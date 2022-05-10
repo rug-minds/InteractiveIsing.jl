@@ -62,7 +62,6 @@ end
 
 function updateScreen(julia_display::JuliaDisplay)
     Threads.@spawn let _
-        tm = time()
         while true
             dispIsing(julia_display,g)
             sleep(0.0333) # ~30fps at most
