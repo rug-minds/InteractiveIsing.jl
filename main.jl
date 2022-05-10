@@ -77,6 +77,7 @@ end
 # Draw circle to state
 circleToStateQML(i,j) = Threads.@spawn circleToState(g,i,j,brushR[],brush[])
 
+# Don't use for large state
 function printG()
     println(g)
 end
