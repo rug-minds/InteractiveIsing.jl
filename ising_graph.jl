@@ -43,9 +43,14 @@ function coordToIdx(i,j,N)
     return (i-1)*N+j
 end
                 
-function graphLookup(idx,N)
+function idxToCoord(idx,N)
     return ((idx-1)÷N+1,(idx-1)%N+1)
 end
+
+# coordToIdxMatrix(N)
+#     matr = [[]]
+#     for 
+# end
 
 # Initialization of state
 function initRandomState(N)::Vector{Int8}

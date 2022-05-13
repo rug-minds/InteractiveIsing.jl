@@ -39,7 +39,7 @@ function fillAdjList!(cd,N)
     end
 
     for idx in 1:size
-        i,j = graphLookup(idx,N)
+        i,j = idxToCoord(idx,N)
         cd[idx] = coupleIndices(i,j,N)
     end
 end
@@ -48,8 +48,8 @@ end
 
 # Connection rule for lattice, not used right now
 function conn_rule(i,j, N)
-    i1,j1 = graphLookup(i,N)
-    i2,j2 = graphLookup(j,N)
+    i1,j1 = idxToCoord(i,N)
+    i2,j2 = idxToCoord(j,N)
     
     # If any of the distances is greater than 1, not nearest neighbor
     if max(abs(i1-i2),abs(j1-j2)) > 1 || i==j
