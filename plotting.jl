@@ -19,6 +19,15 @@ dispIsing(julia_display::JuliaDisplay, g) = let size = g.size
     end
 end
 
+#Display Ising IsingGraph
+dispIsingREPL(g) = let size = g.size
+    if size <= 512
+        display(imagesc(permutedims( reshape(g.state, (g.N,g.N) ) ) , maxsize=g.N  ))
+    else
+        display(imagesc(permutedims( reshape(g.state, (g.N,g.N) ) ) ) )
+    end
+end
+
 
 
 """

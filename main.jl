@@ -12,6 +12,7 @@ include("analysis.jl")
 qmlfile = joinpath(dirname(Base.source_path()), "qml", "Ising.qml")
 
 #Observables
+running = Observable(true)
 NIs = Observable(512)
 TIs = Observable(1.0)
 JIs = Observable(1.0)
@@ -36,6 +37,7 @@ g = IsingGraph(NIs[])
 
 # Basically a dict of all properties
 pmap = JuliaPropertyMap(
+    "running" => running,
     "NIs" => NIs, 
     "TIs" => TIs, 
     "JIs" => JIs, 
@@ -58,7 +60,7 @@ end
 function updateGraph()
     Threads.@spawn let _
         # Main loop
-        while true
+        while running[]
         
             if !isPaused[] # if sim not paused
                 # updates += 1
@@ -74,7 +76,7 @@ end
 
 function updateScreen(julia_display::JuliaDisplay)
     Threads.@spawn let _
-        while true
+        while running[] 
             dispIsing(julia_display,g)
             # updates_frame[] = updates
             # updates[] = 0
