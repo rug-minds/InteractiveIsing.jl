@@ -5,7 +5,6 @@ import org.julialang 1.0
 import Qt.labs.platform 1.1
 
 
-
 ApplicationWindow {
   title: "Ising Simulation"
   width: 800
@@ -66,7 +65,7 @@ ApplicationWindow {
         ColumnLayout{
           Text{
             Layout.alignment: Qt.AlignHCenter
-            text: "Circle Type"
+            text: "Type"
           }
           Layout.alignment: Qt.AlignCenter
 
@@ -178,6 +177,7 @@ ApplicationWindow {
 
         width: childrenRect.width
         height: childrenRect.height
+
         ColumnLayout{
           spacing: 2
 
@@ -205,7 +205,7 @@ ApplicationWindow {
         }
       }
 
-      // Text under plot, magnetizaiton and FPS (Not working)
+      // Text under plot, magnetization
       Item{
         width: childrenRect.width
         height: childrenRect.height
@@ -216,9 +216,17 @@ ApplicationWindow {
           Text{
             text: "Magnetization: " + obs.M.toFixed(1)
           }
-          Text{
-            text: "Updates per frame: " + obs.uframe
-          }
+          // Text{
+          //   text: "Updates per frame: " + obs.uframe
+          // }
+        }
+      }
+      
+      // Initiate Temperature sweep
+      Button{
+        text: "Temperature Sweep"
+        onClicked:{
+          Julia.tempSweepQML()
         }
       }
       

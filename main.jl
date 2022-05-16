@@ -1,4 +1,5 @@
-using LinearAlgebra, BenchmarkTools, Distributions, Random, GLMakie, FileIO, QML, Qt5QuickControls_jll, Qt5QuickControls2_jll, Observables, ColorSchemes, Images, CSV
+using LinearAlgebra, Distributions, Random, GLMakie, FileIO, QML, Qt5QuickControls_jll, Qt5QuickControls2_jll, Observables, ColorSchemes, Images, DataFrames, CSV
+using BenchmarkTools
 import Plots as pl
 
 
@@ -86,7 +87,8 @@ function timedFunctions(julia_display::JuliaDisplay)
             #     g.updates = 0
             #     # tfa = time()
             # end
-            sleep(0.01)
+            
+            sleep(0.001)
         end
         
     end
@@ -117,15 +119,19 @@ end
 
 addRandomDefectsQML() = Threads.@spawn addRandomDefects!(g,pDefects)
 
+tempSweepQML() = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array) , 100))
+
 @qmlfunction println
 @qmlfunction addRandomDefectsQML
 @qmlfunction initIsing
 @qmlfunction printG
 @qmlfunction circleToStateQML
 @qmlfunction persistentFunctions
+@qmlfunction tempSweepQML
 
 
 loadqml( qmlfile, obs =  pmap); exec_async() 
+
 
 
 
