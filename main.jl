@@ -24,7 +24,6 @@ M = Observable(0.0)
 M_array = []
 
 updates = Observable(0)
-updates_frame = Observable(0)
 
 # brushR = Observable(2)
 # circle = Observable(getCircle(0,0,brushR))
@@ -46,7 +45,6 @@ pmap = JuliaPropertyMap(
     "brush" => brush,
     "brushR" => brushR,
     "M" => M,
-    "uframe" => updates_frame
 )
 
 """QML Functions"""
@@ -63,32 +61,50 @@ function updateGraph()
         while running[]
         
             if !isPaused[] # if sim not paused
-                # updates += 1
                 updateMonteCarloQML!(g,TIs[],JIs[])
+                updates[] += 1
             else
                 sleep(0.2)
             end
-
             
         end
     end
 end
 
-function updateScreen(julia_display::JuliaDisplay)
+function timedFunctions(julia_display::JuliaDisplay)
     Threads.@spawn let _
-        while running[] 
-            dispIsing(julia_display,g)
-            # updates_frame[] = updates
-            # updates[] = 0
-            Threads.@spawn magnetization(g,M,M_array)
-            sleep(0.0333) # ~30fps at most
+        tfs = time()
+        # tfa = time()
+        while running[]
+            if time() - tfs > 0.0333
+                dispIsing(julia_display,g)
+                tfs = time()
+            end
+            # if g.updates > g.size
+            #     magnetization($g,M,M_array)
+
+            #     g.updates = 0
+            #     # tfa = time()
+            # end
+            sleep(0.01)
         end
+        
     end
 end
 
+
 function persistentFunctions(julia_display::JuliaDisplay)
-    updateScreen(julia_display)
+    timedFunctions(julia_display)
     updateGraph()
+end
+
+analysis_func = Threads.@spawn on(updates) do val
+    if updates[] > g.size
+        let _
+            magnetization($g,M,M_array)
+            updates[] = 0
+        end
+    end
 end
 
 # Draw circle to state

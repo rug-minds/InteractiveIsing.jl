@@ -26,6 +26,9 @@ IsingGraph(state::Vector{Int8},adj::Dict{Int32,Vector{Int32}}) = let size = leng
     IsingGraph(sqrt(size), size, copy(state), adj)
 end
 
+# Copy graph data to new one
+IsingGraph(g::IsingGraph) = IsingGraph(g.N,g.size,copy(g.state),copy(g.adj),copy(g.aliveList),copy(g.defects),copy(g.defectBools),copy(g.defectList))
+
 function reInitGraph!(g::IsingGraph)
     println("Reinitializing graph")
     g.state = initRandomState(g.N)
