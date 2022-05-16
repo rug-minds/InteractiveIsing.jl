@@ -4,6 +4,7 @@ import Plots as pl
 
 
 include("ising_graph.jl")
+
 include("ising_update.jl")
 include("square_adj.jl")
 include("plotting.jl")
@@ -77,7 +78,7 @@ function timedFunctions(julia_display::JuliaDisplay)
         tfs = time()
         # tfa = time()
         while running[]
-            if time() - tfs > 0.0333
+            if time() - tfs > 1/30
                 dispIsing(julia_display,g)
                 tfs = time()
             end
@@ -101,6 +102,7 @@ function persistentFunctions(julia_display::JuliaDisplay)
 end
 
 analysis_func = Threads.@spawn on(updates) do val
+# analysis_func = on(updates) do val   
     if updates[] > g.size
         let _
             magnetization($g,M,M_array)
@@ -119,7 +121,7 @@ end
 
 addRandomDefectsQML() = Threads.@spawn addRandomDefects!(g,pDefects)
 
-tempSweepQML() = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array) , 100))
+tempSweepQML() = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array)))
 
 @qmlfunction println
 @qmlfunction addRandomDefectsQML

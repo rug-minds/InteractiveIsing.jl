@@ -21,7 +21,13 @@ function corrL(g::IsingGraph, L)
         i2 = i1+L
         j2 = j1+L
 
-        if i2 < g.N 
+        # Check if points are added
+        addedi2 = false
+        addedj2 = false
+
+        if i2 < g.N && !g.defectBools[coordToIdx(i2,j1,g.N)]
+            addedi2 = true
+
             statey = g.state[coordToIdx(i2,j1,g.N)]
             prodavg2 += statey   
             avgprod += state1*statey
@@ -29,7 +35,8 @@ function corrL(g::IsingGraph, L)
             M2 +=1
         end
         
-        if j2 < g.N
+        if j2 < g.N && !g.defectBools[coordToIdx(i1,j2,g.N)]
+            addedj2 = true
             statex = g.state[coordToIdx(i1,j2,g.N)]
             prodavg2 += statex
             avgprod += state1*statex
@@ -37,7 +44,7 @@ function corrL(g::IsingGraph, L)
             M2 +=1
         end
 
-        if i2 < g.N || j2 < g.N
+        if addedi2 || addedj2
             prodavg1 += state1 
             M1 += 1
         end
@@ -49,8 +56,8 @@ end
 
 function corrFunc(g::IsingGraph, plot = true)
     corr::Vector{Float32} = []
-    x = [1:(g.N-1);]
-    for L in 1:(g.N-1)
+    x = [1:(g.N-2);]
+    for L in 1:(g.N-2)
         append!(corr,corrL(g,L))
     end
 
@@ -99,7 +106,68 @@ function tempSweep(g,TIs, M_array, TF = 13, dpoints = 12, sleeptime = 5, equi_wa
     return (Ts,corrLs,Ms)
 end
 
-function dataToDF(tsData, lMax)
+# Input the temperature sweep data into a datafram
+function dataToDF(tsData, lMax = length(tsData[2][1]))
     return DataFrame(Temperature = tsData[1], Correlation_Function = [corrL[1:lMax] for corrL in  tsData[2]], Magnetization = tsData[3] )
 end
 
+# Determine amount of datapoints per temperature (if homogeous)
+function detDPoints(dat)
+    dpoint = 0
+    lastt = dat[:,1][1]
+    for temp in dat[:,1]
+        if temp == lastt
+            dpoint += 1
+        else 
+            return dpoint
+        end
+    end
+    return dpoint
+end
+
+# Aggregate all Magnetization measurements for a the same temperatures 
+function datMAvgT(dat,dpoints = detDPoints(dat))
+    temps = dat[:,1]
+    Ms = dat[:,3]
+    tempit = 1:dpoints:length(temps)
+    temps = temps[tempit]
+    Ms = [(sum( Ms[(1+(i-1)*dpoints):(i*dpoints)] )/length(tempit)) for i in 1:length(tempit)]
+
+    return (temps,Ms)
+end
+
+function datMExpandTime(dat,dpoints,sleeptime)
+    return
+end
+
+# Parse Correlation Length Data
+function parseCorrL(corr_dat)
+    corrLs = []
+    for line in corr_dat
+        append!(corrLs, [eval(Meta.parse(line))] )
+    end
+    return corrLs
+end
+
+# Input dataframe and get correlation length data for all temps
+function dfToCorrLs(dat)
+    corrLs = dat[:,2]
+    Ts = dat[:,1]
+    corrLs = parseCorrL(corrLs)
+
+    return (Ts,corrLs)
+end
+
+# Make a plot of the magnetization
+function MPlot(fileName, pDefects)
+    df = DataFrame(CSV.File(fileName))
+    dat = datMAvgT(df)
+    
+    if dat[2][1] < 0
+        dat = (dat[1],[-x for x in dat[2] ])
+    end
+    display(pl.plot(dat, title = "$pDefects% defects", xlabel = "Temperature" , ylabel = "Magnetization", legend = false))
+
+end
+
+csvToDF(filename) = DataFrame(CSV.File(filename)) 
