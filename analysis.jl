@@ -82,7 +82,7 @@ function tempSweep(g,TIs, M_array, TF = 13, dpoints = 12, sleeptime = 5, equi_wa
 
     # Data 
     Ts = []
-    corrLs = []
+    corrls = []
     Ms = []
 
     TRange =  TIs[]:0.5:TF
@@ -94,7 +94,7 @@ function tempSweep(g,TIs, M_array, TF = 13, dpoints = 12, sleeptime = 5, equi_wa
         
         for i in 1:dpoints
             append!(Ts, T)
-            append!(corrLs,[corrFunc(IsingGraph(g),false)])
+            append!(corrls,[corrFunc(IsingGraph(g),false)])
             append!(Ms, last(M_array))
         
             sleep(sleeptime)
@@ -103,13 +103,16 @@ function tempSweep(g,TIs, M_array, TF = 13, dpoints = 12, sleeptime = 5, equi_wa
         sleep(equi_wait)
     end
 
-    return (Ts,corrLs,Ms)
+    return (Ts,corrls,Ms)
 end
 
-# Input the temperature sweep data into a datafram
+# Input the temperature sweep data into a dataframe
 function dataToDF(tsData, lMax = length(tsData[2][1]))
     return DataFrame(Temperature = tsData[1], Correlation_Function = [corrL[1:lMax] for corrL in  tsData[2]], Magnetization = tsData[3] )
 end
+
+# Read CSV to dataframe
+csvToDF(filename) = DataFrame(CSV.File(filename)) 
 
 # Determine amount of datapoints per temperature (if homogeous)
 function detDPoints(dat)
@@ -136,29 +139,7 @@ function datMAvgT(dat,dpoints = detDPoints(dat))
     return (temps,Ms)
 end
 
-function datMExpandTime(dat,dpoints,sleeptime)
-    return
-end
-
-# Parse Correlation Length Data
-function parseCorrL(corr_dat)
-    corrLs = []
-    for line in corr_dat
-        append!(corrLs, [eval(Meta.parse(line))] )
-    end
-    return corrLs
-end
-
-# Input dataframe and get correlation length data for all temps
-function dfToCorrLs(dat)
-    corrLs = dat[:,2]
-    Ts = dat[:,1]
-    corrLs = parseCorrL(corrLs)
-
-    return (Ts,corrLs)
-end
-
-# Make a plot of the magnetization
+# Make a plot of the magnetization from DF
 function MPlot(fileName, pDefects)
     df = DataFrame(CSV.File(fileName))
     dat = datMAvgT(df)
@@ -170,4 +151,36 @@ function MPlot(fileName, pDefects)
 
 end
 
-csvToDF(filename) = DataFrame(CSV.File(filename)) 
+# Expand measurements in time
+function datMExpandTime(dat,dpoints,sleeptime)
+    return
+end
+
+
+"""Correlation Length Data"""
+# Parse Correlation Length Data from string in DF
+function parseCorrL(corr_dat)
+    corrls = []
+    for line in corr_dat
+        append!(corrls, [eval(Meta.parse(line))] )
+    end
+    return corrls
+end
+
+# Input dataframe and get correlation length data for all temps
+function dfToCorrls(df)
+    corrls = df[:,2]
+    Ts = df[:,1]
+    corrls = parseCorrL(corrls)
+
+    return (Ts,corrls)
+end
+
+function fitCorrl(dat,dom_end, f, params...)
+    dom = Domain(1.:dom_end)
+    data = Measures(Vector{Float64}(dat[1:dom_end]),0.)
+    model = Model(:comp1 => FuncWrap(f,params...))
+    prepare!(model,dom, :comp1)
+    return fit!(model,data)
+end
+

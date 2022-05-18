@@ -30,7 +30,7 @@ end
 
 
 
-"""
+w"""
 OLD PLOTTING FUNCTIONS
 """
 function plotHeat(g, fig, plot_obj)
