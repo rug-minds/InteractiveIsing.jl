@@ -10,6 +10,10 @@ function imagesc(data::AbstractMatrix{<:Real};
     return get(colorscheme, data, rangescale) # get(...) from ColorSchemes.jl
 end
 
+function gToImg(g::IsingGraph)
+    return imagesc(reshape(g.state, (g.N,g.N) )  , maxsize=512  )
+end
+
 #Display Ising IsingGraph
 dispIsing(julia_display::JuliaDisplay, g) = let size = g.size
     if size <= 512
@@ -18,41 +22,3 @@ dispIsing(julia_display::JuliaDisplay, g) = let size = g.size
         display(julia_display, imagesc(permutedims( reshape(g.state, (g.N,g.N) ) ) ) )
     end
 end
-
-#Display Ising IsingGraph
-dispIsingREPL(g) = let size = g.size
-    if size <= 512
-        display(imagesc(permutedims( reshape(g.state, (g.N,g.N) ) ) , maxsize=g.N  ))
-    else
-        display(imagesc(permutedims( reshape(g.state, (g.N,g.N) ) ) ) )
-    end
-end
-
-
-
-"""
-OLD PLOTTING FUNCTIONS
-"""
-function plotHeat(g, fig, plot_obj)
-    plot_obj[1] = reshape(g.state, (g.N,g.N))
-end
-
-function loopPlotOld(g, loops, updatefunc , T, J)
-    fig, ax , plot_obj = heatmap(reshape(g.state, (g.N,g.N)), colorrange=(-1, 1))
-    display(fig)
-    plotHeat(g,fig,plot_obj)
-    @time for loop in 1:loops
-        updatefunc(g.state,g.adj,T, J)
-        plotHeat(g,fig,plot_obj)
-    end
-end
-
-function loopPlot(julia_display::JuliaDisplay, g, loops, updatefunc , T, J)
-    dispIsing(julia_display,g)
-    for loop in 1:loops
-        updatefunc(g.state,g.adj,T, J)
-        dispIsing(julia_display,g)
-    end
-end
-
-

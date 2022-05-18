@@ -118,28 +118,22 @@ ApplicationWindow {
         }
       }
 
-      // JuliaCanvas{
-      //   Layout.alignment: Qt.AlignCenter
-      //   id: canvas
-      //   width: 512
-      //   height: 512
-      //   // paintFunction: showlatest
 
+      JuliaCanvas{
+        Layout.alignment: Qt.AlignCenter
+        id: canvas
+        width: 512
+        height: 512
+        paintFunction: showlatest
 
-      //   // Component.onCompleted: {
-      //   //   Julia.initIsing()
-      //   //   // Julia.updateIsing(canvas)
-      //   //   Julia.persistentFunctions()
-      //   // }
+        MouseArea{
+          anchors.fill: parent
+          onClicked: {
+            Julia.circleToStateQML(mouseY, mouseX)
+          }
+        }
 
-      //   MouseArea{
-      //     anchors.fill: parent
-      //     onClicked: {
-      //       Julia.circleToStateQML(mouseY, mouseX)
-      //     }
-      //   }
-
-      // }
+      }
 
 
       //  Temperature Slider
@@ -190,10 +184,10 @@ ApplicationWindow {
 
         ColumnLayout{
           spacing: 2
+          Layout.alignment: Qt.AlignHCenter
 
           TextField{
             Layout.alignment: Qt.AlignHCenter
-
             text: obs.pDefects
             onTextChanged: {
               obs.pDefects = parseInt(text)
@@ -201,14 +195,18 @@ ApplicationWindow {
               {
                 obs.pDefects = 100
               }
+              if(obs.pDefects < 0)
+              {
+                obs.pDefects = 0
+              }
+              Julia.println(obs.pDefects)
             }
           }
+
           Button{
             Layout.alignment: Qt.AlignHCenter
             text: "Insert Defects"
             onClicked: {
-              // obs.routine = "insDefects"
-              // obs.specialRoutine = true
               Julia.addRandomDefectsQML()
             }
           }
@@ -219,146 +217,34 @@ ApplicationWindow {
       Item{
         width: childrenRect.width
         height: childrenRect.height
-        Layout.alignment: Qt.AlignCenter
+        Layout.alignment: Qt.AlignHCenter
         ColumnLayout{
-
-          spacing: 2
+          Layout.alignment: Qt.AlignHCenter
           Text{
             text: "Magnetization: " + obs.M.toFixed(1)
           }
-          // Text{
-          //   text: "Updates per frame: " + obs.uframe
-          // }
         }
       }
 
       // Initiate Temperature sweep
       Button{
+        Layout.alignment: Qt.AlignHCenter
         text: "Temperature Sweep"
         onClicked: {
           Julia.tempSweepQML()
         }
       }
 
-      // Doesn't Work
-      // Button{
-      //   Layout.alignment: Qt.AlignCenter
-      //   text: "Quit"
-      //   onClicked: {
-      //     obs.running = false
-      //     Qt.quit()
-      //   }
-      // }
-
     }
   }
 
 
   // Timer for display
-  // Timer {
-  //   // Set interval in ms:
-  //   interval: 1/60*1000; repeat: true
-  //   onTriggered: {
-  //     canvas.update();
-  //   }
-  // }
+  Timer {
+    // Set interval in ms:
+    interval: 1/60*1000; running: true; repeat: true
+    onTriggered: {
+      canvas.update();
+    }
+  }
 }
-
-
-// Button{
-//   Layout.alignment: Qt.AlignCenter
-//   text: "Print g"
-//   onClicked: {
-//     Julia.printG()
-//   }
-// }
-
-// Item{
-//   id: BrushButtons
-//   RowLayout{
-//     Layout.alignment: Qt.AlignCenter
-//     ColumnLayout{
-//       Text{
-//         text: "Circle Type"
-//       }
-//       Button{
-//         text: "1"
-//         onClicked: {
-//           obs.brush = 1
-//         }
-//       }
-//       Button{
-//         text: "0"
-//         onClicked: {
-//           obs.brush = 0
-//         }
-//       }
-//       Button{
-//         text: "-1"
-//         onClicked: {
-//           obs.brush = -1
-//         }
-//       }
-
-//     }
-//     // Radius Slider
-//     ColumnLayout{
-//       Text{
-//         text: "Radius"
-//       }
-//       Slider{
-//         value: obs.brushR
-//         orientation: Qt.Vertical
-//         minimumValue: 1
-//         maximumValue: 100
-//         stepSize: 1
-//       onValueChanged: {
-//         obs.brushR = value
-//       }
-//       }
-//     }
-//   }
-
-// }
-
-// MenuBar {
-//   id: menuBar
-//   Menu {
-//     id: fileMenu
-//     title: qsTr("File")
-//     Action {
-//       text: qsTr("&New...")
-//     }
-//     Action {
-//       text: qsTr("&Open...")
-//     }
-//     Action {
-//       text: qsTr("&Save")
-//     }
-//     Action {
-//       text: qsTr("Save &As...")
-//     }
-//     MenuSeparator { }
-//     Action {
-//       text: qsTr("&Quit")
-//     }
-//   }
-
-//   Menu {
-//     id: editMenu
-//     title: qsTr("&Edit")
-//     // ...
-//   }
-
-//   Menu {
-//     id: viewMenu
-//     title: qsTr("&View")
-//     // ...
-//   }
-
-//   Menu {
-//     id: helpMenu
-//     title: qsTr("&Help")
-//     // ...
-//   }
-// }

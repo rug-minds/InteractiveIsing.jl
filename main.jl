@@ -1,3 +1,5 @@
+ENV["QSG_RENDER_LOOP"] = "basic"
+
 using LinearAlgebra, Distributions, Random, GLMakie, FileIO, QML, Observables, ColorSchemes, Images, DataFrames, CSV, CxxWrap
 using BenchmarkTools
 import Plots as pl
@@ -32,9 +34,7 @@ updates = Observable(0)
 
 # Global Variables
 g = IsingGraph(NIs[])
-
-
-
+img = Observable(gToImg(g))
 
 # Basically a dict of all properties
 pmap = JuliaPropertyMap(
@@ -56,10 +56,9 @@ function initIsing()
     M[] = 0
 end
 
-# Main loop for QML
+# Main loop for for MCMC
 function updateGraph()
-    Threads.@spawn let _
-        # Main loop
+    Threads.@spawn begin
         while running[]
         
             if !isPaused[] # if sim not paused
@@ -73,54 +72,42 @@ function updateGraph()
     end
 end
 
-# function timedFunctions(julia_display::JuliaCanvas)
-#     Threads.@spawn let _
-#         tfs = time()
-#         # tfa = time()
-#         while running[]
-#             if time() - tfs > 0.034
-#                     dispIsing(julia_display,g)
-#                 tfs = time()
-#             end
-#             # if g.updates > g.size
-#             #     magnetization($g,M,M_array)
-
-#             #     g.updates = 0
-#             #     # tfa = time()
-#             # end
-#             sleep(0.001)
-#         end
+# Functions that happen on time intervals
+function timedFunctions()
+    Threads.@spawn begin
+        tfs = time()
+        while running[]
+            if time() - tfs > 0.01
+                updateImg(img)
+            end
+            sleep(0.001)
+        end
         
-#     end
-# end
+    end
+end
+
+function updateImg(img)
+    img[] = gToImg(g)
+end
 
 
-function persistentFunctions()
-    # timedFunctions(julia_display)
+function startSim()
+    timedFunctions()
     updateGraph()
 end
 
-# analysis_func = Threads.@spawn on(updates) do val
+analysis_func = Threads.@spawn on(updates) do val
 # analysis_func = on(updates) do val   
-#     if updates[] > g.size
-#         let _
-#             magnetization(g,M,M_array)
-#             updates[] = 0
-#         end
-#     end
-#     yield()
-# end
-
-# Draw circle to state
-# circleToStateQML(i,j) = Threads.@spawn circleToState(g,i,j,brushR[],brush[])
-
-# Don't use for large state
-function printG()
-    println(g)
+    if updates[] > g.size
+        begin
+            magnetization(g,M,M_array)
+            updates[] = 0
+        end
+    end
 end
 
-
-# dispIsingQML() = disp
+# Draw circle to state
+circleToStateQML(i,j) = Threads.@spawn circleToState(g,i,j,brushR[],brush[])
 
 addRandomDefectsQML() = Threads.@spawn addRandomDefects!(g,pDefects)
 
@@ -129,24 +116,27 @@ tempSweepQML() = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,
 @qmlfunction println
 @qmlfunction addRandomDefectsQML
 @qmlfunction initIsing
-@qmlfunction printG
-# @qmlfunction circleToStateQML
-# @qmlfunction persistentFunctions
+@qmlfunction circleToStateQML
+@qmlfunction startSim
 @qmlfunction tempSweepQML
 
 function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
-    # img = imagesc(permutedims( reshape(g.state, (g.N,g.N) ) ) , maxsize=g.N  )
-    # buffer = reshape(buffer, size(img))
-    # buffer = reinterpret(ARGB32, buffer)
-    # buffer .= img
+    buffer = reshape(buffer, size(img[]))
+    buffer = reinterpret(ARGB32, buffer)
+    buffer .= img[]
     return
   end
 
-# showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest, Cvoid, 
-#                                                (Array{UInt32,1}, Int32, Int32))
 
-# loadqml( qmlfile, obs =  pmap, showlatest = showlatest_cfunction); exec_async()
-loadqml( qmlfile, obs =  pmap); exec_async() 
+# Start Simulation
+startSim()
+
+showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest, Cvoid, 
+                                               (Array{UInt32,1}, Int32, Int32))
+
+# loadqml( qmlfile, obs =  pmap, ); exec_async() 
+
+loadqml( qmlfile, obs =  pmap, showlatest = showlatest_cfunction); exec_async()
 
 
 
