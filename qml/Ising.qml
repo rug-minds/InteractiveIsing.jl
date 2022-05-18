@@ -1,8 +1,14 @@
-import QtQuick 2.1
-import QtQuick.Controls 1.0
-import QtQuick.Layouts 1.0
-import org.julialang 1.0
-import Qt.labs.platform 1.1
+// import QtQuick 2.1
+// import QtQuick.Controls 1.0
+// import QtQuick.Layouts 1.0
+// import org.julialang 1.0
+// import Qt.labs.platform 1.1
+
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import org.julialang
+import Qt.labs.platform
 
 
 ApplicationWindow {
@@ -100,8 +106,10 @@ ApplicationWindow {
           Slider{
             value: obs.brushR
             orientation: Qt.Vertical
-            minimumValue: 1
-            maximumValue: 100
+            // minimumValue: 1
+            // maximumValue: 100
+            from: 1
+            to: 100
             stepSize: 1
             onValueChanged: {
               obs.brushR = value
@@ -110,30 +118,30 @@ ApplicationWindow {
         }
       }
 
-      JuliaDisplay {
-        Layout.alignment: Qt.AlignCenter
-        id: jdisp
-        width: 512
-        height: 512
-
-        Component.onCompleted: {
-          Julia.initIsing()
-          // Julia.updateIsing(jdisp)
-          Julia.persistentFunctions(jdisp)
-        }
-
-        MouseArea{
-          anchors.fill: parent
-          onClicked: {
-            Julia.circleToStateQML(mouseY, mouseX)
-          }
-        }
+      // JuliaCanvas{
+      //   Layout.alignment: Qt.AlignCenter
+      //   id: canvas
+      //   width: 512
+      //   height: 512
+      //   // paintFunction: showlatest
 
 
+      //   // Component.onCompleted: {
+      //   //   Julia.initIsing()
+      //   //   // Julia.updateIsing(canvas)
+      //   //   Julia.persistentFunctions()
+      //   // }
+
+      //   MouseArea{
+      //     anchors.fill: parent
+      //     onClicked: {
+      //       Julia.circleToStateQML(mouseY, mouseX)
+      //     }
+      //   }
+
+      // }
 
 
-
-      }
       //  Temperature Slider
       Item{
         Layout.alignment: Qt.AlignCenter
@@ -145,8 +153,10 @@ ApplicationWindow {
           Slider{
             value: obs.TIs
             orientation: Qt.Vertical
-            minimumValue: 0.0
-            maximumValue: 20
+            // minimumValue: 0.0
+            // maximumValue: 20
+            from: 0.0
+            to: 20.
             stepSize: 0.01
             onValueChanged: {
               obs.TIs = value
@@ -221,15 +231,15 @@ ApplicationWindow {
           // }
         }
       }
-      
+
       // Initiate Temperature sweep
       Button{
         text: "Temperature Sweep"
-        onClicked:{
+        onClicked: {
           Julia.tempSweepQML()
         }
       }
-      
+
       // Doesn't Work
       // Button{
       //   Layout.alignment: Qt.AlignCenter
@@ -242,6 +252,16 @@ ApplicationWindow {
 
     }
   }
+
+
+  // Timer for display
+  // Timer {
+  //   // Set interval in ms:
+  //   interval: 1/60*1000; repeat: true
+  //   onTriggered: {
+  //     canvas.update();
+  //   }
+  // }
 }
 
 
