@@ -34,11 +34,11 @@ end
 function fillAdjList!(cd,N)
     size = N*N
     
-    for idx in 1:size
+    @inbounds for idx in 1:size
         cd[idx] = []
     end
 
-    for idx in 1:size
+    @inbounds for idx in 1:size
         i,j = idxToCoord(idx,N)
         cd[idx] = coupleIndices(i,j,N)
     end

@@ -86,7 +86,7 @@ end
 """ Adding Defects """
 function addDefect!(g,spin_idx)
     # If already defect do nothing
-    if g.defectBools[spin_idx] == true
+    @inbounds if g.defectBools[spin_idx] == true
         return
     end
 
@@ -106,20 +106,20 @@ function addDefect!(g,spin_idx)
 
 
     # Set state to zero
-    g.state[spin_idx] = 0
+    @inbounds g.state[spin_idx] = 0
 
 end
 
 # Removing defects
 function remDefect!(g, spin_idx)
     # If it was not defect, skip
-    if g.defectBools[spin_idx] == false
+    @inbounds if g.defectBools[spin_idx] == false
         # println("No defect to remove")
         return
     end
 
     # Spin not defect anymore
-    g.defectBools[spin_idx] = false
+    @inbounds g.defectBools[spin_idx] = false
 
     # Remove from defect list
     rem_idx = removeFirst!(g.defectList,spin_idx)
@@ -164,7 +164,7 @@ function setEl!(g,spin_idx, brush)
     # First remove defect if it was defect
     remDefect!(g,spin_idx)
     # Then set element
-    g.state[spin_idx] = brush
+    @inbounds g.state[spin_idx] = brush
 
 end
 
@@ -196,7 +196,7 @@ end
 function revRemoveSpin!(list,spin_idx)
     init = min(spin_idx, length(list)) #Initial search index
     for offset in 0:(init-1)
-        if list[init-offset] == spin_idx
+        @inbounds if list[init-offset] == spin_idx
             deleteat!(list,init-offset)
             return init-offset # Returns index where element was found
         end
