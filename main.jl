@@ -34,7 +34,7 @@ const g = IsingGraph(NIs[])
 const img = Observable(gToImg(g))
 
 # Basically a dict of all properties
-pmap = JuliaPropertyMap(
+const pmap = JuliaPropertyMap(
     "running" => running,
     "NIs" => NIs, 
     "TIs" => TIs, 
