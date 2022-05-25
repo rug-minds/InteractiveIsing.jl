@@ -16,25 +16,22 @@ include("analysis.jl")
 qmlfile = joinpath(dirname(Base.source_path()), "qml", "Ising.qml")
 
 #Observables
-running = Observable(true)
-NIs = Observable(512)
-TIs = Observable(1.0)
-JIs = Observable(1.0)
-pDefects = Observable(0) #percentage of defects to be added
-isPaused = Observable(false) 
-brush = Observable(0)
-brushR = Observable( Int(round(NIs[]/10)) )
-M = Observable(0.0)
-M_array = []
+const running = Observable(true)
+const NIs = Observable(512)
+const TIs = Observable(1.0)
+const JIs = Observable(1.0)
+const pDefects = Observable(0) #percentage of defects to be added
+const isPaused = Observable(false) 
+const brush = Observable(0)
+const brushR = Observable( Int(round(NIs[]/10)) )
+const M = Observable(0.0)
+const M_array = []
 
-updates = Observable(0)
-
-# brushR = Observable(2)
-# circle = Observable(getCircle(0,0,brushR))
+const updates = Observable(0)
 
 # Global Variables
-g = IsingGraph(NIs[])
-img = Observable(gToImg(g))
+const g = IsingGraph(NIs[])
+const img = Observable(gToImg(g))
 
 # Basically a dict of all properties
 pmap = JuliaPropertyMap(
