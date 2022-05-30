@@ -14,7 +14,7 @@ end
 function restoreDefects!(g)
     nDefects = length(g.defectList)
     states = initRandomState(nDefects)
-    g.state[g.defectList] .= states
+    @inbounds  g.state[g.defectList] .= states
     append!(g.aliveList,g.defectList)
 end
 
