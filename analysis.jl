@@ -77,27 +77,36 @@ function magnetization(g::IsingGraph,M,M_array)
     end 
 end
 
-function tempSweep(g,TIs, M_array, TF = 13, TStep = 0.5, dpoints = 12, sleeptime = 5, equi_wait = 0)
+function tempSweep(g,TIs, M_array, TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equi_wait = 0)
     println("Starting temperature sweep")
-
+    first = true
     # Data 
     Ts = []
     corrls = []
     Ms = []
 
     TRange =  TIs[]:TStep:TF
-    println("The sweep will take approximately $(length(TRange)*dpoints*sleeptime ) seconds")
+    println("The sweep will take approximately $(length(TRange)*dpoints*dpointwait ) seconds")
     for T in TRange
-        println("Doing temperature $T, gathering $dpoints data points in intervals of $sleeptime seconds")
-        println("Approximately $(length(T:0.5:TF)*dpoints*sleeptime) seconds remaining")
+        if first 
+            println("Waiting $equi_wait seconds for equilibration")
+            sleep(equi_wait)
+            first=false
+        else
+            sleep(stepwait)
+        end
+        println("Doing temperature $T, gathering $dpoints data points in intervals of $dpointwait seconds")
+        println("Approximately $(length(T:0.5:TF)*dpoints*dpointwait + length(T:0.5:TF)*stepwait) seconds remaining")
         TIs[] = T
         
+        
+
         for i in 1:dpoints
             append!(Ts, T)
             append!(corrls,[corrFunc(IsingGraph(g),false)])
             append!(Ms, last(M_array))
         
-            sleep(sleeptime)
+            sleep(dpointwait)
         end
         
         sleep(equi_wait)
@@ -152,7 +161,7 @@ function MPlot(fileName, pDefects)
 end
 
 # Expand measurements in time
-function datMExpandTime(dat,dpoints,sleeptime)
+function datMExpandTime(dat,dpoints,dpointwait)
     return
 end
 
