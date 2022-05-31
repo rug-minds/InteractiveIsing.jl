@@ -76,7 +76,7 @@ ApplicationWindow {
           Layout.alignment: Qt.AlignCenter
 
           Button{
-            id: brushButton
+            Layout.preferredWidth: brushButton.width
             text: "1"
             onClicked: {
               obs.brush = 1
@@ -90,7 +90,7 @@ ApplicationWindow {
             }
           }
           Button{
-            Layout.preferredWidth: brushButton.width
+            id: brushButton
             text: "-1"
             onClicked: {
               obs.brush = -1
