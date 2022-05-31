@@ -108,7 +108,8 @@ circleToStateQML(i,j) = Threads.@spawn circleToState(g,i,j,brushR[],brush[])
 
 addRandomDefectsQML() = Threads.@spawn addRandomDefects!(g,pDefects)
 
-tempSweepQML() = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array)))
+# Make an interface for this
+tempSweepQML() = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array, 7, 0.2, 10, 2)))
 
 @qmlfunction println
 @qmlfunction addRandomDefectsQML

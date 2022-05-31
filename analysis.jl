@@ -77,7 +77,7 @@ function magnetization(g::IsingGraph,M,M_array)
     end 
 end
 
-function tempSweep(g,TIs, M_array, TF = 13, dpoints = 12, sleeptime = 5, equi_wait = 0)
+function tempSweep(g,TIs, M_array, TF = 13, TStep = 0.5, dpoints = 12, sleeptime = 5, equi_wait = 0)
     println("Starting temperature sweep")
 
     # Data 
@@ -85,7 +85,7 @@ function tempSweep(g,TIs, M_array, TF = 13, dpoints = 12, sleeptime = 5, equi_wa
     corrls = []
     Ms = []
 
-    TRange =  TIs[]:0.5:TF
+    TRange =  TIs[]:TStep:TF
     println("The sweep will take approximately $(length(TRange)*dpoints*sleeptime ) seconds")
     for T in TRange
         println("Doing temperature $T, gathering $dpoints data points in intervals of $sleeptime seconds")
