@@ -227,24 +227,34 @@ ApplicationWindow {
       }
 
       // Initiate Temperature sweep
+
       Button{
-        Layout.alignment: Qt.AlignHCenter
-        text: "Temperature Sweep"
+        anchors.centerIn: parent
+        text: qsTr("Click me")
+
         onClicked: {
-          Julia.tempSweepQML()
+          var component = Qt.createComponent("Child.qml")
+          var window = component.createObject(root)
+          window.show()
         }
+        // Button{
+        //   Layout.alignment: Qt.AlignHCenter
+        //   text: "Temperature Sweep"
+        //   onClicked: {
+        //     Julia.tempSweepQML()
+        //   }
+        // }
+
       }
+    }
 
+
+    // Timer for display
+    Timer {
+      // Set interval in ms:
+      interval: 1/60*1000; running: true; repeat: true
+      onTriggered: {
+        canvas.update();
+      }
     }
   }
-
-
-  // Timer for display
-  Timer {
-    // Set interval in ms:
-    interval: 1/60*1000; running: true; repeat: true
-    onTriggered: {
-      canvas.update();
-    }
-  }
-}

@@ -84,19 +84,22 @@ function tempSweep(g,TIs, M_array, TF = 13, TStep = 0.5, dpoints = 12, dpointwai
     Ts = []
     corrls = []
     Ms = []
-
     TRange =  TIs[]:TStep:TF
-    println("The sweep will take approximately $(length(TRange)*dpoints*dpointwait ) seconds")
+    println("The sweep will take approximately $(length(TRange)*dpoints*dpointwait + length(TRange)*stepwait + equi_wait) seconds")
+
     for T in TRange
-        if first 
-            println("Waiting $equi_wait seconds for equilibration")
+        if first
+            if equi_wait != 0
+                println("Waiting $equi_wait seconds for equilibration")
+            end
             sleep(equi_wait)
             first=false
         else
+            println("Waiting $stepwait seconds in between temperature steps")
             sleep(stepwait)
         end
         println("Doing temperature $T, gathering $dpoints data points in intervals of $dpointwait seconds")
-        println("Approximately $(length(T:0.5:TF)*dpoints*dpointwait + length(T:0.5:TF)*stepwait) seconds remaining")
+        println("Approximately $(length(T:TStep:TF)*dpoints*dpointwait + length(T:TStep:TF)*stepwait) seconds remaining")
         TIs[] = T
         
         

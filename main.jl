@@ -13,7 +13,7 @@ include("plotting.jl")
 include("interaction.jl")
 include("analysis.jl")
 
-qmlfile = joinpath(dirname(Base.source_path()), "qml", "Ising.qml")
+qmlfile = joinpath(dirname(Base.source_path()), "qml", "ising.qml")
 
 #Observables
 const running = Observable(true)
@@ -109,7 +109,7 @@ circleToStateQML(i,j) = Threads.@spawn circleToState(g,i,j,brushR[],brush[])
 addRandomDefectsQML() = Threads.@spawn addRandomDefects!(g,pDefects)
 
 # Make an interface for this
-tempSweepQML() = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array, 7, 0.2, 10, 2)))
+tempSweepQML() = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array, 7, 0.1, 12, 2, 5)))
 
 @qmlfunction println
 @qmlfunction addRandomDefectsQML
