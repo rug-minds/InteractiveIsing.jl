@@ -12,9 +12,10 @@ import Qt.labs.platform
 
 
 ApplicationWindow {
+  id: root
   title: "Ising Simulation"
-  width: 800
-  height: 800
+  width: obs.gSize + 256
+  height: obs.gSize + 256
   visible: true
 
 
@@ -122,8 +123,8 @@ ApplicationWindow {
       JuliaCanvas{
         Layout.alignment: Qt.AlignCenter
         id: canvas
-        width: 512
-        height: 512
+        width: obs.gSize
+        height: obs.gSize
         paintFunction: showlatest
 
         MouseArea{
@@ -190,15 +191,20 @@ ApplicationWindow {
             Layout.alignment: Qt.AlignHCenter
             text: obs.pDefects
             onTextChanged: {
-              obs.pDefects = parseInt(text)
-              if(obs.pDefects > 100)
+              var int num = parseInt(text)
+              if(num > 100)
               {
-                obs.pDefects = 100
+                num = 100
               }
-              if(obs.pDefects < 0)
+              if(num > 0 && num < 100)
               {
-                obs.pDefects = 0
+                num = num
               }
+              else
+              {
+                num = 0
+              }
+              obs.pDefects = num
               Julia.println(obs.pDefects)
             }
           }
@@ -229,32 +235,31 @@ ApplicationWindow {
       // Initiate Temperature sweep
 
       Button{
-        anchors.centerIn: parent
-        text: qsTr("Click me")
-
+        text: "Temperature Sweep"
         onClicked: {
-          var component = Qt.createComponent("Child.qml")
+          var component = Qt.createComponent("/Users/werk/Documents/PhD/Julia Projects/IsingQT6/qml/tsweep.qml")
           var window = component.createObject(root)
           window.show()
         }
-        // Button{
-        //   Layout.alignment: Qt.AlignHCenter
-        //   text: "Temperature Sweep"
-        //   onClicked: {
-        //     Julia.tempSweepQML()
-        //   }
-        // }
-
       }
-    }
+      // Button{
+      //   Layout.alignment: Qt.AlignHCenter
+      //   text: "Temperature Sweep"
+      //   onClicked: {
+      //     Julia.tempSweepQML()
+      //   }
+      // }
 
-
-    // Timer for display
-    Timer {
-      // Set interval in ms:
-      interval: 1/60*1000; running: true; repeat: true
-      onTriggered: {
-        canvas.update();
-      }
     }
   }
+
+
+  // Timer for display
+  Timer {
+    // Set interval in ms:
+    interval: 1/60*1000; running: true; repeat: true
+    onTriggered: {
+      canvas.update();
+    }
+  }
+}

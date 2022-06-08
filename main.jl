@@ -6,10 +6,11 @@ import Plots as pl
 # Qt5QuickControls_jll, Qt5QuickControls2_jll,
 
 include("ising_graph.jl")
-
+# using IsingGraphs
 include("ising_update.jl")
 include("square_adj.jl")
 include("plotting.jl")
+# using .GPlotting
 include("interaction.jl")
 include("analysis.jl")
 
@@ -17,7 +18,8 @@ qmlfile = joinpath(dirname(Base.source_path()), "qml", "ising.qml")
 
 #Observables
 const running = Observable(true)
-const NIs = Observable(512)
+const gSize = Observable(1024)
+const NIs = Observable(gSize[])
 const TIs = Observable(1.0)
 const JIs = Observable(1.0)
 const pDefects = Observable(0) #percentage of defects to be added
@@ -36,6 +38,7 @@ const img = Observable(gToImg(g))
 # Basically a dict of all properties
 const pmap = JuliaPropertyMap(
     "running" => running,
+    "gSize" => gSize,
     "NIs" => NIs, 
     "TIs" => TIs, 
     "JIs" => JIs, 
@@ -43,7 +46,7 @@ const pmap = JuliaPropertyMap(
     "pDefects" => pDefects,
     "brush" => brush,
     "brushR" => brushR,
-    "M" => M,
+    "M" => M
 )
 
 """QML Functions"""
@@ -84,7 +87,7 @@ function timedFunctions()
 end
 
 function updateImg(img)
-    img[] = gToImg(g)
+    img[] = gToImg(g,gSize[])
 end
 
 

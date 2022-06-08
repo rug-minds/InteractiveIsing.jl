@@ -1,26 +1,4 @@
 # Special routines for program
-
-function paintPoint!(g,i,j, brush)
-    idx = coordToIdx(i,j,g.N)
-
-    if brush == 0
-        addDefect!(g,idx)
-    else
-        setEl!(g,idx,brush)
-    end
-end
-
-# Restores all defects to random states
-function restoreDefects!(g)
-    nDefects = length(g.defectList)
-    states = initRandomState(nDefects)
-    @inbounds  g.state[g.defectList] .= states
-    append!(g.aliveList,g.defectList)
-end
-
-
-
-
 """
 Drawing Functions
 """
