@@ -4,7 +4,6 @@ function updateMonteCarloQML!(g::IsingGraph, T, J)
     beta = T>0 ? 1/T : Inf
 
     idx = rand(ising_it(g))
-
     Estate = 0
 
     for jdx in g.adj[idx]

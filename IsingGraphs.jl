@@ -111,10 +111,10 @@
                     @inbounds el1 = vec1[ofs1]
                     @inbounds el2 = vec2[ofs2]
                     if el1 < el2
-                        @inbounds result[ofs1+ofs2] = el1
+                        @inbounds result[ofs1+ofs2-1] = el1
                         ofs1 += 1
                     else
-                        @inbounds result[ofs1+ofs2] = el2
+                        @inbounds result[ofs1+ofs2-1] = el2
                         ofs2 += 1
                     end
                 end
@@ -135,15 +135,15 @@
                 it_idx = 1
                 num_del = 0
                 for el in els
-                    @inbounds while el != vec[it_idx]
-                        @inbounds result[it_idx - num_del] = vec[it_idx]
-                            it_idx +=1
-                        end
+                     while el != vec[it_idx]
+                    
+                        result[it_idx - num_del] = vec[it_idx]
+                        it_idx +=1
+                    end
                         num_del +=1
                         it_idx += 1
                 end
-        
-                @inbounds result[(it_idx - num_del):end] = vec[it_idx:end]
+                 result[(it_idx - num_del):end] = vec[it_idx:end]
                 return result
             end
 
@@ -164,16 +164,19 @@
 
         """Actually Removing and adding defects"""
             # Adding a defect to lattice
-            function addDefects!(g,spin_idxs::Vector{T}) where T <: Int
+            function addDefects!(g,spin_idxs::Vector{T}) where T <: Integer
                 # Only keep elements that are not defect already
-                @inbounds d_idxs = spin_idxs[map(!,g.defectBools[spin_idxs])]
+                # @inbounds d_idxs::Vector{Int32} = spin_idxs[map(!,g.defectBools[spin_idxs])]
+                d_idxs = spin_idxs[map(!,g.defectBools[spin_idxs])]
+
                 if isempty(d_idxs)
                     return
                 end
                 
                 if length(spin_idxs) > 1
-                    g.aliveList = remOrdEls(g.aliveList,d_idxs) #Remove els from alivelist
-                    g.defectList = zipOrderedLists(g.defectList,d_idxs) #Add them to defectlist
+                    g.defectList = zipOrderedLists(g.defectList,d_idxs)  #Add els to defectlist
+                    g.aliveList = remOrdEls(g.aliveList,d_idxs) #Remove them from alivelist
+                   
                 else #Faster for singular elements
                     #Remove item from alive list and start searching backwards from spin_idx
                      # Since aliveList is sorted, spin_idx - idx_found gives number of smaller elements in list
@@ -181,46 +184,45 @@
                     insert!(g.defectList,spin_idxs[1]-rem_idx+1,spin_idxs[1])
                 end
 
+                # Mark corresponding spins to defect
+                # @inbounds g.defectBools[d_idxs] .= true
+                g.defectBools[d_idxs] .= true
+
                 # If first defect, mark lattice as containing defects
                 if g.defects == false
                     g.defects = true
                 end
 
-                # Mark corresponding spins to defect
-                @inbounds g.defectBools[d_idxs] .= true
-
-
                 # Set states to zero
-                @inbounds g.state[d_idxs] .= 0
+                # @inbounds g.state[d_idxs] .= 0
+                g.state[d_idxs] .= 0
 
             end
 
             # Removing defects, insert ordered list!
-            function remDefects!(g, spin_idxs::Vector{T}) where T <: Int
-
+            function remDefects!(g, spin_idxs::Vector{T}) where T <: Integer
+              
                 # Only keep ones that are actually defect
                 @inbounds d_idxs = spin_idxs[g.defectBools[spin_idxs]]
                 if isempty(d_idxs)
                     return
                 end
-
-                # Spins not defect anymore
-                @inbounds g.defectBools[d_idxs] .= false
-
+          
                 # Remove defects from defect list and add to aliveList
                 # Assumes that els are in list!
                 if length(spin_idxs) > 1
+                    g.aliveList = zipOrderedLists(g.aliveList, d_idxs)
                     g.defectList = remOrdEls(g.defectList,d_idxs)
-                    g.aliveList = zipOrderedLists(g.aliveList, g.defectList)
                 else    #Is faster for singular elements
                     # Add to alive list
                     # Adds it to original index offset by how many smaller numbers are also removed
                     rem_idx = removeFirst!(g.defectList,spin_idxs[1]) 
                     insert!(g.aliveList,spin_idxs[1]-(rem_idx-1),spin_idxs[1])
                 end
-                    
-               
-                
+
+                # Spins not defect anymore
+                @inbounds g.defectBools[d_idxs] .= false
+         
                 if isempty(g.defectList) && g.defects == true
                     g.defects = false
                 end
@@ -275,33 +277,25 @@
             # Set element to -1 or +1, shouldn't be 0
             function setEls!(g,spin_idxs, brush)
                 # First remove defect if it was defect
-                remDefect!(g,spin_idxs)
+                remDefects!(g,spin_idxs)
                 # Then set element
-                @inbounds g.state[spin_idxs] = brush
+                @inbounds g.state[spin_idxs] .= brush
             end
+
             setEl!(g,spin_idx,brush) = setEls!(g, [spin_idx], brush)
             setEl!(g,i,j,brush) =  setEl!(g,coordToIdx(i,j,g.N),brush)
 
         """ User Functions """
-            # Set point either to element or defect
-            function paintPoint!(g,i,j, brush)
-                idx = coordToIdx(i,j,g.N)
-
-                if brush != 0
-                    setEl!(g,idx,brush)
-                else
-                    addDefect!(g,idx)
-                end
-            end
-
+            # Set points either to element or defect
             function paintPoints!(g, coords , brush)
-                idxs = coordToIdx.(coords,g.N)
-
+                idxs::Vector{Int32} = coordToIdx.(coords,g.N)
                 if brush != 0
-                    setEl!(g,idxs,brush)
+                    setEls!(g,idxs,brush)
                 else
-                    addDefect!(g,idxs)
+                    addDefects!(g,idxs)
                 end
             end
+
+            paintPoint!(g,i,j,brush ) = paintPoints!(g, coordToIdx(i,j,g.N) , brush)
 
 # end

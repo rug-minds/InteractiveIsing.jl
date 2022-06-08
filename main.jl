@@ -47,7 +47,7 @@ const pmap = JuliaPropertyMap(
     "pDefects" => pDefects,
     "brush" => brush,
     "brushR" => brushR,
-    "M" => M
+    "M" => M,
 )
 
 """QML Functions"""
@@ -108,12 +108,17 @@ analysis_func = Threads.@spawn on(updates) do val
 end
 
 # Draw circle to state
-circleToStateQML(i,j) = Threads.@spawn circleToState(g,circ[],i,j,brushR[],brush[])
+circleToStateQML(i,j) = Threads.@spawn circleToState(g,circ[],i,j,brush[])
 
 addRandomDefectsQML() = Threads.@spawn addRandomDefects!(g,pDefects)
 
 # Make an interface for this
 tempSweepQML() = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array, 7, 0.1, 12, 2, 5)))
+
+# New circle
+function newCirc()
+    circ[] = getOrdCirc(brushR[])
+end
 
 @qmlfunction println
 @qmlfunction addRandomDefectsQML
@@ -121,6 +126,7 @@ tempSweepQML() = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,
 @qmlfunction circleToStateQML
 @qmlfunction startSim
 @qmlfunction tempSweepQML
+@qmlfunction newCirc
 
 function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
     buffer = reshape(buffer, size(img[]))

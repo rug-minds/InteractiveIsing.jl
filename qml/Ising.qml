@@ -14,8 +14,8 @@ import Qt.labs.platform
 ApplicationWindow {
   id: root
   title: "Ising Simulation"
-  width: obs.gSize + 256
-  height: obs.gSize + 256
+  width: canvas.width + 256
+  height: canvas.height + 256
   visible: true
 
 
@@ -114,6 +114,7 @@ ApplicationWindow {
             stepSize: 1
             onValueChanged: {
               obs.brushR = value
+              Julia.newCirc()
             }
           }
         }
@@ -123,8 +124,25 @@ ApplicationWindow {
       JuliaCanvas{
         Layout.alignment: Qt.AlignCenter
         id: canvas
-        width: obs.gSize
-        height: obs.gSize
+        width: {
+          if(obs.gSize > 512)
+          {
+            obs.gSize
+          }
+          else{
+            512
+          }
+        }
+        height: {
+          if(obs.gSize > 512)
+          {
+            obs.gSize
+          }
+          else{
+            512
+          }
+        }
+
         paintFunction: showlatest
 
         MouseArea{
@@ -191,12 +209,12 @@ ApplicationWindow {
             Layout.alignment: Qt.AlignHCenter
             text: obs.pDefects
             onTextChanged: {
-              var int num = parseInt(text)
+              var num = parseInt(text)
               if(num > 100)
               {
                 num = 100
               }
-              if(num > 0 && num < 100)
+              else if(num > 0 && num < 100)
               {
                 num = num
               }

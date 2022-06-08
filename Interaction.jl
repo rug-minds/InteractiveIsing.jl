@@ -2,7 +2,7 @@
 """
 Drawing Functions
 """
-# Get a circle of states around lattice point i,j
+# Get a circle centered around i,j  =1
 function getOrdCirc(r)
     if r == 0
         return [(1,1)]
@@ -14,6 +14,7 @@ function getOrdCirc(r)
     lineArray = Vector{Vector{Tuple{Int16, Int16}}}()
     points = 0
 
+    # Looks if point in square at offset mid_off, is within r, if it is, color horizontal line and move down, otherwise, move left and try again.
     while yoff < 1
         # Right lower point
         mid_off =(.5,.5)
@@ -30,17 +31,22 @@ function getOrdCirc(r)
             points += length(width)
         end
     end
+
     # Append mid line if it's not there
     if lineArray[end][1][1] != 1
         append!(lineArray, [[(1,1+x) for x in (-r):r]])
         points += length((-r):r)
     end
-    for idx in reverse(1:(length(lineArray)-1))
-        offset = (length(lineArray) - idx)
-        append!(lineArray, [[(y+offset,x) for (y,x) in lineArray[idx]]])
-        points += length(lineArray[idx])
+    
+    # Mirror all lines, excpept for middle line.
+    lines_added = 0
+    for offset in 1:(length(lineArray)-1)
+        points += length(lineArray[end-offset-lines_added])
+        append!(lineArray, [[(1+offset,x) for (y,x) in lineArray[end-offset-lines_added]]])
+        lines_added +=1
     end
 
+    # Make new vector with just the points, not the lines and return it
     circPoints = Vector{Tuple{Int16, Int16}}(undef,points)
     p_idx = 1
 
@@ -55,6 +61,7 @@ function getOrdCirc(r)
 
 end
 
+# Center circle at i,j
 function offCirc(points,i,j, periodic = false)
     circPoints = Vector{Tuple{Int16, Int16}}(undef,length(points))
     p_idx = 1
@@ -67,23 +74,71 @@ function offCirc(points,i,j, periodic = false)
     return circPoints
 end
 
-
-
 # Make image from circle
 function ordCircleToImg(r, N)
     matr = zeros((N,N))
-    circle = getOrderedCircle(r)
-    
-    for line in circle 
-        for point in line
-            if point[1] > 0 && point[2] > 0
-                # println("Point $point")
+    circle = offCirc(getOrdCirc(r),round(N/2),round(N/2))
+    for point in circle
+        if point[1] > 0 && point[2] > 0
+            if matr[point[1],point[2]] == 1
+                matr[point[1],point[2]] = 2
+            else 
                 matr[point[1],point[2]] = 1 
             end
         end
     end
+
     return imagesc(matr)
 end
+
+
+# Draw a circle to state
+function circleToState(g, circ, i,j, brush, periodic = false)
+    println("Drew circle at y=$i and x=$j")
+    
+    if periodic
+        circle = offCirc(circ,i,j)
+    else
+        circle = removeNeg(offCirc(circ,i,j),g.N)
+    end
+
+    paintPoints!(g,circle,brush)
+end
+
+# Make image from circle
+function circleToImg(i,j,r, N)
+    matr = zeros((N,N))
+    circle = getCircle(i,j,r)
+    
+    for point in circle
+        matr[point[1],point[2]] = 1 
+    end
+    return imagesc(matr)
+end
+
+
+#Removing 
+function removeNeg(circ,N)
+    negPoints = 0
+
+    for point in circ
+        @inbounds if !(0 < point[1] < N && 0 < point[2] < N)
+            negPoints += 1
+        end
+    end
+
+    circPoints = Vector{Tuple{Int16, Int16}}(undef,length(circ) - negPoints)
+    p_idx = 1
+    for point in circ
+        if 0 < point[1] < N && 0 < point[2] < N
+            circPoints[p_idx] = point
+            p_idx +=1
+        end
+    end
+    return circPoints
+end
+
+
 
 #OLD
 function getCircle(i,j,r)
@@ -129,53 +184,4 @@ function getCircle(i,j,r)
     # append!(lineArray,[(i+r-steps,y) for y in (j-(xoff-1)):(j+(xoff-1))])
     # append!(lineArray,[(i-r+steps,y) for y in (j-(xoff-1)):(j+(xoff-1))])
     return lineArray
-end
-
-# Draw a circle to state
-function circleToState(g, circ, i,j, brush, periodic = false)
-    println("Drew circle at y=$i and x=$j")
-
-    if periodic
-        circle = offCirc(circ,i,j)
-    else
-        circle = removeNeg(circ,g.N)
-    end
-    
-    paintPoints!(g,circle,brush)
-    
-
-end
-
-# Make image from circle
-function circleToImg(i,j,r, N)
-    matr = zeros((N,N))
-    circle = getCircle(i,j,r)
-    
-    for point in circle
-        # println("Point $point")
-        matr[point[1],point[2]] = 1 
-    end
-    return imagesc(matr)
-end
-
-
-#Removing 
-function removeNeg(circ,N)
-    negPoints = 0
-
-    for point in circ
-        @inbounds if !(0 < point[1] < N && 0 < point[2] < N)
-            negPoints += 1
-        end
-    end
-
-    circPoints = Vector{Tuple{Int16, Int16}}(undef,length(circ) - negPoints)
-    p_idx = 1
-    for point in circ
-        if 0 < point[1] < N && 0 < point[2] < N
-            circPoints[p_idx] = point
-            p_idx +=1
-        end
-    end
-    return circPoints
 end
