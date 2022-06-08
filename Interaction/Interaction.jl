@@ -13,8 +13,9 @@ using ..IsingGraphs
 export getOrdCirc, circleToState, ordCircleToImg
 
 # Draw a circle to state
-function circleToState(g::IsingGraph, circ, i,j, brush, periodic = false)
-    println("Drew circle at y=$i and x=$j")
+function circleToState(g::IsingGraph, circ, i_in,j_in, brush, periodic = false)
+    i = Int16(round(i_in))
+    j = Int16(round(j_in))
     
     if periodic #Add wrapper to allow for periodic graph
         circle = offCirc(circ,i,j)
@@ -23,6 +24,7 @@ function circleToState(g::IsingGraph, circ, i,j, brush, periodic = false)
     end
 
     paintPoints!(g,circle,brush)
+    println("Drew circle at y=$i and x=$j")
 end
 
 # Make image from circle
