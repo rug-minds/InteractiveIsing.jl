@@ -47,18 +47,15 @@
     Methods
     """
         # Matrix Coordinates to vector Coordinates
-        function coordToIdx(i,j,N)
+        @inline  function coordToIdx(i,j,N)
             return (i-1)*N+j
         end
-                        
-        function idxToCoord(idx::Int,N)
+
+        coordToIdx((i,j),N) = coordToIdx(i,j,N)
+        # Go from idx to lattice coordinates
+        @inline function idxToCoord(idx::Int,N)
             return ((idx-1)÷N+1,(idx-1)%N+1)
         end
-
-        # coordToIdxMatrix(N)
-        #     matr = [[]]
-        #     for 
-        # end
 
         # Initialization of state
         function initRandomState(N)::Vector{Int8}
@@ -276,17 +273,16 @@
 
         """Backend """
             # Set element to -1 or +1, shouldn't be 0
-            function setEl!(g,spin_idx, brush)
+            function setEls!(g,spin_idxs, brush)
                 # First remove defect if it was defect
-                remDefect!(g,spin_idx)
+                remDefect!(g,spin_idxs)
                 # Then set element
-                @inbounds g.state[spin_idx] = brush
-
+                @inbounds g.state[spin_idxs] = brush
             end
-
+            setEl!(g,spin_idx,brush) = setEls!(g, [spin_idx], brush)
             setEl!(g,i,j,brush) =  setEl!(g,coordToIdx(i,j,g.N),brush)
 
-        """ User Function """
+        """ User Functions """
             # Set point either to element or defect
             function paintPoint!(g,i,j, brush)
                 idx = coordToIdx(i,j,g.N)
@@ -295,6 +291,16 @@
                     setEl!(g,idx,brush)
                 else
                     addDefect!(g,idx)
+                end
+            end
+
+            function paintPoints!(g, coords , brush)
+                idxs = coordToIdx.(coords,g.N)
+
+                if brush != 0
+                    setEl!(g,idxs,brush)
+                else
+                    addDefect!(g,idxs)
                 end
             end
 

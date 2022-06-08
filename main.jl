@@ -5,16 +5,16 @@ using BenchmarkTools
 import Plots as pl
 # Qt5QuickControls_jll, Qt5QuickControls2_jll,
 
-include("ising_graph.jl")
+include("IsingGraphs.jl")
 # using IsingGraphs
-include("ising_update.jl")
-include("square_adj.jl")
-include("plotting.jl")
+include("MCMC.jl")
+include("SquareAdj.jl")
+include("GPlotting.jl")
 # using .GPlotting
-include("interaction.jl")
-include("analysis.jl")
+include("Interaction.jl")
+include("Analysis.jl")
 
-qmlfile = joinpath(dirname(Base.source_path()), "qml", "ising.qml")
+qmlfile = joinpath(dirname(Base.source_path()), "qml", "Ising.qml")
 
 #Observables
 const running = Observable(true)
@@ -26,6 +26,7 @@ const pDefects = Observable(0) #percentage of defects to be added
 const isPaused = Observable(false) 
 const brush = Observable(0)
 const brushR = Observable( Int(round(NIs[]/10)) )
+const circ  = Observable(getOrdCirc(brushR[]))
 const M = Observable(0.0)
 const M_array = []
 
@@ -107,7 +108,7 @@ analysis_func = Threads.@spawn on(updates) do val
 end
 
 # Draw circle to state
-circleToStateQML(i,j) = Threads.@spawn circleToState(g,i,j,brushR[],brush[])
+circleToStateQML(i,j) = Threads.@spawn circleToState(g,circ[],i,j,brushR[],brush[])
 
 addRandomDefectsQML() = Threads.@spawn addRandomDefects!(g,pDefects)
 
