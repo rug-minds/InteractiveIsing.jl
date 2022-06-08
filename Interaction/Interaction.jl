@@ -1,0 +1,56 @@
+# User interaction with simulation
+"""
+Drawing Functions
+"""
+__precompile__()
+
+module Interaction
+
+include("Cirlces.jl")
+# include("../IsingGraphs.jl")
+using ..IsingGraphs
+
+export getOrdCirc, circleToState, ordCircleToImg
+
+# Draw a circle to state
+function circleToState(g::IsingGraph, circ, i,j, brush, periodic = false)
+    println("Drew circle at y=$i and x=$j")
+    
+    if periodic #Add wrapper to allow for periodic graph
+        circle = offCirc(circ,i,j)
+    else 
+        circle = removeNeg(offCirc(circ,i,j),g.N)
+    end
+
+    paintPoints!(g,circle,brush)
+end
+
+# Make image from circle
+function circleToImg(i,j,r, N)
+    matr = zeros((N,N))
+    circle = getCircle(i,j,r)
+    
+    for point in circle
+        matr[point[1],point[2]] = 1 
+    end
+    return imagesc(matr)
+end
+
+# Make image from circle
+function ordCircleToImg(r, N)
+    matr = zeros((N,N))
+    circle = offCirc(getOrdCirc(r),round(N/2),round(N/2))
+    for point in circle
+        if point[1] > 0 && point[2] > 0
+            if matr[point[1],point[2]] == 1
+                matr[point[1],point[2]] = 2
+            else 
+                matr[point[1],point[2]] = 1 
+            end
+        end
+    end
+
+    return imagesc(matr)
+end
+
+end

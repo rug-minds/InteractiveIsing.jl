@@ -1,6 +1,18 @@
 # Analysis functions
 
-function corrL(g::IsingGraph, L)
+__precompile__()
+
+module Analysis
+
+# include("IsingGraphs.jl")
+using ..IsingGraphs
+
+export magnetization, dataToDF, tempSweep, MPlot 
+
+
+
+# Sweep the lattice to find x and y correlation data.
+function corrL(g::IsingGraphs.IsingGraph, L)
     avgprod = 0
     prodavg1 = 0
     prodavg2 = 0
@@ -54,7 +66,7 @@ function corrL(g::IsingGraph, L)
 
 end
 
-function corrFunc(g::IsingGraph, plot = true)
+function corrFunc(g::IsingGraphs.IsingGraph, plot = true)
     corr::Vector{Float32} = []
     x = [1:(g.N-2);]
     for L in 1:(g.N-2)
@@ -67,64 +79,6 @@ function corrFunc(g::IsingGraph, plot = true)
 
     return corr
 end
-
-function magnetization(g::IsingGraph,M,M_array)
-    avg_window = 50 # Averaging window = Sec * FPS, becomes max length of vector
-    append!(M_array,sum(g.state))
-    if length(M_array) > avg_window
-        deleteat!(M_array,1)
-        M[] = sum(M_array)/avg_window 
-    end 
-end
-
-function tempSweep(g,TIs, M_array, TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equi_wait = 0)
-    println("Starting temperature sweep")
-    first = true
-    # Data 
-    Ts = []
-    corrls = []
-    Ms = []
-    TRange =  TIs[]:TStep:TF
-    println("The sweep will take approximately $(length(TRange)*dpoints*dpointwait + length(TRange)*stepwait + equi_wait) seconds")
-
-    for T in TRange
-        if first
-            if equi_wait != 0
-                println("Waiting $equi_wait seconds for equilibration")
-            end
-            sleep(equi_wait)
-            first=false
-        else
-            println("Waiting $stepwait seconds in between temperature steps")
-            sleep(stepwait)
-        end
-        println("Doing temperature $T, gathering $dpoints data points in intervals of $dpointwait seconds")
-        println("Approximately $(length(T:TStep:TF)*dpoints*dpointwait + length(T:TStep:TF)*stepwait) seconds remaining")
-        TIs[] = T
-        
-        
-
-        for i in 1:dpoints
-            append!(Ts, T)
-            append!(corrls,[corrFunc(IsingGraph(g),false)])
-            append!(Ms, last(M_array))
-        
-            sleep(dpointwait)
-        end
-        
-        sleep(equi_wait)
-    end
-
-    return (Ts,corrls,Ms)
-end
-
-# Input the temperature sweep data into a dataframe
-function dataToDF(tsData, lMax = length(tsData[2][1]))
-    return DataFrame(Temperature = tsData[1], Correlation_Function = [corrL[1:lMax] for corrL in  tsData[2]], Magnetization = tsData[3] )
-end
-
-# Read CSV to dataframe
-csvToDF(filename) = DataFrame(CSV.File(filename)) 
 
 # Determine amount of datapoints per temperature (if homogeous)
 function detDPoints(dat)
@@ -196,3 +150,70 @@ function fitCorrl(dat,dom_end, f, params...)
     return fit!(model,data)
 end
 
+
+"""
+User functions
+"""
+
+function magnetization(g::IsingGraphs.IsingGraph,M,M_array)
+    avg_window = 50 # Averaging window = Sec * FPS, becomes max length of vector
+    append!(M_array,sum(g.state))
+    if length(M_array) > avg_window
+        deleteat!(M_array,1)
+        M[] = sum(M_array)/avg_window 
+    end 
+end
+
+function tempSweep(g,TIs, M_array, TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equi_wait = 0)
+    println("Starting temperature sweep")
+    first = true
+    # Data 
+    Ts = []
+    corrls = []
+    Ms = []
+    TRange =  TIs[]:TStep:TF
+    println("The sweep will take approximately $(length(TRange)*dpoints*dpointwait + length(TRange)*stepwait + equi_wait) seconds")
+
+    for T in TRange
+        if first
+            if equi_wait != 0
+                println("Waiting $equi_wait seconds for equilibration")
+            end
+            sleep(equi_wait)
+            first=false
+        else
+            println("Waiting $stepwait seconds in between temperature steps")
+            sleep(stepwait)
+        end
+        println("Doing temperature $T, gathering $dpoints data points in intervals of $dpointwait seconds")
+        println("Approximately $(length(T:TStep:TF)*dpoints*dpointwait + length(T:TStep:TF)*stepwait) seconds remaining")
+        TIs[] = T
+        
+        
+
+        for i in 1:dpoints
+            append!(Ts, T)
+            append!(corrls,[corrFunc(IsingGraph(g),false)])
+            append!(Ms, last(M_array))
+        
+            sleep(dpointwait)
+        end
+        
+        sleep(equi_wait)
+    end
+
+    return (Ts,corrls,Ms)
+end
+
+# Input the temperature sweep data into a dataframe
+function dataToDF(tsData, lMax = length(tsData[2][1]))
+    return DataFrame(Temperature = tsData[1], Correlation_Function = [corrL[1:lMax] for corrL in  tsData[2]], Magnetization = tsData[3] )
+end
+
+# Read CSV to dataframe
+csvToDF(filename) = DataFrame(CSV.File(filename)) 
+
+
+
+
+end

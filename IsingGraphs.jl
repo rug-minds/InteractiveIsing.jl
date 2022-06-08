@@ -1,9 +1,12 @@
 # Ising Graph Representation and functions
-# __precompile__()
+__precompile__()
 
-# module IsingGraphs
-
-#     export IsingGraph, hIsing, reInitGraph!, coordToIdx, idxToCoord, ising_it, paintPoint!
+module IsingGraphs
+    
+    include("SquareAdj.jl")
+    using Random, Distributions, .SquareAdj
+    
+    export IsingGraph, hIsing, reInitGraph!, coordToIdx, idxToCoord, ising_it, paintPoints!
 
     mutable struct IsingGraph
         N::Int32
@@ -298,4 +301,4 @@
 
             paintPoint!(g,i,j,brush ) = paintPoints!(g, coordToIdx(i,j,g.N) , brush)
 
-# end
+end

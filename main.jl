@@ -5,14 +5,18 @@ using BenchmarkTools
 import Plots as pl
 # Qt5QuickControls_jll, Qt5QuickControls2_jll,
 
+
 include("IsingGraphs.jl")
-# using IsingGraphs
-include("MCMC.jl")
-include("SquareAdj.jl")
+using .IsingGraphs
+
+include("Interaction/Interaction.jl")
+using .Interaction
+include("Analysis.jl")
+using .Analysis
+
+include("MCMC.jl") 
 include("GPlotting.jl")
 # using .GPlotting
-include("Interaction.jl")
-include("Analysis.jl")
 
 qmlfile = joinpath(dirname(Base.source_path()), "qml", "Ising.qml")
 
@@ -71,6 +75,19 @@ function updateGraph()
             
         end
     end
+end
+
+function updateGraphREPL()
+        while running[]
+        
+            if !isPaused[] # if sim not paused
+                updateMonteCarloQML!(g,TIs[],JIs[])
+                updates[] += 1
+            else
+                sleep(0.2)
+            end
+            
+        end
 end
 
 # Functions that happen on time intervals

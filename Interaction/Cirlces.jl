@@ -1,7 +1,5 @@
-# Special routines for program
-"""
-Drawing Functions
-"""
+# Making circles and offsetting them
+
 # Get a circle centered around i,j  =1
 function getOrdCirc(r)
     if r == 0
@@ -74,49 +72,6 @@ function offCirc(points,i,j, periodic = false)
     return circPoints
 end
 
-# Make image from circle
-function ordCircleToImg(r, N)
-    matr = zeros((N,N))
-    circle = offCirc(getOrdCirc(r),round(N/2),round(N/2))
-    for point in circle
-        if point[1] > 0 && point[2] > 0
-            if matr[point[1],point[2]] == 1
-                matr[point[1],point[2]] = 2
-            else 
-                matr[point[1],point[2]] = 1 
-            end
-        end
-    end
-
-    return imagesc(matr)
-end
-
-
-# Draw a circle to state
-function circleToState(g, circ, i,j, brush, periodic = false)
-    println("Drew circle at y=$i and x=$j")
-    
-    if periodic
-        circle = offCirc(circ,i,j)
-    else
-        circle = removeNeg(offCirc(circ,i,j),g.N)
-    end
-
-    paintPoints!(g,circle,brush)
-end
-
-# Make image from circle
-function circleToImg(i,j,r, N)
-    matr = zeros((N,N))
-    circle = getCircle(i,j,r)
-    
-    for point in circle
-        matr[point[1],point[2]] = 1 
-    end
-    return imagesc(matr)
-end
-
-
 #Removing 
 function removeNeg(circ,N)
     negPoints = 0
@@ -185,3 +140,4 @@ function getCircle(i,j,r)
     # append!(lineArray,[(i-r+steps,y) for y in (j-(xoff-1)):(j+(xoff-1))])
     return lineArray
 end
+

@@ -1,6 +1,11 @@
 """
 Stuff for initialization of adjacency matrix
 """
+__precompile__()
+
+module SquareAdj
+
+export fillAdjList!
 
 # Returns the indices of all the spins a particular spin is connected with
 function coupleIndices(i,j,N)
@@ -57,5 +62,18 @@ function conn_rule(i,j, N)
     end
     
     return True
+
+end
+
+# Matrix Coordinates to vector Coordinates
+@inline  function coordToIdx(i,j,N)
+    return (i-1)*N+j
+end
+
+coordToIdx((i,j),N) = coordToIdx(i,j,N)
+# Go from idx to lattice coordinates
+@inline function idxToCoord(idx::Int,N)
+    return ((idx-1)÷N+1,(idx-1)%N+1)
+end
 
 end
