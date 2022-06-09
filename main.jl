@@ -22,7 +22,7 @@ qmlfile = joinpath(dirname(Base.source_path()), "qml", "Ising.qml")
 
 #Observables
 const running = Observable(true)
-const gSize = Observable(1024)
+const gSize = Observable(512)
 const NIs = Observable(gSize[])
 const TIs = Observable(1.0)
 const JIs = Observable(1.0)
@@ -126,6 +126,7 @@ end
 
 # Draw circle to state
 circleToStateQML(i,j) = Threads.@spawn circleToState(g,circ[],i,j,brush[])
+circleToStateREPL(i,j) = circleToState(g,circ[],i,j,brush[])
 
 addRandomDefectsQML() = Threads.@spawn addRandomDefects!(g,pDefects)
 

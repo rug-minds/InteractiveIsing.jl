@@ -102,9 +102,10 @@ ApplicationWindow {
         // Radius Slider
         ColumnLayout{
           Text{
-            text: "Radius \n" + obs.brushR
+            text: "Radius \n" + rSlider.value
           }
           Slider{
+            id: rSlider
             value: obs.brushR
             orientation: Qt.Vertical
             // minimumValue: 1
@@ -114,170 +115,179 @@ ApplicationWindow {
             stepSize: 1
             onValueChanged: {
               obs.brushR = value
+            }
+            onPressedChanged: {
+              // show slider Hover when pressed, hide otherwise
+              if( pressed )
+              {
+            
+            }
+            else {
               Julia.newCirc()
             }
           }
         }
       }
-
-
-      JuliaCanvas{
-        Layout.alignment: Qt.AlignCenter
-        id: canvas
-        width: {
-          if(obs.gSize > 512)
-          {
-            obs.gSize
-          }
-          else{
-            512
-          }
-        }
-        height: {
-          if(obs.gSize > 512)
-          {
-            obs.gSize
-          }
-          else{
-            512
-          }
-        }
-
-        paintFunction: showlatest
-
-        MouseArea{
-          anchors.fill: parent
-          onClicked: {
-            Julia.circleToStateQML(mouseY, mouseX)
-          }
-        }
-
-      }
-
-
-      //  Temperature Slider
-      Item{
-        Layout.alignment: Qt.AlignCenter
-        width: childrenRect.width
-        height: childrenRect.height
-        RowLayout{
-          spacing: 2
-          // Temp Slider
-          Slider{
-            value: obs.TIs
-            orientation: Qt.Vertical
-            // minimumValue: 0.0
-            // maximumValue: 20
-            from: 0.0
-            to: 20.
-            stepSize: 0.01
-            onValueChanged: {
-              obs.TIs = value
-            }
-          }
-          // Temperature text
-          Item{
-            width: 32
-            Text{
-              Layout.alignment: Qt.AlignCenter
-              text: qsTr("T=\n") + obs.TIs.toFixed(2)
-            }
-          }
-        }
-      }
     }
 
-    // Panels under plot
-    // Inserting Defects
-    // Magnetization
-    ColumnLayout{
+
+    JuliaCanvas{
       Layout.alignment: Qt.AlignCenter
-      spacing: 2
-
-      // Defects textfield & Button
-      Item{
-        Layout.alignment: Qt.AlignCenter
-
-        width: childrenRect.width
-        height: childrenRect.height
-
-        ColumnLayout{
-          spacing: 2
-          Layout.alignment: Qt.AlignHCenter
-
-          TextField{
-            Layout.alignment: Qt.AlignHCenter
-            text: obs.pDefects
-            onTextChanged: {
-              var num = parseInt(text)
-              if(num > 100)
-              {
-                num = 100
-              }
-              else if(num > 0 && num < 100)
-              {
-                num = num
-              }
-              else
-              {
-                num = 0
-              }
-              obs.pDefects = num
-              Julia.println(obs.pDefects)
-            }
-          }
-
-          Button{
-            Layout.alignment: Qt.AlignHCenter
-            text: "Insert Defects"
-            onClicked: {
-              Julia.addRandomDefectsQML()
-            }
-          }
+      id: canvas
+      width: {
+        if(obs.gSize > 512)
+        {
+          obs.gSize
+        }
+        else{
+          512
+        }
+      }
+      height: {
+        if(obs.gSize > 512)
+        {
+          obs.gSize
+        }
+        else{
+          512
         }
       }
 
-      // Text under plot, magnetization
-      Item{
-        width: childrenRect.width
-        height: childrenRect.height
-        Layout.alignment: Qt.AlignHCenter
-        ColumnLayout{
-          Layout.alignment: Qt.AlignHCenter
-          Text{
-            text: "Magnetization: " + obs.M.toFixed(1)
-          }
-        }
-      }
+      paintFunction: showlatest
 
-      // Initiate Temperature sweep
-
-      Button{
-        text: "Temperature Sweep"
+      MouseArea{
+        anchors.fill: parent
         onClicked: {
-          var component = Qt.createComponent("/Users/werk/Documents/PhD/Julia Projects/IsingQT6/qml/tsweep.qml")
-          var window = component.createObject(root)
-          window.show()
+          Julia.circleToStateQML(mouseY, mouseX)
         }
       }
-      // Button{
-      //   Layout.alignment: Qt.AlignHCenter
-      //   text: "Temperature Sweep"
-      //   onClicked: {
-      //     Julia.tempSweepQML()
-      //   }
-      // }
 
+    }
+
+
+    //  Temperature Slider
+    Item{
+      Layout.alignment: Qt.AlignCenter
+      width: childrenRect.width
+      height: childrenRect.height
+      RowLayout{
+        spacing: 2
+        // Temp Slider
+        Slider{
+          value: obs.TIs
+          orientation: Qt.Vertical
+          // minimumValue: 0.0
+          // maximumValue: 20
+          from: 0.0
+          to: 20.
+          stepSize: 0.01
+          onValueChanged: {
+            obs.TIs = value
+          }
+        }
+        // Temperature text
+        Item{
+          width: 32
+          Text{
+            Layout.alignment: Qt.AlignCenter
+            text: qsTr("T=\n") + obs.TIs.toFixed(2)
+          }
+        }
+      }
     }
   }
 
+  // Panels under plot
+  // Inserting Defects
+  // Magnetization
+  ColumnLayout{
+    Layout.alignment: Qt.AlignCenter
+    spacing: 2
 
-  // Timer for display
-  Timer {
-    // Set interval in ms:
-    interval: 1/60*1000; running: true; repeat: true
-    onTriggered: {
-      canvas.update();
+    // Defects textfield & Button
+    Item{
+      Layout.alignment: Qt.AlignCenter
+
+      width: childrenRect.width
+      height: childrenRect.height
+
+      ColumnLayout{
+        spacing: 2
+        Layout.alignment: Qt.AlignHCenter
+
+        TextField{
+          Layout.alignment: Qt.AlignHCenter
+          text: obs.pDefects
+          onTextChanged: {
+            var num = parseInt(text)
+            if(num > 100)
+            {
+              num = 100
+            }
+            else if(num > 0 && num < 100)
+            {
+              num = num
+            }
+            else
+            {
+              num = 0
+            }
+            obs.pDefects = num
+            Julia.println(obs.pDefects)
+          }
+        }
+
+        Button{
+          Layout.alignment: Qt.AlignHCenter
+          text: "Insert Defects"
+          onClicked: {
+            Julia.addRandomDefectsQML()
+          }
+        }
+      }
     }
+
+    // Text under plot, magnetization
+    Item{
+      width: childrenRect.width
+      height: childrenRect.height
+      Layout.alignment: Qt.AlignHCenter
+      ColumnLayout{
+        Layout.alignment: Qt.AlignHCenter
+        Text{
+          text: "Magnetization: " + obs.M.toFixed(1)
+        }
+      }
+    }
+
+    // Initiate Temperature sweep
+
+    Button{
+      text: "Temperature Sweep"
+      onClicked: {
+        var component = Qt.createComponent("/Users/werk/Documents/PhD/Julia Projects/IsingQT6/qml/tsweep.qml")
+        var window = component.createObject(root)
+        window.show()
+      }
+    }
+    // Button{
+    //   Layout.alignment: Qt.AlignHCenter
+    //   text: "Temperature Sweep"
+    //   onClicked: {
+    //     Julia.tempSweepQML()
+    //   }
+    // }
+
   }
+}
+
+
+// Timer for display
+Timer {
+  // Set interval in ms:
+  interval: 1/60*1000; running: true; repeat: true
+  onTriggered: {
+    canvas.update();
+  }
+}
 }
