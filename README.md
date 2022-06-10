@@ -2,4 +2,6 @@
 
 An interactive classical spin ising MCMC simulation.
 
-Start simulation by running main.jl
+The simulation can be run by executing main.jl
+
+To reduce startup time, use a sysimage.
