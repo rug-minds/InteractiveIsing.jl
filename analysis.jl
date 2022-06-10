@@ -66,6 +66,8 @@ function corrL(g::IsingGraphs.IsingGraph, L)
 
 end
 
+# Calculates the two points correlation function for different lengths and returns a vector with all the data
+# Returned vector index corresponds to dinstance L``
 function corrFunc(g::IsingGraphs.IsingGraph, plot = true)
     corr::Vector{Float32} = []
     x = [1:(g.N-2);]
@@ -80,19 +82,6 @@ function corrFunc(g::IsingGraphs.IsingGraph, plot = true)
     return corr
 end
 
-# Determine amount of datapoints per temperature (if homogeous)
-function detDPoints(dat)
-    dpoint = 0
-    lastt = dat[:,1][1]
-    for temp in dat[:,1]
-        if temp == lastt
-            dpoint += 1
-        else 
-            return dpoint
-        end
-    end
-    return dpoint
-end
 
 # Aggregate all Magnetization measurements for a the same temperatures 
 function datMAvgT(dat,dpoints = detDPoints(dat))
@@ -122,6 +111,17 @@ function datMExpandTime(dat,dpoints,dpointwait)
     return
 end
 
+# Averages M_array over an amount of steps
+# Updates magnetization (which is thus the averaged value)
+function magnetization(g::IsingGraphs.IsingGraph,M,M_array)
+    avg_window = 50 # Averaging window = Sec * FPS, becomes max length of vector
+    append!(M_array,sum(g.state))
+    if length(M_array) > avg_window
+        deleteat!(M_array,1)
+        M[] = sum(M_array)/avg_window 
+    end 
+end
+
 
 """Correlation Length Data"""
 # Parse Correlation Length Data from string in DF
@@ -142,6 +142,7 @@ function dfToCorrls(df)
     return (Ts,corrls)
 end
 
+# Not used currently, used to fit correleation length data to a function f
 function fitCorrl(dat,dom_end, f, params...)
     dom = Domain(1.:dom_end)
     data = Measures(Vector{Float64}(dat[1:dom_end]),0.)
@@ -150,48 +151,78 @@ function fitCorrl(dat,dom_end, f, params...)
     return fit!(model,data)
 end
 
+"""General data"""
+
+# Determine amount of datapoints per temperature from dataframe data (if homogeneous over temps)
+function detDPoints(dat)
+    dpoint = 0
+    lastt = dat[:,1][1]
+    for temp in dat[:,1]
+        if temp == lastt
+            dpoint += 1
+        else 
+            return dpoint
+        end
+    end
+    return dpoint
+end
+
+
+# Input the temperature sweep data into a dataframe
+function dataToDF(tsData, lMax = length(tsData[2][1]))
+    return DataFrame(Temperature = tsData[1], Correlation_Function = [corrL[1:lMax] for corrL in  tsData[2]], Magnetization = tsData[3] )
+end
+
+# Read CSV and outputs dataframe
+csvToDF(filename) = DataFrame(CSV.File(filename)) 
+
+
 
 """
 User functions
 """
 
-function magnetization(g::IsingGraphs.IsingGraph,M,M_array)
-    avg_window = 50 # Averaging window = Sec * FPS, becomes max length of vector
-    append!(M_array,sum(g.state))
-    if length(M_array) > avg_window
-        deleteat!(M_array,1)
-        M[] = sum(M_array)/avg_window 
-    end 
-end
 
-function tempSweep(g,TIs, M_array, TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equi_wait = 0)
+
+# Does analysis over multiple temperatures.
+# Analyzes magnetization and correlation length.
+# Usage: Goes from current temperature of simulation, to TF, in stepsizes of TStep.
+#   Every step, a number of datapoints (dpoints) are recorded, with inervals between them of dpointwait
+#   In between Temperatures there is an optional wait time of stepwait, for equilibration
+#   There is an initial wait time of equiwait for equilibration
+function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0)
     println("Starting temperature sweep")
     first = true
     # Data 
     Ts = []
     corrls = []
     Ms = []
-    TRange =  TIs[]:TStep:TF
-    println("The sweep will take approximately $(length(TRange)*dpoints*dpointwait + length(TRange)*stepwait + equi_wait) seconds")
+    TRange =  TI:TStep:TF
+    
 
     for T in TRange
-        if first
-            if equi_wait != 0
-                println("Waiting $equi_wait seconds for equilibration")
+        println("Gathering data for temperature $T, $dpoints data points in intervals of $dpointwait seconds")
+        waittime = length(TRange)(dpoints*dpointwait + stepwait)
+        if first # If first run, wait equiwait seconds for equibrilation
+            println("The sweep will take approximately $(equiwait + waittime) seconds")
+            if equiwait != 0
+                println("Waiting $equiwait seconds for equilibration")
+                sleep(equiwait)
             end
-            sleep(equi_wait)
             first=false
-        else
+        else # Else wait in between temperatuer steps
             println("Waiting $stepwait seconds in between temperature steps")
             sleep(stepwait)
         end
-        println("Doing temperature $T, gathering $dpoints data points in intervals of $dpointwait seconds")
-        println("Approximately $(length(T:TStep:TF)*dpoints*dpointwait + length(T:TStep:TF)*stepwait) seconds remaining")
-        TIs[] = T
-        
-        
 
-        for i in 1:dpoints
+        # User feedbakc of time
+        
+        println("Approximately $(length(T:TStep:TF)*dpoints*dpointwait + length(T:TStep:TF)*stepwait) seconds remaining")
+        
+        TIs[] = T
+
+        # Gather Datapoints
+        for _ in 1:dpoints
             append!(Ts, T)
             append!(corrls,[corrFunc(IsingGraph(g),false)])
             append!(Ms, last(M_array))
@@ -199,19 +230,11 @@ function tempSweep(g,TIs, M_array, TF = 13, TStep = 0.5, dpoints = 12, dpointwai
             sleep(dpointwait)
         end
         
-        sleep(equi_wait)
     end
 
     return (Ts,corrls,Ms)
 end
 
-# Input the temperature sweep data into a dataframe
-function dataToDF(tsData, lMax = length(tsData[2][1]))
-    return DataFrame(Temperature = tsData[1], Correlation_Function = [corrL[1:lMax] for corrL in  tsData[2]], Magnetization = tsData[3] )
-end
-
-# Read CSV to dataframe
-csvToDF(filename) = DataFrame(CSV.File(filename)) 
 
 
 

@@ -26,7 +26,6 @@ const gSize = Observable(512)
 const NIs = Observable(gSize[])
 const TIs = Observable(1.0)
 const JIs = Observable(1.0)
-const pDefects = Observable(0) #percentage of defects to be added
 const isPaused = Observable(false) 
 const brush = Observable(0)
 const brushR = Observable( Int(round(NIs[]/10)) )
@@ -48,7 +47,6 @@ const pmap = JuliaPropertyMap(
     "TIs" => TIs, 
     "JIs" => JIs, 
     "isPaused" => isPaused, 
-    "pDefects" => pDefects,
     "brush" => brush,
     "brushR" => brushR,
     "M" => M,
@@ -128,10 +126,12 @@ end
 circleToStateQML(i,j) = Threads.@spawn circleToState(g,circ[],i,j,brush[])
 circleToStateREPL(i,j) = circleToState(g,circ[],i,j,brush[])
 
-addRandomDefectsQML() = Threads.@spawn addRandomDefects!(g,pDefects)
+# addRandomDefectsQML(pDefects) = Threads.@spawn addRandomDefects!(g,pDefects)
+addRandomDefectsQML(pDefects) = addRandomDefects!(g,pDefects)
+
 
 # Make an interface for this
-tempSweepQML() = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array, 7, 0.1, 12, 2, 5)))
+tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 ) = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array, TI=TI,TF=TF,TStep=TStep, dpoints = dpoints, dpointwait= dpointwait, stepwait = stepwait, equiwait=equiwait)))
 
 # New circle
 function newCirc()

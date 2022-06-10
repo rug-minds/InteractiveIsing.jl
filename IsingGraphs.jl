@@ -6,7 +6,7 @@ module IsingGraphs
     include("SquareAdj.jl")
     using Random, Distributions, .SquareAdj
     
-    export IsingGraph, hIsing, reInitGraph!, coordToIdx, idxToCoord, ising_it, paintPoints!
+    export IsingGraph, hIsing, reInitGraph!, coordToIdx, idxToCoord, ising_it, paintPoints!, addDefects!, remDefects!, addDefect!, remDefect!
 
     mutable struct IsingGraph
         N::Int32
@@ -232,25 +232,12 @@ module IsingGraphs
 
             end
 
-            remDefect!(g, spin_idx::T) where T <: Int = remDefects!(g,[spin_idx]) 
-            addDefect!(g, spin_idx::T) where T <: Int = addDefects!(g,[spin_idx]) 
+            remDefect!(g, spin_idx::T) where T <: Integer = remDefects!(g,[spin_idx]) 
+            addDefect!(g, spin_idx::T) where T <: Integer = addDefects!(g,[spin_idx]) 
             
             # Lattice indexing
             addDefect!(g,i,j) = addDefect!(g,coordToIdx(i,j,g.N))
             remDefect!(g,i,j) = remDefect!(g,coordToIdx(i,j,g.N))
-
-            # Add percantage of defects randomly to lattice
-            function addRandomDefects!(g,p)
-                if isempty(g.aliveList) || p[] == 0
-                    return nothing
-                end
-
-                for def in 1:round(length(g.aliveList)*p[]/100)
-                    idx = rand(g.aliveList)
-                    addDefect!(g,idx)
-                end
-                p[] = 0         # Reset observable of percantage of elements to be poked
-            end
 
             # Removes Multiple Defects
             function remDefects!(g,idxs::Vector{Any})

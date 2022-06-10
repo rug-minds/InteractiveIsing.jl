@@ -39,7 +39,9 @@ ApplicationWindow {
         Button {
           Layout.alignment: Qt.AlignCenter
           text: "Initialize Graph"
-          onClicked: Julia.initIsing()
+          onClicked: {
+            Julia.initIsing()
+          }
         }
         // Pause Simulation Button
         Button{
@@ -120,174 +122,162 @@ ApplicationWindow {
               // show slider Hover when pressed, hide otherwise
               if( pressed )
               {
-            
-            }
-            else {
-              Julia.newCirc()
+
+              }
+              else {
+                Julia.newCirc()
+              }
             }
           }
         }
       }
-    }
 
 
-    JuliaCanvas{
-      Layout.alignment: Qt.AlignCenter
-      id: canvas
-      width: {
-        if(obs.gSize > 512)
-        {
-          obs.gSize
-        }
-        else{
-          512
-        }
-      }
-      height: {
-        if(obs.gSize > 512)
-        {
-          obs.gSize
-        }
-        else{
-          512
-        }
-      }
-
-      paintFunction: showlatest
-
-      MouseArea{
-        anchors.fill: parent
-        onClicked: {
-          Julia.circleToStateQML(mouseY, mouseX)
-        }
-      }
-
-    }
-
-
-    //  Temperature Slider
-    Item{
-      Layout.alignment: Qt.AlignCenter
-      width: childrenRect.width
-      height: childrenRect.height
-      RowLayout{
-        spacing: 2
-        // Temp Slider
-        Slider{
-          value: obs.TIs
-          orientation: Qt.Vertical
-          // minimumValue: 0.0
-          // maximumValue: 20
-          from: 0.0
-          to: 20.
-          stepSize: 0.01
-          onValueChanged: {
-            obs.TIs = value
+      JuliaCanvas{
+        Layout.alignment: Qt.AlignCenter
+        id: canvas
+        width: {
+          if(obs.gSize > 512)
+          {
+            obs.gSize
+          }
+          else{
+            512
           }
         }
-        // Temperature text
-        Item{
-          width: 32
-          Text{
-            Layout.alignment: Qt.AlignCenter
-            text: qsTr("T=\n") + obs.TIs.toFixed(2)
+        height: {
+          if(obs.gSize > 512)
+          {
+            obs.gSize
           }
-        }
-      }
-    }
-  }
-
-  // Panels under plot
-  // Inserting Defects
-  // Magnetization
-  ColumnLayout{
-    Layout.alignment: Qt.AlignCenter
-    spacing: 2
-
-    // Defects textfield & Button
-    Item{
-      Layout.alignment: Qt.AlignCenter
-
-      width: childrenRect.width
-      height: childrenRect.height
-
-      ColumnLayout{
-        spacing: 2
-        Layout.alignment: Qt.AlignHCenter
-
-        TextField{
-          Layout.alignment: Qt.AlignHCenter
-          text: obs.pDefects
-          onTextChanged: {
-            var num = parseInt(text)
-            if(num > 100)
-            {
-              num = 100
-            }
-            else if(num > 0 && num < 100)
-            {
-              num = num
-            }
-            else
-            {
-              num = 0
-            }
-            obs.pDefects = num
-            Julia.println(obs.pDefects)
+          else{
+            512
           }
         }
 
-        Button{
-          Layout.alignment: Qt.AlignHCenter
-          text: "Insert Defects"
+        paintFunction: showlatest
+
+        MouseArea{
+          anchors.fill: parent
           onClicked: {
-            Julia.addRandomDefectsQML()
+            Julia.circleToStateQML(mouseY, mouseX)
+          }
+        }
+
+      }
+
+
+      //  Temperature Slider
+      Item{
+        Layout.alignment: Qt.AlignCenter
+        width: childrenRect.width
+        height: childrenRect.height
+        RowLayout{
+          spacing: 2
+          // Temp Slider
+          Slider{
+            value: obs.TIs
+            orientation: Qt.Vertical
+            // minimumValue: 0.0
+            // maximumValue: 20
+            from: 0.0
+            to: 20.
+            stepSize: 0.01
+            onValueChanged: {
+              obs.TIs = value
+            }
+          }
+          // Temperature text
+          Item{
+            width: 32
+            Text{
+              Layout.alignment: Qt.AlignCenter
+              text: qsTr("T=\n") + obs.TIs.toFixed(2)
+            }
           }
         }
       }
     }
 
-    // Text under plot, magnetization
-    Item{
-      width: childrenRect.width
-      height: childrenRect.height
-      Layout.alignment: Qt.AlignHCenter
-      ColumnLayout{
-        Layout.alignment: Qt.AlignHCenter
-        Text{
-          text: "Magnetization: " + obs.M.toFixed(1)
+    // Panels under plot
+    // Inserting Defects
+    // Magnetization
+    ColumnLayout{
+      Layout.alignment: Qt.AlignCenter
+      spacing: 2
+
+      // Defects textfield & Button
+      Item{
+        Layout.alignment: Qt.AlignCenter
+
+        width: childrenRect.width
+        height: childrenRect.height
+
+        ColumnLayout{
+          spacing: 2
+          Layout.alignment: Qt.AlignHCenter
+
+          TextField{
+            Layout.alignment: Qt.AlignHCenter
+            id: defectText
+            text: "0"
+            validator: IntValidator {
+              bottom: 0; top: 100
+            }
+          }
+
+          Button{
+            Layout.alignment: Qt.AlignHCenter
+            text: "Insert Defects"
+            onClicked: {
+              Julia.addRandomDefectsQML(parseInt(defectText.text))
+              defectText.text = ""
+            }
+          }
         }
       }
-    }
 
-    // Initiate Temperature sweep
-
-    Button{
-      text: "Temperature Sweep"
-      onClicked: {
-        var component = Qt.createComponent("/Users/werk/Documents/PhD/Julia Projects/IsingQT6/qml/tsweep.qml")
-        var window = component.createObject(root)
-        window.show()
+      // Text under plot, magnetization
+      Item{
+        width: childrenRect.width
+        height: childrenRect.height
+        Layout.alignment: Qt.AlignHCenter
+        ColumnLayout{
+          Layout.alignment: Qt.AlignHCenter
+          Text{
+            text: "Magnetization: " + obs.M.toFixed(1)
+          }
+        }
       }
+
+      // Initiate Temperature sweep
+
+      Button{
+        text: "Temperature Sweep"
+        onClicked: {
+          var component = Qt.createComponent("./Tsweep.qml")
+          var window = component.createObject(root)
+          window.show()
+        }
+      }
+      // Button{
+      //   Layout.alignment: Qt.AlignHCenter
+      //   text: "Temperature Sweep"
+      //   onClicked: {
+      //     Julia.tempSweepQML()
+      //   }
+      // }
+
     }
-    // Button{
-    //   Layout.alignment: Qt.AlignHCenter
-    //   text: "Temperature Sweep"
-    //   onClicked: {
-    //     Julia.tempSweepQML()
-    //   }
-    // }
-
   }
-}
 
 
-// Timer for display
-Timer {
-  // Set interval in ms:
-  interval: 1/60*1000; running: true; repeat: true
-  onTriggered: {
-    canvas.update();
+  // Timer for display
+  Timer {
+    // Set interval in ms:
+    interval: 1/60*1000; running: true; repeat: true
+    onTriggered: {
+      canvas.update();
+    }
   }
-}
 }

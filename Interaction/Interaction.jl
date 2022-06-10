@@ -10,7 +10,7 @@ include("Cirlces.jl")
 # include("../IsingGraphs.jl")
 using ..IsingGraphs
 
-export getOrdCirc, circleToState, ordCircleToImg
+export getOrdCirc, circleToState, ordCircleToImg, addRandomDefects!
 
 # Draw a circle to state
 function circleToState(g::IsingGraph, circ, i_in,j_in, brush, periodic = false)
@@ -53,6 +53,19 @@ function ordCircleToImg(r, N)
     end
 
     return imagesc(matr)
+end
+
+# Add percantage of defects randomly to lattice
+function addRandomDefects!(g::IsingGraph,p)
+    if length(g.aliveList) <= 1 || p == 0
+        return nothing
+    end
+
+    for def in 1:round(length(g.aliveList)*p/100)
+        idx = rand(g.aliveList)
+        addDefect!(g,idx)
+    end
+
 end
 
 end

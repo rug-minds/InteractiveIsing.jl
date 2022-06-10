@@ -1,6 +1,6 @@
 # Making circles and offsetting them
 
-# Get a circle centered around i,j  =1
+# Get a circle centered around i,j  =1, with points ordered from top left to bottom right.
 function getOrdCirc(r)
     if r == 0
         return [(1,1)]
@@ -59,7 +59,7 @@ function getOrdCirc(r)
 
 end
 
-# Center circle at i,j
+# Offset a circle so that center is at i,j
 function offCirc(points,i,j, periodic = false)
     circPoints = Vector{Tuple{Int16, Int16}}(undef,length(points))
     p_idx = 1
@@ -72,7 +72,7 @@ function offCirc(points,i,j, periodic = false)
     return circPoints
 end
 
-#Removing 
+# Remove all points of circle that fall outside of square lattice NxN
 function removeNeg(circ,N)
     negPoints = 0
 
