@@ -106,7 +106,8 @@ module IsingGraphs
 
             # Zip together two ordered lists into a new ordered list    
             function zipOrderedLists(vec1::Vector{T},vec2::Vector{T}) where T
-                result::Vector{T} = zeros(length(vec1)+length(vec2))
+                # result::Vector{T} = zeros(length(vec1)+length(vec2))
+                result = Vector{T}(undef, length(vec1)+length(vec2))
 
                 ofs1 = 1
                 ofs2 = 1
@@ -133,7 +134,8 @@ module IsingGraphs
             # Deletes els from vec
             # Assumes that els are in vec!
             function remOrdEls(vec::Vector{T}, els::Vector{T}) where T
-                result::Vector{T} = zeros(length(vec)-length(els))
+                # result::Vector{T} = zeros(length(vec)-length(els))
+                result = Vector{T}(undef, length(vec)-length(els))
                 
                 it_idx = 1
                 num_del = 0

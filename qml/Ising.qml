@@ -18,7 +18,24 @@ ApplicationWindow {
   height: canvas.height + 256
   visible: true
 
+  Item{
+    anchors.left : parent.left
+    width: childrenRect.width
+    height: childrenRect.height
 
+    ColumnLayout{
+      Layout.alignment: Qt.AlignHCenter
+      Text{
+        Layout.alignment: Qt.AlignHCenter
+        text: "Updates per frame: " 
+        
+      }
+      Text{
+        Layout.alignment: Qt.AlignHCenter
+        text: obs.upf
+      }
+    }
+  }
 
   // Whole application in a column
   // Screen stuff above, panels and text under
@@ -245,6 +262,7 @@ ApplicationWindow {
         ColumnLayout{
           Layout.alignment: Qt.AlignHCenter
           Text{
+            Layout.alignment: Qt.AlignHCenter
             text: "Magnetization: " + obs.M.toFixed(1)
           }
         }
@@ -253,6 +271,7 @@ ApplicationWindow {
       // Initiate Temperature sweep
 
       Button{
+        Layout.alignment: Qt.AlignHCenter
         text: "Temperature Sweep"
         onClicked: {
           var component = Qt.createComponent("./Tsweep.qml")
@@ -260,6 +279,9 @@ ApplicationWindow {
           window.show()
         }
       }
+
+
+
       // Button{
       //   Layout.alignment: Qt.AlignHCenter
       //   text: "Temperature Sweep"
@@ -275,9 +297,12 @@ ApplicationWindow {
   // Timer for display
   Timer {
     // Set interval in ms:
+    property int frames: 1
     interval: 1/60*1000; running: true; repeat: true
     onTriggered: {
+      Julia.timedFunctions();
       canvas.update();
+      frames += 1
     }
   }
 }

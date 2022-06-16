@@ -9,7 +9,12 @@ using ..IsingGraphs
 
 export magnetization, dataToDF, tempSweep, MPlot 
 
-
+function insertShift(vec::Vector{T}, el::T) where T
+    newVec = Vector{T}(undef, length(vec))
+    newVec[1:(end-1)] = vec[2:end]
+    newVec[end] = el
+    return newVec
+end
 
 # Sweep the lattice to find x and y correlation data.
 function corrL(g::IsingGraphs.IsingGraph, L)
@@ -113,13 +118,16 @@ end
 
 # Averages M_array over an amount of steps
 # Updates magnetization (which is thus the averaged value)
-function magnetization(g::IsingGraphs.IsingGraph,M,M_array)
-    avg_window = 50 # Averaging window = Sec * FPS, becomes max length of vector
-    append!(M_array,sum(g.state))
-    if length(M_array) > avg_window
-        deleteat!(M_array,1)
-        M[] = sum(M_array)/avg_window 
-    end 
+let avg_window = 60, M_array = zeros(Int32,avg_window), frames = 0
+    global function magnetization(g::IsingGraphs.IsingGraph,M)
+        avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
+        M_array = insertShift(M_array, Int32(sum(g.state)))
+        if frames > avg_window
+            M[] = sum(M_array)/avg_window 
+            frames = 0
+        end 
+        frames += 1 
+    end
 end
 
 

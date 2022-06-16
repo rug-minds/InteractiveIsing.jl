@@ -1,22 +1,6 @@
 ENV["QSG_RENDER_LOOP"] = "basic"
 
-using LinearAlgebra, Distributions, Random, GLMakie, FileIO, QML, Observables, ColorSchemes, Images, DataFrames, CSV, CxxWrap
-using BenchmarkTools
-import Plots as pl
-# Qt5QuickControls_jll, Qt5QuickControls2_jll,
-
-
-include("IsingGraphs.jl")
-using .IsingGraphs
-
-include("Interaction/Interaction.jl")
-using .Interaction
-include("Analysis.jl")
-using .Analysis
-
-include("MCMC.jl") 
-include("GPlotting.jl")
-# using .GPlotting
+include("Sim.jl")
 
 qmlfile = joinpath(dirname(Base.source_path()), "qml", "Ising.qml")
 
@@ -31,13 +15,30 @@ const brush = Observable(0)
 const brushR = Observable( Int(round(NIs[]/10)) )
 const circ  = Observable(getOrdCirc(brushR[]))
 const M = Observable(0.0)
-const M_array = []
 
-const updates = Observable(0)
+# Locking updating mag
+const updatingMag = Ref(false)
+
+
+# Counting MMC updates
+const updates = Ref(0)
+# Updates per frame
+const upf = Observable(0)
+# Locking thread
+const updatingUpf = Ref(false)
+
 
 # Global Variables
 const g = IsingGraph(NIs[])
-const img = Observable(gToImg(g))
+
+# Image
+const img = Ref(gToImg(g))
+# Locking img updating thread
+const updatingImg = Ref(false)
+
+# For threads, don't make new ones if already funning
+
+
 
 # Basically a dict of all properties
 const pmap = JuliaPropertyMap(
@@ -50,94 +51,10 @@ const pmap = JuliaPropertyMap(
     "brush" => brush,
     "brushR" => brushR,
     "M" => M,
+    "upf" => upf
 )
 
-"""QML Functions"""
-# Initialize isinggraph and display
-function initIsing()
-    reInitGraph!(g) 
-    M[] = 0
-end
-
-# Main loop for for MCMC
-function updateGraph()
-    Threads.@spawn begin
-        while running[]
-        
-            if !isPaused[] # if sim not paused
-                updateMonteCarloQML!(g,TIs[],JIs[])
-                updates[] += 1
-            else
-                sleep(0.2)
-            end
-            
-        end
-    end
-end
-
-function updateGraphREPL()
-        while running[]
-        
-            if !isPaused[] # if sim not paused
-                updateMonteCarloQML!(g,TIs[],JIs[])
-                updates[] += 1
-            else
-                sleep(0.2)
-            end
-            
-        end
-end
-
-# Functions that happen on time intervals
-function timedFunctions()
-    Threads.@spawn begin
-        tfs = time()
-        while running[]
-            if time() - tfs > 0.01
-                updateImg(img)
-            end
-            sleep(0.001)
-        end
-        
-    end
-end
-
-function updateImg(img)
-    img[] = gToImg(g,gSize[])
-end
-
-
-function startSim()
-    timedFunctions()
-    updateGraph()
-end
-
-analysis_func = Threads.@spawn on(updates) do val
-# analysis_func = on(updates) do val   
-    if updates[] > g.size
-        begin
-            magnetization(g,M,M_array)
-            updates[] = 0
-        end
-    end
-end
-
-# Draw circle to state
-circleToStateQML(i,j) = Threads.@spawn circleToState(g,circ[],i,j,brush[])
-circleToStateREPL(i,j) = circleToState(g,circ[],i,j,brush[])
-
-# addRandomDefectsQML(pDefects) = Threads.@spawn addRandomDefects!(g,pDefects)
-addRandomDefectsQML(pDefects) = addRandomDefects!(g,pDefects)
-
-
-# Make an interface for this
-tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 ) = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array, TI=TI,TF=TF,TStep=TStep, dpoints = dpoints, dpointwait= dpointwait, stepwait = stepwait, equiwait=equiwait)))
-
-# New circle
-function newCirc()
-    circ[] = getOrdCirc(brushR[])
-end
-
+@qmlfunction timedFunctions
 @qmlfunction println
 @qmlfunction addRandomDefectsQML
 @qmlfunction initIsing
@@ -146,23 +63,12 @@ end
 @qmlfunction tempSweepQML
 @qmlfunction newCirc
 
-function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
-    buffer = reshape(buffer, size(img[]))
-    buffer = reinterpret(ARGB32, buffer)
-    buffer .= img[]
-    return
-  end
-
-
 # Start Simulation
 startSim()
-
-showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest, Cvoid, 
-                                               (Array{UInt32,1}, Int32, Int32))
-
 # loadqml( qmlfile, obs =  pmap, ); exec_async() 
 
 loadqml( qmlfile, obs =  pmap, showlatest = showlatest_cfunction); exec_async()
+
 
 
 
