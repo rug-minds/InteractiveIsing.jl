@@ -7,52 +7,31 @@ __precompile__()
 module Interaction
 
 include("Cirlces.jl")
-# include("../IsingGraphs.jl")
 using ..IsingGraphs
 
 export getOrdCirc, circleToState, ordCircleToImg, addRandomDefects!
 
+# Put a lattice index (i or j) back onto lattice by looping it around
+@inline function latmod(i,N)
+    if i < 1 || i > N
+        return i = mod((i-1),N) +1
+    end
+    return i
+end
+
 # Draw a circle to state
-function circleToState(g::IsingGraph, circ, i_in,j_in, brush, periodic = false)
+function circleToState(g::IsingGraph, circ, i_in,j_in, brush, periodic = true)
     i = Int16(round(i_in))
     j = Int16(round(j_in))
     
     if periodic #Add wrapper to allow for periodic graph
-        circle = offCirc(circ,i,j)
+        circle = loopCirc(offCirc(circ,i,j),g.N)
     else 
-        circle = removeNeg(offCirc(circ,i,j),g.N)
+        circle = cutCirc(offCirc(circ,i,j),g.N)
     end
 
     paintPoints!(g,circle,brush)
     println("Drew circle at y=$i and x=$j")
-end
-
-# Make image from circle
-function circleToImg(i,j,r, N)
-    matr = zeros((N,N))
-    circle = getCircle(i,j,r)
-    
-    for point in circle
-        matr[point[1],point[2]] = 1 
-    end
-    return imagesc(matr)
-end
-
-# Make image from circle
-function ordCircleToImg(r, N)
-    matr = zeros((N,N))
-    circle = offCirc(getOrdCirc(r),round(N/2),round(N/2))
-    for point in circle
-        if point[1] > 0 && point[2] > 0
-            if matr[point[1],point[2]] == 1
-                matr[point[1],point[2]] = 2
-            else 
-                matr[point[1],point[2]] = 1 
-            end
-        end
-    end
-
-    return imagesc(matr)
 end
 
 # Add percantage of defects randomly to lattice

@@ -19,7 +19,7 @@ ApplicationWindow {
   visible: true
 
   Item{
-    anchors.left : parent.left
+    anchors.left: parent.left
     width: childrenRect.width
     height: childrenRect.height
 
@@ -27,8 +27,8 @@ ApplicationWindow {
       Layout.alignment: Qt.AlignHCenter
       Text{
         Layout.alignment: Qt.AlignHCenter
-        text: "Updates per frame: " 
-        
+        text: "Updates per frame: "
+
       }
       Text{
         Layout.alignment: Qt.AlignHCenter
@@ -193,6 +193,7 @@ ApplicationWindow {
           spacing: 2
           // Temp Slider
           Slider{
+            height: 256
             value: obs.TIs
             orientation: Qt.Vertical
             // minimumValue: 0.0
@@ -237,7 +238,7 @@ ApplicationWindow {
           TextField{
             Layout.alignment: Qt.AlignHCenter
             id: defectText
-            text: "0"
+            placeholderText: "0"
             validator: IntValidator {
               bottom: 0; top: 100
             }
@@ -247,8 +248,16 @@ ApplicationWindow {
             Layout.alignment: Qt.AlignHCenter
             text: "Insert Defects"
             onClicked: {
-              Julia.addRandomDefectsQML(parseInt(defectText.text))
-              defectText.text = ""
+              if(!(isNaN(parseInt(defectText.text))))
+                {
+                  if(parseInt(defectText.text) > 99)
+                {
+                  defectText.text = "99"
+                }
+
+                 Julia.addRandomDefectsQML(parseInt(defectText.text))
+                }
+                defectText.text = ""
             }
           }
         }
@@ -277,19 +286,12 @@ ApplicationWindow {
           var component = Qt.createComponent("./Tsweep.qml")
           var window = component.createObject(root)
           window.show()
+          if(!root.tsweep.active){
+            println("Active")
+          }
+
         }
       }
-
-
-
-      // Button{
-      //   Layout.alignment: Qt.AlignHCenter
-      //   text: "Temperature Sweep"
-      //   onClicked: {
-      //     Julia.tempSweepQML()
-      //   }
-      // }
-
     }
   }
 

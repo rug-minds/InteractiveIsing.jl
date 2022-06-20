@@ -45,7 +45,7 @@ end
 function updateGraph()
         while running[]
             if !isPaused[] # if sim not paused
-                updateMonteCarloQML!(g,TIs[],JIs[])
+                updateMonteCarloQML!(g,TIs[])
                 updates[] += 1
             else
                 sleep(0.2)
@@ -58,7 +58,7 @@ function updateGraphREPL()
     while running[]
     
         if !isPaused[] # if sim not paused
-            updateMonteCarloQML!(g,TIs[],JIs[])
+            updateMonteCarloQML!(g,TIs[])
             updates[] += 1
         else
             sleep(0.2)
@@ -77,7 +77,7 @@ function updateImg()
 end
 
 # Track number of updates per frame
-let avgWindow = 30, updateWindow = zeros(Int64,avgWindow), frames = 0
+let avgWindow = 60, updateWindow = zeros(Int64,avgWindow), frames = 0
     global function updatesPerFrame()
         updateWindow = insertShift(updateWindow,updates[])
         if frames > avgWindow
