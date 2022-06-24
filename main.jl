@@ -14,8 +14,9 @@ qmlfile = joinpath(dirname(Base.source_path()), "qml", "Ising.qml")
     # Is simulation weighted
     const weighted = true
     # How many nearest neighbors, hard cutoff
-    const NN = 1
-    const weightFunc(r) = randWeights(r, dist = Normal(1,0.01))
+    const NN = 3
+    dist = Normal(0,.5)
+    const weightFunc(r) = randomizeWeights(altWeightsCross(r),dist)
 
 
 #Observables

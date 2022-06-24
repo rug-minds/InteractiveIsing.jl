@@ -153,15 +153,7 @@ ApplicationWindow {
       JuliaCanvas{
         Layout.alignment: Qt.AlignCenter
         id: canvas
-        width: {
-          if(obs.gSize > 512)
-          {
-            obs.gSize
-          }
-          else{
-            512
-          }
-        }
+        width: obs.gSize 
         height: {
           if(obs.gSize > 512)
           {
