@@ -1,7 +1,7 @@
 ENV["QSG_RENDER_LOOP"] = "basic"
 
 include("Sim.jl")
-include("WeightFuncs.jl")
+
 
 qmlfile = joinpath(dirname(Base.source_path()), "qml", "Ising.qml")
 
@@ -14,9 +14,9 @@ qmlfile = joinpath(dirname(Base.source_path()), "qml", "Ising.qml")
     # Is simulation weighted
     const weighted = true
     # How many nearest neighbors, hard cutoff
-    const NN = 3
-    dist = Normal(0,.5)
-    const weightFunc(r) = randomizeWeights(altWeightsCross(r),dist)
+    const NN = 2
+    dist = Normal(0,0)
+    const weightFunc(dr) = randomizeWeights(dr, altWeights,dist)
 
 
 #Observables
@@ -84,7 +84,6 @@ const pmap = JuliaPropertyMap(
 # Start Simulation
 startSim()
 loadqml( qmlfile, obs =  pmap, showlatest = showlatest_cfunction); exec_async()
-
 
 
 

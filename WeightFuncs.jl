@@ -1,47 +1,107 @@
 """ 
 
 Define weighting functions here
-Should be a function of the radius r
+Should be a function of the radius dr
 
 """
 
+module WeightFuncs
+
+using Distributions
+
+export WeightFunc, setAddDist, setMultDist, defaultIsing, altWeights, altWeightsCross, randWeights
+
+# Assuming one method,
+# Returns symbols of argnames
+function func_argnames(f::Function)
+    ml = collect(methods(f))
+    return Base.method_argnames(last(ml))[2:end]
+end
+
+
+mutable struct WeightFunc
+    f::Function
+    NN::Integer
+    invoke::Function
+    addTrue::Bool
+    multTrue::Bool
+    addDist::Any 
+    multDist::Any
+
+    function WeightFunc(func::Function, ; NN::Integer)
+        invoke(dr,i,j) = func(;dr,i,j)
+        return new(func,Int8(NN), invoke, false, false)
+    end
+
+end
+
+
+
+# Add an additive distribution
+function setAddDist(weightfunc, dist)
+    weightfunc.addTrue = true
+    weightfunc.addDist = dist
+
+    invoke(dr,i,j) = !weightfunc.addTrue ? rand(weightfunc.addDist) + weightfunc.f(;dr,i,j) : rand(weightfunc.multDist)*weightfunc.f(;dr,i,j)+rand(weightfunc.addDist)
+    
+    weightfunc.invoke = invoke
+end
+
+# Add an additive distribution
+function setMultDist(weightfunc, dist)
+    weightfunc.multTrue = true
+    weightfunc.multDist = dist
+
+    invoke(dr,i,j) = !weightfunc.addTrue ? rand(weightfunc.multDist)*weightfunc.f(;dr,i,j) : rand(weightfunc.multDist)*weightfunc.f(;dr,i,j)+rand(weightfunc.addDist)
+
+    weightfunc.invoke = invoke
+end
+
 # Default ising Function
-@inline defaultIsing(r)::Float32 = r == 1 ? 1. : 0.
+defaultIsing =  WeightFunc(
+    (;dr, _...) -> dr == 1 ? 1. : 0., 
+    NN = 1
+)
 
-function altWeightsCross(r)::Float32
-    if r % 2 == 1
-        return 1.0*1/r^2
-    elseif r % 2 == 0
-        return -1*1/r^2
-    else
-        return 1/r^2
-    end
-end
+altWeights = WeightFunc(
+    (;dr, _...) ->
+        if dr % 2 == 1
+            return 1.0*1/dr^2
+        elseif dr % 2 == 0
+            return -1*1/dr^2
+        else
+            return 1/dr^2
+        end,
+    NN  = 2
+)
 
-function altWeights(r)::Float32
-    if r % 2 == 1
-        return 1
-    elseif r % 2 == 0
-        return -1
-    else
-        return 0
-    end
-end
+altWeightsCross = WeightFunc(
+    (;dr, _...) ->
+        if dr % 2 == 1
+            return -1
+        elseif dr % 2 == 0
+            return 1
+        else
+            return 0
+        end,
+    NN = 2
+)
 
-function randWeights(r; dist = nothing)::Float32
-    if r > 1
-        return 0.
-    end
+randWeights = WeightFunc(
+    (;dr, _...) ->
+        if dist == nothing
+            return rand()
+        else
+            return rand(dist)
+        end,
+    NN = 1
+)
 
-    if dist == nothing
-        return rand()
-    else
-        return rand(dist)
-    end
-end
 
+""" Old """
 # Use distribution centered around zero
-function randomizeWeights(weight::Float32, dist)::Float32
+function randomizeWeights(dr, func , dist)::Float32
+    weight = func(dr)
     if weight == 0
         return 0.
     else
@@ -49,5 +109,6 @@ function randomizeWeights(weight::Float32, dist)::Float32
     end
 end
 
+end
 
 

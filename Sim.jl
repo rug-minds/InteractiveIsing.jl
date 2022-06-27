@@ -4,6 +4,9 @@ import Plots as pl
 # Qt5QuickControls_jll, Qt5QuickControls2_jll,
 
 
+include("WeightFuncs.jl")
+using .WeightFuncs
+
 include("IsingGraphs.jl")
 using .IsingGraphs
 
@@ -16,6 +19,9 @@ include("MCMC.jl")
 include("GPlotting.jl")
 # using .GPlotting
 
+""" Helper Functions """
+
+# Insert a value in front of vector and push out last one.
 function insertShift(vec::Vector{T}, el::T) where T
     newVec = Vector{T}(undef, length(vec))
     newVec[1:(end-1)] = vec[2:end]
@@ -23,7 +29,8 @@ function insertShift(vec::Vector{T}, el::T) where T
     return newVec
 end
 
-# Spawn function thread, but only if such a thread is not already active
+# Spawn a new thread for a function, but only if no thread for that function was already created
+# The function is "locked" using a reference to a Boolean value: spawned
 function spawnOne(f::Function, spawned::Ref{Bool}, args...)
     # Run function, when thread is finished mark it as not running
     function runOne(func::Function, spawned::Ref{Bool}, args...)
@@ -40,6 +47,7 @@ function spawnOne(f::Function, spawned::Ref{Bool}, args...)
     end
 end
 
+""" Persistent functions of the simulation """
 
 # Main loop for for MCMC
 function updateGraph()
@@ -54,6 +62,7 @@ function updateGraph()
         end
 end
 
+# Update the graph from the REPL, for debugging
 function updateGraphREPL()
     while running[]
     
@@ -90,35 +99,50 @@ let avgWindow = 60, updateWindow = zeros(Int64,avgWindow), frames = 0
 end
 
 """ QML FUNCTIONS """
-
-function timedFunctions()
-    spawnOne(updateImg, updatingImg)
-    spawnOne(updatesPerFrame, updatingUpf)
-    spawnOne(magnetization, updatingMag, g,M)
-end
-
-
-# addRandomDefectsQML(pDefects) = Threads.@spawn addRandomDefects!(g,pDefects)
-addRandomDefectsQML(pDefects) = addRandomDefects!(g,pDefects)
-
 # Initialize isinggraph and display
 function initIsing()
     reInitGraph!(g) 
     M[] = 0
 end
 
+function annealing(Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Tstep:Tf, reInit = true, saveImage)
+    # Reinitialize
+    reInit && initIsing()
+
+    # Set temp and initial wait
+    TIs[] = Ti
+    sleep(initWait)
+    
+    for temp in T_it
+        sleep(stepWait)
+        # save image
+    end
+end
+
+# All functions that are run from the QML Timer
+function timedFunctions()
+    spawnOne(updateImg, updatingImg)
+    spawnOne(updatesPerFrame, updatingUpf)
+    spawnOne(magnetization, updatingMag, g,M)
+end
+
+# Add percentage of defects to lattice
+addRandomDefectsQML(pDefects) = addRandomDefects!(g,pDefects)
+
 # Draw circle to state
 circleToStateQML(i,j) = Threads.@spawn circleToState(g,circ[],i,j,brush[])
 circleToStateREPL(i,j) = circleToState(g,circ[],i,j,brush[])
 
+# Sweep temperatures and record magnetization and correlation lengths
 # Make an interface for this
 tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 ) = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array, TI=TI,TF=TF,TStep=TStep, dpoints = dpoints, dpointwait= dpointwait, stepwait = stepwait, equiwait=equiwait)))
 
-# New circle
+# Save a new circle with size brushR[]
 function newCirc()
     circ[] = getOrdCirc(brushR[])
 end
 
+""" For QML canvas to show image """
 function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
     buffer = reshape(buffer, size(img[]))
     buffer = reinterpret(ARGB32, buffer)

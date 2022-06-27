@@ -30,23 +30,12 @@ function latmod(i,N)
 end
 
 
-# Input idx, gives all other indexes which it is coupled to. NN is how many nearest neighbors, 
-# can set periodic or not
-# rfunc is distance function
-function adjEntry(idx, N, NN = 1, periodic = true, rfunc = r->1/r^2)::Vector{Tuple{Int32,Float32}}
-    (i,j) = idxToCoord(idx, N)
-    if periodic
-        couple = [(coordToIdx(latmod(i2,N),latmod(j2,N),N), rfunc( sqrt((i-i2)^2 + (j-j2)^2) )) for i2 in (i-NN):(i+NN), j2 in (j-NN):(j+NN) if (!(i2 == i && j2 == j) && ( rfunc( sqrt((i-i2)^2 + (j-j2)^2)) != 0.)  )]
-    else
-        couple =[ (coordToIdx(i2, j2,N), rfunc( sqrt((i-i2)^2 + (j-j2)^2) )) for i2 in (i-NN):(1+NN), j2 in (j-NN):(j+NN) if ( !(i2 == i && j2 == j) && (i2 > 0 && j2 > 0 && i2 <= N && j2 <= N) && (rfunc( sqrt((i-i2)^2 + (j-j2)^2) ) != 0.) )]
-    end
 
-    return couple
-end
-
-function adjEntry!(adj, idx, N, NN = 1, periodic = true, rfunc = r->1/r^2)
+function adjEntry!(adj, idx, N, NN = 1, periodic = true, rfunc = dr->1/dr^2)
     (i,j) = idxToCoord(idx, N)
 
+    # Returns bool representing wether there is a connection
+    # Bases connection on periodic and NN
     function doesConnect(i,j,icoup,jcoup)
         if periodic
             return (!(icoup == i && jcoup == j) && ( rfunc( sqrt((i-icoup)^2 + (j-jcoup)^2)) != 0.))
@@ -55,6 +44,7 @@ function adjEntry!(adj, idx, N, NN = 1, periodic = true, rfunc = r->1/r^2)
         end
     end
 
+    # 
     function coupIdxFunc(icoup,jcoup)
         if periodic
             return coordToIdx(latmod(icoup,N),latmod(jcoup,N),N)
@@ -97,16 +87,16 @@ end
 
 # Should also include function!!!!
 # Init the adj list of g
-function fillAdjList!(adj, N , NN = 1; periodic = true, rfunc = r-> r == 1 ? 1. : 0., ijfunc = (i,j) -> 1)
+function fillAdjList!(adj, N , NN = 1; periodic = true, weightFunc = dr-> dr == 1 ? 1. : 0., ijfunc = (i,j) -> 1)
 
     for idx in 1:N*N
-        adjEntry!(adj, idx, N, NN, periodic, rfunc)
+        adjEntry!(adj, idx, N, NN, periodic, weightFunc)
     end
     
 end
 
 # Initialization of adjacency matrix for a given ND
-function initAdj(N; NN = 1, periodic = true, weightFunc = r == 1 ? 1. : 0.)
+function initAdj(N; NN = 1, periodic = true, weightFunc = (dr;i,j) -> dr == 1 ? 1. : 0.)
     adj = Vector{Vector{Conn}}(undef,N^2)
     fillAdjList!(adj,N, NN, periodic = periodic, rfunc = weightFunc)
     return adj
@@ -133,6 +123,22 @@ Stuff for initialization of adjacency matrix
 
 """ Old functions """
 
+
+
+# Input idx, gives all other indexes which it is coupled to. NN is how many nearest neighbors, 
+# can set periodic or not
+# rfunc is distance function
+function adjEntry(idx, N, NN = 1, periodic = true, rfunc = dr->1/dr^2)::Vector{Tuple{Int32,Float32}}
+    (i,j) = idxToCoord(idx, N)
+    if periodic
+        couple = [(coordToIdx(latmod(i2,N),latmod(j2,N),N), rfunc( sqrt((i-i2)^2 + (j-j2)^2) )) for i2 in (i-NN):(i+NN), j2 in (j-NN):(j+NN) if (!(i2 == i && j2 == j) && ( rfunc( sqrt((i-i2)^2 + (j-j2)^2)) != 0.)  )]
+    else
+        couple =[ (coordToIdx(i2, j2,N), rfunc( sqrt((i-i2)^2 + (j-j2)^2) )) for i2 in (i-NN):(1+NN), j2 in (j-NN):(j+NN) if ( !(i2 == i && j2 == j) && (i2 > 0 && j2 > 0 && i2 <= N && j2 <= N) && (rfunc( sqrt((i-i2)^2 + (j-j2)^2) ) != 0.) )]
+    end
+
+    return couple
+end
+
 # Count number of edges in adjacency matrix
 function numEdges(adj::Vector)
     num = 0
@@ -152,12 +158,12 @@ function coupleIndices(i,j,N)
     # Left right up down
     # Sets any of the above to false if spins are at the edge of lattice
     # Representing that there are no spins to that side anymore
-    l,r,u,d = (true,true,true,true)
+    l,dr,u,d = (true,true,true,true)
     if j == 1 
         l = false 
     end
     if j == N
-        r = false 
+        dr = false 
     end
     if i == 1 
         u = false 
@@ -167,8 +173,8 @@ function coupleIndices(i,j,N)
     end
     
     # Filters nearest neighbors that are outside of grid
-    """lu u ru r rd d dl l"""
-    idxs = [l && u, u , r && u , r , r && d, d, d && l , l]
+    """lu u ru dr rd d dl l"""
+    idxs = [l && u, u , dr && u , dr , dr && d, d, d && l , l]
     cn = (y, x) -> coordToIdx(y,x,N)
     nn = [cn(i-1,j-1),cn(i-1,j),cn(i-1,j+1),cn(i,j+1),cn(i+1,j+1),cn(i+1,j),cn(i+1,j-1),cn(i,j-1)]
     return nn[idxs]                    
