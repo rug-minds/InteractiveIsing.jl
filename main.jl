@@ -1,22 +1,13 @@
 ENV["QSG_RENDER_LOOP"] = "basic"
 
 include("Sim.jl")
+include("CustomWF.jl")
 
-
-qmlfile = joinpath(dirname(Base.source_path()), "qml", "Ising.qml")
+qmlfile = joinpath(dirname(Base.source_path()), "qml", "Main.qml")
 
 # Global Variables
-
-    # User Parameters
-
-    const periodic = true
-
-    # Is simulation weighted
-    const weighted = true
-    # How many nearest neighbors, hard cutoff
-    const NN = 2
-    dist = Normal(0,0)
-    const weightFunc(dr) = randomizeWeights(dr, altWeights,dist)
+const weighted = true
+const weightFunc = RadialWeightF
 
 
 #Observables
@@ -28,7 +19,7 @@ const JIs = Observable(1.0)
 const isPaused = Observable(false) 
 const brush = Observable(0)
 const brushR = Observable( Int(round(NIs[]/10)) )
-const circ  = Observable(getOrdCirc(brushR[]))
+const circ  = Observable(getOrdCirc(brushR[])) 
 const M = Observable(0.0)
 
 
@@ -46,10 +37,8 @@ const updatingUpf = Ref(false)
 # Graph
 const g = IsingGraph(
     NIs[], 
-    periodic = periodic, 
     weighted = weighted,
-    NN = NN,
-    weightFunc = weighted ? weightFunc : defIsing
+    weightFunc = weighted ? weightFunc : defaultIsing
     )
 
 # Image

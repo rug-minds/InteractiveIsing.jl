@@ -6,6 +6,9 @@ module IsingGraphs
 include("SquareAdj.jl")
 using Random, Distributions, .SquareAdj
 
+include("WeightFuncs.jl")
+using .WeightFuncs
+
 export IsingGraph, hIsing, reInitGraph!, coordToIdx, idxToCoord, ising_it, paintPoints!, addDefects!, remDefects!, addDefect!, remDefect!, connIdx, connW
 
 # Aliases
@@ -33,12 +36,12 @@ end
 INITIALIZERS
 """ 
     #Initialization using only N
-    IsingGraph(N::Int; periodic = true, weighted = false, NN = 1, weightFunc = r == 1 ? 1. : 0.) = 
+    IsingGraph(N::Int; weighted = false, weightFunc = DefaultIsing()) = 
         IsingGraph(
             N,
             N*N,
             initRandomState(N),
-            initAdj(N, NN = NN, periodic = periodic, weightFunc = weightFunc), 
+            initSqAdj(N, weightFunc = weightFunc), 
             weighted = weighted
             )
 
@@ -81,14 +84,6 @@ Methods
         return [sample([-1,1]) for x in 1:(N*N) ]
     end
 
-    # Initialization of adjacency matrix for a given ND
-    function initAdj(N; NN = 1, periodic = true, weightFunc = r == 1 ? 1. : 0.)
-        adj = Vector{Vector{Conn}}(undef,N^2)
-        fillAdjList!(adj,N, NN, periodic = periodic, rfunc = weightFunc)
-        return adj
-    end
-
-
     # Returns an iterator over the ising lattice
     # If there are no defects, returns whole range
     # Otherwise it returns all alive spins
@@ -110,6 +105,13 @@ end
 # Get weight of connection
 @inline function connW(conn::Conn)
     conn[2]
+end
+
+# Initialization of adjacency matrix for a given ND
+function initSqAdj(N; weightFunc = DefaultIsing())
+    adj = Vector{Vector{Conn}}(undef,N^2)
+    fillAdjList!(adj,N, weightFunc)
+    return adj
 end
 
 

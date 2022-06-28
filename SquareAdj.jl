@@ -5,6 +5,9 @@ __precompile__()
 
 module SquareAdj
 
+include("WeightFuncs.jl")
+using .WeightFuncs
+
 export fillAdjList!, numEdges, latmod, initAdj
 
 
@@ -31,16 +34,23 @@ end
 
 
 
-function adjEntry!(adj, idx, N, NN = 1, periodic = true, rfunc = dr->1/dr^2)
+function adjEntry!(adj, N, idx, weightFunc = defaultIsing)
+    periodic = weightFunc.periodic
+    NN = weightFunc.NN
     (i,j) = idxToCoord(idx, N)
-
+    inv = weightFunc.invoke
     # Returns bool representing wether there is a connection
     # Bases connection on periodic and NN
-    function doesConnect(i,j,icoup,jcoup)
+    function doesConnect(i,j,icoup,jcoup, weight)
+        # If weight is zero, does no connections
+        if weight == 0.
+            return false
+        end
+
         if periodic
-            return (!(icoup == i && jcoup == j) && ( rfunc( sqrt((i-icoup)^2 + (j-jcoup)^2)) != 0.))
+            return !(icoup == i && jcoup == j)
         else
-            return ( !(icoup == i && jcoup == j) && (icoup > 0 && jcoup > 0 && icoup <= N && jcoup <= N) && (rfunc( sqrt((i-icoup)^2 + (j-jcoup)^2) ) != 0.) )
+            return ( !(icoup == i && jcoup == j) && (icoup > 0 && jcoup > 0 && icoup <= N && jcoup <= N) )
         end
     end
 
@@ -66,18 +76,20 @@ function adjEntry!(adj, idx, N, NN = 1, periodic = true, rfunc = dr->1/dr^2)
     entry = []
     for icoup in (i-NN):(i+NN)
         for jcoup in (j-NN):(j+NN)
-
-            if doesConnect(i,j,icoup,jcoup)
-
-                coup_idx = coupIdxFunc(icoup,jcoup)
+            dr = sqrt((i-icoup)^2 + (j-jcoup)^2)
+            weight = inv(dr,i,j)
+            if doesConnect(i,j,icoup,jcoup, weight)
                 
-                if idx < coup_idx #Since connected, only count edge once
-                    weight = rfunc( sqrt((i-icoup)^2 + (j-jcoup)^2) )
+                coup_idx = coupIdxFunc(icoup,jcoup)
+
+                # Undirected graph, so copy edge weight if already present
+                if idx < coup_idx 
+                    newWeight = weight
                 else
-                    weight = findWeight(idx,adj[coup_idx])
+                    newWeight = findWeight(idx,adj[coup_idx])
                 end
 
-                append!(entry,  [(coup_idx,  weight)])
+                append!(entry,  [(coup_idx,  newWeight)])
             end
 
         end
@@ -87,19 +99,12 @@ end
 
 # Should also include function!!!!
 # Init the adj list of g
-function fillAdjList!(adj, N , NN = 1; periodic = true, weightFunc = dr-> dr == 1 ? 1. : 0., ijfunc = (i,j) -> 1)
+function fillAdjList!(adj, N , weightFunc = defaultIsing)
 
     for idx in 1:N*N
-        adjEntry!(adj, idx, N, NN, periodic, weightFunc)
+        adjEntry!(adj, N, idx, weightFunc)
     end
     
-end
-
-# Initialization of adjacency matrix for a given ND
-function initAdj(N; NN = 1, periodic = true, weightFunc = (dr;i,j) -> dr == 1 ? 1. : 0.)
-    adj = Vector{Vector{Conn}}(undef,N^2)
-    fillAdjList!(adj,N, NN, periodic = periodic, rfunc = weightFunc)
-    return adj
 end
 
 function adjToMatrix(adj)

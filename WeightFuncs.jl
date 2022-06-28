@@ -4,12 +4,13 @@ Define weighting functions here
 Should be a function of the radius dr
 
 """
+__precompile__()
 
 module WeightFuncs
 
 using Distributions
 
-export WeightFunc, setAddDist, setMultDist, defaultIsing, altWeights, altWeightsCross, randWeights
+export WeightFunc, setAddDist, setMultDist, DefaultIsing, AltWeights, AltWeightsCross, RandWeights
 
 # Assuming one method,
 # Returns symbols of argnames
@@ -22,6 +23,7 @@ end
 mutable struct WeightFunc
     f::Function
     NN::Integer
+    periodic::Bool
     invoke::Function
     addTrue::Bool
     multTrue::Bool
@@ -30,11 +32,10 @@ mutable struct WeightFunc
 
     function WeightFunc(func::Function, ; NN::Integer)
         invoke(dr,i,j) = func(;dr,i,j)
-        return new(func,Int8(NN), invoke, false, false)
+        return new(func,Int8(NN), true, invoke, false, false)
     end
 
 end
-
 
 
 # Add an additive distribution
@@ -58,7 +59,7 @@ function setMultDist(weightfunc, dist)
 end
 
 # Default ising Function
-defaultIsing =  WeightFunc(
+DefaultIsing =  WeightFunc(
     (;dr, _...) -> dr == 1 ? 1. : 0., 
     NN = 1
 )
@@ -75,7 +76,7 @@ altWeights = WeightFunc(
     NN  = 2
 )
 
-altWeightsCross = WeightFunc(
+AltWeightsCross = WeightFunc(
     (;dr, _...) ->
         if dr % 2 == 1
             return -1
@@ -87,7 +88,7 @@ altWeightsCross = WeightFunc(
     NN = 2
 )
 
-randWeights = WeightFunc(
+RandWeights = WeightFunc(
     (;dr, _...) ->
         if dist == nothing
             return rand()
