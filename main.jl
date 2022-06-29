@@ -5,9 +5,13 @@ include("CustomWF.jl")
 
 qmlfile = joinpath(dirname(Base.source_path()), "qml", "Main.qml")
 
+choicearray = ones(15)
+append!(choicearray,-1)
 # Global Variables
 const weighted = true
-const weightFunc = RadialWeightF
+const weightFunc = defaultIsingWF
+# setAddDist!(weightFunc,Normal(0,0.01))
+setMultDist!(weightFunc, choicearray)
 
 
 #Observables

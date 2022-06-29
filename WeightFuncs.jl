@@ -10,7 +10,7 @@ module WeightFuncs
 
 using Distributions
 
-export WeightFunc, setAddDist, setMultDist, DefaultIsing, AltWeights, AltWeightsCross, RandWeights
+export WeightFunc, setAddDist!, setMultDist!, defaultIsingWF, altWF, altCrossWF, randWF
 
 # Assuming one method,
 # Returns symbols of argnames
@@ -39,32 +39,42 @@ end
 
 
 # Add an additive distribution
-function setAddDist(weightfunc, dist)
-    weightfunc.addTrue = true
-    weightfunc.addDist = dist
+function setAddDist!(weightFunc, dist)
+    weightFunc.addTrue = true
+    weightFunc.addDist = dist
 
-    invoke(dr,i,j) = !weightfunc.addTrue ? rand(weightfunc.addDist) + weightfunc.f(;dr,i,j) : rand(weightfunc.multDist)*weightfunc.f(;dr,i,j)+rand(weightfunc.addDist)
     
-    weightfunc.invoke = invoke
+    if !weightFunc.multTrue
+        inv = (dr,i,j) -> rand(weightFunc.addDist) + weightFunc.f(;dr,i,j)
+    else
+        inv = (dr,i,j) -> rand(weightFunc.multDist)*weightFunc.f(;dr,i,j)+rand(weightFunc.addDist)
+    end
+
+    weightFunc.invoke = inv
+    
 end
 
 # Add an additive distribution
-function setMultDist(weightfunc, dist)
-    weightfunc.multTrue = true
-    weightfunc.multDist = dist
+function setMultDist!(weightFunc, dist)
+    weightFunc.multTrue = true
+    weightFunc.multDist = dist
 
-    invoke(dr,i,j) = !weightfunc.addTrue ? rand(weightfunc.multDist)*weightfunc.f(;dr,i,j) : rand(weightfunc.multDist)*weightfunc.f(;dr,i,j)+rand(weightfunc.addDist)
+    if !weightFunc.addTrue
+        inv = (dr,i,j) -> rand(weightFunc.multDist)*weightFunc.f(;dr,i,j)
+    else
+        inv = (dr,i,j) -> rand(weightFunc.multDist)*weightFunc.f(;dr,i,j)+rand(weightFunc.addDist)
+    end
 
-    weightfunc.invoke = invoke
+    weightFunc.invoke = inv
 end
 
 # Default ising Function
-DefaultIsing =  WeightFunc(
+defaultIsingWF =  WeightFunc(
     (;dr, _...) -> dr == 1 ? 1. : 0., 
     NN = 1
 )
 
-altWeights = WeightFunc(
+altWF = WeightFunc(
     (;dr, _...) ->
         if dr % 2 == 1
             return 1.0*1/dr^2
@@ -76,7 +86,7 @@ altWeights = WeightFunc(
     NN  = 2
 )
 
-AltWeightsCross = WeightFunc(
+altCrossWF = WeightFunc(
     (;dr, _...) ->
         if dr % 2 == 1
             return -1
@@ -88,7 +98,7 @@ AltWeightsCross = WeightFunc(
     NN = 2
 )
 
-RandWeights = WeightFunc(
+randWF = WeightFunc(
     (;dr, _...) ->
         if dist == nothing
             return rand()

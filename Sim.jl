@@ -105,7 +105,7 @@ function initIsing()
     M[] = 0
 end
 
-function annealing(Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Tstep:Tf, reInit = true, saveImage)
+function annealing(Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Tstep:Tf, reInit = true, saveImage = true)
     # Reinitialize
     reInit && initIsing()
 
@@ -114,8 +114,9 @@ function annealing(Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Ts
     sleep(initWait)
     
     for temp in T_it
+        TIs[] = temp
         sleep(stepWait)
-        # save image
+        save(File{format"PNG"}("Ising T$temp"), img[])
     end
 end
 
