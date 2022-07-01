@@ -7,7 +7,9 @@ import org.julialang
 import Qt.labs.platform
 
 
+
 ApplicationWindow {
+
     id: root
     width: 500 ; height: 300
 
@@ -30,13 +32,11 @@ ApplicationWindow {
                     text: "T Start"
                 }
 
-                TextField{
+                IntField{
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
                     id: tstart
-                    validator: IntValidator {
-                        bottom: 0; top: 100
-                    }
+                    text: `${obs.TIs}`
                 }
 
             }
@@ -45,13 +45,14 @@ ApplicationWindow {
                     Layout.alignment: Qt.AlignHCenter
                     text: "T Step"
                 }
-                TextField{
+                DoubleField{
                     Layout.alignment: Qt.AlignHCenter
                     width: tb_width
+                    low: 0.005
+                    high: 10.0
+                    prec: 4
+                    text: "0.5"
                     id: tstep
-                    validator: DoubleValidator {
-                        bottom: 0.005 ; top: 10.0
-                    }
                 }
             }
             ColumnLayout{
@@ -59,33 +60,29 @@ ApplicationWindow {
                     Layout.alignment: Qt.AlignHCenter
                     text: "T End"
                 }
-                TextField{
+                IntField{
                     Layout.alignment: Qt.AlignHCenter
                     width: tb_width
                     id: tend
-                    validator: IntValidator {
-                        bottom: 0; top: 100
-                    }
+                    text: "10"
                 }
             }
         }
 
         // Number of datapoints
         ColumnLayout{
+            width: parent.width/2
             Text{
                 Layout.alignment: Qt.AlignHCenter
                 text: "Number of datapoints for every temperature"
             }
 
-            TextField{
+            IntField{
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignHCenter
                 id: dpoints
-                validator: IntValidator {
-                    bottom: 0; top: 100
-                }
+                text: "12"
             }
-
         }
 
 
@@ -103,27 +100,21 @@ ApplicationWindow {
                     text: "Between datapoints"
                 }
 
-                TextField{
+                IntField{
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
                     id: dpointwait
-                    validator: IntValidator {
-                        bottom: 1; top: 100
-                    }
+                    low: 1
                 }
-
             }
             ColumnLayout{
                 Text{
                     Layout.alignment: Qt.AlignHCenter
                     text: "Between Temperatures"
                 }
-                TextField{
+                IntField{
                     Layout.alignment: Qt.AlignHCenter
                     id: stepwait
-                    validator: IntValidator {
-                        bottom: 0 ; top: 100
-                    }
                 }
             }
             ColumnLayout{
@@ -131,13 +122,24 @@ ApplicationWindow {
                     Layout.alignment: Qt.AlignHCenter
                     text: "Wait for equilibration"
                 }
-                TextField{
+                IntField{
                     Layout.alignment: Qt.AlignHCenter
                     id: equiwait
-                    validator: IntValidator {
-                        bottom: 0; top: 100
-                    }
                 }
+            }
+        }
+        ColumnLayout{
+            Layout.alignment: Qt.AlignHCenter
+            spacing: 1
+
+            Text{
+                Layout.alignment: Qt.AlignHCenter
+                text: "Save Image"
+            }
+            Switch{
+                Layout.alignment: Qt.AlignHCenter
+                checked: true
+                id: saveImg
             }
         }
 
@@ -145,10 +147,59 @@ ApplicationWindow {
             Layout.alignment: Qt.AlignHCenter
             text: "Start Analysis"
             onClicked: {
-                Julia.println(parseInt(dpoints.value))
+                Julia.println(`${tstart.val}`)
+                Julia.tempSweepQML(tstart.val, tend.val, tstep.val, dpoints.val, dpointwait.val, stepwait.val, equiwait.val, saveImg.checked)
                 close()
             }
         }
     }
 
 }
+
+//     function custIntValidator(text, low, high)
+//     {
+//         var newText = ""
+//         if(isNaN(parseInt(text)))
+//     {
+//         var newInt = Math.max(0, low)
+//         newText = `${newInt}`
+//         return newText
+//     }
+//     if(parseInt(text) < low)
+// {
+//     newText = `${low}`
+//     return newText
+// }
+// else if(parseInt(text) > high)
+// {
+//     newText = `${high}`
+//     return newText
+// }
+
+// return text
+// }
+
+
+// function custDoubleValidator(text, low, high)
+// {
+//     var newText = ""
+//     if(isNaN(parseInt(text)))
+// {
+//     newText = "0.0"
+//     return newText
+// }
+// if(parseInt(text) < low)
+// {
+// newText = `${low}`
+// return newText
+// }
+// else if(parseInt(text) > high)
+// {
+//     newText = `${high}`
+//     return newText
+// }
+
+// return text
+// }
+
+

@@ -4,6 +4,8 @@ import QtQuick.Layouts
 import org.julialang
 import Qt.labs.platform
 
+import "../TSweepWindow"
+
 // Panels under plot
 // Inserting Defects
 // Magnetization
@@ -42,7 +44,7 @@ ColumnLayout{
 
         Julia.addRandomDefectsQML(parseInt(defectText.text))
       }
-      defectText.text = ""
+      defectText.text = "";
     }
   }
 }
@@ -68,13 +70,13 @@ Button{
   Layout.alignment: Qt.AlignHCenter
   text: "Temperature Sweep"
   onClicked: {
-    var component = Qt.createComponent("./Tsweep.qml")
+    var component = Qt.createComponent("../TSweepWindow/Tsweep.qml")
     var window = component.createObject(root)
     window.show()
-    if(!root.tsweep.active){
-    println("Active")
-  }
+    //   if(!root.tsweep.active){
+    //   println("Active")
+    // }
 
-}
+  }
 }
 }

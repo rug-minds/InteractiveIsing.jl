@@ -9,7 +9,7 @@ using Random, Distributions, .SquareAdj
 include("WeightFuncs.jl")
 using .WeightFuncs
 
-export IsingGraph, hIsing, reInitGraph!, coordToIdx, idxToCoord, ising_it, paintPoints!, addDefects!, remDefects!, addDefect!, remDefect!, connIdx, connW
+export IsingGraph, hIsing, reInitGraph!, coordToIdx, idxToCoord, ising_it, paintPoints!, addDefects!, remDefects!, addDefect!, remDefect!, connIdx, connW, initSqAdj
 
 # Aliases
 Edge = Pair{Int32,Int32}
@@ -75,7 +75,7 @@ Methods
 
     coordToIdx((i,j),N) = coordToIdx(i,j,N)
     # Go from idx to lattice coordinates
-    @inline function idxToCoord(idx::Int,N)
+    @inline function idxToCoord(idx::Integer,N::Integer)
         return ((idx-1)÷N+1,(idx-1)%N+1)
     end
 
@@ -108,7 +108,7 @@ end
 end
 
 # Initialization of adjacency matrix for a given ND
-function initSqAdj(N; weightFunc = DefaultIsing())
+function initSqAdj(N; weightFunc = defaultIsingWF)
     adj = Vector{Vector{Conn}}(undef,N^2)
     fillAdjList!(adj,N, weightFunc)
     return adj

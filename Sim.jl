@@ -1,3 +1,8 @@
+"""File for all simulation functions. Shouldn't have to be touched by user"""
+
+
+# For sysimage:
+# PackageCompiler.create_sysimage([:Random, :GLMakie, :FileIO, :QML, :Observables, :ColorSchemes, :Images, :DataFrames, :CSV, :CxxWrap, :BenchmarkTools, :Plots]; sysimage_path="JuliaSysimage.dylib", precompile_execution_file="Sim.jl")
 using LinearAlgebra, Distributions, Random, GLMakie, FileIO, QML, Observables, ColorSchemes, Images, DataFrames, CSV, CxxWrap
 using BenchmarkTools
 import Plots as pl
@@ -105,7 +110,7 @@ function initIsing()
     M[] = 0
 end
 
-function annealing(Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Tstep:Tf, reInit = true, saveImage = true)
+function annealing(Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Tstep:Tf, reInit = true, saveImg = true)
     # Reinitialize
     reInit && initIsing()
 
@@ -116,7 +121,9 @@ function annealing(Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Ts
     for temp in T_it
         TIs[] = temp
         sleep(stepWait)
-        save(File{format"PNG"}("Ising T$temp"), img[])
+        if saveImg
+            save(File{format"PNG"}("Images/Annealing/Ising T$temp.PNG"), img[])
+        end
     end
 end
 
@@ -124,7 +131,7 @@ end
 function timedFunctions()
     spawnOne(updateImg, updatingImg)
     spawnOne(updatesPerFrame, updatingUpf)
-    spawnOne(magnetization, updatingMag, g,M)
+    spawnOne(magnetization, updatingMag, g,M, M_array)
 end
 
 # Add percentage of defects to lattice
@@ -136,7 +143,8 @@ circleToStateREPL(i,j) = circleToState(g,circ[],i,j,brush[])
 
 # Sweep temperatures and record magnetization and correlation lengths
 # Make an interface for this
-tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 ) = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array, TI=TI,TF=TF,TStep=TStep, dpoints = dpoints, dpointwait= dpointwait, stepwait = stepwait, equiwait=equiwait)))
+tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true) = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img)))
+# tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true) = CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img)))
 
 # Save a new circle with size brushR[]
 function newCirc()

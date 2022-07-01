@@ -4,17 +4,133 @@ __precompile__()
 
 module Analysis
 
+using FileIO, Images
+import Plots as pl
 # include("IsingGraphs.jl")
 using ..IsingGraphs
 
-export magnetization, dataToDF, tempSweep, MPlot 
+include("SquareAdj.jl")
+using .SquareAdj
 
-function insertShift(vec::Vector{T}, el::T) where T
-    newVec = Vector{T}(undef, length(vec))
-    newVec[1:(end-1)] = vec[2:end]
-    newVec[end] = el
-    return newVec
+export magnetization, dataToDF, tempSweep, MPlot, sampleCorrPeriodic, corrFunc
+
+"""
+User functions
+"""
+
+# Does analysis over multiple temperatures.
+# Analyzes magnetization and correlation length.
+# Usage: Goes from current temperature of simulation, to TF, in stepsizes of TStep.
+#   Every step, a number of datapoints (dpoints) are recorded, with inervals between them of dpointwait
+#   In between Temperatures there is an optional wait time of stepwait, for equilibration
+#   There is an initial wait time of equiwait for equilibration
+function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]))
+    println("Starting temperature sweep")
+    println("Parameters TIs$TIs, M_array$M_array, TI$TI,TF$TF, TStep$TStep, dpoints$dpoints, dpointwait$dpointwait, stepwait$stepwait, equiwait$equiwait, saveImg$saveImg")
+    return
+    first = true
+    # Data 
+    Ts = []
+    corrls = []
+    Ms = []
+    TRange =  TI:TStep:TF
+    
+
+    for T in TRange
+        println("Gathering data for temperature $T, $dpoints data points in intervals of $dpointwait seconds")
+        waittime = length(TRange)*(dpoints*dpointwait + stepwait)
+        if first # If first run, wait equiwait seconds for equibrilation
+            println("The sweep will take approximately $(equiwait + waittime) seconds")
+            if equiwait != 0
+                println("Waiting $equiwait seconds for equilibration")
+                sleep(equiwait)
+            end
+            first=false
+        else # Else wait in between temperatuer steps
+            println("Waiting $stepwait seconds in between temperature steps")
+            sleep(stepwait)
+        end
+
+        # User feedback of remaining time
+        println("Approximately $(length(T:TStep:TF)*dpoints*dpointwait + length(T:TStep:TF)*stepwait) seconds remaining")
+        
+        TIs[] = T
+
+        # Gather Datapoints
+        for point in 1:dpoints
+            append!(Ts, T)
+            append!(corrls,[corrFunc(IsingGraph(g),false)])
+            append!(Ms, last(M_array))
+
+            if saveImg
+                save(File{format"PNG"}("Images/TempSweep/Ising T$T d$point.PNG"), img[])
+            end
+
+            sleep(dpointwait)
+        end
+        
+    end
+
+    return (Ts,corrls,Ms)
 end
+
+function corrFuncPeriodic(g::IsingGraph)
+    dict = Dict{Float32,Tuple{Float32,Int32}}()
+    for (idx1,state1) in enumerate(g.state)
+        for (idx2,state2) in enumerate(g.state)
+            (i1,j1) = idxToCoord(idx1,g.N)
+            (i2,j2) = idxToCoord(idx2,g.N)
+            
+            L::Float32 = sqrt((i1-i2)^2+(j1-j2)^2)
+            if haskey(dict,L) == false
+                dict[L] = (0,0)
+            end
+
+            dict[L] = (dict[L][1] + state1*state2, dict[L][2]+1)
+        end
+    end
+
+    return dict
+end
+
+function sampleCorrPeriodic(g::IsingGraph,Lstep::Float32)
+    function sigToIJ(sig, L)
+        return (L*cos(sig),L*sin(sig))
+    end
+    Lvec = [1:Lstep:g.N;]
+    avgsum = sum(g.state)/g.N
+    corrVec = Vector{Float32}(undef,length(Lvec))
+    
+    # ijprob::Int32 = 1/2
+    for (lidx, L) in enumerate(Lvec)
+        weight = L/g.N
+        sig_samples::Int32 = round(2*L)
+        dijs = map((tup) -> (latmod(round(Int16, tup[1]),g.N),latmod(round(Int16, tup[2]),g.N)) ,sigToIJ.([rand()*2*pi for i in 1:sig_samples],L))
+        idxs = [i for i in 1:g.N if rand([true,false]) ]
+        ijs = idxToCoord.(idxs,g.N)
+
+        fac = length(dijs)*length(ijs)
+
+        prod = 0
+
+        for ij in ijs
+            for dij in dijs
+                prod += g.state[coordToIdx(ij,g.N)]*g.state[coordToIdx(dij,g.N)]
+            end
+        end
+
+        corrVec[lidx] = prod/fac-avgsum
+    end
+
+    return (Lvec,corrVec)
+end
+
+
+
+
+
+
+
 
 # Sweep the lattice to find x and y correlation data.
 function corrL(g::IsingGraphs.IsingGraph, L)
@@ -118,8 +234,8 @@ end
 
 # Averages M_array over an amount of steps
 # Updates magnetization (which is thus the averaged value)
-let avg_window = 60, M_array = zeros(Int32,avg_window), frames = 0
-    global function magnetization(g::IsingGraphs.IsingGraph,M)
+let avg_window = 60, frames = 0
+    global function magnetization(g::IsingGraphs.IsingGraph,M, M_array)
         avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
         M_array = insertShift(M_array, Int32(sum(g.state)))
         if frames > avg_window
@@ -186,65 +302,14 @@ csvToDF(filename) = DataFrame(CSV.File(filename))
 
 
 
-"""
-User functions
-"""
+""" Helper Functions"""
 
-
-
-# Does analysis over multiple temperatures.
-# Analyzes magnetization and correlation length.
-# Usage: Goes from current temperature of simulation, to TF, in stepsizes of TStep.
-#   Every step, a number of datapoints (dpoints) are recorded, with inervals between them of dpointwait
-#   In between Temperatures there is an optional wait time of stepwait, for equilibration
-#   There is an initial wait time of equiwait for equilibration
-function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0)
-    println("Starting temperature sweep")
-    first = true
-    # Data 
-    Ts = []
-    corrls = []
-    Ms = []
-    TRange =  TI:TStep:TF
-    
-
-    for T in TRange
-        println("Gathering data for temperature $T, $dpoints data points in intervals of $dpointwait seconds")
-        waittime = length(TRange)(dpoints*dpointwait + stepwait)
-        if first # If first run, wait equiwait seconds for equibrilation
-            println("The sweep will take approximately $(equiwait + waittime) seconds")
-            if equiwait != 0
-                println("Waiting $equiwait seconds for equilibration")
-                sleep(equiwait)
-            end
-            first=false
-        else # Else wait in between temperatuer steps
-            println("Waiting $stepwait seconds in between temperature steps")
-            sleep(stepwait)
-        end
-
-        # User feedbakc of time
-        
-        println("Approximately $(length(T:TStep:TF)*dpoints*dpointwait + length(T:TStep:TF)*stepwait) seconds remaining")
-        
-        TIs[] = T
-
-        # Gather Datapoints
-        for _ in 1:dpoints
-            append!(Ts, T)
-            append!(corrls,[corrFunc(IsingGraph(g),false)])
-            append!(Ms, last(M_array))
-        
-            sleep(dpointwait)
-        end
-        
-    end
-
-    return (Ts,corrls,Ms)
+function insertShift(vec::Vector{T}, el::T) where T
+    newVec = Vector{T}(undef, length(vec))
+    newVec[1:(end-1)] = vec[2:end]
+    newVec[end] = el
+    return newVec
 end
-
-
-
 
 
 end

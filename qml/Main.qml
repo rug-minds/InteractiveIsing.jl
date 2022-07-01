@@ -4,6 +4,8 @@ import QtQuick.Layouts
 import org.julialang
 import Qt.labs.platform
 
+import "Components"
+import "TSweepWindow"
 
 ApplicationWindow {
   id: root
@@ -28,7 +30,6 @@ ApplicationWindow {
       Layout.alignment: Qt.AlignHCenter
     }
 
-
     // Middle row
     // Brush - Screen - Temperature
     RowLayout{
@@ -36,7 +37,7 @@ ApplicationWindow {
       Layout.alignment: Qt.AlignHCenter
 
       BrushPanel{
-              Layout.alignment: Qt.AlignVCenter
+        Layout.alignment: Qt.AlignVCenter
       }
 
 
@@ -44,15 +45,7 @@ ApplicationWindow {
         Layout.alignment: Qt.AlignCenter
         id: canvas
         width: obs.gSize
-        height: {
-          if(obs.gSize > 512)
-          {
-            obs.gSize
-          }
-          else{
-            512
-          }
-        }
+        height: obs.gSize
 
         paintFunction: showlatest
 

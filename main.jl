@@ -1,30 +1,45 @@
-ENV["QSG_RENDER_LOOP"] = "basic"
 
 include("Sim.jl")
 include("CustomWF.jl")
 
-qmlfile = joinpath(dirname(Base.source_path()), "qml", "Main.qml")
 
-choicearray = ones(15)
-append!(choicearray,-1)
-# Global Variables
-const weighted = true
+"""
+User Variables
+"""
+const graphSize = 512
+const weighted = false
 const weightFunc = defaultIsingWF
-# setAddDist!(weightFunc,Normal(0,0.01))
-setMultDist!(weightFunc, choicearray)
+
+const initTemp = 1.
+
+
+"""
+Simulations Parameters
+Don't have to be touched
+
+"""
+
+ENV["QSG_RENDER_LOOP"] = "basic"
+
+qmlfile = joinpath(dirname(Base.source_path()), "qml", "Main.qml")
+# qmlfile = joinpath(dirname(Base.source_path()), "qml", "TSweepWindow/Tsweep.qml")
 
 
 #Observables
 const running = Observable(true)
-const gSize = Observable(512)
+const gSize = Observable(graphSize)
 const NIs = Observable(gSize[])
-const TIs = Observable(1.0)
+const TIs = Observable(initTemp)
 const JIs = Observable(1.0)
 const isPaused = Observable(false) 
 const brush = Observable(0)
 const brushR = Observable( Int(round(NIs[]/10)) )
 const circ  = Observable(getOrdCirc(brushR[])) 
 const M = Observable(0.0)
+
+# Not elegant
+const M_array = zeros(Int32,60)
+# const M_array = zeros(Int32,avg_window)
 
 
 # Locking updating mag
@@ -42,7 +57,7 @@ const updatingUpf = Ref(false)
 const g = IsingGraph(
     NIs[], 
     weighted = weighted,
-    weightFunc = weighted ? weightFunc : defaultIsing
+    weightFunc = weighted ? weightFunc : defaultIsingWF
     )
 
 # Image
