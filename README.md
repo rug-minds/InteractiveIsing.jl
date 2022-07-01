@@ -19,6 +19,10 @@ Then, make sure that Julia is using multiple threads. Minimum of 4 is recommende
 
 For use in VSCode, open VSCode in the folder with all simulation files. Then, in the Julia extension (needs to be installed) settings, change the option "julia.NumThreads" to number of cores that you want Julia to use. Then, with the main.jl file open, execute the file using the triangular button in the top right corner.
 
+For faster startup time put [Sysimage](https://www.icloud.com/iclouddrive/017m3Oe8w0xq1AFyS_evZzc-w#JuliaSysimage) into environment folder.
+
 # Usage
 
-Work in progress
+If all packages are installed correctly, then executing the "Main.jl" file starts up the simulation interface. 
+
+To use custom weighting functions, define a const global variable named weighted = true and define a new instance of the type WeightFunc in the "CustomWF.jl) file and then alias it as "weightFunc" in the main file. The correct way do initialize a WeightFunc is documented in "WeightFuncs.jl".
