@@ -93,44 +93,94 @@ function corrFuncPeriodic(g::IsingGraph)
     return dict
 end
 
-function sampleCorrPeriodic(g::IsingGraph,Lstep::Float32)
+# function sampleCorrPeriodic(g::IsingGraph,Lstep::Float32)
+#     function sigToIJ(sig, L)
+#         return (L*cos(sig),L*sin(sig))
+#     end
+
+#     # Lvec = [1:Lstep:g.N;]
+#     Lvec = [99:Lstep:100;]
+#     avgsum = (sum(g.state)/g.size)^2
+#     corrVec = Vector{Float32}(undef,length(Lvec))
+    
+#     # ijprob::Int32 = 1/2
+#     for (lidx, L) in enumerate(Lvec)
+#         weight = L/g.N
+#         sig_samples::Int32 = round(2*L)
+#         dijs = map((tup) -> (round(Int16, tup[1]),round(Int16, tup[2])) , sigToIJ.([rand()*2*pi for i in 1:sig_samples],L))
+#         idxs = [i for i in 1:g.size if rand([true,false,false, false]) ]
+#         ijs = idxToCoord.(idxs,g.N)
+
+#         fac = 0
+#         # println(length(ijs))
+#         # println(dijs)
+#         prod = 0
+#         # println(ijs)
+#         # println(dijs)
+#         for ij in ijs
+#             for dij in dijs
+#                 fac += 1
+#                 prod += g.state[coordToIdx(ij,g.N)]*g.state[coordToIdx(latmod.((ij.+dij),g.N),g.N)]
+#             end
+#         end
+#         println("Fac$fac")
+#         println("avgsum$avgsum")
+#         println("prodprod")
+#         corrVec[lidx] = prod/fac-avgsum
+#     end
+
+#     return (Lvec,corrVec)
+# end
+rthetas = 2*pi .* rand(10^7)
+
+function sampleCorrPeriodic(g::IsingGraph,Lstep::Float32, lStart = 1, lEnd = 512, npairs = 1000 )
     function sigToIJ(sig, L)
         return (L*cos(sig),L*sin(sig))
     end
-    Lvec = [1:Lstep:g.N;]
-    avgsum = sum(g.state)/g.N
-    corrVec = Vector{Float32}(undef,length(Lvec))
-    
-    # ijprob::Int32 = 1/2
-    for (lidx, L) in enumerate(Lvec)
-        weight = L/g.N
-        sig_samples::Int32 = round(2*L)
-        dijs = map((tup) -> (latmod(round(Int16, tup[1]),g.N),latmod(round(Int16, tup[2]),g.N)) ,sigToIJ.([rand()*2*pi for i in 1:sig_samples],L))
-        idxs = [i for i in 1:g.N if rand([true,false]) ]
-        ijs = idxToCoord.(idxs,g.N)
 
-        fac = length(dijs)*length(ijs)
-
-        prod = 0
-
-        for ij in ijs
-            for dij in dijs
-                prod += g.state[coordToIdx(ij,g.N)]*g.state[coordToIdx(dij,g.N)]
-            end
-        end
-
-        corrVec[lidx] = prod/fac-avgsum
+    function sampleIdx2(idx1,L,rtheta)
+        ij = idxToCoord(idx1,g.N)
+        dij = Int32.(round.(sigToIJ(rtheta,L)))
+        idx2 = coordToIdx(latmod.((ij.+dij),g.N),g.N)
+        return idx2
     end
 
-    return (Lvec,corrVec)
+    theta_i = rand([1:length(rthetas);])
+
+    avgsum = (sum(g.state)/g.size)^2
+
+    lVec = [lStart:Lstep:lEnd;]
+    corrVec = Vector{Float32}(undef,length(lVec))
+
+    pairs =  Set() # To check wether pair is already checked
+
+    # Iterate over all lengths to be checked
+    for (lidx,L) in enumerate(lVec)
+        pairs_done = 0
+ 
+        sumprod = 0 #Track the sum of products sig_i*sig_j
+        while pairs_done <= npairs
+            idx1 = rand(g.aliveList)
+            rtheta = rthetas[(theta_i -1) % length(rthetas)+1]
+            idx2 = sampleIdx2(idx1,L,rtheta)
+            
+            if !((idx1,idx2) in pairs)
+                sumprod += g.state[idx1]*g.state[idx2]
+                pairs_done +=1
+                union!(pairs,(idx1,idx2))
+            else
+                continue
+            end
+            theta_i += 1 #sample next random angle
+        end
+        # println((sum(g.state)/g.N)^2)
+        # println(avgsum1*avgsum2/(npairs^2))
+        corrVec[lidx] = sumprod/npairs - avgsum
+    end
+
+    return (lVec,corrVec)
+
 end
-
-
-
-
-
-
-
 
 # Sweep the lattice to find x and y correlation data.
 function corrL(g::IsingGraphs.IsingGraph, L)
@@ -237,9 +287,9 @@ end
 let avg_window = 60, frames = 0
     global function magnetization(g::IsingGraphs.IsingGraph,M, M_array)
         avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
-        M_array = insertShift(M_array, Int32(sum(g.state)))
+        M_array[] = insertShift(M_array[], Int32(sum(g.state)))
         if frames > avg_window
-            M[] = sum(M_array)/avg_window 
+            M[] = sum(M_array[])/avg_window 
             frames = 0
         end 
         frames += 1 

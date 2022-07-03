@@ -38,7 +38,7 @@ const circ  = Observable(getOrdCirc(brushR[]))
 const M = Observable(0.0)
 
 # Not elegant
-const M_array = zeros(Int32,60)
+const M_array = Ref(zeros(Int32,60))
 # const M_array = zeros(Int32,avg_window)
 
 
