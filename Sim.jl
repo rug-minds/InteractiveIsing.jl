@@ -75,7 +75,8 @@ function updateGraphREPL()
             updateMonteCarloQML!(g,TIs[])
             updates[] += 1
         else
-            sleep(0.2)
+            yield()
+            # sleep(0.2)
         end
     end
 end
@@ -143,7 +144,7 @@ circleToStateREPL(i,j) = circleToState(g,circ[],i,j,brush[])
 
 # Sweep temperatures and record magnetization and correlation lengths
 # Make an interface for this
-tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true) = Threads.@spawn CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img)))
+tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true) = Threads.@spawn tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img)
 # tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true) = CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img)))
 
 # Save a new circle with size brushR[]

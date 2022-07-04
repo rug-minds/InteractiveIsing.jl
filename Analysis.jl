@@ -4,7 +4,7 @@ __precompile__()
 
 module Analysis
 
-using FileIO, Images
+using FileIO, Images, LaTeXStrings, Dates, DataFrames, CSV
 import Plots as pl
 # include("IsingGraphs.jl")
 using ..IsingGraphs
@@ -12,7 +12,16 @@ using ..IsingGraphs
 include("SquareAdj.jl")
 using .SquareAdj
 
-export magnetization, dataToDF, tempSweep, MPlot, sampleCorrPeriodic, corrFunc
+export magnetization, dataToDF, tempSweep, MPlot, sampleCorrPeriodic, corrFuncXY, dfMPlot, dataFolderNow
+
+mutable struct AInt32
+    @atomic x::Int32
+end
+
+mutable struct AFloat32
+    @atomic x::Float32
+end
+
 
 """
 User functions
@@ -24,21 +33,22 @@ User functions
 #   Every step, a number of datapoints (dpoints) are recorded, with inervals between them of dpointwait
 #   In between Temperatures there is an optional wait time of stepwait, for equilibration
 #   There is an initial wait time of equiwait for equilibration
-function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]))
+function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]), corrF = sampleCorrPeriodic)
+    """ Make folder """
+    foldername = dataFolderNow("Tempsweep")
+
     println("Starting temperature sweep")
     println("Parameters TIs$TIs, M_array$M_array, TI$TI,TF$TF, TStep$TStep, dpoints$dpoints, dpointwait$dpointwait, stepwait$stepwait, equiwait$equiwait, saveImg$saveImg")
-    return
+    
     first = true
-    # Data 
-    Ts = []
-    corrls = []
-    Ms = []
     TRange =  TI:TStep:TF
     
-
+    # DataFrames
+    mdf = DataFrame()
+    cldf = DataFrame()
     for T in TRange
         println("Gathering data for temperature $T, $dpoints data points in intervals of $dpointwait seconds")
-        waittime = length(TRange)*(dpoints*dpointwait + stepwait)
+        waittime = length(T:TStep:TF)*(dpoints*dpointwait + stepwait)
         if first # If first run, wait equiwait seconds for equibrilation
             println("The sweep will take approximately $(equiwait + waittime) seconds")
             if equiwait != 0
@@ -46,94 +56,223 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
                 sleep(equiwait)
             end
             first=false
-        else # Else wait in between temperatuer steps
-            println("Waiting $stepwait seconds in between temperature steps")
+        else # Else wait in between temperature steps
+            println("Now waiting $stepwait seconds in between temperatures")
             sleep(stepwait)
         end
 
         # User feedback of remaining time
-        println("Approximately $(length(T:TStep:TF)*dpoints*dpointwait + length(T:TStep:TF)*stepwait) seconds remaining")
+        println("Approximately $(length(waittime)) seconds remaining")
         
         TIs[] = T
 
         # Gather Datapoints
         for point in 1:dpoints
-            append!(Ts, T)
-            append!(corrls,[corrFunc(IsingGraph(g),false)])
-            append!(Ms, last(M_array))
-
+            tpointi = time()
+            (lVec,corrVec) = corrF(g) 
+            cldf = vcat(cldf, corrToDF((lVec,corrVec) , point, TIs[]) )
+            mdf = vcat(mdf,MToDF(last(M_array[]),point, TIs[]) )
+            
             if saveImg
-                save(File{format"PNG"}("Images/TempSweep/Ising T$T d$point.PNG"), img[])
+                # Image of ising
+                save(File{format"PNG"}("$(foldername)Ising T$T d$point.PNG"), img[])
+
+                # Image of correlation plot
+                corrPlot = pl.plot(lVec,corrVec, xlabel = "Length", ylabel=L"C(L)")
+                Tstring = replace("$T", '.' => ',')
+                pl.savefig(corrPlot,"$(foldername)Corrplot T$Tstring $point")
             end
 
-            sleep(dpointwait)
+            tpointf = time()
+            dtpoint = tpointf-tpointi
+
+            println("Datapoint took $dtpoint seconds")
+
+            sleep(max(dpointwait-dtpoint,0))
         end
         
     end
 
-    return (Ts,corrls,Ms)
-end
-
-function corrFuncPeriodic(g::IsingGraph)
-    dict = Dict{Float32,Tuple{Float32,Int32}}()
-    for (idx1,state1) in enumerate(g.state)
-        for (idx2,state2) in enumerate(g.state)
-            (i1,j1) = idxToCoord(idx1,g.N)
-            (i2,j2) = idxToCoord(idx2,g.N)
-            
-            L::Float32 = sqrt((i1-i2)^2+(j1-j2)^2)
-            if haskey(dict,L) == false
-                dict[L] = (0,0)
-            end
-
-            dict[L] = (dict[L][1] + state1*state2, dict[L][2]+1)
-        end
+    if saveImg
+        dfMPlot(mdf, foldername)
     end
 
-    return dict
+    CSV.write("$(foldername)CorrData", cldf)
+    CSV.write("$(foldername)MData", mdf)
+    
 end
 
-# function sampleCorrPeriodic(g::IsingGraph,Lstep::Float32)
-#     function sigToIJ(sig, L)
-#         return (L*cos(sig),L*sin(sig))
-#     end
 
-#     # Lvec = [1:Lstep:g.N;]
-#     Lvec = [99:Lstep:100;]
-#     avgsum = (sum(g.state)/g.size)^2
-#     corrVec = Vector{Float32}(undef,length(Lvec))
+
+""" Correlation length calculations """
+
+rthetas = 2*pi .* rand(10^7) # Saves random angles to save computation time
+
+# Takes a random number of pairs for every length to calculate correlation length function
+# This only works well with defects.
+function sampleCorrPeriodic(g::IsingGraph, Lstep::Float16 = Float16(.5), lStart::Integer = Int8(1), lEnd::Integer = Int16(256), npairs::Integer = Int16(10000) )
+    function sigToIJ(sig, L)
+        return (L*cos(sig),L*sin(sig))
+    end
+
+    function sampleIdx2(idx1,L,rtheta)
+        ij = idxToCoord(idx1,g.N)
+        dij = Int32.(round.(sigToIJ(rtheta,L)))
+        idx2 = coordToIdx(latmod.((ij.+dij),g.N),g.N)
+        return idx2
+    end
+
+    theta_i = rand([1:length(rthetas);])
+
+    avgsum = (sum(g.state)/g.size)^2
+
+    lVec = [lStart:Lstep:lEnd;]
+    corrVec = Vector{Float32}(undef,length(lVec))
+
+    # Sample all idx to be used
+    # Slight bit faster to do it this way than to sample it every time in the loop
+    idx1s = rand(g.aliveList,length(lVec)*npairs)
+    # Index of above vector
+    idx1idx = 1
+    # Iterate over all lengths to be checked
+    for (lidx,L) in enumerate(lVec)
+ 
+        sumprod = 0 #Track the sum of products sig_i*sig_j
+        for _ in 1:npairs
+            idx1 = idx1s[idx1idx]
+            rtheta = rthetas[(theta_i -1) % length(rthetas)+1]
+            idx2 = sampleIdx2(idx1,L,rtheta)
+            sumprod += g.state[idx1]*g.state[idx2]
+            theta_i += 1 # Sample next random angle
+            idx1idx += 1 # Sample next random idx
+        end
+        # println((sum(g.state)/g.N)^2)
+        # println(avgsum1*avgsum2/(npairs^2))
+        corrVec[lidx] = sumprod/npairs - avgsum
+    end
+
+    return (lVec,corrVec)
+end
+
+"""Correlation Length Data"""
+function corrToDF((lVec,corrVec), dpoint::Integer = Int8(1), T::Real = Float16(1))
+    return DataFrame(L = lVec, Corr = corrVec, D = dpoint, T = T)
+end
+
+# Not used currently, used to fit correleation length data to a function f
+function fitCorrl(dat,dom_end, f, params...)
+    dom = Domain(1.:dom_end)
+    data = Measures(Vector{Float64}(dat[1:dom_end]),0.)
+    model = Model(:comp1 => FuncWrap(f,params...))
+    prepare!(model,dom, :comp1)
+    return fit!(model,data)
+end
+
+
+""" Magnetization """
+function MToDF(M, dpoint::Integer = Int8(1), T::Real = Float16(1))
+    return DataFrame(M = M, D = dpoint, T = T)
+end
+
+function dfMPlot(mdf::DataFrame, foldername::String)
+    """ DF FORMAT """
+    """ M : D : T """
+
+    # All magnetizations
+    ms = mdf[:,1]
+    # All Temperatures
+    ts = mdf[:,3]
+    slices = []
+
+    lastt = ts[1]
+    lasti = 1
+    for idx in 2:length(ts)
+        if !(ts[idx] == lastt)
+            append!(slices,[lasti:(idx-1)])
+            lasti=idx
+        end
+        lastt = ts[idx]
+    end
+    append!(slices, [lasti:length(ts)])
+
+    avgM = Vector{Float32}(undef,length(slices))
+    newTs = Vector{Float32}(undef,length(slices))
+    for (idx,slice) in enumerate(slices)
+        avgM[idx] = sum(ms[slice])/length(slice)
+        newTs[idx] = ts[first(slice)]
+    end
+
+    if avgM[1] < 0
+        avgM .*= -1
+    end
     
-#     # ijprob::Int32 = 1/2
-#     for (lidx, L) in enumerate(Lvec)
-#         weight = L/g.N
-#         sig_samples::Int32 = round(2*L)
-#         dijs = map((tup) -> (round(Int16, tup[1]),round(Int16, tup[2])) , sigToIJ.([rand()*2*pi for i in 1:sig_samples],L))
-#         idxs = [i for i in 1:g.size if rand([true,false,false, false]) ]
-#         ijs = idxToCoord.(idxs,g.N)
+    mPlot = pl.plot(newTs,avgM, xlabel = "T", ylabel="M", label=false)
+    pl.savefig(mPlot,"$(foldername)Mplot")
+end
 
-#         fac = 0
-#         # println(length(ijs))
-#         # println(dijs)
-#         prod = 0
-#         # println(ijs)
-#         # println(dijs)
-#         for ij in ijs
-#             for dij in dijs
-#                 fac += 1
-#                 prod += g.state[coordToIdx(ij,g.N)]*g.state[coordToIdx(latmod.((ij.+dij),g.N),g.N)]
-#             end
-#         end
-#         println("Fac$fac")
-#         println("avgsum$avgsum")
-#         println("prodprod")
-#         corrVec[lidx] = prod/fac-avgsum
-#     end
+# Averages M_array over an amount of steps
+# Updates magnetization (which is thus the averaged value)
+let avg_window = 60, frames = 0
+    global function magnetization(g::IsingGraphs.IsingGraph,M, M_array)
+        avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
+        M_array[] = insertShift(M_array[], Int32(sum(g.state)))
+        if frames > avg_window
+            M[] = sum(M_array[])/avg_window 
+            frames = 0
+        end 
+        frames += 1 
+    end
+end
 
-#     return (Lvec,corrVec)
-# end
-rthetas = 2*pi .* rand(10^7)
+"""General data"""
 
-function sampleCorrPeriodic(g::IsingGraph,Lstep::Float32, lStart = 1, lEnd = 512, npairs = 1000 )
+# Determine amount of datapoints per temperature from dataframe data (if homogeneous over temps)
+function detDPoints(dat)
+    dpoint = 0
+    lastt = dat[:,1][1]
+    for temp in dat[:,1]
+        if temp == lastt
+            dpoint += 1
+        else 
+            return dpoint
+        end
+    end
+    return dpoint
+end
+
+
+# Input the temperature sweep data into a dataframe
+function dataToDF(tsData, lMax = length(tsData[2][1]))
+    return DataFrame(Temperature = tsData[1], Correlation_Function = [corrLXY[1:lMax] for corrLXY in  tsData[2]], Magnetization = tsData[3] )
+end
+
+# Read CSV and outputs dataframe
+csvToDF(filename) = DataFrame(CSV.File(filename)) 
+
+""" Helper Functions"""
+function insertShift(vec::Vector{T}, el::T) where T
+    newVec = Vector{T}(undef, length(vec))
+    newVec[1:(end-1)] = vec[2:end]
+    newVec[end] = el
+    return newVec
+end
+
+# Create folder in data folder with given name and return path
+function dataFolderNow(dataString::String)
+    nowtime = "$(now())"[1:(end-7)]
+    try; mkdir(joinpath(dirname(Base.source_path()),"Data")); catch end
+    try; mkdir(joinpath(dirname(Base.source_path()), "Data", dataString)); catch end
+    try; mkdir(joinpath(dirname(Base.source_path()), "Data", dataString, "$nowtime")); catch end
+    return "Data/Tempsweep/$nowtime/"
+end
+
+
+
+""" OLD STUFF """
+
+# Sample random spins for correlation length, but make sure every pair is only sampled once
+# Colissions are quite unlikely for smaller number of sampled pairs, making this redundant and slower
+function sampleCorrPeriodicUnique(g::IsingGraph, Lstep::Float16, lStart::Int8 = 1, lEnd::Int16 = 256, npairs::Integer = 1000 )
     function sigToIJ(sig, L)
         return (L*cos(sig),L*sin(sig))
     end
@@ -183,7 +322,7 @@ function sampleCorrPeriodic(g::IsingGraph,Lstep::Float32, lStart = 1, lEnd = 512
 end
 
 # Sweep the lattice to find x and y correlation data.
-function corrL(g::IsingGraphs.IsingGraph, L)
+function corrLXY(g::IsingGraphs.IsingGraph, L)
     avgprod = 0
     prodavg1 = 0
     prodavg2 = 0
@@ -239,11 +378,11 @@ end
 
 # Calculates the two points correlation function for different lengths and returns a vector with all the data
 # Returned vector index corresponds to dinstance L``
-function corrFunc(g::IsingGraphs.IsingGraph, plot = true)
+function corrFuncXY(g::IsingGraphs.IsingGraph, plot = true)
     corr::Vector{Float32} = []
     x = [1:(g.N-2);]
     for L in 1:(g.N-2)
-        append!(corr,corrL(g,L))
+        append!(corr,corrLXY(g,L))
     end
 
     if plot
@@ -253,51 +392,26 @@ function corrFunc(g::IsingGraphs.IsingGraph, plot = true)
     return corr
 end
 
+# Tries all pairs, way to expensive for larger grids
+function corrFuncPeriodic(g::IsingGraph)
+    dict = Dict{Float32,Tuple{Float32,Int32}}()
+    for (idx1,state1) in enumerate(g.state)
+        for (idx2,state2) in enumerate(g.state)
+            (i1,j1) = idxToCoord(idx1,g.N)
+            (i2,j2) = idxToCoord(idx2,g.N)
+            
+            L::Float32 = sqrt((i1-i2)^2+(j1-j2)^2)
+            if haskey(dict,L) == false
+                dict[L] = (0,0)
+            end
 
-# Aggregate all Magnetization measurements for a the same temperatures 
-function datMAvgT(dat,dpoints = detDPoints(dat))
-    temps = dat[:,1]
-    Ms = dat[:,3]
-    tempit = 1:dpoints:length(temps)
-    temps = temps[tempit]
-    Ms = [(sum( Ms[(1+(i-1)*dpoints):(i*dpoints)] )/length(tempit)) for i in 1:length(tempit)]
-
-    return (temps,Ms)
-end
-
-# Make a plot of the magnetization from DF
-function MPlot(fileName, pDefects)
-    df = DataFrame(CSV.File(fileName))
-    dat = datMAvgT(df)
-    
-    if dat[2][1] < 0
-        dat = (dat[1],[-x for x in dat[2] ])
+            dict[L] = (dict[L][1] + state1*state2, dict[L][2]+1)
+        end
     end
-    display(pl.plot(dat, title = "$pDefects% defects", xlabel = "Temperature" , ylabel = "Magnetization", legend = false))
 
+    return dict
 end
 
-# Expand measurements in time
-function datMExpandTime(dat,dpoints,dpointwait)
-    return
-end
-
-# Averages M_array over an amount of steps
-# Updates magnetization (which is thus the averaged value)
-let avg_window = 60, frames = 0
-    global function magnetization(g::IsingGraphs.IsingGraph,M, M_array)
-        avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
-        M_array[] = insertShift(M_array[], Int32(sum(g.state)))
-        if frames > avg_window
-            M[] = sum(M_array[])/avg_window 
-            frames = 0
-        end 
-        frames += 1 
-    end
-end
-
-
-"""Correlation Length Data"""
 # Parse Correlation Length Data from string in DF
 function parseCorrL(corr_dat)
     corrls = []
@@ -316,50 +430,27 @@ function dfToCorrls(df)
     return (Ts,corrls)
 end
 
-# Not used currently, used to fit correleation length data to a function f
-function fitCorrl(dat,dom_end, f, params...)
-    dom = Domain(1.:dom_end)
-    data = Measures(Vector{Float64}(dat[1:dom_end]),0.)
-    model = Model(:comp1 => FuncWrap(f,params...))
-    prepare!(model,dom, :comp1)
-    return fit!(model,data)
-end
+""" Old magnetization stuff """
 
-"""General data"""
+# Aggregate all Magnetization measurements for a the same temperatures 
+function datMAvgT(dat,dpoints = detDPoints(dat))
+    temps = dat[:,1]
+    Ms = dat[:,3]
+    tempit = 1:dpoints:length(temps)
+    temps = temps[tempit]
+    Ms = [(sum( Ms[(1+(i-1)*dpoints):(i*dpoints)] )/length(tempit)) for i in 1:length(tempit)]
 
-# Determine amount of datapoints per temperature from dataframe data (if homogeneous over temps)
-function detDPoints(dat)
-    dpoint = 0
-    lastt = dat[:,1][1]
-    for temp in dat[:,1]
-        if temp == lastt
-            dpoint += 1
-        else 
-            return dpoint
-        end
-    end
-    return dpoint
+    return (temps,Ms)
 end
 
 
-# Input the temperature sweep data into a dataframe
-function dataToDF(tsData, lMax = length(tsData[2][1]))
-    return DataFrame(Temperature = tsData[1], Correlation_Function = [corrL[1:lMax] for corrL in  tsData[2]], Magnetization = tsData[3] )
-end
 
-# Read CSV and outputs dataframe
-csvToDF(filename) = DataFrame(CSV.File(filename)) 
-
-
-
-""" Helper Functions"""
-
-function insertShift(vec::Vector{T}, el::T) where T
-    newVec = Vector{T}(undef, length(vec))
-    newVec[1:(end-1)] = vec[2:end]
-    newVec[end] = el
-    return newVec
+# Expand measurements in time
+function datMExpandTime(dat,dpoints,dpointwait)
+    return
 end
 
 
 end
+
+
