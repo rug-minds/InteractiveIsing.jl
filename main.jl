@@ -7,8 +7,8 @@ include("CustomWF.jl")
 User Variables
 """
 const graphSize = 512
-const weighted = false
-const weightFunc = defaultIsingWF
+const weighted = true
+const weightFunc = altCrossWF
 
 const initTemp = 1.
 
@@ -25,7 +25,7 @@ qmlfile = joinpath(dirname(Base.source_path()), "qml", "Main.qml")
 # qmlfile = joinpath(dirname(Base.source_path()), "qml", "TSweepWindow/Tsweep.qml")
 
 
-#Observables
+#Observables 
 const running = Observable(true)
 const gSize = Observable(graphSize)
 const NIs = Observable(gSize[])

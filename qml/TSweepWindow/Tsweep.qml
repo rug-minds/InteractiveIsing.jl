@@ -10,6 +10,16 @@ import Qt.labs.platform
 
 ApplicationWindow {
 
+    property int ti: obs.TIs[]
+    property double tstep: .5
+    property int tend: 0
+
+    property int npoints: 5
+
+    property int dwait: 5
+    property int twait: 10
+    property int ewait: 5
+
     id: root
     width: 500 ; height: 300
 
@@ -35,8 +45,8 @@ ApplicationWindow {
                 IntField{
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
-                    id: tstart
-                    text: `${obs.TIs}`
+                    id: tifield
+                    text: `${ti}`
                 }
 
             }
@@ -50,9 +60,9 @@ ApplicationWindow {
                     width: tb_width
                     low: 0.005
                     high: 10.0
-                    prec: 4
-                    text: "0.5"
-                    id: tstep
+                    prec: 3
+                    text: `${tstep}`
+                    id: tstepfield
                 }
             }
             ColumnLayout{
@@ -63,8 +73,8 @@ ApplicationWindow {
                 IntField{
                     Layout.alignment: Qt.AlignHCenter
                     width: tb_width
-                    id: tend
-                    text: "10"
+                    id: tendfield
+                    text: `${tend}`
                 }
             }
         }
@@ -81,7 +91,7 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignHCenter
                 id: dpoints
-                text: "12"
+                text: `${npoints}`
             }
         }
 
@@ -104,6 +114,7 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
                     id: dpointwait
+                    text: `${dwait}`
                     low: 1
                 }
             }
@@ -114,7 +125,8 @@ ApplicationWindow {
                 }
                 IntField{
                     Layout.alignment: Qt.AlignHCenter
-                    id: stepwait
+                    id: tstepwait
+                    text: `${twait}`
                 }
             }
             ColumnLayout{
@@ -125,6 +137,7 @@ ApplicationWindow {
                 IntField{
                     Layout.alignment: Qt.AlignHCenter
                     id: equiwait
+                    text: `${ewait}`
                 }
             }
         }
@@ -147,8 +160,7 @@ ApplicationWindow {
             Layout.alignment: Qt.AlignHCenter
             text: "Start Analysis"
             onClicked: {
-                Julia.println(`${tstart.val}`)
-                Julia.tempSweepQML(tstart.val, tend.val, tstep.val, dpoints.val, dpointwait.val, stepwait.val, equiwait.val, saveImg.checked)
+                Julia.tempSweepQML(tifield.val, tendfield.val, tstepfield.val, dpoints.val, dpointwait.val, tstepwait.val, equiwait.val, saveImg.checked)
                 close()
             }
         }

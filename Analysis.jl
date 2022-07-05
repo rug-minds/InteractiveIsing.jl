@@ -41,12 +41,17 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
     println("Parameters TIs$TIs, M_array$M_array, TI$TI,TF$TF, TStep$TStep, dpoints$dpoints, dpointwait$dpointwait, stepwait$stepwait, equiwait$equiwait, saveImg$saveImg")
     
     first = true
+
+    if TF < TI
+        TStep *= -1
+    end
+
     TRange =  TI:TStep:TF
     
     # DataFrames
     mdf = DataFrame()
     cldf = DataFrame()
-    for T in TRange
+    for (tidx, T) in enumerate(TRange)
         println("Gathering data for temperature $T, $dpoints data points in intervals of $dpointwait seconds")
         waittime = length(T:TStep:TF)*(dpoints*dpointwait + stepwait)
         if first # If first run, wait equiwait seconds for equibrilation
@@ -75,12 +80,12 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
             
             if saveImg
                 # Image of ising
-                save(File{format"PNG"}("$(foldername)Ising T$T d$point.PNG"), img[])
+                save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), img[])
 
                 # Image of correlation plot
                 corrPlot = pl.plot(lVec,corrVec, xlabel = "Length", ylabel=L"C(L)")
                 Tstring = replace("$T", '.' => ',')
-                pl.savefig(corrPlot,"$(foldername)Corrplot T$Tstring $point")
+                pl.savefig(corrPlot,"$(foldername)Corrplot $tidx $point T$Tstring")
             end
 
             tpointf = time()
@@ -205,7 +210,7 @@ function dfMPlot(mdf::DataFrame, foldername::String)
     if avgM[1] < 0
         avgM .*= -1
     end
-    
+
     mPlot = pl.plot(newTs,avgM, xlabel = "T", ylabel="M", label=false)
     pl.savefig(mPlot,"$(foldername)Mplot")
 end
