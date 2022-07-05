@@ -68,14 +68,25 @@ Item{
 
 Button{
   Layout.alignment: Qt.AlignHCenter
-  text: "Temperature Sweep"
+  text:{
+      if(obs.analysisRunning == false){
+        "Temperature Sweep"
+      }
+      else{
+        "Stop Analysis"
+      }
+    }
+
   onClicked: {
-    var component = Qt.createComponent("../TSweepWindow/Tsweep.qml")
-    var window = component.createObject(root)
-    window.show()
-    //   if(!root.tsweep.active){
-    //   println("Active")
-    // }
+    if(obs.analysisRunning == false){
+      var component = Qt.createComponent("../TSweepWindow/Tsweep.qml")
+      var window = component.createObject(root)
+      window.show()
+    }
+    else{
+      obs.analysisRunning = false
+    }
+    
 
   }
 }

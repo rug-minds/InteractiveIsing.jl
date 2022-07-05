@@ -42,7 +42,7 @@ function radialFunc(pow; dr, i, j, _...)
     return (1/dr^2)*1/((i-256)^2+(j-256)^2)^pow
 end
 pow = .25
-radialWeightF = WeightFunc(
+radialWF = WeightFunc(
     (;dr, i,j,_...) -> radialFunc(pow ;dr, i,j),
-    NN = 2
+    NN = 1
 )

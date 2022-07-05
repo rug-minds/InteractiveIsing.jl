@@ -10,7 +10,7 @@ module WeightFuncs
 
 using Distributions
 
-export WeightFunc, setAddDist!, setMultDist!, defaultIsingWF, altWF, altCrossWF, randWF
+export WeightFunc, setAddDist!, setMultDist!, defaultIsingWF, altRWF, altCrossWF, randWF
 
 # Assuming one method,
 # Returns symbols of argnames
@@ -74,14 +74,14 @@ defaultIsingWF =  WeightFunc(
     NN = 1
 )
 
-altWF = WeightFunc(
+altRWF = WeightFunc(
     (;dr, _...) ->
         if dr % 2 == 1
-            return 1.0*1/dr^2
+            return -1.0*1/dr^2
         elseif dr % 2 == 0
-            return -1*1/dr^2
+            return 1*1/dr^2
         else
-            return 1/dr^2
+            return -1/dr^2
         end,
     NN  = 2
 )

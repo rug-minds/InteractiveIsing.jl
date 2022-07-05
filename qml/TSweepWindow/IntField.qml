@@ -20,6 +20,8 @@ TextField{
         bottom: low; top: high
     }
     selectByMouse: true
+
+    property var resetVal: false
     onTextChanged: {
         text = custIntValidator(text, low, high)
         val = parseInt(text)
@@ -32,8 +34,7 @@ TextField{
         if(isNaN(parseInt(text))){
             var newInt = def
             newText = `${newInt}`
-            
-
+            resetVal = true
             return newText
         }
 
@@ -45,8 +46,9 @@ TextField{
             newText = `${high}`
             return newText
         }
-        if( text == `${def}` && !frst){
+        if(resetVal == true){
             selectAll()
+            resetVal = false
         }
 
         frst = false

@@ -10,11 +10,11 @@ import Qt.labs.platform
 
 ApplicationWindow {
 
-    property int ti: obs.TIs[]
-    property double tstep: .5
-    property int tend: 0
+    property double ti: obs.TIs
+    property double tstep: .2
+    property double tend: .0
 
-    property int npoints: 5
+    property int npoints: 12
 
     property int dwait: 5
     property int twait: 10
@@ -42,7 +42,7 @@ ApplicationWindow {
                     text: "T Start"
                 }
 
-                IntField{
+                DoubleField{
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
                     id: tifield
@@ -70,7 +70,7 @@ ApplicationWindow {
                     Layout.alignment: Qt.AlignHCenter
                     text: "T End"
                 }
-                IntField{
+                DoubleField{
                     Layout.alignment: Qt.AlignHCenter
                     width: tb_width
                     id: tendfield
@@ -161,6 +161,8 @@ ApplicationWindow {
             text: "Start Analysis"
             onClicked: {
                 Julia.tempSweepQML(tifield.val, tendfield.val, tstepfield.val, dpoints.val, dpointwait.val, tstepwait.val, equiwait.val, saveImg.checked)
+                obs.analysisRunning = true
+                Julia.println(obs.analysisRunning)
                 close()
             }
         }

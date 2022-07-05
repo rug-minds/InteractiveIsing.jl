@@ -8,7 +8,9 @@ User Variables
 """
 const graphSize = 512
 const weighted = true
-const weightFunc = altCrossWF
+const weightFunc = defaultIsingWF
+
+setAddDist!(weightFunc, Normal(0,0.7))
 
 const initTemp = 1.
 
@@ -36,6 +38,7 @@ const brush = Observable(0)
 const brushR = Observable( Int(round(NIs[]/10)) )
 const circ  = Observable(getOrdCirc(brushR[])) 
 const M = Observable(0.0)
+const analysisRunning = Observable(false)
 
 # Not elegant
 const M_array = Ref(zeros(Int32,60))
@@ -77,7 +80,8 @@ const pmap = JuliaPropertyMap(
     "brush" => brush,
     "brushR" => brushR,
     "M" => M,
-    "upf" => upf
+    "upf" => upf,
+    "analysisRunning" => analysisRunning
 )
 
 @qmlfunction timedFunctions

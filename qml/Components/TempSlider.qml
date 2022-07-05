@@ -49,10 +49,10 @@ Rectangle{
             }
         }
 
-        Button{
-            text: "Anneal"
+        // Button{
+        //     text: "Anneal"
             
-        }
+        // }
 
     }
 }

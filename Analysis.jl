@@ -12,7 +12,7 @@ using ..IsingGraphs
 include("SquareAdj.jl")
 using .SquareAdj
 
-export magnetization, dataToDF, tempSweep, MPlot, sampleCorrPeriodic, corrFuncXY, dfMPlot, dataFolderNow
+export magnetization, dataToDF, tempSweep, MPlot, sampleCorrPeriodic, corrFuncXY, dfMPlot, dataFolderNow, csvToDF
 
 mutable struct AInt32
     @atomic x::Int32
@@ -33,12 +33,12 @@ User functions
 #   Every step, a number of datapoints (dpoints) are recorded, with inervals between them of dpointwait
 #   In between Temperatures there is an optional wait time of stepwait, for equilibration
 #   There is an initial wait time of equiwait for equilibration
-function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]), corrF = sampleCorrPeriodic)
+function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]), corrF = sampleCorrPeriodic, analysisRunning = Observable(true))
     """ Make folder """
     foldername = dataFolderNow("Tempsweep")
 
     println("Starting temperature sweep")
-    println("Parameters TIs$TIs, M_array$M_array, TI$TI,TF$TF, TStep$TStep, dpoints$dpoints, dpointwait$dpointwait, stepwait$stepwait, equiwait$equiwait, saveImg$saveImg")
+    println("Parameters TI$TI,TF$TF, TStep$TStep, dpoints$dpoints, dpointwait$dpointwait, stepwait$stepwait, equiwait$equiwait, saveImg$saveImg")
     
     first = true
 
@@ -54,6 +54,9 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
     for (tidx, T) in enumerate(TRange)
         println("Gathering data for temperature $T, $dpoints data points in intervals of $dpointwait seconds")
         waittime = length(T:TStep:TF)*(dpoints*dpointwait + stepwait)
+
+        TIs[] = T
+
         if first # If first run, wait equiwait seconds for equibrilation
             println("The sweep will take approximately $(equiwait + waittime) seconds")
             if equiwait != 0
@@ -62,17 +65,22 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
             end
             first=false
         else # Else wait in between temperature steps
+            # User feedback of remaining time
+            println("Approximately $waittime seconds remaining")
             println("Now waiting $stepwait seconds in between temperatures")
             sleep(stepwait)
         end
 
-        # User feedback of remaining time
-        println("Approximately $(length(waittime)) seconds remaining")
         
-        TIs[] = T
 
         # Gather Datapoints
         for point in 1:dpoints
+
+            if !(analysisRunning[])
+                println("Interrupted analysis")
+                return
+            end
+
             tpointi = time()
             (lVec,corrVec) = corrF(g) 
             cldf = vcat(cldf, corrToDF((lVec,corrVec) , point, TIs[]) )
@@ -91,7 +99,7 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
             tpointf = time()
             dtpoint = tpointf-tpointi
 
-            println("Datapoint took $dtpoint seconds")
+            println("Datapoint $point took $dtpoint seconds")
 
             sleep(max(dpointwait-dtpoint,0))
         end
@@ -102,8 +110,10 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
         dfMPlot(mdf, foldername)
     end
 
-    CSV.write("$(foldername)CorrData", cldf)
-    CSV.write("$(foldername)MData", mdf)
+    CSV.write("$(foldername)CorrData.csv", cldf)
+    CSV.write("$(foldername)MData.csv", mdf)
+
+    println("Temperature sweep done!")
     
 end
 
@@ -207,9 +217,16 @@ function dfMPlot(mdf::DataFrame, foldername::String)
         newTs[idx] = ts[first(slice)]
     end
 
-    if avgM[1] < 0
-        avgM .*= -1
+    if newTs[1] < newTs[end]
+        if avgM[1] < 0
+            avgM .*= -1
+        end
+    else
+        if avgM[end] < 0
+            avgM .*= -1
+        end
     end
+        
 
     mPlot = pl.plot(newTs,avgM, xlabel = "T", ylabel="M", label=false)
     pl.savefig(mPlot,"$(foldername)Mplot")

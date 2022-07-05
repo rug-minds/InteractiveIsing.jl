@@ -19,10 +19,12 @@ TextField{
     selectByMouse: true
 
     validator: DoubleValidator {
+        locale: "en"
         bottom: low; top: high
+        notation: DoubleValidator.StandardNotation
     }
 
-    
+    property var resetVal: false
     onTextChanged: {
         text = `${custDoubleValidator(text, low, high, prec)}`
 
@@ -34,11 +36,11 @@ TextField{
         }
     }
 
-    onFocusChanged: {
-        if(parseFloat(text) < low){
-            text = `${low}`
-        }
-    }
+    // onFocusChanged: {
+    //     if(parseFloat(text) < low){
+    //         text = `${custDoubleValidator(text, low, high, prec)}`
+    //     }
+    // }
 
     function custDoubleValidator(text, low, high, prec){
         Number.prototype.countDecimals = function () {
@@ -52,6 +54,7 @@ TextField{
         // If textfield is cleared, enter in default value
         if(isNaN(parseFloat(text))){
             newText = `${def}`
+            resetVal = true
             return newText
         }
 
@@ -65,8 +68,9 @@ TextField{
             return newText
         }
 
-         if( text == `${def}` && !frst){
+        if(resetVal == true){
             selectAll()
+            resetVal = false
         }
 
         frst = false
