@@ -21,7 +21,7 @@ function imagesc(data::AbstractMatrix{<:Real};
     return get(colorscheme, data, rangescale) # get(...) from ColorSchemes.jl
 end
 
-function gToImg(g::IsingGraph, maxsize = 512)
+function gToImg(g::AbstractIsingGraph, maxsize = 512)
     return imagesc(reshape(g.state, (g.N,g.N) )  , maxsize=maxsize  )
 end
 

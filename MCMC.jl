@@ -1,23 +1,17 @@
 """ Updates the spin ising"""
-# function updateMonteCarloQML!(g::IsingGraph, T)
+__precompile__()
+module IsingMetropolis
 
-#     beta = T>0 ? 1/T : Inf
+# include("IsingGraphs.jl")
+using ..IsingGraphs
 
-#     idx = rand(ising_it(g))
-#     Estate = 0
+export updateMonteCarloIsing!
 
-#     for jdx in g.adj[idx]
-#         @inbounds Estate += -g.state[idx]*g.state[jdx]
-#     end
+function updateMonteCarloIsing!(g::IsingGraph, T)
 
-
-#     if (Estate >= 0 || rand() < exp(2*beta*Estate))
-#         @inbounds g.state[idx] *= -1
-#     end
-    
-# end
-
-function updateMonteCarloQML!(g::IsingGraph, T)
+    @inline function deltE(Estate)
+        return 2*Estate
+    end
 
     beta = T>0 ? 1/T : Inf
 
@@ -25,25 +19,45 @@ function updateMonteCarloQML!(g::IsingGraph, T)
 
     Estate = getH(g,idx)
 
-    if (Estate >= 0 || rand() < exp(2*beta*Estate))
+    if (Estate >= 0 || rand() < exp(beta*deltE(Estate)))
         @inbounds g.state[idx] *= -1
     end
     
 end
 
-function getH(g,idx)::Float32
-    
-    Estate = 0.
-    if !g.weighted
-        for conn in g.adj[idx]
-            @inbounds Estate += -g.state[idx]*g.state[connIdx(conn)]
-        end
-    else
-        for conn in g.adj[idx]
-            @inbounds Estate += -connW(conn)*g.state[idx]*g.state[connIdx(conn)]
-        end
-    end
-        
+function updateMonteCarloIsing!(g::CIsingGraph, T)
 
-    return Estate
+    # No self energy
+    # @inline function deltE(Estate,newstate,oldstate)
+    #     return Estate*(newstate/oldstate-1)
+    # end
+
+    @inline function deltE(Estate,newstate,oldstate)
+        ratio = newstate/oldstate
+        return Estate*(ratio-1) - oldstate^2*(ratio)+newstate^2
+    end
+
+    @inline function sampleCState()
+        2*(rand()-.5)
+    end
+
+    beta = T>0 ? 1/T : Inf
+
+    idx = rand(ising_it(g))
+
+    oldstate = g.state[idx]
+    Estate = getH(g,oldstate,idx)
+
+    newstate = sampleCState()
+    
+
+    if (Estate >= 0 || rand() < exp(-beta*deltE(Estate,newstate,oldstate)))
+        @inbounds g.state[idx] = newstate
+    end
+    
 end
+
+
+end
+
+

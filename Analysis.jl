@@ -12,7 +12,7 @@ using ..IsingGraphs
 include("SquareAdj.jl")
 using .SquareAdj
 
-export magnetization, dataToDF, tempSweep, MPlot, sampleCorrPeriodic, corrFuncXY, dfMPlot, dataFolderNow, csvToDF
+export dataToDF, tempSweep, MPlot, sampleCorrPeriodic, corrFuncXY, dfMPlot, dataFolderNow, csvToDF
 
 mutable struct AInt32
     @atomic x::Int32
@@ -38,7 +38,7 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
     foldername = dataFolderNow("Tempsweep")
 
     println("Starting temperature sweep")
-    println("Parameters TI$TI,TF$TF, TStep$TStep, dpoints$dpoints, dpointwait$dpointwait, stepwait$stepwait, equiwait$equiwait, saveImg$saveImg")
+    println("Parameters TI: $TI,TF: $TF, TStep: $TStep, dpoints: $dpoints, dpointwait: $dpointwait, stepwait: $stepwait, equiwait: $equiwait, saveImg: $saveImg")
     
     first = true
 
@@ -91,9 +91,9 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
                 save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), img[])
 
                 # Image of correlation plot
-                corrPlot = pl.plot(lVec,corrVec, xlabel = "Length", ylabel=L"C(L)")
+                corrPlot = pl.plot(lVec,corrVec, xlabel = "Length", ylabel=L"C(L)", label = false)
                 Tstring = replace("$T", '.' => ',')
-                pl.savefig(corrPlot,"$(foldername)Corrplot $tidx $point T$Tstring")
+                pl.savefig(corrPlot,"$(foldername)Corrplot $tidx d$point T$Tstring")
             end
 
             tpointf = time()
@@ -230,20 +230,6 @@ function dfMPlot(mdf::DataFrame, foldername::String)
 
     mPlot = pl.plot(newTs,avgM, xlabel = "T", ylabel="M", label=false)
     pl.savefig(mPlot,"$(foldername)Mplot")
-end
-
-# Averages M_array over an amount of steps
-# Updates magnetization (which is thus the averaged value)
-let avg_window = 60, frames = 0
-    global function magnetization(g::IsingGraphs.IsingGraph,M, M_array)
-        avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
-        M_array[] = insertShift(M_array[], Int32(sum(g.state)))
-        if frames > avg_window
-            M[] = sum(M_array[])/avg_window 
-            frames = 0
-        end 
-        frames += 1 
-    end
 end
 
 """General data"""

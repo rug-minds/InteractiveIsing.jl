@@ -9,7 +9,7 @@ using Random, Distributions, .SquareAdj
 include("WeightFuncs.jl")
 using .WeightFuncs
 
-export IsingGraph, hIsing, reInitGraph!, coordToIdx, idxToCoord, ising_it, paintPoints!, addDefects!, remDefects!, addDefect!, remDefect!, connIdx, connW, initSqAdj
+export AbstractIsingGraph, IsingGraph, CIsingGraph, reInitGraph!, coordToIdx, idxToCoord, ising_it, paintPoints!, addDefects!, remDefects!, addDefect!, remDefect!, connIdx, connW, initSqAdj, getH
 
 # Aliases
 Edge = Pair{Int32,Int32}
@@ -17,7 +17,11 @@ Vert = Int32
 Weight = Float32
 Conn = Tuple{Vert, Weight}
 
-mutable struct IsingGraph
+abstract type AbstractIsingGraph end
+
+""" Discrete """
+
+mutable struct IsingGraph <: AbstractIsingGraph
     # Global graph props to be tracked for performance
     N::Int32
     size::Int32
@@ -31,6 +35,11 @@ mutable struct IsingGraph
     defectList::Vector{Vert}
     weighted::Bool
 end
+
+# mutable struct mField
+#     active::Bool
+#     bfield::Matrix{Float32}
+# end
 
 """
 INITIALIZERS
@@ -65,6 +74,63 @@ INITIALIZERS
         g.defectList = []
     end
 
+   # Initialization of state
+    function initRandomState(N)::Vector{Int8}
+        return [sample([-1,1]) for x in 1:(N*N) ]
+    end
+
+""" Continuous """
+
+mutable struct CIsingGraph <: AbstractIsingGraph
+    # Global graph props to be tracked for performance
+    N::Int32
+    size::Int32
+    # Vertices and edges
+    state::Vector{Float32}
+    adj::Vector{Vector{Conn}}
+    # For tracking defects
+    aliveList::Vector{Vert}
+    defects::Bool
+    defectBools::Vector{Bool}
+    defectList::Vector{Vert}
+    weighted::Bool
+end
+
+  #Initialization using only N
+  CIsingGraph(N::Int; weighted = false, weightFunc = DefaultIsing()) = 
+    CIsingGraph(
+        N,
+        N*N,
+        initRandomCState(N^2),
+        initSqAdj(N, weightFunc = weightFunc), 
+        weighted = weighted
+    )
+
+# Initialize without defects
+CIsingGraph(N,size,state,adj; weighted = false) = CIsingGraph(N,size,state,adj,[1:size;], false ,[false for x in 1:size],[], weighted)
+
+#Initialization of graph using a state and adjacency matrix
+CIsingGraph(state::Vector{Int8},adj::Dict{Vert,Vector{Vert}}) = let size = length(state)
+  CIsingGraph(sqrt(size), size, copy(state), adj)
+end
+
+# Copy graph data to new one
+CIsingGraph(g::CIsingGraph) = deepcopy(g)
+
+function reInitGraph!(g::CIsingGraph)
+  println("Reinitializing graph")
+  g.state = initRandomCState(g.size)
+  g.defects = false
+  g.aliveList = [1:g.size;]
+  g.defectBools = [false for x in 1:g.size]
+  g.defectList = []
+end
+
+# Initialization of state
+function initRandomCState(size)::Vector{Float32}
+    return 2 .* (rand(Float32,size) .- .5)
+end
+
 """
 Methods
 """
@@ -79,15 +145,12 @@ Methods
         return ((idx-1)÷N+1,(idx-1)%N+1)
     end
 
-    # Initialization of state
-    function initRandomState(N)::Vector{Int8}
-        return [sample([-1,1]) for x in 1:(N*N) ]
-    end
+ 
 
     # Returns an iterator over the ising lattice
     # If there are no defects, returns whole range
     # Otherwise it returns all alive spins
-    function ising_it(g::IsingGraph)
+    function ising_it(g::AbstractIsingGraph)
         if !g.defects
             it::UnitRange{Int32} = 1:g.size
             return it
@@ -97,15 +160,15 @@ Methods
 
     end
 
-# Get weight of connection
-@inline function connIdx(conn::Conn)
-    conn[1]
-end
+    # Get weight of connection
+    @inline function connIdx(conn::Conn)
+        conn[1]
+    end
 
-# Get weight of connection
-@inline function connW(conn::Conn)
-    conn[2]
-end
+    # Get weight of connection
+    @inline function connW(conn::Conn)
+        conn[2]
+    end
 
 # Initialization of adjacency matrix for a given ND
 function initSqAdj(N; weightFunc = defaultIsingWF)
@@ -118,78 +181,6 @@ end
 """ Setting Elements and defects """
 
 """ Adding Defects """
-
-    """Helper Functions"""
-
-        # Searches backwards from idx in list and removes item
-        # This is because spin idx can only be before it's own index in aliveList
-        function revRemoveSpin!(list,spin_idx)
-            init = min(spin_idx, length(list)) #Initial search index
-            for offset in 0:(init-1)
-                @inbounds if list[init-offset] == spin_idx
-                    deleteat!(list,init-offset)
-                    return init-offset # Returns index where element was found
-                end
-            end
-        end
-
-        # Zip together two ordered lists into a new ordered list    
-        function zipOrderedLists(vec1::Vector{T},vec2::Vector{T}) where T
-            # result::Vector{T} = zeros(length(vec1)+length(vec2))
-            result = Vector{T}(undef, length(vec1)+length(vec2))
-
-            ofs1 = 1
-            ofs2 = 1
-            while ofs1 <= length(vec1) && ofs2 <= length(vec2)
-                @inbounds el1 = vec1[ofs1]
-                @inbounds el2 = vec2[ofs2]
-                if el1 < el2
-                    @inbounds result[ofs1+ofs2-1] = el1
-                    ofs1 += 1
-                else
-                    @inbounds result[ofs1+ofs2-1] = el2
-                    ofs2 += 1
-                end
-            end
-    
-            if ofs1 <= length(vec1)
-                @inbounds result[ofs1+ofs2-1:end] = vec1[ofs1:end]
-            else
-                @inbounds result[ofs1+ofs2-1:end] = vec2[ofs2:end]
-            end
-            return result
-        end
-
-        # Deletes els from vec
-        # Assumes that els are in vec!
-        function remOrdEls(vec::Vector{T}, els::Vector{T}) where T
-            # result::Vector{T} = zeros(length(vec)-length(els))
-            result = Vector{T}(undef, length(vec)-length(els))
-            
-            it_idx = 1
-            num_del = 0
-            for el in els
-                    while el != vec[it_idx]
-                
-                    result[it_idx - num_del] = vec[it_idx]
-                    it_idx +=1
-                end
-                    num_del +=1
-                    it_idx += 1
-            end
-                result[(it_idx - num_del):end] = vec[it_idx:end]
-            return result
-        end
-
-        # Remove first element equal to el and returns correpsonding index
-        function removeFirst!(list,el)
-            for (idx,item) in enumerate(list)
-                if item == el
-                    deleteat!(list,idx)
-                    return idx
-                end
-            end
-        end
 
     """Actually Removing and adding defects"""
     
@@ -287,6 +278,79 @@ end
             g.defectList = [] # Remove defects
         end
 
+        """Helper Functions"""
+
+        # Searches backwards from idx in list and removes item
+        # This is because spin idx can only be before it's own index in aliveList
+        function revRemoveSpin!(list,spin_idx)
+            init = min(spin_idx, length(list)) #Initial search index
+            for offset in 0:(init-1)
+                @inbounds if list[init-offset] == spin_idx
+                    deleteat!(list,init-offset)
+                    return init-offset # Returns index where element was found
+                end
+            end
+        end
+
+        # Zip together two ordered lists into a new ordered list    
+        function zipOrderedLists(vec1::Vector{T},vec2::Vector{T}) where T
+            # result::Vector{T} = zeros(length(vec1)+length(vec2))
+            result = Vector{T}(undef, length(vec1)+length(vec2))
+
+            ofs1 = 1
+            ofs2 = 1
+            while ofs1 <= length(vec1) && ofs2 <= length(vec2)
+                @inbounds el1 = vec1[ofs1]
+                @inbounds el2 = vec2[ofs2]
+                if el1 < el2
+                    @inbounds result[ofs1+ofs2-1] = el1
+                    ofs1 += 1
+                else
+                    @inbounds result[ofs1+ofs2-1] = el2
+                    ofs2 += 1
+                end
+            end
+    
+            if ofs1 <= length(vec1)
+                @inbounds result[ofs1+ofs2-1:end] = vec1[ofs1:end]
+            else
+                @inbounds result[ofs1+ofs2-1:end] = vec2[ofs2:end]
+            end
+            return result
+        end
+
+        # Deletes els from vec
+        # Assumes that els are in vec!
+        function remOrdEls(vec::Vector{T}, els::Vector{T}) where T
+            # result::Vector{T} = zeros(length(vec)-length(els))
+            result = Vector{T}(undef, length(vec)-length(els))
+            
+            it_idx = 1
+            num_del = 0
+            for el in els
+                    while el != vec[it_idx]
+                
+                    result[it_idx - num_del] = vec[it_idx]
+                    it_idx +=1
+                end
+                    num_del +=1
+                    it_idx += 1
+            end
+                result[(it_idx - num_del):end] = vec[it_idx:end]
+            return result
+        end
+
+        # Remove first element equal to el and returns correpsonding index
+        function removeFirst!(list,el)
+            for (idx,item) in enumerate(list)
+                if item == el
+                    deleteat!(list,idx)
+                    return idx
+                end
+            end
+        end
+
+
 
 """Setting Elements"""
 
@@ -327,22 +391,40 @@ function sortedPair(idx1::Integer,idx2::Integer):: Pair{Integer,Integer}
     end
 end
 
-function getH(g::IsingGraph, spindex::Integer ; weighted::Bool = false)
-    @inbounds conns = g.adj[spindex]
-    E = 0
-    @inbounds state = g.state[spindex]
-    # Energy always -J * state1 * state2
-    if !weighted
-        for conn in conns
-            @inbounds E += -state*g.state[conn]
+function getH(g::AbstractIsingGraph,idx)::Float32
+    
+    Estate::Float32 = 0.
+    if !g.weighted
+        for conn in g.adj[idx]
+            @inbounds Estate += -g.state[idx]*g.state[connIdx(conn)]
         end
     else
-        for conn in conns
-           @inbounds E += -g.eprops[sortedPair(spindex,conn)][:weight]*state*g.state[conn]
+        for conn in g.adj[idx]
+            @inbounds Estate += -connW(conn)*g.state[idx]*g.state[connIdx(conn)]
         end
     end
+        
 
-    return E
+    return Estate
 end
+
+function getH(g::CIsingGraph,state, idx)::Float32
+    
+    Estate::Float32 = 0.
+    if !g.weighted
+        for conn in g.adj[idx]
+            @inbounds Estate += -state*g.state[connIdx(conn)]
+        end
+    else
+        for conn in g.adj[idx]
+            @inbounds Estate += -connW(conn)*state*g.state[connIdx(conn)]
+        end
+    end
+    
+    Estate += state^2
+
+    return Estate
+end
+
 
 end

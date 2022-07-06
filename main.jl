@@ -1,4 +1,3 @@
-
 include("Sim.jl")
 include("CustomWF.jl")
 
@@ -6,11 +5,12 @@ include("CustomWF.jl")
 """
 User Variables
 """
+const continuous = true
 const graphSize = 512
 const weighted = true
-const weightFunc = defaultIsingWF
+const weightFunc = radialWF
 
-setAddDist!(weightFunc, Normal(0,0.7))
+setAddDist!(weightFunc, Normal(0,0.001))
 
 const initTemp = 1.
 
@@ -41,7 +41,7 @@ const M = Observable(0.0)
 const analysisRunning = Observable(false)
 
 # Not elegant
-const M_array = Ref(zeros(Int32,60))
+const M_array = Ref(zeros(Real,60))
 # const M_array = zeros(Int32,avg_window)
 
 
@@ -57,11 +57,19 @@ const upf = Observable(0)
 const updatingUpf = Ref(false)
 
 # Graph
-const g = IsingGraph(
-    NIs[], 
-    weighted = weighted,
-    weightFunc = weighted ? weightFunc : defaultIsingWF
+if continuous
+    const g = CIsingGraph(
+            NIs[], 
+            weighted = weighted,
+            weightFunc = weighted ? weightFunc : defaultIsingWF
+        )
+else
+    const g = IsingGraph(
+        NIs[], 
+        weighted = weighted,
+        weightFunc = weighted ? weightFunc : defaultIsingWF
     )
+end
 
 # Image
 const img = Ref(gToImg(g))

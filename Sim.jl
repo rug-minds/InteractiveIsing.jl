@@ -21,6 +21,7 @@ include("Analysis.jl")
 using .Analysis
 
 include("MCMC.jl") 
+using .IsingMetropolis
 include("GPlotting.jl")
 # using .GPlotting
 
@@ -58,7 +59,7 @@ end
 function updateGraph()
         while running[]
             if !isPaused[] # if sim not paused
-                updateMonteCarloQML!(g,TIs[])
+                updateMonteCarloIsing!(g,TIs[])
                 updates[] += 1
             else
                 sleep(0.2)
@@ -72,7 +73,7 @@ function updateGraphREPL()
     while running[]
     
         if !isPaused[] # if sim not paused
-            updateMonteCarloQML!(g,TIs[])
+            updateMonteCarloIsing!(g,TIs[])
             updates[] += 1
         else
             yield()
@@ -101,6 +102,20 @@ let avgWindow = 60, updateWindow = zeros(Int64,avgWindow), frames = 0
         end
         frames += 1
         updates[] = 0
+    end
+end
+
+# Averages M_array over an amount of steps
+# Updates magnetization (which is thus the averaged value)
+let avg_window = 60, frames = 0
+    global function magnetization(g::AbstractIsingGraph,M, M_array)
+        avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
+        M_array[] = insertShift(M_array[], sum(g.state))
+        if frames > avg_window
+            M[] = sum(M_array[])/avg_window 
+            frames = 0
+        end 
+        frames += 1 
     end
 end
 
