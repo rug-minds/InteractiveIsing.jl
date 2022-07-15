@@ -28,17 +28,23 @@ end
 function updateMonteCarloIsing!(g::CIsingGraph, T)
 
     # No self energy
-    # @inline function deltE(Estate,newstate,oldstate)
-    #     return Estate*(newstate/oldstate-1)
-    # end
-
     @inline function deltE(Estate,newstate,oldstate)
+        return Estate*(newstate/oldstate-1)
+    end
+
+    @inline function deltESelf(Estate,newstate,oldstate)
         ratio = newstate/oldstate
         return Estate*(ratio-1) - oldstate^2*(ratio)+newstate^2
     end
 
     @inline function sampleCState()
         2*(rand()-.5)
+    end
+
+    if g.selfE
+        deltEFunc = deltESelf
+    else
+        deltEFunc = deltE
     end
 
     beta = T>0 ? 1/T : Inf
@@ -51,7 +57,7 @@ function updateMonteCarloIsing!(g::CIsingGraph, T)
     newstate = sampleCState()
     
 
-    if (Estate >= 0 || rand() < exp(-beta*deltE(Estate,newstate,oldstate)))
+    if (Estate >= 0 || rand() < exp(-beta*deltEFunc(Estate,newstate,oldstate)))
         @inbounds g.state[idx] = newstate
     end
     

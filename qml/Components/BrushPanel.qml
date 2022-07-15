@@ -9,6 +9,8 @@ import Qt.labs.platform
 
 RowLayout{
 
+    property bool clamp: false
+
     ColumnLayout{
         Text{
             Layout.alignment: Qt.AlignHCenter
@@ -33,8 +35,20 @@ RowLayout{
         Button{
             id: brushButton
             text: "-1"
+            // palette: {
+            //     button: "gray"
+            // }
             onClicked: {
                 obs.brush = -1
+            }
+        }
+
+        Switch{
+            Layout.alignment: Qt.AlignHCenter
+            text: qsTr("Clamp")
+            checked: clamp
+            onCheckedChanged: {
+                clamp = !clamp
             }
         }
 
@@ -51,7 +65,7 @@ RowLayout{
             // minimumValue: 1
             // maximumValue: 100
             from: 1
-            to: 100
+            to: {Math.floor(obs.gSize/2)-1}
             stepSize: 1
             onValueChanged: {
                 obs.brushR = value

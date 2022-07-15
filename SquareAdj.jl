@@ -8,7 +8,7 @@ module SquareAdj
 include("WeightFuncs.jl")
 using .WeightFuncs
 
-export fillAdjList!, numEdges, latmod, initAdj
+export fillAdjList!, numEdges, latmod, initAdj, adjToMatrix
 
 
 # Matrix Coordinates to vector Coordinates
@@ -54,7 +54,7 @@ function adjEntry!(adj, N, idx, weightFunc=defaultIsing)
         end
     end
 
-    # 
+    
     function coupIdxFunc(icoup, jcoup)
         if periodic
             return coordToIdx(latmod(icoup, N), latmod(jcoup, N), N)
@@ -77,7 +77,7 @@ function adjEntry!(adj, N, idx, weightFunc=defaultIsing)
     for icoup in (i-NN):(i+NN)
         for jcoup in (j-NN):(j+NN)
             dr = sqrt((i - icoup)^2 + (j - jcoup)^2)
-            weight = inv(dr, i, j)
+            weight = inv(dr, (i+icoup)/2, (j+jcoup)/2)
             if doesConnect(i, j, icoup, jcoup, weight)
 
                 coup_idx = coupIdxFunc(icoup, jcoup)

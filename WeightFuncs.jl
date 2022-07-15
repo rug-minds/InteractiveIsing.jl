@@ -39,15 +39,15 @@ end
 
 
 # Add an additive distribution
-function setAddDist!(weightFunc, dist)
+function setAddDist!(weightFunc, dist, func= (;dr,i,j,_...) -> 1)
     weightFunc.addTrue = true
-    weightFunc.addDist = dist
+    weightFunc.addDist = (;dr,i,j) -> func(;dr,i,j)*dist
 
     
     if !weightFunc.multTrue
-        inv = (dr,i,j) -> rand(weightFunc.addDist) + weightFunc.f(;dr,i,j)
+        inv = (dr,i,j) -> rand(weightFunc.addDist(;dr,i,j)) + weightFunc.f(;dr,i,j)
     else
-        inv = (dr,i,j) -> rand(weightFunc.multDist)*weightFunc.f(;dr,i,j)+rand(weightFunc.addDist)
+        inv = (dr,i,j) -> rand(weightFunc.multDist(;dr,i,j))*weightFunc.f(;dr,i,j)+rand(weightFunc.addDist(;dr,i,j))
     end
 
     weightFunc.invoke = inv
@@ -55,14 +55,14 @@ function setAddDist!(weightFunc, dist)
 end
 
 # Add an additive distribution
-function setMultDist!(weightFunc, dist)
+function setMultDist!(weightFunc, dist, func= (;dr,i,j,_...) -> 1)
     weightFunc.multTrue = true
-    weightFunc.multDist = dist
+    weightFunc.multDist = (;dr,i,j) -> func(;dr,i,j)*dist
 
     if !weightFunc.addTrue
-        inv = (dr,i,j) -> rand(weightFunc.multDist)*weightFunc.f(;dr,i,j)
+        inv = (dr,i,j) -> rand(weightFunc.multDist(;dr,i,j))*weightFunc.f(;dr,i,j)
     else
-        inv = (dr,i,j) -> rand(weightFunc.multDist)*weightFunc.f(;dr,i,j)+rand(weightFunc.addDist)
+        inv = (dr,i,j) -> rand(weightFunc.multDist(;dr,i,j))*weightFunc.f(;dr,i,j)+rand(weightFunc.addDist(;dr,i,j))
     end
 
     weightFunc.invoke = inv

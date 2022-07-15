@@ -46,3 +46,8 @@ radialWF = WeightFunc(
     (;dr, i,j,_...) -> radialFunc(pow ;dr, i,j),
     NN = 1
 )
+
+isingNN2 = WeightFunc(
+    (;dr, i,j,_...) -> 1/dr,
+    NN = 2
+)

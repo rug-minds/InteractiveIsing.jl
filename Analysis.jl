@@ -12,7 +12,7 @@ using ..IsingGraphs
 include("SquareAdj.jl")
 using .SquareAdj
 
-export dataToDF, tempSweep, MPlot, sampleCorrPeriodic, corrFuncXY, dfMPlot, dataFolderNow, csvToDF
+export dataToDF, tempSweep, MPlot, sampleCorrPeriodic, sampleCorrPeriodicDefects, corrFuncXY, dfMPlot, dataFolderNow, csvToDF, corrPlotDF, corrPlotDFSlices, corrPlotTRange
 
 mutable struct AInt32
     @atomic x::Int32
@@ -33,7 +33,8 @@ User functions
 #   Every step, a number of datapoints (dpoints) are recorded, with inervals between them of dpointwait
 #   In between Temperatures there is an optional wait time of stepwait, for equilibration
 #   There is an initial wait time of equiwait for equilibration
-function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]), corrF = sampleCorrPeriodic, analysisRunning = Observable(true))
+function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]), corrF = sampleCorrPeriodic, analysisRunning = Observable(true), savelast = true, absvalcorrplot = false)
+    
     """ Make folder """
     foldername = dataFolderNow("Tempsweep")
 
@@ -87,13 +88,15 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
             mdf = vcat(mdf,MToDF(last(M_array[]),point, TIs[]) )
             
             if saveImg
-                # Image of ising
-                save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), img[])
+                if !savelast || point == dpoints
+                    # Image of ising
+                    save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), img[])
 
-                # Image of correlation plot
-                corrPlot = pl.plot(lVec,corrVec, xlabel = "Length", ylabel=L"C(L)", label = false)
-                Tstring = replace("$T", '.' => ',')
-                pl.savefig(corrPlot,"$(foldername)Corrplot $tidx d$point T$Tstring")
+                    # Image of correlation plot
+                    corrPlot = pl.plot(lVec,corrVec, xlabel = "Length", ylabel=L"C(L)", label = false)
+                    Tstring = replace("$T", '.' => ',')
+                    pl.savefig(corrPlot,"$(foldername)Ising Corrplot $tidx d$point T$Tstring")
+                end
             end
 
             tpointf = time()
@@ -106,15 +109,21 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
         
     end
 
-    if saveImg
-        dfMPlot(mdf, foldername)
+    analysisRunning[] = false
+
+    try
+        if saveImg
+            dfMPlot(mdf, foldername)
+        end
+
+    catch(error)
+        error(error)
+    finally
+        CSV.write("$(foldername)Ising 0 CorrData.csv", cldf)
+        CSV.write("$(foldername)Ising 0 MData.csv", mdf)
     end
 
-    CSV.write("$(foldername)CorrData.csv", cldf)
-    CSV.write("$(foldername)MData.csv", mdf)
-
     println("Temperature sweep done!")
-    
 end
 
 
@@ -144,7 +153,7 @@ function sampleCorrPeriodic(g::IsingGraph, Lstep::Float16 = Float16(.5), lStart:
     lVec = [lStart:Lstep:lEnd;]
     corrVec = Vector{Float32}(undef,length(lVec))
 
-    # Sample all idx to be used
+    # Sample all startidx to be used
     # Slight bit faster to do it this way than to sample it every time in the loop
     idx1s = rand(g.aliveList,length(lVec)*npairs)
     # Index of above vector
@@ -159,7 +168,7 @@ function sampleCorrPeriodic(g::IsingGraph, Lstep::Float16 = Float16(.5), lStart:
             idx2 = sampleIdx2(idx1,L,rtheta)
             sumprod += g.state[idx1]*g.state[idx2]
             theta_i += 1 # Sample next random angle
-            idx1idx += 1 # Sample next random idx
+            idx1idx += 1 # Sample next random startidx
         end
         # println((sum(g.state)/g.N)^2)
         # println(avgsum1*avgsum2/(npairs^2))
@@ -169,7 +178,77 @@ function sampleCorrPeriodic(g::IsingGraph, Lstep::Float16 = Float16(.5), lStart:
     return (lVec,corrVec)
 end
 
+# Sample correlation length function when there are defects.
+function sampleCorrPeriodicDefects(g::AbstractIsingGraph, lend = -floor(-sqrt(2)*g.N/2), binsize = .5, npairs::Integer = Int64(round(lend/binsize * 40000)); sig = 1000, periodic = true)
+    function torusDist(i1,j1,i2,j2, N)
+        dy = abs(i2-i1)
+        dx = abs(j2-j1)
+
+        if dy > .5*g.N
+            dy = g.N - dy
+        end
+        if dx > .5*g.N
+            dx = g.N - dx
+        end
+
+        return sqrt(dx^2+dy^2)
+    end
+    
+    if length(g.aliveList) <= 2
+        error("Too little alive spins to do analysis")
+        return
+    end
+
+    idxs1 = rand(g.aliveList,npairs)
+    idxs2 = rand(g.aliveList,npairs)
+    lbins = zeros(length(1:binsize:lend))
+    lVec = [1:binsize:lend;]
+    corrbins = zeros(length(lVec))
+    prodavg = sum(g.state[g.aliveList])/length(g.aliveList)
+
+    for sample in 1:npairs
+        idx1 = idxs1[sample]
+        idx2 = idxs2[sample]
+        
+        while idx1 == idx2
+            idx2 = rand(g.aliveList)
+        end
+
+        (i1,j1) = idxToCoord(idx1,g.N)
+        (i2,j2) = idxToCoord(idx2,g.N)
+        if periodic
+            l = torusDist(i1,j1,i2,j2,g.N )
+        else
+            l = sqrt((i1-i2)^2+(j1-j2)^2)
+        end
+        
+        # println("1 $idx1, 2 $idx2")
+        # println("1 $((i1,j1)), 2 $((i2,j2)) ")
+        # println("L $l")
+
+        binidx = Int32(floor((l-1)/binsize)+1)
+        
+        lbins[binidx] += 1
+        corrbins[binidx] += g.state[idx1]*g.state[idx2]
+
+    end
+
+    remaining_idxs = []
+    for (startidx,pairs_sampled) in enumerate(lbins)
+        if pairs_sampled >= sig
+            append!(remaining_idxs, startidx)
+        end
+    end
+
+    corrVec = (corrbins[remaining_idxs] ./ lbins[remaining_idxs]) .- prodavg
+    lVec = lVec[remaining_idxs]
+
+    return (lVec,corrVec)
+    
+end
+
 """Correlation Length Data"""
+# Save correlation date (lVec,corrVec) to dataframe
 function corrToDF((lVec,corrVec), dpoint::Integer = Int8(1), T::Real = Float16(1))
     return DataFrame(L = lVec, Corr = corrVec, D = dpoint, T = T)
 end
@@ -184,12 +263,14 @@ function fitCorrl(dat,dom_end, f, params...)
 end
 
 
-""" Magnetization """
+""" PLOTTING """
+
 function MToDF(M, dpoint::Integer = Int8(1), T::Real = Float16(1))
     return DataFrame(M = M, D = dpoint, T = T)
 end
 
-function dfMPlot(mdf::DataFrame, foldername::String)
+# Plot a magnetization plot from dataframe
+function dfMPlot(mdf::DataFrame, foldername::String, filename::String = "")
     """ DF FORMAT """
     """ M : D : T """
 
@@ -201,20 +282,20 @@ function dfMPlot(mdf::DataFrame, foldername::String)
 
     lastt = ts[1]
     lasti = 1
-    for idx in 2:length(ts)
-        if !(ts[idx] == lastt)
-            append!(slices,[lasti:(idx-1)])
-            lasti=idx
+    for startidx in 2:length(ts)
+        if !(ts[startidx] == lastt)
+            append!(slices,[lasti:(startidx-1)])
+            lasti=startidx
         end
-        lastt = ts[idx]
+        lastt = ts[startidx]
     end
     append!(slices, [lasti:length(ts)])
 
     avgM = Vector{Float32}(undef,length(slices))
     newTs = Vector{Float32}(undef,length(slices))
-    for (idx,slice) in enumerate(slices)
-        avgM[idx] = sum(ms[slice])/length(slice)
-        newTs[idx] = ts[first(slice)]
+    for (startidx,slice) in enumerate(slices)
+        avgM[startidx] = sum(ms[slice])/length(slice)
+        newTs[startidx] = ts[first(slice)]
     end
 
     if newTs[1] < newTs[end]
@@ -229,7 +310,85 @@ function dfMPlot(mdf::DataFrame, foldername::String)
         
 
     mPlot = pl.plot(newTs,avgM, xlabel = "T", ylabel="M", label=false)
-    pl.savefig(mPlot,"$(foldername)Mplot")
+    filename = replace(filename, '.' => ',')
+    pl.savefig(mPlot,"$(foldername)Ising 0 Mplot $filename")
+end
+
+dfMPlot(filename::String, foldername::String, savefilename::String) = let df = csvToDF(filename); dfMPlot(df,foldername,savefilename) end
+
+corrPlotDF(filename::String , dpoint, temp; savefolder::String = "", absval = false) = let cdf = csvToDF(filename); corrPlotDF(cdf, dpoint, temp; savefolder, absval) end
+
+function corrPlotDF(cdf::DataFrame, dpoint, temp; savefolder::String = "", absval = false)
+    Larray = @view cdf[:,1]
+    corrArray = @view cdf[:,2]
+    dpointArray = @view cdf[:,3]
+    temparray = @view cdf[:,4]
+
+    startidx = 0
+    
+    for (tidx,T) in enumerate(temparray)
+        if T == temp
+            startidx += tidx
+            break
+        end
+        if tidx == length(temparray)
+            error("Didn't find temperature")
+        end
+    end
+
+
+    for (didx,point) in enumerate(@view dpointArray[startidx:end])
+        if point == dpoint
+            startidx += didx - 1
+            break
+        end
+        if didx == length(@view dpointArray[startidx:end]) || temparray[startidx] != temp
+            error("Didn't find datapoint for temp")
+        end
+    end
+
+    endidx = startidx
+    last_l = Larray[startidx]
+    for (lidx,llength) in enumerate(@view Larray[(startidx+1):end])
+        if llength < last_l
+            endidx += lidx - 1
+            break
+        end
+        if lidx == length(@view Larray[(startidx+1):end])
+            endidx += lidx
+        end
+        last_l = llength
+    end
+
+    println("Start startidx $startidx")
+    println("End endidx $endidx")
+
+    x = @view Larray[startidx:endidx]
+    y = @view corrArray[startidx:endidx]
+
+    if absval
+        y = abs.(y)
+    end
+    
+    if !absval
+        ylabel = L"C(L)"
+    else
+        ylabel = L"|C(L)|"
+    end
+
+    cplot = pl.plot(x,y,xlabel = "Length", ylabel=ylabel, label = "T = $temp" )
+    Tstring = replace("$temp", '.' => ',')
+    pl.savefig(cplot,"$(savefolder)Ising Cplot T=$Tstring d$dpoint")
+
+end
+
+function corrPlotTRange(filename::String, dpoint, Ts; savefolder = "Data/Images/Correlation/", absval = false)
+    trymakefolder(savefolder)
+    
+    df = csvToDF(filename)
+    for T in Ts
+        corrPlotDF(df, dpoint, T; savefolder, absval)
+    end
 end
 
 """General data"""
@@ -274,7 +433,12 @@ function dataFolderNow(dataString::String)
     return "Data/Tempsweep/$nowtime/"
 end
 
-
+function trymakefolder(foldername::String)
+    if foldername[end] == '/'
+        foldername = foldername[1:(end-1)]
+    end
+    try; mkdir(joinpath(dirname(Base.source_path()),foldername)); catch end
+end
 
 """ OLD STUFF """
 
@@ -438,7 +602,7 @@ function dfToCorrls(df)
     return (Ts,corrls)
 end
 
-""" Old magnetization stuff """
+""" Old stuff """
 
 # Aggregate all Magnetization measurements for a the same temperatures 
 function datMAvgT(dat,dpoints = detDPoints(dat))
@@ -456,6 +620,81 @@ end
 # Expand measurements in time
 function datMExpandTime(dat,dpoints,dpointwait)
     return
+end
+
+# Plots Correlation Length Plot from dataframe
+# Needs the datapoint number and temperature to be plotted
+# Set Absval = true if you want to plot absolute value of correlation length data
+# Is a bit faster than the other method, but doesn't work for variable lengths of lvec and corrvec
+corrPlotDFSlices(filename::String , dpoint, temp, savefolder::String, absval = false) = let cdf = csvToDF(filename); corrPlotDFSlices(cdf, dpoint, temp, savefolder::String, absval) end
+
+function corrPlotDFSlices(cdf::DataFrame, dpoint, temp, savefolder::String, absval = false)
+    Larray = @view cdf[:,1]
+    corrArray = @view cdf[:,2]
+    dpointArray = @view cdf[:,3]
+    temparray = @view cdf[:,4]
+    l_blocksize = let _ 
+                    len = 1
+                    lastel = Larray[1]
+                    for startidx in 2:length(Larray)
+                        if !(Larray[startidx] < lastel)
+                            len+=1
+                            lastel = Larray[startidx]
+                        else
+                            break
+                        end
+                    end
+                    len
+                end
+    dpoints = let _
+                len = 1
+                lastel = dpointArray[1]
+                for startidx in (1+l_blocksize):l_blocksize:length(dpointArray)
+                    if !(dpointArray[startidx] < lastel)
+                        len+=1
+                        lastel = dpointArray[startidx]
+                    else
+                        break
+                    end
+                end
+                len
+            end
+
+    tslices = 1:(dpoints*l_blocksize):length(temparray)
+    
+    tidx = 0
+    for (startidx,T) in enumerate(@view temparray[tslices])
+        if T == temp
+            tidx = startidx
+        end
+    end
+    if tidx == 0
+        error("T not found")
+        return
+    end
+    startidx = 1+dpoints*l_blocksize*(tidx-1)+l_blocksize*(dpoint-1)
+    endidx = dpoints*l_blocksize*(tidx-1)+l_blocksize*(dpoint-1)+l_blocksize
+    println("T index $tidx")
+    println("Start startidx $startidx")
+    println("End startidx $endidx")
+    x = @view Larray[startidx:endidx]
+    y = @view corrArray[startidx:endidx]
+
+    
+    if absval
+        y = abs.(y)
+    end
+    
+    if !absval
+        ylabel = L"C(L)"
+    else
+        ylabel = L"|C(L)|"
+    end
+
+    cplot = pl.plot(x,y,xlabel = "Length", ylabel=ylabel, label = "T = $temp" )
+    Tstring = replace("$temp", '.' => ',')
+    pl.savefig(cplot,"$(savefolder)Ising Cplot T=$Tstring d$dpoint")
+    
 end
 
 

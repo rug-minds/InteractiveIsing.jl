@@ -85,7 +85,7 @@ function cutCirc(circ,N)
     circPoints = Vector{Tuple{Int16, Int16}}(undef,length(circ) - negPoints)
     p_idx = 1
     for point in circ
-        if 0 < point[1] < N && 0 < point[2] < N
+        if pointIsOut(point,N)
             circPoints[p_idx] = point
             p_idx +=1
         end
@@ -96,12 +96,20 @@ end
 function loopCirc(circ, N)
     circPoints = copy(circ)
     for (pidx, point) in enumerate(circ)
-        if !(0 < point[1] < N && 0 < point[2] < N)
+        if pointIsOut(point,N)
             circPoints[pidx] = (latmod(point[1],N),latmod(point[2],N))
         end
     end
+
+
     return circPoints
 end
+
+function pointIsOut(point::Tuple, N)
+    return !(0 < point[1] <= N && 0 < point[2] <= N)
+end
+
+pointIsIn(point, N) = !pointIsOut(point, N)
 
 """ Make image from circle, for debugging"""
 # Make image from circle

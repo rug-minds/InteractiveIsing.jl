@@ -8,6 +8,8 @@ using BenchmarkTools
 import Plots as pl
 # Qt5QuickControls_jll, Qt5QuickControls2_jll,
 
+include("SquareAdj.jl")
+using .SquareAdj
 
 include("WeightFuncs.jl")
 using .WeightFuncs
@@ -17,13 +19,18 @@ using .IsingGraphs
 
 include("Interaction/Interaction.jl")
 using .Interaction
+
 include("Analysis.jl")
 using .Analysis
 
 include("MCMC.jl") 
 using .IsingMetropolis
+
 include("GPlotting.jl")
-# using .GPlotting
+using .GPlotting
+
+include("Learning/IsingLearning.jl")
+using .IsingLearning
 
 """ Helper Functions """
 
@@ -89,7 +96,7 @@ end
 """Timed Functions"""
 # Updating image of graph
 function updateImg()
-    img[] = gToImg(g,gSize[])
+    img[] = gToImg(g)
 end
 
 # Track number of updates per frame
@@ -154,13 +161,23 @@ end
 addRandomDefectsQML(pDefects) = addRandomDefects!(g,pDefects)
 
 # Draw circle to state
-circleToStateQML(i,j) = Threads.@spawn circleToState(g,circ[],i,j,brush[])
-circleToStateREPL(i,j) = circleToState(g,circ[],i,j,brush[])
+circleToStateQML(i,j,clamp=false) = Threads.@spawn circleToState(g,circ[],i,j,brush[]; clamp)
+circleToStateREPL(i,j, clamp = false) = circleToState(g,circ[],i,j,brush[]; clamp)
 
 # Sweep temperatures and record magnetization and correlation lengths
 # Make an interface for this
-tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true) = Threads.@spawn tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, analysisRunning=analysisRunning)
-# tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true) = CSV.write("sweepData.csv", dataToDF(tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img)))
+function tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true)
+    if !g.defects
+        corrF = sampleCorrPeriodic
+    else
+        corrF = sampleCorrPeriodicDefects
+    end
+    Threads.@spawn tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, analysisRunning=analysisRunning, corrF)
+end
+
+function tempSweepQMLRepl(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true); analysisRunning[] = true; tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, analysisRunning=analysisRunning, savelast = true) end
+
+saveGImgQML() = saveGImg(g)
 
 # Save a new circle with size brushR[]
 function newCirc()

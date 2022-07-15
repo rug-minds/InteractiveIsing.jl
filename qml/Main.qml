@@ -19,6 +19,25 @@ ApplicationWindow {
     anchors.left: parent.left
   }
 
+
+
+  Image{
+    anchors.right: parent.right
+    width: 32
+    height: 26
+    source: "Icons/cam.png"
+    MouseArea {
+      anchors.fill: parent
+      cursorShape: Qt.PointingHandCursor
+      hoverEnabled: false
+      onClicked: {
+        Julia.saveGImgQML()
+      }
+    }
+  }
+
+
+
   // Whole application in a column
   // Screen stuff above, panels and text under
   ColumnLayout{
@@ -37,6 +56,7 @@ ApplicationWindow {
       Layout.alignment: Qt.AlignHCenter
 
       BrushPanel{
+        id: bpanel
         Layout.alignment: Qt.AlignVCenter
       }
 
@@ -44,15 +64,35 @@ ApplicationWindow {
       JuliaCanvas{
         Layout.alignment: Qt.AlignCenter
         id: canvas
-        width: obs.gSize
-        height: obs.gSize
+        // width: 500
+        // height: 500
+        width: {
+          if(obs.gSize > 500)
+          {
+            return obs.gSize
+          }
+          else
+          {
+            return 500
+          }
+        }
+        height: {
+          if(obs.gSize > 500)
+          {
+            return obs.gSize
+          }
+          else
+          {
+            return 500
+          }
+        }
 
         paintFunction: showlatest
 
         MouseArea{
           anchors.fill: parent
           onClicked: {
-            Julia.circleToStateQML(mouseY, mouseX)
+            Julia.circleToStateQML(mouseY, mouseX, bpanel.clamp)
           }
         }
 

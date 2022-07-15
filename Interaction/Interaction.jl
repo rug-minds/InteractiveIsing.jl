@@ -2,6 +2,7 @@
 """
 Drawing Functions
 """
+
 __precompile__()
 
 module Interaction
@@ -9,7 +10,7 @@ module Interaction
 include("Cirlces.jl")
 using ..IsingGraphs
 
-export getOrdCirc, circleToState, ordCircleToImg, addRandomDefects!
+export getOrdCirc, circleToState, ordCircleToImg, addRandomDefects!, offCirc, loopCirc, reOrderCirc
 
 # Put a lattice index (i or j) back onto lattice by looping it around
 @inline function latmod(i,N)
@@ -20,17 +21,27 @@ export getOrdCirc, circleToState, ordCircleToImg, addRandomDefects!
 end
 
 # Draw a circle to state
-function circleToState(g::IsingGraph, circ, i_in,j_in, brush, periodic = true)
-    i = Int16(round(i_in))
-    j = Int16(round(j_in))
+function circleToState(g::AbstractIsingGraph, circ, i_in,j_in, brush; periodic = true, clamp = false, imgsize = g.N)
+    if g.N == imgsize
+        i = Int16(round(i_in))
+        j = Int16(round(j_in))
+    else
+        i = Int16(round(i_in/imgsize*g.N))
+        j = Int16(round(j_in/imgsize*g.N))
+    end        
     
-    if periodic #Add wrapper to allow for periodic graph
-        circle = loopCirc(offCirc(circ,i,j),g.N)
+
+    offcirc = offCirc(circ,i,j)
+    if periodic 
+        circle = sort(loopCirc(offcirc,g.N))
     else 
-        circle = cutCirc(offCirc(circ,i,j),g.N)
+        circle = cutCirc(offcirc,g.N)
     end
 
-    paintPoints!(g,circle,brush)
+    # println("Circle to state circle $circle")
+
+    println("Brush used $brush")
+    setSpins!(g,circle,brush,clamp)
     println("Drew circle at y=$i and x=$j")
 end
 
@@ -40,11 +51,13 @@ function addRandomDefects!(g::IsingGraph,p)
         return nothing
     end
 
-    for def in 1:round(length(g.aliveList)*p/100)
+    for _ in 1:round(length(g.aliveList)*p/100)
         idx = rand(g.aliveList)
-        addDefect!(g,idx)
+        setSpin!(g, idx, 0 , true)
     end
 
 end
+
+
 
 end
