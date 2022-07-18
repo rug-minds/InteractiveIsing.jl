@@ -4,7 +4,7 @@ module GPlotting
 
 using FileIO, Images, ColorSchemes, Dates, ..IsingGraphs, ..SquareAdj
 
-export gToImg, resizeGImg, saveGImg, imagesc
+export gToImg, resizeGImg, saveGImg, imagesc, plotAdj
 
 
 #Converts matrix of reals into matrix of rgb data based on color scheme
@@ -40,11 +40,10 @@ function resizeGImg(img,N,minsize)
 end
 
 function gToImg(g::AbstractIsingGraph, minsize = 500)
-    tempimg = imagesc(reshape(g.state, (g.N,g.N) )  )
+    tempimg = transpose(imagesc(reshape(g.state, (g.N,g.N) )  ))
     if g.N < minsize
         tempimg = resizeGImg(tempimg,g.N,minsize)
     end
-
     return tempimg
 end
 
@@ -64,6 +63,11 @@ function nowStr()
     nowtime = replace("$(now())"[3:(end)], "T" => " ")
     return nowtime
 end
+
+function plotAdj(g)
+    imagesc(adjToMatrix(g.adj))
+end
+    
 
 
 end

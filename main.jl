@@ -6,10 +6,10 @@ include("WeightFuncsCustom.jl")
 User Variables
 """
 const runsim = true
-const continuous = false
-const graphSize = 512
+const continuous = true
+const graphSize = 100
 const weighted = true
-const weightFunc = radialWF
+const weightFunc = isingNN2
 
 # setAddDist!(weightFunc, Normal(0,0.3))
 

@@ -2,29 +2,43 @@ __precompile__()
 
 module IsingLearning
 
-using ..IsingGraphs
+using ..IsingGraphs, MLDatasets
 
-export read_idx, clampIm, mnist_im, mnist_ex
+export read_idx, clampIm, mnist_im, mnist_lab
 
-const idx_types = [(UInt8, 0x08), (Int8, 0x09), (Int16, 0x0B), (Int32, 0x0C), (Float32, 0x0D), (Float64, 0x0E)]
-const typefromcode = Dict(idx_types)
-const codefromtype = Dict(map(reverse, idx_types))
+# const idx_types = [(UInt8, 0x08), (Int8, 0x09), (Int16, 0x0B), (Int32, 0x0C), (Float32, 0x0D), (Float64, 0x0E)]
+# const typefromcode = Dict(idx_types)
+# const codefromtype = Dict(map(reverse, idx_types))
 
-function write_idx(stream::Union{IOStream,String}, data::Array{T,N}) where {T,N}
-  dims = convert(Array{Int32}, collect(size(data)))
-  write(stream, 0x00, 0x00, typefromcode[T], UInt8(N), hton.(dims), hton.(data))
+# function write_idx(stream::Union{IOStream,String}, data::Array{T,N}) where {T,N}
+#   dims = convert(Array{Int32}, collect(size(data)))
+#   write(stream, 0x00, 0x00, typefromcode[T], UInt8(N), hton.(dims), hton.(data))
+# end
+
+# read_idx(filename::String) = open(read_idx, filename)
+
+# function read_idx(stream::IOStream)
+#   header = read(stream, 4)
+#   dims = ntoh.(read!(stream, Array{Int32}(undef, header[4])))
+#   data = ntoh.(read!(stream, Array{codefromtype[header[3]]}(undef, dims...)))
+# end
+
+# mnist_im = read_idx(open("Learning/Dataset/train-images.idx3-ubyte"))
+# mnist_ex = read_idx(open("Learning/Dataset/train-labels.idx1-ubyte"))
+
+# function mnist_img(num)
+#   mToI.(mnist[num, :,:])
+# end
+
+mnist = MNIST()
+
+function mnist_im(num, crange = (0,1))
+  (crange[2]-crange[1]) .* mnist[num][1] .+ crange[1]
 end
 
-read_idx(filename::String) = open(read_idx, filename)
-
-function read_idx(stream::IOStream)
-  header = read(stream, 4)
-  dims = ntoh.(read!(stream, Array{Int32}(undef, header[4])))
-  data = ntoh.(read!(stream, Array{codefromtype[header[3]]}(undef, dims...)))
+function mnist_lab(num)
+  mnist[num][2]
 end
-
-mnist_im = read_idx(open("Learning/Dataset/train-images.idx3-ubyte"))
-mnist_ex = read_idx(open("Learning/Dataset/train-labels.idx1-ubyte"))
 
 # Mnist value to ising value
 @inline function mToI(int::UInt8, irange = (0,1))::Float32
@@ -39,18 +53,29 @@ end
 
 
 # Groupsize should be odd?
-function clampIm(g::CIsingGraph,mnist::Matrix,num::Integer,groupsize=5)
+# Crange: Clamp range
+function clampIm(g::CIsingGraph, num::Integer,groupsize=5; crange = (0,1))
+  while groupsize*28 > g.N || iseven(groupsize) && groupsize > 0
+    groupsize -= 1
+  end
 
-  rem = rem(g.N,groupsize)
-  clamp_region_length = Int32((g.N-rem)/groupsize)
-  init_idx = -floor(-groupsize/2)
-  idxs = [(init_idx+i*groupsize,init_idx+j*groupsize) for i in 1:(clamp_region_length-1), i in 1:1:(clamp_region_length-1)]
+  border = Int32(round((g.N - groupsize*28)/2))
+  println("Bordersize $border")
 
-  img_is = transpose(mToI.(mnist[num, :,:]))
+  clamp_region_length = Int32((g.N-border*2)/groupsize)
+
+  # println(groupsize)
+
+  idxs = [Int16.((border+i*groupsize,border+j*groupsize)) for i in 1:(clamp_region_length), j in 1:(clamp_region_length)]
+
+  idxs_array::Array{Int32} = reshape(transpose(coordToIdx.(idxs,g.N)), length(idxs))
+ 
+  img_is = mnist_im(num, crange)
 
   brushs = img_is[:]
+  println("Size of brushs $(length(brushs)), size of idxs $(length(idxs_array))")
 
-  setSpins!(g, idxs, brushs, clamp=true)
+  setSpins!(g, idxs_array, brushs, true)
 
 end
 

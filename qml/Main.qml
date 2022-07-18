@@ -19,8 +19,7 @@ ApplicationWindow {
     anchors.left: parent.left
   }
 
-
-
+  // Save Button
   Image{
     anchors.right: parent.right
     width: 32

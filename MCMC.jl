@@ -17,7 +17,7 @@ function updateMonteCarloIsing!(g::IsingGraph, T)
 
     idx = rand(ising_it(g))
 
-    Estate = getH(g,idx)
+    Estate = g.d.getH(g,idx)
 
     if (Estate >= 0 || rand() < exp(beta*deltE(Estate)))
         @inbounds g.state[idx] *= -1
@@ -26,6 +26,34 @@ function updateMonteCarloIsing!(g::IsingGraph, T)
 end
 
 function updateMonteCarloIsing!(g::CIsingGraph, T)
+
+    # No self energy
+    @inline function deltE(Estate,newstate,oldstate)
+        return Estate*(newstate/oldstate-1)
+    end
+
+    @inline function sampleCState()
+        2*(rand()-.5)
+    end
+
+    beta = T>0 ? 1/T : Inf
+
+    idx = rand(ising_it(g))
+
+    oldstate = g.state[idx]
+
+    Estate = g.d.getH(g,idx, oldstate)
+
+    newstate = sampleCState()
+    
+    Ediff = deltE(Estate,newstate,oldstate)
+    if (Ediff < 0 || rand() < exp(-beta*Ediff))
+        @inbounds g.state[idx] = newstate
+    end
+    
+end
+
+function updateMonteCarloIsingOLD!(g::CIsingGraph, T)
 
     # No self energy
     @inline function deltE(Estate,newstate,oldstate)

@@ -161,13 +161,13 @@ end
 addRandomDefectsQML(pDefects) = addRandomDefects!(g,pDefects)
 
 # Draw circle to state
-circleToStateQML(i,j,clamp=false) = Threads.@spawn circleToState(g,circ[],i,j,brush[]; clamp)
-circleToStateREPL(i,j, clamp = false) = circleToState(g,circ[],i,j,brush[]; clamp)
+circleToStateQML(i,j,clamp=false) = Threads.@spawn circleToState(g,circ[],i,j,brush[]; clamp, imgsize = size(img[])[1])
+circleToStateREPL(i,j, clamp = false) = circleToState(g,circ[],i,j,brush[]; clamp, imgsize = size(img[])[1])
 
 # Sweep temperatures and record magnetization and correlation lengths
 # Make an interface for this
 function tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true)
-    if !g.defects
+    if !g.d.defects
         corrF = sampleCorrPeriodic
     else
         corrF = sampleCorrPeriodicDefects
@@ -188,7 +188,7 @@ end
 function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
     buffer = reshape(buffer, size(img[]))
     buffer = reinterpret(ARGB32, buffer)
-    buffer .= img[]
+    buffer .= transpose(img[])
     return
 end
 

@@ -19,6 +19,28 @@ Conn = Tuple{Vert, Weight}
 
 abstract type AbstractIsingGraph end
 
+mutable struct IsingData
+    # is weighted
+    weighted::Bool
+
+    # For tracking defects
+    aliveList::Vector{Vert}
+    defects::Bool
+    defectBools::Vector{Bool}
+    defectList::Vector{Vert}
+    
+    # Magnetic field
+    mactive::Bool
+    mlist::Vector{Float32}
+    
+    # Energy function
+    getH::Function
+end
+
+IsingData(g, weighted = false) = IsingData( weighted, [1:g.size;], false, [false for x in 1:g.size], [] , false, zeros(g.size), weighted ? getH : getHWeighted)
+
+
+
 """ Discrete """
 
 mutable struct IsingGraph <: AbstractIsingGraph
@@ -28,56 +50,36 @@ mutable struct IsingGraph <: AbstractIsingGraph
     # Vertices and edges
     state::Vector{Int8}
     adj::Vector{Vector{Conn}}
-    # For tracking defects
-    aliveList::Vector{Vert}
-    defects::Bool
-    defectBools::Vector{Bool}
-    defectList::Vector{Vert}
-    weighted::Bool
+    d::IsingData
+
+    IsingGraph(N::Integer; state = initRandomState(N^2), weighted = false, weightFunc = defaultIsingWF) = 
+        (   g = new(
+                N,
+                N^2,
+                state,
+                initSqAdj(N, weightFunc = weightFunc)
+                );
+            g.d = IsingData(g, weighted);
+            return g
+        )
 end
 
-# mutable struct mField
-#     active::Bool
-#     bfield::Matrix{Float32}
-# end
+# Copy graph data to new one
+IsingGraph(g::IsingGraph) = deepcopy(g)
 
-"""
-INITIALIZERS
-""" 
-    #Initialization using only N
-    IsingGraph(N::Int; weighted = false, weightFunc = DefaultIsing()) = 
-        IsingGraph(
-            N,
-            N*N,
-            initRandomState(N),
-            initSqAdj(N, weightFunc = weightFunc), 
-            weighted = weighted
-            )
+function reInitGraph!(g::AbstractIsingGraph, state = initRandomState(g.N))
+    println("Reinitializing graph")
+    g.state = state
+    g.d.defects = false
+    g.d.aliveList = [1:g.size;]
+    g.d.defectBools = [false for x in 1:g.size]
+    g.d.defectList = []
+end
 
-    # Initialize without defects
-    IsingGraph(N,size,state,adj; weighted = false) = IsingGraph(N,size,state,adj,[1:size;], false ,[false for x in 1:size],[], weighted)
-
-    #Initialization of graph using a state and adjacency matrix
-    IsingGraph(state::Vector{Int8},adj::Dict{Vert,Vector{Vert}}) = let size = length(state)
-        IsingGraph(sqrt(size), size, copy(state), adj)
-    end
-
-    # Copy graph data to new one
-    IsingGraph(g::IsingGraph) = deepcopy(g)
-
-    function reInitGraph!(g::IsingGraph)
-        println("Reinitializing graph")
-        g.state = initRandomState(g.N)
-        g.defects = false
-        g.aliveList = [1:g.size;]
-        g.defectBools = [false for x in 1:g.size]
-        g.defectList = []
-    end
-
-   # Initialization of state
-    function initRandomState(N)::Vector{Int8}
-        return rand([-1,1],N^2)
-    end
+# Initialization of state
+function initRandomState(size)::Vector{Int8}
+    return rand([-1,1],size)
+end
 
 """ Continuous """
 
@@ -88,45 +90,27 @@ mutable struct CIsingGraph <: AbstractIsingGraph
     # Vertices and edges
     state::Vector{Float32}
     adj::Vector{Vector{Conn}}
-    # For tracking defects
-    aliveList::Vector{Vert}
-    defects::Bool
-    defectBools::Vector{Bool}
-    defectList::Vector{Vert}
-    weighted::Bool
-    selfE::Bool
-end
+    
+    d::IsingData
 
-  #Initialization using only N
-  CIsingGraph(N::Int; weighted = false, weightFunc = DefaultIsing(), selfE = true) = 
-    CIsingGraph(
-        N,
-        N*N,
-        initRandomCState(N^2),
-        selfE ? initSqAdjSelf(N, weightFunc = weightFunc) : initSqAdj(N, weightFunc = weightFunc), 
-        weighted = weighted,
-        selfE = selfE
-    )
+    CIsingGraph(N::Integer; state = initRandomCState(N^2), weighted = false, weightFunc = DefaultIsingWF, selfE = true) = 
+        (   g = new(
+                N,
+                N^2,
+                state,
+                selfE ? initSqAdjSelf(N, weightFunc = weightFunc) : initSqAdj(N, weightFunc = weightFunc),
+            );
+            g.d = IsingData(g,weighted);
+            return g
+        )
 
-# Initialize without defects
-CIsingGraph(N,size,state,adj; weighted = false, selfE = true) = CIsingGraph(N,size,state,adj,[1:size;], false ,[false for x in 1:size],[], weighted, selfE)
-
-#Initialization of graph using a state and adjacency matrix
-CIsingGraph(state::Vector{Int8},adj::Dict{Vert,Vector{Vert}}) = let size = length(state)
-  CIsingGraph(sqrt(size), size, copy(state), adj)
 end
 
 # Copy graph data to new one
 CIsingGraph(g::CIsingGraph) = deepcopy(g)
 
-function reInitGraph!(g::CIsingGraph)
-  println("Reinitializing graph")
-  g.state = initRandomCState(g.size)
-  g.defects = false
-  g.aliveList = [1:g.size;]
-  g.defectBools = [false for x in 1:g.size]
-  g.defectList = []
-end
+reInitGraph!(g::CIsingGraph) = reInitGraph!(g, initRandomCState(g.size))
+
 
 # Initialization of state
 function initRandomCState(size)::Vector{Float32}
@@ -153,11 +137,11 @@ Methods
     # If there are no defects, returns whole range
     # Otherwise it returns all alive spins
     function ising_it(g::AbstractIsingGraph)
-        if !g.defects
+        if !g.d.defects
             it::UnitRange{Int32} = 1:g.size
             return it
         else
-            return g.aliveList
+            return g.d.aliveList
         end
 
     end
@@ -198,8 +182,8 @@ end
     # Adding a defect to lattice
     function addDefects!(g::AbstractIsingGraph,spin_idxs::Vector{T}) where T <: Integer
         # Only keep elements that are not defect already
-        # @inbounds d_idxs::Vector{Int32} = spin_idxs[map(!,g.defectBools[spin_idxs])]
-        d_idxs = spin_idxs[map(!,g.defectBools[spin_idxs])]
+        # @inbounds d_idxs::Vector{Int32} = spin_idxs[map(!,g.d.defectBools[spin_idxs])]
+        d_idxs = spin_idxs[map(!,g.d.defectBools[spin_idxs])]
 
         if isempty(d_idxs)
             return
@@ -207,10 +191,10 @@ end
         
         if length(spin_idxs) > 1
             try
-                newdefectList = zipOrderedLists(g.defectList,d_idxs)  #Add els to defectlist
-                newaliveList = remOrdEls(g.aliveList,d_idxs) #Remove them from alivelist
-                g.defectList = newdefectList
-                g.aliveList = newaliveList
+                newdefectList = zipOrderedLists(g.d.defectList,d_idxs)  #Add els to defectlist
+                newaliveList = remOrdEls(g.d.aliveList,d_idxs) #Remove them from alivelist
+                g.d.defectList = newdefectList
+                g.d.aliveList = newaliveList
             catch
                 println("Aborting adding defects")
                 return
@@ -219,16 +203,16 @@ end
 
             #Remove item from alive list and start searching backwards from spin_idx
                 # Since aliveList is sorted, spin_idx - idx_found gives number of smaller elements in list
-            rem_idx = revRemoveSpin!(g.aliveList,spin_idxs[1])
-            insert!(g.defectList,spin_idxs[1]-rem_idx+1,spin_idxs[1])
+            rem_idx = revRemoveSpin!(g.d.aliveList,spin_idxs[1])
+            insert!(g.d.defectList,spin_idxs[1]-rem_idx+1,spin_idxs[1])
         end
 
         # Mark corresponding spins to defect
-        @inbounds g.defectBools[d_idxs] .= true
+        @inbounds g.d.defectBools[d_idxs] .= true
 
         # If first defect, mark lattice as containing defects
-        if g.defects == false
-            g.defects = true
+        if g.d.defects == false
+            g.d.defects = true
         end
 
         # # Set states to zero
@@ -239,7 +223,7 @@ end
     function remDefects!(g::AbstractIsingGraph, spin_idxs::Vector{T}) where T <: Integer
         
         # Only keep ones that are actually defect
-        @inbounds d_idxs = spin_idxs[g.defectBools[spin_idxs]]
+        @inbounds d_idxs = spin_idxs[g.d.defectBools[spin_idxs]]
         if isempty(d_idxs)
             return
         end
@@ -248,10 +232,10 @@ end
         # Assumes that els are in list!
         if length(spin_idxs) > 1
             try
-                newaliveList = zipOrderedLists(g.aliveList, d_idxs)
-                newdefectList = remOrdEls(g.defectList,d_idxs)
-                g.aliveList = newaliveList
-                g.defectList = newdefectList
+                newaliveList = zipOrderedLists(g.d.aliveList, d_idxs)
+                newdefectList = remOrdEls(g.d.defectList,d_idxs)
+                g.d.aliveList = newaliveList
+                g.d.defectList = newdefectList
             catch
                 println("Aborting removing defects")
                 return
@@ -262,15 +246,15 @@ end
         else    #Is faster for singular elements
             # Add to alive list
             # Adds it to original index offset by how many smaller numbers are also removed
-            rem_idx = removeFirst!(g.defectList,spin_idxs[1]) 
-            insert!(g.aliveList,spin_idxs[1]-(rem_idx-1),spin_idxs[1])
+            rem_idx = removeFirst!(g.d.defectList,spin_idxs[1]) 
+            insert!(g.d.aliveList,spin_idxs[1]-(rem_idx-1),spin_idxs[1])
         end
 
         # Spins not defect anymore
-        @inbounds g.defectBools[d_idxs] .= false
+        @inbounds g.d.defectBools[d_idxs] .= false
     
-        if isempty(g.defectList) && g.defects == true
-            g.defects = false
+        if isempty(g.d.defectList) && g.d.defects == true
+            g.d.defects = false
         end
 
     end
@@ -292,15 +276,15 @@ end
 
     # Removes All defects
     function restoreState!(g)
-        g.state[g.defectlist] = rand(length(defectlist))
-        remDefects!(g,g.defectList)
+        g.state[g.d.defectList] = rand(length(defectlist))
+        remDefects!(g,g.d.defectList)
     end
      
 """Setting Elements"""
 
     """Backend """
         # Setting an alive element
-        function setNormal!(g::AbstractIsingGraph, spin_idxs::Vector{Int32} , brush::Real)
+        function setNormal!(g::AbstractIsingGraph, spin_idxs::Vector{Int32} , brush)
             # First remove defect if it was defect
             remDefects!(g,spin_idxs)
             # Then set element
@@ -311,7 +295,7 @@ end
         setNormal!(g,i::Integer,j::Integer,brush) =  setNormal!(g,Int32.(coordToIdx(i,j,g.N)),brush)
         setNormal!(g,tupls::Vector{Tuple{Int16,Int16}},brush) = setNormal!(g,Int32.(coordToIdx.(tupls,g.N)),brush)
 
-        function setClamp!(g::AbstractIsingGraph, spin_idxs::Vector{Int32} , brush::Real)
+        function setClamp!(g::AbstractIsingGraph, spin_idxs::Vector{Int32} , brush)
             addDefects!(g,spin_idxs)
             @inbounds g.state[spin_idxs] .= brush
         end
@@ -324,7 +308,7 @@ end
         # Set points either to element or defect
         # Implement clamping
         function setSpins!(g::IsingGraph, idxs , brush, clamp = false)
-            if brush != 0
+            if brush != 0 && !clamp
                 setNormal!(g,idxs,brush)
             else
                 setClamp!(g,idxs,brush)
@@ -335,7 +319,7 @@ end
             if !clamp
                 setNormal!(g,idxs,brush)
             else
-                setClamp!(g,idx,brush)
+                setClamp!(g,idxs,brush)
             end
         end
 
@@ -347,40 +331,37 @@ end
         
 
 
-""" Get Hamiltonian """
-
-function getH(g::AbstractIsingGraph,idx)::Float32
-    
-    Estate::Float32 = 0.
-    if !g.weighted
-        for conn in g.adj[idx]
-            @inbounds Estate += -g.state[idx]*g.state[connIdx(conn)]
-        end
+""" Hamiltonians"""
+function getE(g, idx, state = g.state[idx])::Float32
+    if g.d.weighted
+        return getHWeighted(g, idx, state) 
     else
-        for conn in g.adj[idx]
-            @inbounds Estate += -connW(conn)*g.state[idx]*g.state[connIdx(conn)]
-        end
+        return getH(g, idx, state)
     end
-        
-
-    return Estate
 end
 
-function getH(g::CIsingGraph,state, idx)::Float32
+function getH(g::AbstractIsingGraph,idx, state = g.state[idx])::Float32
     
     Estate::Float32 = 0.
-    if !g.weighted
-        for conn in g.adj[idx]
-            @inbounds Estate += -state*g.state[connIdx(conn)]
-        end
-    else
-        for conn in g.adj[idx]
-            @inbounds Estate += -connW(conn)*state*g.state[connIdx(conn)]
-        end
+    for conn in g.adj[idx]
+        @inbounds Estate += -state*g.state[connIdx(conn)]
     end
 
     return Estate
 end
+
+# When there's weights
+function getHWeighted(g::AbstractIsingGraph,idx, state = g.state[idx])::Float32
+    Estate::Float32 = 0.
+    for conn in g.adj[idx]
+        @inbounds Estate += -connW(conn)*state*g.state[connIdx(conn)]
+    end
+    return Estate
+end
+
+function getHM(g::AbstractIsingGraph,idx,state = g.state[idx])::Float32
+    return -state*eg.d.mlist[idx]
+end    
 
 """Helper Functions"""
 

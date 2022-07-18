@@ -93,9 +93,7 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
                     save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), img[])
 
                     # Image of correlation plot
-                    corrPlot = pl.plot(lVec,corrVec, xlabel = "Length", ylabel=L"C(L)", label = false)
-                    Tstring = replace("$T", '.' => ',')
-                    pl.savefig(corrPlot,"$(foldername)Ising Corrplot $tidx d$point T$Tstring")
+                    plotCorr(lVec,corrVec)
                 end
             end
 
@@ -126,7 +124,11 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
     println("Temperature sweep done!")
 end
 
-
+function plotCorr(lVec,corrVec)
+    corrPlot = pl.plot(lVec,corrVec, xlabel = "Length", ylabel = false, label = L"C(L)")
+    Tstring = replace("$T", '.' => ',')
+    pl.savefig(corrPlot,"$(foldername)Ising Corrplot $tidx d$point T$Tstring")
+end
 
 """ Correlation length calculations """
 
@@ -155,7 +157,7 @@ function sampleCorrPeriodic(g::IsingGraph, Lstep::Float16 = Float16(.5), lStart:
 
     # Sample all startidx to be used
     # Slight bit faster to do it this way than to sample it every time in the loop
-    idx1s = rand(g.aliveList,length(lVec)*npairs)
+    idx1s = rand(g.d.aliveList,length(lVec)*npairs)
     # Index of above vector
     idx1idx = 1
     # Iterate over all lengths to be checked
@@ -194,24 +196,24 @@ function sampleCorrPeriodicDefects(g::AbstractIsingGraph, lend = -floor(-sqrt(2)
         return sqrt(dx^2+dy^2)
     end
     
-    if length(g.aliveList) <= 2
+    if length(g.d.aliveList) <= 2
         error("Too little alive spins to do analysis")
         return
     end
 
-    idxs1 = rand(g.aliveList,npairs)
-    idxs2 = rand(g.aliveList,npairs)
+    idxs1 = rand(g.d.aliveList,npairs)
+    idxs2 = rand(g.d.aliveList,npairs)
     lbins = zeros(length(1:binsize:lend))
     lVec = [1:binsize:lend;]
     corrbins = zeros(length(lVec))
-    prodavg = sum(g.state[g.aliveList])/length(g.aliveList)
+    prodavg = sum(g.state[g.d.aliveList])/length(g.d.aliveList)
 
     for sample in 1:npairs
         idx1 = idxs1[sample]
         idx2 = idxs2[sample]
         
         while idx1 == idx2
-            idx2 = rand(g.aliveList)
+            idx2 = rand(g.d.aliveList)
         end
 
         (i1,j1) = idxToCoord(idx1,g.N)
@@ -471,7 +473,7 @@ function sampleCorrPeriodicUnique(g::IsingGraph, Lstep::Float16, lStart::Int8 = 
  
         sumprod = 0 #Track the sum of products sig_i*sig_j
         while pairs_done <= npairs
-            idx1 = rand(g.aliveList)
+            idx1 = rand(g.d.aliveList)
             rtheta = rthetas[(theta_i -1) % length(rthetas)+1]
             idx2 = sampleIdx2(idx1,L,rtheta)
             
@@ -508,7 +510,7 @@ function corrLXY(g::IsingGraphs.IsingGraph, L)
     #     for state in 1:g.size
     # ]
     # for state1 in g.state[filter]
-    for stateIdx in g.aliveList
+    for stateIdx in g.d.aliveList
 
         state1 = g.state[stateIdx]
         (i1,j1) = idxToCoord(stateIdx,g.N)
@@ -519,7 +521,7 @@ function corrLXY(g::IsingGraphs.IsingGraph, L)
         addedi2 = false
         addedj2 = false
 
-        if i2 < g.N && !g.defectBools[coordToIdx(i2,j1,g.N)]
+        if i2 < g.N && !g.d.defectBools[coordToIdx(i2,j1,g.N)]
             addedi2 = true
 
             statey = g.state[coordToIdx(i2,j1,g.N)]
@@ -529,7 +531,7 @@ function corrLXY(g::IsingGraphs.IsingGraph, L)
             M2 +=1
         end
         
-        if j2 < g.N && !g.defectBools[coordToIdx(i1,j2,g.N)]
+        if j2 < g.N && !g.d.defectBools[coordToIdx(i1,j2,g.N)]
             addedj2 = true
             statex = g.state[coordToIdx(i1,j2,g.N)]
             prodavg2 += statex
