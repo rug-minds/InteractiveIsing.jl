@@ -1,8 +1,9 @@
 __precompile__()
 
 module IsingLearning
+push!(LOAD_PATH, pwd())
 
-using ..IsingGraphs, MLDatasets
+using IsingGraphs, MLDatasets
 
 export read_idx, clampIm, mnist_im, mnist_lab
 
@@ -54,7 +55,7 @@ end
 
 # Groupsize should be odd?
 # Crange: Clamp range
-function clampIm(g::CIsingGraph, num::Integer,groupsize=5; crange = (0,1))
+function clampIm(g::IsingGraph{Float32}, num::Integer,groupsize=5; crange = (0,1))
   while groupsize*28 > g.N || iseven(groupsize) && groupsize > 0
     groupsize -= 1
   end
@@ -79,4 +80,13 @@ function clampIm(g::CIsingGraph, num::Integer,groupsize=5; crange = (0,1))
 
 end
 
+function clampMag(g::IsingGraph{Float32}, num::Integer, groupsize = 5, crange = (0,1))
+  while groupsize*28 > g.N || iseven(groupsize) && groupsize > 0
+    groupsize -= 1
+  end
+
+  border = Int32(round((g.N - groupsize*28)/2))
+  println("Bordersize $border")
+
+  clamp_region_length = Int32((g.N-border*2)/groupsize)
 end

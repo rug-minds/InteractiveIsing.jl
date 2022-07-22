@@ -6,9 +6,10 @@ Drawing Functions
 __precompile__()
 
 module Interaction
+push!(LOAD_PATH, pwd())
 
 include("Cirlces.jl")
-using ..IsingGraphs
+using IsingGraphs
 
 export getOrdCirc, circleToState, ordCircleToImg, addRandomDefects!, offCirc, loopCirc, reOrderCirc
 
