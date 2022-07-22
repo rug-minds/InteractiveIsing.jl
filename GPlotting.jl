@@ -1,8 +1,10 @@
 __precompile__()
 
 module GPlotting
+push!(LOAD_PATH, pwd())
 
-using FileIO, Images, ColorSchemes, Dates, ..IsingGraphs, ..SquareAdj
+
+using FileIO, Images, ColorSchemes, Dates, IsingGraphs, SquareAdj
 
 export gToImg, resizeGImg, saveGImg, imagesc, plotAdj
 

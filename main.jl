@@ -1,3 +1,5 @@
+push!(LOAD_PATH, pwd())
+
 include("Sim.jl")
 include("WeightFuncsCustom.jl")
 
@@ -16,9 +18,9 @@ const weightFunc = isingNN2
 const initTemp = 1.
 
 include("Params.jl")
-
+setRenderLoop()
 # Start Simulation
 if runsim
-    startSim()
+    startSim(g)
     loadqml( qmlfile, obs =  pmap, showlatest = showlatest_cfunction); exec_async()
 end

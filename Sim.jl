@@ -1,36 +1,18 @@
 """File for all simulation functions. Shouldn't have to be touched by user"""
-
-
 # For sysimage:
 # PackageCompiler.create_sysimage([:Random, :GLMakie, :FileIO, :QML, :Observables, :ColorSchemes, :Images, :DataFrames, :CSV, :CxxWrap, :BenchmarkTools, :Plots]; sysimage_path="JuliaSysimage.dylib", precompile_execution_file="Sim.jl")
+
+push!(LOAD_PATH, pwd())
+push!(LOAD_PATH, pwd()*"/Interaction")
+push!(LOAD_PATH, pwd()*"/Learning")
+
+
 using LinearAlgebra, Distributions, Random, GLMakie, FileIO, QML, Observables, ColorSchemes, Images, DataFrames, CSV, CxxWrap
 using BenchmarkTools
 import Plots as pl
-# Qt5QuickControls_jll, Qt5QuickControls2_jll,
 
-include("SquareAdj.jl")
-using .SquareAdj
+using SquareAdj, WeightFuncs, IsingGraphs, Interaction, Analysis, IsingMetropolis, GPlotting, IsingLearning
 
-include("WeightFuncs.jl")
-using .WeightFuncs
-
-include("IsingGraphs.jl")
-using .IsingGraphs
-
-include("Interaction/Interaction.jl")
-using .Interaction
-
-include("Analysis.jl")
-using .Analysis
-
-include("MCMC.jl") 
-using .IsingMetropolis
-
-include("GPlotting.jl")
-using .GPlotting
-
-include("Learning/IsingLearning.jl")
-using .IsingLearning
 
 """ Helper Functions """
 
@@ -63,35 +45,34 @@ end
 """ Persistent functions of the simulation """
 
 # Main loop for for MCMC
-function updateGraph()
-        while running[]
-            if !isPaused[] # if sim not paused
-                updateMonteCarloIsing!(g,TIs[])
-                updates[] += 1
-            else
-                sleep(0.2)
-            end
+function updateGraph(g::AbstractIsingGraph)
+        getE = g.d.hFuncRef[]
+        isRunning[] = true
+        while shouldRun[]
+            updateMonteCarloIsing!(g,TIs[];getE)
+            updates[] += 1
             GC.safepoint()
         end
-end
 
-# Update the graph from the REPL, for debugging
-function updateGraphREPL()
-    while running[]
-    
-        if !isPaused[] # if sim not paused
-            updateMonteCarloIsing!(g,TIs[])
-            updates[] += 1
-        else
+        isRunning[] = false
+        while !shouldRun[]
             yield()
-            # sleep(0.2)
         end
-    end
+        updateGraph(g)
 end
 
-function startSim()
-    Threads.@spawn updateGraph()
+function startSim(g::AbstractIsingGraph)
+    Threads.@spawn updateGraph(g)
 end
+
+# reStartSim = on(shouldRun) do val
+#     if shouldRun[]
+#         while isRunning[]
+#             sleep(.1)
+#         end
+#         startSim(previousEfunc)
+#     end
+# end
 
 """Timed Functions"""
 # Updating image of graph
@@ -195,3 +176,13 @@ end
 showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest, Cvoid, 
                                                (Array{UInt32,1}, Int32, Int32))
 
+
+@qmlfunction timedFunctions
+@qmlfunction println
+@qmlfunction addRandomDefectsQML
+@qmlfunction initIsing
+@qmlfunction circleToStateQML
+@qmlfunction startSim
+@qmlfunction tempSweepQML
+@qmlfunction newCirc
+@qmlfunction saveGImgQML

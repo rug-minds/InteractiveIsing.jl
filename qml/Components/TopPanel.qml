@@ -23,7 +23,7 @@ Item{
         Button{
             Layout.alignment: Qt.AlignCenter
             text: {
-                if(obs.isPaused)
+                if(!obs.shouldRun)
                 {
                     "Paused"
                 }
@@ -32,7 +32,7 @@ Item{
                 }
             }
             onClicked: {
-                obs.isPaused = !obs.isPaused
+                obs.shouldRun = !obs.shouldRun
             }
         }
     }

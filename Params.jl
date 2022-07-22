@@ -1,26 +1,55 @@
-"""
-Simulations Parameters
-Don't have to be touched
-"""
-
-ENV["QSG_RENDER_LOOP"] = "basic"
+""" Parameters """
+function setRenderLoop()
+    ENV["QSG_RENDER_LOOP"] = "basic"
+end
 
 qmlfile = joinpath(dirname(Base.source_path()), "qml", "Main.qml")
 # qmlfile = joinpath(dirname(Base.source_path()), "qml", "TSweepWindow/Tsweep.qml")
 
+# const pmap = JuliaPropertyMap(
+#     "isRunning" => isRunning,
+#     "gSize" => gSize,
+#     "NIs" => NIs, 
+#     "TIs" => TIs, 
+#     "JIs" => JIs, 
+#     "brush" => brush,
+#     "brushR" => brushR,
+#     "M" => M,
+#     "upf" => upf,
+#     "imgSize" => imgSize,
+#     "analysisRunning" => analysisRunning
+# )
 
-#Observables 
-const running = Observable(true)
+const pmap = JuliaPropertyMap()
+
+#Observables etc
+const shouldRun = Observable(true)
+pmap["shouldRun"] = shouldRun
+const isRunning = Ref(true)
+
 const gSize = Observable(graphSize)
+pmap["gSize"] = gSize
+
 const NIs = Observable(gSize[])
+pmap["NIs"] = NIs
 const TIs = Observable(initTemp)
+pmap["TIs"] = TIs
 const JIs = Observable(1.0)
-const isPaused = Observable(false) 
+pmap["JIs"] = JIs
+
 const brush = Observable(0)
+pmap["brush"] = brush
+
 const brushR = Observable( Int(round(NIs[]/10)) )
+pmap["brushR"] = brushR
 const circ  = Observable(getOrdCirc(brushR[])) 
+pmap["circ"] = circ
+
 const M = Observable(0.0)
+pmap["M"] = M
+
 const analysisRunning = Observable(false)
+pmap["analysisRunning"] = analysisRunning
 
 # Not elegant
 const M_array = Ref(zeros(Real,60))
@@ -35,6 +64,8 @@ const updatingMag = Ref(false)
 const updates = Ref(0)
 # Updates per frame
 const upf = Observable(0)
+pmap["upf"] = upf
+
 # Locking thread
 const updatingUpf = Ref(false)
 
@@ -56,35 +87,12 @@ end
 # Image
 const img = Ref(gToImg(g))
 const imgSize = Observable(size(img[]))
-# const imgsize = Observable(size(img[]))
+pmap["imgSize"] = imgSize
 
 # Locking img updating thread
 const updatingImg = Ref(false)
 
+const getERef = Ref(HFunc)
 
-# Basically a dict of all properties
-const pmap = JuliaPropertyMap(
-    "running" => running,
-    "gSize" => gSize,
-    "NIs" => NIs, 
-    "TIs" => TIs, 
-    "JIs" => JIs, 
-    "isPaused" => isPaused, 
-    "brush" => brush,
-    "brushR" => brushR,
-    "M" => M,
-    "upf" => upf,
-    "imgSize" => imgSize,
-    "analysisRunning" => analysisRunning
-)
 
-@qmlfunction timedFunctions
-@qmlfunction println
-@qmlfunction addRandomDefectsQML
-@qmlfunction initIsing
-@qmlfunction circleToStateQML
-@qmlfunction startSim
-@qmlfunction tempSweepQML
-@qmlfunction newCirc
-@qmlfunction saveGImgQML
 

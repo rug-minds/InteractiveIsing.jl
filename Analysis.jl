@@ -3,14 +3,15 @@
 __precompile__()
 
 module Analysis
+push!(LOAD_PATH, pwd())
 
 using FileIO, Images, LaTeXStrings, Dates, DataFrames, CSV
 import Plots as pl
 # include("IsingGraphs.jl")
-using ..IsingGraphs
+using IsingGraphs
 
-include("SquareAdj.jl")
-using .SquareAdj
+# include("SquareAdj.jl")
+using SquareAdj
 
 export dataToDF, tempSweep, MPlot, sampleCorrPeriodic, sampleCorrPeriodicDefects, corrFuncXY, dfMPlot, dataFolderNow, csvToDF, corrPlotDF, corrPlotDFSlices, corrPlotTRange
 

@@ -1,57 +1,66 @@
 """ Updates the spin ising"""
 __precompile__()
+
 module IsingMetropolis
+push!(LOAD_PATH, pwd())
 
 # include("IsingGraphs.jl")
-using ..IsingGraphs
+using IsingGraphs
 
-export updateMonteCarloIsing!
+export updateMonteCarloIsing!, deltED, deltEC
 
-function updateMonteCarloIsing!(g::IsingGraph, T)
+# Discrete
+@inline function deltED(Estate)
+    return -2*Estate
+end
 
-    @inline function deltE(Estate)
-        return 2*Estate
-    end
+# Continuous
+@inline function deltEC(efac,newstate,oldstate)
+    return efac*(newstate-oldstate)
+end
+
+function updateMonteCarloIsing!(g::IsingGraph{Int8}, T; getE::Function = HFunc, deltE::Function = deltED)
 
     beta = T>0 ? 1/T : Inf
 
     idx = rand(ising_it(g))
 
-    Estate = g.d.getH(g,idx)
+    Estate = g.state[idx]*getE(g,idx)
 
-    if (Estate >= 0 || rand() < exp(beta*deltE(Estate)))
+    if (Estate >= 0 || rand() < exp(-beta*deltE(Estate)))
         @inbounds g.state[idx] *= -1
     end
     
 end
 
-function updateMonteCarloIsing!(g::CIsingGraph, T)
-
-    # No self energy
-    @inline function deltE(Estate,newstate,oldstate)
-        return Estate*(newstate/oldstate-1)
-    end
+function updateMonteCarloIsing!(g::IsingGraph{Float32}, T; getE::Function = HFunc, deltE::Function = deltEC)
 
     @inline function sampleCState()
-        2*(rand()-.5)
+        Float32(2*(rand()-.5))
     end
 
     beta = T>0 ? 1/T : Inf
 
     idx = rand(ising_it(g))
-
+     
     oldstate = g.state[idx]
 
-    Estate = g.d.getH(g,idx, oldstate)
+    efactor = getE(g,idx, oldstate)
 
     newstate = sampleCState()
     
-    Ediff = deltE(Estate,newstate,oldstate)
+    Ediff = deltE(efactor,newstate,oldstate)
     if (Ediff < 0 || rand() < exp(-beta*Ediff))
-        @inbounds g.state[idx] = newstate
+        @inbounds g.state[idx] = newstate 
     end
     
 end
+
+
+end
+
+"""
+OLD STUFF
 
 function updateMonteCarloIsingOLD!(g::CIsingGraph, T)
 
@@ -90,8 +99,5 @@ function updateMonteCarloIsingOLD!(g::CIsingGraph, T)
     end
     
 end
-
-
-end
-
+"""
 

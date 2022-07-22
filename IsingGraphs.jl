@@ -2,20 +2,22 @@
 __precompile__()
 
 module IsingGraphs
-    
-include("SquareAdj.jl")
-using Random, Distributions, .SquareAdj
+push!(LOAD_PATH, pwd())
+   
+# include("SquareAdj.jl")
+using Random, Distributions, Observables, SquareAdj
 
-include("WeightFuncs.jl")
-using .WeightFuncs
+# include("WeightFuncs.jl")
+using WeightFuncs
 
-export AbstractIsingGraph, IsingGraph, CIsingGraph, reInitGraph!, coordToIdx, idxToCoord, ising_it, setSpins!, setSpin!, addDefects!, remDefects!, addDefect!, remDefect!, connIdx, connW, initSqAdj, getH
+export AbstractIsingGraph, IsingGraph, CIsingGraph, reInitGraph!, coordToIdx, idxToCoord, ising_it, setSpins!, setSpin!, addDefects!, remDefects!, addDefect!, remDefect!, 
+    connIdx, connW, initSqAdj, HFunc, HWeightedFunc, HMagFunc, HWMagFunc, setMIdxs!
 
 # Aliases
-Edge = Pair{Int32,Int32}
-Vert = Int32
-Weight = Float32
-Conn = Tuple{Vert, Weight}
+const Edge = Pair{Int32,Int32}
+const Vert = Int32
+const Weight = Float32
+const Conn = Tuple{Vert, Weight}
 
 abstract type AbstractIsingGraph end
 
@@ -32,48 +34,60 @@ mutable struct IsingData
     # Magnetic field
     mactive::Bool
     mlist::Vector{Float32}
-    
-    # Energy function
-    getH::Function
+
+    hFuncRef::Ref
+
 end
 
-IsingData(g, weighted = false) = IsingData( weighted, [1:g.size;], false, [false for x in 1:g.size], [] , false, zeros(g.size), weighted ? getH : getHWeighted)
-
-
+# IsingData(g, weighted = false) = IsingData( weighted, Int32.([1:g.size;]), false, [false for x in 1:g.size], Vector{Int32}() , false, zeros(Float32, g.size), weighted ? HFunc : HWeightedFunc)
+IsingData(g, weighted = false; hFuncRef::Ref = Ref(HFunc)) = IsingData( weighted, Int32.([1:g.size;]), false, [false for x in 1:g.size], Vector{Int32}() , false, zeros(Float32, g.size), hFuncRef)
 
 """ Discrete """
 
-mutable struct IsingGraph <: AbstractIsingGraph
+mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph
     # Global graph props to be tracked for performance
     N::Int32
     size::Int32
     # Vertices and edges
-    state::Vector{Int8}
+    state::Vector{T}
     adj::Vector{Vector{Conn}}
     d::IsingData
 
-    IsingGraph(N::Integer; state = initRandomState(N^2), weighted = false, weightFunc = defaultIsingWF) = 
-        (   g = new(
+    IsingGraph(type::DataType, N::Integer; state, adj, weighted = false, weightFunc = defaultIsingWF) = 
+        (   h = new{type}(
                 N,
                 N^2,
                 state,
-                initSqAdj(N, weightFunc = weightFunc)
+                adj
                 );
-            g.d = IsingData(g, weighted);
-            return g
+            h.d = IsingData(h,weighted);
+            return h
         )
 end
+
+IsingGraph(N::Integer; weighted = false, weightFunc = defaultIsingWF) = IsingGraph(Int8, N, state = initRandomState(N^2), adj = initSqAdj(N, weightFunc = weightFunc); weighted)
+CIsingGraph(N::Integer; weighted = false, weightFunc = defaultIsingWF, selfE = true) =  
+    IsingGraph(
+        Float32,
+        N, 
+        state = initRandomCState(N^2), 
+        adj = selfE ? initSqAdjSelf(N, weightFunc = weightFunc) : initSqAdj(N, weightFunc = weightFunc);
+        weighted
+    )
 
 # Copy graph data to new one
 IsingGraph(g::IsingGraph) = deepcopy(g)
 
-function reInitGraph!(g::AbstractIsingGraph, state = initRandomState(g.N))
+function reInitGraph!(g::IsingGraph, state = typeof(g) == IsingGraph{Int8} ? initRandomState(g.size) : initRandomCState(g.size))
     println("Reinitializing graph")
     g.state = state
     g.d.defects = false
     g.d.aliveList = [1:g.size;]
     g.d.defectBools = [false for x in 1:g.size]
     g.d.defectList = []
+    g.d.mactive = false
+    g.d.mlist = zeros(g.size)
+    setGHFunc!(g)
 end
 
 # Initialization of state
@@ -83,33 +97,33 @@ end
 
 """ Continuous """
 
-mutable struct CIsingGraph <: AbstractIsingGraph
-    # Global graph props to be tracked for performance
-    N::Int32
-    size::Int32
-    # Vertices and edges
-    state::Vector{Float32}
-    adj::Vector{Vector{Conn}}
+# mutable struct CIsingGraph <: AbstractIsingGraph
+#     # Global graph props to be tracked for performance
+#     N::Int32
+#     size::Int32
+#     # Vertices and edges
+#     state::Vector{Float32}
+#     adj::Vector{Vector{Conn}}
+#     # Energy function
+#     d::IsingData
     
-    d::IsingData
+#     CIsingGraph(N::Integer; state = initRandomCState(N^2), weighted = false, weightFunc = DefaultIsingWF, selfE = true) = 
+#         (   h = new(
+#                 N,
+#                 N^2,
+#                 state,
+#                 selfE ? initSqAdjSelf(N, weightFunc = weightFunc) : initSqAdj(N, weightFunc = weightFunc)
+#             );
+#             h.d = IsingData(h,weighted);
+#             return h
+#         )
 
-    CIsingGraph(N::Integer; state = initRandomCState(N^2), weighted = false, weightFunc = DefaultIsingWF, selfE = true) = 
-        (   g = new(
-                N,
-                N^2,
-                state,
-                selfE ? initSqAdjSelf(N, weightFunc = weightFunc) : initSqAdj(N, weightFunc = weightFunc),
-            );
-            g.d = IsingData(g,weighted);
-            return g
-        )
+# end
 
-end
+# # Copy graph data to new one
+# CIsingGraph(g::CIsingGraph) = deepcopy(g)
 
-# Copy graph data to new one
-CIsingGraph(g::CIsingGraph) = deepcopy(g)
-
-reInitGraph!(g::CIsingGraph) = reInitGraph!(g, initRandomCState(g.size))
+# reInitGraph!(g::CIsingGraph) = reInitGraph!(g, initRandomCState(g.size))
 
 
 # Initialization of state
@@ -307,7 +321,7 @@ end
     """ User Functions """
         # Set points either to element or defect
         # Implement clamping
-        function setSpins!(g::IsingGraph, idxs , brush, clamp = false)
+        function setSpins!(g::IsingGraph{Int8}, idxs , brush, clamp = false)
             if brush != 0 && !clamp
                 setNormal!(g,idxs,brush)
             else
@@ -315,53 +329,115 @@ end
             end
         end
 
-        function setSpins!(g::CIsingGraph, idxs , brush, clamp = false)
+        function setSpins!(g::IsingGraph{Float32}, idxs , brush, clamp = false)
             if !clamp
+                println("Here")
                 setNormal!(g,idxs,brush)
             else
+                println("Or Here")
                 setClamp!(g,idxs,brush)
             end
         end
 
-        setSpin!(g,i,j,brush, clamp = false) = setSpins!(g, [coordToIdx(i,j,g.N)], brush, clamp)
+        setSpin!(g::AbstractIsingGraph,i::Integer,j::Integer, brush::Real, clamp::Bool = false) = setSpins!(g, [coordToIdx(i,j,g.N)], brush, clamp)
         
-        setSpin!(g, coord, brush, clamp = false) = setSpins!(g,[coord],brush,clamp)
+        setSpin!(g::AbstractIsingGraph, coord::Integer, brush::Real, clamp::Bool = false) = setSpins!(g,[coord],brush,clamp)
 
-        setSpins!(g, tupls::Vector{Tuple{Int32,Int32}}, brush, clamp) = setSpins!(g, coordToIdx.(tupls,g.N), brush, clamp)
+        setSpins!(g::AbstractIsingGraph, tupls::Vector{Tuple{Int32,Int32}}, brush, clamp) = setSpins!(g, coordToIdx.(tupls,g.N), brush, clamp)
         
 
 
 """ Hamiltonians"""
-function getE(g, idx, state = g.state[idx])::Float32
-    if g.d.weighted
-        return getHWeighted(g, idx, state) 
-    else
-        return getH(g, idx, state)
+
+# No weights
+function HFunc(g::AbstractIsingGraph,idx, state = g.state[idx])::Float32
+    
+    efactor::Float32 = 0.
+    for conn in g.adj[idx]
+        @inbounds efactor += -g.state[connIdx(conn)]
     end
+
+    return efactor
 end
 
-function getH(g::AbstractIsingGraph,idx, state = g.state[idx])::Float32
+# No weights but magfield
+function HMagFunc(g::AbstractIsingGraph,idx, state = g.state[idx])::Float32
     
-    Estate::Float32 = 0.
+    efactor::Float32 = 0.
     for conn in g.adj[idx]
-        @inbounds Estate += -state*g.state[connIdx(conn)]
+        @inbounds efactor += -g.state[connIdx(conn)]
     end
 
-    return Estate
+    return efactor -g.d.mlist[idx]
 end
 
 # When there's weights
-function getHWeighted(g::AbstractIsingGraph,idx, state = g.state[idx])::Float32
-    Estate::Float32 = 0.
+function HWeightedFunc(g::AbstractIsingGraph,idx, state = g.state[idx])::Float32
+    efactor::Float32 = 0.
     for conn in g.adj[idx]
-        @inbounds Estate += -connW(conn)*state*g.state[connIdx(conn)]
+        @inbounds efactor += -connW(conn)*g.state[connIdx(conn)]
     end
-    return Estate
+    return efactor
 end
 
-function getHM(g::AbstractIsingGraph,idx,state = g.state[idx])::Float32
-    return -state*eg.d.mlist[idx]
-end    
+# Weights and magfield
+function HWMagFunc(g::AbstractIsingGraph,idx,state = g.state[idx])::Float32
+    efactor::Float32 = 0.
+    for conn in g.adj[idx]
+        @inbounds efactor += -connW(conn)*g.state[connIdx(conn)]
+    end
+    return efactor -g.d.mlist[idx]
+end
+
+function setGHFunc!(g, shouldRun::Observable,isRunning::Ref)
+    if !g.d.weighted
+        if !g.d.mactive
+            g.d.hFuncRef = Ref(HFunc)
+            println("Set HFunc")
+        else
+            g.d.hFuncRef = Ref(HMagFunc)
+            println("Set HMagFunc")
+        end
+    else
+        if !g.d.mactive
+            g.d.hFuncRef = Ref(HWeightedFunc)
+            println("Set HWeightedFunc")
+        else
+            g.d.hFuncRef = Ref(HWMagFunc)
+            println("Set HWMagFunc")
+        end
+    end
+
+    branchSim(shouldRun,isRunning)
+end
+
+""" Changing E functions """
+
+function setMIdxs!(g,idxs,strengths,shouldRun::Observable,isRunning::Ref)
+    if length(idxs) != length(strengths)
+        error("Idxs and strengths lengths not the same")
+        return      
+    end
+
+    shouldRun[] = false
+    g.d.mactive = true
+    g.d.mlist[idxs] = strengths
+    # setGHFunc!(g)
+    g.d.hFuncRef = Ref(HWMagFunc)
+    while isRunning[]
+        sleep(.1)
+    end
+    shouldRun[] = true
+end
+
+function branchSim(shouldRun::Observable,isRunning::Ref)
+    shouldRun[] = false 
+    while isRunning[]
+        sleep(.1)
+    end
+    shouldRun[] = true
+end
+
 
 """Helper Functions"""
 
@@ -445,3 +521,45 @@ end
 
 
 end
+
+
+""" Old
+
+
+macro varname(arg)
+    string(arg)
+end
+
+function getHMField!(g,idxs,strengths)
+    gname = @varname(g)
+    try
+        setMIdxs!(g,idxs,strengths)
+    catch
+        return
+    end
+    
+
+    if g.d.weighted
+        println("Hamiltonian set to weighted + magnetic field")
+        eval(Meta.parse("DOLLARSIGN(gname).getE(g,idx,state = g.state[idx]) = HWeightedFunc(g,idx,state) + HMagFunc(g,idx,state)"))
+    else
+        println("Hamiltonian set to unweighted + magnetic field")
+        eval(Meta.parse("DOLLARSIGN(gname).getE(g,idx,state = g.state[idx]) = HFunc(g,idx,state) + HMagFunc(g,idx,state)"))
+    end
+
+    
+end
+
+function setMIdxs!(g,idxs,strengths)
+    if length(idxs) != length(strengths)
+        error("Idxs and strengths lengths not the same")
+        return      
+    end
+
+    for idx in idxs
+        g.d.mlist[idx] = strengths[idx]
+    end
+end
+
+
+"""

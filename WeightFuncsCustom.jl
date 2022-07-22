@@ -1,5 +1,4 @@
 # Custom WeightFuncs
-
 """ 
     Use this file to define custom weightfuncs.
 
