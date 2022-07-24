@@ -323,14 +323,12 @@ end
 # Cannot be inside qmlFunctions due to problem with CxxWrap
 const img = zeros(ARGB32,500,500)
 
-function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32, img)
+function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
     buffer = reshape(buffer, size(img))
     buffer = reinterpret(ARGB32, buffer)
     buffer .= img
     return
 end
-
-showlatest_c(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32) = showlatest(buffer, width32, height32, img)
 
 # # export showlatest_cfunction
 showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest_c, Cvoid, 
