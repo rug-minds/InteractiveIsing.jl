@@ -1,26 +1,25 @@
 push!(LOAD_PATH, pwd())
+push!(LOAD_PATH, pwd()*"/Interaction")
+push!(LOAD_PATH, pwd()*"/Learning")
 
-include("Sim.jl")
+
+# include("IsingSim.jl")
+using IsingSim
+using GPlotting
+using IsingGraphs
+using Interaction
+using IsingMetropolis
+using WeightFuncs
+using Analysis
+
+
 include("WeightFuncsCustom.jl")
 
+const sim = Sim(
+    continuous = false, 
+    graphSize = 512, 
+    weighted = false, 
+    weightFunc = defaultIsingWF
+    )
 
-"""
-User Variables
-"""
-const runsim = true
-const continuous = true
-const graphSize = 100
-const weighted = true
-const weightFunc = isingNN2
-
-# setAddDist!(weightFunc, Normal(0,0.3))
-
-const initTemp = 1.
-
-include("Params.jl")
-setRenderLoop()
-# Start Simulation
-if runsim
-    startSim(g)
-    loadqml( qmlfile, obs =  pmap, showlatest = showlatest_cfunction); exec_async()
-end
+sim(true)

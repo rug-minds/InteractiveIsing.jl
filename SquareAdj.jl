@@ -5,8 +5,8 @@ __precompile__()
 
 module SquareAdj
 
-include("WeightFuncs.jl")
-using .WeightFuncs
+push!(LOAD_PATH, pwd())
+using WeightFuncs
 
 export fillAdjList!, numEdges, latmod, initAdj, adjToMatrix
 

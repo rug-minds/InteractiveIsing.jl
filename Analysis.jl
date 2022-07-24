@@ -7,10 +7,7 @@ push!(LOAD_PATH, pwd())
 
 using FileIO, Images, LaTeXStrings, Dates, DataFrames, CSV
 import Plots as pl
-# include("IsingGraphs.jl")
 using IsingGraphs
-
-# include("SquareAdj.jl")
 using SquareAdj
 
 export dataToDF, tempSweep, MPlot, sampleCorrPeriodic, sampleCorrPeriodicDefects, corrFuncXY, dfMPlot, dataFolderNow, csvToDF, corrPlotDF, corrPlotDFSlices, corrPlotTRange
@@ -86,7 +83,7 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
             tpointi = time()
             (lVec,corrVec) = corrF(g) 
             cldf = vcat(cldf, corrToDF((lVec,corrVec) , point, TIs[]) )
-            mdf = vcat(mdf,MToDF(last(M_array[]),point, TIs[]) )
+            mdf = vcat(mdf,MToDF(last(M_array),point, TIs[]) )
             
             if saveImg
                 if !savelast || point == dpoints

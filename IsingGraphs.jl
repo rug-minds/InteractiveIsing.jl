@@ -11,7 +11,7 @@ using Random, Distributions, Observables, SquareAdj
 using WeightFuncs
 
 export AbstractIsingGraph, IsingGraph, CIsingGraph, reInitGraph!, coordToIdx, idxToCoord, ising_it, setSpins!, setSpin!, addDefects!, remDefects!, addDefect!, remDefect!, 
-    connIdx, connW, initSqAdj, HFunc, HWeightedFunc, HMagFunc, HWMagFunc, setMIdxs!
+    connIdx, connW, initSqAdj, HFunc, HWeightedFunc, HMagFunc, HWMagFunc, setMIdxs!, setGHFunc!
 
 # Aliases
 const Edge = Pair{Int32,Int32}
@@ -78,55 +78,14 @@ CIsingGraph(N::Integer; weighted = false, weightFunc = defaultIsingWF, selfE = t
 # Copy graph data to new one
 IsingGraph(g::IsingGraph) = deepcopy(g)
 
-function reInitGraph!(g::IsingGraph, state = typeof(g) == IsingGraph{Int8} ? initRandomState(g.size) : initRandomCState(g.size))
-    println("Reinitializing graph")
-    g.state = state
-    g.d.defects = false
-    g.d.aliveList = [1:g.size;]
-    g.d.defectBools = [false for x in 1:g.size]
-    g.d.defectList = []
-    g.d.mactive = false
-    g.d.mlist = zeros(g.size)
-    setGHFunc!(g)
-end
-
 # Initialization of state
+export initRandomState
 function initRandomState(size)::Vector{Int8}
     return rand([-1,1],size)
 end
 
-""" Continuous """
-
-# mutable struct CIsingGraph <: AbstractIsingGraph
-#     # Global graph props to be tracked for performance
-#     N::Int32
-#     size::Int32
-#     # Vertices and edges
-#     state::Vector{Float32}
-#     adj::Vector{Vector{Conn}}
-#     # Energy function
-#     d::IsingData
-    
-#     CIsingGraph(N::Integer; state = initRandomCState(N^2), weighted = false, weightFunc = DefaultIsingWF, selfE = true) = 
-#         (   h = new(
-#                 N,
-#                 N^2,
-#                 state,
-#                 selfE ? initSqAdjSelf(N, weightFunc = weightFunc) : initSqAdj(N, weightFunc = weightFunc)
-#             );
-#             h.d = IsingData(h,weighted);
-#             return h
-#         )
-
-# end
-
-# # Copy graph data to new one
-# CIsingGraph(g::CIsingGraph) = deepcopy(g)
-
-# reInitGraph!(g::CIsingGraph) = reInitGraph!(g, initRandomCState(g.size))
-
-
 # Initialization of state
+export initRandomCState
 function initRandomCState(size)::Vector{Float32}
     return 2 .* (rand(Float32,size) .- .5)
 end
@@ -339,9 +298,9 @@ end
             end
         end
 
-        setSpin!(g::AbstractIsingGraph,i::Integer,j::Integer, brush::Real, clamp::Bool = false) = setSpins!(g, [coordToIdx(i,j,g.N)], brush, clamp)
+        setSpin!(g::AbstractIsingGraph, i::Integer, j::Integer, brush::Union{Int8,Float32}, clamp::Bool = false) = setSpins!(g, [coordToIdx(i,j,g.N)], brush, clamp)
         
-        setSpin!(g::AbstractIsingGraph, coord::Integer, brush::Real, clamp::Bool = false) = setSpins!(g,[coord],brush,clamp)
+        setSpin!(g::AbstractIsingGraph, idx::Integer, brush::Union{Int8,Float32}, clamp::Bool = false) = setSpins!(g,[idx],brush,clamp)
 
         setSpins!(g::AbstractIsingGraph, tupls::Vector{Tuple{Int32,Int32}}, brush, clamp) = setSpins!(g, coordToIdx.(tupls,g.N), brush, clamp)
         
@@ -389,7 +348,8 @@ function HWMagFunc(g::AbstractIsingGraph,idx,state = g.state[idx])::Float32
     return efactor -g.d.mlist[idx]
 end
 
-function setGHFunc!(g, shouldRun::Observable,isRunning::Ref)
+function setGHFunc!(sim)
+    g = sim.g
     if !g.d.weighted
         if !g.d.mactive
             g.d.hFuncRef = Ref(HFunc)
@@ -408,34 +368,35 @@ function setGHFunc!(g, shouldRun::Observable,isRunning::Ref)
         end
     end
 
-    branchSim(shouldRun,isRunning)
+    branchSim(sim)
 end
 
 """ Changing E functions """
 
-function setMIdxs!(g,idxs,strengths,shouldRun::Observable,isRunning::Ref)
+function setMIdxs!(sim,idxs,strengths)
+    g = sim.g
     if length(idxs) != length(strengths)
         error("Idxs and strengths lengths not the same")
         return      
     end
 
-    shouldRun[] = false
+    sim.shouldRun[] = false
     g.d.mactive = true
     g.d.mlist[idxs] = strengths
     # setGHFunc!(g)
     g.d.hFuncRef = Ref(HWMagFunc)
-    while isRunning[]
+    while sim.isRunning[]
         sleep(.1)
     end
-    shouldRun[] = true
+    sim.shouldRun[] = true
 end
 
-function branchSim(shouldRun::Observable,isRunning::Ref)
-    shouldRun[] = false 
-    while isRunning[]
+function branchSim(sim)
+    sim.shouldRun[] = false 
+    while sim.isRunning[]
         sleep(.1)
     end
-    shouldRun[] = true
+    sim.shouldRun[] = true
 end
 
 
@@ -521,45 +482,3 @@ end
 
 
 end
-
-
-""" Old
-
-
-macro varname(arg)
-    string(arg)
-end
-
-function getHMField!(g,idxs,strengths)
-    gname = @varname(g)
-    try
-        setMIdxs!(g,idxs,strengths)
-    catch
-        return
-    end
-    
-
-    if g.d.weighted
-        println("Hamiltonian set to weighted + magnetic field")
-        eval(Meta.parse("DOLLARSIGN(gname).getE(g,idx,state = g.state[idx]) = HWeightedFunc(g,idx,state) + HMagFunc(g,idx,state)"))
-    else
-        println("Hamiltonian set to unweighted + magnetic field")
-        eval(Meta.parse("DOLLARSIGN(gname).getE(g,idx,state = g.state[idx]) = HFunc(g,idx,state) + HMagFunc(g,idx,state)"))
-    end
-
-    
-end
-
-function setMIdxs!(g,idxs,strengths)
-    if length(idxs) != length(strengths)
-        error("Idxs and strengths lengths not the same")
-        return      
-    end
-
-    for idx in idxs
-        g.d.mlist[idx] = strengths[idx]
-    end
-end
-
-
-"""

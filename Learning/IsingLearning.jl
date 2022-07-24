@@ -90,3 +90,5 @@ function clampMag(g::IsingGraph{Float32}, num::Integer, groupsize = 5, crange = 
 
   clamp_region_length = Int32((g.N-border*2)/groupsize)
 end
+
+end

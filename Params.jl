@@ -1,24 +1,7 @@
 """ Parameters """
-function setRenderLoop()
-    ENV["QSG_RENDER_LOOP"] = "basic"
-end
+
 
 qmlfile = joinpath(dirname(Base.source_path()), "qml", "Main.qml")
-# qmlfile = joinpath(dirname(Base.source_path()), "qml", "TSweepWindow/Tsweep.qml")
-
-# const pmap = JuliaPropertyMap(
-#     "isRunning" => isRunning,
-#     "gSize" => gSize,
-#     "NIs" => NIs, 
-#     "TIs" => TIs, 
-#     "JIs" => JIs, 
-#     "brush" => brush,
-#     "brushR" => brushR,
-#     "M" => M,
-#     "upf" => upf,
-#     "imgSize" => imgSize,
-#     "analysisRunning" => analysisRunning
-# )
 
 const pmap = JuliaPropertyMap()
 
@@ -30,17 +13,13 @@ const isRunning = Ref(true)
 const gSize = Observable(graphSize)
 pmap["gSize"] = gSize
 
-const NIs = Observable(gSize[])
-pmap["NIs"] = NIs
 const TIs = Observable(initTemp)
 pmap["TIs"] = TIs
-const JIs = Observable(1.0)
-pmap["JIs"] = JIs
 
 const brush = Observable(0)
 pmap["brush"] = brush
 
-const brushR = Observable( Int(round(NIs[]/10)) )
+const brushR = Observable( Int(round(gSize[]/10)) )
 pmap["brushR"] = brushR
 const circ  = Observable(getOrdCirc(brushR[])) 
 pmap["circ"] = circ
@@ -72,27 +51,25 @@ const updatingUpf = Ref(false)
 # Graph
 if continuous
     const g = CIsingGraph(
-            NIs[], 
+            gSize[], 
             weighted = weighted,
             weightFunc = weighted ? weightFunc : defaultIsingWF
         )
 else
     const g = IsingGraph(
-        NIs[], 
+        gSize[], 
         weighted = weighted,
         weightFunc = weighted ? weightFunc : defaultIsingWF
     )
 end
 
 # Image
-const img = Ref(gToImg(g))
-const imgSize = Observable(size(img[]))
-pmap["imgSize"] = imgSize
+# const img = Ref(gToImg(g))
+# const imgSize = Observable(size(img[]))
+# pmap["imgSize"] = imgSize
 
 # Locking img updating thread
 const updatingImg = Ref(false)
-
-const getERef = Ref(HFunc)
 
 
 
