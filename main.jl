@@ -3,7 +3,6 @@ push!(LOAD_PATH, pwd()*"/Interaction")
 push!(LOAD_PATH, pwd()*"/Learning")
 
 
-# include("IsingSim.jl")
 using IsingSim
 using GPlotting
 using IsingGraphs
@@ -12,12 +11,16 @@ using IsingMetropolis
 using WeightFuncs
 using Analysis
 
+qmlfile = joinpath(dirname(Base.source_path()), "qml", "Main.qml")
+
+using QML
+using Images
 
 include("WeightFuncsCustom.jl")
 
 const sim = Sim(
     continuous = false, 
-    graphSize = 512, 
+    graphSize = 500, 
     weighted = false, 
     weightFunc = defaultIsingWF
     )

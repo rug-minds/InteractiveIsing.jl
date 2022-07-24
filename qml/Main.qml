@@ -117,7 +117,7 @@ ApplicationWindow {
     interval: 1/60*1000; running: true; repeat: true
     onTriggered: {
       Julia.timedFunctions();
-      // canvas.update();
+      canvas.update();
       frames += 1
     }
   }
