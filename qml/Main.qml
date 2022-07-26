@@ -12,6 +12,8 @@ ApplicationWindow {
   title: "Ising Simulation"
   width: canvas.width + 256
   height: canvas.height + 256
+  // width: 712
+  // height: 712
   visible: true
 
   // UPS Counter
@@ -63,8 +65,8 @@ ApplicationWindow {
       JuliaCanvas{
         Layout.alignment: Qt.AlignCenter
         id: canvas
-        // width: 500
         // height: 500
+        // width: 500
         width: {
           if(obs.gSize > 500)
           {

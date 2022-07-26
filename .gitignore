@@ -7,3 +7,5 @@ Ising Image/
 Mplot.png
 Learning/Dataset/train-labels.idx1-ubyte
 Learning/Dataset/train-images.idx3-ubyte
+test.jl
+test.qml

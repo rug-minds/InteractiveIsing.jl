@@ -53,7 +53,7 @@ function addRandomDefects!(g::IsingGraph,p)
 
     for _ in 1:round(length(g.d.aliveList)*p/100)
         idx = rand(g.d.aliveList)
-        setSpin!(g, idx, 0 , true)
+        setSpin!(g, idx, Int8(0) , true)
     end
 
 end

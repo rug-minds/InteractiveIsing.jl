@@ -10,16 +10,16 @@ using IsingGraphs
 export updateMonteCarloIsing!, deltED, deltEC
 
 # Discrete
-@inline function deltED(Estate)
-    return -2*Estate
-end
+
 
 # Continuous
-@inline function deltEC(efac,newstate,oldstate)
-    return efac*(newstate-oldstate)
-end
 
-function updateMonteCarloIsing!(g::IsingGraph{Int8}, T; getE::Function = HFunc, deltE::Function = deltED)
+
+function updateMonteCarloIsing!(g::IsingGraph{Int8}, T; getE::Function = HFunc)
+
+    @inline function deltE(Estate)
+        return -2*Estate
+    end
 
     beta = T>0 ? 1/T : Inf
 
@@ -33,7 +33,11 @@ function updateMonteCarloIsing!(g::IsingGraph{Int8}, T; getE::Function = HFunc, 
     
 end
 
-function updateMonteCarloIsing!(g::IsingGraph{Float32}, T; getE::Function = HFunc, deltE::Function = deltEC)
+function updateMonteCarloIsing!(g::IsingGraph{Float32}, T; getE::Function = HFunc)
+
+    @inline function deltE(efac,newstate,oldstate)
+        return efac*(newstate-oldstate)
+    end
 
     @inline function sampleCState()
         Float32(2*(rand()-.5))

@@ -1,4 +1,7 @@
 # Custom WeightFuncs
+push!(LOAD_PATH, pwd())
+using WeightFuncs
+
 """ 
     Use this file to define custom weightfuncs.
 
