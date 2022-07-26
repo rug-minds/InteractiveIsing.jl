@@ -15,51 +15,65 @@ using BenchmarkTools
 import Plots as pl
 
 using SquareAdj, WeightFuncs, IsingGraphs, Interaction, Analysis, IsingMetropolis, GPlotting
-# using IsingLearning
+using IsingLearning
 
+const img =  Ref(zeros(RGB{Float64},1,1))
+
+function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
+    buffer = reshape(buffer, size(img[]))
+    buffer = reinterpret(ARGB32, buffer)
+    buffer .= transpose(img[])
+    return
+end
+
+function __init__()
+
+    global showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest, Cvoid, 
+                                               (Array{UInt32,1}, Int32, Int32))
+end
+export showlatest_cfunction
 
 
 export Sim
-
 mutable struct Sim
     # Graph
-     g::IsingGraph
+    const g::IsingGraph
     # Property map for qml
-     pmap::JuliaPropertyMap
+    const pmap::JuliaPropertyMap
     
     # length/width of graph
-     gSize::Observable{Int32}
+    const gSize::Observable{Int32}
 
     # Temperature Observable
-     TIs::Observable{Float32}
+    const TIs::Observable{Float32}
 
     # For drawing to simulation
-     brush::Observable{Float32} 
-     brushR::Observable{Int32} 
-     circ::Observable 
+    const brush::Observable{Float32} 
+    const brushR::Observable{Int32} 
+    const circ::Observable 
 
     # Magnetization
-     M::Observable{Float32} 
-    M_array::Vector{Real}
+    const M::Observable{Float32} 
+    const M_array::Ref{Vector{Real}}
 
-     analysisRunning::Observable{Bool} 
+    const analysisRunning::Observable{Bool} 
     
     # For tracking updates
     updates::Int
     # Updates per frame average
-     upf::Observable{Int} 
+    const upf::Observable{Int} 
 
     # Image of graph
-     img::Matrix{RGB{Float64}}
-     imgSize::Observable
+    const img::Base.RefValue{Matrix{RGB{Float64}}}
+    const imgSize::Observable
 
     # Thread Locking
-     updatingUpf::Ref{Bool}
-     updatingMag::Ref{Bool} 
-     updatingImg::Ref{Bool} 
+    const updatingUpf::Ref{Bool}
+    const updatingMag::Ref{Bool} 
+    const updatingImg::Ref{Bool} 
 
     # For Branching Simulation
-     shouldRun::Observable{Bool} 
+    const shouldRun::Observable{Bool} 
     isRunning::Bool
 
     function Sim(;
@@ -99,6 +113,7 @@ mutable struct Sim
             0,
             Observable(0),
             img,
+            # Ref(initImg),
             Observable(size(initImg)),
             Ref(false),
             Ref(false),
@@ -106,7 +121,7 @@ mutable struct Sim
             Observable(true),
             true,
         )
-        sim.img = initImg
+        sim.img[] = initImg
         # Initializing propertymap
         sim.pmap["imgSize"] = sim.imgSize
         sim.pmap["shouldRun"] = sim.shouldRun
@@ -132,6 +147,7 @@ function (sim::Sim)(start = true)
     if start
         startSim(sim)
     end
+    return sim.g
 end
 
 
@@ -292,9 +308,9 @@ end
 let avg_window = 60, frames = 0
     global function magnetization(sim::Sim)
         avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
-        sim.M_array = insertShift(sim.M_array, sum(sim.g.state))
+        sim.M_array[] = insertShift(sim.M_array[], sum(sim.g.state))
         if frames > avg_window
-            sim.M[] = sum(sim.M_array)/avg_window 
+            sim.M[] = sum(sim.M_array[])/avg_window 
             frames = 0
         end 
         frames += 1 
@@ -302,37 +318,24 @@ let avg_window = 60, frames = 0
 end
 
 # """ QML FUNCTIONS """
-# function annealing(sim, Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Tstep:Tf, reInit = true, saveImg = true)
-#     # Reinitialize
-#     reInit && initIsing()
+function annealing(sim, Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Tstep:Tf, reInit = true, saveImg = true)
+    # Reinitialize
+    reInit && initIsing()
 
-#     # Set temp and initial wait
-#     TIs[] = Ti
-#     sleep(initWait)
+    # Set temp and initial wait
+    TIs[] = Ti
+    sleep(initWait)
     
-#     for temp in T_it
-#         TIs[] = temp
-#         sleep(stepWait)
-#         if saveImg
-#             save(File{format"PNG"}("Images/Annealing/Ising T$temp.PNG"), img[])
-#         end
-#     end
-# end
-
-""" For QML canvas to show image """
-# Cannot be inside qmlFunctions due to problem with CxxWrap
-const img = zeros(ARGB32,500,500)
-
-function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
-    buffer = reshape(buffer, size(img))
-    buffer = reinterpret(ARGB32, buffer)
-    buffer .= img
-    return
+    for temp in T_it
+        TIs[] = temp
+        sleep(stepWait)
+        if saveImg
+            save(File{format"PNG"}("Images/Annealing/Ising T$temp.PNG"), img[])
+        end
+    end
 end
 
-# # export showlatest_cfunction
-showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest_c, Cvoid, 
-                                                (Array{UInt32,1}, Int32, Int32))
+""" For QML canvas to show image """
 
 export setRenderLoop
 function setRenderLoop()
@@ -348,11 +351,14 @@ function qmlFunctions(sim::Sim)
     TIs = sim.TIs
     M_array = sim.M_array
     M = sim.M
+    brushR = sim.brushR
 
     # Locks
     updatingImg = sim.updatingImg
     updatingUpf = sim.updatingUpf
     updatingMag = sim.updatingMag
+
+    analysisRunning = sim.analysisRunning
 
     @qmlfunction println
 
@@ -404,8 +410,36 @@ end
 """ Sim Functions"""
 
 export runSim
+# Cannot be inside qmlFunctions due to problem with closures and @cfunction
+# const img = Ref(zeros(RGB,500,500))
+
+# function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
+#     buffer = reshape(buffer, size(img))
+#     buffer = reinterpret(ARGB32, buffer)
+#     buffer .= img
+#     return
+# end
+
+# export showlatest_cfunction
+# showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest, Cvoid, 
+#                                                (Array{UInt32,1}, Int32, Int32))
+
+
+# function showlatesteval(sim)
+#     img = sim.img
+#     function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
+#         buffer = reshape(buffer, size(img[]))
+#         buffer = reinterpret(ARGB32, buffer)
+#         buffer .= img[]
+#         return
+#     end
+
+#     @eval $:(CxxWrap.@safe_cfunction($showlatest, Cvoid, (Array{UInt32,1}, Int32, Int32)))
+# end
+
+
 function runSim(sim)
-    # g = sim.g
+    # showlatest_cfunction = showlatesteval(sim)
     Threads.@spawn updateGraph(sim)
     loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction); exec_async()
 end
@@ -420,9 +454,9 @@ end
 # """ REPL FUNCTIONS FOR DEBUGGING """
 
 # # # Draw circle to state
-# # circleToStateQML(i,j,clamp=false) = Threads.@spawn circleToState(g,circ[],i,j,brush[]; clamp, imgsize = size(img[])[1])
-# circleToStateREPL(i,j, clamp = false) = circleToState(g,circ[],i,j,brush[]; clamp, imgsize = size(img[])[1])
+# circleToStateQML(i,j,clamp=false) = Threads.@spawn circleToState(g,circ[],i,j,brush[]; clamp, imgsize = size(img[])[1])
+circleToStateREPL(i,j, clamp = false) = circleToState(g,circ[],i,j,brush[]; clamp, imgsize = size(img[])[1])
 
-# function tempSweepQMLRepl(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true); analysisRunning[] = true; tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, analysisRunning=analysisRunning, savelast = true) end
+function tempSweepQMLRepl(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true); analysisRunning[] = true; tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, analysisRunning=analysisRunning, savelast = true) end
 
 end

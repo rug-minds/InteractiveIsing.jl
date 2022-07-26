@@ -40,7 +40,7 @@ mutable struct IsingData
 end
 
 # IsingData(g, weighted = false) = IsingData( weighted, Int32.([1:g.size;]), false, [false for x in 1:g.size], Vector{Int32}() , false, zeros(Float32, g.size), weighted ? HFunc : HWeightedFunc)
-IsingData(g, weighted = false; hFuncRef::Ref = Ref(HFunc)) = IsingData( weighted, Int32.([1:g.size;]), false, [false for x in 1:g.size], Vector{Int32}() , false, zeros(Float32, g.size), hFuncRef)
+IsingData(g, weighted = false; hFuncRef::Ref = weighted ? Ref(HWeightedFunc) : Ref(HFunc)) = IsingData( weighted, Int32.([1:g.size;]), false, [false for x in 1:g.size], Vector{Int32}() , false, zeros(Float32, g.size), hFuncRef)
 
 """ Discrete """
 

@@ -10,10 +10,10 @@ import "TSweepWindow"
 ApplicationWindow {
   id: root
   title: "Ising Simulation"
-  // width: canvas.width + 256
-  // height: canvas.height + 256
-  width: 712
-  height: 712
+  width: canvas.width + 256
+  height: canvas.height + 256
+  // width: 712
+  // height: 712
   visible: true
 
   // UPS Counter
@@ -65,28 +65,28 @@ ApplicationWindow {
       JuliaCanvas{
         Layout.alignment: Qt.AlignCenter
         id: canvas
-        height: 500
-        width: 500
-        // width: {
-        //   if(obs.gSize > 500)
-        //   {
-        //     return obs.gSize
-        //   }
-        //   else
-        //   {
-        //     return 500
-        //   }
-        // }
-        // height: {
-        //   if(obs.gSize > 500)
-        //   {
-        //     return obs.gSize
-        //   }
-        //   else
-        //   {
-        //     return 500
-        //   }
-        // }
+        // height: 500
+        // width: 500
+        width: {
+          if(obs.gSize > 500)
+          {
+            return obs.gSize
+          }
+          else
+          {
+            return 500
+          }
+        }
+        height: {
+          if(obs.gSize > 500)
+          {
+            return obs.gSize
+          }
+          else
+          {
+            return 500
+          }
+        }
 
         paintFunction: showlatest
 

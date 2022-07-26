@@ -10,19 +10,18 @@ using Interaction
 using IsingMetropolis
 using WeightFuncs
 using Analysis
-
-qmlfile = joinpath(dirname(Base.source_path()), "qml", "Main.qml")
-
-using QML
-using Images
+using Distributions
 
 include("WeightFuncsCustom.jl")
 
+weightFunc = defaultIsingWF
+setAddDist!(weightFunc, Normal(0,0.3))
+
 const sim = Sim(
     continuous = false, 
-    graphSize = 500, 
-    weighted = false, 
-    weightFunc = defaultIsingWF
+    graphSize = 512, 
+    weighted = true;
+    weightFunc
     )
 
-sim(true)
+g = sim(true)

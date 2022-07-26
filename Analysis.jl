@@ -9,6 +9,7 @@ using FileIO, Images, LaTeXStrings, Dates, DataFrames, CSV
 import Plots as pl
 using IsingGraphs
 using SquareAdj
+using Observables
 
 export dataToDF, tempSweep, MPlot, sampleCorrPeriodic, sampleCorrPeriodicDefects, corrFuncXY, dfMPlot, dataFolderNow, csvToDF, corrPlotDF, corrPlotDFSlices, corrPlotTRange
 
@@ -74,25 +75,21 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
 
         # Gather Datapoints
         for point in 1:dpoints
-
             if !(analysisRunning[])
                 println("Interrupted analysis")
                 return
             end
 
             tpointi = time()
-            (lVec,corrVec) = corrF(g) 
+            (lVec,corrVec) = corrF(g)
             cldf = vcat(cldf, corrToDF((lVec,corrVec) , point, TIs[]) )
-            mdf = vcat(mdf,MToDF(last(M_array),point, TIs[]) )
-            
-            if saveImg
-                if !savelast || point == dpoints
-                    # Image of ising
-                    save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), img[])
-
-                    # Image of correlation plot
-                    plotCorr(lVec,corrVec)
-                end
+            mdf = vcat(mdf, MToDF(last(M_array[]),point, TIs[]) )
+            if saveImg && (!savelast || point == dpoints)
+                # Image of ising
+                save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), img[])
+                
+                # Image of correlation plot
+                plotCorr(lVec,corrVec, foldername, tidx, point, T)
             end
 
             tpointf = time()
@@ -122,8 +119,8 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
     println("Temperature sweep done!")
 end
 
-function plotCorr(lVec,corrVec)
-    corrPlot = pl.plot(lVec,corrVec, xlabel = "Length", ylabel = false, label = L"C(L)")
+function plotCorr(lVec,corrVec, foldername, tidx, point, T)
+    corrPlot = pl.plot(lVec,corrVec, xlabel = "Length", label = L"C(L)")
     Tstring = replace("$T", '.' => ',')
     pl.savefig(corrPlot,"$(foldername)Ising Corrplot $tidx d$point T$Tstring")
 end
@@ -179,7 +176,7 @@ function sampleCorrPeriodic(g::IsingGraph, Lstep::Float16 = Float16(.5), lStart:
 end
 
 # Sample correlation length function when there are defects.
-function sampleCorrPeriodicDefects(g::AbstractIsingGraph, lend = -floor(-sqrt(2)*g.N/2), binsize = .5, npairs::Integer = Int64(round(lend/binsize * 40000)); sig = 1000, periodic = true)
+function sampleCorrPeriodicDefects(g::IsingGraph, lend = -floor(-sqrt(2)*g.N/2), binsize = .5, npairs::Integer = Int64(round(lend/binsize * 40000)); sig = 1000, periodic = true)
     function torusDist(i1,j1,i2,j2, N)
         dy = abs(i2-i1)
         dx = abs(j2-j1)
