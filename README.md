@@ -25,4 +25,4 @@ For faster startup time put [Sysimage](https://www.icloud.com/iclouddrive/017m3O
 
 If all packages are installed correctly, then executing the "Main.jl" file starts up the simulation interface. 
 
-To use custom weighting functions, initialize the sim struct with `weighted = true`and define a new instance of the type WeightFunc in the "CustomWF.jl) file and then alias it as "weightFunc" in the main file. The correct way do initialize a WeightFunc is documented in "WeightFuncs.jl".
+To use custom weighting functions, initialize the sim struct with `weighted = true` and define a new instance of the type WeightFunc in the "CustomWF.jl) file and then alias it as "weightFunc" in the main file. The correct way do initialize a WeightFunc is documented in "WeightFuncs.jl".
