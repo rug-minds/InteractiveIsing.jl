@@ -10,12 +10,11 @@ push!(LOAD_PATH, pwd()*"/Interaction")
 push!(LOAD_PATH, pwd()*"/Learning")
 
 
-using LinearAlgebra, Distributions, Random, GLMakie, FileIO, QML, Observables, ColorSchemes, Images, DataFrames, CSV, CxxWrap
-using BenchmarkTools
+using LinearAlgebra, Distributions, Random, GLMakie, FileIO,  Observables, ColorSchemes, Images, DataFrames, CSV, BenchmarkTools, CxxWrap, QML
 import Plots as pl
 
 using SquareAdj, WeightFuncs, IsingGraphs, Interaction, Analysis, IsingMetropolis, GPlotting
-using IsingLearning
+# using IsingLearning
 
 # For plotting
 const img =  Ref(zeros(RGB{Float64},1,1))
@@ -32,6 +31,7 @@ function __init__()
     global showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest, Cvoid, 
                                                (Array{UInt32,1}, Int32, Int32))
 end
+
 export showlatest_cfunction
 
 

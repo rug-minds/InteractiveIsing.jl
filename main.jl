@@ -18,7 +18,7 @@ weightFunc = defaultIsingWF
 # setAddDist!(weightFunc, Normal(0,0.5))
 
 const sim = Sim(
-    continuous = true, 
+    continuous = false, 
     graphSize = 512, 
     weighted = true;
     weightFunc

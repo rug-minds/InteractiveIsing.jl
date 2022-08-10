@@ -9,3 +9,5 @@ Learning/Dataset/train-labels.idx1-ubyte
 Learning/Dataset/train-images.idx3-ubyte
 test.jl
 test.qml
+qml/.DS_Store
+.DS_Store
