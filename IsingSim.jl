@@ -17,6 +17,7 @@ import Plots as pl
 using SquareAdj, WeightFuncs, IsingGraphs, Interaction, Analysis, IsingMetropolis, GPlotting
 using IsingLearning
 
+# For plotting
 const img =  Ref(zeros(RGB{Float64},1,1))
 
 function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
@@ -34,6 +35,7 @@ end
 export showlatest_cfunction
 
 
+# Simulation struct
 export Sim
 mutable struct Sim
     # Graph
@@ -151,33 +153,6 @@ function (sim::Sim)(start = true)
 end
 
 
-# """ Helper Functions """
-
-# Insert a value in front of vector and push out last one.
-function insertShift(vec::Vector{T}, el::T) where T
-    newVec = Vector{T}(undef, length(vec))
-    newVec[1:(end-1)] = vec[2:end]
-    newVec[end] = el
-    return newVec
-end
-
-# Spawn a new thread for a function, but only if no thread for that function was already created
-# The function is "locked" using a reference to a Boolean value: spawned
-function spawnOne(f::Function, spawned::Ref{Bool}, args...)
-    # Run function, when thread is finished mark it as not running
-    function runOne(func::Function, spawned::Ref{Bool}, args...)
-        func(args...)
-        spawned[] = false
-        GC.safepoint()
-    end
-
-    # Mark as running, then spawn thread
-    if !spawned[]
-        spawned[] = true
-        # Threads.@spawn runOne(f,spawned)
-        runOne(f,spawned, args...)
-    end
-end
 
 """ Persistent functions of the simulation """
 
@@ -410,34 +385,6 @@ end
 """ Sim Functions"""
 
 export runSim
-# Cannot be inside qmlFunctions due to problem with closures and @cfunction
-# const img = Ref(zeros(RGB,500,500))
-
-# function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
-#     buffer = reshape(buffer, size(img))
-#     buffer = reinterpret(ARGB32, buffer)
-#     buffer .= img
-#     return
-# end
-
-# export showlatest_cfunction
-# showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest, Cvoid, 
-#                                                (Array{UInt32,1}, Int32, Int32))
-
-
-# function showlatesteval(sim)
-#     img = sim.img
-#     function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
-#         buffer = reshape(buffer, size(img[]))
-#         buffer = reinterpret(ARGB32, buffer)
-#         buffer .= img[]
-#         return
-#     end
-
-#     @eval $:(CxxWrap.@safe_cfunction($showlatest, Cvoid, (Array{UInt32,1}, Int32, Int32)))
-# end
-
-
 function runSim(sim)
     # showlatest_cfunction = showlatesteval(sim)
     Threads.@spawn updateGraph(sim)
@@ -450,6 +397,96 @@ function startSim(sim)
     qmlFunctions(sim)
     runSim(sim)
 end
+
+
+# """ Helper Functions """
+
+# Insert a value in front of vector and push out last one.
+function insertShift(vec::Vector{T}, el::T) where T
+    newVec = Vector{T}(undef, length(vec))
+    newVec[1:(end-1)] = vec[2:end]
+    newVec[end] = el
+    return newVec
+end
+
+# Spawn a new thread for a function, but only if no thread for that function was already created
+# The function is "locked" using a reference to a Boolean value: spawned
+function spawnOne(f::Function, spawned::Ref{Bool}, args...)
+    # Run function, when thread is finished mark it as not running
+    function runOne(func::Function, spawned::Ref{Bool}, args...)
+        func(args...)
+        spawned[] = false
+        GC.safepoint()
+    end
+
+    # Mark as running, then spawn thread
+    if !spawned[]
+        spawned[] = true
+        # Threads.@spawn runOne(f,spawned)
+        runOne(f,spawned, args...)
+    end
+end
+
+""" Magnetic field stuff """
+function branchSim(sim)
+    sim.shouldRun[] = false 
+    while sim.isRunning[]
+        sleep(.1)
+    end
+    sim.shouldRun[] = true
+end
+
+function setGHFunc!(sim)
+    g = sim.g
+    if !g.d.weighted
+        if !g.d.mactive
+            g.d.hFuncRef = Ref(HFunc)
+            println("Set HFunc")
+        else
+            g.d.hFuncRef = Ref(HMagFunc)
+            println("Set HMagFunc")
+        end
+    else
+        if !g.d.mactive
+            g.d.hFuncRef = Ref(HWeightedFunc)
+            println("Set HWeightedFunc")
+        else
+            g.d.hFuncRef = Ref(HWMagFunc)
+            println("Set HWMagFunc")
+        end
+    end
+
+    branchSim(sim)
+end
+
+export setMIdxs!
+function setMIdxs!(sim,idxs,strengths)
+    g = sim.g
+    if length(idxs) != length(strengths)
+        error("Idxs and strengths lengths not the same")
+        return      
+    end
+
+    g.d.mactive = true
+    g.d.mlist[idxs] = strengths
+    setGHFunc!(sim)
+end
+
+# Insert func(x,y)
+export setMFunc!
+function setMFunc!(sim,func::Function)
+    g = sim.g
+    m_matr = Matrix{Float32}(undef,g.N,g.N)
+    for i in 1:g.N
+        for j in 1:g.N
+            m_matr[i,j] = func(j,i)
+        end
+    end
+    setMIdxs!(sim,[1:g.size;],reshape(transpose(m_matr),g.size))
+end
+
+
+
 
 # """ REPL FUNCTIONS FOR DEBUGGING """
 

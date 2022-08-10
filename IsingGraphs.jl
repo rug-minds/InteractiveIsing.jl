@@ -11,7 +11,7 @@ using Random, Distributions, Observables, SquareAdj
 using WeightFuncs
 
 export AbstractIsingGraph, IsingGraph, CIsingGraph, reInitGraph!, coordToIdx, idxToCoord, ising_it, setSpins!, setSpin!, addDefects!, remDefects!, addDefect!, remDefect!, 
-    connIdx, connW, initSqAdj, HFunc, HWeightedFunc, HMagFunc, HWMagFunc, setMIdxs!, setGHFunc!
+    connIdx, connW, initSqAdj, HFunc, HWeightedFunc, HMagFunc, HWMagFunc, setGHFunc!
 
 # Aliases
 const Edge = Pair{Int32,Int32}
@@ -348,56 +348,6 @@ function HWMagFunc(g::AbstractIsingGraph,idx,state = g.state[idx])::Float32
     return efactor -g.d.mlist[idx]
 end
 
-function setGHFunc!(sim)
-    g = sim.g
-    if !g.d.weighted
-        if !g.d.mactive
-            g.d.hFuncRef = Ref(HFunc)
-            println("Set HFunc")
-        else
-            g.d.hFuncRef = Ref(HMagFunc)
-            println("Set HMagFunc")
-        end
-    else
-        if !g.d.mactive
-            g.d.hFuncRef = Ref(HWeightedFunc)
-            println("Set HWeightedFunc")
-        else
-            g.d.hFuncRef = Ref(HWMagFunc)
-            println("Set HWMagFunc")
-        end
-    end
-
-    branchSim(sim)
-end
-
-""" Changing E functions """
-
-function setMIdxs!(sim,idxs,strengths)
-    g = sim.g
-    if length(idxs) != length(strengths)
-        error("Idxs and strengths lengths not the same")
-        return      
-    end
-
-    sim.shouldRun[] = false
-    g.d.mactive = true
-    g.d.mlist[idxs] = strengths
-    # setGHFunc!(g)
-    g.d.hFuncRef = Ref(HWMagFunc)
-    while sim.isRunning[]
-        sleep(.1)
-    end
-    sim.shouldRun[] = true
-end
-
-function branchSim(sim)
-    sim.shouldRun[] = false 
-    while sim.isRunning[]
-        sleep(.1)
-    end
-    sim.shouldRun[] = true
-end
 
 
 """Helper Functions"""

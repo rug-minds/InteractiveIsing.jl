@@ -15,13 +15,13 @@ using Distributions
 include("WeightFuncsCustom.jl")
 
 weightFunc = defaultIsingWF
-setAddDist!(weightFunc, Normal(0,0.3))
+# setAddDist!(weightFunc, Normal(0,0.5))
 
 const sim = Sim(
-    continuous = false, 
+    continuous = true, 
     graphSize = 512, 
     weighted = true;
     weightFunc
     )
 
-g = sim(true)
+g = sim(true);
