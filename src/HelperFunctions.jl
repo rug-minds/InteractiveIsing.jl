@@ -1,4 +1,4 @@
-"""Grid lattice functions"""
+#=Grid lattice functions=#
 
 # Matrix Coordinates to vector Coordinates
 @inline function coordToIdx(i, j, N)
@@ -21,7 +21,7 @@ function latmod(i, N)
     return i
 end
 
-"""Array functions"""
+# Array functions
 
 # Searches backwards from idx in list and removes item
 # This is because spin idx can only be before it's own index in aliveList
@@ -92,7 +92,31 @@ function removeFirst!(list,el)
     end
 end
 
-""" Etc """
+#=
+Threads
+=#
+
+# Spawn a new thread for a function, but only if no thread for that function was already created
+# The function is "locked" using a reference to a Boolean value: spawned
+function spawnOne(f::Function, spawned::Ref{Bool}, threadname = "", args... )
+    # Run function, when thread is finished mark it as not running
+    function runOne(func::Function, spawned::Ref{Bool}, args...)
+        func(args...)
+        spawned[] = false
+        GC.safepoint()
+    end
+
+    # Mark as running, then spawn thread
+    if !spawned[]
+        spawned[] = true
+        # Threads.@spawn runOne(f,spawned)
+        runOne(f,spawned, args...)
+    else
+        println("Already spawned" * threadname)
+    end
+end
+
+# Etc
 # Not used?
 function sortedPair(idx1::Integer,idx2::Integer):: Pair{Integer,Integer}
     if idx1 < idx2

@@ -1,5 +1,6 @@
-
-""" Magnetic field stuff """
+#= 
+Magnetic field stuff
+=#
 
 # Restart MCMC loop to define new Hamiltonian function
 function branchSim(sim)

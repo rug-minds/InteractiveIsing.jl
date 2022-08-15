@@ -10,9 +10,9 @@ mutable struct AFloat32
 end
 
 
-"""
+#=
 User functions
-"""
+=#
 
 # Does analysis over multiple temperatures.
 # Analyzes magnetization and correlation length.
@@ -113,7 +113,7 @@ function plotCorr(lVec,corrVec, foldername, tidx, point, T)
     pl.savefig(corrPlot,"$(foldername)Ising Corrplot $tidx d$point T$Tstring")
 end
 
-""" Correlation length calculations """
+# Correlation length calculations
 
 rthetas = 2*pi .* rand(10^7) # Saves random angles to save computation time
 
@@ -232,7 +232,7 @@ function sampleCorrPeriodicDefects(g::IsingGraph, lend = -floor(-sqrt(2)*g.N/2),
     
 end
 
-"""Correlation Length Data"""
+# Correlation Length Data
 # Save correlation date (lVec,corrVec) to dataframe
 function corrToDF((lVec,corrVec), dpoint::Integer = Int8(1), T::Real = Float16(1))
     return DataFrame(L = lVec, Corr = corrVec, D = dpoint, T = T)
@@ -248,7 +248,7 @@ function fitCorrl(dat,dom_end, f, params...)
 end
 
 
-""" PLOTTING """
+#PLOTTING
 
 function MToDF(M, dpoint::Integer = Int8(1), T::Real = Float16(1))
     return DataFrame(M = M, D = dpoint, T = T)
@@ -376,7 +376,7 @@ function corrPlotTRange(filename::String, dpoint, Ts; savefolder = "Data/Images/
     end
 end
 
-"""General data"""
+# General data
 
 # Determine amount of datapoints per temperature from dataframe data (if homogeneous over temps)
 function detDPoints(dat)
@@ -401,7 +401,7 @@ end
 # Read CSV and outputs dataframe
 csvToDF(filename) = DataFrame(CSV.File(filename)) 
 
-""" Helper Functions"""
+# Helper Functions 
 function insertShift(vec::Vector{T}, el::T) where T
     newVec = Vector{T}(undef, length(vec))
     newVec[1:(end-1)] = vec[2:end]
@@ -425,7 +425,7 @@ function trymakefolder(foldername::String)
     try; mkdir(joinpath(dirname(Base.source_path()),foldername)); catch end
 end
 
-""" OLD STUFF """
+# """ OLD STUFF """
 
 # Sample random spins for correlation length, but make sure every pair is only sampled once
 # Colissions are quite unlikely for smaller number of sampled pairs, making this redundant and slower
@@ -479,7 +479,7 @@ function sampleCorrPeriodicUnique(g::IsingGraph, Lstep::Float16, lStart::Int8 = 
 end
 
 # Sweep the lattice to find x and y correlation data.
-function corrLXY(g::IsingGraphs.IsingGraph, L)
+function corrLXY(g::IsingGraph, L)
     avgprod = 0
     prodavg1 = 0
     prodavg2 = 0
@@ -535,7 +535,7 @@ end
 
 # Calculates the two points correlation function for different lengths and returns a vector with all the data
 # Returned vector index corresponds to dinstance L``
-function corrFuncXY(g::IsingGraphs.IsingGraph, plot = true)
+function corrFuncXY(g::IsingGraph, plot = true)
     corr::Vector{Float32} = []
     x = [1:(g.N-2);]
     for L in 1:(g.N-2)
@@ -587,7 +587,7 @@ function dfToCorrls(df)
     return (Ts,corrls)
 end
 
-""" Old stuff """
+# """ Old stuff """
 
 # Aggregate all Magnetization measurements for a the same temperatures 
 function datMAvgT(dat,dpoints = detDPoints(dat))

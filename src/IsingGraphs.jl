@@ -32,8 +32,6 @@ end
 # IsingData(g, weighted = false) = IsingData( weighted, Int32.([1:g.size;]), false, [false for x in 1:g.size], Vector{Int32}() , false, zeros(Float32, g.size), weighted ? HFunc : HWeightedFunc)
 IsingData(g, weighted = false; hFuncRef::Ref = weighted ? Ref(HWeightedFunc) : Ref(HFunc)) = IsingData( weighted, Int32.([1:g.size;]), false, [false for x in 1:g.size], Vector{Int32}() , false, zeros(Float32, g.size), hFuncRef)
 
-""" Discrete """
-
 mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph
     # Global graph props to be tracked for performance
     N::Int32
@@ -123,9 +121,9 @@ function initSqAdjSelf(N; selfWeights = -1 .* ones(N^2), weightFunc = defaultIsi
 end
 
 
-""" Setting Elements and defects """
+# Setting Elements and defects 
 
-"""Removing and adding defects, and clamping"""
+# Removing and adding defects, and clamping
     
     # Adding a defect to lattice
     function addDefects!(g::AbstractIsingGraph,spin_idxs::Vector{T}) where T <: Integer
@@ -228,9 +226,9 @@ end
         remDefects!(g,g.d.defectList)
     end
      
-"""Setting Elements"""
+# Setting Elements
 
-    """Backend """
+    # Backend 
         # Setting an alive element
         function setNormal!(g::AbstractIsingGraph, spin_idxs::Vector{Int32} , brush)
             # First remove defect if it was defect
@@ -252,7 +250,7 @@ end
         setClamp!(g,i::Integer,j::Integer,brush) =  setClamp!(g,Int32.(coordToIdx(i,j,g.N)),brush)
         setClamp!(g,tupls::Vector{Tuple{Int16,Int16}},brush) = setClamp!(g,Int32.(coordToIdx.(tupls,g.N)),brush)
 
-    """ User Functions """
+    # User Functions 
         # Set spins either to a value or clamp them
         function setSpins!(g::IsingGraph{Int8}, idxs , brush, clamp = false)
             if brush != 0 && !clamp

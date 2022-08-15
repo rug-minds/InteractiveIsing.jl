@@ -1,10 +1,13 @@
-"""
+#=
 Stuff for initialization of adjacency matrix
-"""
+=#
  
 export fillAdjList!, numEdges, latmod, initAdj, adjToMatrix
 
-
+"""
+Creates an entry for an adjacency list
+I.e. a vector containing outgoing edges for a given spin will be created
+"""
 function adjEntry!(adj, N, idx, weightFunc=defaultIsing)
     periodic = weightFunc.periodic
     NN = weightFunc.NN
@@ -68,8 +71,9 @@ function adjEntry!(adj, N, idx, weightFunc=defaultIsing)
     adj[idx] = entry
 end
 
-# Should also include function!!!!
-# Init the adj list of g
+""" 
+Initialize an adjacencylist to be used in an IsingGraph
+"""
 function fillAdjList!(adj, N, weightFunc=defaultIsing)
 
     for idx in 1:N*N
@@ -78,6 +82,9 @@ function fillAdjList!(adj, N, weightFunc=defaultIsing)
 
 end
 
+"""
+Reads an adjacency list as a matrix
+"""
 function adjToMatrix(adj)
     N = length(adj)
     matr = Matrix{Float32}(undef, N, N)

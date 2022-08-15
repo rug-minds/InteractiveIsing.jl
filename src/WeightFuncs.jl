@@ -1,9 +1,10 @@
-""" 
+#=
 
 Define weighting functions here
 Should be a function of the radius dr
 
-"""
+=#
+
 export WeightFunc, setAddDist!, setMultDist!, defaultIsingWF, altRWF, altCrossWF, randWF
 
 # Assuming one method,
@@ -103,7 +104,7 @@ randWF = WeightFunc(
 )
 
 
-""" Old """
+# """ Old """
 # Use distribution centered around zero
 function randomizeWeights(dr, func , dist)::Float32
     weight = func(dr)

@@ -1,4 +1,4 @@
-qmlfile = joinpath( "qml", "Main.qml")
+qmlfile = joinpath( "src", "qml", "Main.qml")
 
 # For plotting
 const img =  Ref(zeros(RGB{Float64},1,1))
@@ -11,8 +11,8 @@ function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
 end
 
 # Simulation struct
-export Sim
-mutable struct Sim
+export IsingSim
+mutable struct IsingSim
     # Graph
     const g::IsingGraph
     # Property map for qml
@@ -53,7 +53,7 @@ mutable struct Sim
     const shouldRun::Observable{Bool} 
     isRunning::Bool
 
-    function Sim(;
+    function IsingSim(;
             continuous = false,
             graphSize = 512,
             weighted = true,
@@ -120,7 +120,7 @@ mutable struct Sim
     
 end
 
-function (sim::Sim)(start = true)
+function (sim::IsingSim)(start = true)
     if start
         startSim(sim)
     end
@@ -129,16 +129,20 @@ end
 
 
 
-""" Persistent functions of the simulation """
+#= 
+Persistent functions of the simulation 
+=#
 
-# Main loop for for MCMC
-# When a new getE function needs to be defined, this loop can be branched to a new loop with a new getE func
-# Depends on two variables, isRunning and shouldRun to check wether current branch is up to date or not
-# When another thread needs to invalidate branch, it sets shouldRun to false
-# Then it waits until isRunning is set to false after which shouldRun can be activated again.
-# Then, this function itself makes a new branch where getE is defined again.
+"""
+Main loop for for MCMC
+When a new getE function needs to be defined, this loop can be branched to a new loop with a new getE func
+Depends on two variables, isRunning and shouldRun to check wether current branch is up to date or not
+When another thread needs to invalidate branch, it sets shouldRun to false
+Then it waits until isRunning is set to false after which shouldRun can be activated again.
+Then, this function itself makes a new branch where getE is defined again.
 export updateGraph
-function updateGraph(sim::Sim)
+"""
+function updateGraph(sim::IsingSim)
         g = sim.g
         TIs = sim.TIs
         getE = g.d.hFuncRef[]
@@ -234,7 +238,7 @@ function reInitSim(sim)
     setGHFunc!(sim)
 end
 
-"""Timed Functions"""
+# Timed Functions 
 # Updating image of graph
 export updateImg
 function updateImg(sim)
@@ -244,7 +248,7 @@ end
 
 # Track number of updates per frame
 let avgWindow = 60, updateWindow = zeros(Int64,avgWindow), frames = 0
-    global function updatesPerFrame(sim::Sim)
+    global function updatesPerFrame(sim::IsingSim)
         updateWindow = insertShift(updateWindow,sim.updates)
         if frames > avgWindow
             sim.upf[] = round(sum(updateWindow)/avgWindow)
@@ -258,7 +262,7 @@ end
 # Averages M_array over an amount of steps
 # Updates magnetization (which is thus the averaged value)
 let avg_window = 60, frames = 0
-    global function magnetization(sim::Sim)
+    global function magnetization(sim::IsingSim)
         avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
         sim.M_array[] = insertShift(sim.M_array[], sum(sim.g.state))
         if frames > avg_window
@@ -287,7 +291,9 @@ function annealing(sim, Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = 
     end
 end
 
-""" For QML canvas to show image """
+#= 
+For QML canvas to show image 
+=#
 
 export setRenderLoop
 function setRenderLoop()
@@ -296,7 +302,7 @@ end
 
 # Defines all functions that can be run from QML interface
 export qmlFunctions
-function qmlFunctions(sim::Sim)
+function qmlFunctions(sim::IsingSim)
     g = sim.g
     circ = sim.circ
     brush = sim.brush
@@ -316,9 +322,9 @@ function qmlFunctions(sim::Sim)
 
     # All functions that are run from the QML Timer
     function timedFunctions()
-        spawnOne(updateImg, updatingImg, sim)
-        spawnOne(updatesPerFrame, updatingUpf, sim)
-        spawnOne(magnetization, updatingMag, sim)
+        spawnOne(updateImg, updatingImg, "UpdateImg", sim)
+        spawnOne(updatesPerFrame, updatingUpf, "", sim)
+        spawnOne(magnetization, updatingMag, "", sim)
     end
     @qmlfunction timedFunctions
 
@@ -359,7 +365,9 @@ function qmlFunctions(sim::Sim)
     @qmlfunction saveGImgQML
 end
 
-""" Sim Functions"""
+#= 
+IsingSim Functions
+=#
 
 export runSim
 function runSim(sim)
@@ -374,35 +382,6 @@ function startSim(sim)
     setRenderLoop()
     qmlFunctions(sim)
     runSim(sim)
-end
-
-
-# """ Helper Functions """
-
-# Insert a value in front of vector and push out last one.
-function insertShift(vec::Vector{T}, el::T) where T
-    newVec = Vector{T}(undef, length(vec))
-    newVec[1:(end-1)] = vec[2:end]
-    newVec[end] = el
-    return newVec
-end
-
-# Spawn a new thread for a function, but only if no thread for that function was already created
-# The function is "locked" using a reference to a Boolean value: spawned
-function spawnOne(f::Function, spawned::Ref{Bool}, args...)
-    # Run function, when thread is finished mark it as not running
-    function runOne(func::Function, spawned::Ref{Bool}, args...)
-        func(args...)
-        spawned[] = false
-        GC.safepoint()
-    end
-
-    # Mark as running, then spawn thread
-    if !spawned[]
-        spawned[] = true
-        # Threads.@spawn runOne(f,spawned)
-        runOne(f,spawned, args...)
-    end
 end
 
 # """ REPL FUNCTIONS FOR DEBUGGING """

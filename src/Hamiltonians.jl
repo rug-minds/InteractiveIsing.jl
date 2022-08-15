@@ -1,4 +1,4 @@
-""" Hamiltonians"""
+# Hamiltonians
 
 # No weights
 function HFunc(g::AbstractIsingGraph,idx, state = g.state[idx])::Float32

@@ -19,7 +19,7 @@ include("Interaction/Interaction.jl")
 include("Analysis.jl")
 include("GPlotting.jl")
 include("IsingMagneticFields.jl")
-include("Learning/Learning.jl")
+include("Learning/IsingLearning.jl")
 
 # Probably shouldn't be exported
 export showlatest_cfunction

@@ -1,4 +1,7 @@
-""" Updates the spin ising"""
+#= 
+Updates the spin ising
+Currently not used
+=#
 export updateMonteCarloIsing!, deltED, deltEC
 
 function updateMonteCarloIsing!(g::IsingGraph{Int8}, T; getE::Function = HFunc)
@@ -49,7 +52,7 @@ end
 
 
 
-"""
+#=
 OLD STUFF
 
 function updateMonteCarloIsingOLD!(g::CIsingGraph, T)
@@ -89,5 +92,5 @@ function updateMonteCarloIsingOLD!(g::CIsingGraph, T)
     end
     
 end
-"""
+=#
 

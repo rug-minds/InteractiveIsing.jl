@@ -1,7 +1,7 @@
 # User interaction with simulation
-"""
+#=
 Drawing Functions
-"""
+=#
 
 include("Cirlces.jl")
 
