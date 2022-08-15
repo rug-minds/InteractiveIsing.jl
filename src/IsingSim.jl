@@ -1,4 +1,4 @@
-qmlfile = joinpath( "src", "qml", "Main.qml")
+qmlfile = joinpath( @__DIR__, "qml", "Main.qml")
 
 # For plotting
 const img =  Ref(zeros(RGB{Float64},1,1))
