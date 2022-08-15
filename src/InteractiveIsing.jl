@@ -1,3 +1,5 @@
+__precompile__()
+
 module InteractiveIsing
 
 using FileIO, Images, ColorSchemes, Dates, JLD, Random, Distributions, Observables, LinearAlgebra, DataFrames, 
