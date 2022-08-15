@@ -1,6 +1,7 @@
 export read_idx, mnist_img, mnist_lab, mnist, clampImg!, clampMag!
 
-const mnist = load(pwd()*"src/Learning/mnist.jld")
+const mnist_path = joinpath(@__DIR__, "src", "Learning", "mnist.jld")
+const mnist = load(mnist_path)
 
 function mnist_img(num, crange = (0,1))
   (crange[2]-crange[1]) .* mnist["img"][:,:,num] .+ crange[1]
