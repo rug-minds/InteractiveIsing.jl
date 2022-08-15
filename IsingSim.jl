@@ -9,12 +9,22 @@ push!(LOAD_PATH, pwd())
 push!(LOAD_PATH, pwd()*"/Interaction")
 push!(LOAD_PATH, pwd()*"/Learning")
 
+using QML
+export QML
 
-using LinearAlgebra, Distributions, Random, GLMakie, FileIO,  Observables, ColorSchemes, Images, DataFrames, CSV, BenchmarkTools, CxxWrap, QML
+using LinearAlgebra, Distributions, Random, GLMakie, FileIO,  Observables, ColorSchemes, Images, DataFrames, CSV, BenchmarkTools, CxxWrap
 import Plots as pl
 
 using SquareAdj, WeightFuncs, IsingGraphs, Interaction, Analysis, IsingMetropolis, GPlotting
-# using IsingLearning
+using IsingLearning
+
+export GPlotting
+export IsingGraphs
+export Interaction
+export IsingMetropolis
+export WeightFuncs
+export Analysis
+export IsingLearning
 
 # For plotting
 const img =  Ref(zeros(RGB{Float64},1,1))
@@ -26,14 +36,18 @@ function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
     return
 end
 
-function __init__()
+# Helper to call a julia function
+function julia_call(f, argptr::Ptr{Cvoid})
+    arglist = CxxRef{QVariantList}(argptr)[]
+    result = QVariant(f((value(x) for x in arglist)...))
+    return result.cpp_object
+end
 
+function __init__()
     global showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest, Cvoid, 
                                                (Array{UInt32,1}, Int32, Int32))
 end
-
 export showlatest_cfunction
-
 
 # Simulation struct
 export Sim
@@ -188,7 +202,7 @@ function updateGraph(sim::Sim)
         end
 
         function updateMonteCarloIsingC!()
-
+            T = TIs[]
             @inline function deltE(efac,newstate,oldstate)
                 return efac*(newstate-oldstate)
             end
@@ -248,12 +262,14 @@ function reInitSim(sim)
     g.d.defectList = []
     g.d.aliveList = [1:g.size;]
     g.d.mactive = false
-    g.d.mlist = []
+    g.d.mlist = zeros(Float32, g.size)
     g.d.hFuncRef = g.d.weighted ? Ref(HFunc) : Ref(HWeightedFunc)
 
     sim.M[] = 0
     sim.updates = 0
 
+    # This makes the function run if paused before
+    # Fix that
     setGHFunc!(sim)
 end
 
@@ -388,7 +404,8 @@ export runSim
 function runSim(sim)
     # showlatest_cfunction = showlatesteval(sim)
     Threads.@spawn updateGraph(sim)
-    loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction); exec_async()
+    loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction) 
+    exec_async()
 end
 
 export startSim
@@ -436,23 +453,31 @@ function branchSim(sim)
     sim.shouldRun[] = true
 end
 
-function setGHFunc!(sim)
+function setGHFunc!(sim, prt = true)
     g = sim.g
     if !g.d.weighted
         if !g.d.mactive
             g.d.hFuncRef = Ref(HFunc)
-            println("Set HFunc")
+            if prt
+                println("Set HFunc")
+            end
         else
             g.d.hFuncRef = Ref(HMagFunc)
-            println("Set HMagFunc")
+            if prt
+                println("Set HMagFunc")
+            end
         end
     else
         if !g.d.mactive
             g.d.hFuncRef = Ref(HWeightedFunc)
-            println("Set HWeightedFunc")
+            if prt
+                println("Set HWeightedFunc")
+            end
         else
             g.d.hFuncRef = Ref(HWMagFunc)
-            println("Set HWMagFunc")
+            if prt
+                println("Set HWMagFunc")
+            end
         end
     end
 
@@ -469,23 +494,40 @@ function setMIdxs!(sim,idxs,strengths)
 
     g.d.mactive = true
     g.d.mlist[idxs] = strengths
-    setGHFunc!(sim)
+    setGHFunc!(sim, false)
 end
 
-# Insert func(x,y)
+# Insert func(;x,y)
 export setMFunc!
 function setMFunc!(sim,func::Function)
     g = sim.g
     m_matr = Matrix{Float32}(undef,g.N,g.N)
-    for i in 1:g.N
-        for j in 1:g.N
-            m_matr[i,j] = func(j,i)
+    for y in 1:g.N
+        for x in 1:g.N
+            m_matr[y,x] = func(;x,y)
         end
     end
     setMIdxs!(sim,[1:g.size;],reshape(transpose(m_matr),g.size))
 end
 
+# Removes magnetic field
+export remM!
+function remM!(sim)
+    g = sim.g
+    g.d.mactive = false
+    setGHFunc!(sim, false)
+end
 
+# Set a time dependent magnetic field function f(;x,y,t)
+export setMFuncTimed!
+function setMFuncTimed!(sim,func::Function, interval = 5, t_step = .2)
+    g = sim.g
+    for t in 0:t_step:interval
+        newfunc(;x,y) = func(;x,y,t)
+        setMFunc!(sim,newfunc)
+        sleep(t_step)
+    end
+end
 
 
 # """ REPL FUNCTIONS FOR DEBUGGING """
