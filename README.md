@@ -1,7 +1,7 @@
 # InteractiveIsing.jl
 An interactive Spin Ising simulation using Julia and QML
 
-This package requires multithreading. Either set up multithreading in VSCODE, Pluto, etc. or when running through the REPL, make sure the environment variable `JULIA_NUM_THREADS`
+Using the user interface requires multithreading. Either set up multithreading directly in VSCODE, Pluto, etc. or when running through the REPL, make sure the environment variable `JULIA_NUM_THREADS`
 is set.
 
 This can be done by running 
