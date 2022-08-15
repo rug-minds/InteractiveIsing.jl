@@ -1,14 +1,4 @@
 # Ising Graph Representation and functions
-__precompile__()
-
-module IsingGraphs
-push!(LOAD_PATH, pwd())
-   
-# include("SquareAdj.jl")
-using Random, Distributions, Observables, SquareAdj
-
-# include("WeightFuncs.jl")
-using WeightFuncs
 
 export AbstractIsingGraph, IsingGraph, CIsingGraph, reInitGraph!, coordToIdx, idxToCoord, ising_it, setSpins!, setSpin!, addDefects!, remDefects!, addDefect!, remDefect!, 
     connIdx, connW, initSqAdj, HFunc, HWeightedFunc, HMagFunc, HWMagFunc, setGHFunc!
@@ -92,42 +82,29 @@ end
 
 """
 Methods
-"""
-    # Matrix Coordinates to vector Coordinates
-    @inline  function coordToIdx(i,j,N)
-        return (i-1)*N+j
+""" 
+# Returns an iterator over the ising lattice
+# If there are no defects, returns whole range
+# Otherwise it returns all alive spins
+function ising_it(g::AbstractIsingGraph)
+    if !g.d.defects
+        it::UnitRange{Int32} = 1:g.size
+        return it
+    else
+        return g.d.aliveList
     end
 
-    coordToIdx((i,j),N) = coordToIdx(i,j,N)
-    # Go from idx to lattice coordinates
-    @inline function idxToCoord(idx::Integer,N::Integer)
-        return ((idx-1)÷N+1,(idx-1)%N+1)
-    end
+end
 
- 
+# Get weight of connection
+@inline function connIdx(conn::Conn)
+    conn[1]
+end
 
-    # Returns an iterator over the ising lattice
-    # If there are no defects, returns whole range
-    # Otherwise it returns all alive spins
-    function ising_it(g::AbstractIsingGraph)
-        if !g.d.defects
-            it::UnitRange{Int32} = 1:g.size
-            return it
-        else
-            return g.d.aliveList
-        end
-
-    end
-
-    # Get weight of connection
-    @inline function connIdx(conn::Conn)
-        conn[1]
-    end
-
-    # Get weight of connection
-    @inline function connW(conn::Conn)
-        conn[2]
-    end
+# Get weight of connection
+@inline function connW(conn::Conn)
+    conn[2]
+end
 
 # Initialization of adjacency matrix for a given ND
 function initSqAdj(N; weightFunc = defaultIsingWF)
@@ -147,8 +124,6 @@ end
 
 
 """ Setting Elements and defects """
-
-
 
 """Removing and adding defects, and clamping"""
     
@@ -278,8 +253,7 @@ end
         setClamp!(g,tupls::Vector{Tuple{Int16,Int16}},brush) = setClamp!(g,Int32.(coordToIdx.(tupls,g.N)),brush)
 
     """ User Functions """
-        # Set points either to element or defect
-        # Implement clamping
+        # Set spins either to a value or clamp them
         function setSpins!(g::IsingGraph{Int8}, idxs , brush, clamp = false)
             if brush != 0 && !clamp
                 setNormal!(g,idxs,brush)
@@ -306,129 +280,3 @@ end
         
 
 
-""" Hamiltonians"""
-
-# No weights
-function HFunc(g::AbstractIsingGraph,idx, state = g.state[idx])::Float32
-    
-    efactor::Float32 = 0.
-    for conn in g.adj[idx]
-        @inbounds efactor += -g.state[connIdx(conn)]
-    end
-
-    return efactor
-end
-
-# No weights but magfield
-function HMagFunc(g::AbstractIsingGraph,idx, state = g.state[idx])::Float32
-    
-    efactor::Float32 = 0.
-    for conn in g.adj[idx]
-        @inbounds efactor += -g.state[connIdx(conn)]
-    end
-
-    return efactor -g.d.mlist[idx]
-end
-
-# When there's weights
-function HWeightedFunc(g::AbstractIsingGraph,idx, state = g.state[idx])::Float32
-    efactor::Float32 = 0.
-    for conn in g.adj[idx]
-        @inbounds efactor += -connW(conn)*g.state[connIdx(conn)]
-    end
-    return efactor
-end
-
-# Weights and magfield
-function HWMagFunc(g::AbstractIsingGraph,idx,state = g.state[idx])::Float32
-    efactor::Float32 = 0.
-    for conn in g.adj[idx]
-        @inbounds efactor += -connW(conn)*g.state[connIdx(conn)]
-    end
-    return efactor -g.d.mlist[idx]
-end
-
-
-
-"""Helper Functions"""
-
-
-    function sortedPair(idx1::Integer,idx2::Integer):: Pair{Integer,Integer}
-        if idx1 < idx2
-            return idx1 => idx2
-        else
-            return idx2 => idx1
-        end
-    end
-
-    # Searches backwards from idx in list and removes item
-    # This is because spin idx can only be before it's own index in aliveList
-    function revRemoveSpin!(list,spin_idx)
-        init = min(spin_idx, length(list)) #Initial search index
-        for offset in 0:(init-1)
-            @inbounds if list[init-offset] == spin_idx
-                deleteat!(list,init-offset)
-                return init-offset # Returns index where element was found
-            end
-        end
-    end
-
-    # Zip together two ordered lists into a new ordered list    
-    function zipOrderedLists(vec1::Vector{T},vec2::Vector{T}) where T
-        # result::Vector{T} = zeros(length(vec1)+length(vec2))
-        result = Vector{T}(undef, length(vec1)+length(vec2))
-
-        ofs1 = 1
-        ofs2 = 1
-        while ofs1 <= length(vec1) && ofs2 <= length(vec2)
-            @inbounds el1 = vec1[ofs1]
-            @inbounds el2 = vec2[ofs2]
-            if el1 < el2
-                @inbounds result[ofs1+ofs2-1] = el1
-                ofs1 += 1
-            else
-                @inbounds result[ofs1+ofs2-1] = el2
-                ofs2 += 1
-            end
-        end
-
-        if ofs1 <= length(vec1)
-            @inbounds result[ofs1+ofs2-1:end] = vec1[ofs1:end]
-        else
-            @inbounds result[ofs1+ofs2-1:end] = vec2[ofs2:end]
-        end
-        return result
-    end
-
-    # Deletes els from vec
-    # Assumes that els are in vec!
-    function remOrdEls(vec::Vector{T}, els::Vector{T}) where T
-        # result::Vector{T} = zeros(length(vec)-length(els))
-        result = Vector{T}(undef, length(vec)-length(els))
-        it_idx = 1
-        num_del = 0
-        for el in els
-                while el != vec[it_idx]
-            
-                result[it_idx - num_del] = vec[it_idx]
-                it_idx +=1
-            end
-                num_del +=1
-                it_idx += 1
-        end
-            result[(it_idx - num_del):end] = vec[it_idx:end]
-        return result
-    end
-
-    # Remove first element equal to el and returns correpsonding index
-    function removeFirst!(list,el)
-        for (idx,item) in enumerate(list)
-            if item == el
-                deleteat!(list,idx)
-                return idx
-            end
-        end
-    end
-
-
-end

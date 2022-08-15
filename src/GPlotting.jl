@@ -1,13 +1,4 @@
-__precompile__()
-
-module GPlotting
-push!(LOAD_PATH, pwd())
-
-
-using FileIO, Images, ColorSchemes, Dates, IsingGraphs, SquareAdj
-
 export gToImg, resizeGImg, saveGImg, imagesc, plotAdj
-
 
 #Converts matrix of reals into matrix of rgb data based on color scheme
 function imagesc(data::AbstractMatrix{<:Real};
@@ -68,8 +59,4 @@ end
 
 function plotAdj(g)
     imagesc(adjToMatrix(g.adj))
-end
-    
-
-
 end

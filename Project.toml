@@ -1,0 +1,21 @@
+name = "InteractiveIsing"
+uuid = "4d251d0e-e9cc-4969-a014-b26a68f98433"
+authors = ["f-ij <f.i.ijpelaar@rug.nl>"]
+version = "0.1.0"
+
+[deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
+CxxWrap = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+JLD = "4138dd39-2aa7-5051-a626-17a0bb65d9c8"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Observables = "510215fc-4207-5dde-b226-833fc4488ee2"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+QML = "2db162a6-7e43-52c3-8d84-290c1c42d82a"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"

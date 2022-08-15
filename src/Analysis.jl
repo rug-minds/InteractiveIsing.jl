@@ -1,16 +1,4 @@
 # Analysis functions
-
-__precompile__()
-
-module Analysis
-push!(LOAD_PATH, pwd())
-
-using FileIO, Images, LaTeXStrings, Dates, DataFrames, CSV
-import Plots as pl
-using IsingGraphs
-using SquareAdj
-using Observables
-
 export dataToDF, tempSweep, MPlot, sampleCorrPeriodic, sampleCorrPeriodicDefects, corrFuncXY, dfMPlot, dataFolderNow, csvToDF, corrPlotDF, corrPlotDFSlices, corrPlotTRange
 
 mutable struct AInt32
@@ -693,8 +681,3 @@ function corrPlotDFSlices(cdf::DataFrame, dpoint, temp, savefolder::String, absv
     pl.savefig(cplot,"$(savefolder)Ising Cplot T=$Tstring d$dpoint")
     
 end
-
-
-end
-
-

@@ -1,19 +1,5 @@
 """ Updates the spin ising"""
-__precompile__()
-
-module IsingMetropolis
-push!(LOAD_PATH, pwd())
-
-# include("IsingGraphs.jl")
-using IsingGraphs
-
 export updateMonteCarloIsing!, deltED, deltEC
-
-# Discrete
-
-
-# Continuous
-
 
 function updateMonteCarloIsing!(g::IsingGraph{Int8}, T; getE::Function = HFunc)
 
@@ -61,7 +47,7 @@ function updateMonteCarloIsing!(g::IsingGraph{Float32}, T; getE::Function = HFun
 end
 
 
-end
+
 
 """
 OLD STUFF

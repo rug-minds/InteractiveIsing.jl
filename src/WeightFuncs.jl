@@ -4,12 +4,6 @@ Define weighting functions here
 Should be a function of the radius dr
 
 """
-__precompile__()
-
-module WeightFuncs
-
-using Distributions
-
 export WeightFunc, setAddDist!, setMultDist!, defaultIsingWF, altRWF, altCrossWF, randWF
 
 # Assuming one method,
@@ -118,8 +112,6 @@ function randomizeWeights(dr, func , dist)::Float32
     else
         return weight + rand(dist)
     end
-end
-
 end
 
 

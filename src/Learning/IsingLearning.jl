@@ -1,10 +1,3 @@
-__precompile__()
-
-module IsingLearning
-push!(LOAD_PATH, pwd())
-
-using IsingGraphs, JLD
-
 export read_idx, mnist_img, mnist_lab, mnist, clampImg!, clampMag!
 
 const mnist = load(pwd()*"/Learning/mnist.jld")
@@ -21,8 +14,6 @@ end
 @inline function mToI(int::UInt8, irange = (0,1))::Float32
   return irange[1]+(irange[2]-irange[1])/256*int
 end
-
-
 
 # Groupsize should be odd?
 # Crange: Clamp range
@@ -60,6 +51,4 @@ function clampMag!(g::IsingGraph{Float32}, num::Integer, groupsize = 5, crange =
   println("Bordersize $border")
 
   clamp_region_length = Int32((g.N-border*2)/groupsize)
-end
-
 end

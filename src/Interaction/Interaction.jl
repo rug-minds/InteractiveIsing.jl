@@ -3,23 +3,9 @@
 Drawing Functions
 """
 
-__precompile__()
-
-module Interaction
-push!(LOAD_PATH, pwd())
-
 include("Cirlces.jl")
-using IsingGraphs
 
 export getOrdCirc, circleToState, ordCircleToImg, addRandomDefects!, offCirc, loopCirc, reOrderCirc
-
-# Put a lattice index (i or j) back onto lattice by looping it around
-@inline function latmod(i,N)
-    if i < 1 || i > N
-        return i = mod((i-1),N) +1
-    end
-    return i
-end
 
 # Draw a circle to state
 function circleToState(g::AbstractIsingGraph, circ, i_in,j_in, brush; periodic = true, clamp = false, imgsize)
@@ -55,9 +41,5 @@ function addRandomDefects!(g::IsingGraph,p)
         idx = rand(g.d.aliveList)
         setSpin!(g, idx, Int8(0) , true)
     end
-
-end
-
-
 
 end
