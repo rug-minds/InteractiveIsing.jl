@@ -2,7 +2,7 @@
 
 module IsingSim
 
-qmlfile = joinpath(dirname(Base.source_path()), "qml", "Main.qml")
+qmlfile = joinpath(@__DIR__, "qml", "Main.qml")
 
 
 push!(LOAD_PATH, pwd())
