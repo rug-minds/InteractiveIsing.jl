@@ -22,14 +22,18 @@ User functions
 #   There is an initial wait time of equiwait for equilibration
 function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]), corrF = sampleCorrPeriodic, analysisRunning = Observable(true), savelast = true, absvalcorrplot = false)
     
-    """ Make folder """
-    foldername = dataFolderNow("Tempsweep")
-
+    # Print details
     println("Starting temperature sweep")
     println("Parameters TI: $TI,TF: $TF, TStep: $TStep, dpoints: $dpoints, dpointwait: $dpointwait, stepwait: $stepwait, equiwait: $equiwait, saveImg: $saveImg")
     
+
+    """ Make folder """
+    foldername = dataFolderNow("Tempsweep")
+
+    # Constants
     first = true
 
+    # If temperature range goes down, tstep needs to be negative
     if TF < TI
         TStep *= -1
     end
@@ -39,11 +43,18 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
     # DataFrames
     mdf = DataFrame()
     cldf = DataFrame()
-    for (tidx, T) in enumerate(TRange)
-        println("Gathering data for temperature $T, $dpoints data points in intervals of $dpointwait seconds")
-        waittime = length(T:TStep:TF)*(dpoints*dpointwait + stepwait)
 
-        TIs[] = T
+    dwaits = []
+    dwait_actual = dpointwait
+    for (tidx, T) in enumerate(TRange)
+
+        #=
+        Printing stuff
+        =#
+        println("Gathering data for temperature $T, $dpoints data points in intervals of $dpointwait seconds")
+        waittime = length(T:TStep:TF)*(dpoints*dwait_actual + stepwait)
+
+        TIs[] = Float32(T)
 
         if first # If first run, wait equiwait seconds for equibrilation
             println("The sweep will take approximately $(equiwait + waittime) seconds")
@@ -61,7 +72,9 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
 
         
 
-        # Gather Datapoints
+        #=
+        Actual analysis 
+        =#
         for point in 1:dpoints
             if !(analysisRunning[])
                 println("Interrupted analysis")
@@ -69,10 +82,18 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
             end
 
             tpointi = time()
+
+            # Get correlation
             (lVec,corrVec) = corrF(g)
+
+            #=
+            Saving dataframes
+            =#
             cldf = vcat(cldf, corrToDF((lVec,corrVec) , point, TIs[]) )
             mdf = vcat(mdf, MToDF(last(M_array[]),point, TIs[]) )
+
             if saveImg && (!savelast || point == dpoints)
+
                 # Image of ising
                 save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), img[])
                 
@@ -82,7 +103,8 @@ function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 
 
             tpointf = time()
             dtpoint = tpointf-tpointi
-
+            append!(dwaits,dtpoint)
+            dwait_actual = sum(dwait_actual)/length(dwait_actual)
             println("Datapoint $point took $dtpoint seconds")
 
             sleep(max(dpointwait-dtpoint,0))
@@ -115,11 +137,14 @@ end
 
 # Correlation length calculations
 
-rthetas = 2*pi .* rand(10^7) # Saves random angles to save computation time
 
 # Takes a random number of pairs for every length to calculate correlation length function
-# This only works well with defects.
-function sampleCorrPeriodic(g::IsingGraph, Lstep::Float16 = Float16(.5), lStart::Integer = Int8(1), lEnd::Integer = Int16(256), npairs::Integer = Int16(10000) )
+# This only works without defects.
+rthetas = 2*pi .* rand(10^7) # Saves random angles to save computation time
+function sampleCorrPeriodic(ig::IsingGraph, Lstep::Float16 = Float16(.5), lStart::Integer = Int8(1), lEnd::Integer = Int16(256), precision_fac = 5, npairs::Integer = Int32(precision_fac*10000) )
+    
+    g = deepcopy(ig)
+
     function sigToIJ(sig, L)
         return (L*cos(sig),L*sin(sig))
     end
@@ -164,7 +189,10 @@ function sampleCorrPeriodic(g::IsingGraph, Lstep::Float16 = Float16(.5), lStart:
 end
 
 # Sample correlation length function when there are defects.
-function sampleCorrPeriodicDefects(g::IsingGraph, lend = -floor(-sqrt(2)*g.N/2), binsize = .5, npairs::Integer = Int64(round(lend/binsize * 40000)); sig = 1000, periodic = true)
+function sampleCorrPeriodicDefects(ig::IsingGraph, lend = -floor(-sqrt(2)*g.N/2), binsize = .5, precision_fac = 1, npairs::Integer = Int64(round(lend/binsize * precision_fac*40000)); sig = 1000, periodic = true)
+    
+    g = deepcopy(ig)
+
     function torusDist(i1,j1,i2,j2, N)
         dy = abs(i2-i1)
         dx = abs(j2-j1)

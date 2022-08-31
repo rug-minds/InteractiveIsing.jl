@@ -23,7 +23,7 @@ include("GPlotting.jl")
 include("IsingMagneticFields.jl")
 include("Learning/IsingLearning.jl")
 
-# Probably shouldn't be exported
+# Probably doesn't need to be exported
 export showlatest_cfunction
 # Needs to be in init for pointer to img in IsingSim.jl to work
 function __init__()

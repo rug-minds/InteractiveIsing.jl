@@ -120,11 +120,11 @@ mutable struct IsingSim
     
 end
 
-function (sim::IsingSim)(start = true)
+function (sim::IsingSim)(start = true; async = true)
     if start
-        startSim(sim)
+        startSim(sim; async)
     end
-    return sim.g
+    return sim.g;
 end
 
 
@@ -350,7 +350,8 @@ function qmlFunctions(sim::IsingSim)
         else
             corrF = sampleCorrPeriodicDefects
         end
-        Threads.@spawn tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, analysisRunning=analysisRunning, corrF)
+        # Catching error doesn't work like this, why?
+        Threads.@spawn try; tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, analysisRunning=analysisRunning, corrF); catch er; display(error(er)); end
     end
     @qmlfunction tempSweepQML
 
@@ -370,18 +371,22 @@ IsingSim Functions
 =#
 
 export runSim
-function runSim(sim)
+function runSim(sim; async)
     # showlatest_cfunction = showlatesteval(sim)
     Threads.@spawn updateGraph(sim)
-    loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction) 
-    exec_async()
+    loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction)
+    if async
+        exec_async()
+    else
+        exec()
+    end
 end
 
 export startSim
-function startSim(sim)
+function startSim(sim; async)
     setRenderLoop()
     qmlFunctions(sim)
-    runSim(sim)
+    runSim(sim; async)
 end
 
 # """ REPL FUNCTIONS FOR DEBUGGING """
