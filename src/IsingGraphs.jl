@@ -262,10 +262,8 @@ end
 
         function setSpins!(g::IsingGraph{Float32}, idxs , brush, clamp = false)
             if !clamp
-                println("Here")
                 setNormal!(g,idxs,brush)
             else
-                println("Or Here")
                 setClamp!(g,idxs,brush)
             end
         end

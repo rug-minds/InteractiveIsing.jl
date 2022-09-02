@@ -1,0 +1,17 @@
+function updateMonteCarloIsingD!()
+    T = TIs[]
+    @inline function deltE(Estate)
+        return -2*Estate
+    end
+    
+    beta = T>0 ? 1/T : Inf
+    
+    idx = rand(ising_it(g))
+    
+    Estate = g.state[idx]*getE(g,idx)
+    
+    if (Estate >= 0 || rand() < exp(-beta*deltE(Estate)))
+        @inbounds g.state[idx] *= -1
+    end
+    
+end

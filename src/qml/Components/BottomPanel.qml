@@ -55,39 +55,44 @@ Item{
   width: childrenRect.width
   height: childrenRect.height
   Layout.alignment: Qt.AlignHCenter
+  // anchors.bottom: parent.bottom
   ColumnLayout{
     Layout.alignment: Qt.AlignHCenter
     Text{
       Layout.alignment: Qt.AlignHCenter
       text: "Magnetization: " + obs.M.toFixed(1)
     }
-  }
-}
 
-// Initiate Temperature sweep
 
-Button{
-  Layout.alignment: Qt.AlignHCenter
-  text:{
-      if(obs.analysisRunning == false){
-        "Temperature Sweep"
+
+    // Initiate Temperature sweep
+
+    Button{
+      Layout.alignment: Qt.AlignHCenter
+      text: {
+        if(obs.analysisRunning == false)
+        {
+          "Temperature Sweep"
+        }
+        else{
+          "Stop Analysis"
+        }
       }
-      else{
-        "Stop Analysis"
+
+      onClicked: {
+        if(obs.analysisRunning == false)
+        {
+          var component = Qt.createComponent("../TSweepWindow/Tsweep.qml")
+          var window = component.createObject(root)
+          window.show()
+        }
+        else{
+          obs.analysisRunning = false
+        }
+
+
       }
     }
-
-  onClicked: {
-    if(obs.analysisRunning == false){
-      var component = Qt.createComponent("../TSweepWindow/Tsweep.qml")
-      var window = component.createObject(root)
-      window.show()
-    }
-    else{
-      obs.analysisRunning = false
-    }
-    
-
   }
 }
 }

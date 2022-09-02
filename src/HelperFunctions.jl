@@ -116,6 +116,10 @@ function spawnOne(f::Function, spawned::Ref{Bool}, threadname = "", args... )
     end
 end
 
+macro includefile(filepath)
+    esc(Meta.parse(read(open(eval(filepath)), String)))
+end
+
 # Etc
 # Not used?
 function sortedPair(idx1::Integer,idx2::Integer):: Pair{Integer,Integer}

@@ -148,57 +148,15 @@ function updateGraph(sim::IsingSim)
         getE = g.d.hFuncRef[]
 
         # Defining argumentless functions here seems faster.
-        function updateMonteCarloIsingD!()
-            T = TIs[]
-            @inline function deltE(Estate)
-                return -2*Estate
-            end
-            
-            beta = T>0 ? 1/T : Inf
-            
-            idx = rand(ising_it(g))
-            
-            Estate = g.state[idx]*getE(g,idx)
-            
-            if (Estate >= 0 || rand() < exp(-beta*deltE(Estate)))
-                @inbounds g.state[idx] *= -1
-            end
-            
-        end
-
-        function updateMonteCarloIsingC!()
-            T = TIs[]
-            @inline function deltE(efac,newstate,oldstate)
-                return efac*(newstate-oldstate)
-            end
-        
-            @inline function sampleCState()
-                Float32(2*(rand()-.5))
-            end
-        
-            beta = T>0 ? 1/T : Inf
-        
-            idx = rand(ising_it(g))
-             
-            oldstate = g.state[idx]
-        
-            efactor = getE(g,idx, oldstate)
-        
-            newstate = sampleCState()
-            
-            Ediff = deltE(efactor,newstate,oldstate)
-            if (Ediff < 0 || rand() < exp(-beta*Ediff))
-                @inbounds g.state[idx] = newstate 
-            end
-            
-        end
+        # Offset large function into files for clearity
+        @includefile joinpath(@__DIR__,"textfiles","MonteCarlo","updateMonteCarloIsingD!")
+        @includefile joinpath(@__DIR__,"textfiles","MonteCarlo","updateMonteCarloIsingC!")
 
         if typeof(g) == IsingGraph{Int8}
-            isingUpdate! = updateMonteCarloIsingD!
+        isingUpdate! = updateMonteCarloIsingD!
         else
             isingUpdate! = updateMonteCarloIsingC!
         end
-
         # Old update
         # updatefunc(g,T) = updateMonteCarloIsing!(g,T;getE)
         sim.isRunning = true
@@ -339,7 +297,7 @@ function qmlFunctions(sim::IsingSim)
     end
     @qmlfunction initIsing
     # Draw circle to state
-    circleToStateQML(i,j,clamp=false) = Threads.@spawn circleToState(g,circ[],i,j,brush[]; clamp, imgsize = size(img[])[1])
+    circleToStateQML(i,j,clamp=false) = errormonitor(Threads.@spawn circleToState(g,circ[],i,j,brush[]; clamp, imgsize = size(img[])[1]))
     @qmlfunction circleToStateQML
 
     # Sweep temperatures and record magnetization and correlation lengths
@@ -351,7 +309,7 @@ function qmlFunctions(sim::IsingSim)
             corrF = sampleCorrPeriodicDefects
         end
         # Catching error doesn't work like this, why?
-        Threads.@spawn try; tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, analysisRunning=analysisRunning, corrF); catch er; display(error(er)); end
+        Threads.@spawn errormonitor(tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, analysisRunning=analysisRunning, corrF))
     end
     @qmlfunction tempSweepQML
 
