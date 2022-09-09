@@ -4,18 +4,22 @@ using InteractiveIsing
 using Distributions
 
 include(joinpath(@__DIR__ , "WeightFuncsCustom.jl"))
-# weightFunc = WeightFunc(
-#     (;i,_...) -> sin(i),
-#     NN = 1
-# )
-# setAddDist!(weightFunc, Normal(0,0.1))
+
+# Radially decreasing weightfunction
 # weightFunc = radialWF
+
+# Second nearest neighbor radially falling of weightfunction
+weightFunc = isingNN2
+
+# Add randomness to the weights
+# setAddDist!(weightFunc, Normal(0,0.1))
+
 
 const sim = IsingSim(
     continuous = true, 
-    graphSize = 512, 
-    weighted = false;
-    # weightFunc
+    graphSize = 100, 
+    weighted = true;
+    weightFunc
     )
 
-g = sim(true, async = true);
+g = sim(true);

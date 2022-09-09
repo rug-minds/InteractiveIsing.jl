@@ -122,7 +122,11 @@ end
 
 function (sim::IsingSim)(start = true; async = true)
     if start
-        startSim(sim; async)
+        if Threads.nthreads < 4
+            error("Please enable multithreading to use the interface. For documentation, see github page")
+        else
+            startSim(sim; async)
+        end
     end
     return sim.g;
 end
@@ -329,6 +333,7 @@ IsingSim Functions
 =#
 
 export runSim
+# Spawn graph update thread and load qml interface
 function runSim(sim; async)
     # showlatest_cfunction = showlatesteval(sim)
     Threads.@spawn updateGraph(sim)
@@ -341,6 +346,9 @@ function runSim(sim; async)
 end
 
 export startSim
+# Set the render loop,
+# Define qml functions
+# Start graph update and qml interface
 function startSim(sim; async)
     setRenderLoop()
     qmlFunctions(sim)

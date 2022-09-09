@@ -109,6 +109,7 @@ export remM!
 function remM!(sim)
     g = sim.g
     g.d.mactive = false
+    g.d.mlist = zeros(Float32, g.size)
     setGHFunc!(sim, false)
 end
 

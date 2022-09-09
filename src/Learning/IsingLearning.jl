@@ -43,7 +43,8 @@ function clampImg!(g::IsingGraph{Float32}, num::Integer,groupsize=5; crange = (0
 
 end
 
-function clampMag!(g::IsingGraph{Float32}, num::Integer, groupsize = 5, crange = (0,1))
+function clampMag!(sim::IsingSim, num::Integer; groupsize = 5, crange = (0,1))
+  g = sim.g
   while groupsize*28 > g.N || iseven(groupsize) && groupsize > 0
     groupsize -= 1
   end
@@ -52,4 +53,17 @@ function clampMag!(g::IsingGraph{Float32}, num::Integer, groupsize = 5, crange =
   println("Bordersize $border")
 
   clamp_region_length = Int32((g.N-border*2)/groupsize)
+
+  idxs = [Int16.((border+i*groupsize,border+j*groupsize)) for i in 1:(clamp_region_length), j in 1:(clamp_region_length)]
+
+  idxs_array::Array{Int32} = reshape(transpose(coordToIdx.(idxs,g.N)), length(idxs))
+ 
+  img_is = mnist_img(num, crange)
+
+  brushs = img_is[:]
+  println("Size of brushs $(length(brushs)), size of idxs $(length(idxs_array))")
+  
+  remM!(sim)
+  setMIdxs!(sim, idxs_array, brushs)
+
 end
