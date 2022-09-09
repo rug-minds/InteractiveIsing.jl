@@ -12,8 +12,12 @@ function imagesc(data::AbstractMatrix{<:Real};
     return get(colorscheme, data, rangescale) # get(...) from ColorSchemes.jl
 end
 
-function resizeGImg(img,N,minsize)
-    factor = Int32(floor(minsize/N))
+# Resizes image of graph by duplicating pixels by integer amount
+# Determines integer factor based on specifying some max size
+# N = image size (why not read this from img????)
+# Maxsize specifies maxsize
+function resizeGImg(img,N,maxsize)
+    factor = Int32(floor(maxsize/N))
 
     newN = (N*factor)
     # new_size = trunc.(Int, (size,size) .* factor)
@@ -32,10 +36,10 @@ function resizeGImg(img,N,minsize)
     return newimg
 end
 
-function gToImg(g::AbstractIsingGraph, minsize = 500)
+function gToImg(g::AbstractIsingGraph, maxsize = 500)
     tempimg = transpose(imagesc(reshape(g.state, (g.N,g.N) )  ))
-    if g.N < minsize
-        tempimg = resizeGImg(tempimg,g.N,minsize)
+    if g.N < maxsize
+        tempimg = resizeGImg(tempimg,g.N,maxsize)
     end
     return tempimg
 end
