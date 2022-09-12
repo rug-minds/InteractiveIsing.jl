@@ -122,7 +122,7 @@ end
 
 function (sim::IsingSim)(start = true; async = true)
     if start
-        if Threads.nthreads < 4
+        if Threads.nthreads() < 4
             error("Please enable multithreading to use the interface. For documentation, see github page")
         else
             startSim(sim; async)
