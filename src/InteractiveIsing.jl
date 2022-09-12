@@ -1,4 +1,4 @@
-__precompile__()
+__precompile__(false)
 
 module InteractiveIsing
 
@@ -21,7 +21,7 @@ include("Interaction/Interaction.jl")
 include("Analysis.jl")
 include("GPlotting.jl")
 include("IsingMagneticFields.jl")
-include("Learning/IsingLearning.jl")
+# include("Learning/IsingLearning.jl")
 
 # Probably doesn't need to be exported
 export showlatest_cfunction

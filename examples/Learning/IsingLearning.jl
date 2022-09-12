@@ -1,3 +1,4 @@
+using SparseArrays
 export read_idx, mnist_img, mnist_lab, mnist, clampImg!, clampMag!
 
 const mnist_path = joinpath(@__DIR__, "mnist.jld")
@@ -26,8 +27,10 @@ function clampImg!(g::IsingGraph{Float32}, num::Integer,groupsize=5; crange = (0
   border = Int32(round((g.N - groupsize*28)/2))
   println("Bordersize $border")
 
-  clamp_region_length = Int32((g.N-border*2)/groupsize)
-
+  # Always mnist dimension..
+  clamp_region_length = 28
+  # clamp_region_length = Int32((g.N-border*2)/groupsize)
+  
   # println(groupsize)
 
   idxs = [Int16.((border+i*groupsize,border+j*groupsize)) for i in 1:(clamp_region_length), j in 1:(clamp_region_length)]
@@ -41,6 +44,7 @@ function clampImg!(g::IsingGraph{Float32}, num::Integer,groupsize=5; crange = (0
 
   setSpins!(g, idxs_array, brushs, true)
 
+  return groupsize, border
 end
 
 function clampMag!(sim::IsingSim, num::Integer; groupsize = 5, crange = (0,1))
@@ -52,7 +56,9 @@ function clampMag!(sim::IsingSim, num::Integer; groupsize = 5, crange = (0,1))
   border = Int32(round((g.N - groupsize*28)/2))
   println("Bordersize $border")
 
-  clamp_region_length = Int32((g.N-border*2)/groupsize)
+  # Always mnist dimension..
+  clamp_region_length = 28
+  # clamp_region_length = Int32((g.N-border*2)/groupsize)
 
   idxs = [Int16.((border+i*groupsize,border+j*groupsize)) for i in 1:(clamp_region_length), j in 1:(clamp_region_length)]
 
@@ -66,4 +72,31 @@ function clampMag!(sim::IsingSim, num::Integer; groupsize = 5, crange = (0,1))
   remM!(sim)
   setMIdxs!(sim, idxs_array, brushs)
 
+  return groupsize, border
+end
+
+# Read 3 by 3 blocks of around clamped pixel and ignores middle pixel. 
+# Converts it into image of 28 by 28 (1 to 1 with amount of mnist pixels)
+# Every pixel is obtained by averaging all states next to the clamped pixel
+export blockRead
+function blockRead(sim::IsingSim, groupsize, border; imsize = 28)
+  g = sim.g
+  first_row = vcat(repeat([0], border),
+                  repeat([1/8],groupsize), repeat([0], g.N),
+                  repeat([1/8],groupsize ÷ 2), [0], repeat([1/8],groupsize ÷ 2), repeat([0], g.N),
+                  repeat([1/8],groupsize))
+  first_row = vcat(first_row, repeat([0], g.size-length(first_row)) )
+
+  sparse = SparseVector(first_row)
+  shift = 0
+  for pix in 2:imsize^2 #Do for every mnist pixel
+    if mod(pix,imsize) == 1 #If next pixel row, then shift array by dimension of Ising model, otherwise groupsize
+      shift += g.N
+    else
+      shift += groupsize
+    end
+    
+    sparse = hcat(sparse, circshift(first_row,shift))
+  end
+  return sparse
 end

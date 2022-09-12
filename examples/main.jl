@@ -2,6 +2,7 @@
 
 using InteractiveIsing
 using Distributions
+include("./Learning")
 
 include(joinpath(@__DIR__ , "WeightFuncsCustom.jl"))
 
