@@ -3,44 +3,17 @@ Magnetic field stuff
 =#
 
 # Restart MCMC loop to define new Hamiltonian function
+# Is needed for fast execution if part of hamiltonian doesn't need to be checked
+# Should be in IsingSim.jl
 function branchSim(sim)
-    sim.shouldRun[] = false 
-    while sim.isRunning[]
-        sleep(.1)
-    end
-    sim.shouldRun[] = true;
-end
-
-# Sets magnetic field and branches simulation
-function setGHFunc!(sim, prt = true)
-    g = sim.g
-    if !g.d.weighted
-        if !g.d.mactive
-            g.d.hFuncRef = Ref(HFunc)
-            if prt
-                println("Set HFunc")
-            end
-        else
-            g.d.hFuncRef = Ref(HMagFunc)
-            if prt
-                println("Set HMagFunc")
-            end
+    if sim.shouldRun[]
+        sim.shouldRun[] = false 
+        while sim.isRunning[]
+            # sleep(.1)
+            yield()
         end
-    else
-        if !g.d.mactive
-            g.d.hFuncRef = Ref(HWeightedFunc)
-            if prt
-                println("Set HWeightedFunc")
-            end
-        else
-            g.d.hFuncRef = Ref(HWMagFunc)
-            if prt
-                println("Set HWMagFunc")
-            end
-        end
+        sim.shouldRun[] = true;
     end
-
-    branchSim(sim)
 end
 
 # Set M field for given indexes
@@ -113,6 +86,7 @@ function remM!(sim)
     setGHFunc!(sim, false)
 end
 
+# Plot magnetic field
 export plotM
 function plotM(sim)
     g = sim.g

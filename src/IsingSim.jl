@@ -53,6 +53,9 @@ mutable struct IsingSim
     const shouldRun::Observable{Bool} 
     isRunning::Bool
 
+    # Hamiltonian factor
+    efac::Function
+
     function IsingSim(;
             continuous = false,
             graphSize = 512,
@@ -96,9 +99,14 @@ mutable struct IsingSim
             Ref(false),
             Ref(false),
             Observable(true),
-            true,
+            true
         )
+        # Initialize image
         sim.img[] = initImg
+
+        # Set hamiltonian factor function
+        sim.efac = () -> 1
+
         # Initializing propertymap
         sim.pmap["imgSize"] = sim.imgSize
         sim.pmap["shouldRun"] = sim.shouldRun
@@ -110,6 +118,9 @@ mutable struct IsingSim
         sim.pmap["analysisRunning"] = sim.analysisRunning
         sim.pmap["upf"] = sim.upf
         sim.pmap["gSize"] = sim.gSize
+
+        
+
 
         if start
             s()
@@ -157,7 +168,7 @@ function updateGraph(sim::IsingSim)
         @includefile joinpath(@__DIR__,"textfiles","MonteCarlo","updateMonteCarloIsingC!")
 
         if typeof(g) == IsingGraph{Int8}
-        isingUpdate! = updateMonteCarloIsingD!
+            isingUpdate! = updateMonteCarloIsingD!
         else
             isingUpdate! = updateMonteCarloIsingC!
         end
@@ -233,6 +244,30 @@ let avg_window = 60, frames = 0
         end 
         frames += 1 
     end
+end
+
+# Pauses sim and waits until paused
+function pauseSim(sim)
+    sim.shouldRun[] = false
+
+    while sim.isRunning[]
+        yield()
+    end
+
+    return true
+end
+
+export unpauseSim
+function unpauseSim(sim)
+    sim.isRunning && return
+
+    sim.shouldRun[] = true
+
+    while !sim.isRunning
+        yield()
+    end
+
+    return true
 end
 
 # """ QML FUNCTIONS """
@@ -336,7 +371,7 @@ export runSim
 # Spawn graph update thread and load qml interface
 function runSim(sim; async)
     # showlatest_cfunction = showlatesteval(sim)
-    Threads.@spawn updateGraph(sim)
+    Threads.@spawn errormonitor(updateGraph(sim))
     loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction)
     if async
         exec_async()

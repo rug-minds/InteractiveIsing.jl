@@ -2,8 +2,7 @@
 
 using InteractiveIsing
 using Distributions
-include("./Learning")
-
+# include(joinpath(@__DIR__ , "Learning", "IsingLearning.jl"))
 include(joinpath(@__DIR__ , "WeightFuncsCustom.jl"))
 
 # Radially decreasing weightfunction
@@ -18,7 +17,7 @@ weightFunc = isingNN2
 
 const sim = IsingSim(
     continuous = true, 
-    graphSize = 100, 
+    graphSize = 500, 
     weighted = true;
     weightFunc
     )

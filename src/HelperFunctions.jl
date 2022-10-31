@@ -35,7 +35,7 @@ function revRemoveSpin!(list,spin_idx)
     end
 end
 
-# Zip together two ordered lists into a new ordered list    
+# Zip together two ordered lists into a new ordered list; fast  
 function zipOrderedLists(vec1::Vector{T},vec2::Vector{T}) where T
     # result::Vector{T} = zeros(length(vec1)+length(vec2))
     result = Vector{T}(undef, length(vec1)+length(vec2))
@@ -62,8 +62,9 @@ function zipOrderedLists(vec1::Vector{T},vec2::Vector{T}) where T
     return result
 end
 
-# Deletes els from vec
+# Deletes els from vec which should be ordered
 # Assumes that els are in vec!
+# Should I make ordered vec a type?
 function remOrdEls(vec::Vector{T}, els::Vector{T}) where T
     # result::Vector{T} = zeros(length(vec)-length(els))
     result = Vector{T}(undef, length(vec)-length(els))

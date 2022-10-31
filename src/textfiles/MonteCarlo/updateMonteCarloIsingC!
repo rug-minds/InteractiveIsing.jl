@@ -14,7 +14,7 @@ function updateMonteCarloIsingC!()
      
     oldstate = g.state[idx]
 
-    efactor = getE(g,idx, oldstate)
+    efactor = getE(g,idx)
 
     newstate = sampleCState()
     

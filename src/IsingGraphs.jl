@@ -67,6 +67,15 @@ CIsingGraph(N::Integer; weighted = false, weightFunc = defaultIsingWF, selfE = t
 IsingGraph(g::IsingGraph) = deepcopy(g)
 
 # Initialization of state
+export initRandomIsing!
+function initRandomIsing!(g)
+    if typeof(g) == IsingGraph{Int8}
+        g.state = initRandomState(g.size)
+    else
+        g.state = initRandomCState(g.size)
+    end
+end
+
 export initRandomState
 function initRandomState(size)::Vector{Int8}
     return rand([-1,1],size)
