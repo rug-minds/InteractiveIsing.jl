@@ -1,5 +1,5 @@
 using SparseArrays
-export read_idx, mnist_img, mnist_lab, mnist, clampImg!, clampMag!
+# export read_idx, mnist_img, mnist_lab, mnist, clampImg!, clampMag!
 
 const mnist_path = joinpath(@__DIR__, "mnist.jld")
 const mnist = load(mnist_path)
@@ -78,7 +78,7 @@ end
 # Read 3 by 3 blocks of around clamped pixel and ignores middle pixel. 
 # Converts it into image of 28 by 28 (1 to 1 with amount of mnist pixels)
 # Every pixel is obtained by averaging all states next to the clamped pixel
-export blockRead
+# export blockRead
 function blockRead(sim::IsingSim, groupsize, border; imsize = 28)
   g = sim.g
   first_row = vcat(repeat([0], border),
