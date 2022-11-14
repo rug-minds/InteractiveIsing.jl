@@ -8,7 +8,7 @@ function updateMonteCarloIsingD!()
     
     idx = rand(ising_it(g))
     
-    Estate = g.state[idx]*getE(g,idx)
+    Estate = g.state[idx]*getEFactor(g,idx, htype)
     
     if (Estate >= 0 || rand() < exp(-beta*deltE(Estate)))
         @inbounds g.state[idx] *= -1

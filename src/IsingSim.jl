@@ -160,7 +160,7 @@ export updateGraph
 function updateGraph(sim::IsingSim)
         g = sim.g
         TIs = sim.TIs
-        getE = g.d.hFuncRef[]
+        htype = g.htype
 
         # Defining argumentless functions here seems faster.
         # Offset large function into files for clearity
@@ -199,16 +199,12 @@ function reInitSim(sim)
     g.d.defectBools = [false for x in 1:g.size]
     g.d.defectList = []
     g.d.aliveList = [1:g.size;]
-    g.d.mactive = false
     g.d.mlist = zeros(Float32, g.size)
-    g.d.hFuncRef = g.d.weighted ? Ref(HFunc) : Ref(HWeightedFunc)
 
     sim.M[] = 0
     sim.updates = 0
 
-    # This makes the function run if paused before
-    # Fix that
-    setGHFunc!(sim)
+    branchSim(sim)
 end
 
 # Timed Functions 
@@ -247,6 +243,7 @@ let avg_window = 60, frames = 0
 end
 
 # Pauses sim and waits until paused
+export pauseSim
 function pauseSim(sim)
     sim.shouldRun[] = false
 

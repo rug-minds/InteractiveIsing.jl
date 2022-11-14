@@ -1,124 +1,190 @@
-# Hamiltonians
+module Hamiltonians
+using ..InteractiveIsing
+using ..InteractiveIsing: branchSim, IsingGraph
 
-struct HType{Weighted,Magfield,Clamp} end
 
-# No weights
-function HFunc(g::AbstractIsingGraph,idx)::Float32
-    
-    efactor::Float32 = 0.
-    for conn in g.adj[idx]
-        @inbounds efactor += -g.state[connIdx(conn)]
+"""
+Add factors to factor array defined in module scope
+"""
+macro addfactor(facnames...)
+    for name in facnames
+        push!(factors,eval(name))
     end
-
-    return efactor
 end
 
-# No weights but magfield
-function HMagFunc(g::AbstractIsingGraph,idx)::Float32
-    
-    efactor::Float32 = 0.
-    for conn in g.adj[idx]
-        @inbounds efactor += -g.state[connIdx(conn)]
-    end
-
-    return efactor -g.d.mlist[idx]
+"""
+Struct to define factors to be used in hamiltonian
+expr: A string in julia syntax for the factor
+symb: Define a unique symbol for the factor, if two factors use the same symbol
+    a value can be used to pick any of the factors to be added over the others
+val: Value for the symbol to pick one factor instead of the others
+loop: Defines wether the factor is present in the loop or not. - more explanation needed -
+"""
+struct hFactor{T}
+    expr::String
+    symb::Symbol
+    val::T
+    loop::Bool
 end
 
-# When there's weights
-function HWeightedFunc(g::AbstractIsingGraph,idx)::Float32
-    efactor::Float32 = 0.
-    for conn in g.adj[idx]
-        @inbounds efactor += -connW(conn)*g.state[connIdx(conn)]
-    end
-    return efactor
-end
-
-# Weights and magfield
-function HWMagFunc(g::AbstractIsingGraph,idx)::Float32
-    efactor::Float32 = 0.
-    for conn in g.adj[idx]
-        @inbounds efactor += -connW(conn)*g.state[connIdx(conn)]
-    end
-    return efactor -g.d.mlist[idx]
-end
-
-
-
-# Sets magnetic field and branches simulation
-# Prints function set if prt
-function setGHFunc!(sim, prt = true)
-    g = sim.g
-    if !g.d.weighted
-        if !g.d.mactive
-            g.d.hFuncRef = Ref(HFunc)
-            if prt
-                println("Set HFunc")
-            end
-        else
-            g.d.hFuncRef = Ref(HMagFunc)
-            if prt
-                println("Set HMagFunc")
+function getUniqueParams(factors)
+    # Make a set of parameters for hamiltonian, ordered
+    # by the order they are added by the macro addfactor
+    paramset = tuple()
+    for factor in factors
+        symb = factor.symb
+        for el in paramset
+            if el == symb
+                @goto cont
             end
         end
-    else
-        if !g.d.mactive
-            g.d.hFuncRef = Ref(HWeightedFunc)
-            if prt
-                println("Set HWeightedFunc")
-            end
-        else
-            g.d.hFuncRef = Ref(HWMagFunc)
-            if prt
-                println("Set HWMagFunc")
-            end
-        end
+        paramset = (paramset..., symb)
+        @label cont
+    end
+    return  paramset
+end
+
+"""
+Generate a struct of the type: struct HType{Symbs, Vals} end
+"""
+function generateHType(vals...)
+    symbs = getUniqueParams(factors)
+
+    if length(vals) > length(symbs)
+        error("Cannot be higher than number of symbols")
     end
 
+    vals = (vals...,repeat([false], length((length(vals)+1):length(symbs)))...)
+
+    return HType{symbs,vals}()
+
+end
+export generateHType
+
+function editHType(htype::HType{Symbs, Vals}, vals...) where {Symbs, Vals}
+
+    if length(vals) > length(Symbs)
+        error("Cannot be higher than number of symbols")
+    end
+
+    vals = (vals..., Vals[(length(vals)+1):end]...)
+
+    return HType{Symbs,vals}()
+end
+
+function editHType(htype::HType{Symbs, Vals}, pairs::Pair ...) where {Symbs, Vals}
+    if length(pairs) > length(Symbs)
+        error("Cannot be higher than number of symbols")
+    end
+
+    vals = [Vals...]
+
+    for pair in pairs
+        for (idx,symb) in enumerate(Symbs)
+            if pair[1] == symb
+                vals[idx] = pair[2]
+                @goto nextpair
+            end
+        end
+        @label nextpair
+    end
+
+    vals = Tuple(vals)
+
+    return HType{Symbs,vals}()
+end
+export editHType
+
+
+export setSimHType
+function setSimHType(sim, pairs...; prt = false)
+    sim.g.htype = editHType(sim.g.htype, pairs...)
+    if prt
+        println(sim.g.htype)
+    end
     branchSim(sim)
 end
 
-# Hamiltonian elements
-function unweightedFac(g::AbstractIsingGraph,idx, state = state[idx])::Float32
-    efactor::Float32 = 0.
 
-    for _ in g.adj[idx]
-        @inbounds efactor += -state
+
+"""
+Finds the expression that fits with the given symbol, value of the symbol,
+and wether the factor is part of the loop or not
+"""
+function findExpr(symb, val, loop)
+    for factor in factors
+        if factor.symb == symb && factor.val == val && factor.loop == loop
+            return factor.expr
+        end
     end
-
-    return efactor
+    return ""
 end
 
-function weightedFac(g::AbstractIsingGraph,idx, state = state[idx])::Float32
-    efactor::Float32 = 0.
-    for conn in g.adj[idx]
-        @inbounds efactor += -connW(conn)*state
+"""
+Makes expression in form of string out of a set of symbols, values, 
+and a predicate that tells the function wether the expression is part of
+a loop over neighbors or not
+"""
+function buildExpr(loop, symbs, vals)
+    str = string()
+
+    for (idx, symb) in enumerate(symbs)
+        term = findExpr(symb, vals[idx], loop)
+        if term != ""
+            if str != ""
+                str *= " + "
+            end
+            str *= ("(@inbounds " * term * ")")
+        end
+        
     end
-    return efactor
+    return str
 end
 
-function magFac(g::AbstractIsingGraph,idx)::Float32
-    return - g.d.mlist[idx]
+function getEFacExpr(g, idx, htype::HType{Symbs,Vals}) where {Symbs, Vals}
+    exprvec = []
+
+    line = "for conn in g.adj[idx] \n efactor +="
+    line *= buildExpr(true, Symbs, Vals)
+
+    line *= "end"
+
+    push!(exprvec, Meta.parse(line))
+
+    line = "return efactor"
+
+    normalfactor = buildExpr(false, Symbs, Vals)
+
+    line *= normalfactor != "" ? "+ "*normalfactor : ""
+
+    push!(exprvec, Meta.parse(line))
+
+    expr = Expr(
+        :block,
+        :(efactor = 0),
+        exprvec...
+    ) 
 end
+export getEFacExpr
 
-export getHFac
-function getHFac(sim, prt)
-    g = sim.g
+"""
+Get the energy factor (where we define E === σ_i Σ_j fac_j) for the state
+the function is dispatched on the graph g, the idx i and the type of the Hamiltonian
+which may be generated by the function generateHType(Symbs...).
+"""
+@generated function getEFactor(g, idx, htype::HType{Symbs,Vals}) where {Symbs, Vals}
 
-    expr = Expr(:block,:( (g::AbstractIsingGraph,idx, state = state[idx])::Float32 ),:(->) )
-    
-    if g.d.weighted
-        fac_exprs = [:(unweightedFac(g,idx,state))]
-    else
-        fac_exprs = [:(weightedFac(g,idx,state))]
-    end
-    
-    if g.d.weighted
-        append!(fac_exprs, [:(+ magFac(g, idx))] )
-    end
-    return Expr(:block, expr, fac_exprs...) 
+    return getEFacExpr(g, idx, htype)
 end
+export getEFactor
 
+unweightedloop = hFactor("-g.state[connIdx(conn)]" , :Weighted, false, true)
+weightedloop = hFactor("-connW(conn)*g.state[connIdx(conn)]", :Weighted, true, true)
+magfac = hFactor("-g.d.mlist[idx]", :MagField, true, false)
+clampfac = hFactor("g.d.clampfac[idx]*g.state[idx]", :Clamp, true, false)
 
-# @generated genHamiltonian(htype::HType)
-# 
-# end
+factors = [];
+
+@addfactor unweightedloop weightedloop magfac clampfac
+
+end

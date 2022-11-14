@@ -10,12 +10,30 @@ import Plots as pl
 using QML
 export QML
 
+# Restart MCMC loop to define new Hamiltonian function
+# Is needed for fast execution if part of hamiltonian doesn't need to be checked
+# Should be in IsingSim.jl
+function branchSim(sim)
+    if sim.shouldRun[]
+        sim.shouldRun[] = false 
+        while sim.isRunning[]
+            yield()
+        end
+        sim.shouldRun[] = true;
+    end
+end
+
 include("HelperFunctions.jl")
 include("WeightFuncs.jl")
 include("SquareAdj.jl")
+
 include("IsingGraphs.jl")
+
 include("Hamiltonians.jl")
-include("IsingMetropolis.jl")
+using .Hamiltonians
+export Hamiltonians
+
+# include("IsingMetropolis.jl")
 include("IsingSim.jl")
 include("Interaction/Interaction.jl")
 include("Analysis.jl")

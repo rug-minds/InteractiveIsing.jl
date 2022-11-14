@@ -2,19 +2,7 @@
 Magnetic field stuff
 =#
 
-# Restart MCMC loop to define new Hamiltonian function
-# Is needed for fast execution if part of hamiltonian doesn't need to be checked
-# Should be in IsingSim.jl
-function branchSim(sim)
-    if sim.shouldRun[]
-        sim.shouldRun[] = false 
-        while sim.isRunning[]
-            # sleep(.1)
-            yield()
-        end
-        sim.shouldRun[] = true;
-    end
-end
+
 
 # Set M field for given indexes
 export setMIdxs!
@@ -25,9 +13,8 @@ function setMIdxs!(sim,idxs,strengths)
         return      
     end
 
-    g.d.mactive = true
     g.d.mlist[idxs] = strengths
-    setGHFunc!(sim, false)
+    setSimHType(sim, :MagField => true)
 end
 
 # Insert func(;x,y)
@@ -81,9 +68,8 @@ end
 export remM!
 function remM!(sim)
     g = sim.g
-    g.d.mactive = false
     g.d.mlist = zeros(Float32, g.size)
-    setGHFunc!(sim, false)
+    setSimHType(sim, :MagField => false)
 end
 
 # Plot magnetic field

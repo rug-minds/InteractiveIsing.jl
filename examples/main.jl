@@ -1,9 +1,13 @@
 # Example File
 
 using InteractiveIsing
+using InteractiveIsing.Hamiltonians
 using Distributions
 # include(joinpath(@__DIR__ , "Learning", "IsingLearning.jl"))
 include(joinpath(@__DIR__ , "WeightFuncsCustom.jl"))
+# include(joinpath(@__DIR__, "..", "wip", "Hamiltonians.jl"))
+include(joinpath(@__DIR__, "..", "benchmarking", "Benchmark.jl"))
+
 
 # Radially decreasing weightfunction
 # weightFunc = radialWF
@@ -16,7 +20,7 @@ weightFunc = isingNN2
 
 
 const sim = IsingSim(
-    continuous = true, 
+    continuous = false, 
     graphSize = 500, 
     weighted = true;
     weightFunc
