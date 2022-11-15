@@ -191,6 +191,7 @@ function updateGraph(sim::IsingSim)
         end
         updateGraph(sim)
 end
+export updateGraph
 
 function reInitSim(sim)
     g = sim.g
