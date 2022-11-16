@@ -10,7 +10,7 @@ function updateMonteCarloIsingC!()
 
     beta = T>0 ? 1/T : Inf
 
-    idx = rand(ising_it(g))
+    idx = rand(ising_it(g, htype))
      
     oldstate = g.state[idx]
 

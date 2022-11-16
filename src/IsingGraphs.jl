@@ -9,9 +9,6 @@ const Vert = Int32
 const Weight = Float32
 const Conn = Tuple{Vert, Weight}
 
-export HType
-struct HType{Symbs, Vals} end
-
 export AbstractIsingGraph
 abstract type AbstractIsingGraph end
 
@@ -104,12 +101,32 @@ Returns an iterator over the ising lattice
 If there are no defects, returns whole range
 Otherwise it returns all alive spins
 """
-function ising_it(g::AbstractIsingGraph)
-    if !g.d.defects
-        it::UnitRange{Int32} = 1:g.size
-        return it
+# function ising_it(g::AbstractIsingGraph)
+#     # if !g.d.defects
+#         it::UnitRange{Int32} = 1:g.size
+#         return it
+#     # else
+#     #     return g.d.aliveList
+#     # end
+
+# end
+
+@generated function ising_it(g::IsingGraph, htype::HType{Symbs,Params}) where {Symbs,Params}
+    # Assumes :Defects will be found
+    defectIdx = 1
+    for symb in Symbs
+        if symb == :Defects
+            defectIdx += 1
+            break
+        end
+    end
+
+    defects = Params[defectIdx]
+
+    if !defects
+        return Expr(:block, :(return it::UnitRange{Int32} = 1:g.size) )
     else
-        return g.d.aliveList
+        return Expr(:block, :(return g.d.aliveList))
     end
 
 end

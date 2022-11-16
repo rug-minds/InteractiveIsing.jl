@@ -23,15 +23,18 @@ function branchSim(sim)
     end
 end
 
+export HType
+struct HType{Symbs, Vals} end
+
 include("HelperFunctions.jl")
 include("WeightFuncs.jl")
 include("SquareAdj.jl")
 
-include("IsingGraphs.jl")
-
 include("Hamiltonians.jl")
 using .Hamiltonians
 export Hamiltonians
+
+include("IsingGraphs.jl")
 
 # include("IsingMetropolis.jl")
 include("IsingSim.jl")

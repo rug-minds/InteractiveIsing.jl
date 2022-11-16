@@ -6,7 +6,7 @@ function updateMonteCarloIsingD!()
     
     beta = T>0 ? 1/T : Inf
     
-    idx = rand(ising_it(g))
+    idx = rand(ising_it(g, htype))
     
     Estate = g.state[idx]*getEFactor(g,idx, htype)
     
