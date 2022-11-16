@@ -1,0 +1,3 @@
+@inline function deltE(Estate)
+    return -2*Estate
+end

@@ -3,9 +3,11 @@ Magnetic field stuff
 =#
 
 
-
-# Set M field for given indexes
 export setMIdxs!
+""" 
+Set the magnetic field using two vectors, one gives the indexes of the positions,
+the other gives the magnetic field strength for the corresponding index
+"""
 function setMIdxs!(sim,idxs,strengths)
     g = sim.g
     if length(idxs) != length(strengths)
@@ -17,8 +19,13 @@ function setMIdxs!(sim,idxs,strengths)
     setSimHType(sim, :MagField => true)
 end
 
-# Insert func(;x,y)
 export setMFunc!
+""" 
+Set the magnetic field based on a given function of x and y.
+Function needs to be specified as a julia anonymous functions that needs to
+have the named arguments x and y. The syntax to define an anonymous function
+is (;x,y) -> f(x,y)
+"""
 function setMFunc!(sim,func::Function)
     g = sim.g
     m_matr = Matrix{Float32}(undef,g.N,g.N)
@@ -31,8 +38,10 @@ function setMFunc!(sim,func::Function)
     return
 end
 
-# Set a time dependent magnetic field function f(;x,y,t)
 export setMFuncTimed!
+"""
+Set a time dependent magnetic field function (;x,y,t) -> f(x,y,t)
+"""
 function setMFuncTimed!(sim,func::Function, interval = 5, t_step = .2)
     g = sim.g
     for t in 0:t_step:interval
@@ -43,6 +52,10 @@ function setMFuncTimed!(sim,func::Function, interval = 5, t_step = .2)
 end
 
 export setMFuncRepeating!
+"""
+Set a time dependent magnetic field function (;x,y,t) -> f(x,y,t)
+which keeps repeating until a button is pressed
+"""
 function setMFuncRepeating!(sim, func::Function, t_step = .1)
     repeating = Ref(true)
 
@@ -64,16 +77,20 @@ function setMFuncRepeating!(sim, func::Function, t_step = .1)
     return
 end
 
-# Removes magnetic field
 export remM!
+"""
+Removes magnetic field
+"""
 function remM!(sim)
     g = sim.g
     g.d.mlist = zeros(Float32, g.size)
     setSimHType(sim, :MagField => false)
 end
 
-# Plot magnetic field
 export plotM
+""" 
+Plot the magnetic field
+"""
 function plotM(sim)
     g = sim.g
     imagesc(permutedims(reshape(g.d.mlist, g.N,g.N)))

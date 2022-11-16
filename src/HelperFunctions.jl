@@ -121,6 +121,15 @@ macro includefile(filepath)
     esc(Meta.parse(read(open(eval(filepath)), String)))
 end
 
+macro includefile(includepath, filename::String)
+    esc(Meta.parse(read(open(eval(includepath) * "/" * filename), String)))
+end
+
+macro includetextfile(includepath, filename)
+    path = joinpath(@__DIR__,"textfiles", string(includepath), string(filename))
+    esc(Meta.parse(read(open(path), String)))
+end
+
 # Etc
 # Not used?
 function sortedPair(idx1::Integer,idx2::Integer):: Pair{Integer,Integer}

@@ -1,0 +1,3 @@
+@inline function deltE(efac,newstate,oldstate)
+    return efac*(newstate-oldstate)
+end

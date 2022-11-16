@@ -1,0 +1,3 @@
+@inline function sampleCState()
+    Float32(2*(rand(rng)-.5))
+end

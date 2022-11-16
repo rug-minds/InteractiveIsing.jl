@@ -38,30 +38,43 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph
 
 
     IsingGraph(type::DataType, N::Integer; state, adj, weighted = false) = 
-        (   h = new{type}(
-                N,
-                N^2,
-                state,
-                adj,
-                generateHType(weighted,false)
-                );
-            h.d = IsingData(h);
+    (   
+        h = new{type}(
+            N,
+            N^2,
+            state,
+            adj,
+            generateHType(weighted,false)
+        );
+        
+        h.d = IsingData(h);
             return h
-        )
+    )
 end
 
 
 # Minimal Initialization using N and optional args
-IsingGraph(N::Integer; weighted = false, weightFunc = defaultIsingWF) = IsingGraph(Int8, N, state = initRandomState(N^2), adj = initSqAdj(N, weightFunc = weightFunc); weighted)
+IsingGraph(N::Integer; continuous = true, weighted = false, weightFunc = defaultIsingWF, selfE = true) =
+    let adjfunc = continuous ? (selfE ? initSqAdjSelf : initSqAdj) : initSqAdj,
+        type = continuous ? Float32 : Int8
+        IsingGraph(
+            type, 
+            N, 
+            state = initRandomState(N^2), 
+            adj = adjfunc(N, weightFunc = weightFunc)
+            ;weighted
+        )
+    end
+
 # Initialize continuous ising graph
-CIsingGraph(N::Integer; weighted = false, weightFunc = defaultIsingWF, selfE = true) =  
-    IsingGraph(
-        Float32,
-        N, 
-        state = initRandomCState(N^2), 
-        adj = selfE ? initSqAdjSelf(N, weightFunc = weightFunc) : initSqAdj(N, weightFunc = weightFunc);
-        weighted
-    )
+# CIsingGraph(N::Integer; weighted = false, weightFunc = defaultIsingWF, selfE = true) =  
+#     IsingGraph(
+#         Float32,
+#         N, 
+#         state = initRandomCState(N^2), 
+#         adj = selfE ? initSqAdjSelf(N, weightFunc = weightFunc) : initSqAdj(N, weightFunc = weightFunc)
+#         ;weighted
+#     )
 
 # Copy graph data to new one
 IsingGraph(g::IsingGraph) = deepcopy(g)
@@ -167,160 +180,5 @@ function initSqAdjSelf(N; selfWeights = -1 .* ones(N^2), weightFunc = defaultIsi
     end
     return adj
 end
-
-
-# Setting Elements and defects 
-
-# Removing and adding defects, and clamping
-    
-    # Adding a defect to lattice
-    function addDefects!(g::AbstractIsingGraph,spin_idxs::Vector{T}) where T <: Integer
-        # Only keep elements that are not defect already
-        # @inbounds d_idxs::Vector{Int32} = spin_idxs[map(!,g.d.defectBools[spin_idxs])]
-        d_idxs = spin_idxs[map(!,g.d.defectBools[spin_idxs])]
-
-        if isempty(d_idxs)
-            return
-        end
-        
-        if length(spin_idxs) > 1
-            try
-                newdefectList = zipOrderedLists(g.d.defectList,d_idxs)  #Add els to defectlist
-                newaliveList = remOrdEls(g.d.aliveList,d_idxs) #Remove them from alivelist
-                g.d.defectList = newdefectList
-                g.d.aliveList = newaliveList
-            catch
-                println("Aborting adding defects")
-                return
-            end
-        else #Faster for singular elements
-
-            #Remove item from alive list and start searching backwards from spin_idx
-                # Since aliveList is sorted, spin_idx - idx_found gives number of smaller elements in list
-            rem_idx = revRemoveSpin!(g.d.aliveList,spin_idxs[1])
-            insert!(g.d.defectList,spin_idxs[1]-rem_idx+1,spin_idxs[1])
-        end
-
-        # Mark corresponding spins to defect
-        @inbounds g.d.defectBools[d_idxs] .= true
-
-        # If first defect, mark lattice as containing defects
-        if g.d.defects == false
-            g.d.defects = true
-        end
-
-        # # Set states to zero
-        # @inbounds g.state[d_idxs] .= 0
-    end
-
-    # Removing defects, insert ordered list!
-    function remDefects!(g::AbstractIsingGraph, spin_idxs::Vector{T}) where T <: Integer
-        
-        # Only keep ones that are actually defect
-        @inbounds d_idxs = spin_idxs[g.d.defectBools[spin_idxs]]
-        if isempty(d_idxs)
-            return
-        end
-    
-        # Remove defects from defect list and add to aliveList
-        # Assumes that els are in list!
-        if length(spin_idxs) > 1
-            try
-                newaliveList = zipOrderedLists(g.d.aliveList, d_idxs)
-                newdefectList = remOrdEls(g.d.defectList,d_idxs)
-                g.d.aliveList = newaliveList
-                g.d.defectList = newdefectList
-            catch
-                println("Aborting removing defects")
-                return
-            end
-                
-
-            
-        else    #Is faster for singular elements
-            # Add to alive list
-            # Adds it to original index offset by how many smaller numbers are also removed
-            rem_idx = removeFirst!(g.d.defectList,spin_idxs[1]) 
-            insert!(g.d.aliveList,spin_idxs[1]-(rem_idx-1),spin_idxs[1])
-        end
-
-        # Spins not defect anymore
-        @inbounds g.d.defectBools[d_idxs] .= false
-    
-        if isempty(g.d.defectList) && g.d.defects == true
-            g.d.defects = false
-        end
-
-    end
-
-    remDefect!(g, spin_idx::T) where T <: Integer = remDefects!(g,[spin_idx]) 
-    addDefect!(g, spin_idx::T) where T <: Integer = addDefects!(g,[spin_idx]) 
-    
-    # Lattice indexing
-    addDefect!(g,i,j) = addDefect!(g,coordToIdx(i,j,g.N))
-    remDefect!(g,i,j) = remDefect!(g,coordToIdx(i,j,g.N))
-
-    # Removes Multiple Defects
-    # Not used
-    function remDefects!(g,idxs::Vector{Any})
-        for idx in idxs
-            remDefect!(g,idx)
-        end
-    end
-
-    # Removes All defects
-    function restoreState!(g)
-        g.state[g.d.defectList] = rand(length(defectlist))
-        remDefects!(g,g.d.defectList)
-    end
-     
-# Setting Elements
-
-    # Backend 
-        # Setting an alive element
-        function setNormal!(g::AbstractIsingGraph, spin_idxs::Vector{Int32} , brush)
-            # First remove defect if it was defect
-            remDefects!(g,spin_idxs)
-            # Then set element
-            @inbounds g.state[spin_idxs] .= brush
-        end
-
-        setNormal!(g,spin_idx::Integer,brush) = setNormal!(g, [spin_idx], brush)
-        setNormal!(g,i::Integer,j::Integer,brush) =  setNormal!(g,Int32.(coordToIdx(i,j,g.N)),brush)
-        setNormal!(g,tupls::Vector{Tuple{Int16,Int16}},brush) = setNormal!(g,Int32.(coordToIdx.(tupls,g.N)),brush)
-
-        function setClamp!(g::AbstractIsingGraph, spin_idxs::Vector{Int32} , brush)
-            addDefects!(g,spin_idxs)
-            @inbounds g.state[spin_idxs] .= brush
-        end
-
-        setClamp!(g,spin_idx::Integer,brush) = setClamp!(g, [spin_idx], brush)
-        setClamp!(g,i::Integer,j::Integer,brush) =  setClamp!(g,Int32.(coordToIdx(i,j,g.N)),brush)
-        setClamp!(g,tupls::Vector{Tuple{Int16,Int16}},brush) = setClamp!(g,Int32.(coordToIdx.(tupls,g.N)),brush)
-
-    # User Functions 
-        # Set spins either to a value or clamp them
-        function setSpins!(g::IsingGraph{Int8}, idxs , brush, clamp = false)
-            if brush != 0 && !clamp
-                setNormal!(g,idxs,brush)
-            else
-                setClamp!(g,idxs,brush)
-            end
-        end
-
-        function setSpins!(g::IsingGraph{Float32}, idxs , brush, clamp = false)
-            if !clamp
-                setNormal!(g,idxs,brush)
-            else
-                setClamp!(g,idxs,brush)
-            end
-        end
-
-        setSpin!(g::AbstractIsingGraph, i::Integer, j::Integer, brush::Union{Int8,Float32}, clamp::Bool = false) = setSpins!(g, [coordToIdx(i,j,g.N)], brush, clamp)
-        
-        setSpin!(g::AbstractIsingGraph, idx::Integer, brush::Union{Int8,Float32}, clamp::Bool = false) = setSpins!(g,[idx],brush,clamp)
-
-        setSpins!(g::AbstractIsingGraph, tupls::Vector{Tuple{Int32,Int32}}, brush, clamp) = setSpins!(g, coordToIdx.(tupls,g.N), brush, clamp)
-        
 
 

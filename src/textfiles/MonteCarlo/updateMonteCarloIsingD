@@ -1,12 +1,9 @@
-function updateMonteCarloIsingD!()
+function updateMonteCarloIsingD(rng)
     T = TIs[]
-    @inline function deltE(Estate)
-        return -2*Estate
-    end
-    
+
     beta = T>0 ? 1/T : Inf
     
-    idx = rand(ising_it(g, htype))
+    idx = rand(rng, g_iterator)
     
     Estate = g.state[idx]*getEFactor(g,idx, htype)
     
