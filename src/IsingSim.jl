@@ -168,7 +168,7 @@ function updateGraph(sim::IsingSim)
     # Defining argumentless functions here seems faster.
     # Offset large function into files for clearity
   
-    # @includetextfile MonteCarlo deltED
+    @includetextfile MonteCarlo deltED
     @includetextfile MonteCarlo deltEC
     @includetextfile MonteCarlo sampleCState
     @includetextfile MonteCarlo updateMonteCarloIsingD
