@@ -64,21 +64,19 @@ mutable struct IsingSim
             initTemp = 1.,
             start = false
         );
-        if continuous
-            g = CIsingGraph(
-                    graphSize, 
-                    weighted = weighted,
-                    weightFunc = weighted ? weightFunc : defaultIsingWF
-                )
-        else
-            g = IsingGraph(
-                graphSize, 
-                weighted = weighted,
-                weightFunc = weighted ? weightFunc : defaultIsingWF
-            )
-        end
+
+        type = continuous ? Float32 : Int8
+
+        g = IsingGraph(
+            graphSize,
+            continuous = continuous, 
+            weighted = weighted,
+            weightFunc = weighted ? weightFunc : defaultIsingWF
+        )
+        
         initImg = gToImg(g)
         initbrushR= round(graphSize/10)
+
         sim = new(
             g,
             JuliaPropertyMap(),
@@ -93,7 +91,6 @@ mutable struct IsingSim
             0,
             Observable(0),
             img,
-            # Ref(initImg),
             Observable(size(initImg)),
             Ref(false),
             Ref(false),
@@ -101,6 +98,7 @@ mutable struct IsingSim
             Observable(true),
             true
         )
+
         # Initialize image
         sim.img[] = initImg
 
@@ -119,8 +117,6 @@ mutable struct IsingSim
         sim.pmap["upf"] = sim.upf
         sim.pmap["gSize"] = sim.gSize
 
-        
-
 
         if start
             s()
@@ -131,6 +127,10 @@ mutable struct IsingSim
     
 end
 
+"""
+Start the simulation and interface
+Will add a non-interface mode soon.
+"""
 function (sim::IsingSim)(start = true; async = true)
     if start
         if Threads.nthreads() < 4
@@ -177,9 +177,9 @@ function updateGraph(sim::IsingSim)
         while shouldRun[]
             isingUpdate()
 
-            sim.updates += 1
-            GC.safepoint()
-        end
+        sim.updates += 1
+        GC.safepoint()
+    end
 
         sim.isRunning = false
         while !shouldRun[]
@@ -188,6 +188,7 @@ function updateGraph(sim::IsingSim)
         updateGraph(sim)
 end
 export updateGraph
+
 
 function reInitSim(sim)
     g = sim.g
@@ -321,7 +322,7 @@ function qmlFunctions(sim::IsingSim)
 
 
     # Add percentage of defects to lattice
-    addRandomDefectsQML(pDefects) = addRandomDefects!(g,pDefects)
+    addRandomDefectsQML(pDefects) = addRandomDefects!(sim, g,pDefects)
     @qmlfunction addRandomDefectsQML
 
     # Initialize isinggraph and display
@@ -329,8 +330,9 @@ function qmlFunctions(sim::IsingSim)
         reInitSim(sim) 
     end
     @qmlfunction initIsing
+
     # Draw circle to state
-    circleToStateQML(i,j,clamp=false) = errormonitor(Threads.@spawn circleToState(g,circ[],i,j,brush[]; clamp, imgsize = size(img[])[1]))
+    circleToStateQML(i,j,clamp=false) = errormonitor(Threads.@spawn circleToState(sim, g,circ[],i,j,brush[]; clamp, imgsize = size(img[])[1]))
     @qmlfunction circleToStateQML
 
     # Sweep temperatures and record magnetization and correlation lengths

@@ -139,7 +139,7 @@ Otherwise it returns all alive spins
     if !defects
         return Expr(:block, :(return it::UnitRange{Int32} = 1:g.size) )
     else
-        return Expr(:block, :(return g.d.aliveList))
+        return g.d.aliveList
     end
 
 end
