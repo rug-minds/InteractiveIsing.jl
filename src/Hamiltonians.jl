@@ -95,6 +95,10 @@ function editHType(htype::HType{Symbs, Vals}, pairs::Pair ...) where {Symbs, Val
 end
 export editHType
 
+function editHType!(g, pairs...)
+    g.htype = editHType(g.htype, pairs...)
+end
+export editHType!
 
 export setSimHType
 function setSimHType(sim, pairs...; prt = false)
@@ -128,7 +132,7 @@ Get value of parameter of HType
 function getHParam(htype::HType{Symbs,Vals}, symb) where {Symbs, Vals}
     idx = paramIdx(htype, symb)
 
-    return Symbs[idx]
+    return Vals[idx]
 end
 
 getHParam(g, symb) = getHParam(g.htype, symb)
