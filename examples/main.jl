@@ -22,7 +22,7 @@ include(joinpath(@__DIR__,"..","Benchmarking/Benchmarking.jl"))
 const sim = IsingSim(
     continuous = false, 
     graphSize = 500, 
-    weighted = true;
+    weighted = false;
     # weightFunc
     )
 

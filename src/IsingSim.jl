@@ -161,9 +161,8 @@ function updateGraph(sim::IsingSim)
     g = sim.g
     TIs = sim.TIs
     htype = g.htype
-
-    rng = MersenneTwister()
     
+    rng = MersenneTwister()
     g_iterator = ising_it(g,htype)
     shouldRun = sim.shouldRun
     
@@ -182,16 +181,17 @@ function updateGraph(sim::IsingSim)
         end
         
     end
-    @includetextfile MonteCarlo updateMonteCarloIsingC
+
+    # @includetextfile MonteCarlo updateMonteCarloIsingC
 
 
-    isingUpdate = typeof(g) == IsingGraph{Int8} ? 
-            updateMonteCarloIsingD : updateMonteCarloIsingC
+    # isingUpdate = typeof(g) == IsingGraph{Int8} ? 
+    #         updateMonteCarloIsingD : updateMonteCarloIsingC
 
     sim.isRunning = true
 
     while shouldRun[]
-        isingUpdate()
+        updateMonteCarloIsingD()
         sim.updates += 1
         
         GC.safepoint()
