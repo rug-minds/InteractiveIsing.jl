@@ -36,8 +36,8 @@ function addDefects!(sim, g::IsingGraph, spin_idxs::Vector{T}) where T <: Intege
     @inbounds g.d.defectBools[d_idxs] .= true
 
     # If first defect, mark lattice as containing defects
-    if getHParam(g, :Defects) == false
-        editHType!(g, :Defects => true)
+    if g.d.defects == false
+        editHType(g.htype, :Defects => true)
         branchSim(sim)
     end
 
@@ -77,8 +77,8 @@ function remDefects!(sim, g::IsingGraph, spin_idxs::Vector{T}) where T <: Intege
     # Spins not defect anymore
     @inbounds g.d.defectBools[d_idxs] .= false
 
-    if isempty(g.d.defectList) && getHParam(g, :Defects) == true
-        editHType!(g, :Defects => false)
+    if isempty(g.d.defectList) && g.d.defects == true
+        editHType(g.htype, :Defects => false)
         branchSim(sim)
     end
 
@@ -103,8 +103,7 @@ end
 function restoreState!(sim, g)
     g.state[g.d.defectList] = rand(length(defectlist))
     remDefects!(g,g.d.defectList)
-    
-    editHType!(g, :Defects => false)
+    editHType(g.htype, :Defects => false)
     branchSim(sim)
 end
     
@@ -128,7 +127,7 @@ function setClamp!(sim, g::IsingGraph, spin_idxs::Vector{Int32} , brush)
     addDefects!(sim, g,spin_idxs)
     @inbounds g.state[spin_idxs] .= brush
 
-    editHType!(g, :Defects => true)
+    editHType(g.htype, :Defects => true)
     branchSim(sim)
 end
 
@@ -140,11 +139,10 @@ setClamp!(sim, g,tupls::Vector{Tuple{Int16,Int16}},brush) = setClamp!(sim, g, In
 
 # Set spins either to a value or clamp them
 function setSpins!(sim, g::IsingGraph{Int8}, idxs , brush, clamp = false)
-    # Always clamp if brush is zero, otherwise only if clamping
     if brush != 0 && !clamp
-        setNormal!(sim, g, idxs, brush)
+        setNormal!(sim, g,idxs,brush)
     else
-        setClamp!(sim, g, idxs, brush)
+        setClamp!(sim, g,idxs,brush)
     end
 end
 

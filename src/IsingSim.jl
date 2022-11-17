@@ -168,30 +168,17 @@ function updateGraph(sim::IsingSim)
     
     # Defining argumentless functions here seems faster.
     # Offset large function into files for clearity
-    # @includetextfile MonteCarlo updateMonteCarloIsingD
-    function updateMonteCarloIsingD()
-        beta = 1/(TIs[])
-        
-        idx = rand(rng, g_iterator)
-        
-        Estate = @inbounds g.state[idx]*getEFactor(g, idx, g.htype)
-        
-        if (Estate >= 0 || rand(rng) < exp(2*beta*Estate))
-            @inbounds g.state[idx] *= -1
-        end
-        
-    end
-
-    # @includetextfile MonteCarlo updateMonteCarloIsingC
+    @includetextfile MonteCarlo updateMonteCarloIsingD
+    @includetextfile MonteCarlo updateMonteCarloIsingC
 
 
-    # isingUpdate = typeof(g) == IsingGraph{Int8} ? 
-    #         updateMonteCarloIsingD : updateMonteCarloIsingC
+    isingUpdate = typeof(g) == IsingGraph{Int8} ? 
+            updateMonteCarloIsingD : updateMonteCarloIsingC
 
     sim.isRunning = true
 
     while shouldRun[]
-        updateMonteCarloIsingD()
+        isingUpdate()
         sim.updates += 1
         
         GC.safepoint()

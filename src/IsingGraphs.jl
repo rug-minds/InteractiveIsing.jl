@@ -139,7 +139,7 @@ Otherwise it returns all alive spins
     if !defects
         return Expr(:block, :(return it::UnitRange{Int32} = 1:g.size) )
     else
-        return g.d.aliveList
+        return Expr(:block, :(return g.d.aliveList))
     end
 
 end
@@ -180,3 +180,5 @@ function initSqAdjSelf(N; selfWeights = -1 .* ones(N^2), weightFunc = defaultIsi
     end
     return adj
 end
+
+
