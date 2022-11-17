@@ -1,35 +1,4 @@
-# export benchmarkIsing
-using BenchmarkTools
-using Random
 
-randclamp = Float32.(rand(500^2).* 2 .- 1)
-
-function clampE(idx)
-    return randclamp[idx]
-end
-
-function benchmarkIsing(sim, bfunc, iterations)
-    function clampE(idx)
-        return randclamp[idx]
-    end
-    Random.seed!(1234)
-
-    g = sim.g
-
-    # oldfunc = g.d.hFuncRef[]
-
-    # g.d.hFuncRef = Ref((g,idx, state = g.state[idx]) ->  oldfunc(g,idx, state) + 1/2*(state-clampE(idx))^2)
-
-    pauseSim(sim)
-
-    # return g.d.hFuncRef[](g,1)
-    g.state = initRandomIsing!(g)
-
-
-    bfunc(sim,iterations)
-end
-
-export benchmarkFunc
 function benchmarkFunc(sim,iterations)
     g = sim.g
     TIs = sim.TIs
@@ -99,75 +68,7 @@ function benchmarkFunc(sim,iterations)
     return t_end-t_start
 end
 
-#Generated functions
-function benchmarkFuncGenerated(sim, iterations)
-    g = sim.g
-    TIs = sim.TIs
-    hType = generateHType(true)
 
-    # Defining argumentless functions here seems faster.
-    # Offset large function into files for clearity
-    function updateMonteCarloIsingC!()
-        T = TIs[]
-        @inline function deltE(efac,newstate,oldstate)
-            return efac*(newstate-oldstate)
-        end
-    
-        @inline function sampleCState()
-            Float32(2*(rand()-.5))
-        end
-    
-        beta = T>0 ? 1/T : Inf
-        
-        idx = rand(ising_it(g))
-
-        oldstate = g.state[idx]
-    
-        efactor = getEFactor(g,idx,hType)
-    
-        newstate = sampleCState()
-        
-        Ediff = deltE(efactor,newstate,oldstate)
-        if (Ediff < 0 || rand() < exp(-beta*Ediff))
-            @inbounds g.state[idx] = newstate 
-        end
-    end
-
-    function updateMonteCarloIsingD!()
-        T = TIs[]
-        @inline function deltE(Estate)
-            return -2*Estate
-        end
-        
-        beta = T>0 ? 1/T : Inf
-                
-        idx = rand(ising_it(g))
-
-        Estate = g.state[idx]*getEFactor(g,idx,hType)
-        
-        if (Estate >= 0 || rand() < exp(-beta*deltE(Estate)))
-            @inbounds g.state[idx] *= -1
-        end
-        
-    end
-
-    if typeof(g) == IsingGraph{Int8}
-        isingUpdate! = updateMonteCarloIsingD!
-    else
-        isingUpdate! = updateMonteCarloIsingC!
-    end
-    sim.updates = 0
-
-    t_start = time()
-
-    for _ in 1:(iterations)
-        isingUpdate!()
-        sim.updates += 1
-    end
-    t_end = time()
-
-    return t_end-t_start
-end
 
 #Other stuff
 function updateMonteCarloIsingC2!(sim)

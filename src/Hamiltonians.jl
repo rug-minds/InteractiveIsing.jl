@@ -1,6 +1,6 @@
 module Hamiltonians
 using ..InteractiveIsing
-using ..InteractiveIsing: branchSim, IsingGraph
+using ..InteractiveIsing: branchSim
 
 
 """

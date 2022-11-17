@@ -161,32 +161,28 @@ function updateGraph(sim::IsingSim)
         g = sim.g
         TIs = sim.TIs
         htype = g.htype
-
+        rng = MersenneTwister()
+        shouldRun = sim.shouldRun
+        
         # Defining argumentless functions here seems faster.
         # Offset large function into files for clearity
-        @includefile joinpath(@__DIR__,"textfiles","MonteCarlo","updateMonteCarloIsingD!")
-        @includefile joinpath(@__DIR__,"textfiles","MonteCarlo","updateMonteCarloIsingC!")
+        @includetextfile MonteCarlo updateMonteCarloIsingD
+        @includetextfile MonteCarlo updateMonteCarloIsingC
 
-        if typeof(g) == IsingGraph{Int8}
-            isingUpdate! = updateMonteCarloIsingD!
-        else
-            isingUpdate! = updateMonteCarloIsingC!
-        end
-        # Old update
-        # updatefunc(g,T) = updateMonteCarloIsing!(g,T;getE)
+
+        isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD 
+                                            : updateMonteCarloIsingC
+
         sim.isRunning = true
-        while sim.shouldRun[]
-            isingUpdate!()
-
-            # Old update
-            # updatefunc(g,TIs[])
+        while shouldRun[]
+            isingUpdate()
 
             sim.updates += 1
             GC.safepoint()
         end
 
         sim.isRunning = false
-        while !sim.shouldRun[]
+        while !shouldRun[]
             yield()
         end
         updateGraph(sim)
@@ -196,7 +192,7 @@ export updateGraph
 function reInitSim(sim)
     g = sim.g
     g.state = typeof(g) == IsingGraph{Int8} ? initRandomState(g.size) : initRandomCState(g.size)
-    g.d.defects = false
+    editHType!(g, :MagField => false, :Defects => false, :Clamp => false)
     g.d.defectBools = [false for x in 1:g.size]
     g.d.defectList = []
     g.d.aliveList = [1:g.size;]
