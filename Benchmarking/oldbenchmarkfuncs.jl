@@ -216,7 +216,7 @@ function benchmarkFunc3(sim)
     return t_end-t_start
 end
 
-function efactest(g::AbstractIsingGraph,idx)::Float32
+function efactest(g,idx)::Float32
     efactor::Float32 = 0.
     for conn in g.adj[idx]
         @inbounds efactor += -connW(conn)*g.state[connIdx(conn)]
@@ -228,6 +228,6 @@ function getFac(conn)
     @inbounds -connW(conn)*g.state[connIdx(conn)]
 end
 
-function efactest2(g::AbstractIsingGraph,idx)::Float32 
+function efactest2(g,idx)::Float32 
     return @inbounds reduce(+,getFac.(g.adj[idx]))
 end

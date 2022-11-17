@@ -105,6 +105,34 @@ function setSimHType(sim, pairs...; prt = false)
     branchSim(sim)
 end
 
+function paramIdx(htype::HType{Symbs,Vals}, symb) where {Symbs,Vals}
+    idx = 1
+    for symbol in Symbs
+        if symb == symbol
+            break
+        end
+        idx +=1
+    end
+
+    if idx > length(Symbs)
+        error("Symbol not found")
+        idx = length(Symbs)
+    end
+
+    return idx
+end
+
+"""
+Get value of parameter of HType
+"""
+function getHParam(htype::HType{Symbs,Vals}, symb) where {Symbs, Vals}
+    idx = paramIdx(htype, symb)
+
+    return Symbs[idx]
+end
+
+getHParam(g, symb) = getHParam(g.htype, symb)
+export getHParam
 
 
 """

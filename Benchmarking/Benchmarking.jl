@@ -4,7 +4,7 @@ using BenchmarkTools
 using Random
 
 macro includetextfile(pathsymbs...)
-    path = joinpath(@__DIR__,"textfiles", string.(pathsymbs)...)
+    path = joinpath(@__DIR__, string.(pathsymbs)...)
     esc(Meta.parse(read(open(path), String)))
 end
 
@@ -38,14 +38,14 @@ function benchmarkFuncGenerated(sim, iterations, rng)
 
     g_iterator = ising_it(g, htype)
     
-    getE(g,idx) = getEFactor(g,idx, htype)
+    getFac(g,idx) = getEFactor(g,idx, htype)
 
 
     # Defining argumentless functions here seems faster.
     
     # Offset large function into files for clearity
-    @includetextfile "../.." src textfiles MonteCarlo updateMonteCarloIsingD
-    @includetextfile "../.." src textfiles MonteCarlo updateMonteCarloIsingC
+    @includetextfile ".." src textfiles MonteCarlo updateMonteCarloIsingD
+    @includetextfile ".." src textfiles MonteCarlo updateMonteCarloIsingC
 
     isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD : updateMonteCarloIsingC
    
@@ -73,8 +73,8 @@ function benchmarkFuncGenerated2(sim, iterations, rng)
     # Defining argumentless functions here seems faster.
     
     # Offset large function into files for clearity
-    @includetextfile "../.." src textfiles MonteCarlo updateMonteCarloIsingD2
-    @includetextfile "../.." src textfiles MonteCarlo updateMonteCarloIsingC
+    @includetextfile ".." src textfiles MonteCarlo updateMonteCarloIsingD2
+    @includetextfile ".." src textfiles MonteCarlo updateMonteCarloIsingC
 
     isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD : updateMonteCarloIsingC
    
@@ -91,6 +91,7 @@ function benchmarkFuncGenerated2(sim, iterations, rng)
     return t_end-t_start
 end
 
+
 function benchmarkFuncGenerated3(sim, iterations, rng)
     g = sim.g
     TIs = sim.TIs
@@ -104,8 +105,8 @@ function benchmarkFuncGenerated3(sim, iterations, rng)
     # Defining argumentless functions here seems faster.
     
     # Offset large function into files for clearity
-    @includetextfile "../.." src textfiles MonteCarlo updateMonteCarloIsingD3
-    @includetextfile "../.." src textfiles MonteCarlo updateMonteCarloIsingC3
+    @includetextfile ".." src textfiles MonteCarlo updateMonteCarloIsingD3
+    @includetextfile ".." src textfiles MonteCarlo updateMonteCarloIsingC3
 
     isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD : updateMonteCarloIsingC
    

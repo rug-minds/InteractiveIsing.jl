@@ -158,34 +158,51 @@ Then, this function itself makes a new branch where getE is defined again.
 export updateGraph
 """
 function updateGraph(sim::IsingSim)
-        g = sim.g
-        TIs = sim.TIs
-        htype = g.htype
-        rng = MersenneTwister()
-        shouldRun = sim.shouldRun
+    g = sim.g
+    TIs = sim.TIs
+    htype = g.htype
+
+    rng = MersenneTwister()
+    
+    g_iterator = ising_it(g,htype)
+    shouldRun = sim.shouldRun
+    
+    # Defining argumentless functions here seems faster.
+    # Offset large function into files for clearity
+    # @includetextfile MonteCarlo updateMonteCarloIsingD
+    function updateMonteCarloIsingD()
+        beta = 1/(TIs[])
         
-        # Defining argumentless functions here seems faster.
-        # Offset large function into files for clearity
-        @includetextfile MonteCarlo updateMonteCarloIsingD
-        @includetextfile MonteCarlo updateMonteCarloIsingC
+        idx = rand(rng, g_iterator)
+        
+        Estate = @inbounds g.state[idx]*getEFactor(g, idx, g.htype)
+        
+        if (Estate >= 0 || rand(rng) < exp(2*beta*Estate))
+            @inbounds g.state[idx] *= -1
+        end
+        
+    end
+    @includetextfile MonteCarlo updateMonteCarloIsingC
 
 
-        isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD 
-                                            : updateMonteCarloIsingC
+    isingUpdate = typeof(g) == IsingGraph{Int8} ? 
+            updateMonteCarloIsingD : updateMonteCarloIsingC
 
-        sim.isRunning = true
-        while shouldRun[]
-            isingUpdate()
+    sim.isRunning = true
 
+    while shouldRun[]
+        isingUpdate()
         sim.updates += 1
+        
         GC.safepoint()
     end
 
-        sim.isRunning = false
-        while !shouldRun[]
-            yield()
-        end
-        updateGraph(sim)
+    sim.isRunning = false
+    while !shouldRun[]
+        yield()
+    end
+    updateGraph(sim)
+
 end
 export updateGraph
 

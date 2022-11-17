@@ -3,7 +3,7 @@ function updateMonteCarloIsingD()
     
     idx = rand(rng, g_iterator)
     
-    Estate = @inbounds g.state[idx]*getE(g,idx)
+    Estate = @inbounds g.state[idx]*getFac(g,idx)
     
     if (Estate >= 0 || rand(rng) < exp(2*beta*Estate))
         @inbounds g.state[idx] *= -1
