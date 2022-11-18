@@ -46,6 +46,12 @@ include("Interaction/Interaction.jl")
 include("Analysis.jl")
 include("GPlotting.jl")
 include("IsingMagneticFields.jl")
+
+# using IsingMagneticFields
+# export IsingMagneticFields
+
+using IsingMagneticFields
+export IsingMagneticFields
 # include("Learning/IsingLearning.jl")
 
 # Probably doesn't need to be exported
