@@ -369,14 +369,16 @@ IsingSim Functions
 
 export runSim
 # Spawn graph update thread and load qml interface
-function runSim(sim; async)
+function runSim(sim; load = true, async = true)
     # showlatest_cfunction = showlatesteval(sim)
     Threads.@spawn errormonitor(updateGraph(sim))
-    loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction)
-    if async
-        exec_async()
-    else
-        exec()
+    if load
+        loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction)
+        if async
+            exec_async()
+        else
+            exec()
+        end
     end
 end
 

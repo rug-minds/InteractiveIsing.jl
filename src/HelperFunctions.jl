@@ -130,6 +130,17 @@ macro includetextfile(pathsymbs...)
     esc(Meta.parse(read(open(path), String)))
 end
 
+function setTuple(tuple, idx, val)
+    if idx == 1
+        return (val, tuple[2:end]...)
+    elseif idx == length(tuple)
+        return (tuple[1:(end-1)]..., val)
+    else
+        return (tuple[1:(idx-1)]...,val,tuple[(idx+1):end]...)
+    end
+end
+export setTuple
+
 # Etc
 # Not used?
 function sortedPair(idx1::Integer,idx2::Integer):: Pair{Integer,Integer}

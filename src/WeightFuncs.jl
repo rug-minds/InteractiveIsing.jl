@@ -114,5 +114,3 @@ function randomizeWeights(dr, func , dist)::Float32
         return weight + rand(dist)
     end
 end
-
-

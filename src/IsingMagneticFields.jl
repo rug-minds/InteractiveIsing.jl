@@ -15,7 +15,7 @@ function setMIdxs!(sim,idxs,strengths)
         return      
     end
 
-    g.d.mlist[idxs] = strengths
+    g.d.mlist[idxs] .= strengths
     setSimHType(sim, :MagField => true)
 end
 

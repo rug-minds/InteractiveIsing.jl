@@ -2,7 +2,7 @@
 Stuff for initialization of adjacency matrix
 =#
  
-export fillAdjList!, numEdges, latmod, initAdj, adjToMatrix
+export fillAdjList!, numEdges, latmod, adjToMatrix
 
 """
 Creates an entry for an adjacency list
@@ -94,4 +94,9 @@ function adjToMatrix(adj)
         end
     end
     return matr
+end
+
+export newAdj!
+function newAdj!(g, wf)
+    g.adj = initSqAdj(g.N, weightFunc = wf)
 end

@@ -162,9 +162,15 @@ end
 Initialization of adjacency matrix for a given N
 and using a weightfunc
 """
-function initSqAdj(N; weightFunc = defaultIsingWF)
+function initSqAdj(N; weightFunc = defaultIsingWF, self = false, selfWeights = -1 .* ones(N^2))
     adj = Vector{Vector{Conn}}(undef,N^2)
     fillAdjList!(adj,N, weightFunc)
+    if self
+        for (idx,el) in enumerate(adj)
+            append!(el,[(idx,selfWeights[idx])])
+        end
+    end
+
     return adj
 end
 
@@ -173,12 +179,6 @@ Initialization of adjacency matrix for a given N
 and using a weightfunc with a self energy
 """
 function initSqAdjSelf(N; selfWeights = -1 .* ones(N^2), weightFunc = defaultIsingWF)
-    adj = Vector{Vector{Conn}}(undef,N^2)
-    fillAdjList!(adj,N, weightFunc)
-    for (idx,el) in enumerate(adj)
-        append!(el,[(idx,selfWeights[idx])])
-    end
-    return adj
+    return initSqAdj(N; weightFunc, self, selfWeights)
 end
-
 
