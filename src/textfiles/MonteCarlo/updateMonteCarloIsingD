@@ -1,14 +1,10 @@
 function updateMonteCarloIsingD()
-    # function getEFactor2()
-    #     list = g.adj[idx]
-    #     return -sum(connW.(list).* @inbounds (@view g.state[connIdx.(list)]))
-    # end
 
     beta = 1/(TIs[])
     
     idx = rand(rng, g_iterator)
     
-    # Estate = @inbounds g.state[idx]*getEFactor2()
+    # Estate = @inbounds g.state[idx]*getEFactor2(idx)
     Estate = @inbounds g.state[idx]*getEFactor(g,idx, htype)
 
     

@@ -90,37 +90,3 @@ function benchmarkFuncGenerated2(sim, iterations, rng)
 
     return t_end-t_start
 end
-
-
-function benchmarkFuncGenerated3(sim, iterations, rng)
-    g = sim.g
-    TIs = sim.TIs
-    htype = g.htype
-
-    g_iterator = ising_it(g, htype)
-    
-    getE(g,idx) = getEFactor(g,idx, htype)
-
-
-    # Defining argumentless functions here seems faster.
-    
-    # Offset large function into files for clearity
-    @includetextfile ".." src textfiles MonteCarlo updateMonteCarloIsingD3
-    @includetextfile ".." src textfiles MonteCarlo updateMonteCarloIsingC3
-
-    isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD : updateMonteCarloIsingC
-   
-    sim.updates = 0
-
-    t_start = time()
-
-    for _ in 1:(iterations)
-        isingUpdate()
-        # sim.updates += 1
-    end
-    t_end = time()
-
-    return t_end-t_start
-end
-
-# end

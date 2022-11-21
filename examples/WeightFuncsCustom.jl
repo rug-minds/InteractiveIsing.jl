@@ -51,3 +51,8 @@ isingNN2 = WeightFunc(
     (;dr, i,j,_...) -> 1/dr,
     NN = 2
 )
+
+isingNN22 = WeightFunc(
+    (;dr, i,j,_...) -> 1/(dr^2),
+    NN = 2
+)

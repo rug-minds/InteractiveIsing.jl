@@ -16,7 +16,7 @@ function setMIdxs!(sim,idxs,strengths)
     end
 
     g.d.mlist[idxs] .= strengths
-    setSimHType(sim, :MagField => true)
+    setSimHType!(sim, :MagField => true)
 end
 
 export setMFunc!
@@ -84,7 +84,7 @@ Removes magnetic field
 function remM!(sim)
     g = sim.g
     g.d.mlist = zeros(Float32, g.size)
-    setSimHType(sim, :MagField => false)
+    setSimHType!(sim, :MagField => false)
 end
 
 export plotM

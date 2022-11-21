@@ -42,9 +42,9 @@ include("IsingGraphs.jl")
 include("SetEls.jl")
 
 # include("IsingMetropolis.jl")
-include("IsingSim.jl")
+include("Sim/Sim.jl")
 include("Interaction/Interaction.jl")
-include("Analysis.jl")
+include("Analysis/Analysis.jl")
 include("GPlotting.jl")
 include("IsingMagneticFields.jl")
 

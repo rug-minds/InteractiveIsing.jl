@@ -96,7 +96,10 @@ function adjToMatrix(adj)
     return matr
 end
 
-export newAdj!
-function newAdj!(g, wf)
+
+function setAdj!(sim, wf)
+    g = sim.g
     g.adj = initSqAdj(g.N, weightFunc = wf)
+    setSimHType!(sim, :NN => wf.NN)
 end
+export setAdj!

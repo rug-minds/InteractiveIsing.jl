@@ -108,8 +108,8 @@ function editHType!(g, pairs...)
 end
 export editHType!
 
-export setSimHType
-function setSimHType(sim, pairs...; prt = false)
+export setSimHType!
+function setSimHType!(sim, pairs...; prt = false)
     sim.g.htype = editHType(sim.g.htype, pairs...)
     if prt
         println(sim.g.htype)
@@ -149,6 +149,7 @@ end
 
 getHParam(g, symb) = getHParam(g.htype, symb)
 export getHParam
+export getHParamType
 
 
 """
@@ -260,7 +261,7 @@ weightedloop = hFactor("-connW(conn)*g.state[connIdx(conn)]", :Weighted, true, t
 magfac = hFactor("-g.d.mlist[idx]", :MagField, true, false)
 clampfac = hFactor("g.d.clampfac[idx]*g.state[idx]", :Clamp, true, false)
 defects = hFactor("", :Defects, false, false)
-NN = hFactor("", :NN, false, false)
+NN = hFactor("", :NN, 1, false)
 
 factors = [];
 

@@ -38,9 +38,8 @@ function addDefects!(sim, g::IsingGraph, spin_idxs::Vector{T}) where T <: Intege
     # If first defect, mark lattice as containing defects
     if getHParam(g, :Defects) == false
         editHType!(g, :Defects => true)
-        branchSim(sim)
     end
-
+    branchSim(sim)
 end
 
 # Removing defects, insert ordered list!
@@ -79,9 +78,9 @@ function remDefects!(sim, g::IsingGraph, spin_idxs::Vector{T}) where T <: Intege
 
     if isempty(g.d.defectList) && getHParam(g, :Defects) == true
         editHType!(g, :Defects => false)
-        branchSim(sim)
     end
 
+    branchSim(sim)
 end
 
 remDefect!(sim, g, spin_idx::T) where T <: Integer = remDefects!(sim, g,[spin_idx]) 

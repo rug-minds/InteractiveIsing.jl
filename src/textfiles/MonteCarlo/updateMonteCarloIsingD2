@@ -1,10 +1,11 @@
 function updateMonteCarloIsingD()
+
     T = TIs[]
 
     beta = T>0 ? 1/T : Inf
     
     idx = rand(rng, g_iterator)
-    Estate = @inbounds g.state[idx]*getEFactor(g,idx,htype)
+    Estate = @inbounds -g.state[idx]*sum(connW.(g.adj[idx]).* @inbounds (@view g.state[connIdx.(g.adj[idx])]))
     
     if (Estate >= 0 || rand() < exp(2*beta*Estate))
         @inbounds g.state[idx] *= -1
