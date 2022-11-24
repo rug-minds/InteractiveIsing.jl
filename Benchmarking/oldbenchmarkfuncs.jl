@@ -73,8 +73,7 @@ end
 #Other stuff
 function updateMonteCarloIsingC2!(sim)
     g = sim.g
-    T = sim.TIs[]
-    getE = g.d.hFuncRef[]
+    T = sim.obs.TIs[]
     @inline function deltE(efac,newstate,oldstate)
         return efac*(newstate-oldstate)
     end
@@ -101,7 +100,7 @@ end
 
 function updateMonteCarloIsingD2!(sim)
     g = sim.g
-    T = sim.TIs[]
+    T = sim.obs.TIs[]
     getE = g.d.hFuncRef[]
 
     @inline function deltE(Estate)

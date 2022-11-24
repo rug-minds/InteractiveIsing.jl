@@ -2,7 +2,19 @@
 Re initialize simulation while running
 """
 function reInitSim(sim)
-    g = sim.g
+    for layer in sim.layers
+        reInitG!(layer)
+    end
+
+    M(sim)[] = 0
+    sim.updates = 0
+
+    branchSim(sim)
+
+    return
+end
+
+function reInitG!(g)
     g.state = typeof(g) == IsingGraph{Int8} ? initRandomState(g.size) : initRandomCState(g.size)
     editHType!(g, :MagField => false, :Defects => false, :Clamp => false)
     g.d.defectBools = [false for x in 1:g.size]
@@ -10,17 +22,13 @@ function reInitSim(sim)
     g.d.aliveList = [1:g.size;]
     g.d.mlist = zeros(Float32, g.size)
 
-    sim.M[] = 0
-    sim.updates = 0
-
-    branchSim(sim)
+    return 
 end
-
 
 # Pauses sim and waits until paused
 export pauseSim
 function pauseSim(sim)
-    sim.shouldRun[] = false
+    shouldRun(sim)[] = false
 
     while sim.isRunning[]
         yield()
@@ -31,11 +39,11 @@ end
 
 export unpauseSim
 function unpauseSim(sim)
-    sim.isRunning && return
+    isRunning(sim) && return
 
-    sim.shouldRun[] = true
+    shouldRun(sim) = true
 
-    while !sim.isRunning
+    while !isRunning(sim)
         yield()
     end
 
@@ -47,11 +55,11 @@ function annealing(sim, Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = 
     reInit && initIsing()
 
     # Set temp and initial wait
-    TIs[] = Ti
+    TIs(sim)[] = Ti
     sleep(initWait)
     
     for temp in T_it
-        TIs[] = temp
+        TIs(sim)[] = temp
         sleep(stepWait)
         if saveImg
             save(File{format"PNG"}("Images/Annealing/Ising T$temp.PNG"), img[])

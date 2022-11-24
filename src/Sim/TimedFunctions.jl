@@ -3,7 +3,7 @@
 # Updating image of graph
 export updateImg
 function updateImg(sim)
-    sim.img[] = gToImg(sim.g)
+    sim.img[] = gToImg(sim.layers[activeLayer(sim)[]])
     return
 end
 
@@ -12,7 +12,7 @@ let avgWindow = 60, updateWindow = zeros(Int64,avgWindow), frames = 0
     global function updatesPerFrame(sim::IsingSim)
         updateWindow = insertShift(updateWindow,sim.updates)
         if frames > avgWindow
-            sim.upf[] = round(sum(updateWindow)/avgWindow)
+            upf(sim)[] = round(sum(updateWindow)/avgWindow)
             frames = 0
         end
         frames += 1
@@ -25,9 +25,9 @@ end
 let avg_window = 60, frames = 0
     global function magnetization(sim::IsingSim)
         avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
-        sim.M_array[] = insertShift(sim.M_array[], sum(sim.g.state))
+        sim.M_array[] = insertShift(sim.M_array[], sum(sim.layers[activeLayer(sim)[]].state))
         if frames > avg_window
-            sim.M[] = sum(sim.M_array[])/avg_window 
+            M(sim)[] = sum(sim.M_array[])/avg_window 
             frames = 0
         end 
         frames += 1 

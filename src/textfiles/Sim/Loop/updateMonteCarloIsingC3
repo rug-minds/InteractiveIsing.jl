@@ -7,7 +7,7 @@ function updateMonteCarloIsingC()
         Float32(2.) *(rand(rng,Float32)- Float32(.5))
     end
 
-    beta = 1/(TIs[])
+    beta = 1/(s_TIs[])
 
     idx = rand(rng, g_iterator)
      

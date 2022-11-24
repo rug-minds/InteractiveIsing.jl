@@ -97,8 +97,8 @@ function adjToMatrix(adj)
 end
 
 
-function setAdj!(sim, wf)
-    g = sim.g
+function setAdj!(sim, layer, wf)
+    g = sim.layers[layer]
     g.adj = initSqAdj(g.N, weightFunc = wf)
     setSimHType!(sim, :NN => wf.NN)
 end

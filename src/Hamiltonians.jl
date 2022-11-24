@@ -109,10 +109,10 @@ end
 export editHType!
 
 export setSimHType!
-function setSimHType!(sim, pairs...; prt = false)
-    sim.g.htype = editHType(sim.g.htype, pairs...)
+function setSimHType!(sim, layer, pairs...; prt = false)
+    sim.layers[layer].htype = editHType(sim.layers[layer].htype, pairs...)
     if prt
-        println(sim.g.htype)
+        println(sim.layers[layer].htype)
     end
     branchSim(sim)
 end

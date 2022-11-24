@@ -146,8 +146,8 @@ function readIdxs(sim)
   return idxs
 end
 
-function readPixelIdxs(sim,idx, groupsize = 3, border = 8)
-  g = sim.g
+function readPixelIdxs(sim, layer, idx, groupsize = 3, border = 8)
+  g = sim.layers[layer]
   startIdx = border*g.N + border
   idxs = [startIdx, startIdx+1, startIdx+2, startIdx+g.N , startIdx+g.N + 2 , startIdx+2*g.N,startIdx+2*g.N+1, startIdx+2*g.N+2]
   shift = groupsize * ( (idx-1) % 28) + g.N * (idx ÷ 28)

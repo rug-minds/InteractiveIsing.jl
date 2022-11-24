@@ -1,4 +1,11 @@
+include("Obs.jl")
 include("IsingSim.jl")
+
+@forward IsingSim Obs
+isRunning(sim) = sim.isRunning
+isRunning(sim,val) = sim.isRunning = val
+M_array(sim) = sim.M_array
+
 include("QML.jl")
 include("Loop.jl")
 include("TimedFunctions.jl")
@@ -19,7 +26,7 @@ export runSim
 # Spawn graph update thread and load qml interface
 function runSim(sim; load = true, async = true)
     # showlatest_cfunction = showlatesteval(sim)
-    Threads.@spawn errormonitor(updateGraph(sim))
+    Threads.@spawn updateGraph(sim, 1)
     if load
         loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction)
         if async
@@ -35,6 +42,6 @@ end
 
 # # # Draw circle to state
 # circleToStateQML(i,j,clamp=false) = Threads.@spawn circleToState(g,circ[],i,j,brush[]; clamp, imgsize = size(img[])[1])
-circleToStateREPL(i,j, clamp = false) = circleToState(g,circ[],i,j,brush[]; clamp, imgsize = size(img[])[1])
+# circleToStateREPL(i,j, clamp = false) = circleToState(g, circ[],i,j,brush[]; clamp, imgsize = size(img[])[1])
 
-function tempSweepQMLRepl(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true); analysisRunning[] = true; tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, analysisRunning=analysisRunning, savelast = true) end
+# function tempSweepQMLRepl(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true); analysisRunning[] = true; tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, analysisRunning=analysisRunning, savelast = true) end

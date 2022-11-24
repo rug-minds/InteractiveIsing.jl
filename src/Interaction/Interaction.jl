@@ -8,7 +8,8 @@ include("Cirlces.jl")
 export getOrdCirc, circleToState, ordCircleToImg, addRandomDefects!, offCirc, loopCirc, reOrderCirc
 
 # Draw a circle to state
-function circleToState(sim, g::AbstractIsingGraph, circ, i_in,j_in, brush; periodic = true, clamp = false, imgsize, debug = false)
+function circleToState(sim, layer, circ, i_in,j_in, brush; periodic = true, clamp = false, imgsize, debug = false)
+    g = sim.layers[layer]
     if g.N == imgsize
         i = Int16(round(i_in))
         j = Int16(round(j_in))
@@ -36,7 +37,8 @@ function circleToState(sim, g::AbstractIsingGraph, circ, i_in,j_in, brush; perio
 end
 
 # Add percantage of defects randomly to lattice
-function addRandomDefects!(sim, g::IsingGraph,p)
+function addRandomDefects!(sim, layer,p)
+    g = sim.layers[layer]
     if length(g.d.aliveList) <= 1 || p == 0
         return nothing
     end

@@ -141,6 +141,50 @@ function setTuple(tuple, idx, val)
 end
 export setTuple
 
+
+"""
+Registers the fieldnames of some struct B as methods for struct a
+where 
+    struct A
+        b::B
+        ...
+    end
+
+    struct B
+        a
+        b
+        c
+    end
+
+    s.t.
+
+    a = A(...)
+
+    a(a) = a.b.a
+    b(a) = a.b.b
+    ...
+
+Capitalization and naming has to be done like the above
+
+    Also defines the same methods with an extra argument which are setters
+"""
+macro forward(Outer, Inner)
+    funcs = quote end
+    for name in fieldnames(eval(Inner))
+        outervarname = lowercase(string(nameof(eval(Outer))))
+        innervarname = lowercase(string(nameof(eval(Inner))))
+        getstr = "@inline $name($outervarname) = $outervarname.$innervarname.$(string(name))"
+
+        setstr = "@inline $name($outervarname, val) = $outervarname.$innervarname.$(string(name)) = val"
+        push!(funcs.args, Meta.parse(getstr))
+        push!(funcs.args, Meta.parse(setstr))
+        push!(funcs.args, Meta.parse("export $name"))
+        
+    end
+    return esc(funcs)
+end
+
+
 # Etc
 # Not used?
 function sortedPair(idx1::Integer,idx2::Integer):: Pair{Integer,Integer}

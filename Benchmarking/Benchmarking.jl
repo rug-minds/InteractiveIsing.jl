@@ -44,8 +44,8 @@ function benchmarkFuncGenerated(sim, iterations, rng)
     # Defining argumentless functions here seems faster.
     
     # Offset large function into files for clearity
-    @includetextfile ".." src textfiles MonteCarlo updateMonteCarloIsingD
-    @includetextfile ".." src textfiles MonteCarlo updateMonteCarloIsingC
+    @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingD
+    @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingC
 
     isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD : updateMonteCarloIsingC
    
@@ -73,8 +73,8 @@ function benchmarkFuncGenerated2(sim, iterations, rng)
     # Defining argumentless functions here seems faster.
     
     # Offset large function into files for clearity
-    @includetextfile ".." src textfiles MonteCarlo updateMonteCarloIsingD2
-    @includetextfile ".." src textfiles MonteCarlo updateMonteCarloIsingC
+    @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingD2
+    @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingC
 
     isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD : updateMonteCarloIsingC
    

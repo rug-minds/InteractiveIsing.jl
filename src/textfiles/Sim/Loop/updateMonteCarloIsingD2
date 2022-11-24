@@ -1,6 +1,6 @@
 function updateMonteCarloIsingD()
 
-    T = TIs[]
+    T = s_TIs[]
 
     beta = T>0 ? 1/T : Inf
     

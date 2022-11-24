@@ -44,7 +44,8 @@ function gToImg(g::AbstractIsingGraph, maxsize = 500)
     return tempimg
 end
 
-function saveGImg(g)
+function saveGImg(sim, layer)
+    g = sim.layers[layer]
     foldername = imgFolder()
     println("Image saved to $(foldername)")
     save(File{format"PNG"}("$(foldername)/Ising Img $(nowStr()).PNG"), gToImg(g,500))

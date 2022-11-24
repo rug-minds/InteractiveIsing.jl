@@ -14,12 +14,12 @@ export QML
 # Is needed for fast execution if part of hamiltonian doesn't need to be checked
 # Should be in IsingSim.jl
 function branchSim(sim)
-    if sim.shouldRun[]
-        sim.shouldRun[] = false 
-        while sim.isRunning[]
+    if shouldRun(sim)[]
+        shouldRun(sim)[] = false
+        while sim.isRunning
             yield()
         end
-        sim.shouldRun[] = true;
+        shouldRun(sim)[] = true;
     end
 end
 export branchSim
@@ -37,7 +37,7 @@ include("Hamiltonians.jl")
 using .Hamiltonians
 export Hamiltonians
 
-include("IsingGraphs.jl")
+include("IsingGraphs/IsingGraphs.jl")
 
 include("SetEls.jl")
 
