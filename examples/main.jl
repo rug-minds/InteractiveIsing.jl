@@ -24,6 +24,6 @@ const sim = IsingSim(
     graphSize = 500, 
     weighted = true;
     weightFunc
-    )
+)
 
 g = sim(true);
