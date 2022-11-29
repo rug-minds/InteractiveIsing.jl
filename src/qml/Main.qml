@@ -10,8 +10,8 @@ import "TSweepWindow"
 ApplicationWindow {
   id: root
   title: "Ising Simulation"
-  width: canvas.width + 256
-  height: canvas.height + 256
+  width: canvas.width + 300
+  height: canvas.height + 300
   // width: 712
   // height: 712
   visible: true
@@ -37,22 +37,29 @@ ApplicationWindow {
     }
   }
 
-
+  TopPanel{
+    anchors.top: parent.top
+    anchors.horizontalCenter: parent.horizontalCenter
+    
+      // Layout.alignment: Qt.AlignHCenter
+  }
 
   // Whole application in a column
   // Screen stuff above, panels and text under
   ColumnLayout{
     // anchors.fill: parent
     anchors.centerIn: parent
-    spacing: 32
+    spacing: 2
 
-    TopPanel{
-      Layout.alignment: Qt.AlignHCenter
+    LayerSelector{
+        Layout.alignment: Qt.AlignHCenter
+        // anchors.bottom: mainrow.top
     }
 
     // Middle row
     // Brush - Screen - Temperature
     RowLayout{
+      id: mainrow
       spacing: 6
       Layout.alignment: Qt.AlignHCenter
 

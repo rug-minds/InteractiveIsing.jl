@@ -8,7 +8,31 @@ import Qt.labs.platform
 // Inserting Defects
 // Magnetization
 ColumnLayout{
+    spacing: 2
     Text{
-        sele
+        Layout.alignment: Qt.AlignCenter
+        text: "Layer" + " " + obs.activeLayer
+    }
+    RowLayout{
+        Layout.alignment: Qt.AlignCenter
+        Button{
+            text: "<"
+            onClicked:
+            {
+                if (obs.layer > 1){
+                    obs.layer += -1
+                }
+            }
+        }
+        Button{
+            Layout.alignment: Qt.AlignCenter
+            text: ">"
+            onClicked:
+            {
+                if (obs.layer < obs.nlayers){
+                    obs.layer += 1
+                }
+            }
+        }
     }
 }

@@ -1,6 +1,8 @@
 struct Obs
     # Active Layer
     activeLayer::Observable{Int32}
+    #
+    nlayers::Observable{Int32}
     # length/width of graph
     gSize::Observable{Int32}
 
@@ -28,9 +30,11 @@ struct Obs
     analysisRunning::Observable{Bool}
 end
 
-Obs(;graphSize, initTemp, initbrushR, initImg) = Obs(  
+Obs(;nlayers = 1, graphSize, initTemp, initbrushR, initImg) = Obs(  
     # Active Layer
     Observable(Int32(1)),
+    # Nlayers
+    Observable(Int32(nlayers)),
     # Size of sim
     Observable(Int32(graphSize)),
     # Temperature

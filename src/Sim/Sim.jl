@@ -5,6 +5,7 @@ include("IsingSim.jl")
 isRunning(sim) = sim.isRunning
 isRunning(sim,val) = sim.isRunning = val
 M_array(sim) = sim.M_array
+selectedLayer(sim) = sim.layers[sim.currentLayer]
 
 include("QML.jl")
 include("Loop.jl")
