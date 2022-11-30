@@ -30,6 +30,7 @@ end
 
 """
 Read CSV and outputs dataframe
+Make this use julia data format
 """
 csvToDF(filename) = DataFrame(CSV.File(filename)) 
 
