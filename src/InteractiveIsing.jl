@@ -33,7 +33,7 @@ include("HelperFunctions.jl")
 include("WeightFuncs.jl")
 include("SquareAdj.jl")
 
-include("Hamiltonians.jl")
+include("Hamiltonians/Hamiltonians.jl")
 using .Hamiltonians
 export Hamiltonians
 
