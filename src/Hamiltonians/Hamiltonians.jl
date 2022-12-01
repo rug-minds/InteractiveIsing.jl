@@ -10,9 +10,6 @@ include("HType.jl")
 # E.g. - σ_i * H_fac (check if the minus sign is in H_fac or not)
 include("Factor.jl")
 
-# All other terms in the Hamiltonian
-include("Term.jl")
-
 # Initialize the structs as module variables
 include("Vars.jl")
 

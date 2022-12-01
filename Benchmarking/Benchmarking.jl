@@ -26,7 +26,7 @@ function benchmarkIsing(sim, bfunc, iterations = 80000000)
     g = sim.g
 
     pauseSim(sim)
-    g.state = initRandomIsing!(g)
+    state(g,initRandomState(g))
     bfunc(sim,iterations, rng)
 end
 

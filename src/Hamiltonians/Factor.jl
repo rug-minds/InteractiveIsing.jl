@@ -1,13 +1,3 @@
-
-"""
-Add factors to factor array defined in module scope
-"""
-macro addfactor(facnames...)
-    for name in facnames
-        push!(factors,eval(name))
-    end
-end
-
 """
 Struct to define factors to be used in hamiltonian
 expr: A string in julia syntax for the factor
@@ -20,7 +10,7 @@ struct hFactor{T}
     expr::String
     symb::Symbol
     val::T
-    loop::Bool
+    type::Symbol
 end
 
 """
@@ -29,7 +19,7 @@ and wether the factor is part of the loop or not
 """
 function findExpr(symb, val, loop)
     for factor in factors
-        if factor.symb == symb && factor.val == val && factor.loop == loop
+        if factor.symb == symb && factor.val == val && factor.type == loop
             return factor.expr
         end
     end
@@ -66,7 +56,7 @@ function getEFacExpr(htype::Type{HType{Symbs,Vals}}) where {Symbs, Vals}
     exprvec = []
 
     line = "for conn in g.adj[idx] \n efactor +="
-    line *= buildExpr(true, Symbs, Vals)
+    line *= buildExpr(:FacLoop, Symbs, Vals)
 
     line *= "end"
 
@@ -74,7 +64,7 @@ function getEFacExpr(htype::Type{HType{Symbs,Vals}}) where {Symbs, Vals}
 
     line = "return efactor"
 
-    normalfactor = buildExpr(false, Symbs, Vals)
+    normalfactor = buildExpr(:FacTerm, Symbs, Vals)
     
     # Check if empty otherwise add a plus and the factor
     line *= normalfactor != "" ? "+ "*normalfactor : ""

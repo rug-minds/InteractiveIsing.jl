@@ -20,11 +20,14 @@ mutable struct IsingData
     defectList::Vector{Vert}
     
     # Magnetic field
-    mlist::Vector{Float32}
+    const mlist::Vector{Float32}
+
+    # Clamp factors
+    const clamps::Vector{Float32}
 end
 
 # IsingData(g, weighted = false) = IsingData( weighted, Int32.([1:g.size;]), false, [false for x in 1:g.size], Vector{Int32}() , false, zeros(Float32, g.size), weighted ? HFunc : HWeightedFunc)
-IsingData(g) = IsingData(Int32.([1:g.size;]), false, [false for x in 1:g.size], Vector{Int32}(), zeros(Float32, g.size))
+IsingData(g) = IsingData(Int32.([1:g.size;]), false, [false for x in 1:g.size], Vector{Int32}(), zeros(Float32, g.size), zeros(Float32, g.size))
 
 mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph
     # Global graph props to be tracked for performance
@@ -52,6 +55,9 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph
     )
 end
 
+@setterGetter IsingGraph
+@forward IsingGraph IsingData
+
 
 # Minimal Initialization using N and optional args
 IsingGraph(N::Integer; continuous = true, weighted = false, weightFunc = defaultIsingWF, selfE = true) =
@@ -60,51 +66,36 @@ IsingGraph(N::Integer; continuous = true, weighted = false, weightFunc = default
         IsingGraph(
             type, 
             N, 
-            state = initRandomState(N^2), 
+            state = initRandomState(continuous ? Float32 : Int8, N^2), 
             adj = adjfunc(N, weightFunc = weightFunc)
             ;weighted
         )
     end
 
-# Initialize continuous ising graph
-# CIsingGraph(N::Integer; weighted = false, weightFunc = defaultIsingWF, selfE = true) =  
-#     IsingGraph(
-#         Float32,
-#         N, 
-#         state = initRandomCState(N^2), 
-#         adj = selfE ? initSqAdjSelf(N, weightFunc = weightFunc) : initSqAdj(N, weightFunc = weightFunc)
-#         ;weighted
-#     )
-
 # Copy graph data to new one
 IsingGraph(g::IsingGraph) = deepcopy(g)
-
-# Initialization of state
-export initRandomIsing!
-function initRandomIsing!(g)
-    if typeof(g) == IsingGraph{Int8}
-        g.state = initRandomState(g.size)
-    else
-        g.state = initRandomCState(g.size)
-    end
-end
 
 export initRandomState
 """ 
 Initialize a random discrete state 
 """
-function initRandomState(size)::Vector{Int8}
-    return rand([-1,1],size)
+function initRandomState(g::IsingGraph{Int8})::Vector{Int8}
+    return rand([-1,1],size(g))
 end
-
-export initRandomCState
 """ 
 Initialize a random continuous state 
 """
-function initRandomCState(size)::Vector{Float32}
-    return 2 .* (rand(Float32,size) .- .5)
+function initRandomState(g::IsingGraph{Float32})::Vector{Float32}
+    return 2 .* (rand(Float32,size(g)) .- .5)
 end
 
+function initRandomState(type, size)
+    if type == Int8
+        return rand([-1,1],size)
+    elseif type == Float32
+        return 2 .* (rand(Float32,size) .- .5)
+    end
+end
 #=
 Methods
 =#
@@ -114,15 +105,6 @@ Returns an iterator over the ising lattice
 If there are no defects, returns whole range
 Otherwise it returns all alive spins
 """
-# function ising_it(g::AbstractIsingGraph)
-#     # if !g.d.defects
-#         it::UnitRange{Int32} = 1:g.size
-#         return it
-#     # else
-#     #     return g.d.aliveList
-#     # end
-
-# end
 
 @generated function ising_it(g::IsingGraph, htype::HType{Symbs,Params}) where {Symbs,Params}
     # Assumes :Defects will be found
@@ -171,6 +153,6 @@ Initialization of adjacency matrix for a given N
 and using a weightfunc with a self energy
 """
 function initSqAdjSelf(N; selfWeights = -1 .* ones(N^2), weightFunc = defaultIsingWF)
-    return initSqAdj(N; weightFunc, self, selfWeights)
+    return initSqAdj(N; weightFunc, self = true, selfWeights)
 end
 

@@ -184,6 +184,24 @@ macro forward(Outer, Inner)
     return esc(funcs)
 end
 
+"""
+Defines setter and getter functions for all struct fieldnames
+"""
+macro setterGetter(strct)
+    funcs = quote end
+    for name in fieldnames(eval(strct))
+        varname = lowercase(string(nameof(eval(strct))))
+
+        getstr = "@inline $name($varname) = $varname.$(string(name))"
+
+        setstr = "@inline $name($varname, val) = $varname.$(string(name)) = val"
+        push!(funcs.args, Meta.parse(getstr))
+        push!(funcs.args, Meta.parse(setstr))
+        push!(funcs.args, Meta.parse("export $name"))
+    end
+    return esc(funcs)
+
+end
 
 # Etc
 # Not used?

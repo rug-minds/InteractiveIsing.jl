@@ -15,12 +15,12 @@ function reInitSim(sim)
 end
 
 function reInitG!(g)
-    g.state = typeof(g) == IsingGraph{Int8} ? initRandomState(g.size) : initRandomCState(g.size)
+    state(g, initRandomState(g))
     editHType!(g, :MagField => false, :Defects => false, :Clamp => false)
-    g.d.defectBools = [false for x in 1:g.size]
-    g.d.defectList = []
-    g.d.aliveList = [1:g.size;]
-    g.d.mlist = zeros(Float32, g.size)
+    defectBools(g,[false for x in 1:g.size])
+    defectList(g,[])
+    aliveList(g, [1:g.size;])
+    mlist(g) .= Float32(0)
 
     return 
 end
