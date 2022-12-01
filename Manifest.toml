@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.2"
+julia_version = "1.8.3"
 manifest_format = "2.0"
-project_hash = "5cf66be55535006fc1b76f9331d74af54695e74e"
+project_hash = "ab9feb2fc12030107627ad15d3b44c3923110f0b"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -43,6 +43,12 @@ version = "0.4.6"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+
+[[deps.BenchmarkTools]]
+deps = ["JSON", "Logging", "Printf", "Profile", "Statistics", "UUIDs"]
+git-tree-sha1 = "d9a9701b899b30332bbcb3e1679c41cce81fb0e8"
+uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+version = "1.3.2"
 
 [[deps.BitFlags]]
 git-tree-sha1 = "629c6e4a7be8f427d268cebef2a5e3de6c50d462"
@@ -1063,6 +1069,10 @@ version = "1.3.1"
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
+[[deps.Profile]]
+deps = ["Printf"]
+uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
+
 [[deps.ProgressMeter]]
 deps = ["Distributed", "Printf"]
 git-tree-sha1 = "d7a7aef8f8f2d537104f170139553b14dfe39fe9"
@@ -1575,9 +1585,9 @@ version = "1.5.2+0"
 
 [[deps.jlqml_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "Qt6Declarative_jll", "Qt6Svg_jll", "libcxxwrap_julia_jll"]
-git-tree-sha1 = "9392303a6c4618564952c1956da82de060c479ea"
+git-tree-sha1 = "c6af472988aeae3deac514ffa616eeb61dbd77fc"
 uuid = "6b5019fb-a83d-5b4e-a9f7-678a36c28df7"
-version = "0.4.0+0"
+version = "0.4.0+1"
 
 [[deps.libaom_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]

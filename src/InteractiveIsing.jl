@@ -37,6 +37,7 @@ include("Hamiltonians/Hamiltonians.jl")
 using .Hamiltonians
 export Hamiltonians
 
+import Base: size
 include("IsingGraphs/IsingGraphs.jl")
 
 include("SetEls.jl")
@@ -46,7 +47,6 @@ include("Sim/Sim.jl")
 include("Interaction/Interaction.jl")
 include("Analysis/Analysis.jl")
 include("GPlotting.jl")
-include("IsingMagneticFields.jl")
 
 # include("Learning/IsingLearning.jl")
 

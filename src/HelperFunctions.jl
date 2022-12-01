@@ -141,6 +141,18 @@ function setTuple(tuple, idx, val)
 end
 export setTuple
 
+"""
+Checks if methods exist for the given name
+"""
+macro methodexists(methodname)
+    try
+        methods(eval(methodname))
+        return true
+    catch e
+        return false
+    end
+end
+
 
 """
 Registers the fieldnames of some struct B as methods for struct a
@@ -168,14 +180,21 @@ Capitalization and naming has to be done like the above
 
     Also defines the same methods with an extra argument which are setters
 """
-macro forward(Outer, Inner)
+macro forward(Outer, Inner, fieldname = lowercase(string(nameof(eval(Inner)))))
     funcs = quote end
+    fieldname = string(fieldname)
     for name in fieldnames(eval(Inner))
+        outername = string(nameof(eval(Outer)))
         outervarname = lowercase(string(nameof(eval(Outer))))
-        innervarname = lowercase(string(nameof(eval(Inner))))
-        getstr = "@inline $name($outervarname) = $outervarname.$innervarname.$(string(name))"
 
-        setstr = "@inline $name($outervarname, val) = $outervarname.$innervarname.$(string(name)) = val"
+        if @methodexists name
+            println("importing $name")
+            eval(:(import Base: $name))
+        end
+
+        getstr = "@inline $name($outervarname::$(outername)) = $outervarname.$fieldname.$(string(name))"
+
+        setstr = "@inline $name($outervarname::$(outername), val) = $outervarname.$fieldname.$(string(name)) = val"
         push!(funcs.args, Meta.parse(getstr))
         push!(funcs.args, Meta.parse(setstr))
         push!(funcs.args, Meta.parse("export $name"))
@@ -190,11 +209,18 @@ Defines setter and getter functions for all struct fieldnames
 macro setterGetter(strct)
     funcs = quote end
     for name in fieldnames(eval(strct))
+        strctname = string(nameof(eval(strct)))
         varname = lowercase(string(nameof(eval(strct))))
 
-        getstr = "@inline $name($varname) = $varname.$(string(name))"
+        if @methodexists name
+            println("importing $name")
+            eval(:(import Base: $name))
+        end
+        
+        getstr = "@inline $name($varname::$(strctname)) = $varname.$(string(name))"
 
-        setstr = "@inline $name($varname, val) = $varname.$(string(name)) = val"
+        setstr = "@inline $name($varname::$(strctname), val) = $varname.$(string(name)) = val"
+
         push!(funcs.args, Meta.parse(getstr))
         push!(funcs.args, Meta.parse(setstr))
         push!(funcs.args, Meta.parse("export $name"))

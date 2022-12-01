@@ -56,7 +56,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph
 end
 
 @setterGetter IsingGraph
-@forward IsingGraph IsingData
+@forward IsingGraph IsingData d
 
 
 # Minimal Initialization using N and optional args
