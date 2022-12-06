@@ -10,24 +10,23 @@ import Plots as pl
 using QML
 export QML
 
+# Remove this
+using BenchmarkTools
+
 # Restart MCMC loop to define new Hamiltonian function
 # Is needed for fast execution if part of hamiltonian doesn't need to be checked
 # Should be in IsingSim.jl
-function branchSim(sim)
-    if shouldRun(sim)[]
-        shouldRun(sim)[] = false
-        while sim.isRunning
+function branchSim(sim)::Nothing
+    if shouldRun(sim)
+        shouldRun(sim, false)
+        while isRunning(sim)
             yield()
         end
-        shouldRun(sim)[] = true;
+        shouldRun(sim, true)
     end
+    return
 end
 export branchSim
-
-export HType
-struct HType{Symbs, Vals} end
-
-
 
 include("HelperFunctions.jl")
 include("WeightFuncs.jl")
@@ -45,6 +44,8 @@ include("SetEls.jl")
 # include("IsingMetropolis.jl")
 include("Sim/Sim.jl")
 include("Interaction/Interaction.jl")
+include("Interaction/IsingMagneticFields.jl")
+include("Interaction/Clamping.jl")
 include("Analysis/Analysis.jl")
 include("GPlotting.jl")
 

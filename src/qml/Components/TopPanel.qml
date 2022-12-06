@@ -32,7 +32,7 @@ Item{
                 }
             }
             onClicked: {
-                obs.shouldRun = !obs.shouldRun
+                Julia.toggleSimRunning()
             }
         }
  

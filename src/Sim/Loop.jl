@@ -8,38 +8,81 @@ Then it waits until isRunning is set to false after which s_shouldRun can be act
 Then, this function itself makes a new branch where getE is defined again.
 export updateGraph
 """
-function updateGraph(sim::IsingSim, layer)
+function updateSim(sim::IsingSim, layer)
     g = sim.layers[layer]
-    s_TIs = TIs(sim)
-    htype = g.htype
-    
+    ghtype = htype(g)
     rng = MersenneTwister()
-    g_iterator = ising_it(g,htype)
-    s_shouldRun = shouldRun(sim)
+    g_iterator = ising_it(g,ghtype)
+    gstate = g.state
+    gadj = g.adj
+    params = sim.params
+    lTemp = Temp(sim)
+
+    updateFunc = continuous(g) ? updateMonteCarloIsingC : updateMonteCarloIsingD
+
+    updateGraph(sim, layer, params, lTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc)
+end
+
+export updateSim
+
+function updateGraph(sim::IsingSim, layer, params::IsingParams, lTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc)
     
-    # Defining argumentless functions here seems faster.
-    # Offset large function into files for clearity
-    @includetextfile Sim Loop updateMonteCarloIsingD
-    @includetextfile Sim Loop updateMonteCarloIsingC
-
-    isingUpdate = typeof(g) == IsingGraph{Int8} ? 
-            updateMonteCarloIsingD : updateMonteCarloIsingC
-
     isRunning(sim,true)
-
-    while s_shouldRun[]
-        isingUpdate()
-        sim.updates += 1
-        
+    
+    while shouldRun(sim)
+        updateFunc(lTemp, g, gstate, gadj, rng, g_iterator, ghtype)
+        params.updates += 1
         GC.safepoint()
     end
 
     isRunning(sim,false)
-    while !s_shouldRun[]
+    while !shouldRun(sim)
         yield()
     end
-    updateGraph(sim, layer)
+
+    updateSim(sim, layer)
 
 end
-export updateGraph
+
+function updateMonteCarloIsingD(lTemp, g, gstate, gadj, rng, g_iterator, ghtype)
+
+    beta = 1/(lTemp[])
+    
+    idx = rand(rng, g_iterator)
+    
+    Estate = @inbounds gstate[idx]*getEFactor(g, gstate, gadj, idx, ghtype)
+
+    minEdiff = 2*Estate
+
+    if (Estate >= 0 || rand(rng) < exp(beta*minEdiff))
+        @inbounds g.state[idx] *= -1
+    end
+    
+end
+
+function updateMonteCarloIsingC(lTemp, g, gstate, gadj, rng, g_iterator, ghtype)
+    # @inline function deltE(efac,newstate,oldstate)::Float32
+    #     return efac*(newstate-oldstate)
+    # end
+
+    @inline function sampleCState()::Float32
+        Float32(2*(rand(rng)-.5))
+    end
+
+    beta = 1/(lTemp[])
+
+    idx = rand(rng, g_iterator)
+     
+    oldstate = @inbounds gstate[idx]
+
+    efactor = getEFactor(g, gstate, gadj, idx, ghtype)
+
+    newstate = sampleCState()
+    
+    # Ediff = deltE(efactor,newstate,oldstate)
+    ediff = Ediff(g, ghtype, idx, efactor, oldstate, newstate)
+    if (ediff < 0 || rand(rng) < exp(-beta*ediff))
+        @inbounds g.state[idx] = newstate 
+    end
+end
 

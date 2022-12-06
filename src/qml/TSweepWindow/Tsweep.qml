@@ -10,7 +10,7 @@ import Qt.labs.platform
 
 ApplicationWindow {
 
-    property double ti: obs.TIs
+    property double ti: obs.Temp
     property double tstep: .2
     property double tend: .0
 

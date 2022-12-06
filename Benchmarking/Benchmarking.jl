@@ -1,5 +1,5 @@
 # module Benchmarking
-include("oldbenchmarkfuncs.jl")
+# include("oldbenchmarkfuncs.jl")
 using BenchmarkTools
 using Random
 
@@ -23,70 +23,91 @@ function benchmarkIsing(sim, bfunc, iterations = 80000000)
     Random.seed!(1234)
     rng = MersenneTwister(1234)
 
-    g = sim.g
-
+    g = graph(sim)
+    
+    isRunning(sim,false)
     pauseSim(sim)
-    state(g,initRandomState(g))
-    bfunc(sim,iterations, rng)
+    state(g) .= initRandomState(g)
+    # bfunc(sim,iterations, rng)
+    bfunc(sim, rng)
 end
 
-# export benchmarkFuncGenerated
-function benchmarkFuncGenerated(sim, iterations, rng)
-    g = sim.g
-    TIs = sim.TIs
-    htype = g.htype
-
-    g_iterator = ising_it(g, htype)
-    
-    getFac(g,idx) = getEFactor(g,idx, htype)
-
-
-    # Defining argumentless functions here seems faster.
-    
-    # Offset large function into files for clearity
-    @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingD
-    @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingC
-
-    isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD : updateMonteCarloIsingC
-   
-    sim.updates = 0
-
-    t_start = time()
-
-    for _ in 1:(iterations)
-        isingUpdate()
-        # sim.updates += 1
-    end
-    t_end = time()
-
-    return t_end-t_start
+function updateSim1(sim::IsingSim, rng)
+    g = sim.layers[1]
+    ghtype = htype(g)
+    g_iterator = ising_it(g,ghtype)
+    gstate = g.state
+    gadj = g.adj
+    params = sim.params
+    println("Starting")
+    updateGraph1(sim, params, g, gstate, gadj, ghtype, rng, g_iterator)
 end
 
-# export benchmarkFuncGenerated2
-function benchmarkFuncGenerated2(sim, iterations, rng)
-    g = sim.g
-    TIs = sim.TIs
-    htype = g.htype
-
-    g_iterator = ising_it(g, htype)
-
-    # Defining argumentless functions here seems faster.
-    
-    # Offset large function into files for clearity
-    @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingD2
-    @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingC
-
-    isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD : updateMonteCarloIsingC
-   
-    sim.updates = 0
-
-    t_start = time()
-
-    for _ in 1:(iterations)
-        isingUpdate()
-        sim.updates += 1
+function updateGraph1(sim::IsingSim, params, g, gstate, gadj, ghtype, rng, g_iterator)
+        
+    ti = time()
+    for _ in 1:10^8
+        updateMonteCarloIsingD1(params, g, gstate, gadj, rng, g_iterator, ghtype)
+        params.updates += 1
     end
-    t_end = time()
+    tf = time()
 
-    return t_end-t_start
+    println(tf - ti)
+
+end
+
+function updateMonteCarloIsingD1(params, g, gstate, gadj, rng, g_iterator, ghtype)
+    beta = 1/(params.Temp)
+    
+    idx = rand(rng, g_iterator)
+    
+    Estate = @inbounds gstate[idx]*getEFactor(g, gstate, gadj, idx, ghtype)
+
+    minEdiff = 2*Estate
+
+    if (Estate >= 0 || rand(rng) < exp(beta*minEdiff))
+        @inbounds g.state[idx] *= -1
+    end
+    
+end
+
+function updateSim2(sim::IsingSim, rng)
+    g = sim.layers[1]
+    ghtype = htype(g)
+    g_iterator = ising_it(g,ghtype)
+    gstate = g.state
+    gadj = g.adj
+    params = sim.params
+    obs = sim.obs
+
+    updateGraph2(sim, obs, params, g, gstate, gadj, ghtype, rng, g_iterator)
+end
+
+function updateGraph2(sim::IsingSim, obs, params, g, gstate, gadj, ghtype, rng, g_iterator)
+    
+    ti = time()
+    for _ in 1:10^8
+        updateMonteCarloIsingD2(obs, g, gstate, gadj, rng, g_iterator, ghtype)
+        params.updates += 1
+    end
+    tf = time()
+
+    println(tf - ti)
+
+end
+
+function updateMonteCarloIsingD2(obs, g, gstate, gadj, rng, g_iterator, ghtype)
+
+    beta = 1/(obs.Temp[])
+    
+    idx = rand(rng, g_iterator)
+    
+    Estate = @inbounds gstate[idx]*getEFactor(g, gstate, gadj, idx, ghtype)
+
+    minEdiff = 2*Estate
+
+    if (Estate >= 0 || rand(rng) < exp(beta*minEdiff))
+        @inbounds g.state[idx] *= -1
+    end
+    
 end

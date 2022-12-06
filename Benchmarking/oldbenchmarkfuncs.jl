@@ -1,4 +1,65 @@
 
+# export benchmarkFuncGenerated
+function benchmarkFuncGenerated(sim, iterations, rng)
+    g = sim.g
+    TIs = sim.TIs
+    htype = g.htype
+
+    g_iterator = ising_it(g, htype)
+    
+    getFac(g,idx) = getEFactor(g,idx, htype)
+
+
+    # Defining argumentless functions here seems faster.
+    
+    # Offset large function into files for clearity
+    @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingD
+    @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingC
+
+    isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD : updateMonteCarloIsingC
+   
+    sim.updates = 0
+
+    t_start = time()
+
+    for _ in 1:(iterations)
+        isingUpdate()
+        # sim.updates += 1
+    end
+    t_end = time()
+
+    return t_end-t_start
+end
+
+# export benchmarkFuncGenerated2
+function benchmarkFuncGenerated2(sim, iterations, rng)
+    g = sim.g
+    TIs = sim.TIs
+    htype = g.htype
+
+    g_iterator = ising_it(g, htype)
+
+    # Defining argumentless functions here seems faster.
+    
+    # Offset large function into files for clearity
+    @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingD2
+    @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingC
+
+    isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD : updateMonteCarloIsingC
+   
+    sim.updates = 0
+
+    t_start = time()
+
+    for _ in 1:(iterations)
+        isingUpdate()
+        sim.updates += 1
+    end
+    t_end = time()
+
+    return t_end-t_start
+end
+
 function benchmarkFunc(sim,iterations)
     g = sim.g
     TIs = sim.TIs

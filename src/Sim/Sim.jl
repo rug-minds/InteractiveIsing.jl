@@ -1,10 +1,15 @@
+include("IsingParams.jl")
 include("Obs.jl")
 include("IsingSim.jl")
 
 @forward IsingSim Obs
-isRunning(sim) = sim.isRunning
-isRunning(sim,val) = sim.isRunning = val
-M_array(sim) = sim.M_array
+@forward IsingSim IsingParams params
+export graph
+@inline graph(sim,layer = 1) = sim.layers[layer]
+# @inline shouldRun(sim) = sim.shouldRun
+# @inline isRunning(sim) = sim.isRunning
+# @inline isRunning(sim,val) = sim.isRunning = val
+@inline M_array(sim) = sim.M_array
 selectedLayer(sim) = sim.layers[sim.currentLayer]
 
 include("QML.jl")
@@ -27,7 +32,7 @@ export runSim
 # Spawn graph update thread and load qml interface
 function runSim(sim; load = true, async = true)
     # showlatest_cfunction = showlatesteval(sim)
-    Threads.@spawn updateGraph(sim, 1)
+    Threads.@spawn updateSim(sim, 1)
     if load
         loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction)
         if async
@@ -36,6 +41,33 @@ function runSim(sim; load = true, async = true)
             exec()
         end
     end
+end
+
+# Pauses sim and waits until paused
+function pauseSim(sim)
+    println("Pausing sim")
+
+    shouldRun(sim,false)
+
+    while isRunning(sim)
+        yield()
+    end
+
+    return true
+end
+export pauseSim
+
+function unpauseSim(sim)
+    println("Pausing sim")
+    isRunning(sim) && return
+
+    shouldRun(sim, true)
+
+    while !isRunning(sim)
+        yield()
+    end
+
+    return true
 end
 
 

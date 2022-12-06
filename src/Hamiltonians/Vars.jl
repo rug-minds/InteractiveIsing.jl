@@ -8,13 +8,14 @@ macro addfactor(facnames...)
     end
 end
 
-unweightedloop = hFactor("-g.state[connIdx(conn)]" , :Weighted, false, :FacLoop)
-weightedloop = hFactor("-connW(conn)*g.state[connIdx(conn)]", :Weighted, true, :FacLoop)
-magfac = hFactor("-g.d.mlist[idx]", :MagField, true, :FacTerm)
-clampfac = hFactor("beta(g)/2 * (newstate^2-oldstate^2 - 2 * clamps(g)[idx](statediff) )", :Clamp, true, :DifTerm)
+unweightedloop = hFactor("-gstate[connIdx(conn)]" , :Weighted, false, :FacLoop)
+weightedloop = hFactor("-connW(conn)*gstate[connIdx(conn)]", :Weighted, true, :FacLoop)
+magfac = hFactor("-mlist(g)[idx]", :MagField, true, :FacTerm)
+clampfac = hFactor("clampparam(g)/2 * (newstate^2-oldstate^2 - 2 * @inbounds clamps(g)[idx] * (statediff))", :Clamp, true, :DiffTerm)
 defects = hFactor("", :Defects, false, :Etc)
 
 factors = [];
+export factors
 
 @addfactor unweightedloop weightedloop magfac clampfac defects 
 

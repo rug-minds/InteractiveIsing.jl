@@ -10,7 +10,7 @@ Usage: Goes from current temperature of simulation, to TF, in stepsizes of TStep
   In between Temperatures there is an optional wait time of stepwait, for equilibration
   There is an initial wait time of equiwait for equilibration
 """
-function tempSweep(sim, layer, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]), corrF = sampleCorrPeriodic, analysisRunning = Observable(true), savelast = true, absvalcorrplot = false)
+function tempSweep(sim, layer, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]), corrF = sampleCorrPeriodic, analysisRunning = Observable(true), savelast = true, absvalcorrplot = false)
     g = sim.layers[layer]
     # Print details
     println("Starting temperature sweep")
@@ -44,7 +44,7 @@ function tempSweep(sim, layer, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, d
         println("Gathering data for temperature $T, $dpoints data points in intervals of $dpointwait seconds")
         waittime = length(T:TStep:TF)*(dpoints*dwait_actual + stepwait)
 
-        TIs[] = Float32(T)
+        Temp[] = Float32(T)
 
         if first # If first run, wait equiwait seconds for equibrilation
             println("The sweep will take approximately $(equiwait + waittime) seconds")
@@ -79,8 +79,8 @@ function tempSweep(sim, layer, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, d
             #=
             Saving dataframes
             =#
-            cldf = vcat(cldf, corrToDF((lVec,corrVec) , point, TIs[]) )
-            mdf = vcat(mdf, MToDF(last(M_array[]),point, TIs[]) )
+            cldf = vcat(cldf, corrToDF((lVec,corrVec) , point, Temp[]) )
+            mdf = vcat(mdf, MToDF(last(M_array[]),point, Temp[]) )
 
             if saveImg && (!savelast || point == dpoints)
 

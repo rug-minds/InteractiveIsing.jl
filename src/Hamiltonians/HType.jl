@@ -1,3 +1,23 @@
+export HType
+struct HType{Symbs, Vals} end
+
+function HType(pairs...)
+    symbs = getUniqueParams(factors)
+    vals = []
+
+    for symb in symbs
+        append!(vals, typeof(getFirstVal(symb))(0))
+        for pair in pairs
+            if pair[1] == symb
+                vals[end] = pair[2]
+            end
+        end
+    end
+
+    return HType{symbs,tuple(vals...)}()
+end
+export HType
+
 function getUniqueParams(factors)
     # Make a set of parameters for hamiltonian, ordered
     # by the order they are added by the macro addfactor
@@ -13,6 +33,15 @@ function getUniqueParams(factors)
         @label cont
     end
     return  paramset
+end
+
+function getFirstVal(symb)
+    for factor in factors
+        if factor.symb == symb
+            return factor.val
+        end
+    end
+    return false
 end
 
 """

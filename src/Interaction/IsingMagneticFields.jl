@@ -16,7 +16,7 @@ function setMIdxs!(sim, layer ,idxs,strengths)
     end
 
     mlist(g)[idxs] .= strengths
-    setSimHType!(sim, :MagField => true)
+    setSimHType!(sim, 1, :MagField => true)
 end
 
 export setMFunc!
@@ -34,7 +34,7 @@ function setMFunc!(sim, layer, func::Function)
             m_matr[y,x] = func(;x,y)
         end
     end
-    setMIdxs!(sim,[1:g.size;],reshape(transpose(m_matr),g.size));
+    setMIdxs!(sim, 1, [1:g.size;],reshape(transpose(m_matr),g.size));
     return
 end
 
@@ -56,17 +56,17 @@ export setMFuncRepeating!
 Set a time dependent magnetic field function (;x,y,t) -> f(x,y,t)
 which keeps repeating until a button is pressed
 """
-function setMFuncRepeating!(sim, func::Function, t_step = .1)
+function setMFuncRepeating!(sim, layer, func::Function, t_step = .1)
     repeating = Ref(true)
 
     function loopM()
         t = 0
         while repeating[]
             newfunc(;x,y) = func(;x,y,t)
-            setMFunc!(sim,newfunc)
+            setMFunc!(sim, layer, newfunc)
             t+= t_step
         end
-        remM!(sim)
+        remM!(sim, 1)
     end
     errormonitor( Threads.@spawn loopM() )
     println("Press any button to cancel")
@@ -84,7 +84,7 @@ Removes magnetic field
 function remM!(sim, layer)
     g = sim.layers[layer]
     mlist(g) .= Float32(0)
-    setSimHType!(sim, :MagField => false)
+    setSimHType!(sim, layer, :MagField => false)
 end
 
 export plotM

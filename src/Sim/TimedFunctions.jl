@@ -10,13 +10,13 @@ end
 # Track number of updates per frame
 let avgWindow = 60, updateWindow = zeros(Int64,avgWindow), frames = 0
     global function updatesPerFrame(sim::IsingSim)
-        updateWindow = insertShift(updateWindow,sim.updates)
+        updateWindow = insertShift(updateWindow,sim.params.updates)
         if frames > avgWindow
             upf(sim)[] = round(sum(updateWindow)/avgWindow)
             frames = 0
         end
         frames += 1
-        sim.updates = 0
+        sim.params.updates = 0
     end
 end
 

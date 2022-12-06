@@ -5,15 +5,12 @@ Simulation struct
 """
 mutable struct IsingSim
     #Graph Layers
-    layers::Vector{IsingGraph}
+    const layers::Vector{IsingGraph}
 
     # Property map for qml
     const pmap::JuliaPropertyMap
 
-    const M_array::Ref{Vector{Real}}
-    
-    # For tracking updates
-    updates::Int
+    const M_array::Ref{Vector{Float64}}
 
     # Image of graph
     const img::Base.RefValue{Matrix{RGB{Float64}}}
@@ -23,11 +20,8 @@ mutable struct IsingSim
     const updatingMag::Ref{Bool} 
     const updatingImg::Ref{Bool} 
 
-    isRunning::Bool
-
-    # Is sim already started?
-    started::Bool
-
+    # Simulation Parameters
+    params::IsingParams
     # Observables
     obs::Obs
 
@@ -41,9 +35,7 @@ mutable struct IsingSim
             initTemp = 1.,
             start = false
         );
-
-        type = continuous ? Float32 : Int8
-
+        
         g = IsingGraph(
             graphSize,
             continuous = continuous, 
@@ -62,13 +54,11 @@ mutable struct IsingSim
             # Property map
             JuliaPropertyMap(),
             zeros(Real,60),
-            0,
             img,
             Ref(false),
             Ref(false),
             Ref(false),
-            true,
-            false,
+            IsingParams(),
             obs
         )
 
@@ -78,12 +68,12 @@ mutable struct IsingSim
         # Initialize image
         sim.img[] = initImg
 
-        
-
         if start
             s()
         end
         return sim
+
+
     end
     #= END Initializer =# 
 end
@@ -103,3 +93,4 @@ function (sim::IsingSim)(start = true; async = true)
     end
     return sim.layers[1];
 end
+

@@ -16,18 +16,29 @@ mutable struct IsingData
     # For tracking defects
     aliveList::Vector{Vert}
     defects::Bool
-    defectBools::Vector{Bool}
+    const defectBools::Vector{Bool}
     defectList::Vector{Vert}
     
     # Magnetic field
     const mlist::Vector{Float32}
 
-    # Clamp factors
+    #Beta clamp
+    clampparam::Float32
+    #clamps
     const clamps::Vector{Float32}
 end
 
 # IsingData(g, weighted = false) = IsingData( weighted, Int32.([1:g.size;]), false, [false for x in 1:g.size], Vector{Int32}() , false, zeros(Float32, g.size), weighted ? HFunc : HWeightedFunc)
-IsingData(g) = IsingData(Int32.([1:g.size;]), false, [false for x in 1:g.size], Vector{Int32}(), zeros(Float32, g.size), zeros(Float32, g.size))
+IsingData(g) = IsingData(Int32.([1:g.size;]), false, [false for x in 1:g.size], Vector{Int32}(), zeros(Float32, g.size), 0 , zeros(Float32, g.size))
+
+function reinitIsingData!(data, g)
+    data.aliveList = Int32.([1:g.size;])
+    data.defects = false
+    data.defectBools .= false
+    data.defectList .= Vector{Int32}()
+    data.mlist .= 0
+    data.clamps .= 0
+end
 
 mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph
     # Global graph props to be tracked for performance
@@ -58,7 +69,6 @@ end
 @setterGetter IsingGraph
 @forward IsingGraph IsingData d
 
-
 # Minimal Initialization using N and optional args
 IsingGraph(N::Integer; continuous = true, weighted = false, weightFunc = defaultIsingWF, selfE = true) =
     let adjfunc = continuous ? (selfE ? initSqAdjSelf : initSqAdj) : initSqAdj,
@@ -74,6 +84,13 @@ IsingGraph(N::Integer; continuous = true, weighted = false, weightFunc = default
 
 # Copy graph data to new one
 IsingGraph(g::IsingGraph) = deepcopy(g)
+
+function reinitIsingGraph!(g::IsingGraph)
+    g.state .= initRandomState(g)
+    g.htype = HType(:Weighted => getHParam(g.htype, :Weighted))
+    reinitIsingData!(g.d,g)
+end
+
 
 export initRandomState
 """ 
@@ -156,3 +173,5 @@ function initSqAdjSelf(N; selfWeights = -1 .* ones(N^2), weightFunc = defaultIsi
     return initSqAdj(N; weightFunc, self = true, selfWeights)
 end
 
+export continuous
+continuous(g::IsingGraph{T}) where T = T <: Integer ? false : true

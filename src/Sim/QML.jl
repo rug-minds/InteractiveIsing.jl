@@ -18,7 +18,7 @@ and all the local variables are actually variables that live in the sim object o
 function qmlFunctions(sim::IsingSim)
     s_circ = circ(sim)
     s_brush = brush(sim)
-    s_TIs = TIs(sim)
+    s_Temp = Temp(sim)
     s_M_array = M_array(sim)
     s_M = M(sim)
     s_brushR = brushR(sim)
@@ -61,14 +61,14 @@ function qmlFunctions(sim::IsingSim)
 
     # Sweep temperatures and record magnetization and correlation lengths
     # Make an interface for this
-    function tempSweepQML(TI = s_TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true)
+    function tempSweepQML(TI = s_Temp[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true)
         if !g.d.defects
             corrF = sampleCorrPeriodic
         else
             corrF = sampleCorrPeriodicDefects
         end
         # Catching error doesn't work like this, why?
-        Threads.@spawn errormonitor(tempSweep(sim, activeLayer(sim)[] , s_TIs, s_M_array; TI, TF, TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, s_analysisRunning=s_analysisRunning, corrF))
+        Threads.@spawn errormonitor(tempSweep(sim, activeLayer(sim)[] , s_Temp, s_M_array; TI, TF, TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, s_analysisRunning=s_analysisRunning, corrF))
     end
     @qmlfunction tempSweepQML
 
@@ -82,4 +82,16 @@ function qmlFunctions(sim::IsingSim)
     # Save an image of the graph
     saveGImgQML() = saveGImg(sim, activeLayer(sim)[])
     @qmlfunction saveGImgQML
+
+    function setTemp(temp)
+        sim.params.Temp = temp
+    end
+    @qmlfunction setTemp
+
+    function toggleSimRunning()
+        togglePauseSim(sim)
+    end
+    @qmlfunction toggleSimRunning
+
+
 end

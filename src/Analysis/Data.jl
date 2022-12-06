@@ -37,10 +37,10 @@ csvToDF(filename) = DataFrame(CSV.File(filename))
 """
 Helper Functions 
 """
-function insertShift(vec::Vector{T}, el::T) where T
+function insertShift(vec::Vector{T}, el) where T
     newVec = Vector{T}(undef, length(vec))
     newVec[1:(end-1)] = vec[2:end]
-    newVec[end] = el
+    newVec[end] = T(el)
     return newVec
 end
 

@@ -1,53 +1,24 @@
 """
 Re initialize simulation while running
 """
-function reInitSim(sim)
+function reInitSim(sim)::Nothing
     for layer in sim.layers
-        reInitG!(layer)
+        reinitIsingGraph!(layer)
     end
 
     M(sim)[] = 0
-    sim.updates = 0
+    updates(sim, 0)
 
     branchSim(sim)
-
-    return
 end
 
-function reInitG!(g)
-    state(g, initRandomState(g))
-    editHType!(g, :MagField => false, :Defects => false, :Clamp => false)
-    defectBools(g,[false for x in 1:g.size])
-    defectList(g,[])
-    aliveList(g, [1:g.size;])
-    mlist(g) .= Float32(0)
-
-    return 
-end
-
-# Pauses sim and waits until paused
-export pauseSim
-function pauseSim(sim)
-    shouldRun(sim)[] = false
-
-    while sim.isRunning[]
-        yield()
+export togglePauseSim
+function togglePauseSim(sim)
+    if isRunning(sim)
+        pauseSim(sim)
+    else
+        unpauseSim(sim)
     end
-
-    return true
-end
-
-export unpauseSim
-function unpauseSim(sim)
-    isRunning(sim) && return
-
-    shouldRun(sim) = true
-
-    while !isRunning(sim)
-        yield()
-    end
-
-    return true
 end
 
 function annealing(sim, Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Tstep:Tf, reInit = true, saveImg = true)
@@ -55,11 +26,11 @@ function annealing(sim, Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = 
     reInit && initIsing()
 
     # Set temp and initial wait
-    TIs(sim)[] = Ti
+    Temp(sim)[] = Ti
     sleep(initWait)
     
     for temp in T_it
-        TIs(sim)[] = temp
+        Temp(sim)[] = temp
         sleep(stepWait)
         if saveImg
             save(File{format"PNG"}("Images/Annealing/Ising T$temp.PNG"), img[])
@@ -71,9 +42,9 @@ export startSim
 # Set the render loop,
 # Define qml functions
 # Start graph update and qml interface
-function startSim(sim; async)
-    if !sim.started
-        sim.started = true
+function startSim(sim; async = true)
+    if !started(sim)
+        started(sim,true)
         setRenderLoop()
         qmlFunctions(sim)
         runSim(sim; async)

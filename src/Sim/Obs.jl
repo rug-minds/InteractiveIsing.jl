@@ -7,12 +7,12 @@ struct Obs
     gSize::Observable{Int32}
 
     # Temperature Observable
-    TIs::Observable{Float32}
+    Temp::Observable{Float32}
 
     # For drawing to simulation
     brush::Observable{Float32} 
     brushR::Observable{Int32} 
-    circ::Observable 
+    circ::Observable{Vector{Tuple{Int16, Int16}}} 
 
     # Magnetization
     M::Observable{Float32}
@@ -20,17 +20,14 @@ struct Obs
     # Updates per frame average
     upf::Observable{Int} 
 
-    # For Branching Simulation
-    shouldRun::Observable{Bool} 
-
     # Size of Image Window QML
-    imgSize::Observable
+    imgSize::Observable{Tuple{Int64, Int64}}
 
     # Analysis Is running
     analysisRunning::Observable{Bool}
 end
 
-Obs(;nlayers = 1, graphSize, initTemp, initbrushR, initImg) = Obs(  
+Obs(;nlayers = 1, graphSize, initTemp = 1, initbrushR, initImg) = Obs(  
     # Active Layer
     Observable(Int32(1)),
     # Nlayers
@@ -49,8 +46,6 @@ Obs(;nlayers = 1, graphSize, initTemp, initbrushR, initImg) = Obs(
     Observable(Float32(0.0)),
     # UPF
     Observable(0),
-    #Should Run
-    Observable(true),
     # Image Size
     Observable(size(initImg)),
     # Analysis Running
