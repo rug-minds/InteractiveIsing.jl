@@ -42,12 +42,30 @@ export startSim
 # Set the render loop,
 # Define qml functions
 # Start graph update and qml interface
-function startSim(sim; async = true)
+function startSim(sim; async = true, loadQML = true)
     if !started(sim)
+        # Set sim started to true
         started(sim,true)
-        setRenderLoop()
-        qmlFunctions(sim)
-        runSim(sim; async)
+
+        # Spawn MCMC thread on layer 1
+        errormonitor(Threads.@spawn updateSim(sim, 1))
+
+        # Load QML interface?
+        if loadQML
+            # Register QML Functions
+            qmlFunctions(sim)
+            # Set render loop global variable
+            setRenderLoop()
+
+            # Load qml files, observables and functions
+            loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction)
+            # Start interface in interactive mode or not
+            if async
+                exec_async()
+            else
+                exec()
+            end
+        end
     else
         error("Simulation already running")
     end

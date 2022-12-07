@@ -27,22 +27,6 @@ function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
     return
 end
 
-
-export runSim
-# Spawn graph update thread and load qml interface
-function runSim(sim; load = true, async = true)
-    # showlatest_cfunction = showlatesteval(sim)
-    Threads.@spawn updateSim(sim, 1)
-    if load
-        loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction)
-        if async
-            exec_async()
-        else
-            exec()
-        end
-    end
-end
-
 # Pauses sim and waits until paused
 function pauseSim(sim)
     println("Pausing sim")
