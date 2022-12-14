@@ -2,8 +2,8 @@
 Re initialize simulation while running
 """
 function reInitSim(sim)::Nothing
-    for layer in sim.layers
-        reinitIsingGraph!(layer)
+    for g in sim.gs
+        reinitIsingGraph!(g)
     end
 
     M(sim)[] = 0
@@ -71,3 +71,9 @@ function startSim(sim; async = true, loadQML = true)
     end
 
 end
+
+function setCircR(sim, r)
+    brushR(sim)[] = r
+    circ(sim, getOrdCirc(brushR(sim)[]))
+end
+export setCircR

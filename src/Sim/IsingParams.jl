@@ -5,6 +5,16 @@ mutable struct IsingParams
     isRunning::Bool
 
     started::Bool
+
+    circ::Vector{Tuple{Int16, Int16}}
 end
 
-IsingParams() = IsingParams(0,true, true, false)
+IsingParams(initbrushR) = 
+    IsingParams(
+        0,
+        true, 
+        true, 
+        false,
+        # Circ
+        getOrdCirc(Int32(initbrushR))
+    )

@@ -3,6 +3,7 @@
 using InteractiveIsing
 using InteractiveIsing.Hamiltonians
 using Distributions
+# using Revise
 
 # include(joinpath(@__DIR__ , "Learning", "IsingLearning.jl"))
 include(joinpath(@__DIR__ , "WeightFuncsCustom.jl"))
@@ -21,9 +22,10 @@ weightFunc = defaultIsingWF
 
 
 const sim = IsingSim(
-    continuous = true, 
-    graphSize = 500, 
-    weighted = true;
+    continuous = false, 
+    length = 300,
+    width = 500, 
+    weighted = false;
     weightFunc
 )
 

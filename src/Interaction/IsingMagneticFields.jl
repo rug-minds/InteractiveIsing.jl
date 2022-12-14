@@ -8,8 +8,7 @@ export setMIdxs!
 Set the magnetic field using two vectors, one gives the indexes of the positions,
 the other gives the magnetic field strength for the corresponding index
 """
-function setMIdxs!(sim, layer ,idxs,strengths)
-    g = sim.layers[layer]
+function setMIdxs!(sim, strengths; g = currentLayer(sim))
     if length(idxs) != length(strengths)
         error("Idxs and strengths lengths not the same")
         return      
@@ -26,15 +25,14 @@ Function needs to be specified as a julia anonymous functions that needs to
 have the named arguments x and y. The syntax to define an anonymous function
 is (;x,y) -> f(x,y)
 """
-function setMFunc!(sim, layer, func::Function)
-    g = sim.layers[layer]
-    m_matr = Matrix{Float32}(undef,g.N,g.N)
-    for y in 1:g.N
-        for x in 1:g.N
+function setMFunc!(sim, func::Function; g = currentLayer(sim))
+    m_matr = Matrix{Float32}(undef,glength(g),gwidth(g))
+    for x in 1:g.N
+        for y in 1:g.N
             m_matr[y,x] = func(;x,y)
         end
     end
-    setMIdxs!(sim, 1, [1:g.size;],reshape(transpose(m_matr),g.size));
+    setMIdxs!(sim, m_matr; g);
     return
 end
 
@@ -42,11 +40,10 @@ export setMFuncTimed!
 """
 Set a time dependent magnetic field function (;x,y,t) -> f(x,y,t)
 """
-function setMFuncTimed!(sim, layer, func::Function, interval = 5, t_step = .2)
-    g = sim.layers[layer]
+function setMFuncTimed!(sim, func::Function, interval = 5, t_step = .2; g = currentLayer(sim))
     for t in 0:t_step:interval
         newfunc(;x,y) = func(;x,y,t)
-        setMFunc!(sim,newfunc)
+        setMFunc!(sim, newfunc; g)
         sleep(t_step)
     end
 end
@@ -56,14 +53,14 @@ export setMFuncRepeating!
 Set a time dependent magnetic field function (;x,y,t) -> f(x,y,t)
 which keeps repeating until a button is pressed
 """
-function setMFuncRepeating!(sim, layer, func::Function, t_step = .1)
+function setMFuncRepeating!(sim, func::Function, t_step = .1;  g = currentLayer(sim))
     repeating = Ref(true)
 
     function loopM()
         t = 0
         while repeating[]
             newfunc(;x,y) = func(;x,y,t)
-            setMFunc!(sim, layer, newfunc)
+            setMFunc!(sim, newfunc; g)
             t+= t_step
         end
         remM!(sim, 1)
@@ -81,17 +78,15 @@ export remM!
 """
 Removes magnetic field
 """
-function remM!(sim, layer)
-    g = sim.layers[layer]
+function remM!(sim; g = currentLayer(sim))
     mlist(g) .= Float32(0)
-    setSimHType!(sim, layer, :MagField => false)
+    setSimHType!(sim, g, :MagField => false)
 end
 
 export plotM
 """ 
 Plot the magnetic field
 """
-function plotM(sim, layer)
-    g = sim.layers[layer]
-    imagesc(permutedims(reshape(g.d.mlist, g.N,g.N)))
+function plotM(sim; g = currentLayer(sim))
+    imagesc(mlist(g))
 end

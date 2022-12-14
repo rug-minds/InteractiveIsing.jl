@@ -2,7 +2,8 @@ export gToImg, resizeGImg, saveGImg, imagesc, plotAdj
 
 #Converts matrix of reals into matrix of rgb data based on color scheme
 function imagesc(data::AbstractMatrix{<:Real};
-                colorscheme::ColorScheme=ColorSchemes.viridis,
+                # colorscheme::ColorScheme=ColorSchemes.viridis,
+                colorscheme::ColorScheme=ColorSchemes.vermeer,
                 maxsize::Integer=512, rangescale=:extrema)
     s = maximum(size(data))
     if s > maxsize
@@ -37,12 +38,19 @@ function resizeGImg(img,N,maxsize)
 end
 
 function gToImg(g::AbstractIsingGraph, maxsize = 500)
-    tempimg = transpose(imagesc(reshape(g.state, (g.N,g.N) )  ))
-    if g.N < maxsize
-        tempimg = resizeGImg(tempimg,g.N,maxsize)
+    tempimg = imagesc(reshape(state(g), glength(g), gwidth(g)))
+    if gwidth(g) < maxsize
+        tempimg = resizeGImg(tempimg,gwidth(g),maxsize)
     end
     return tempimg
 end
+
+function gToImg(g::AbstractIsingGraph)
+    tempimg = imagesc(reshape(state(g), glength(g), gwidth(g)))
+    return tempimg
+end
+export gToImg
+
 
 function saveGImg(sim, layer)
     g = sim.layers[layer]

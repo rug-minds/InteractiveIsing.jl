@@ -85,7 +85,7 @@ function blockReadMatrix(sim::IsingSim, groupsize = 3, border = 8; imsize = 28)
                   repeat([1/8],groupsize), repeat([0], g.N-groupsize),
                   repeat([1/8],groupsize ÷ 2), [0], repeat([1/8],groupsize ÷ 2), repeat([0], g.N-groupsize),
                   repeat([1/8],groupsize))
-  first_row = vcat(first_row, repeat([0], g.size-length(first_row)) )
+  first_row = vcat(first_row, repeat([0], Nstates(g)-length(first_row)) )
 
   sparse = SparseVector(first_row)
   shift = 0

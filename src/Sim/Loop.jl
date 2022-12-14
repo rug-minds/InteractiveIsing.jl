@@ -8,8 +8,8 @@ Then it waits until isRunning is set to false after which s_shouldRun can be act
 Then, this function itself makes a new branch where getE is defined again.
 export updateGraph
 """
-function updateSim(sim::IsingSim, layer)
-    g = sim.layers[layer]
+function updateSim(sim::IsingSim, gidx)
+    g = gs(sim)[gidx]
     ghtype = htype(g)
     rng = MersenneTwister()
     g_iterator = ising_it(g,ghtype)
@@ -20,7 +20,7 @@ function updateSim(sim::IsingSim, layer)
 
     updateFunc = continuous(g) ? updateMonteCarloIsingC : updateMonteCarloIsingD
 
-    updateGraph(sim, layer, params, lTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc)
+    updateGraph(sim, gidx, params, lTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc)
 end
 
 export updateSim

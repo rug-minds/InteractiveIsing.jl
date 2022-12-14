@@ -4,8 +4,11 @@ export IsingSim
 Simulation struct
 """
 mutable struct IsingSim
+    const gs::Vector{IsingGraph}
     #Graph Layers
-    const layers::Vector{IsingGraph}
+    const layers::Vector{Vector{IsingLayer}}
+
+    layeridx::Int32
 
     # Property map for qml
     const pmap::JuliaPropertyMap
@@ -29,7 +32,8 @@ mutable struct IsingSim
     #= Initializer =#
     function IsingSim(;
             continuous = false,
-            graphSize = 512,
+            length = 500,
+            width = 500,
             weighted = true,
             weightFunc = defaultIsingWF,
             initTemp = 1.,
@@ -37,20 +41,25 @@ mutable struct IsingSim
         );
         
         g = IsingGraph(
-            graphSize,
+            length,
+            width,
             continuous = continuous, 
             weighted = weighted,
             weightFunc = weighted ? weightFunc : defaultIsingWF
         )
         
         initImg = gToImg(g)
-        initbrushR= round(graphSize/10)
+        initbrushR= round(min(length,width)/10)
 
-        obs = Obs(;graphSize, initTemp, initbrushR, initImg)
-
+        obs = Obs(;length = glength(g), width = gwidth(g), initTemp, initbrushR, initImg)
+        
         sim = new(
-            # Layers
+            # Graphs
             [g],
+            # Layers
+            [[IsingLayer(g,1,length,width)]],
+            # Layer idx
+            1,
             # Property map
             JuliaPropertyMap(),
             zeros(Real,60),
@@ -58,7 +67,7 @@ mutable struct IsingSim
             Ref(false),
             Ref(false),
             Ref(false),
-            IsingParams(),
+            IsingParams(initbrushR),
             obs
         )
 
@@ -91,6 +100,6 @@ function (sim::IsingSim)(start = true; async = true)
             startSim(sim; async)
         end
     end
-    return sim.layers[1];
+    return gs(sim)[1];
 end
 

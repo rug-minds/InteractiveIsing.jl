@@ -1,9 +1,9 @@
-function setClampIdxs(sim, layer, idxs, strenghts, cfac = 1)
-    g = graph(sim, layer)
+function setClampIdxs(sim, idxs, strenghts, cfac = 1, g = currentLayer(sim))
+
     clamps(g)[idxs] .= strenghts
     clampparam(g, cfac)
 
-    setSimHType!(sim, layer, :Clamp => true)
+    setSimHType!(sim, g, :Clamp => true)
 end
 export setClampIdxs
 
@@ -12,11 +12,11 @@ setClampFunc!(sim, layer, func, cfac = 1) = let vecs = functionToVecs(func, grap
 export setClampFunc!
 
 function functionToVecs(func, g)
-    m_matr = [Float32(func(;x,y)) for x in 1:g.N, y in 1:g.N]
-    ([1:g.size;],reshape(transpose(m_matr),g.size))
+    m_matr = [Float32(func(;x,y)) for y in 1:glength(g), x in 1:gwidth(layer)]
+    ([1:Nstates(g);],reshape(m_matr,Nstates(g)))
 end
     
 function vecToImage(vec, length, width)
-    imagesc(permutedims(reshape(vec, length, width)))
+    imagesc(reshape(vec, length, width))
 end
 export vecToImage

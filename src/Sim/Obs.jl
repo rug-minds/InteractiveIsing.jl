@@ -4,7 +4,9 @@ struct Obs
     #
     nlayers::Observable{Int32}
     # length/width of graph
-    gSize::Observable{Int32}
+    length::Observable{Int32}
+    
+    width::Observable{Int32}
 
     # Temperature Observable
     Temp::Observable{Float32}
@@ -12,7 +14,6 @@ struct Obs
     # For drawing to simulation
     brush::Observable{Float32} 
     brushR::Observable{Int32} 
-    circ::Observable{Vector{Tuple{Int16, Int16}}} 
 
     # Magnetization
     M::Observable{Float32}
@@ -25,23 +26,24 @@ struct Obs
 
     # Analysis Is running
     analysisRunning::Observable{Bool}
+    
 end
 
-Obs(;nlayers = 1, graphSize, initTemp = 1, initbrushR, initImg) = Obs(  
+Obs(;nlayers = 1, length, width, initTemp = 1, initbrushR, initImg) = Obs(  
     # Active Layer
     Observable(Int32(1)),
     # Nlayers
     Observable(Int32(nlayers)),
-    # Size of sim
-    Observable(Int32(graphSize)),
+    # length of screen
+    Observable(Int32(length)),
+    # width of screen
+    Observable(Int32(width)),
     # Temperature
     Observable(Float32(initTemp)),
     # Brush
     Observable(Float32(0.)),
     # BrushR
     Observable( Int32(initbrushR) ),
-    # Circ
-    Observable(getOrdCirc(Int32(initbrushR))),
     # M
     Observable(Float32(0.0)),
     # UPF

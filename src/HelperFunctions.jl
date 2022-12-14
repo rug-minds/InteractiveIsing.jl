@@ -1,24 +1,25 @@
 #=Grid lattice functions=#
 
 # Matrix Coordinates to vector Coordinates
-@inline function coordToIdx(i, j, N)
-    return (i - 1) * N + j
+@inline function coordToIdx(i, j, length)
+    return i + (j - 1) * length
 end
 
 # Insert coordinates as tuple
-coordToIdx((i, j), N) = coordToIdx(i, j, N)
+coordToIdx((i, j), length) = coordToIdx(i, j, length)
 
-# Go from idx to lattice coordinates
-@inline function idxToCoord(idx::Integer, N::Integer)
-    return ((idx - 1) ÷ N + 1, (idx - 1) % N + 1)
+# Go from idx to lattice coordinates, for rectangular grids
+@inline function idxToCoord(idx::Integer, length::Integer, width::Integer)
+    return ((idx - 1) % length + 1, (idx - 1) ÷ width + 1)
 end
 
-# Put a lattice index (i or j) back onto lattice by looping it around
-function latmod(i, N)
-    if i < 1 || i > N
-        return i = mod((i - 1), N) + 1
-    end
-    return i
+# Go from idx to lattice coordinates, for square grids
+@inline idxToCoord(idx::Integer, N::Integer) = idxToCoord(idx, N, N)
+
+
+# Put a lattice index (i or j) back onto lattice by looping in a direction
+@inline function latmod(idx, N)
+    return mod((idx - 1), N) + 1
 end
 
 # Array functions
@@ -237,4 +238,20 @@ function sortedPair(idx1::Integer,idx2::Integer):: Pair{Integer,Integer}
     else
         return idx2 => idx1
     end
+end
+
+"""
+Use a single idx to get an element of a vector of vectors
+"""
+function vecvecIdx(vec, idx)
+    function vecvecIdxInner(vec, idx, outeridx)
+        tmp_idx = idx - length(vec[outeridx])
+        if tmp_idx <= 0 
+            return vec[outeridx][idx]
+        else
+            vecvecIdxInner(vec, tmp_idx, outeridx+1)
+        end
+    end
+
+    vecvecIdxInner(vec, idx, 1)
 end

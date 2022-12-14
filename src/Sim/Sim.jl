@@ -4,13 +4,20 @@ include("IsingSim.jl")
 
 @forward IsingSim Obs
 @forward IsingSim IsingParams params
+# @setterGetter IsingSim]
+export gs
+@inline gs(sim) = sim.gs
+export layers
+@inline layers(sim) = sim.layers
+@inline layers(sim, idx) = vecvecIdx(layers(sim), idx)
 export graph
-@inline graph(sim,layer = 1) = sim.layers[layer]
+@inline graph(sim, graphidx = 1) = gs(sim)[graphidx]
 # @inline shouldRun(sim) = sim.shouldRun
 # @inline isRunning(sim) = sim.isRunning
 # @inline isRunning(sim,val) = sim.isRunning = val
 @inline M_array(sim) = sim.M_array
-selectedLayer(sim) = sim.layers[sim.currentLayer]
+export currentLayer
+@inline currentLayer(sim) = vecvecIdx(layers(sim), activeLayer(sim)[])
 
 include("QML.jl")
 include("Loop.jl")
@@ -21,11 +28,11 @@ include("User.jl")
 const img =  Ref(zeros(RGB{Float64},1,1))
 
 function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
-    buffer = reshape(buffer, size(img[]))
     buffer = reinterpret(ARGB32, buffer)
-    buffer .= transpose(img[])
+    buffer .= @view permutedims(img[])[1:end]
     return
 end
+export showlatest
 
 # Pauses sim and waits until paused
 function pauseSim(sim)

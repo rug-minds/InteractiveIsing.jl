@@ -8,32 +8,28 @@ export fillAdjList!, numEdges, latmod, adjToMatrix
 Creates an entry for an adjacency list
 I.e. a vector containing outgoing edges for a given spin will be created
 """
-function adjEntry!(adj, N, idx, weightFunc=defaultIsing)
-    periodic = weightFunc.periodic
-    NN = weightFunc.NN
-    (i, j) = idxToCoord(idx, N)
-    inv = weightFunc.invoke
+function adjEntry!(adj, length, width, idx, periodic, NN, inv)
     # Returns bool representing wether there is a connection
     # Bases connection on periodic and NN
     function doesConnect(i, j, icoup, jcoup, weight)
-        # If weight is zero, does no connections
-        if weight == 0.0
-            return false
-        end
+        # If weight is zero, does not connect
+        ! Bool(weight) && return false
 
+        # Filter out self connections and, if not periodic, connections that are out of the grid
         if periodic
             return !(icoup == i && jcoup == j)
         else
-            return (!(icoup == i && jcoup == j) && (icoup > 0 && jcoup > 0 && icoup <= N && jcoup <= N))
+            return (!(icoup == i && jcoup == j) && (icoup > 0 && jcoup > 0 && icoup <= length && jcoup <= width))
         end
     end
 
     
+    # If periodic, loop coordinates arround
     function coupIdxFunc(icoup, jcoup)
         if periodic
-            return coordToIdx(latmod(icoup, N), latmod(jcoup, N), N)
+            return coordToIdx(latmod(icoup, length), latmod(jcoup, width), length)
         else
-            return coordToIdx(icoup, jcoup, N)
+            return coordToIdx(icoup, jcoup, length)
         end
     end
 
@@ -44,16 +40,24 @@ function adjEntry!(adj, N, idx, weightFunc=defaultIsing)
                 return tupl[2]
             end
         end
+        # If not found, should fail
+        return nothing
     end
-
-
+ 
+    # Coordinates of idx
+    (i, j) = idxToCoord(idx, length)
+    # Entry of adj
     entry = []
-    for icoup in (i-NN):(i+NN)
-        for jcoup in (j-NN):(j+NN)
+    for jcoup in (j-NN):(j+NN)
+        for icoup in (i-NN):(i+NN)
             dr = sqrt((i - icoup)^2 + (j - jcoup)^2)
+            # Generate weight based on relative dist
             weight = inv(dr, (i+icoup)/2, (j+jcoup)/2)
-            if doesConnect(i, j, icoup, jcoup, weight)
 
+            # If not same point or out of lattice if not periodic
+            if doesConnect(i, j, icoup, jcoup, weight)
+                
+                # Idx of other spin
                 coup_idx = coupIdxFunc(icoup, jcoup)
 
                 # Undirected graph, so copy edge weight if already present
@@ -68,16 +72,20 @@ function adjEntry!(adj, N, idx, weightFunc=defaultIsing)
 
         end
     end
+    sort!(entry)
     adj[idx] = entry
 end
 
 """ 
 Initialize an adjacencylist to be used in an IsingGraph
 """
-function fillAdjList!(adj, N, weightFunc=defaultIsing)
+function fillAdjList!(adj, length, width, weightFunc=defaultIsingWF)
+    periodic = weightFunc.periodic
+    NN = weightFunc.NN
+    inv = weightFunc.invoke
 
-    for idx in 1:N*N
-        adjEntry!(adj, N, idx, weightFunc)
+    for idx in 1:length*width
+        adjEntry!(adj, length, width, idx, periodic, NN, inv)
     end
 
 end
@@ -85,9 +93,8 @@ end
 """
 Reads an adjacency list as a matrix
 """
-function adjToMatrix(adj)
-    N = length(adj)
-    matr = Matrix{Float32}(undef, N, N)
+function adjToMatrix(adj, length, width)
+    matr = Matrix{Float32}(undef, length, width)
     for (idx, tupls) in enumerate(adj)
         for tupl in tupls
             matr[idx, tupl[1]] = tupl[2]
@@ -96,10 +103,12 @@ function adjToMatrix(adj)
     return matr
 end
 
+adjToMatrix(g) = adjToMatrix(adj(g), glength(g), gwidth(g))
+
 
 function setAdj!(sim, layer, wf)
     g = sim.layers[layer]
-    g.adj = initSqAdj(g.N, weightFunc = wf)
+    adj(g) = initSqAdj(glength(g), gwidth(g), weightFunc = wf)
     setSimHType!(sim, :NN => wf.NN)
 end
 export setAdj!

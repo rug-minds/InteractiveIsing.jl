@@ -16,7 +16,6 @@ Should work since the macro only calls a function
 and all the local variables are actually variables that live in the sim object outside of the function
 """
 function qmlFunctions(sim::IsingSim)
-    s_circ = circ(sim)
     s_brush = brush(sim)
     s_Temp = Temp(sim)
     s_M_array = M_array(sim)
@@ -46,7 +45,7 @@ function qmlFunctions(sim::IsingSim)
 
 
     # Add percentage of defects to lattice
-    addRandomDefectsQML(pDefects) = addRandomDefects!(sim, activeLayer(sim)[], pDefects)
+    addRandomDefectsQML(pDefects) = addRandomDefects!(sim, currentLayer, pDefects)
     @qmlfunction addRandomDefectsQML
 
     # Initialize isinggraph and display
@@ -56,7 +55,7 @@ function qmlFunctions(sim::IsingSim)
     @qmlfunction initIsing
 
     # Draw circle to state
-    circleToStateQML(i,j,clamp=false) = errormonitor(Threads.@spawn circleToState(sim, activeLayer(sim)[], s_circ[], i, j, s_brush[]; clamp, imgsize = size(img[])[1]))
+    circleToStateQML(i,j,clamp=false) = errormonitor(Threads.@spawn circleToState(sim, currentLayer(sim), i, j, s_brush[]; clamp, imgsize = size(img[])))
     @qmlfunction circleToStateQML
 
     # Sweep temperatures and record magnetization and correlation lengths
@@ -75,7 +74,7 @@ function qmlFunctions(sim::IsingSim)
 
     # Save a new circle with size s_brushR[]
     function newCirc()
-        s_circ[] = getOrdCirc(s_brushR[])
+        circ(sim, getOrdCirc(s_brushR[]))
     end
     @qmlfunction newCirc
 

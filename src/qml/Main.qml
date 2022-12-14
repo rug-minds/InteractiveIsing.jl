@@ -74,25 +74,26 @@ ApplicationWindow {
         id: canvas
         // height: 500
         // width: 500
-        width: {
-          if(obs.gSize > 500)
-          {
-            return obs.gSize
-          }
-          else
-          {
-            return 500
-          }
+        width: { obs.width
+          // if(obs.gSize > 500)
+          // {
+          //   return obs.gSize
+          // }
+          // else
+          // {
+          //   return 500
+          // }
         }
         height: {
-          if(obs.gSize > 500)
-          {
-            return obs.gSize
-          }
-          else
-          {
-            return 500
-          }
+          obs.length
+          // if(obs.gSize > 500)
+          // {
+          //   return obs.gSize
+          // }
+          // else
+          // {
+          //   return 500
+          // }
         }
 
         paintFunction: showlatest

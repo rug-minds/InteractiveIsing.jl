@@ -13,7 +13,7 @@ function sampleCorrPeriodic(ig::IsingGraph, Lstep::Float16 = Float16(.5), lStart
 
     function sampleIdx2(idx1,L,rtheta)
         # turn idx into coordinates
-        ij = idxToCoord(idx1,length(g))
+        ij = idxToCoord(idx1,gwidth(g))
         # Turn angle and length into relative coordinates
         dij = Int32.(round.(sigToIJ(rtheta,L))) 
         # Turn old coordinates plus relative coordinates into and index again

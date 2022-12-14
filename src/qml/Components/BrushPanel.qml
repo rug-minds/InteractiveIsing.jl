@@ -65,7 +65,7 @@ RowLayout{
             // minimumValue: 1
             // maximumValue: 100
             from: 1
-            to: {Math.floor(obs.gSize/2)-1}
+            to: {Math.floor(Math.min(obs.length,obs.width)/2)-1}
             stepSize: 1
             onValueChanged: {
                 obs.brushR = value

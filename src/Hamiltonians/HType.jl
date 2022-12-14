@@ -106,13 +106,14 @@ export editHType
 function editHType!(g, pairs...)
     g.htype = editHType(g.htype, pairs...)
 end
+
 export editHType!
 
 export setSimHType!
-function setSimHType!(sim, layer, pairs...; prt = false)
-    sim.layers[layer].htype = editHType(sim.layers[layer].htype, pairs...)
+function setSimHType!(sim, g, pairs...; prt = false)
+    htype(g) = editHType(htype(g), pairs...)
     if prt
-        println(sim.layers[layer].htype)
+        println(htype(g))
     end
     branchSim(sim)
 end
@@ -147,6 +148,6 @@ function getHParamType(htype::Type{HType{Symbs,Vals}}, symb) where {Symbs, Vals}
     return getHParam(HType{Symbs,Vals}(), symb)
 end
 
-getHParam(g, symb) = getHParam(g.htype, symb)
+getHParam(g, symb) = getHParam(htype(g), symb)
 export getHParam
 export getHParamType
