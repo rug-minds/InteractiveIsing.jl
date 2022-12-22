@@ -4,20 +4,19 @@ include("IsingSim.jl")
 
 @forward IsingSim Obs
 @forward IsingSim IsingParams params
-# @setterGetter IsingSim]
-export gs
-@inline gs(sim) = sim.gs
-export layers
-@inline layers(sim) = sim.layers
-@inline layers(sim, idx) = vecvecIdx(layers(sim), idx)
+@setterGetter IsingSim img
+
+export image
+@inline image(sim::IsingSim) = sim.img
+
+@inline layer(sim, idx) = vecvecIdx(layers(sim), idx)
+export layer
+
 export graph
 @inline graph(sim, graphidx = 1) = gs(sim)[graphidx]
-# @inline shouldRun(sim) = sim.shouldRun
-# @inline isRunning(sim) = sim.isRunning
-# @inline isRunning(sim,val) = sim.isRunning = val
-@inline M_array(sim) = sim.M_array
+
 export currentLayer
-@inline currentLayer(sim) = vecvecIdx(layers(sim), activeLayer(sim)[])
+@inline currentLayer(sim) = vecvecIdx(layers(sim), layerIdx(sim)[])
 
 include("QML.jl")
 include("Loop.jl")
@@ -49,7 +48,7 @@ end
 export pauseSim
 
 function unpauseSim(sim)
-    println("Pausing sim")
+    println("Unpausing sim")
     isRunning(sim) && return
 
     shouldRun(sim, true)

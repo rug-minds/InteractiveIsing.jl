@@ -3,7 +3,7 @@
 # Updating image of graph
 export updateImg
 function updateImg(sim)
-    sim.img[] = gToImg(currentLayer(sim))
+    sim.img[] = gToImg(currentLayer(sim), colorscheme = colorscheme(sim))
     return
 end
 

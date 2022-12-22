@@ -13,7 +13,7 @@ export setClampFunc!
 
 function functionToVecs(func, g)
     m_matr = [Float32(func(;x,y)) for y in 1:glength(g), x in 1:gwidth(layer)]
-    ([1:Nstates(g);],reshape(m_matr,Nstates(g)))
+    ([1:nStates(g);],reshape(m_matr,nStates(g)))
 end
     
 function vecToImage(vec, length, width)

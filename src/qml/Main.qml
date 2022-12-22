@@ -10,8 +10,8 @@ import "TSweepWindow"
 ApplicationWindow {
   id: root
   title: "Ising Simulation"
-  width: canvas.width + 300
-  height: canvas.height + 300
+  minimumWidth: ((obs.qmlwidth < 500) ? 500 : obs.qmlwidth) + 300
+  minimumHeight: ((obs.qmlwidth < 500) ? 500 : obs.qmlwidth) + 300
   // width: 712
   // height: 712
   visible: true
@@ -40,93 +40,113 @@ ApplicationWindow {
   TopPanel{
     anchors.top: parent.top
     anchors.horizontalCenter: parent.horizontalCenter
-    
-      // Layout.alignment: Qt.AlignHCenter
+
+    // Layout.alignment: Qt.AlignHCenter
   }
 
   // Whole application in a column
   // Screen stuff above, panels and text under
-  ColumnLayout{
-    // anchors.fill: parent
-    anchors.centerIn: parent
-    spacing: 2
+  // Column{
+  //   id: midcolumn
+  //   // anchors.fill: parent
+  //   anchors.centerIn: parent
+  //   spacing: 2
 
-    LayerSelector{
-        Layout.alignment: Qt.AlignHCenter
-        // anchors.bottom: mainrow.top
+  LayerSelector{
+    // Layout.alignment: Qt.AlignHCenter
+    // anchors.bottom: mainrow.top
+    anchors.horizontalCenter: canvas.horizontalCenter
+    anchors.bottom: canvas.top
+  }
+
+  // Middle row
+  // Brush - Screen - Temperature
+  // RowLayout{
+  // Row{
+  // id: mainrow
+  // spacing: 6
+  // Layout.alignment: Qt.AlignHCenter
+
+  Item{
+    anchors {
+      left: root.left
+      verticalCenter: canvas.verticalCenter
+      leftMargin: 10
+      // rightMargin: 10
     }
-
-    // Middle row
-    // Brush - Screen - Temperature
-    RowLayout{
-      id: mainrow
-      spacing: 6
-      Layout.alignment: Qt.AlignHCenter
-
-      BrushPanel{
-        id: bpanel
-        Layout.alignment: Qt.AlignVCenter
-      }
+    width: (root.width - canvas.width)/2
+    height: canvas.height
 
 
-      JuliaCanvas{
-        Layout.alignment: Qt.AlignCenter
-        id: canvas
-        // height: 500
-        // width: 500
-        width: { obs.width
-          // if(obs.gSize > 500)
-          // {
-          //   return obs.gSize
-          // }
-          // else
-          // {
-          //   return 500
-          // }
-        }
-        height: {
-          obs.length
-          // if(obs.gSize > 500)
-          // {
-          //   return obs.gSize
-          // }
-          // else
-          // {
-          //   return 500
-          // }
-        }
 
-        paintFunction: showlatest
-
-        MouseArea{
-          anchors.fill: parent
-          onClicked: {
-            Julia.circleToStateQML(mouseY, mouseX, bpanel.clamp)
-          }
-        }
-
-      }
-
-      TempSlider{
-        Layout.alignment: Qt.AlignCenter
-      }
-    }
-
-    BottomPanel{
-      Layout.alignment: Qt.AlignCenter
+    BrushPanel{
+      id: bpanel
+      anchors.centerIn: parent
     }
   }
+
+
+  Item{
+    id: canvas
+    anchors.centerIn: parent
+    height: (obs.qmlwidth < 500) ? 500 : obs.qmlwidth
+    width: (obs.qmlwidth < 500) ? 500 : obs.qmlwidth
+    JuliaCanvas{
+      // Layout.alignment: Qt.AlignCenter
+      anchors.centerIn: parent
+      // id: canvas
+      id: jlcanvas
+
+      width: obs.qmlwidth
+      height: obs.qmllength
+
+      paintFunction: showlatest
+
+      MouseArea{
+        anchors.fill: parent
+        onClicked: {
+          Julia.circleToStateQML(mouseY, mouseX, bpanel.clamp)
+        }
+      }
+
+    }
+  }
+
+  Item{
+    anchors.right: parent.right
+    anchors.verticalCenter: canvas.verticalCenter
+    // anchors {
+    //   right: root.right
+    //   verticalCenter: canvas.verticalCenter
+    //   rightMargin: 10
+    // }
+
+    width: (root.width - canvas.width) / 2
+    height: canvas.height
+
+    TempSlider{
+      anchors.centerIn: parent
+    }
+  }
+
+  // }
+
+  BottomPanel{
+    anchors.bottom: parent.bottom
+    anchors.horizontalCenter: parent.horizontalCenter
+  }
+  // }
 
 
   // Timer for display
   Timer {
     // Set interval in ms:
     property int frames: 1
-    interval: 1/60*1000; running: true; repeat: true
-    onTriggered: {
-      Julia.timedFunctions();
-      canvas.update();
-      frames += 1
+      interval: 1/60*1000; running: true; repeat: true
+      onTriggered: {
+        Julia.timedFunctions();
+        jlcanvas.update();
+        frames += 1
+      }
     }
   }
-}

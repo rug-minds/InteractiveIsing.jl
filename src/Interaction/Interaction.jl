@@ -8,7 +8,7 @@ include("Cirlces.jl")
 export getOrdCirc, circleToState, ordCircleToImg, addRandomDefects!, offCirc, loopCirc, reOrderCirc
 
 # Draw a circle to state
-function circleToState(sim, g, i_in,j_in, brush; periodic = true, clamp = false, imgsize, debug = false)
+function circleToState(sim, g, i_in, j_in, brush; periodic = true, clamp = false, imgsize, debug = false)
 
     # If img is size of underlying graph, use rounded coordinate, otherwise scale
     i = glength(g) == imgsize[1]    ? Int16(round(i_in)) : Int16(round(i_in/imgsize*glength(g)))
@@ -30,7 +30,7 @@ function circleToState(sim, g, i_in,j_in, brush; periodic = true, clamp = false,
         println("Circle to state circle $circle")
     end
 
-    setSpins!(sim, g, circle, brush,clamp)
+    setSpins!(sim, g, circle, brush, clamp)
     
 end
 
@@ -42,7 +42,7 @@ function addRandomDefects!(sim, g, p)
 
     for _ in 1:round(length(aliveList(g))*p/100)
         idx = rand(liveList(g))
-        setSpin!(sim, g, idx, Int8(0) , true)
+        setSpins!(sim, g, [idx], Int8(0) , true)
     end
 
 end

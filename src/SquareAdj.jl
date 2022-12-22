@@ -8,7 +8,7 @@ export fillAdjList!, numEdges, latmod, adjToMatrix
 Creates an entry for an adjacency list
 I.e. a vector containing outgoing edges for a given spin will be created
 """
-function adjEntry!(adj, length, width, idx, periodic, NN, inv)
+function adjEntry(adj, length, width, idx, periodic, NN, inv)
     # Returns bool representing wether there is a connection
     # Bases connection on periodic and NN
     function doesConnect(i, j, icoup, jcoup, weight)
@@ -72,8 +72,7 @@ function adjEntry!(adj, length, width, idx, periodic, NN, inv)
 
         end
     end
-    sort!(entry)
-    adj[idx] = entry
+    return sort!(entry)
 end
 
 """ 
@@ -85,9 +84,8 @@ function fillAdjList!(adj, length, width, weightFunc=defaultIsingWF)
     inv = weightFunc.invoke
 
     for idx in 1:length*width
-        adjEntry!(adj, length, width, idx, periodic, NN, inv)
+        adj[idx] = adjEntry(adj, length, width, idx, periodic, NN, inv)
     end
-
 end
 
 """

@@ -1,4 +1,4 @@
-export AbstractIsingGraph, IsingGraph, CIsingGraph, reInitGraph!, coordToIdx, idxToCoord, ising_it, setSpins!, setSpin!, addDefects!, remDefects!, addDefect!, remDefect!, 
+export AbstractIsingGraph, IsingGraph, CIsingGraph, reInitGraph!, coordToIdx, idxToCoord, ising_it, setSpins!, addDefects!, remDefects!, addDefect!, remDefect!, 
     connIdx, connW, initSqAdj, HFunc, HWeightedFunc, HMagFunc, HWMagFunc, setGHFunc!
 
 # Aliases
@@ -13,7 +13,10 @@ Makes a reshaped view of a vector so that a part of memory can be interpreted as
 @inline function reshapeView(vec, start, length, width)
     return reshape((@view vec[start:(start + width*length - 1)]), length, width)
 end
+export reshapeView
 
 include("Data.jl")
 include("Graph.jl")
 include("Layer.jl")
+include("SetEls.jl")
+include("User.jl")

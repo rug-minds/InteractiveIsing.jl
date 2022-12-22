@@ -6,7 +6,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
     # Global graph props to be tracked for performance
     size::Tuple{Int32,Int32}
 
-    Nstates::Int32
+    nStates::Int32
 
     # Vertices and edges
     state::Vector{T}
@@ -17,7 +17,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
     IsingGraph(type::DataType; length, width, state, adj, weighted = false) = 
     (   
         h = new{type}(
-            (length,width),
+            (length*width,1),
             length*width,
             state,
             adj,
@@ -34,9 +34,10 @@ end
 @setterGetter IsingGraph
 @forward IsingGraph GraphData d
 
-import Base: length
-glength(g::IsingGraph) = size(g)[1]
-gwidth(g::IsingGraph) = size(g)[2]
+@inline glength(g::IsingGraph) = size(g)[1]
+@inline gwidth(g::IsingGraph) = size(g)[2]
+
+@inline graph(g::IsingGraph) = g
 
 
 # Minimal Initialization using N and optional args
@@ -72,13 +73,13 @@ export initRandomState
 Initialize from a graph
 """
 (initRandomState(g::IsingGraph{type})::Vector{type}) where type = initRandomState(type, glength(g), gwidth(g))
-    
+initRandomState(type, glength, gwidth)::Vector{type} = initRandomState(type, glength*gwidth)
 
-function initRandomState(type, length, width)::Vector{type}
+function initRandomState(type, nstates)::Vector{type}
     if type == Int8
-        return rand([-1,1], length*width)
+        return rand([-1,1], nstates)
     elseif type == Float32
-        return 2 .* rand(Float32, length*width) .- .5
+        return 2 .* rand(Float32, nstates) .- .5
     end
 end
 #=
@@ -96,7 +97,7 @@ Otherwise it returns all alive spins
     defects = getHParamType(htype, :Defects)
 
     if !defects
-        return Expr(:block, :(return it::UnitRange{Int32} = 1:Nstates(g)) )
+        return Expr(:block, :(return it::UnitRange{Int32} = 1:nStates(g)) )
     else
         return Expr(:block, :(return aliveList(g)))
     end
@@ -142,3 +143,30 @@ end
 
 export continuous
 continuous(g::IsingGraph{T}) where T = T <: Integer ? false : true
+
+"""
+resize Graph to new size with random states and now connections for the new states
+"""
+function resizeG!(g::IsingGraph{T}, nstates) where T
+    oldlength = nStates(g)
+    newlength = nStates(g) + nstates
+
+    randomstate = initRandomState(T, nstates)
+    state(g, expand(state(g), newlength, randomstate ))
+    adj(g, expand(adj(g), newlength, [[] for _ in 1:nstates]))
+
+    nStates(g, newlength)
+    size(g, (newlength,1))
+
+    # Data
+    aLLength = length(aliveList(g))
+    newaLLength = aLLength + nstates
+    aliveList(g, expand(aliveList(g), newaLLength, [(oldlength+1):newlength;]))
+    defectBools(g, expand(defectBools(g), newlength, false ))
+    mlist(g, expand(mlist(g), newlength, 0) ) 
+    clamps(g, expand(clamps(g), newlength, 0) )
+
+    return
+end
+
+export resizeG!

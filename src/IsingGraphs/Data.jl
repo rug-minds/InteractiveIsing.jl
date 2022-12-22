@@ -2,39 +2,39 @@ mutable struct GraphData
     # For tracking defects
     aliveList::Vector{Vert}
     defects::Bool
-    const defectBools::Vector{Bool}
+    defectBools::Vector{Bool}
     defectList::Vector{Vert}
     
     # Magnetic field
-    const mlist::Vector{Float32}
+    mlist::Vector{Float32}
 
     #Beta clamp
     clampparam::Float32
     #clamps
-    const clamps::Vector{Float32}
+    clamps::Vector{Float32}
     
 end
 
 GraphData(g) = 
     GraphData(
         # AliveList
-        Int32.([1:Nstates(g);]),
+        Int32.([1:nStates(g);]),
         #Defects?
         false, 
         # DefectBools
-        [false for x in 1:Nstates(g)], 
+        [false for x in 1:nStates(g)], 
         # Defect List
         Vector{Int32}(), 
         # Mlist
-        zeros(Float32, Nstates(g)),
+        zeros(Float32, nStates(g)),
         # Clamp Param
         0, 
         # Clamp values
-        zeros(Float32, Nstates(g))
+        zeros(Float32, nStates(g))
     )
 
 function reinitGraphData!(data, g)
-    data.aliveList = Int32.([1:Nstates(g);])
+    data.aliveList = Int32.([1:nStates(g);])
     data.defects = false
     data.defectBools .= false
     data.defectList = Vector{Int32}()
@@ -42,16 +42,20 @@ function reinitGraphData!(data, g)
     data.clamps .= 0
 end
 
-struct LayerData
+mutable struct LayerData
     # Magnetic field
     mlist::Base.ReshapedArray
 
     #clamps
     clamps::Base.ReshapedArray
+
+    #number of defects
+    ndefects::Int32
 end
 
-LayerData(data::GraphData, start, width, length) = 
+LayerData(data::GraphData, start, length, width) = 
     LayerData(
-        reshapeView(data.mlist, start, width, length),
-        reshapeView(data.clamps, start, width, length)
+        reshapeView(data.mlist, start, length, width),
+        reshapeView(data.clamps, start, length, width),
+        0
     )

@@ -37,6 +37,8 @@ function qmlFunctions(sim::IsingSim)
 
     # All functions that are run from the QML Timer
     function timedFunctions()
+        layer = currentLayer(sim)
+        checkImgSize(sim, layer, glength(layer), gwidth(layer), qmllength(sim), qmllength(sim))
         spawnOne(updateImg, updatingImg, "UpdateImg", sim)
         spawnOne(updatesPerFrame, updatingUpf, "", sim)
         spawnOne(magnetization, updatingMag, "", sim)
@@ -67,7 +69,7 @@ function qmlFunctions(sim::IsingSim)
             corrF = sampleCorrPeriodicDefects
         end
         # Catching error doesn't work like this, why?
-        Threads.@spawn errormonitor(tempSweep(sim, activeLayer(sim)[] , s_Temp, s_M_array; TI, TF, TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, s_analysisRunning=s_analysisRunning, corrF))
+        Threads.@spawn errormonitor(tempSweep(sim, currentLayer(sim) , s_Temp, s_M_array; TI, TF, TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, s_analysisRunning=s_analysisRunning, corrF))
     end
     @qmlfunction tempSweepQML
 
@@ -79,7 +81,7 @@ function qmlFunctions(sim::IsingSim)
     @qmlfunction newCirc
 
     # Save an image of the graph
-    saveGImgQML() = saveGImg(sim, activeLayer(sim)[])
+    saveGImgQML() = saveGImg(sim, currentLayer(sim))
     @qmlfunction saveGImgQML
 
     function setTemp(temp)
@@ -92,5 +94,12 @@ function qmlFunctions(sim::IsingSim)
     end
     @qmlfunction toggleSimRunning
 
+    function changeLayer(inc)
+        setLayerIdx!(sim, layerIdx(sim)[] + inc)
+        newR = round(min(size(currentLayer(sim))...) / 10)
 
+        setCircR!(sim, newR) 
+    end
+    @qmlfunction changeLayer
+    
 end

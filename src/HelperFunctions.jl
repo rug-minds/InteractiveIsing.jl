@@ -1,8 +1,8 @@
 #=Grid lattice functions=#
 
 # Matrix Coordinates to vector Coordinates
-@inline function coordToIdx(i, j, length)
-    return i + (j - 1) * length
+@inline function coordToIdx(i, j, length)::Int32
+    return Int32(i + (j - 1) * length)
 end
 
 # Insert coordinates as tuple
@@ -207,24 +207,26 @@ end
 """
 Defines setter and getter functions for all struct fieldnames
 """
-macro setterGetter(strct)
+macro setterGetter(strct, deleted...)
     funcs = quote end
     for name in fieldnames(eval(strct))
-        strctname = string(nameof(eval(strct)))
-        varname = lowercase(string(nameof(eval(strct))))
+        if !(name ∈ deleted)
+            strctname = string(nameof(eval(strct)))
+            varname = lowercase(string(nameof(eval(strct))))
 
-        if @methodexists name
-            println("importing $name")
-            eval(:(import Base: $name))
+            if @methodexists name
+                println("importing $name")
+                eval(:(import Base: $name))
+            end
+            
+            getstr = "@inline $name($varname::$(strctname)) = $varname.$(string(name))"
+
+            setstr = "@inline $name($varname::$(strctname), val) = $varname.$(string(name)) = val"
+
+            push!(funcs.args, Meta.parse(getstr))
+            push!(funcs.args, Meta.parse(setstr))
+            push!(funcs.args, Meta.parse("export $name"))
         end
-        
-        getstr = "@inline $name($varname::$(strctname)) = $varname.$(string(name))"
-
-        setstr = "@inline $name($varname::$(strctname), val) = $varname.$(string(name)) = val"
-
-        push!(funcs.args, Meta.parse(getstr))
-        push!(funcs.args, Meta.parse(setstr))
-        push!(funcs.args, Meta.parse("export $name"))
     end
     return esc(funcs)
 
@@ -244,14 +246,43 @@ end
 Use a single idx to get an element of a vector of vectors
 """
 function vecvecIdx(vec, idx)
-    function vecvecIdxInner(vec, idx, outeridx)
+    outeridx = 1
+    while idx > 0
         tmp_idx = idx - length(vec[outeridx])
         if tmp_idx <= 0 
             return vec[outeridx][idx]
         else
-            vecvecIdxInner(vec, tmp_idx, outeridx+1)
+            idx = tmp_idx
+            outeridx += 1
         end
     end
+end
 
-    vecvecIdxInner(vec, idx, 1)
+
+"""
+Expand a vector by creating a copy with extra entries all initialized with val
+and return the copy
+"""
+function expand(vec::Vector{T}, newlength, val) where T
+    if length(vec) > newlength
+        error("New length must be longer")
+    end
+    newvec = Vector{T}(undef, newlength)
+
+    newvec[1:length(vec)] .= vec
+    
+    newvec[(length(vec) + 1):newlength] .= val
+
+    return newvec
+end
+
+function expand(vec::Vector{T}, newlength) where T
+    if length(vec) > newlength
+        error("New length must be longer")
+    end
+    newvec = Vector{T}(undef, newlength)
+
+    newvec[1:length(vec)] .= vec
+
+    return newvec
 end

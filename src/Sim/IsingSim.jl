@@ -30,14 +30,15 @@ mutable struct IsingSim
 
 
     #= Initializer =#
-    function IsingSim(;
-            continuous = false,
+    function IsingSim(
             length = 500,
-            width = 500,
+            width = 500;
+            continuous = false,
             weighted = true,
             weightFunc = defaultIsingWF,
             initTemp = 1.,
-            start = false
+            start = false,
+            colorscheme = ColorSchemes.viridis
         );
         
         g = IsingGraph(
@@ -47,27 +48,31 @@ mutable struct IsingSim
             weighted = weighted,
             weightFunc = weighted ? weightFunc : defaultIsingWF
         )
-        
-        initImg = gToImg(g)
+
+        newlayer = IsingLayer(g,1,length,width)
+
         initbrushR= round(min(length,width)/10)
 
-        obs = Obs(;length = glength(g), width = gwidth(g), initTemp, initbrushR, initImg)
+        initImg = gToImg(newlayer; colorscheme)
+
+        obs = Obs(;length = glength(newlayer), width = gwidth(newlayer), initTemp, initbrushR, initImg)
         
         sim = new(
             # Graphs
             [g],
             # Layers
-            [[IsingLayer(g,1,length,width)]],
+            [[newlayer]],
             # Layer idx
             1,
             # Property map
             JuliaPropertyMap(),
             zeros(Real,60),
+            # Image from module
             img,
             Ref(false),
             Ref(false),
             Ref(false),
-            IsingParams(initbrushR),
+            IsingParams(;initbrushR, colorscheme),
             obs
         )
 
@@ -80,9 +85,14 @@ mutable struct IsingSim
         if start
             s()
         end
+
+        @eval function bablzak()
+            return sim.gs[1]
+        end
+
         return sim
 
-
+        
     end
     #= END Initializer =# 
 end

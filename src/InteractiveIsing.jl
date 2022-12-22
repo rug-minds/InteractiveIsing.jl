@@ -39,8 +39,6 @@ export Hamiltonians
 import Base: size
 include("IsingGraphs/IsingGraphs.jl")
 
-include("SetEls.jl")
-
 # include("IsingMetropolis.jl")
 include("Sim/Sim.jl")
 include("Interaction/Interaction.jl")

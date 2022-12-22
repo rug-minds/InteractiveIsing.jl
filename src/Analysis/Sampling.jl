@@ -26,7 +26,7 @@ function sampleCorrPeriodic(ig::IsingGraph, Lstep::Float16 = Float16(.5), lStart
 
     theta_i = rand([1:length(rthetas);])
 
-    avgsum = (sum(g.state)/Nstates(g))^2
+    avgsum = (sum(g.state)/nStates(g))^2
 
     lVec = [lStart:Lstep:lEnd;]
     corrVec = Vector{Float32}(undef,length(lVec))

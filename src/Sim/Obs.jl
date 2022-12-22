@@ -1,12 +1,12 @@
 struct Obs
     # Active Layer
-    activeLayer::Observable{Int32}
+    layerIdx::Observable{Int32}
     #
     nlayers::Observable{Int32}
     # length/width of graph
-    length::Observable{Int32}
+    qmllength::Observable{Int32}
     
-    width::Observable{Int32}
+    qmlwidth::Observable{Int32}
 
     # Temperature Observable
     Temp::Observable{Float32}

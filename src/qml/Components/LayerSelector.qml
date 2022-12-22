@@ -11,7 +11,7 @@ ColumnLayout{
     spacing: 2
     Text{
         Layout.alignment: Qt.AlignCenter
-        text: "Layer" + " " + obs.activeLayer
+        text: "Layer" + " " + obs.layerIdx + "/" + obs.nlayers
     }
     RowLayout{
         Layout.alignment: Qt.AlignCenter
@@ -19,9 +19,7 @@ ColumnLayout{
             text: "<"
             onClicked:
             {
-                if (obs.layer > 1){
-                    obs.layer += -1
-                }
+                Julia.changeLayer(-1)
             }
         }
         Button{
@@ -29,9 +27,7 @@ ColumnLayout{
             text: ">"
             onClicked:
             {
-                if (obs.layer < obs.nlayers){
-                    obs.layer += 1
-                }
+                Julia.changeLayer(1)
             }
         }
     }

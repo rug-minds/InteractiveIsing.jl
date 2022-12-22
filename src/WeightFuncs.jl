@@ -19,6 +19,7 @@ mutable struct WeightFunc
     f::Function
     NN::Integer
     periodic::Bool
+    self::Bool
     invoke::Function
     addTrue::Bool
     multTrue::Bool
@@ -27,7 +28,7 @@ mutable struct WeightFunc
 
     function WeightFunc(func::Function, ; NN::Integer)
         invoke(dr,i,j) = func(;dr,i,j)
-        return new(func,Int8(NN), true, invoke, false, false)
+        return new(func, Int8(NN), true, false, invoke, false, false)
     end
 
 end

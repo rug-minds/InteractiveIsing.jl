@@ -13,8 +13,8 @@ function updateSim(sim::IsingSim, gidx)
     ghtype = htype(g)
     rng = MersenneTwister()
     g_iterator = ising_it(g,ghtype)
-    gstate = g.state
-    gadj = g.adj
+    gstate = state(g)
+    gadj = adj(g)
     params = sim.params
     lTemp = Temp(sim)
 

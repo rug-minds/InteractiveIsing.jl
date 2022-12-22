@@ -3,7 +3,7 @@
 using InteractiveIsing
 using InteractiveIsing.Hamiltonians
 using Distributions
-# using Revise
+using ColorSchemes
 
 # include(joinpath(@__DIR__ , "Learning", "IsingLearning.jl"))
 include(joinpath(@__DIR__ , "WeightFuncsCustom.jl"))
@@ -22,11 +22,12 @@ weightFunc = defaultIsingWF
 
 
 const sim = IsingSim(
+    200,
+    100,
     continuous = false, 
-    length = 300,
-    width = 500, 
     weighted = false;
-    weightFunc
+    weightFunc,
+    colorscheme = ColorSchemes.winter
 )
 
 const g = sim(true);
