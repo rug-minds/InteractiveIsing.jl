@@ -17,7 +17,7 @@ include(joinpath(@__DIR__,"test.jl"))
 weightFunc = isingNN2
 # weightFunc = isingNN2
 weightFunc.NN = 4
-
+# Test
 
 
 #= Add randomness to the weights =#
