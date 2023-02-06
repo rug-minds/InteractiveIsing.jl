@@ -1,23 +1,32 @@
-function reshapeView(vec, start, length, width)
-    return reshape((@view vec[start:(start + width*length - 1)]), length, width)
+using BenchmarkTools
+
+function vecvecIdx(vec, idx)
+    function vecvecIdxInner(vec, idx, outeridx)
+        tmp_idx = idx - length(vec[outeridx])
+        if tmp_idx <= 0 
+            return vec[outeridx][idx]
+        else
+            vecvecIdxInner(vec, tmp_idx, outeridx+1)
+        end
+    end
+
+    vecvecIdxInner(vec, idx, 1)
 end
 
-struct A
-      vec
+function vecvecIdxLoop(vec, idx)
+    outeridx = 1
+    while idx > 0
+        tmp_idx = idx - length(vec[outeridx])
+        if tmp_idx <= 0 
+            return vec[outeridx][idx]
+        else
+            idx = tmp_idx
+            outeridx += 1
+        end
+    end
 end
 
-struct B
-      mat
-end
+const vec = [rand(3),rand(3),rand(3)]
 
-a = A(rand(100))
-
-b = B(reshapeView(a.vec, 3, 3, 3))
-
-struct C{T,N}
-    arr::Array{T,N}
-end
-
-C(vec::Vector{T}) where T = C{T,2}(reshapeView(vec, 3, 3, 3))
-
-c = C(a.vec)
+@btime vecvecIdx(vec,4)
+@btime vecvecIdxLoop(vec,4)

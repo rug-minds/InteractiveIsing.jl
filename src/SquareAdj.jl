@@ -13,7 +13,7 @@ function adjEntry(adj, length, width, idx, periodic, NN, inv)
     # Bases connection on periodic and NN
     function doesConnect(i, j, icoup, jcoup, weight)
         # If weight is zero, does not connect
-        ! Bool(weight) && return false
+        weight == 0 && return false
 
         # Filter out self connections and, if not periodic, connections that are out of the grid
         if periodic
@@ -110,3 +110,10 @@ function setAdj!(sim, layer, wf)
     setSimHType!(sim, :NN => wf.NN)
 end
 export setAdj!
+
+function setGAdj!(sim, idx, wf)
+    g = gs(sim)[idx]
+    adj(g) = initSqAdj(glength(g), gwidth(g), weightFunc = wf)
+    setSimHType!(sim, :NN => wf.NN)
+end
+export setGAdj!

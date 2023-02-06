@@ -25,7 +25,8 @@ function buildExpr(type, symbs, vals)
             if str != ""
                 str *= " + "
             end
-            str *= ("(@inbounds " * term * ")")
+            # str *= ("(@inbounds " * term * ")")
+            str *= term
         end
         
     end

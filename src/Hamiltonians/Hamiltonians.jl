@@ -1,4 +1,5 @@
 module Hamiltonians
+# using LoopVectorization
 using ..InteractiveIsing
 using ..InteractiveIsing: branchSim, setTuple
 
