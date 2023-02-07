@@ -10,6 +10,7 @@ include(joinpath(@__DIR__ , "WeightFuncsCustom.jl"))
 
 include(joinpath(@__DIR__,"..","Benchmarking/Benchmarking.jl"))
 include(joinpath(@__DIR__,"test.jl"))
+include(joinpath(@__DIR__,"etest.jl"))
 #= Radially decreasing weightfunction =#
 # weightFunc = radialWF
 

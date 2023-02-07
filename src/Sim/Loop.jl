@@ -8,7 +8,7 @@ Then it waits until isRunning is set to false after which s_shouldRun can be act
 Then, this function itself makes a new branch where getE is defined again.
 export updateGraph
 """
-function updateSim(sim::IsingSim, gidx)
+function updateSim(sim::IsingSim, gidx, energyFunc = getEFactor)::Nothing
     g = gs(sim)[gidx]
     ghtype = htype(g)
     rng = MersenneTwister()
@@ -16,21 +16,21 @@ function updateSim(sim::IsingSim, gidx)
     gstate = state(g)
     gadj = adj(g)
     params = sim.params
-    lTemp = Temp(sim)
+    loopTemp = Temp(sim)
 
     updateFunc = continuous(g) ? updateMonteCarloIsingC : updateMonteCarloIsingD
 
-    updateGraph(sim, gidx, params, lTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc)
+    updateGraph(sim, gidx, params, loopTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc, energyFunc)
 end
 
 export updateSim
 
-function updateGraph(sim::IsingSim, layer, params::IsingParams, lTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc)
+function updateGraph(sim::IsingSim, gidx, params::IsingParams, lTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc, energyFunc)::Nothing
     
     isRunning(sim,true)
     
     while shouldRun(sim)
-        updateFunc(lTemp, g, gstate, gadj, rng, g_iterator, ghtype)
+        updateFunc(lTemp, g, gstate, gadj, rng, g_iterator, ghtype, energyFunc)
         params.updates += 1
         GC.safepoint()
     end
@@ -38,19 +38,23 @@ function updateGraph(sim::IsingSim, layer, params::IsingParams, lTemp, g, gstate
     isRunning(sim,false)
     while !shouldRun(sim)
         yield()
+
+        if shouldQuit(sim)
+            return
+        end
     end
 
-    updateSim(sim, layer)
-
+    updateSim(sim, gidx, energyFunc)
+    return 
 end
 
-function updateMonteCarloIsingD(lTemp, g, gstate, gadj, rng, g_iterator, ghtype)
+function updateMonteCarloIsingD(lTemp, g, gstate, gadj, rng, g_iterator, ghtype, energyFunc)
 
     beta = 1/(lTemp[])
     
     idx = rand(rng, g_iterator)
     
-    Estate = @inbounds gstate[idx]*getEFactor(g, gstate, gadj, idx, ghtype)
+    Estate = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, ghtype)
 
     minEdiff = 2*Estate
 
@@ -75,7 +79,7 @@ function updateMonteCarloIsingC(lTemp, g, gstate, gadj, rng, g_iterator, ghtype)
      
     oldstate = @inbounds gstate[idx]
 
-    efactor = getEFactor(g, gstate, gadj, idx, ghtype)
+    efactor = energyFunc(g, gstate, gadj, idx, ghtype)
 
     newstate = sampleCState()
     

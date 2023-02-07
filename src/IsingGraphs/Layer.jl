@@ -28,6 +28,11 @@ end
     return
 end
 
+startidx(layer::IsingLayer) = start(layer)
+endidx(layer::IsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
+iterator(layer::IsingLayer) = start(layer):endidx(layer)
+iterator(g::IsingGraph) = 1:(nStates(g))
+
 Hamiltonians.editHType!(layer::IsingLayer, pairs...) = editHType!(layer.graph, pairs...)
 
 IsingLayer(g::IsingGraph, start, length, width) =

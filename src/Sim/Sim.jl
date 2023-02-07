@@ -59,6 +59,30 @@ function unpauseSim(sim)
 
     return true
 end
+export unpauseSim
+
+function quitSim(sim)
+    shouldQuit(sim, true)
+    pauseSim(sim)
+    
+    shouldQuit(sim, false)
+    shouldRun(sim,true)
+    return
+end
+export quitSim
+
+function refreshSim(sim)
+    pauseSim(sim)
+    unpauseSim(sim)
+end
+export refreshSim
+
+function restartSim(sim, gidx, efunc = getEFactor)
+    quitSim(sim)
+    Threads.@spawn updateSim(sim, $gidx, $efunc)
+    return
+end
+export restartSim
 
 
 # """ REPL FUNCTIONS FOR DEBUGGING """

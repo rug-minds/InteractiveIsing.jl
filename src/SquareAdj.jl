@@ -107,13 +107,14 @@ adjToMatrix(g) = adjToMatrix(adj(g), glength(g), gwidth(g))
 function setAdj!(sim, layer, wf)
     g = sim.layers[layer]
     adj(g) = initSqAdj(glength(g), gwidth(g), weightFunc = wf)
-    setSimHType!(sim, :NN => wf.NN)
+    refreshSim(sim)
 end
 export setAdj!
 
-function setGAdj!(sim, idx, wf)
+# Doesn't work with layers
+function setGAdj!(sim, idx, weightFunc)
     g = gs(sim)[idx]
-    adj(g) = initSqAdj(glength(g), gwidth(g), weightFunc = wf)
-    setSimHType!(sim, :NN => wf.NN)
+    adj(graph(g))[iterator(g)] = initSqAdj(glength(g), gwidth(g); weightFunc)
+    refreshSim(sim)
 end
 export setGAdj!

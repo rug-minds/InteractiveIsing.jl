@@ -8,13 +8,12 @@ export setMIdxs!
 Set the magnetic field using two vectors, one gives the indexes of the positions,
 the other gives the magnetic field strength for the corresponding index
 """
-function setMIdxs!(sim, strengths; g = currentLayer(sim))
+function setMIdxs!(sim, strengths; idxs = 1:length(strengths), g = currentLayer(sim))
     if length(idxs) != length(strengths)
         error("Idxs and strengths lengths not the same")
         return      
     end
-
-    mlist(g)[idxs] .= strengths
+    mlist(g)[iterator(g)] .= strengths[1:end]
     setSimHType!(sim, 1, :MagField => true)
 end
 
@@ -27,8 +26,8 @@ is (;x,y) -> f(x,y)
 """
 function setMFunc!(sim, func::Function; g = currentLayer(sim))
     m_matr = Matrix{Float32}(undef,glength(g),gwidth(g))
-    for x in 1:g.N
-        for y in 1:g.N
+    for x in 1:gwidth(g)
+        for y in 1:glength(g)
             m_matr[y,x] = func(;x,y)
         end
     end

@@ -1,7 +1,7 @@
 import InteractiveIsing: connW, connIdx
 
-function getENorm(gstate, gadj, idx)::Float32
-    efac = zero(eltype(gstate))
+function getENorm(g, gstate, gadj, idx, htype)::Float32
+    efac = Float32(0)
     @inbounds for conn_idx in eachindex(gadj[idx])
         conn = gadj[idx][conn_idx]
         efac += -connW(conn)*gstate[connIdx(conn)]
@@ -9,21 +9,14 @@ function getENorm(gstate, gadj, idx)::Float32
     return efac
 end
 
-function getENormSimd(gstate, gadj, idx)::Float32
-    efac = Float32(0)
-    @inbounds @simd for conn_idx in eachindex(gadj[idx])
-        conn = (gadj[idx])[conn_idx]
-        efac += -(connW(conn)) * (gstate[connIdx(conn)])
-    end
-    return efac
-end
+function getENormSimd(g, gstate, gadj, idx, htype)::Float32
+    efac::Float32 = Float32(0)
 
-function getENormSimd(gstate, gadj, idx)::Float32
-    efac = Float32(0)
     @inbounds @simd for conn_idx in eachindex(gadj[idx])
         conn = gadj[idx][conn_idx]
-        efac += -connW(conn)*gstate[connIdx(conn)]
+        efac += -connW(conn) * gstate[connIdx(conn)]
     end
+
     return efac
 end
 
@@ -37,4 +30,13 @@ function getENormSimd2(gstate, gadj, idx)::Float32
                 #= none:3 =#
         end)
     return efactor
+end
+
+function getENormMag(g, gstate, gadj, idx, htype)::Float32
+    efac = Float32(0)
+    @inbounds for conn_idx in eachindex(gadj[idx])
+        conn = gadj[idx][conn_idx]
+        efac += -connW(conn)*gstate[connIdx(conn)] 
+    end
+    return efac - mlist(g)[idx]
 end

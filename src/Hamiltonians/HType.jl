@@ -111,7 +111,7 @@ export editHType!
 
 export setSimHType!
 function setSimHType!(sim, g, pairs...; prt = false)
-    htype(g) = editHType(htype(g), pairs...)
+    htype(g, editHType(htype(g), pairs...))
     if prt
         println(htype(g))
     end
