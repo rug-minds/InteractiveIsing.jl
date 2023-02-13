@@ -102,4 +102,8 @@ function qmlFunctions(sim::IsingSim)
     end
     @qmlfunction changeLayer
     
+    function pauseUnpause()
+        memory(sim)["Procstatus"] = [process.status for process in processes(sim)]
+        
+    end
 end

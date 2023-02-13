@@ -6,9 +6,27 @@ Depends on two variables, isRunning and s_shouldRun to check wether current bran
 When another thread needs to invalidate branch, it sets s_shouldRun to false
 Then it waits until isRunning is set to false after which s_shouldRun can be activated again.
 Then, this function itself makes a new branch where getE is defined again.
-export updateGraph
+export mainLoop
 """
-function updateSim(sim::IsingSim, gidx, energyFunc = getEFactor)::Nothing
+function createProcess(sim::IsingSim, ; gidx = 1, energyFunc = getEFactor)::Nothing
+    process = nothing
+    for (idx, p) in enumerate(processes(sim))
+        if status(p) == :Terminated
+            process = p
+            break
+        end
+
+        if idx == length(processes(sim))
+            println("No available process")
+            return
+        end
+    end
+
+    Threads.@spawn updateGraph(sim, process; gidx, energyFunc)
+    return
+end
+
+function updateGraph(sim::IsingSim, process; gidx = 1, energyFunc = getEFactor)
     g = gs(sim)[gidx]
     ghtype = htype(g)
     rng = MersenneTwister()
@@ -20,31 +38,36 @@ function updateSim(sim::IsingSim, gidx, energyFunc = getEFactor)::Nothing
 
     updateFunc = continuous(g) ? updateMonteCarloIsingC : updateMonteCarloIsingD
 
-    updateGraph(sim, gidx, params, loopTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc, energyFunc)
+    mainLoop(sim, process, gidx, params, loopTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc, energyFunc)
 end
 
 export updateSim
 
-function updateGraph(sim::IsingSim, gidx, params::IsingParams, lTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc, energyFunc)::Nothing
-    
-    isRunning(sim,true)
-    
-    while shouldRun(sim)
+function mainLoop(sim::IsingSim, process, gidx, params::IsingParams, lTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc, energyFunc)::Nothing
+    status(process, :Running)
+
+    while message(process) == :Nothing
         updateFunc(lTemp, g, gstate, gadj, rng, g_iterator, ghtype, energyFunc)
         params.updates += 1
         GC.safepoint()
     end
 
-    isRunning(sim,false)
-    while !shouldRun(sim)
-        yield()
+    status(process, :Paused)
 
-        if shouldQuit(sim)
+    while message(process) != :Nothing
+        
+        if message(process) == :Quit
+            status(process, :Terminated)
             return
+        elseif message(process) == :Execute
+            func(process)(sim, gidx, energyFunc)
         end
+
+        yield()
+        GC.safepoint()
     end
 
-    updateSim(sim, gidx, energyFunc)
+    updateGraph(sim, process; gidx, energyFunc)
     return 
 end
 

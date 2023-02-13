@@ -1,5 +1,6 @@
 include("IsingParams.jl")
 include("Obs.jl")
+include("Processes.jl")
 include("IsingSim.jl")
 
 @forward IsingSim Obs

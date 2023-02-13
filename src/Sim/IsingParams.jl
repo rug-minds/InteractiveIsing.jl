@@ -1,12 +1,7 @@
 mutable struct IsingParams
-    updates::Int64
-
-    shouldRun::Bool
-    isRunning::Bool
-
     started::Bool
 
-    shouldQuit::Bool
+    updates::Int64
 
     circ::Vector{Tuple{Int16, Int16}}
 
@@ -15,15 +10,10 @@ end
 
 IsingParams(;initbrushR = 1, colorscheme = ColorSchemes.viridis) = 
     IsingParams(
+        # started
+        false,
         # Updates
         0,
-        true, 
-        # shouldRun
-        true, 
-        # isRunning
-        false,
-        # shouldQuit
-        false,
         # Circ
         getOrdCirc(Int32(initbrushR)),
         #ColorScheme

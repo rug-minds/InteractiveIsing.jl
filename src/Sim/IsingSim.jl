@@ -23,11 +23,14 @@ mutable struct IsingSim
     const updatingMag::Ref{Bool} 
     const updatingImg::Ref{Bool} 
 
+    #
+    processes::Processes
     # Simulation Parameters
     params::IsingParams
     # Observables
     obs::Obs
 
+    memory::Dict
 
     #= Initializer =#
     function IsingSim(
@@ -72,8 +75,11 @@ mutable struct IsingSim
             Ref(false),
             Ref(false),
             Ref(false),
+            Processes(4),
             IsingParams(;initbrushR, colorscheme),
-            obs
+            obs,
+            # memory
+            Dict()
         )
 
         # Register observables
@@ -84,10 +90,6 @@ mutable struct IsingSim
 
         if start
             s()
-        end
-
-        @eval function bablzak()
-            return sim.gs[1]
         end
 
         return sim

@@ -42,7 +42,7 @@ TextField{
             newText = `${low}`
             return newText
         }
-        else if(parseInt(text) > high){
+        elseif(parseInt(text) > high){
             newText = `${high}`
             return newText
         }
