@@ -25,6 +25,7 @@ function createProcess(sim::IsingSim, ; gidx = 1, energyFunc = getEFactor)::Noth
     Threads.@spawn updateGraph(sim, process; gidx, energyFunc)
     return
 end
+export createProcess
 
 function updateGraph(sim::IsingSim, process; gidx = 1, energyFunc = getEFactor)
     g = gs(sim)[gidx]

@@ -29,13 +29,18 @@ mutable struct Processes
     end
 end
 
-function Base.getindex(processes::Processes, num)
+import Base: getindex, length, iterate
+
+function getindex(processes::Processes, num)
     return processes.processes[num]
 end
+export getindex
 
-Base.length(processes::Processes) = length(processes.processes)
+length(processes::Processes) = length(processes.processes)
+export length
 
-Base.iterate(processes::Processes) = iterate(processes.processes)
+iterate(processes::Processes) = iterate(processes.processes)
+export iterate
 
 @setterGetter Processes
 

@@ -82,7 +82,7 @@ function restartSim(sim, gidx, efunc = getEFactor)
     quitSim(sim)
     Threads.@spawn updateSim(sim, $gidx, $efunc)
     return
-end
+end 
 export restartSim
 
 
