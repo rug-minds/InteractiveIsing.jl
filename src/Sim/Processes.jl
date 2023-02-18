@@ -1,53 +1,50 @@
 mutable struct Process
-    status::Ref{Symbol}
-    message::Ref{Symbol}
-    func::Ref
+    status::Symbol
+    message::Symbol
+    func::Function
 end
 
-@inline status(process) = process.status[]
-@inline status(process, val) = process.status[] = val
-
-@inline message(process) = process.message[]
-@inline message(process, val) = process.message[] = val
+@setterGetter Process
 
 mutable struct Processes
-    status::Vector{Ref{Symbol}}
-    messages::Vector{Ref{Symbol}}
-    funcs::Vector{Ref}
-    processes::Vector{Process}
-
-    function Processes(num)
-        p = new(
-            repeat([Ref(:Terminated)], num), 
-            repeat([Ref(:Nothing)], num), 
-            repeat([Ref(_ -> ())], num),
-        )
-
-        p.processes = [Process(p.status[i], p.messages[i], p.funcs[i]) for i in eachindex(p.status) ]
-
-        return p
-    end
+    procs::Vector{Process}
 end
 
-import Base: getindex, length, iterate
+Processes(num) = Processes([Process(:Terminated, :Nothing, _ -> ()) for _ in 1:num])
 
-function getindex(processes::Processes, num)
-    return processes.processes[num]
-end
+import Base: getindex, setindex!, length, iterate
+
+getindex(processes::Processes, num) = processes.procs[num]
+
 export getindex
 
-length(processes::Processes) = length(processes.processes)
+setindex!(processes::Processes, val, idx) = setindex(processes.procs[num], val, idx)
+
+length(processes::Processes) = length(processes.procs)
 export length
 
-iterate(processes::Processes) = iterate(processes.processes)
+iterate(processes::Processes, s = 1) = iterate(processes.procs, s)
+
+struct ProcessStats <: AbstractVector{Symbol}
+    processes::Processes
+    type::Symbol
+end
+
+size(ps::ProcessStats) = (length(ps.processes),)
+
+messages(procs::Processes) = ProcessStats(procs, :message)
+messages(sim) = messages(sim.processes)
+status(procs::Processes) = ProcessStats(procs, :status)
+status(sim) = status(sim.processes)
+export messages
+export status
+
+iterate(ps::ProcessStats, state = 1) = state > length(ps.processes.procs) ? nothing : (getfield(ps.processes.procs[state], ps.type), state + 1)
+
+getindex(ps::ProcessStats, num::Integer) = getfield(ps.processes.procs[num], ps.type)
+getindex(ps::ProcessStats, num::Vector) = getfield.(ps.processes.procs[num], ps.type)
+setindex!(ps::ProcessStats, val, idx) = setfield!(ps.processes.procs[idx], ps.type, val)
+
 export iterate
-
-@setterGetter Processes
-
-
-    
-
-
-
 
 

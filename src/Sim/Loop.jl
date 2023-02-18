@@ -13,6 +13,7 @@ function createProcess(sim::IsingSim, ; gidx = 1, energyFunc = getEFactor)::Noth
     for (idx, p) in enumerate(processes(sim))
         if status(p) == :Terminated
             process = p
+            status(p, :Starting)
             break
         end
 
@@ -25,6 +26,7 @@ function createProcess(sim::IsingSim, ; gidx = 1, energyFunc = getEFactor)::Noth
     Threads.@spawn updateGraph(sim, process; gidx, energyFunc)
     return
 end
+createProcess(sim::IsingSim, num; gidx = 1, energyFunc = getEFactor)::Nothing = for _ in 1:num; createProcess(sim; gidx, energyFunc) end
 export createProcess
 
 function updateGraph(sim::IsingSim, process; gidx = 1, energyFunc = getEFactor)
@@ -59,7 +61,9 @@ function mainLoop(sim::IsingSim, process, gidx, params::IsingParams, lTemp, g, g
         
         if message(process) == :Quit
             status(process, :Terminated)
+            message(process, :Nothing)
             return
+
         elseif message(process) == :Execute
             func(process)(sim, gidx, energyFunc)
         end

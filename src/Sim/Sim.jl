@@ -34,57 +34,6 @@ function showlatest(buffer::Array{UInt32, 1}, width32::Int32, height32::Int32)
 end
 export showlatest
 
-# Pauses sim and waits until paused
-function pauseSim(sim)
-    println("Pausing sim")
-
-    shouldRun(sim,false)
-
-    while isRunning(sim)
-        yield()
-    end
-
-    return true
-end
-export pauseSim
-
-function unpauseSim(sim)
-    println("Unpausing sim")
-    isRunning(sim) && return
-
-    shouldRun(sim, true)
-
-    while !isRunning(sim)
-        yield()
-    end
-
-    return true
-end
-export unpauseSim
-
-function quitSim(sim)
-    shouldQuit(sim, true)
-    pauseSim(sim)
-    
-    shouldQuit(sim, false)
-    shouldRun(sim,true)
-    return
-end
-export quitSim
-
-function refreshSim(sim)
-    pauseSim(sim)
-    unpauseSim(sim)
-end
-export refreshSim
-
-function restartSim(sim, gidx, efunc = getEFactor)
-    quitSim(sim)
-    Threads.@spawn updateSim(sim, $gidx, $efunc)
-    return
-end 
-export restartSim
-
 
 # """ REPL FUNCTIONS FOR DEBUGGING """
 

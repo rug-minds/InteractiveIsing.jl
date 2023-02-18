@@ -12,15 +12,6 @@ function reInitSim(sim)::Nothing
     branchSim(sim)
 end
 
-export togglePauseSim
-function togglePauseSim(sim)
-    if isRunning(sim)
-        pauseSim(sim)
-    else
-        unpauseSim(sim)
-    end
-end
-
 function annealing(sim, Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Tstep:Tf, reInit = true, saveImg = true)
     # Reinitialize
     reInit && initIsing()
@@ -42,14 +33,14 @@ export startSim
 # Set the render loop,
 # Define qml functions
 # Start graph update and qml interface
-function startSim(sim; async = true, loadQML = true)
+function startSim(sim; threads = 1, async = true, loadQML = true)
     if !started(sim)
         # Set sim started to true
         started(sim,true)
 
         # Spawn MCMC thread on layer 1
         println("Created a process")
-        createProcess(sim; gidx = 1)
+        createProcess(sim, threads; gidx = 1)
 
         # Load QML interface?
         if loadQML
