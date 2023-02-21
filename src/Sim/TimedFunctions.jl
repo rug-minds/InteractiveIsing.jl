@@ -1,3 +1,13 @@
+# All functions that are run from the QML Timer
+function timedFunctions(sim)
+    layer = currentLayer(sim)
+    checkImgSize(sim, layer, glength(layer), gwidth(layer), qmllength(sim), qmllength(sim))
+    if runTimedFunctions(sim)[]
+        spawnOne(updateImg, sim.updatingImg, "UpdateImg", sim)
+        spawnOne(updatesPerFrame, sim.updatingUpf, "", sim)
+        spawnOne(magnetization, sim.updatingMag, "", sim)
+    end
+end
 
 # Timed Functions 
 # Updating image of graph

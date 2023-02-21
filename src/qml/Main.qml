@@ -144,7 +144,7 @@ ApplicationWindow {
     property int frames: 1
       interval: 1/60*1000; running: true; repeat: true
       onTriggered: {
-        Julia.timedFunctions();
+        Julia.timedFunctionsQML();
         jlcanvas.update();
         frames += 1
       }

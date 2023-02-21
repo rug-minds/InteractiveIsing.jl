@@ -1,6 +1,8 @@
 # Pauses sim and waits until paused
-function pauseSim(sim)
-    println("Pausing sim")
+function pauseSim(sim; print = true)
+    if print
+        println("Pausing sim")
+    end
 
     # If no processes are running
     if !any(x -> x == :Running, status(sim))
@@ -19,8 +21,10 @@ function pauseSim(sim)
 end
 export pauseSim
 
-function unpauseSim(sim)
-    println("Unpausing sim")
+function unpauseSim(sim; print = true)
+    if print
+        println("Unpausing sim")
+    end
     
     # If none are paused return
     if !any(x -> x == :Paused, status(sim))
@@ -50,14 +54,18 @@ end
 export quitSim
 
 function refreshSim(sim)
-    pauseSim(sim)
-    unpauseSim(sim)
+    pauseSim(sim, print = false)
+    unpauseSim(sim, print = false)
 end
 export refreshSim
 
-function restartSim(sim, gidx, energyFunc = getEFactor)
+function restartSim(sim, gidx = 1, energyFunc = getEFactor)
+    processNum = count(stat -> stat == :Running, status(sim)) 
+    processNum = processNum < 1 ? 1 : processNum
+    println(processNum)
     quitSim(sim)
-    createProcess(sim; gidx, energyFunc)
+    createProcess(sim, processNum; gidx, energyFunc)
+    println("Restarted Sim")
     return
 end 
 export restartSim

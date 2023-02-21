@@ -16,16 +16,7 @@ using BenchmarkTools
 # Restart MCMC loop to define new Hamiltonian function
 # Is needed for fast execution if part of hamiltonian doesn't need to be checked
 # Should be in IsingSim.jl
-function branchSim(sim)::Nothing
-    if shouldRun(sim)
-        shouldRun(sim, false)
-        while isRunning(sim)
-            yield()
-        end
-        shouldRun(sim, true)
-    end
-    return
-end
+branchSim(sim) = refreshSim(sim)
 export branchSim
 
 include("HelperFunctions.jl")

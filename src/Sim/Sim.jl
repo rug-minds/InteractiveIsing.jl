@@ -1,6 +1,7 @@
 include("IsingParams.jl")
 include("Obs.jl")
 include("Processes.jl")
+include("Pausing.jl")
 include("IsingSim.jl")
 
 @forward IsingSim Obs
@@ -21,7 +22,7 @@ export currentLayer
 
 include("QML.jl")
 include("Loop.jl")
-include("TimedFunctions.jl")
+include("timedFunctions.jl")
 include("User.jl")
 
 # For plotting

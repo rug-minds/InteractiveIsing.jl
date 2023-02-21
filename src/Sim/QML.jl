@@ -22,28 +22,23 @@ function qmlFunctions(sim::IsingSim)
     s_M = M(sim)
     s_brushR = brushR(sim)
 
-    # Locks for ensuring spawned functions are not created
-    # if old one is still running
+    # # Locks for ensuring spawned functions are not created
+    # # if old one is still running
     
-    # Clean up this system
-    # Maybe with a dict
-    updatingImg = sim.updatingImg
-    updatingUpf = sim.updatingUpf
-    updatingMag = sim.updatingMag
+    # # Clean up this system
+    # # Maybe with a dict
+    # updatingImg = sim.updatingImg
+    # updatingUpf = sim.updatingUpf
+    # updatingMag = sim.updatingMag
 
     s_analysisRunning = analysisRunning(sim)
 
     @qmlfunction println
 
     # All functions that are run from the QML Timer
-    function timedFunctions()
-        layer = currentLayer(sim)
-        checkImgSize(sim, layer, glength(layer), gwidth(layer), qmllength(sim), qmllength(sim))
-        spawnOne(updateImg, updatingImg, "UpdateImg", sim)
-        spawnOne(updatesPerFrame, updatingUpf, "", sim)
-        spawnOne(magnetization, updatingMag, "", sim)
-    end
-    @qmlfunction timedFunctions
+    timedFunctionsQML() = timedFunctions(sim)
+
+    @qmlfunction timedFunctionsQML
 
 
     # Add percentage of defects to lattice

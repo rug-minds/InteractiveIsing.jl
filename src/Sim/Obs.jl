@@ -27,6 +27,8 @@ struct Obs
     # Analysis Is running
     analysisRunning::Observable{Bool}
     
+    # Run the timed functions
+    runTimedFunctions::Observable{Bool}
 end
 
 Obs(;nlayers = 1, length, width, initTemp = 1, initbrushR, initImg) = Obs(  
@@ -51,7 +53,9 @@ Obs(;nlayers = 1, length, width, initTemp = 1, initbrushR, initImg) = Obs(
     # Image Size
     Observable(size(initImg)),
     # Analysis Running
-    Observable(false)
+    Observable(false),
+    # Run Timed Functions
+    Observable(true)
 )
 
 # Register QML observables to property map of sim
