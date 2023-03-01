@@ -10,6 +10,7 @@ function reInitSim(sim)::Nothing
     updates(sim, 0)
 
     branchSim(sim)
+    return
 end
 
 function annealing(sim, Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Tstep:Tf, reInit = true, saveImg = true)

@@ -1,16 +1,25 @@
-#=
-Stuff for initialization of adjacency matrix
-=#
- 
-export fillAdjList!, numEdges, latmod, adjToMatrix
+using BenchmarkTools
+# Go from idx to lattice coordinates, for rectangular grids
+@inline function idxToCoord(idx::Integer, length::Integer, width::Integer)
+    return ((idx - 1) % length + 1, (idx - 1) ÷ width + 1)
+end
 
-"""
-Creates a square adjacency matrix (NN must be smaller than width/2 & length/2)
-"""
-function createAdj(len, wid, weightFunc, self = false, selfweight = Float32(1))
-    periodic = weightFunc.periodic
-    invoke = weightFunc.invoke
-    NN = weightFunc.NN
+# Matrix Coordinates to vector Coordinates
+@inline function coordToIdx(i, j, length)::Int32
+    return Int32(i + (j - 1) * length)
+end
+
+# Insert coordinates as tuple
+coordToIdx((i, j), length) = coordToIdx(i, j, length)
+
+# Go from idx to lattice coordinates, for square grids
+@inline idxToCoord(idx::Integer, N::Integer) = idxToCoord(idx, N, N)
+
+@inline function latmod(coord, N)
+    return mod((coord - 1), N) + 1
+end
+
+function createAdj(NN, len, wid, invoke = (;dr, i ,j) -> dr^2, self = false, selfweight = Float32(1))
     adj = [Vector{Tuple{Int32,Float32}}() for _ in 1:(len*wid)]
 
     fillEmptyAdj(adj, NN, len, wid, invoke)
@@ -52,42 +61,8 @@ function fillEmptyAdj(adj, NN, len, wid, invoke)
     end
 end
 
-"""
-Adds weight to adjacency matrix
-"""
 function addWeight(adj::Vector, idx, conn_idx, weight)
     push!(adj[idx], (conn_idx, weight))
     push!(adj[conn_idx], (idx, weight))
 end
-export addWeight
 
-"""
-Reads an adjacency list as a matrix
-"""
-function adjToMatrix(adj, length, width)
-    matr = Matrix{Float32}(undef, length, width)
-    for (idx, tupls) in enumerate(adj)
-        for tupl in tupls
-            matr[idx, tupl[1]] = tupl[2]
-        end
-    end
-    return matr
-end
-
-adjToMatrix(g) = adjToMatrix(adj(g), glength(g), gwidth(g))
-
-
-function setAdj!(sim, layer, wf)
-    g = sim.layers[layer]
-    adj(g) = initSqAdj(glength(g), gwidth(g), weightFunc = wf)
-    refreshSim(sim)
-end
-export setAdj!
-
-# Doesn't work with layers
-function setGAdj!(sim, idx, weightFunc)
-    g = gs(sim)[idx]
-    adj(graph(g))[iterator(g)] = initSqAdj(glength(g), gwidth(g); weightFunc)
-    refreshSim(sim)
-end
-export setGAdj!
