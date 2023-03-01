@@ -88,7 +88,7 @@ function fillAdjList!(layer::IsingLayer, length, width, weightFunc=defaultIsingW
     inv = weightFunc.invoke
     adjlist = adj(layer)
     
-    for idx in 1:length*width
+    Threads.@threads for idx in 1:length*width
         adjlist[idx] = adjEntry(adjlist, length, width, idx, periodic, NN, inv)
     end
     

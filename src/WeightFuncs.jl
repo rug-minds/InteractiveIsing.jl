@@ -14,6 +14,9 @@ function func_argnames(f::Function)
     return Base.method_argnames(last(ml))[2:end]
 end
 
+mutable struct WeightFunc2{}
+
+end
 
 mutable struct WeightFunc
     f::Function

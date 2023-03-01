@@ -126,7 +126,7 @@ function initSqAdj(length, width; weightFunc = defaultIsingWF, self = false, sel
     adj = Vector{Vector{Conn}}(undef,length*width)
     fillAdjList!(adj, length, width, weightFunc)
     if self
-        for (idx,el) in enumerate(adj)
+        Threads.@threads for (idx,el) in enumerate(adj)
             append!(el,[(idx,selfWeights[idx])])
         end
     end
