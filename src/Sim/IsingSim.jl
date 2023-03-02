@@ -34,8 +34,8 @@ mutable struct IsingSim
 
     #= Initializer =#
     function IsingSim(
-            length = 500,
-            width = 500;
+            len = 500,
+            wid = 500;
             continuous = false,
             weighted = true,
             weightFunc = defaultIsingWF,
@@ -45,16 +45,16 @@ mutable struct IsingSim
         );
         
         g = IsingGraph(
-            length,
-            width,
+            len,
+            wid,
             continuous = continuous, 
             weighted = weighted,
             weightFunc = weighted ? weightFunc : defaultIsingWF
         )
 
-        newlayer = IsingLayer(g,1,length,width)
+        newlayer = IsingLayer(g,1,len,wid)
 
-        initbrushR= round(min(length,width)/10)
+        initbrushR= round(min(len,wid)/10)
 
         initImg = gToImg(newlayer; colorscheme)
 

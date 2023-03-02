@@ -276,6 +276,7 @@ function expand(vec::Vector{T}, newlength, val) where T
     return newvec
 end
 
+# Expand a vector with undef
 function expand(vec::Vector{T}, newlength) where T
     if length(vec) > newlength
         error("New length must be longer")
@@ -286,3 +287,6 @@ function expand(vec::Vector{T}, newlength) where T
 
     return newvec
 end
+
+# Insert an item into an ordered list and deduplicate
+insert_and_dedup!(v::Vector, x) = (splice!(v, searchsorted(v,x), [x]); v)::Vector{Tuple{Int32,Float32}}

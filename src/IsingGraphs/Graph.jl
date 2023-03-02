@@ -121,24 +121,16 @@ end
 """
 Initialization of adjacency Vector for a given N
 and using a weightfunc
+Is a pointer to function in SquareAdj.jl for compatibility
 """
-function initSqAdj(length, width; weightFunc = defaultIsingWF, self = false, selfWeights = -1 .* ones(length*width))::Vector{Vector{Conn}}
-    adj = Vector{Vector{Conn}}(undef,length*width)
-    fillAdjList!(adj, length, width, weightFunc)
-    if self
-        Threads.@threads for (idx,el) in enumerate(adj)
-            append!(el,[(idx,selfWeights[idx])])
-        end
-    end
-    return adj
-end
+initSqAdj(len, wid; weightFunc = defaultIsingWF, self = false, selfweight = -1 .* ones(len*wid)) = createSqAdj(len, wid, weightFunc; self, selfweight)
 
 """
 Initialization of adjacency Vector for a given N
 and using a weightfunc with a self energy
 """
-function initSqAdjSelf(length, width; selfWeights = -1 .* ones(length*width), weightFunc = defaultIsingWF)
-    return initSqAdj(length, width; weightFunc, self = true, selfWeights)
+function initSqAdjSelf(len, wid; selfweight = -1 .* ones(len*wid), weightFunc = defaultIsingWF)
+    return initSqAdj(len, wid; weightFunc, self = true, selfweight)
 end
 
 export continuous
