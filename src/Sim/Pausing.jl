@@ -59,7 +59,11 @@ function refreshSim(sim)
 end
 export refreshSim
 
-function restartSim(sim, gidx = 1, energyFunc = getEFactor)
+"""
+Restart the sim with a single process and possible a given energy factor function
+Has some errors if the process terminated
+"""
+function restartSim(sim, gidx = 1; energyFunc = getEFactor)
     processNum = count(stat -> stat == :Running, status(sim)) 
     processNum = processNum < 1 ? 1 : processNum
     println(processNum)

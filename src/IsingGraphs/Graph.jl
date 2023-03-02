@@ -137,7 +137,7 @@ export continuous
 continuous(g::IsingGraph{T}) where T = T <: Integer ? false : true
 
 """
-resize Graph to new size with random states and now connections for the new states
+resize Graph to new size with random states and no connections for the new states
 """
 function resizeG!(g::IsingGraph{T}, nstates) where T
     oldlength = nStates(g)

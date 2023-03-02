@@ -8,7 +8,7 @@ struct IsingLayer{T} <: AbstractIsingGraph{T}
 end
 
 @setterGetter IsingLayer
-@inline reladj(layer::IsingLayer) = adjAbsToView(layer.adj, layer)
+@inline reladj(layer::IsingLayer) = adjGToL(layer.adj, layer)
 @forward IsingLayer LayerData d
 # Setters and getters
 # @forward IsingLayer IsingGraph g
@@ -45,42 +45,55 @@ IsingLayer(g::IsingGraph, start, length, width) =
         LayerData(d(g), start, length, width)
     )
 
-@inline function viewToGIdx(layer, idx)::Int32
+"""
+Go from a local idx of layer to idx of the underlying graph
+"""
+@inline function idxLToG(layer, idx)::Int32
     return start(layer) + idx - 1
 end
 
-@inline function viewToGIdx(layer, i, j)::Int32
+"""
+Go from a local matrix indexing of layer to idx of the underlying graph
+"""
+@inline function idxLToG(layer, i, j)::Int32
     return start(layer) + coordToIdx(i,j, llength(layer))
 end
 
-@inline function gIdxToView(layer, idx)
+"""
+Go from graph idx to idx of layer
+"""
+@inline function idxGToL(layer, idx)
     return idx + 1 - start(layer)
 end
 
-function viewAdjToAbs!(adj, layer)
+"""
+Convert adjacency matrix of a layer to adjacency matrix with idxs of underlying graph
+"""
+function adjLToG(adj, layer)
     for entry in adj
         for idx in 1:length(entry)
-            entry[idx] = tuple(viewToGIdx(layer, connIdx(entry[idx])), connW(entry[idx]))
+            entry[idx] = tuple(idxLToG(layer, connIdx(entry[idx])), connW(entry[idx]))
         end
     end
 end
 # debug
-export viewAdjToAbs!
+export adjLToG
 
-function adjAbsToView(adj::AbstractArray{T}, layer) where T
+# What is this used for?
+function adjGToL(adj::AbstractArray{T}, layer) where T
     newadj = Vector{T}(undef, length(adj))
     for adjidx in 1:length(adj)
         entry = adj[adjidx]
         newentry = typeof(entry)(undef, length(entry))
         for entryidx in 1:length(entry)
             conn = entry[entryidx]
-            newentry[entryidx] = tuple(gIdxToView(layer, connIdx(conn)), connW(conn))
+            newentry[entryidx] = tuple(idxGToL(layer, connIdx(conn)), connW(conn))
         end
         newadj[adjidx] = newentry
     end
     return newadj
 end
-export adjAbsToView
+export adjGToL
 
 function fillAdjList!(layer::IsingLayer, length, width, weightFunc=defaultIsingWF)
     periodic = weightFunc.periodic
@@ -92,6 +105,6 @@ function fillAdjList!(layer::IsingLayer, length, width, weightFunc=defaultIsingW
         adjlist[idx] = adjEntry(adjlist, length, width, idx, periodic, NN, inv)
     end
     
-    viewAdjToAbs!(adjlist, layer)
+    adjLToG(adjlist, layer)
   
 end

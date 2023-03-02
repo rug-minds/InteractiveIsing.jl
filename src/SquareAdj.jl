@@ -9,15 +9,15 @@ Creates a square adjacency matrix (NN must be smaller than width/2 & length/2)
 """
 function createSqAdj(len, wid, weightfunc = defaultIsingWF; self = false, selfweight = (i,j) -> Float32(1))
     NN = weightfunc.NN
-    invoke = weightfunc.invoke
+    invoke(dr,i,j) = getWeight(weightfunc, dr, i ,j)
 
     adj = [Vector{Tuple{Int32,Float32}}() for _ in 1:(len*wid)]
     
     # Need this pattern for performance?
     uniqueIdxFunc(idx, NN, len, wid, invoke) = !self ? getUniqueConnIdxs(idx, NN, len, wid, invoke) : getUniqueConnIdxsSelf(idx, NN, len, wid, invoke, selfweight)
 
-    # Threads.@threads for idx in eachindex(adj)
-    for idx in eachindex(adj)
+    Threads.@threads for idx in eachindex(adj)
+    # for idx in eachindex(adj)
         idxs_weights = uniqueIdxFunc(idx, NN, len, wid, invoke)
         
         for idx_weight in idxs_weights
@@ -28,15 +28,23 @@ function createSqAdj(len, wid, weightfunc = defaultIsingWF; self = false, selfwe
     return adj
 end
 
-function getUniqueConnIdxs(idx, NN, len, wid, invoke)
+export createSqAdj
+
+function getUniqueConnIdxs(idx, NN, len, wid, invoke, shapefunc = 
+        (dj,di, idx, vec) -> (
+            if di < 1 && dj == 0
+                return true
+            end;
+            return false
+        )
+    )
     vec::Vector{Tuple{Int32,Float32}} = []
 
-    for dj in (-NN):(NN)
-        for di in 0:(NN)
-            if dj < 1 && di == 0
+    for dj in 0:(NN)
+        for di in (-NN):(NN)
+            if shapefunc(dj, di, idx, vec)
                 continue
             end
-
             vert_i, vert_j = idxToCoord(idx, len, wid)
 
             conn_i = latmod(vert_i + di, len)
@@ -45,7 +53,7 @@ function getUniqueConnIdxs(idx, NN, len, wid, invoke)
             weight = Float32(invoke(sqrt(di^2+dj^2), (vert_i+conn_i)/2, (vert_j+conn_j)/2))
             if weight != 0
                 conn_idx = coordToIdx(conn_i,conn_j,len)
-                insert_and_dedup!(vec, (conn_idx, weight))
+                push!(vec, (conn_idx, weight))
             end
         end
     end
@@ -53,44 +61,20 @@ function getUniqueConnIdxs(idx, NN, len, wid, invoke)
     return vec
 end
 
-function getUniqueConnIdxsSelf(idx, NN, len, wid, invoke, selfweight)::Vector{Tuple{Int32,Float32}}
-    vec::Vector{Tuple{Int32,Float32}} = []
-
-    for dj in (-NN):(NN)
-        for di in 0:(NN)
-            if dj < 1 && di == 0
+getUniqueConnIdxsSelf(idx, NN, len, wid, invoke, selfweight)::Vector{Tuple{Int32,Float32}} = getUniqueConnIdxs(idx, NN, len, wid, invoke, 
+        (dj, di, idx, vec) -> (
+            if di < 1 && dj == 0
                 if dj == 0
                     vert_i, vert_j = idxToCoord(idx, len, wid)
                     sw = selfweight(vert_i, vert_j)
-                    insert_and_dedup!(vec, (idx, sw ))
+                    push!(vec, (idx, sw ))
                 end
-                continue
-            end
+                return true
+            end;
+            return false
+        )
+)
 
-            vert_i, vert_j = idxToCoord(idx, len, wid)
-
-            conn_i = latmod(vert_i + di, len)
-            conn_j = latmod(vert_j + dj, wid)
-
-            weight = Float32(invoke(sqrt(di^2+dj^2), (vert_i+conn_i)/2, (vert_j+conn_j)/2))
-            if weight != 0
-                conn_idx = coordToIdx(conn_i,conn_j,len)
-                insert_and_dedup!(vec, (conn_idx, weight))
-            end
-        end
-    end
-
-    return vec
-end
-
-"""
-Adds weight to adjacency matrix
-"""
-function addWeight!(adj::Vector, idx, conn_idx, weight)
-    push!(adj[idx], (conn_idx, weight))
-    push!(adj[conn_idx], (idx, weight))
-end
-export addWeight!
 
 """
 Reads an adjacency list as a matrix

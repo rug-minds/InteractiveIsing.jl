@@ -17,7 +17,7 @@ include(joinpath(@__DIR__,"etest.jl"))
 #= Second nearest neighbor radially falling of weightfunction =#
 weightFunc = isingNN2
 # weightFunc = isingNN2
-weightFunc.NN = 1
+weightFunc.NN = 7
 # Test
 
 

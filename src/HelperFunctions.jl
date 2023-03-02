@@ -231,6 +231,7 @@ macro setterGetter(strct, deleted...)
     return esc(funcs)
 
 end
+export setterGetter
 
 # Etc
 # Not used?
