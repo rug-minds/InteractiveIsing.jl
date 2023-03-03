@@ -95,14 +95,27 @@ function adjGToL(adj::AbstractArray{T}, layer) where T
 end
 export adjGToL
 
+function setAdj!(layer::IsingLayer, wf = defaultIsingWF)
+
+    # Threads.@threads for idx in eachindex(adj)
+    for idx in eachindex(adj(layer))
+        idxs_weights = getUniqueConnIdxs(wf, idx, glength(layer), gwidth(layer))
+        
+        for idx_weight in idxs_weights
+            addWeight!(layer, idx, idx_weight[1], idx_weight[2])
+        end
+    end
+end
+
 function fillAdjList!(layer::IsingLayer, length, width, weightFunc=defaultIsingWF)
-    periodic = weightFunc.periodic
-    NN = weightFunc.NN
-    inv = weightFunc.invoke
+    isperiodic = periodic(weightFunc)
+    l_NN = NN(weightFunc)
+    inv = func(weightFunc)
     adjlist = adj(layer)
     
-    Threads.@threads for idx in 1:length*width
-        adjlist[idx] = adjEntry(adjlist, length, width, idx, periodic, NN, inv)
+    # Threads.@threads for idx in 1:length*width
+    for idx in 1:length*width
+        adjlist[idx] = adjEntry(adjlist, length, width, idx, isperiodic, l_NN, inv)
     end
     
     adjLToG(adjlist, layer)

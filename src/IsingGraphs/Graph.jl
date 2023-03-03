@@ -42,14 +42,13 @@ end
 
 # Minimal Initialization using N and optional args
 IsingGraph(length, width; continuous = true, weighted = false, weightFunc = defaultIsingWF, selfE = true) =
-    let adjfunc = continuous ? (selfE ? initSqAdjSelf : initSqAdj) : initSqAdj,
-        type = continuous ? Float32 : Int8
+        let type = continuous ? Float32 : Int8
         IsingGraph(
             type;
             length,
             width, 
             state = initRandomState(continuous ? Float32 : Int8, length, width), 
-            adj = adjfunc(length, width, weightFunc = weightFunc),
+            adj = initSqAdj(length, width, weightFunc = weightFunc),
             weighted
         )
     end
@@ -123,15 +122,15 @@ Initialization of adjacency Vector for a given N
 and using a weightfunc
 Is a pointer to function in SquareAdj.jl for compatibility
 """
-initSqAdj(len, wid; weightFunc = defaultIsingWF, self = false, selfweight = -1 .* ones(len*wid)) = createSqAdj(len, wid, weightFunc; self, selfweight)
+initSqAdj(len, wid; weightFunc = defaultIsingWF) = createSqAdj(len, wid, weightFunc)
 
-"""
-Initialization of adjacency Vector for a given N
-and using a weightfunc with a self energy
-"""
-function initSqAdjSelf(len, wid; selfweight = -1 .* ones(len*wid), weightFunc = defaultIsingWF)
-    return initSqAdj(len, wid; weightFunc, self = true, selfweight)
-end
+# """
+# Initialization of adjacency Vector for a given N
+# and using a weightfunc with a self energy
+# """
+# function initSqAdjSelf(len, wid; selfweight = -1 .* ones(len*wid), weightFunc = defaultIsingWF)
+#     return initSqAdj(len, wid; weightFunc, self = true, selfweight)
+# end
 
 export continuous
 continuous(g::IsingGraph{T}) where T = T <: Integer ? false : true

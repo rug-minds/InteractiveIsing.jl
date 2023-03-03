@@ -10,7 +10,7 @@ mutable struct Processes
     procs::Vector{Process}
 end
 
-Processes(num) = Processes([Process(:Terminated, :Nothing, _ -> ()) for _ in 1:num])
+Processes(num) = Processes([Process(:Terminated, :Nothing, _ -> Sleep(0.5)) for _ in 1:num])
 
 import Base: getindex, setindex!, length, iterate
 

@@ -59,15 +59,16 @@ function mainLoop(sim::IsingSim, process, gidx, params::IsingParams, lTemp, g, g
 
     while message(process) != :Nothing
         
-        if message(process) == :Quit
+        if message(process) == :Execute
+            func(process)(sim, gidx, energyFunc)
+        elseif message(process) == :Quit
             status(process, :Terminated)
             message(process, :Nothing)
             return
-
-        elseif message(process) == :Execute
-            func(process)(sim, gidx, energyFunc)
+        else
+            sleep(0.5)
         end
-
+            
         yield()
         GC.safepoint()
     end

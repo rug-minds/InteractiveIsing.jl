@@ -36,12 +36,12 @@ end
 
 # Add percantage of defects randomly to lattice
 function addRandomDefects!(sim, g, p)
-    if length(liveList(g)) <= 1 || p == 0
+    if length(aliveList(g)) <= 1 || p == 0
         return nothing
     end
 
     for _ in 1:round(length(aliveList(g))*p/100)
-        idx = rand(liveList(g))
+        idx = rand(aliveList(g))
         setSpins!(sim, g, [idx], Int8(0) , true)
     end
 

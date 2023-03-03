@@ -81,7 +81,7 @@ function setLayerIdx!(sim, layeridx)
 end
 export setLayerIdx!
 
-function addLayer!(sim, gidx, glength, gwidth, weightfunc = defaultIsingWF)
+function addLayer!(sim, glength, gwidth; gidx = 1, weightfunc = defaultIsingWF)
     pauseSim(sim)
     glayers = layers(sim)[gidx]
     g = gs(sim)[gidx]
@@ -107,7 +107,7 @@ function addLayer!(sim, gidx, glength, gwidth, weightfunc = defaultIsingWF)
 
     layers(sim)[gidx] = newlayers
     
-    fillAdjList!(newlayers[end], glength, gwidth, weightfunc)
+    setAdj!(newlayers[end], weightfunc)
     
     unpauseSim(sim)
 

@@ -19,7 +19,7 @@ end
 
 # Go from idx to lattice coordinates, for rectangular grids
 @inline function idxToCoord(idx::Integer, length::Integer, width::Integer)
-    return ((idx - 1) % length + 1, (idx - 1) ÷ width + 1)
+    return ((idx - 1) % length + 1, (idx - 1) ÷ length + 1)
 end
 
 # Go from idx to lattice coordinates, for square grids

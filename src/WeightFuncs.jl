@@ -14,25 +14,29 @@ function func_argnames(f::Function)
     return Base.method_argnames(last(ml))[2:end]
 end
 
-struct WeightType{Add,Mult} end
+struct WeightType{Add,Mult,Periodic,Self} end
+
 mutable struct WeightFunc
     NN::Integer
-    periodic::Bool
-    self::Bool
-    selfWeight::Float32
+    selfweight::Function
     func::Function
     wt::WeightType
     addDist::Any 
     multDist::Any
-
-    
-        
-    
 end
 
-WeightFunc(func; NN = 1, periodic = true, self = false, selfWeight = 1) = WeightFunc(NN, periodic, self, selfWeight, func, WeightType{false,false}(), (;_...) -> 1, (;_...) -> 1)
+WeightFunc(func; NN = 1, periodic = true, self = false, selfweight = (i,j) -> 1) = WeightFunc(NN, selfweight, func, WeightType{false,false,periodic,self}(), (;_...) -> 1, (;_...) -> 1)
 
 @setterGetter WeightFunc
+periodic(wt::WeightType{A,B,Periodic,C}) where {A,B,Periodic,C} = Periodic
+periodic(wf::WeightFunc) = periodic(wt(wf))
+self(wt::WeightType{A,B,C,Self}) where {A,B,C,Self} = Self
+self(wf::WeightFunc) = self(wt(wf))
+self(wf::WeightFunc, selfval; weighttype::WeightType{A,B,C,D} = wt(wf)) where {A,B,C,D} = wf.wt = WeightType{A,B,C,selfval}()
+export periodic, self
+
+
+
 
 # Add an additive distribution
 function setAddDist!(wf, dist, func= (;dr,i,j,_...) -> 1)

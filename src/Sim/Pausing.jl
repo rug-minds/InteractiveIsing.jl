@@ -14,6 +14,12 @@ function pauseSim(sim; print = true)
 
     # While any are running, yield
     while any(x -> x == :Running, status(sim))
+        # println("Waiting to pause")
+        # println("Messages: ")
+        # println(messages(sim))
+        # println("Status: ")
+        # println(status(sim))
+        sleep(.5)
         yield()
     end
 
@@ -35,6 +41,12 @@ function unpauseSim(sim; print = true)
     messages(sim)[ [status == :Paused for status in status(sim)] ] .= :Nothing
 
     while any(x -> x == :Paused, status(sim))
+        # println("Waiting to unpause")
+        # println("Messages: ")
+        # println(messages(sim))
+        # println("Status: ")
+        # println(status(sim))
+        sleep(.5)
         yield()
     end
 
