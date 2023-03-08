@@ -8,7 +8,8 @@ Then it waits until isRunning is set to false after which s_shouldRun can be act
 Then, this function itself makes a new branch where getE is defined again.
 export mainLoop
 """
-function createProcess(sim::IsingSim, ; gidx = 1, energyFunc = getEFactor)::Nothing
+
+function createProcess(sim::IsingSim, ; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)::Nothing
     process = nothing
     for (idx, p) in enumerate(processes(sim))
         if status(p) == :Terminated
@@ -23,13 +24,14 @@ function createProcess(sim::IsingSim, ; gidx = 1, energyFunc = getEFactor)::Noth
         end
     end
 
-    Threads.@spawn updateGraph(sim, process; gidx, energyFunc)
+    Threads.@spawn updateGraph(sim, process; gidx, updateFunc, energyFunc)
     return
 end
-createProcess(sim::IsingSim, num; gidx = 1, energyFunc = getEFactor)::Nothing = for _ in 1:num; createProcess(sim; gidx, energyFunc) end
+createProcess(sim::IsingSim, num; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)::Nothing = 
+    for _ in 1:num; createProcess(sim; gidx, updateFunc, energyFunc) end
 export createProcess
 
-function updateGraph(sim::IsingSim, process; gidx = 1, energyFunc = getEFactor)
+function updateGraph(sim::IsingSim, process; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)
     g = gs(sim)[gidx]
     ghtype = htype(g)
     rng = MersenneTwister()
@@ -39,14 +41,14 @@ function updateGraph(sim::IsingSim, process; gidx = 1, energyFunc = getEFactor)
     params = sim.params
     loopTemp = Temp(sim)
 
-    updateFunc = continuous(g) ? updateMonteCarloIsingC : updateMonteCarloIsingD
-
     mainLoop(sim, process, gidx, params, loopTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc, energyFunc)
 end
 
-export updateSim
+export updateGraph
 
-function mainLoop(sim::IsingSim, process, gidx, params::IsingParams, lTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc, energyFunc)::Nothing
+function mainLoop(sim::IsingSim, process, gidx, params::IsingParams, 
+    lTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)::Nothing
+
     status(process, :Running)
 
     while message(process) == :Nothing
@@ -77,7 +79,7 @@ function mainLoop(sim::IsingSim, process, gidx, params::IsingParams, lTemp, g, g
     return 
 end
 
-function updateMonteCarloIsingD(lTemp, g, gstate, gadj, rng, g_iterator, ghtype, energyFunc)
+function updateMonteCarloIsing(lTemp, g, gstate::Vector{Int32}, gadj, rng, g_iterator, ghtype, energyFunc)
 
     beta = 1/(lTemp[])
     
@@ -93,7 +95,7 @@ function updateMonteCarloIsingD(lTemp, g, gstate, gadj, rng, g_iterator, ghtype,
     
 end
 
-function updateMonteCarloIsingC(lTemp, g, gstate, gadj, rng, g_iterator, ghtype)
+function updateMonteCarloIsing(lTemp, g, gstate::Vector{Float32}, gadj, rng, g_iterator, ghtype)
     # @inline function deltE(efac,newstate,oldstate)::Float32
     #     return efac*(newstate-oldstate)
     # end
@@ -119,3 +121,29 @@ function updateMonteCarloIsingC(lTemp, g, gstate, gadj, rng, g_iterator, ghtype)
     end
 end
 
+let times = Ref([])
+    global function upDebug(lTemp, g, gstate::Vector{Int32}, gadj, rng, g_iterator, ghtype, energyFunc)
+
+        beta = 1/(lTemp[])
+        
+        idx = rand(rng, g_iterator)
+        
+        ti = time()
+        Estate = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, ghtype)
+        tf = time()
+
+        push!(times[], tf-ti)
+        if length(times[]) == 1000000
+            println(sum(times[])/length(times[]))
+            times[] = []
+        end
+
+        minEdiff = 2*Estate
+
+        if (Estate >= 0 || rand(rng) < exp(beta*minEdiff))
+            @inbounds g.state[idx] *= -1
+        end
+        
+    end
+end
+export upDebug
