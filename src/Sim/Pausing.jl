@@ -96,3 +96,9 @@ function togglePauseSim(sim)
 end
 export togglePauseSim
 
+function resetStatus!(sim)
+    status(sim) .= :Terminated
+    messages(sim) .= :Nothing
+end
+
+export resetStatus!

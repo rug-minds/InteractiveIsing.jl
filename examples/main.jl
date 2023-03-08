@@ -7,12 +7,10 @@ using ColorSchemes
 
 # include(joinpath(@__DIR__ , "Learning", "IsingLearning.jl"))
 include(joinpath(@__DIR__ , "WeightFuncsCustom.jl"))
-include(joinpath(@__DIR__ , "etest.jl"))
 
 
 include(joinpath(@__DIR__,"..","Benchmarking/Benchmarking.jl"))
 include(joinpath(@__DIR__,"test.jl"))
-include(joinpath(@__DIR__,"etest.jl"))
 #= Radially decreasing weightfunction =#
 # weightFunc = radialWF
 
@@ -37,3 +35,5 @@ const sim = IsingSim(
 )
 
 const g = sim(true);
+
+include(joinpath(@__DIR__ , "etest.jl"))

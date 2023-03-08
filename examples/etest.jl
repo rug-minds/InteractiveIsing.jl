@@ -85,4 +85,16 @@ function convertAdj64(adj)
             push!(newadj, tuple(idxentry,connentry))
         end
         return newadj
-    end
+end
+
+using LinearAlgebra
+ß
+const newadj::Vector{Tuple{Vector{Int32},Vector{Float32}}} = convertAdj(adj(g))
+
+eDot(g, gstate, gadj, idx, htype)::Float32 = getEDot(g, gstate, newadj, idx, htype)::Float32
+
+function getEDot(g, gstate, gadj, idx, htype)::Float32
+    idxs = gadj[idx][1]
+    weights = gadj[idx][2]
+    return @inbounds (@view gstate[idxs]) ⋅ weights
+end
