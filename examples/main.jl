@@ -7,6 +7,8 @@ using ColorSchemes
 
 # include(joinpath(@__DIR__ , "Learning", "IsingLearning.jl"))
 include(joinpath(@__DIR__ , "WeightFuncsCustom.jl"))
+include(joinpath(@__DIR__ , "etest.jl"))
+
 
 include(joinpath(@__DIR__,"..","Benchmarking/Benchmarking.jl"))
 include(joinpath(@__DIR__,"test.jl"))
