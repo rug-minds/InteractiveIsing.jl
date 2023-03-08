@@ -42,7 +42,7 @@ function addRandomDefects!(sim, g, p)
 
     for _ in 1:round(length(aliveList(g))*p/100)
         idx = rand(aliveList(g))
-        setSpins!(sim, g, [idx], Int8(0) , true)
+        setSpins!(sim, g, [idx], Int32(0) , true)
     end
 
 end

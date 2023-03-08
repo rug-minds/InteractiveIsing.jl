@@ -129,7 +129,7 @@ end
 
 # Setting functions for different types of graphs
 setGraphSpins!(sim, g::IsingGraph, idxs, brush, clamp) = setOrClamp!(sim, g, idxs, brush, clamp)
-setGraphSpins!(sim, g::IsingGraph{Int8}, idxs, brush, clamp) = let (clamp = brush == 0 ? true : clamp) ; setOrClamp!(sim, g, idxs, brush, clamp) end
+setGraphSpins!(sim, g::IsingGraph{Int32}, idxs, brush, clamp) = let (clamp = brush == 0 ? true : clamp) ; setOrClamp!(sim, g, idxs, brush, clamp) end
 setGraphSpins!(sim, layer::IsingLayer, idxs, brush, clamp) = setOrClamp!(sim, layer, idxLToG.(Ref(layer), idxs), brush, clamp)
 
 """

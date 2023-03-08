@@ -16,7 +16,7 @@ function benchmarkFuncGenerated(sim, iterations, rng)
     @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingD
     @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingC
 
-    isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD : updateMonteCarloIsingC
+    isingUpdate = typeof(g) == IsingGraph{Int32} ? updateMonteCarloIsingD : updateMonteCarloIsingC
    
     sim.updates = 0
 
@@ -45,7 +45,7 @@ function benchmarkFuncGenerated2(sim, iterations, rng)
     @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingD2
     @includetextfile ".." src textfiles Sim Loop updateMonteCarloIsingC
 
-    isingUpdate = typeof(g) == IsingGraph{Int8} ? updateMonteCarloIsingD : updateMonteCarloIsingC
+    isingUpdate = typeof(g) == IsingGraph{Int32} ? updateMonteCarloIsingD : updateMonteCarloIsingC
    
     sim.updates = 0
 
@@ -111,7 +111,7 @@ function benchmarkFunc(sim,iterations)
         
     end
 
-    if typeof(g) == IsingGraph{Int8}
+    if typeof(g) == IsingGraph{Int32}
         isingUpdate! = updateMonteCarloIsingD!
     else
         isingUpdate! = updateMonteCarloIsingC!
@@ -189,7 +189,7 @@ function benchmarkFunc2(sim)
     # Offset large function into files for clearity
     
 
-    if typeof(g) == IsingGraph{Int8}
+    if typeof(g) == IsingGraph{Int32}
         isingUpdate! = updateMonteCarloIsingD2!
     else
         isingUpdate! = updateMonteCarloIsingC2!
@@ -258,7 +258,7 @@ function benchmarkFunc3(sim)
         
     end
 
-    if typeof(g) == IsingGraph{Int8}
+    if typeof(g) == IsingGraph{Int32}
         isingUpdate! = updateMonteCarloIsingD!
     else
         isingUpdate! = updateMonteCarloIsingC!

@@ -79,7 +79,7 @@ export getWeight
 
 #     function WeightFunc(func::Function, ; NN::Integer)
 #         invoke(dr,i,j) = func(;dr,i,j)
-#         return new(func, Int8(NN), true, false, invoke, false, false)
+#         return new(func, Int32(NN), true, false, invoke, false, false)
 #     end
 
 # end

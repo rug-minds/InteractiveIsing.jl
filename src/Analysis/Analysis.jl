@@ -16,7 +16,7 @@ include("Data.jl")
 
 # Correlation Length Data
 # Save correlation date (lVec,corrVec) to dataframe
-function corrToDF((lVec,corrVec), dpoint::Integer = Int8(1), T::Real = Float16(1))
+function corrToDF((lVec,corrVec), dpoint::Integer = Int32(1), T::Real = Float16(1))
     return DataFrame(L = lVec, Corr = corrVec, D = dpoint, T = T)
 end
 
@@ -33,7 +33,7 @@ end
 
 # # Sample random spins for correlation length, but make sure every pair is only sampled once
 # # Colissions are quite unlikely for smaller number of sampled pairs, making this redundant and slower
-# function sampleCorrPeriodicUnique(g::IsingGraph, Lstep::Float16, lStart::Int8 = 1, lEnd::Int16 = 256, npairs::Integer = 1000 )
+# function sampleCorrPeriodicUnique(g::IsingGraph, Lstep::Float16, lStart::Int32 = 1, lEnd::Int16 = 256, npairs::Integer = 1000 )
 #     function sigToIJ(sig, L)
 #         return (L*cos(sig),L*sin(sig))
 #     end

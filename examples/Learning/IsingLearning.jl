@@ -13,7 +13,7 @@ function mnist_lab(num)
 end
 
 # Mnist value to ising value
-@inline function mToI(int::UInt8, irange = (0,1))::Float32
+@inline function mToI(int::UInt32, irange = (0,1))::Float32
   return irange[1]+(irange[2]-irange[1])/256*int
 end
 

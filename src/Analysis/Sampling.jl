@@ -3,7 +3,7 @@ Takes a random number of pairs for every length to calculate correlation length 
 This only works without defects.
 """
 rthetas = 2*pi .* rand(10^7) # Saves random angles to save computation time
-function sampleCorrPeriodic(ig::IsingGraph, Lstep::Float16 = Float16(.5), lStart::Integer = Int8(1), lEnd::Integer = Int16(256), precision_fac = 5, npairs::Integer = Int32(precision_fac*10000) )
+function sampleCorrPeriodic(ig::IsingGraph, Lstep::Float16 = Float16(.5), lStart::Integer = Int32(1), lEnd::Integer = Int16(256), precision_fac = 5, npairs::Integer = Int32(precision_fac*10000) )
     
     g = deepcopy(ig)
 

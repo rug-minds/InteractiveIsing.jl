@@ -42,12 +42,12 @@ end
 
 # Minimal Initialization using N and optional args
 IsingGraph(length, width; continuous = true, weighted = false, weightFunc = defaultIsingWF, selfE = true) =
-        let type = continuous ? Float32 : Int8
+        let type = continuous ? Float32 : Int32
         IsingGraph(
             type;
             length,
             width, 
-            state = initRandomState(continuous ? Float32 : Int8, length, width), 
+            state = initRandomState(continuous ? Float32 : Int32, length, width), 
             adj = initSqAdj(length, width, weightFunc = weightFunc),
             weighted
         )
@@ -75,7 +75,7 @@ Initialize from a graph
 initRandomState(type, glength, gwidth)::Vector{type} = initRandomState(type, glength*gwidth)
 
 function initRandomState(type, nstates)::Vector{type}
-    if type == Int8
+    if type == Int32
         return rand([-1,1], nstates)
     elseif type == Float32
         return 2 .* rand(Float32, nstates) .- .5

@@ -79,7 +79,7 @@ function mainLoop(sim::IsingSim, process, gidx, params::IsingParams,
     return 
 end
 
-function updateMonteCarloIsing(lTemp, g, gstate::Vector{Int8}, gadj, rng, g_iterator, ghtype, energyFunc)
+function updateMonteCarloIsing(lTemp, g, gstate::Vector{Int32}, gadj, rng, g_iterator, ghtype, energyFunc)
 
     beta = 1/(lTemp[])
     
@@ -122,7 +122,7 @@ function updateMonteCarloIsing(lTemp, g, gstate::Vector{Float32}, gadj, rng, g_i
 end
 
 let times = Ref([])
-    global function upDebug(lTemp, g, gstate::Vector{Int8}, gadj, rng, g_iterator, ghtype, energyFunc)
+    global function upDebug(lTemp, g, gstate::Vector{Int32}, gadj, rng, g_iterator, ghtype, energyFunc)
 
         beta = 1/(lTemp[])
         

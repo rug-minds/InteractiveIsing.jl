@@ -88,7 +88,6 @@ function convertAdj64(adj)
 end
 
 using LinearAlgebra
-ß
 const newadj::Vector{Tuple{Vector{Int32},Vector{Float32}}} = convertAdj(adj(g))
 
 eDot(g, gstate, gadj, idx, htype)::Float32 = getEDot(g, gstate, newadj, idx, htype)::Float32

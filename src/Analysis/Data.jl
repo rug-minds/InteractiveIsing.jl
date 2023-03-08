@@ -1,7 +1,7 @@
 """
 Save magnetization data to a dataframe
 """
-function MToDF(M, dpoint::Integer = Int8(1), T::Real = Float16(1))
+function MToDF(M, dpoint::Integer = Int32(1), T::Real = Float16(1))
     return DataFrame(M = M, D = dpoint, T = T)
 end
 
