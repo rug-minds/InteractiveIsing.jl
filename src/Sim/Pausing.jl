@@ -75,12 +75,12 @@ export refreshSim
 Restart the sim with a single process and possible a given energy factor function
 Has some errors if the process terminated
 """
-function restartSim(sim, gidx = 1; energyFunc = getEFactor)
+function restartSim(sim, gidx = 1; updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)
     processNum = count(stat -> stat == :Running, status(sim)) 
     processNum = processNum < 1 ? 1 : processNum
     println(processNum)
     quitSim(sim)
-    createProcess(sim, processNum; gidx, energyFunc)
+    createProcess(sim, processNum; gidx, updateFunc, energyFunc)
     println("Restarted Sim")
     return
 end 
