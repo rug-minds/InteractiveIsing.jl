@@ -15,25 +15,14 @@ function getENormSimd(g, gstate, gadj, idx, htype)::Float32
     efac::Float32 = Float32(0)
 
     @inbounds @simd for conn_idx in eachindex(gadj[idx])
-        conn = gadj[idx][conn_idx]
-        efac += -connW(conn) * gstate[connIdx(conn)]
+        conn::Tuple{Int32,Float32} = gadj[idx][conn_idx]
+        @fastmath efac += -connW(conn) * gstate[connIdx(conn)]
     end
 
     return efac
 end
 
-function getENormTurbo(g, gstate, gadj, idx, htype)::Float32
-    efac::Float32 = Float32(0)
-    idxs = gadj[idx][1]
-    weights = gadj[idx][2]
-    @inbounds @turbo for idx in eachindex(idxs)
-        efac += -gstate[idxs[idx]]*weights[idx]
-    end
-
-    return efac
-end
-
-function getENormSimd2(gstate, gadj, idx)::Float32
+function getENormSimd2(g, gstate, gadj, idx, htype)::Float32
     efactor = Float32(0)
     #= none:1 =# @inbounds #= none:1 =# @simd(for conn_idx = eachindex(gadj[idx])
                 #= none:2 =#
@@ -48,7 +37,7 @@ end
 function getENormMag(g, gstate, gadj, idx, htype)::Float32
     efac = Float32(0)
     @inbounds for conn_idx in eachindex(gadj[idx])
-        conn = gadj[idx][conn_idx]
+        conn::Tuple{Int32,Float32} = gadj[idx][conn_idx]
         efac += -connW(conn)*gstate[connIdx(conn)] 
     end
     return efac - mlist(g)[idx]
@@ -88,12 +77,38 @@ function convertAdj64(adj)
 end
 
 using LinearAlgebra
+
 const newadj::Vector{Tuple{Vector{Int32},Vector{Float32}}} = convertAdj(adj(g))
+
+function getEDot(g, gstate, gadj, idx, htype)::Float32
+    idxs::Vector{Int32} = gadj[idx][1]
+    weights::Vector{Float32} = gadj[idx][2]
+    return @inbounds -((@view gstate[idxs]) ⋅ weights)
+end
 
 eDot(g, gstate, gadj, idx, htype)::Float32 = getEDot(g, gstate, newadj, idx, htype)::Float32
 
-function getEDot(g, gstate, gadj, idx, htype)::Float32
-    idxs = gadj[idx][1]
-    weights = gadj[idx][2]
-    return @inbounds (@view gstate[idxs]) ⋅ weights
+
+function getENormTurbo(g, gstate, gadj, idx, htype)::Float32
+    efac::Float32 = Float32(0)
+    idxs = newadj[idx][1]
+    weights = newadj[idx][2]
+    @inbounds @turbo for idx in eachindex(idxs)
+        efac += -gstate[idxs[idx]]*weights[idx]
+    end
+
+    return efac
+end
+
+es(g, gstate, gadj, idx, htype) = eSNew(g, gstate, newadj, idx, htype)
+function eSNew(g, gstate, gadj, idx, htype)::Float32
+    efac::Float32 = Float32(0)
+    idxs::Vector{Int32} = gadj[idx][1]
+    weights::Vector{Float32} = gadj[idx][2]
+
+    @inbounds @simd for conn_idx in eachindex(idxs)
+        efac += - gstate[idxs[conn_idx]] * weights[conn_idx]
+    end
+
+    return efac
 end
