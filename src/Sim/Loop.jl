@@ -81,13 +81,13 @@ end
 
 function updateMonteCarloIsing(lTemp, g, gstate::Vector{Int32}, gadj, rng, g_iterator, ghtype, energyFunc)
 
-    beta = 1/(lTemp[])
+    beta::Float32 = 1/(lTemp[])
     
-    idx = rand(rng, g_iterator)
+    idx::Int32 = rand(rng, g_iterator)
     
-    Estate = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, ghtype)
+    Estate::Float32 = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, ghtype)
 
-    minEdiff = 2*Estate
+    minEdiff::Float32 = 2*Estate
 
     if (Estate >= 0 || rand(rng) < exp(beta*minEdiff))
         @inbounds g.state[idx] *= -1
@@ -104,18 +104,18 @@ function updateMonteCarloIsing(lTemp, g, gstate::Vector{Float32}, gadj, rng, g_i
         Float32(2*(rand(rng)-.5))
     end
 
-    beta = 1/(lTemp[])
+    beta::Float32 = 1/(lTemp[])
 
-    idx = rand(rng, g_iterator)
+    idx::Int32 = rand(rng, g_iterator)
      
-    oldstate = @inbounds gstate[idx]
+    oldstate::Int32 = @inbounds gstate[idx]
 
-    efactor = energyFunc(g, gstate, gadj, idx, ghtype)
+    efactor::Float32 = energyFunc(g, gstate, gadj, idx, ghtype)
 
-    newstate = sampleCState()
+    newstate::Int32 = sampleCState()
     
     # Ediff = deltE(efactor,newstate,oldstate)
-    ediff = Ediff(g, ghtype, idx, efactor, oldstate, newstate)
+    ediff::Float32 = Ediff(g, ghtype, idx, efactor, oldstate, newstate)
     if (ediff < 0 || rand(rng) < exp(-beta*ediff))
         @inbounds g.state[idx] = newstate 
     end
