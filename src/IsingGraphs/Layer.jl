@@ -96,9 +96,9 @@ end
 export adjGToL
 
 function setAdj!(layer::IsingLayer, wf = defaultIsingWF)
-
-    # Threads.@threads for idx in eachindex(adj)
-    for idx in eachindex(adj(layer))
+    
+    Threads.@threads for idx in eachindex(adj)
+    # for idx in eachindex(adj(layer))
         idxs_weights = getUniqueConnIdxs(wf, idx, glength(layer), gwidth(layer))
         
         for idx_weight in idxs_weights
@@ -107,17 +107,17 @@ function setAdj!(layer::IsingLayer, wf = defaultIsingWF)
     end
 end
 
-function fillAdjList!(layer::IsingLayer, length, width, weightFunc=defaultIsingWF)
-    isperiodic = periodic(weightFunc)
-    l_NN = NN(weightFunc)
-    inv = func(weightFunc)
-    adjlist = adj(layer)
+# function fillAdjList!(layer::IsingLayer, length, width, weightFunc=defaultIsingWF)
+#     isperiodic = periodic(weightFunc)
+#     l_NN = NN(weightFunc)
+#     inv = func(weightFunc)
+#     adjlist = adj(layer)
     
-    # Threads.@threads for idx in 1:length*width
-    for idx in 1:length*width
-        adjlist[idx] = adjEntry(adjlist, length, width, idx, isperiodic, l_NN, inv)
-    end
+#     # Threads.@threads for idx in 1:length*width
+#     for idx in 1:length*width
+#         adjlist[idx] = adjEntry(adjlist, length, width, idx, isperiodic, l_NN, inv)
+#     end
     
-    adjLToG(adjlist, layer)
+#     adjLToG(adjlist, layer)
   
-end
+# end
