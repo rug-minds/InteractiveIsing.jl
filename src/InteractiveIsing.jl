@@ -13,6 +13,9 @@ export QML
 # Remove this
 using BenchmarkTools
 
+import Base: getindex, setindex!, length, iterate, isless
+
+
 # Restart MCMC loop to define new Hamiltonian function
 # Is needed for fast execution if part of hamiltonian doesn't need to be checked
 # Should be in IsingSim.jl
