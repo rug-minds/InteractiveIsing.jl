@@ -34,15 +34,8 @@ function getENormSimd2(g, gstate, gadj, sidx, htype = htype(g))::Float32
     return efac
 end
 
-struct Conn
-    idx::Int32
-    weight::Float32
-end
-@inline idx(c::Conn)::Int32 = c.idx
-@inline weight(c::Conn)::Float32 = c.weight
-
 function adjOfEntry(adj)
-    newadj::Vector{Vector{Conn}} = []
+    newadj::Vector{Vector{Tuple(Int32,Float32)}} = []
     for conn_idx in eachindex(adj)
         entries = []
         for entry in adj[conn_idx]
