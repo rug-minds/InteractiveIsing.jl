@@ -40,7 +40,6 @@ function startSim(sim; threads = 1, async = true, loadQML = true)
         started(sim,true)
 
         # Spawn MCMC thread on layer 1
-        println("Created a process")
         createProcess(sim, threads; gidx = 1)
 
         # Load QML interface?
