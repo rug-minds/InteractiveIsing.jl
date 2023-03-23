@@ -46,7 +46,7 @@ function adjOfEntry(adj)
     for conn_idx in eachindex(adj)
         entries = []
         for entry in adj[conn_idx]
-            push!(entries, Conn(entry[1],entry[2]))
+            push!(entries, (entry[1],entry[2]))
         end
         push!(newadj, entries)
     end
