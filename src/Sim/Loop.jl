@@ -9,7 +9,7 @@ Then, this function itself makes a new branch where getE is defined again.
 export mainLoop
 """
 
-function createProcess(sim::IsingSim, ; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)::Nothing
+function createProcess(sim::IsingSim, ; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor, rng = MersenneTwister())::Nothing
     process = nothing
     for (idx, p) in enumerate(processes(sim))
         if status(p) == :Terminated
@@ -24,17 +24,16 @@ function createProcess(sim::IsingSim, ; gidx = 1, updateFunc = updateMonteCarloI
         end
     end
 
-    Threads.@spawn updateGraph(sim, process; gidx, updateFunc, energyFunc)
+    Threads.@spawn updateGraph(sim, process; gidx, updateFunc, energyFunc, rng)
     return
 end
-createProcess(sim::IsingSim, num; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)::Nothing = 
+createProcess(sim::IsingSim, num; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor, rng = MersenneTwister())::Nothing = 
     for _ in 1:num; createProcess(sim; gidx, updateFunc, energyFunc) end
 export createProcess
 
-function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)
+function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor, rng = MersenneTwister())
     g = gs(sim)[gidx]
     ghtype = htype(g)
-    rng = MersenneTwister()
     g_iterator = ising_it(g,ghtype)
     gstate = state(g)
     gadj = adj(g)
