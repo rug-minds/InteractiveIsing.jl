@@ -55,11 +55,14 @@ end
 export unpauseSim
 
 function quitSim(sim)
+
     messages(sim) .= :Quit
 
     while !all(x -> x == :Terminated, status(sim))
         yield()
     end
+
+    messages(sim) .= :Nothing
 
     return true
 end

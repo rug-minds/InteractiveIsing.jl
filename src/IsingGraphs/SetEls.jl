@@ -98,7 +98,7 @@ end
 """
 Setting an alive element
 """
-function setNormal!(sim, g::AbstractIsingGraph, spin_idxs::Vector{Int32}, brush)
+function setNormal!(sim, g::AbstractIsingGraph, spin_idxs::Vector{Int8}, brush)
     remDefects!(sim, g, spin_idxs)
     @inbounds state(graph(g))[spin_idxs] .= brush
 end
@@ -106,7 +106,7 @@ end
 """
 Set clamped spins, change htype, and branch sim
 """
-function setClamp!(sim, g::AbstractIsingGraph, spin_idxs::Vector{Int32}, brush)
+function setClamp!(sim, g::AbstractIsingGraph, spin_idxs::Vector{Int8}, brush)
     # If no defects before, now has defects
     if getHParam(htype(g), :Defects) == false
         editHType!(g, :Defects => true)
@@ -129,7 +129,7 @@ end
 
 # Setting functions for different types of graphs
 setGraphSpins!(sim, g::IsingGraph, idxs, brush, clamp) = setOrClamp!(sim, g, idxs, brush, clamp)
-setGraphSpins!(sim, g::IsingGraph{Int32}, idxs, brush, clamp) = let (clamp = brush == 0 ? true : clamp) ; setOrClamp!(sim, g, idxs, brush, clamp) end
+setGraphSpins!(sim, g::IsingGraph{Int8}, idxs, brush, clamp) = let (clamp = brush == 0 ? true : clamp) ; setOrClamp!(sim, g, idxs, brush, clamp) end
 setGraphSpins!(sim, layer::IsingLayer, idxs, brush, clamp) = setOrClamp!(sim, layer, idxLToG.(Ref(layer), idxs), brush, clamp)
 
 """

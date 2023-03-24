@@ -111,3 +111,54 @@ function updateMonteCarloIsingD2(obs, g, gstate, gadj, rng, g_iterator, ghtype)
     end
     
 end
+
+
+function Benchmark(sim::IsingSim, process = processes(sim)[1], gidx = 1; g = gs(sim)[gidx], updateFunc, energyFunc)
+    ghtype = htype(g)
+    Random.seed!(1234)
+    rng = MersenneTwister(1234)
+    g_iterator = ising_it(g,ghtype)
+    gstate = state(g)
+    gadj = adj(g)
+    params = sim.params
+    loopTemp = Temp(sim)
+
+    quitSim(sim)
+    runTimedFunctions(sim)[] = false
+
+    state(g) .= initRandomState(g)
+    params.updates = 0
+
+    println("Starting Benchmark")
+    ti = time()
+    # mainLoop(sim, process, gidx, params, loopTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc, energyFunc)
+    mainLoop(sim, process, params, gidx, g, gstate, gadj, loopTemp, rng, g_iterator, updateFunc, energyFunc)
+    tf = time()
+
+    # display(gToImg(g))
+
+    return tf - ti
+end
+
+let iterations = 10^7
+    global function monteCarloBenchmark(sim, g, params, lTemp, gstate, gadj, rng, g_iterator, ghtype, energyFunc)
+        beta::Float32 = 1/(lTemp[])
+        
+        idx::Int32 = rand(rng, g_iterator)
+        
+        Estate::Float32 = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, ghtype)
+
+        minEdiff::Float32 = 2*Estate
+
+        if (Estate >= 0 || rand(rng) < exp(beta*minEdiff))
+            @inbounds g.state[idx] *= -1
+        end
+        
+        if params.updates > iterations
+            messages(sim)[1] = :Quit;
+        else
+            params.updates += 1
+        end
+
+    end
+end

@@ -96,7 +96,7 @@ end
 getENormSum(g, gstate, gadj, idx, htype) =let adjentry = gadj[idx]; sum(i -> -connW(adjentry[i]) * gstate[connIdx(adjentry[i])], 1:length(gadj[idx])) end
 
 struct AdjEntry
-    idxs::Vector{Int32}
+    idxs::Vector{32}
     weights::Vector{Float32}
 end
 
@@ -112,7 +112,7 @@ function convertAdj(adj)
 
     for idx in eachindex(adj)
         entry = AdjEntry()
-        # idxentry::Vector{Int32} = []
+        # idxentry::Vector{Int8} = []
         # connentry::Vector{Float32} = []
         for entryidx in eachindex(adj[idx])
             push!(idxs(entry), adj[idx][entryidx][1])
@@ -166,7 +166,7 @@ end
 
 function getETurboNew(g, gstate, gadj, idx, htype = htype(g))::Float32
     efac::Float32 = Float32(0)
-    # @inbounds idxsv::Vector{Int32} = idxs(gadj[idx])
+    # @inbounds idxsv::Vector{Int8} = idxs(gadj[idx])
     # @inbounds weightsv::Vector{Float32} = weights(gadj[idx])
 
     @turbo for idx in eachindex(gadj[idx].idxs)
@@ -202,7 +202,7 @@ eSumView(g, gstate, gadj, idx, htype) = let stateview = view(gstate, gadj[idx][1
 
 function manESimd(g, stateview, gadj, idx, htype = htype(g) )::Float32
     efac::Float32 = Float32(0)    
-    @inbounds idxs::Vector{Int32} = idxs(gadj[idx])
+    @inbounds idxs::Vector{32} = idxs(gadj[idx])
     @inbounds weights::Vector{Float32} = weights(gadj[idx])
 
     lane = VecRange{4}(0)

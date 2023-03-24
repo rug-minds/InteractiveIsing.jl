@@ -31,7 +31,7 @@ createProcess(sim::IsingSim, num; gidx = 1, updateFunc = updateMonteCarloIsing, 
     for _ in 1:num; createProcess(sim; gidx, updateFunc, energyFunc) end
 export createProcess
 
-function updateGraph(sim::IsingSim, process; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)
+function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)
     g = gs(sim)[gidx]
     ghtype = htype(g)
     rng = MersenneTwister()
@@ -41,19 +41,17 @@ function updateGraph(sim::IsingSim, process; gidx = 1, updateFunc = updateMonteC
     params = sim.params
     loopTemp = Temp(sim)
 
-    mainLoop(sim, process, gidx, params, loopTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc, energyFunc)
+    mainLoop(sim, process, params, gidx, g, gstate, gadj, loopTemp, rng, g_iterator, updateFunc, energyFunc)
 end
 
 export updateGraph
 
-function mainLoop(sim::IsingSim, process, gidx, params::IsingParams, 
-    lTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)::Nothing
+function mainLoop(sim::IsingSim, process, params, gidx, g, gstate, gadj, lTemp, rng, g_iterator, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor; ghtype = htype(g))::Nothing
 
     status(process, :Running)
 
     while message(process) == :Nothing
-        updateFunc(lTemp, g, gstate, gadj, rng, g_iterator, ghtype, energyFunc)
-        params.updates += 1
+        updateFunc(sim, g, params, lTemp, gstate, gadj, rng, g_iterator, ghtype, energyFunc)
         GC.safepoint()
     end
 
@@ -78,8 +76,9 @@ function mainLoop(sim::IsingSim, process, gidx, params::IsingParams,
     updateGraph(sim, process; gidx, energyFunc)
     return 
 end
+export mainLoop
 
-function updateMonteCarloIsing(lTemp, g, gstate::Vector{Int32}, gadj, rng, g_iterator, ghtype, energyFunc)
+function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Int8}, gadj, rng, g_iterator, ghtype, energyFunc)
 
     beta::Float32 = 1/(lTemp[])
     
@@ -93,9 +92,11 @@ function updateMonteCarloIsing(lTemp, g, gstate::Vector{Int32}, gadj, rng, g_ite
         @inbounds g.state[idx] *= -1
     end
     
+    params.updates +=1
+
 end
 
-function updateMonteCarloIsing(lTemp, g, gstate::Vector{Float32}, gadj, rng, g_iterator, ghtype)
+function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Float32}, gadj, rng, g_iterator, ghtype, energyFunc)
     # @inline function deltE(efac,newstate,oldstate)::Float32
     #     return efac*(newstate-oldstate)
     # end
@@ -119,10 +120,14 @@ function updateMonteCarloIsing(lTemp, g, gstate::Vector{Float32}, gadj, rng, g_i
     if (ediff < 0 || rand(rng) < exp(-beta*ediff))
         @inbounds g.state[idx] = newstate 
     end
+
+    params.updates +=1
 end
 
+export updateMonteCarloIsing
+
 let times = Ref([])
-    global function upDebug(lTemp, g, gstate::Vector{Int32}, gadj, rng, g_iterator, ghtype, energyFunc)
+    global function upDebug(lTemp, g, gstate::Vector, gadj, rng, g_iterator, ghtype, energyFunc, params)
 
         beta = 1/(lTemp[])
         
