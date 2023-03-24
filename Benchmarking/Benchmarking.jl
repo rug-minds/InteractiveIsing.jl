@@ -162,3 +162,16 @@ let iterations = 10^7
 
     end
 end
+
+function simtest(sim)
+    Random.seed!(1234)
+    rng = MersenneTwister(1234)
+
+    g = graph(sim)
+    state(g) .= initRandomState(g)
+
+    sleep(5)
+
+    quitSim(sim)
+
+end
