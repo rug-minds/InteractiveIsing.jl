@@ -106,6 +106,8 @@ Otherwise it returns all alive spins
 
 end
 
+export ising_it
+
 """
 Get index of connection
 """

@@ -209,9 +209,11 @@ Defines setter and getter functions for all struct fieldnames
 """
 macro setterGetter(strct, deleted...)
     funcs = quote end
+    strctname = string(nameof(eval(strct)))
+
     for name in fieldnames(eval(strct))
         if !(name ∈ deleted)
-            strctname = string(nameof(eval(strct)))
+            # strctname = string(nameof(eval(strct)))
             varname = lowercase(string(nameof(eval(strct))))
 
             if @methodexists name
@@ -232,6 +234,20 @@ macro setterGetter(strct, deleted...)
 
 end
 export setterGetter
+
+macro registerStructVars(varname, structname)
+    vars = quote end
+    objectname = string(varname)
+    # println(typeof(eval(structname)))
+    for name in fieldnames(eval(structname))
+        # println(name)
+        # println("$name = $objectname.$name")
+        push!(vars.args, Meta.parse("$name = $objectname.$name"))
+    end
+
+    return esc(vars)
+end
+export registerStructVars
 
 # Etc
 # Not used?

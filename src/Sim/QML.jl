@@ -22,15 +22,6 @@ function qmlFunctions(sim::IsingSim)
     s_M = M(sim)
     s_brushR = brushR(sim)
 
-    # # Locks for ensuring spawned functions are not created
-    # # if old one is still running
-    
-    # # Clean up this system
-    # # Maybe with a dict
-    # updatingImg = sim.updatingImg
-    # updatingUpf = sim.updatingUpf
-    # updatingMag = sim.updatingMag
-
     s_analysisRunning = analysisRunning(sim)
 
     @qmlfunction println
