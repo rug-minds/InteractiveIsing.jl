@@ -24,7 +24,7 @@ function createProcess(sim::IsingSim, ; gidx = 1, updateFunc = updateMonteCarloI
         end
     end
 
-    Threads.@spawn updateGraph(sim, process; gidx, updateFunc, energyFunc, rng)
+    errormonitor(Threads.@spawn updateGraph(sim, process; gidx, updateFunc, energyFunc, rng))
     return
 end
 createProcess(sim::IsingSim, num; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor, rng = MersenneTwister())::Nothing = 
@@ -57,11 +57,10 @@ function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, updat
 
     try
         mainLoop(sim, process, loopParams, updateFunc, energyFunc)
-    catch error 
+    catch 
         status(process, :Terminated)
         message(process, :Nothing)
-        #display error 
-        display(error)
+        rethrow()
     end
 
 
@@ -75,6 +74,7 @@ function mainLoop(sim::IsingSim, process, loopParams, updateFunc = updateMonteCa
 
     @registerStructVars loopParams LoopParams
 
+    println(params.updates)
     while message(process) == :Nothing
         updateFunc(sim, g, params, lTemp, gstate, gadj, rng, g_iterator, ghtype, energyFunc)
         # updateFunc(g, lTemp, gstate, gadj, rng, g_iterator, ghtype, energyFunc)
@@ -124,7 +124,6 @@ function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Int8}, gadj
 end
 
 function updateMonteCarloIsing(g, lTemp, gstate::Vector{Int8}, gadj, rng, g_iterator, ghtype, energyFunc)
-
     beta::Float32 = 1/(lTemp[])
     
     idx::Int32 = rand(rng, g_iterator)
@@ -137,8 +136,6 @@ function updateMonteCarloIsing(g, lTemp, gstate::Vector{Int8}, gadj, rng, g_iter
         @inbounds g.state[idx] *= -1
     end
     
-    params.updates +=1
-
 end
 
 function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Float32}, gadj, rng, g_iterator, ghtype, energyFunc)
