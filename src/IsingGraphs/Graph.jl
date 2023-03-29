@@ -48,7 +48,7 @@ IsingGraph(length, width; continuous = true, weighted = false, weightFunc = defa
             length,
             width, 
             state = initRandomState(continuous ? Float32 : Int8, length, width), 
-            adj = initSqAdj(length, width, weightFunc = weightFunc),
+            adj = deepcopy(initSqAdj(length, width, weightFunc = weightFunc)),
             weighted
         )
     end
