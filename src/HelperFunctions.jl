@@ -235,13 +235,32 @@ macro setterGetter(strct, deleted...)
 end
 export setterGetter
 
+macro createArgStruct(name, args...)
+    startstr = "struct $name{"
+    argstr = ""
+    for idx in eachindex(args)
+        argstr *= "\t$(args[idx])::T$idx\n"
+        startstr *= "T$idx,"
+    end
+    #remove last character from startstr
+    startstr = startstr[1:end-1]
+    #close the bracket
+    startstr *= "}\n"
+    #add the arguments
+    startstr *= argstr
+    #close the struct
+    startstr *= "end"
+    println(startstr)
+    return esc(Meta.parse(startstr))
+end
+
+export createArgStruct
+
 macro registerStructVars(varname, structname)
     vars = quote end
     objectname = string(varname)
     # println(typeof(eval(structname)))
     for name in fieldnames(eval(structname))
-        # println(name)
-        # println("$name = $objectname.$name")
         push!(vars.args, Meta.parse("$name = $objectname.$name"))
     end
 

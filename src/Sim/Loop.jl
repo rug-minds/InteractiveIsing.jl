@@ -31,17 +31,18 @@ createProcess(sim::IsingSim, num; gidx = 1, updateFunc = updateMonteCarloIsing, 
     for _ in 1:num; createProcess(sim; gidx, updateFunc, energyFunc) end
 export createProcess
 
-struct LoopParams
-    g::IsingGraph
-    ghtype::HType
-    g_iterator
-    gstate::Vector
-    gadj::Vector{Vector{Conn}}
-    params::IsingParams
-    lTemp::Observable{Float64}
-    rng
-    gidx
-end
+@createArgStruct LoopParams g ghtype g_iterator gstate gadj params lTemp rng gidx
+# struct LoopParams
+#     g::IsingGraph
+#     ghtype::HType
+#     g_iterator
+#     gstate::Vector
+#     gadj::Vector{Vector{Conn}}
+#     params::IsingParams
+#     lTemp::Observable{Float64}
+#     rng
+#     gidx
+# end
 
 
 
