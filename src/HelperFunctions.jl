@@ -250,7 +250,6 @@ macro createArgStruct(name, args...)
     startstr *= argstr
     #close the struct
     startstr *= "end"
-    println(startstr)
     return esc(Meta.parse(startstr))
 end
 
