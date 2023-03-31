@@ -19,7 +19,7 @@ struct Obs
     M::Observable{Float32}
 
     # Updates per frame average
-    upf::Observable{Int} 
+    upf::Observable{Float32} 
 
     # Size of Image Window QML
     imgSize::Observable{Tuple{Int64, Int64}}

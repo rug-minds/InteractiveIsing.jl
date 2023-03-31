@@ -39,7 +39,7 @@ Helper Functions
 """
 function insertShift(vec::Vector{T}, el) where T
     newVec = Vector{T}(undef, length(vec))
-    newVec[1:(end-1)] = vec[2:end]
+    newVec[1:(end-1)] = @view vec[2:end]
     newVec[end] = T(el)
     return newVec
 end

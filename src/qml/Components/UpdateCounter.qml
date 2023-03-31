@@ -15,12 +15,12 @@ Item{
     Layout.alignment: Qt.AlignHCenter
     Text{
       Layout.alignment: Qt.AlignHCenter
-      text: "Updates per frame: "
+      text: "Updates per frame per unit: "
 
     }
     Text{
       Layout.alignment: Qt.AlignHCenter
-      text: obs.upf
+      text: obs.upf.toFixed(3)
     }
   }
 }

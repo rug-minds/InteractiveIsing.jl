@@ -24,62 +24,33 @@ function createProcess(sim::IsingSim, ; gidx = 1, updateFunc = updateMonteCarloI
         end
     end
 
-    errormonitor(Threads.@spawn updateGraph(sim, process; gidx, updateFunc, energyFunc, rng))
+    Threads.@spawn updateGraph(sim, process; gidx, updateFunc, energyFunc, rng)
     return
 end
 createProcess(sim::IsingSim, num; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor, rng = MersenneTwister())::Nothing = 
     for _ in 1:num; createProcess(sim; gidx, updateFunc, energyFunc) end
 export createProcess
 
-@createArgStruct LoopParams g ghtype g_iterator gstate gadj params lTemp rng gidx
-# struct LoopParams
-#     g::IsingGraph
-#     ghtype::HType
-#     g_iterator
-#     gstate::Vector
-#     gadj::Vector{Vector{Conn}}
-#     params::IsingParams
-#     lTemp::Observable{Float64}
-#     rng
-#     gidx
-# end
-
-
-
-registerLoopParams(sim, gidx = 1; rng = MersenneTwister()) = 
-    let g = gs(sim)[gidx]
-        LoopParams(g, htype(g), ising_it(g, htype(g)), state(g), adj(g), sim.params, Temp(sim), rng, gidx)
-    end
-
-export registerLoopParams
-
 function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor, rng = MersenneTwister())
-    loopParams = registerLoopParams(sim, gidx; rng)
+    g = gs(sim)[gidx]
+    ghtype = htype(g)
+    g_iterator = ising_it(g,ghtype)
+    gstate = state(g)
+    gadj = adj(g)
+    params = sim.params
+    loopTemp = Temp(sim)
 
-    try
-        mainLoop(sim, process, loopParams, updateFunc, energyFunc)
-    catch 
-        status(process, :Terminated)
-        message(process, :Nothing)
-        rethrow()
-    end
-
-
+    mainLoop(sim, process, params, gidx, g, gstate, gadj, loopTemp, rng, g_iterator, updateFunc, energyFunc)
 end
 
 export updateGraph
 
-function mainLoop(sim::IsingSim, process, loopParams, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)::Nothing
+function mainLoop(sim::IsingSim, process, params, gidx, g, gstate, gadj, lTemp, rng, g_iterator, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor; ghtype = htype(g))::Nothing
 
     status(process, :Running)
 
-    @registerStructVars loopParams LoopParams
-
-    println(params.updates)
     while message(process) == :Nothing
         updateFunc(sim, g, params, lTemp, gstate, gadj, rng, g_iterator, ghtype, energyFunc)
-        # updateFunc(g, lTemp, gstate, gadj, rng, g_iterator, ghtype, energyFunc)
-        # params.updates +=1
         GC.safepoint()
     end
 
@@ -124,21 +95,6 @@ function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Int8}, gadj
 
 end
 
-function updateMonteCarloIsing(g, lTemp, gstate::Vector{Int8}, gadj, rng, g_iterator, ghtype, energyFunc)
-    beta::Float32 = 1/(lTemp[])
-    
-    idx::Int32 = rand(rng, g_iterator)
-    
-    Estate::Float32 = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, ghtype)
-
-    minEdiff::Float32 = 2*Estate
-
-    if (Estate >= 0 || rand(rng) < exp(beta*minEdiff))
-        @inbounds g.state[idx] *= -1
-    end
-    
-end
-
 function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Float32}, gadj, rng, g_iterator, ghtype, energyFunc)
     # @inline function deltE(efac,newstate,oldstate)::Float32
     #     return efac*(newstate-oldstate)
@@ -164,7 +120,7 @@ function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Float32}, g
         @inbounds g.state[idx] = newstate 
     end
 
-    # params.updates +=1
+    params.updates +=1
 end
 
 export updateMonteCarloIsing
