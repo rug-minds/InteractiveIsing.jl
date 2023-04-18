@@ -15,8 +15,19 @@ Makes a reshaped view of a vector so that a part of memory can be interpreted as
 end
 export reshapeView
 
+export AbstractIsingGraph
+abstract type AbstractIsingGraph{T} end
+
+@ForwardDeclare IsingGraph "IsingGraphs"
+@ForwardDeclare IsingLayer "IsingGraphs"
+
+
 include("Data.jl")
+include("GraphDefects.jl")
 include("Graph.jl")
+
+include("LayerDefects.jl")
+
 include("Layer.jl")
 include("SetEls.jl")
 include("User.jl")

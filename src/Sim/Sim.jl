@@ -4,21 +4,7 @@ include("Processes.jl")
 include("Pausing.jl")
 include("IsingSim.jl")
 
-@forward IsingSim Obs
-@forward IsingSim IsingParams params
-@setterGetter IsingSim img
 
-export image
-@inline image(sim::IsingSim) = sim.img
-
-@inline layer(sim, idx) = vecvecIdx(layers(sim), idx)
-export layer
-
-export graph
-@inline graph(sim, graphidx = 1) = gs(sim)[graphidx]
-
-export currentLayer
-@inline currentLayer(sim) = vecvecIdx(layers(sim), layerIdx(sim)[])
 
 include("QML.jl")
 include("Loop.jl")

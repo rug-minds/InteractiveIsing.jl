@@ -81,62 +81,61 @@ function setLayerIdx!(sim, layeridx)
 end
 export setLayerIdx!
 
-function addLayer!(sim, glength, gwidth; gidx = 1, weightfunc = defaultIsingWF)
+function addLayer!(sim::IsingSim, glength, gwidth; gidx = 1, weightfunc = defaultIsingWF)
+    #pause sim
     pauseSim(sim)
-    glayers = layers(sim)[gidx]
-    g = gs(sim)[gidx]
-    oldlength = nStates(g)
-
-    # Resize underlying graphs 
-    resizeG!(g, glength*gwidth)
-
-    # Save layer parameters
-    layerparams = []
-    for layer in glayers
-        push!(layerparams, tuple(start(layer), size(layer)...))
-    end
-
-    startidx = layerparams[end][1] + layerparams[end][2]*layerparams[end][3]
-    push!(layerparams, (startidx, glength, gwidth))
-
-    # Make new layers
-    newlayers = Vector{IsingLayer}(undef, length(glayers) + 1)
-    for layeridx in 1:(length(glayers) + 1)
-        newlayers[layeridx] = IsingLayer(g, layerparams[layeridx]...)
-    end
-
-    layers(sim)[gidx] = newlayers
-    
-    setAdj!(newlayers[end], weightfunc)
-    
-    unpauseSim(sim)
-
+    # add layer to graph
+    addLayer!(gs(sim)[gidx], glength, gwidth; weightfunc = weightfunc)
+    #update number of layers
     nlayers(sim)[] += 1
-    return
+    # unpause sim
+    unpauseSim(sim)
 end
 
-function removeLayer!(sim, gidx, layeridx)
+function removeLayer!(sim::IsingSim, layeridx; gidx = 1)
     pauseSim(sim)
-    g = gs(sim)[gidx]
-    layervec = layers(sim)[gidx]
-    layer = layers(sim)[gidx][layeridx]
+    
+    if layerIdx(sim)[] >= layeridx
+        layerIdx(sim)[] -= 1
+    end
 
-    # Remove the states from the IsingGraph
-    state(g, removeStates(state(g), start(layer), start(layer) + nStates(layer) - 1))
-
-    # Removing defects
-    ndefects = collectNumDefects(layervec)
-    newdefects = remPartitionAscendingList(defectList(g), ndefects, layeridx, nStates(layer))
-    defectList(g, newdefects)
-
-    # Fixing aliveList
-    nalives = nStates.(layervec) .- ndefects
-    newalives = remPartitionAscendingList(aliveList(g), nalives, layeridx, nStates(layer))
-    aliveList(g, newalives)
+    removeLayer!(gs(sim)[gidx], layeridx)
+    nlayers(sim)[] -= 1
 
     unpauseSim(sim)
 end
+
+
+# function removeLayer!(sim, gidx, layeridx)
+#     pauseSim(sim)
+#     g = gs(sim)[gidx]
+#     layervec = layers(sim)[gidx,:]
+#     layer = layervec[layeridx]
+
+#     # Remove the states from the IsingGraph
+#     state(g, removeStates(state(g), start(layer), start(layer) + nStates(layer) - 1))
+
+#     # Removing defects
+#     ndefects = collectNumDefects(layervec)
+#     newdefects = remPartitionAscendingList(defectList(g), ndefects, layeridx, nStates(layer))
+#     defectList(g, newdefects)
+
+#     # Fixing aliveList
+#     nalives = nStates.(layervec) .- ndefects
+#     newalives = remPartitionAscendingList(aliveList(g), nalives, layeridx, nStates(layer))
+#     aliveList(g, newalives)
+
+#     unpauseSim(sim)
+# end
 export addLayer!
+export removeLayer!
+
+
+
+
+
+# Move this away
+
 
 function removeEntries(vec, startidx, endidx, transform = identity)
     newstate = Vector{typeof(vec).parameters[1]}(undef, length(vec) - (endidx - startidx + 1) )
@@ -147,30 +146,8 @@ function removeEntries(vec, startidx, endidx, transform = identity)
     return newstate
 end
 
-"""
-Takes an ascending list that is partitioned into parameters
-Removes one of the partitions, and shifts al elements after the partition
-down by an amount of the maxsize of the partition
-|part1|part2|part3| -> |part1|part3 .- maxsize(part2)|
-"""
-function remPartitionAscendingList(list, npartitions, partitionidx, maxSize)
-    nElementsToRemove = npartitions[partitionidx]
-    startidx = 1 + sum(npartitions[1:(partitionidx-1)])
-    endidx = startIdx + nElementsToRemove
-    removeEntries(list, startidx, endidx, x -> x - maxSize)
-end
 
-"""
-From vector of layers for one underlying graph
-collect the number of defects
-"""
-function collectNumDefects(layers)
-    defectvec = Vector(undef, length(layers))
-    for (idx,layer) in enumerate(layers)
-        defectvec[idx] = ndefects(layer)
-    end
-    return defectvec
-end
+
 
 function removeAdjEntries(adj::Vector{T}, idxs) where T
     newadj = Vector{T}(undef, length(adj) - length(idxs))

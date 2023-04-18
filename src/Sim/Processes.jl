@@ -1,3 +1,4 @@
+# Probably add a ref to the graph it's working on
 mutable struct Process
     status::Symbol
     message::Symbol

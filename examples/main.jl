@@ -15,9 +15,9 @@ include(joinpath(@__DIR__,"test.jl"))
 # weightFunc = radialWF
 
 #= Second nearest neighbor radially falling of weightfunction =#
-weightFunc = isingNN2
+const weightFunc = isingNN2
 # weightFunc = isingNN2
-weightFunc.NN = 7
+weightFunc.NN = 2
 # Test
 
 
@@ -26,13 +26,13 @@ weightFunc.NN = 7
 
 
 const sim = IsingSim(
-    500,
-    500,
+    50,
+    50,
     continuous = false, 
     weighted = true;
     weightFunc,
     colorscheme = ColorSchemes.winter
-)
+);
 
 const g = sim(true);
 

@@ -3,9 +3,21 @@
 """
 Set spins either to a value or clamp them
 """
+#Clean this up
+setSpins!(sim, g, idxs::Vector{Int32}, brush, clamp = false) = setOrClamp!(sim, g, idxs, brush, clamp)
+setSpins!(sim, g, coords::Vector{Tuple{Int16,Int16}}, brush, clamp = false) = setSpins!(sim, g, coordToIdx.(coords, glength(g)), brush, clamp)
 
-setSpins!(sim, g, idxs, brush, clamp = false) = setGraphSpins!(sim, g, idxs, brush, clamp)
-setSpins!(sim, g, tupls, brush, clamp = false) = setGraphSpins!(sim, g, coordToIdx.(tupls, glength(g)), brush, clamp)
+function setSpins!(sim, g::AbstractIsingGraph{T}, idx::Int32, brush, clamp = false) where T
+    if T == Int8
+        clamp = brush == 0 ? true : clamp
+    end
+
+    setdefect(g, clamp, idx)
+
+    setSimHType!(sim, "Defects" =>  hasDefects(defects(graph(g))))
+    
+    @inbounds state(g)[idx] = brush
+end
 
 """
 Adds weight to adjacency matrix

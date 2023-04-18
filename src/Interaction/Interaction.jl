@@ -36,13 +36,37 @@ end
 
 # Add percantage of defects randomly to lattice
 function addRandomDefects!(sim, g, p)
+    println("Adding random defects to graph")
     if length(aliveList(g)) <= 1 || p == 0
         return nothing
     end
 
-    for _ in 1:round(length(aliveList(g))*p/100)
-        idx = rand(aliveList(g))
-        setSpins!(sim, g, [idx], Int32(0) , true)
-    end
+    al = aliveList(g)
+    idxs = al[sample([true, false], Weights([p/100,1-p/100]), length(al))]
+
+    setSpins!(sim, g, idxs, 0, true)
+
+    return
+
+    # for _ in 1:round(length(aliveList(g))*p/100)
+    #     setSpins!(sim, g, 0, true)
+    # end
 
 end
+
+
+# function addRandomDefects!(sim, layer::IsingLayer, p)
+#     println("Adding random defects to layer")
+#     if length(aliveList(layer)) <= 1 || p == 0
+#         return nothing
+#     end
+#     al = aliveList(layer)
+#     idxs = al[sample([true, false], Weights([p/100,1-p/100]), length(al))]
+
+#     setSpins!(sim, g, idxs, 0, true)
+
+#     # for _ in 1:round((length(state(layer))-ndefects(layer) )*p/100)
+#     #     setSpins!(sim, layer, Int32(rand(aliveList(layer))), Int32(0), true)
+#     # end
+
+# end

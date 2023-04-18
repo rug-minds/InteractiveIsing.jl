@@ -1,63 +1,79 @@
 # Ising Graph Representation and functions
-export AbstractIsingGraph
-abstract type AbstractIsingGraph{T} end
-
 mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
-    # Global graph props to be tracked for performance
-    size::Tuple{Int32,Int32}
-
     nStates::Int32
 
     # Vertices and edges
     state::Vector{T}
     adj::Vector{Vector{Conn}}
     htype::HType
+    layers::Vector{IsingLayer{T}}
+    defects::GraphDefects
     d::GraphData
 
-    IsingGraph(type::DataType; length, width, state, adj, weighted = false) = 
-    (   
-        h = new{type}(
-            (length*width,1),
-            length*width,
-            state,
-            adj,
-            generateHType(weighted,false)
-        );
-        
-        h.d = GraphData(h);
-        return h
-    )
 
+
+    # IsingGraph(type::DataType; length, width, state, adj, weighted = false) = 
+    # (   
+    #     g = new{type}(
+    #         (length*width,1),
+    #         length*width,
+    #         state,
+    #         adj,
+    #         HType(weighted,false)
+    #     );
+        
+    #     g.d = GraphData(g);
+    #     g.defects = GraphDefects(nStates(g));
+    #     # g.layers = [IsingLayer(g, 1, 1, length, width)];
+    #     g.layers = IsingLayer[];
+    #     return g
+    # )
+
+    IsingGraph(length, width; weightFunc::WeightFunc, continuous = false, weighted = false) = 
+    (   
+        type = continuous ? Float32 : Int8;
+        g = new{type}(
+            0,
+            type[],
+            Vector{Vector{Conn}}[],
+            HType(weighted, false),
+            IsingLayer[],
+        );
+        g.defects = GraphDefects(g);
+        g.d = GraphData(g);
+        addLayer!(g, length, width, weightfunc = weightFunc);
+        #For performance for some reason
+        g.adj = deepcopy(g.adj);
+        return g
+    )
     
 end
 
+#extend show to print out the graph, showing the length of the state, and the layers
+function Base.show(io::IO, g::IsingGraph)
+    println(io, "IsingGraph with $(nStates(g)) states")
+    println(io, "Layers:")
+    for layer in g.layers
+        show(io, layer)
+    end
+end
+
+
 @setterGetter IsingGraph
 @forward IsingGraph GraphData d
+@forward IsingGraph GraphDefects defects
 
 @inline glength(g::IsingGraph) = size(g)[1]
 @inline gwidth(g::IsingGraph) = size(g)[2]
 
 @inline graph(g::IsingGraph) = g
 
+@inline layer(g::IsingGraph, idx) = g.layers[idx]
 
-# Minimal Initialization using N and optional args
-IsingGraph(length, width; continuous = true, weighted = false, weightFunc = defaultIsingWF, selfE = true) =
-        let type = continuous ? Float32 : Int8
-        IsingGraph(
-            type;
-            length,
-            width, 
-            state = initRandomState(continuous ? Float32 : Int8, length, width), 
-            adj = deepcopy(initSqAdj(length, width, weightFunc = weightFunc)),
-            weighted
-        )
-    end
-
-IsingGraph(N; continuous = true, weighted = false, weightFunc = defaultIsingWF, selfE = true) = 
-    IsingGraph(N, N; continuous, weighted, weightFunc, selfE)
-
-# Copy graph data to new one
 IsingGraph(g::IsingGraph) = deepcopy(g)
+
+@inline layerdefects(g::IsingGraph) = layerdefects(defects(g))
+@inline size(g::IsingGraph) = (nStates(g), 1)
 
 function reinitIsingGraph!(g::IsingGraph)
     state(g) .= initRandomState(g)
@@ -65,8 +81,7 @@ function reinitIsingGraph!(g::IsingGraph)
     g.htype = HType(:Weighted => currentlyWeighted)
     reinitGraphData!(g.d,g)
 end
-
-
+ 
 export initRandomState
 """ 
 Initialize from a graph
@@ -80,7 +95,7 @@ function initRandomState(type, nstates)::Vector{type}
     elseif type == Float32
         return 2 .* rand(Float32, nstates) .- .5
     else
-        return rand(type.([-1,1]), nstates)
+        return rand(type[-1,1], nstates)
     end
 
 end
@@ -140,29 +155,120 @@ initSqAdj(len, wid; weightFunc = defaultIsingWF) = createSqAdj(len, wid, weightF
 export continuous
 continuous(g::IsingGraph{T}) where T = T <: Integer ? false : true
 
-"""
-resize Graph to new size with random states and no connections for the new states
-"""
-function resizeG!(g::IsingGraph{T}, nstates) where T
-    oldlength = nStates(g)
-    newlength = nStates(g) + nstates
+setdefect(g::IsingGraph, val, idx) = defects(g)[idx] = val
 
-    randomstate = initRandomState(T, nstates)
-    state(g, expand(state(g), newlength, randomstate ))
-    adj(g, expand(adj(g), newlength, [[] for _ in 1:nstates]))
+"""
+Resize Graph to new size with random states and no connections for the new states
+Need to be bigger than original size?
+"""
+function resize!(g::IsingGraph{T}, newlength, layeridx = 0) where T
+    oldlength = nStates(g)
+    sizediff = newlength - oldlength
+
+    if sizediff < 0
+        savedstates = state(g)[(endidx(layer(g,layeridx))+1):end]
+        oldstart = startidx(layer(g,layeridx))
+    end
+
+    resize!(state(g), newlength)
+    resize!(adj(g), newlength)
+
+    if sizediff > 0
+        randomstate = initRandomState(T, sizediff)
+        state(g)[oldlength+1:newlength] .= randomstate
+        adj(g)[oldlength+1:newlength] .= [Vector{Conn}[] for _ in oldlength+1:newlength]
+    else
+        state(g)[oldstart:end] .= savedstates
+    end
 
     nStates(g, newlength)
-    size(g, (newlength,1))
 
-    # Data
-    aLLength = length(aliveList(g))
-    newaLLength = aLLength + nstates
-    aliveList(g, expand(aliveList(g), newaLLength, [(oldlength+1):newlength;]))
-    defectBools(g, expand(defectBools(g), newlength, false ))
-    mlist(g, expand(mlist(g), newlength, 0) ) 
-    clamps(g, expand(clamps(g), newlength, 0) )
+    # Resize Data
+    resize!(d(g), newlength)
 
     return
 end
 
-export resizeG!
+#Remove states from state(graph) and return new vector
+function removeStates(state, startidx, endidx)
+    #initialize new vec
+    newstate = Vector{eltype(state)}(undef, length(state) - (endidx - startidx + 1))
+    #copy old vec
+    newstate[1:startidx-1] = state[1:startidx-1]
+    newstate[startidx:end] = state[endidx+1:end]
+
+    return newstate
+end
+
+export resize!
+
+function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = defaultIsingWF)
+    glayers = layers(g)
+
+    # Resize underlying graphs 
+    resize!(g, nStates(g) + llength*lwidth)
+
+    # If this is not the first, regenerate the views because state now points to new memory
+    # And find the starting idx of the layer
+    if length(glayers) != 0
+        startidx = start(glayers[end]) + glength(glayers[end])*gwidth(glayers[end])
+        # for layer in glayers
+        #     regenerateViews(layer)
+        # end
+    else
+        startidx = 1
+    end
+
+    #Make the new layer
+    newlayer = IsingLayer(g, length(glayers)+1 , startidx, llength, lwidth)
+    # Push it to layers
+    push!(glayers, newlayer)
+
+    setAdj!(newlayer, weightfunc)
+
+    # Add Layer to defects
+    addLayer!(defects(g), newlayer)
+    
+    return
+end
+
+
+function removeLayer!(g::IsingGraph, lidx::Integer)
+    #if only one layer error
+    if length(layers(g)) <= 1
+        error("Cannot remove last layer")
+    end
+
+    layervec = layers(g)
+    layer = layervec[lidx]
+
+    # Resize the graph
+    resize!(g, nStates(g) - glength(layer)*gwidth(layer), lidx)
+
+    # Remove the layer from the graph defects
+    removeLayer!(defects(g), lidx)
+
+    # Remove the layer from the graph
+    deleteat!(layervec, lidx)
+    
+    #Update the layer idxs
+    updateLayerIdxs!(g)
+
+
+    #Fix the layers to point towards the right spins
+    for i in (lidx):length(layervec)
+        llayer = layervec[i]
+        layeridx(llayer, layeridx(llayer)-1)
+        start(llayer, start(llayer) - glength(layer)*gwidth(layer))
+        regenerateViews(llayer)
+    end
+
+end
+
+removeLayer!(g::IsingGraph, layer::IsingLayer) = removeLayer!(g, layeridx(layer))
+
+function updateLayerIdxs!(g::IsingGraph)
+    for (i, layer) in enumerate(layers(g))
+        layeridx(layer, i)
+    end
+end

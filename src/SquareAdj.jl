@@ -110,8 +110,8 @@ end
 adjToMatrix(g) = adjToMatrix(adj(g), glength(g), gwidth(g))
 
 
-function setAdj!(sim, layer, wf)
-    g = sim.layers[layer]
+function setAdj!(sim, layeridx, wf)
+    g = sim.layers[layeridx]
     adj(g) = initSqAdj(glength(g), gwidth(g), weightFunc = wf)
     refreshSim(sim)
 end

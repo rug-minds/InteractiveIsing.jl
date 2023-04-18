@@ -3,7 +3,7 @@ function setClampIdxs(sim, idxs, strenghts, cfac = 1, g = currentLayer(sim))
     clamps(g)[idxs] .= strenghts
     clampparam(g, cfac)
 
-    setSimHType!(sim, g, :Clamp => true)
+    setSimHType!(sim, :Clamp => true)
 end
 export setClampIdxs
 

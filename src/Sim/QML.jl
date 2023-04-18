@@ -33,7 +33,7 @@ function qmlFunctions(sim::IsingSim)
 
 
     # Add percentage of defects to lattice
-    addRandomDefectsQML(pDefects) = addRandomDefects!(sim, currentLayer, pDefects)
+    addRandomDefectsQML(pDefects) = (layer = currentLayer(sim); try addRandomDefects!(sim, layer, pDefects); catch(error); rethrow(); end)
     @qmlfunction addRandomDefectsQML
 
     # Initialize isinggraph and display
@@ -43,7 +43,7 @@ function qmlFunctions(sim::IsingSim)
     @qmlfunction initIsing
 
     # Draw circle to state
-    circleToStateQML(i,j,clamp=false) = errormonitor(Threads.@spawn circleToState(sim, currentLayer(sim), i, j, s_brush[]; clamp, imgsize = size(img[])))
+    circleToStateQML(i,j,clamp=false) = (errormonitor(Threads.@spawn circleToState(sim, currentLayer(sim), i, j, s_brush[]; clamp, imgsize = size(img[]))))
     @qmlfunction circleToStateQML
 
     # Sweep temperatures and record magnetization and correlation lengths

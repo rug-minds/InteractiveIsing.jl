@@ -1,7 +1,7 @@
 struct Obs
     # Active Layer
     layerIdx::Observable{Int32}
-    #
+    #number of layers
     nlayers::Observable{Int32}
     # length/width of graph
     qmllength::Observable{Int32}

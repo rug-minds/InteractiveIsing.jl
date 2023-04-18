@@ -1,7 +1,7 @@
 export HType
 struct HType{Symbs, Vals} end
 
-function HType(pairs...)
+function HType(pairs::Pair...)
     symbs = getUniqueParams(factors)
     vals = []
 
@@ -47,7 +47,7 @@ end
 """
 Generate a struct of the type: struct HType{Symbs, Vals} end
 """
-function generateHType(vals...)
+function HType(vals::Bool...)
     symbs = getUniqueParams(factors)
 
     if length(vals) > length(symbs)
@@ -59,13 +59,12 @@ function generateHType(vals...)
     return HType{symbs,vals}()
 
 end
-export generateHType
 
 # not used
 """
 Set hamiltonion params by providing a set of vals that are applied in order
 """
-function editHType(htype::HType{Symbs, Vals}, vals...) where {Symbs, Vals}
+function HType(htype::HType{Symbs, Vals}, vals...) where {Symbs, Vals}
 
     if length(vals) > length(Symbs)
         error("Cannot be higher than number of symbols")
@@ -79,7 +78,7 @@ end
 """
 Set hamiltonion params by providing a set of pairs of symbols and vals
 """
-function editHType(htype::HType{Symbs, Vals}, pairs::Pair ...) where {Symbs, Vals}
+function HType(htype::HType{Symbs, Vals}, pairs::Pair ...) where {Symbs, Vals}
     if length(pairs) > length(Symbs)
         error("Cannot be higher than number of symbols")
     end
@@ -99,23 +98,28 @@ function editHType(htype::HType{Symbs, Vals}, pairs::Pair ...) where {Symbs, Val
     end
         
     return HType{Symbs,vals}()
-
 end
-export editHType
 
 function editHType!(g, pairs...)
-    g.htype = editHType(g.htype, pairs...)
+    g.htype = HType(g.htype, pairs...)
 end
-
 export editHType!
 
 export setSimHType!
-function setSimHType!(sim, g, pairs...; prt = false)
-    htype(g, editHType(htype(g), pairs...))
+function setSimHType!(sim, pairs...; gidx = 1, prt = false)
+    g = gs(sim)[gidx]
+
+    oldhtype = htype(g)
+    newhtype = HType(htype(g), pairs...)
+
+    if oldhtype != newhtype
+        htype(g, newhtype)
+        refreshSim(sim)
+    end
+
     if prt
         println(htype(g))
     end
-    branchSim(sim)
 end
 
 function paramIdx(htype::HType{Symbs,Vals}, symb) where {Symbs,Vals}

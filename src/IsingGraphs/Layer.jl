@@ -1,32 +1,77 @@
-struct IsingLayer{T} <: AbstractIsingGraph{T}
+"""
+ndefects not tracking correctly FIX
+"""
+mutable struct IsingLayer{T} <: AbstractIsingGraph{T}
     graph::IsingGraph{T}
+    layeridx::Int32
     state::Base.ReshapedArray
     adj::Base.ReshapedArray
     start::Int32
     size::Tuple{Int32,Int32}
     d::LayerData
+    defects::LayerDefects
+
+    EmptyLayer(type) = new{type}() 
+
+    IsingLayer(g::IsingGraph{T}, idx, start, length, width; olddefects = 0) where T =
+    (
+        layer = new{T}(
+            # Graph
+            g,
+            # Layer idx
+            Int32(idx),
+            # View of state
+            reshapeView(state(g), start, length, width),
+            # View of adj
+            reshapeView(adj(g), start, length, width),
+            # Start idx
+            Int32(start),
+            # Size
+            tuple(Int32(length), Int32(width)),
+            # Layer data
+            LayerData(d(g), start, length, width)
+        );
+        layer.defects = LayerDefects(layer, olddefects);
+     
+
+        return layer
+    )
 end
+
+function regenerateViews(layer::IsingLayer)
+    layer.state = reshapeView(state(graph(layer)), start(layer), glength(layer), gwidth(layer))
+    layer.adj = reshapeView(adj(graph(layer)), start(layer), glength(layer), gwidth(layer))
+end
+
+# Extend show for IsingLayer, showing the layer idx, and the size of the layer
+function Base.show(io::IO, layer::IsingLayer)
+    println(io, "IsingLayer $(layer.layeridx) with size $(size(layer))")
+end
+
+IsingLayer(g, layer::IsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefects(layer))
 
 @setterGetter IsingLayer
 @inline reladj(layer::IsingLayer) = adjGToL(layer.adj, layer)
 @forward IsingLayer LayerData d
+@forward IsingLayer LayerDefects defects
 # Setters and getters
 # @forward IsingLayer IsingGraph g
 @inline glength(layer) = size(layer)[1]
 @inline gwidth(layer) = size(layer)[2]
-@inline aliveList(layer::IsingLayer) = layer.graph.d.aliveList
-@inline aliveList(layer::IsingLayer, newlist) = layer.graph.d.aliveList = newlist
-@inline defectList(layer::IsingLayer) = layer.graph.d.defectList
-@inline defectList(layer::IsingLayer, newlist) = layer.graph.d.defectList = newlist
-@inline defectBools(layer::IsingLayer) = layer.graph.d.defectBools
-@inline defects(layer::IsingLayer) = layer.graph.d.defects
+@inline endidx(layer::IsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
+
+
+
 @inline htype(layer::IsingLayer) = layer.graph.htype
 @inline nStates(layer::IsingLayer) = length(state(layer))
 
-@inline function upNDefects(layer::IsingLayer)::Nothing
-    ndefects(layer, sum(defectBools(layer)[start(layer):(start(layer)+nStates(layer)-1)] ) )
-    return
-end
+#forward alivelist
+aliveList(layer::IsingLayer) = aliveList(defects(layer))
+#forward defectList
+defectList(layer::IsingLayer) = defectList(defects(layer))
+
+@inline hasDefects(layer::IsingLayer) = ndefects(defects(layer)) > 0
+@inline setdefect(layer::IsingLayer, val, idx) = defects(layer)[idx] = val
 
 startidx(layer::IsingLayer) = start(layer)
 endidx(layer::IsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
@@ -35,35 +80,27 @@ iterator(g::IsingGraph) = 1:(nStates(g))
 
 Hamiltonians.editHType!(layer::IsingLayer, pairs...) = editHType!(layer.graph, pairs...)
 
-IsingLayer(g::IsingGraph, start, length, width) =
-    IsingLayer(
-        g,
-        reshapeView(state(g), start, length, width),
-        reshapeView(adj(g), start, length, width),
-        Int32(start),
-        tuple(Int32(length), Int32(width)),
-        LayerData(d(g), start, length, width)
-    )
+
 
 """
 Go from a local idx of layer to idx of the underlying graph
 """
 @inline function idxLToG(layer, idx)::Int32
-    return start(layer) + idx - 1
+    return Int32(start(layer) + idx - 1)
 end
 
 """
 Go from a local matrix indexing of layer to idx of the underlying graph
 """
 @inline function idxLToG(layer, i, j)::Int32
-    return start(layer) + coordToIdx(i,j, llength(layer))
+    return Int32(start(layer) + coordToIdx(i,j, llength(layer)))
 end
 
 """
 Go from graph idx to idx of layer
 """
 @inline function idxGToL(layer, idx)
-    return idx + 1 - start(layer)
+    return Int32(idx + 1 - start(layer))
 end
 
 """
@@ -97,7 +134,7 @@ export adjGToL
 
 function setAdj!(layer::IsingLayer, wf = defaultIsingWF)
     
-    Threads.@threads for idx in eachindex(adj)
+    Threads.@threads for idx in eachindex(adj(layer))
     # for idx in eachindex(adj(layer))
         idxs_weights = getUniqueConnIdxs(wf, idx, glength(layer), gwidth(layer))
         
@@ -107,17 +144,4 @@ function setAdj!(layer::IsingLayer, wf = defaultIsingWF)
     end
 end
 
-# function fillAdjList!(layer::IsingLayer, length, width, weightFunc=defaultIsingWF)
-#     isperiodic = periodic(weightFunc)
-#     l_NN = NN(weightFunc)
-#     inv = func(weightFunc)
-#     adjlist = adj(layer)
-    
-#     # Threads.@threads for idx in 1:length*width
-#     for idx in 1:length*width
-#         adjlist[idx] = adjEntry(adjlist, length, width, idx, isperiodic, l_NN, inv)
-#     end
-    
-#     adjLToG(adjlist, layer)
-  
-# end
+

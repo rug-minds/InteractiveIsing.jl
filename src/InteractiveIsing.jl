@@ -3,7 +3,7 @@ __precompile__(false)
 module InteractiveIsing
 
 using FileIO, Images, ColorSchemes, Dates, JLD, Random, Distributions, Observables, LinearAlgebra, DataFrames, 
-    CSV, CxxWrap, LaTeXStrings
+    CSV, CxxWrap, LaTeXStrings, StatsBase
 
 import Plots as pl
 
@@ -13,7 +13,7 @@ export QML
 # Remove this
 using BenchmarkTools
 
-import Base: getindex, setindex!, length, iterate, isless
+import Base: getindex, setindex!, length, iterate, isless, push!, resize!
 
 
 # Restart MCMC loop to define new Hamiltonian function

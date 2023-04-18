@@ -325,3 +325,69 @@ end
 
 # Insert an item into an ordered list and deduplicate
 insert_and_dedup!(v::Vector, x) = (splice!(v, searchsorted(v,x), [x]); v)::Vector{Tuple{Int32,Float32}}
+
+# macro that takes a description of a struct and fowards declares it by putting a try catch block around it
+macro ForwardDeclare(strct)
+    return quote
+        try
+            $(esc(strct))
+        catch
+        end
+    end
+end
+
+#forward declaration of struct that reads all files in the same folder
+function getstruct(strctname, files)
+    # for every file look for the word struct
+    range = nothing
+    fileidx = 1
+    for (idx, file) in enumerate(files)
+        # read the file
+        filestr = read(file, String)
+        # find the index of the word struct
+        range = findfirst("struct $strctname", filestr)
+
+        # if it's found break the loop
+        if range != nothing
+            mutablerange = (range[1]- 8):(range[1]-2)
+
+            if range[1] >= 9 && filestr[mutablerange] == "mutable"
+                range = mutablerange[1]:range[end]
+            end
+
+            fileidx = idx
+            break
+        end
+    end
+
+    file = read(files[fileidx], String)
+    # add string until "end" is found
+    # find next occurrence of "end" after range
+    endrange = findnext("end", file, range[end])
+
+    str = file[range[1]:endrange[end]]
+    
+    return str
+
+end
+
+#macro defines a struct with the given name in a try catch block
+# with a field that has a type that's gona make it fail
+macro ForwardDeclare(structname, subfolder)
+    #get files from current dir
+    files = readdir(joinpath(@__DIR__, subfolder))
+
+    # get all files that end in .jl
+    files = filter(x -> endswith(x, ".jl"), files)
+
+    # add the path to the files
+    files = map(x -> joinpath(@__DIR__, subfolder, x), files)
+    structstring = getstruct(string(structname), files)
+    expr = Meta.parse(structstring)
+    return esc(quote
+                try
+                    $expr
+                catch
+                end
+            end)
+end
