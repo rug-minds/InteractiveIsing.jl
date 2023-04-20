@@ -13,7 +13,7 @@ export QML
 # Remove this
 using BenchmarkTools
 
-import Base: getindex, setindex!, length, iterate, isless, push!, resize!
+import Base: getindex, setindex!, length, iterate, isless, push!, resize!, size
 
 
 # Restart MCMC loop to define new Hamiltonian function

@@ -104,34 +104,19 @@ function removeLayer!(sim::IsingSim, layeridx; gidx = 1)
 
     unpauseSim(sim)
 end
-
-
-# function removeLayer!(sim, gidx, layeridx)
-#     pauseSim(sim)
-#     g = gs(sim)[gidx]
-#     layervec = layers(sim)[gidx,:]
-#     layer = layervec[layeridx]
-
-#     # Remove the states from the IsingGraph
-#     state(g, removeStates(state(g), start(layer), start(layer) + nStates(layer) - 1))
-
-#     # Removing defects
-#     ndefects = collectNumDefects(layervec)
-#     newdefects = remPartitionAscendingList(defectList(g), ndefects, layeridx, nStates(layer))
-#     defectList(g, newdefects)
-
-#     # Fixing aliveList
-#     nalives = nStates.(layervec) .- ndefects
-#     newalives = remPartitionAscendingList(aliveList(g), nalives, layeridx, nStates(layer))
-#     aliveList(g, newalives)
-
-#     unpauseSim(sim)
-# end
 export addLayer!
 export removeLayer!
 
+function connectLayersFull(layer1::IsingLayer, layer2::IsingLayer)
+    for idx1 in 1:length(state(layer1))
+        for idx2 in 1:length(state(layer2))
+            addWeight!(layer1, layer2, idx1, idx2, 1)
+        end
+    end
+end
 
-
+connectLayersFull(g, layeridx1::Integer, layeridx2::Integer) = connectLayersFull(layers(g)[layeridx1], layers(g)[layeridx2])
+export connectLayersFull
 
 
 # Move this away

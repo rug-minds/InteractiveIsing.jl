@@ -1,6 +1,15 @@
 """
 ndefects not tracking correctly FIX
 """
+
+# Coordinates that can be left uninitialized
+struct Coords{T}
+    cs :: Union{Nothing,T}
+end
+
+Coords() = Coords{Tuple{Int32,Int32}}(nothing)
+Coords(y,z) = Coords{Tuple{Int32,Int32}}((Int32(y),Int32(z)))
+export Coords
 mutable struct IsingLayer{T} <: AbstractIsingGraph{T}
     graph::IsingGraph{T}
     layeridx::Int32
@@ -8,6 +17,7 @@ mutable struct IsingLayer{T} <: AbstractIsingGraph{T}
     adj::Base.ReshapedArray
     start::Int32
     size::Tuple{Int32,Int32}
+    coords::Coords{Tuple{Int32,Int32}}
     d::LayerData
     defects::LayerDefects
 
@@ -28,6 +38,8 @@ mutable struct IsingLayer{T} <: AbstractIsingGraph{T}
             Int32(start),
             # Size
             tuple(Int32(length), Int32(width)),
+            #Coordinates
+            Coords(),
             # Layer data
             LayerData(d(g), start, length, width)
         );
@@ -45,12 +57,18 @@ end
 
 # Extend show for IsingLayer, showing the layer idx, and the size of the layer
 function Base.show(io::IO, layer::IsingLayer)
-    println(io, "IsingLayer $(layer.layeridx) with size $(size(layer))")
+    showstr = "IsingLayer $(layer.layeridx) with size $(size(layer))"
+    if coords(layer) != nothing
+        showstr *= " \t at coordinates $(coords(layer))"
+    end
+    print(io, showstr)
 end
 
 IsingLayer(g, layer::IsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefects(layer))
 
-@setterGetter IsingLayer
+@setterGetter IsingLayer coords
+@inline coords(layer::IsingLayer) = layer.coords.cs
+
 @inline reladj(layer::IsingLayer) = adjGToL(layer.adj, layer)
 @forward IsingLayer LayerData d
 @forward IsingLayer LayerDefects defects

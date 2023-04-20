@@ -26,7 +26,7 @@ weightFunc.NN = 2
 
 
 const sim = IsingSim(
-    50,
+    100,
     50,
     continuous = false, 
     weighted = true;

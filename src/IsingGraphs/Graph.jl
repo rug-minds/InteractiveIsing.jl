@@ -59,6 +59,11 @@ function Base.show(io::IO, g::IsingGraph)
 end
 
 
+coords(g::IsingGraph) = VSI(layers(g), :coords)
+export coords
+layerdefects(g::IsingGraph) = VSI(layers(g), :defects)
+export layerdefects
+
 @setterGetter IsingGraph
 @forward IsingGraph GraphData d
 @forward IsingGraph GraphDefects defects
