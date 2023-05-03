@@ -31,6 +31,7 @@ using .Hamiltonians
 export Hamiltonians
 
 import Base: size
+@ForwardDeclare IsingSim "Sim"
 include("IsingGraphs/IsingGraphs.jl")
 
 # include("IsingMetropolis.jl")

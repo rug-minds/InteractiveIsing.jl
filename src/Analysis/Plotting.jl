@@ -7,6 +7,7 @@ function plotCorr(lVec, corrVec, foldername = "Data", tidx = 0, point = 0, T = 0
     Tstring = replace("$T", '.' => ',')
     pl.savefig(corrPlot,"$(foldername)Ising Corrplot $tidx d$point T$Tstring")
 end
+export plotCorr
 
 
 # Plot a magnetization plot from dataframe

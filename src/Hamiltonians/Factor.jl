@@ -29,7 +29,6 @@ function getEFacExpr(htype::Type{HType{Symbs,Vals}}) where {Symbs, Vals}
     line *= "end"
 
     push!(exprvec, Meta.parse(line))
-
     line = "return efactor"
 
     normalfactor = buildExpr(:FacTerm, Symbs, Vals)
@@ -46,6 +45,7 @@ function getEFacExpr(htype::Type{HType{Symbs,Vals}}) where {Symbs, Vals}
         exprvec...
     ) 
 end
+getEFacExpr(htype::HType{Symbs,Vals}) where {Symbs, Vals} = getEFacExpr(typeof(htype))
 export getEFacExpr
 
 

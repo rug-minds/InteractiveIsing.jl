@@ -158,7 +158,7 @@ function updateMonteCarloIsing(g, lTemp, gstate::Vector{Int8}, gadj, rng, g_iter
     
 end
 
-function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Float32}, gadj, rng, g_iterator, ghtype, energyFunc)
+function updateMonteCarloIsing(g, lTemp, gstate::Vector{Float32}, gadj, rng, g_iterator, ghtype, energyFunc)
     # @inline function deltE(efac,newstate,oldstate)::Float32
     #     return efac*(newstate-oldstate)
     # end

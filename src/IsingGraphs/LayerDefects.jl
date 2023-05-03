@@ -16,6 +16,8 @@ maxdefects(defects::LayerDefects) = nStates(defects.layer)
 
 graphdefects(df::LayerDefects) = defects(graph(layer(df)))
 
+reset!(defects::LayerDefects) = ndefects(defects,0)
+
 function getindex(defects::LayerDefects, idx)
     graphdefects(defects)[idxLToG(defects.layer, idx)]
 end
@@ -35,7 +37,6 @@ function setrange!(defects::LayerDefects, val, idxs)
     return num_set
 end
 
-reset!(defects::LayerDefects) = ndefects(defects,0)
 
 
 #NOT WORKING

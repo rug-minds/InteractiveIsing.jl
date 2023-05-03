@@ -23,7 +23,7 @@ Item{
         Button{
             Layout.alignment: Qt.AlignCenter
             text: {
-                if(!obs.shouldRun)
+                if(obs.isPaused)
                 {
                     "Paused"
                 }

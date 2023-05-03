@@ -19,7 +19,7 @@ GraphData(g) =
         zeros(Float32, nStates(g))
     )
 
-function reinitGraphData!(data, g)
+function reset!(data::GraphData)
     data.mlist .= 0
     data.clampparam = 1
     data.clamps .= 0

@@ -27,10 +27,10 @@ function circleToState(sim, g, i_in, j_in, brush; periodic = true, clamp = false
         println("i $i, j$j")
         println("Brush used $brush")
         # println("Drew circle at y=$i and x=$j")
-        println("Circle to state circle $circle")
+        println("Circle to state circle $cir|cle")
     end
 
-    setSpins!(sim, g, circle, brush, clamp)
+    setSpins!(g, circle, brush, clamp)
     
 end
 
@@ -44,7 +44,7 @@ function addRandomDefects!(sim, g, p)
     al = aliveList(g)
     idxs = al[sample([true, false], Weights([p/100,1-p/100]), length(al))]
 
-    setSpins!(sim, g, idxs, 0, true)
+    setSpins!(g, idxs, 0, true)
 
     return
 

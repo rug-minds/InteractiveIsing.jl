@@ -5,7 +5,7 @@ import org.julialang
 import Qt.labs.platform
 
 import "Components"
-import "TSweepWindow"
+import "Components/TSweepWindow"
 
 ApplicationWindow {
   id: root

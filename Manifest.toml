@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.9.0-rc1"
+julia_version = "1.9.0-rc2"
 manifest_format = "2.0"
-project_hash = "e8e88cd956f1b0a3d7292560a2ecb3a9a1c1659d"
+project_hash = "9c307492837b36d890581b176decf3153d410a86"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -1413,9 +1413,9 @@ version = "0.8.3"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "Random", "StaticArraysCore", "Statistics"]
-git-tree-sha1 = "4e051b85454b4e4f66e6a6b7bdc452ad9da3dcf6"
+git-tree-sha1 = "c262c8e978048c2b095be1672c9bee55b4619521"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.5.10"
+version = "1.5.24"
 
 [[deps.StaticArraysCore]]
 git-tree-sha1 = "6b7ba252635a5eff6a0b0664a41ee140a1c9e72a"

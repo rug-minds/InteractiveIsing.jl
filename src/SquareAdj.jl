@@ -124,3 +124,102 @@ function setGAdj!(sim, idx, weightFunc)
     refreshSim(sim)
 end
 export setGAdj!
+
+# Find connection in adjacency list (directed)
+function findconn(adj, idx, connidx; startidx = 1, endidx = length(adj[idx]))::Tuple{Symbol, Int32}
+    for i in startidx:endidx
+        conn = adj[idx][i]
+        if connIdx(conn) < connidx
+            continue
+        elseif connIdx(conn) > connidx
+            return :Insert , i
+        elseif connIdx(conn) == connidx
+            return :Found , i
+        end
+    end
+
+    return :Append, length(adj[idx])
+end
+export findconn
+
+"""
+Adds weight to adjacency matrix
+"""
+function addWeight!(adj::Vector, idx, conn_idx, weight; sidx1 = 1, sidx2 = 1, eidx1 = length(adj[idx]), eidx2 = length(adj[conn_idx]))
+    action, insertidx1 = findconn(adj, idx, conn_idx, startidx = sidx1, endidx = eidx1)
+
+    if action == :Append
+        push!(adj[idx], (conn_idx, weight))
+    elseif action == :Insert
+        insert!(adj[idx], insertidx1, (conn_idx, weight))
+    else #if found
+        adj[idx][insertidx1] = (conn_idx, weight)
+    end
+
+    action, insertidx2 = findconn(adj, conn_idx, idx, startidx = sidx2, endidx = eidx2)
+
+    if action == :Append
+        push!(adj[conn_idx], (idx, weight))
+    elseif action == :Insert
+        insert!(adj[conn_idx], insertidx2, (idx, weight))
+    else
+        adj[conn_idx][insertidx2] = (idx, weight)
+    end
+
+    return insertidx1, insertidx2
+end
+
+function addWeightDirected!(adj::Vector, idx, conn_idx, weight; sidx = 1, eidx = length(adj[idx]))
+    action, insertidx = findconn(adj, idx, conn_idx, startidx = sidx, endidx = eidx)
+
+    if action == :Append
+        push!(adj[idx], (conn_idx, weight))
+    elseif action == :Insert
+        insert!(adj[idx], insertidx, (conn_idx, weight))
+    else #if found
+        adj[idx][insertidx] = (conn_idx, weight)
+    end
+
+    return insertidx
+end
+
+function addWeightOld!(adj::Vector, idx, conn_idx, weight)
+    insert_and_dedup!(adj[idx], (conn_idx, weight))
+    insert_and_dedup!(adj[conn_idx], (idx, weight))
+end
+export addWeightOld!   
+
+function removeWeight!(adj::Vector, idx, conn_idx)
+    action, insertidx = findconn(adj, idx, conn_idx)
+
+    if (action == :Append || action == :Insert)
+        return
+    else # action == :Found
+        deleteat!(adj[idx], insertidx)
+    end
+
+    _, insertidx = findconn(adj, conn_idx, idx)
+
+    deleteat!(adj[conn_idx], insertidx)
+
+end
+
+# Only removes the weight to conn_idx from adj[idx]
+# Only to be used if adj[idx] is later removed
+function removeWeightDirected!(adj::Vector, idx, conn_idx; sidx = 1, eidx = length(adj[idx]))
+    action, insertidx = findconn(adj, idx, conn_idx; startidx = sidx, endidx = eidx)
+
+    if (action == :Append || action == :Insert)
+        return false
+    else # action == :Found
+        deleteat!(adj[idx], insertidx)
+    end
+
+    return insertidx
+
+end
+
+shiftWeight(tupl, idx_offset) = (tupl[1] + idx_offset, tupl[2])
+
+export addWeight!
+export removeWeight!

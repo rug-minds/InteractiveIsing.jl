@@ -2,6 +2,7 @@
 
 # Get a circle centered around i,j  =1, with points ordered from top left to bottom right.
 function getOrdCirc(r::Integer)
+    # println("Making new circ with radius $r")
     circpoints::Vector{Tuple} = []
     r2 = r^2
     for x in (-r):r

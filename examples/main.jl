@@ -26,8 +26,8 @@ weightFunc.NN = 2
 
 
 const sim = IsingSim(
-    100,
-    50,
+    200,
+    200,
     continuous = false, 
     weighted = true;
     weightFunc,
@@ -36,5 +36,15 @@ const sim = IsingSim(
 
 const g = sim(true);
 
+# # Add Layers
+#     addLayer!(sim, 200, 200)
 
-# include(joinpath(@__DIR__ , "etest.jl"))
+# # name them l1, l2, l3 ...
+# @enumeratelayers layers(g) 2
+
+# setcoords!(l1)
+# setcoords!(l2, z = 1)
+
+# clampImg!(g, 1, "examples/smileys.jpg")
+# overlayNoise!(g, 1, 5, noise_values = [-1,1])
+# connectLayers!(g, 1, 2, (;dr, _...) -> 1, 1)

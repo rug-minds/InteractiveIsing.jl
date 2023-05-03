@@ -1,9 +1,9 @@
 """
 Re initialize simulation while running
 """
-function reInitSim(sim)::Nothing
+function reset!(sim)::Nothing
     for g in sim.gs
-        reinitIsingGraph!(g)
+        reset!(g)
     end
 
     M(sim)[] = 0
@@ -12,11 +12,11 @@ function reInitSim(sim)::Nothing
     branchSim(sim)
     return
 end
-export reInitSim
+export reset!
 
 function annealing(sim, Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Tstep:Tf, reInit = true, saveImg = true)
     # Reinitialize
-    reInit && initIsing()
+    reInit && reset!(sim)
 
     # Set temp and initial wait
     Temp(sim)[] = Ti
@@ -73,7 +73,7 @@ export setCircR!
 
 function setLayerIdx!(sim, layeridx)
     if layeridx < 1 || layeridx > nlayers(sim)[]
-        println("Cannot choose layer idx smaller than 0 or larger than the number of layers")
+        println("Cannot choose layer idx smaller than 1 or larger than the number of layers")
         return
     end
 
@@ -108,9 +108,17 @@ export addLayer!
 export removeLayer!
 
 function connectLayersFull(layer1::IsingLayer, layer2::IsingLayer)
-    for idx1 in 1:length(state(layer1))
+    Threads.@threads for idx1 in 1:length(state(layer1))
+        sidx = 1
         for idx2 in 1:length(state(layer2))
-            addWeight!(layer1, layer2, idx1, idx2, 1)
+            sidx = addWeightDirected!(layer1, layer2, idx1, idx2, 1; sidx) + 1
+        end
+    end
+
+    Threads.@threads for idx1 in 1:length(state(layer2))
+        sidx = 1
+        for idx2 in 1:length(state(layer1))
+            sidx = addWeightDirected!(layer2, layer1, idx1, idx2, 1; sidx) + 1
         end
     end
 end

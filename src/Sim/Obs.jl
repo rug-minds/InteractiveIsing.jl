@@ -26,6 +26,9 @@ struct Obs
 
     # Analysis Is running
     analysisRunning::Observable{Bool}
+
+    # Is Paused
+    isPaused::Observable{Bool}
     
     # Run the timed functions
     runTimedFunctions::Observable{Bool}
@@ -53,6 +56,8 @@ Obs(;nlayers = 1, length, width, initTemp = 1, initbrushR, initImg) = Obs(
     # Image Size
     Observable(size(initImg)),
     # Analysis Running
+    Observable(false),
+    # Is Paused
     Observable(false),
     # Run Timed Functions
     Observable(true)

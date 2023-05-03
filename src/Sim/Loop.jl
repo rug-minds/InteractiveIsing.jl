@@ -27,6 +27,7 @@ function createProcess(sim::IsingSim, ; gidx = 1, updateFunc = updateMonteCarloI
     errormonitor(Threads.@spawn updateGraph(sim, process; gidx, updateFunc, energyFunc, rng))
     return
 end
+
 createProcess(sim::IsingSim, num; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor, rng = MersenneTwister())::Nothing = 
     for _ in 1:num; createProcess(sim; gidx, updateFunc, energyFunc) end
 export createProcess
@@ -112,13 +113,13 @@ function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Float32}, g
 
     beta::Float32 = 1/(lTemp[])
 
-    idx::Int32 = rand(rng, ising_it(g, ghtype))
+    idx::Int32 = rand(rng, ising_it(g))
      
-    oldstate::Int32 = @inbounds gstate[idx]
+    oldstate::Float32 = @inbounds gstate[idx]
 
     efactor::Float32 = energyFunc(g, gstate, gadj, idx, ghtype)
 
-    newstate::Int32 = sampleCState()
+    newstate::Float32 = sampleCState()
     
     # Ediff = deltE(efactor,newstate,oldstate)
     ediff::Float32 = Ediff(g, ghtype, idx, efactor, oldstate, newstate)

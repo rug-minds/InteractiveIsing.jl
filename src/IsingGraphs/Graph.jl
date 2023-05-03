@@ -1,5 +1,6 @@
 # Ising Graph Representation and functions
 mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
+    sim::IsingSim
     nStates::Int32
 
     # Vertices and edges
@@ -7,42 +8,26 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
     adj::Vector{Vector{Conn}}
     htype::HType
     layers::Vector{IsingLayer{T}}
+    layerconns::Dict{Set, Int32}
     defects::GraphDefects
     d::GraphData
 
-
-
-    # IsingGraph(type::DataType; length, width, state, adj, weighted = false) = 
-    # (   
-    #     g = new{type}(
-    #         (length*width,1),
-    #         length*width,
-    #         state,
-    #         adj,
-    #         HType(weighted,false)
-    #     );
-        
-    #     g.d = GraphData(g);
-    #     g.defects = GraphDefects(nStates(g));
-    #     # g.layers = [IsingLayer(g, 1, 1, length, width)];
-    #     g.layers = IsingLayer[];
-    #     return g
-    # )
-
-    IsingGraph(length, width; weightFunc::WeightFunc, continuous = false, weighted = false) = 
+    IsingGraph(sim, length, width; weightFunc::WeightFunc, continuous = false, weighted = false) = 
     (   
         type = continuous ? Float32 : Int8;
         g = new{type}(
+            sim,
             0,
             type[],
             Vector{Vector{Conn}}[],
             HType(weighted, false),
             IsingLayer[],
+            Dict{Pair, Int32}()
         );
         g.defects = GraphDefects(g);
         g.d = GraphData(g);
         addLayer!(g, length, width, weightfunc = weightFunc);
-        #For performance for some reason
+        #For performance, don't know why
         g.adj = deepcopy(g.adj);
         return g
     )
@@ -53,8 +38,11 @@ end
 function Base.show(io::IO, g::IsingGraph)
     println(io, "IsingGraph with $(nStates(g)) states")
     println(io, "Layers:")
-    for layer in g.layers
+    for (idx, layer) in enumerate(g.layers)
         show(io, layer)
+        if idx != length(g.layers)
+            print(io, "\n")
+        end
     end
 end
 
@@ -80,11 +68,12 @@ IsingGraph(g::IsingGraph) = deepcopy(g)
 @inline layerdefects(g::IsingGraph) = layerdefects(defects(g))
 @inline size(g::IsingGraph) = (nStates(g), 1)
 
-function reinitIsingGraph!(g::IsingGraph)
+function reset!(g::IsingGraph)
     state(g) .= initRandomState(g)
     currentlyWeighted = getHParam(g.htype, :Weighted)
     g.htype = HType(:Weighted => currentlyWeighted)
-    reinitGraphData!(g.d,g)
+    reset!(defects(g))
+    reset!(d(g))
 end
  
 export initRandomState
@@ -114,7 +103,7 @@ If there are no defects, returns whole range
 Otherwise it returns all alive spins
 """
 
-@generated function ising_it(g::IsingGraph, htype::HType{Symbs,Params}) where {Symbs,Params}
+@generated function ising_it(g::IsingGraph, htype::HType{Symbs,Params} = htype(g)) where {Symbs,Params}
     # Assumes :Defects will be found
     defects = getHParamType(htype, :Defects)
 
@@ -170,20 +159,41 @@ function resize!(g::IsingGraph{T}, newlength, layeridx = 0) where T
     oldlength = nStates(g)
     sizediff = newlength - oldlength
 
-    if sizediff < 0
-        savedstates = state(g)[(endidx(layer(g,layeridx))+1):end]
-        oldstart = startidx(layer(g,layeridx))
-    end
+    # If making smaller save states and copy them
+    # if sizediff < 0
+    #     savedstates = state(g)[(endidx(layer(g,layeridx))+1):end]
+    #     
+    # end
 
-    resize!(state(g), newlength)
-    resize!(adj(g), newlength)
+    
 
     if sizediff > 0
+        resize!(state(g), newlength)
+        resize!(adj(g), newlength)
         randomstate = initRandomState(T, sizediff)
         state(g)[oldlength+1:newlength] .= randomstate
         adj(g)[oldlength+1:newlength] .= [Vector{Conn}[] for _ in oldlength+1:newlength]
-    else
-        state(g)[oldstart:end] .= savedstates
+    else # if making smaller
+        d_layer = layer(g,layeridx)
+        # idxs to be removed
+        g_idxs = graphidxs(d_layer) 
+
+            
+        # Delete everything from adj
+        for idx in g_idxs
+            Threads.@threads for conn in adj(g)[idx]
+                conn_idx = connIdx(conn)
+                removeWeightDirected!(adj(g), conn_idx, idx)
+            end
+        end
+
+        #Shift all the leftovers from adj
+        for idx in g_idxs[end]:length(adj(g))
+            adj(g)[idx] = shiftWeight.(adj(g)[idx], -nStates(d_layer))
+        end
+
+        deleteat!(adj(g), g_idxs)
+        deleteat!(state(g), g_idxs)
     end
 
     nStates(g, newlength)

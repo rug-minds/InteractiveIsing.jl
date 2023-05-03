@@ -38,7 +38,7 @@ function qmlFunctions(sim::IsingSim)
 
     # Initialize isinggraph and display
     function initIsing()
-        reInitSim(sim) 
+        reset!(sim) 
     end
     @qmlfunction initIsing
 

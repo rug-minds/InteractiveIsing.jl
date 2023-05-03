@@ -3,9 +3,10 @@ Takes a random number of pairs for every length to calculate correlation length 
 This only works without defects.
 """
 rthetas = 2*pi .* rand(10^7) # Saves random angles to save computation time
-function sampleCorrPeriodic(ig::IsingGraph, Lstep::Float16 = Float16(.5), lStart::Integer = Int32(1), lEnd::Integer = Int16(256), precision_fac = 5, npairs::Integer = Int32(precision_fac*10000) )
+function sampleCorrPeriodic(layer, Lstep::Float16 = Float16(.5), lStart::Integer = Int32(1), lEnd::Integer = Int16(256), precision_fac = 5, npairs::Integer = Int32(precision_fac*10000) )
     
-    g = deepcopy(ig)
+    g = deepcopy(layer)
+    alives = aliveList(g)
 
     function sigToIJ(sig, L)
         return (L*cos(sig),L*sin(sig))
@@ -13,7 +14,7 @@ function sampleCorrPeriodic(ig::IsingGraph, Lstep::Float16 = Float16(.5), lStart
 
     function sampleIdx2(idx1,L,rtheta)
         # turn idx into coordinates
-        ij = idxToCoord(idx1,length(g))
+        i,j = idxToCoord(idx1,glength(g))
         # Turn angle and length into relative coordinates
         dij = Int32.(round.(sigToIJ(rtheta,L))) 
         # Turn old coordinates plus relative coordinates into and index again
@@ -26,14 +27,14 @@ function sampleCorrPeriodic(ig::IsingGraph, Lstep::Float16 = Float16(.5), lStart
 
     theta_i = rand([1:length(rthetas);])
 
-    avgsum = (sum(g.state)/nStates(g))^2
+    avgsum = (sum(state(g))/nStates(g))^2
 
     lVec = [lStart:Lstep:lEnd;]
     corrVec = Vector{Float32}(undef,length(lVec))
 
     # Sample all startidx to be used
     # Slight bit faster to do it this way than to sample it every time in the loop
-    idx1s = rand(g.d.aliveList,length(lVec)*npairs)
+    idx1s = rand(alives,length(lVec)*npairs)
     # Index of above vector
     idx1idx = 1
     # Iterate over all lengths to be checked
@@ -44,7 +45,7 @@ function sampleCorrPeriodic(ig::IsingGraph, Lstep::Float16 = Float16(.5), lStart
             idx1 = idx1s[idx1idx]
             rtheta = rthetas[(theta_i -1) % length(rthetas)+1]
             idx2 = sampleIdx2(idx1,L,rtheta)
-            sumprod += g.state[idx1]*g.state[idx2]
+            sumprod += state(g)[idx1]*state(g)[idx2]
             theta_i += 1 # Sample next random angle
             idx1idx += 1 # Sample next random startidx
         end
@@ -55,50 +56,52 @@ function sampleCorrPeriodic(ig::IsingGraph, Lstep::Float16 = Float16(.5), lStart
 
     return (lVec,corrVec)
 end
+export sampleCorrPeriodic
 
 # Sample correlation length function when there are defects.
-function sampleCorrPeriodicDefects(ig::IsingGraph, lend = -floor(-sqrt(2)*g.N/2), binsize = .5, precision_fac = 1, npairs::Integer = Int64(round(lend/binsize * precision_fac*40000)); sig = 1000, periodic = true)
+function sampleCorrPeriodicDefects(layer::IsingLayer, lend = -floor(-sqrt(2)*max(gwidth(layer),glength(layer))/2), binsize = .5, precision_fac = 1, npairs::Integer = Int64(round(lend/binsize * precision_fac*40000)); sig = 1000, periodic = true)
     
-    g = deepcopy(ig)
+    g = deepcopy(layer)
 
-    function torusDist(i1,j1,i2,j2, N)
+    function torusDist(i1,j1,i2,j2, g)
         dy = abs(i2-i1)
         dx = abs(j2-j1)
 
-        if dy > .5*g.N
-            dy = g.N - dy
+        if dy > .5*glength(g)
+            dy = glength(g) - dy
         end
-        if dx > .5*g.N
-            dx = g.N - dx
+        if dx > .5*gwidth(g)
+            dx = gwidth(g) - dx
         end
 
         return sqrt(dx^2+dy^2)
     end
-    
-    if length(g.d.aliveList) <= 2
+    alives = aliveList(g)
+
+    if length(alives) <= 2
         error("Too little alive spins to do analysis")
         return
     end
 
-    idxs1 = rand(g.d.aliveList,npairs)
-    idxs2 = rand(g.d.aliveList,npairs)
+    idxs1 = rand(alives,npairs)
+    idxs2 = rand(alives,npairs)
     lbins = zeros(length(1:binsize:lend))
     lVec = [1:binsize:lend;]
     corrbins = zeros(length(lVec))
-    prodavg = sum(g.state[g.d.aliveList])/length(g.d.aliveList)
+    prodavg = sum(state(g)[alives])/length(alives)
 
     for sample in 1:npairs
         idx1 = idxs1[sample]
         idx2 = idxs2[sample]
         
         while idx1 == idx2
-            idx2 = rand(g.d.aliveList)
+            idx2 = rand(alives)
         end
 
-        (i1,j1) = idxToCoord(idx1,g.N)
-        (i2,j2) = idxToCoord(idx2,g.N)
+        (i1,j1) = idxToCoord(idx1,glength(g))
+        (i2,j2) = idxToCoord(idx2,glength(g))
         if periodic
-            l = torusDist(i1,j1,i2,j2,g.N )
+            l = torusDist(i1,j1,i2,j2,g)
         else
             l = sqrt((i1-i2)^2+(j1-j2)^2)
         end
@@ -110,7 +113,7 @@ function sampleCorrPeriodicDefects(ig::IsingGraph, lend = -floor(-sqrt(2)*g.N/2)
         binidx = Int32(floor((l-1)/binsize)+1)
         
         lbins[binidx] += 1
-        corrbins[binidx] += g.state[idx1]*g.state[idx2]
+        corrbins[binidx] += state(g)[idx1]*state(g)[idx2]
 
     end
 

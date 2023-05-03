@@ -3,12 +3,13 @@ ndefects not tracking correctly FIX
 """
 
 # Coordinates that can be left uninitialized
-struct Coords{T}
+mutable struct Coords{T}
     cs :: Union{Nothing,T}
 end
 
-Coords() = Coords{Tuple{Int32,Int32}}(nothing)
-Coords(y,z) = Coords{Tuple{Int32,Int32}}((Int32(y),Int32(z)))
+Coords(;y = 0, x = 0, z = 0) = Coords{Tuple{Int32,Int32,Int32}}((Int32(y), Int32(x), Int32(z)))
+Coords() = Coords{Tuple{Int32,Int32,Int32}}(nothing)
+Coords(y = 0, x = 0, z = 0) = Coords{Tuple{Int32,Int32,Int32}}((Int32(y), Int32(x), Int32(z)))
 export Coords
 mutable struct IsingLayer{T} <: AbstractIsingGraph{T}
     graph::IsingGraph{T}
@@ -17,9 +18,10 @@ mutable struct IsingLayer{T} <: AbstractIsingGraph{T}
     adj::Base.ReshapedArray
     start::Int32
     size::Tuple{Int32,Int32}
-    coords::Coords{Tuple{Int32,Int32}}
+    coords::Coords{Tuple{Int32,Int32,Int32}}
     d::LayerData
     defects::LayerDefects
+    top::LayerTopology
 
     EmptyLayer(type) = new{type}() 
 
@@ -44,7 +46,7 @@ mutable struct IsingLayer{T} <: AbstractIsingGraph{T}
             LayerData(d(g), start, length, width)
         );
         layer.defects = LayerDefects(layer, olddefects);
-     
+        layer.top = LayerTopology(layer, [1,0], [0,1]);
 
         return layer
     )
@@ -68,6 +70,10 @@ IsingLayer(g, layer::IsingLayer) = IsingLayer(g, layeridx(layer), start(layer), 
 
 @setterGetter IsingLayer coords
 @inline coords(layer::IsingLayer) = layer.coords.cs
+# Move to user folder
+@inline setcoords!(layer::IsingLayer; x = 0, y = 0, z = 0) = (layer.coords.cs = Int32.((y,x,z)))
+@inline setcoords!(layer::IsingLayer, y = 0, x = 0, z = 0) = (layer.coords.cs = Int32.((y,x,z)))
+export setcoords!
 
 @inline reladj(layer::IsingLayer) = adjGToL(layer.adj, layer)
 @forward IsingLayer LayerData d
@@ -78,10 +84,12 @@ IsingLayer(g, layer::IsingLayer) = IsingLayer(g, layeridx(layer), start(layer), 
 @inline gwidth(layer) = size(layer)[2]
 @inline endidx(layer::IsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
 
-
+@inline graphidxs(layer::IsingLayer) = UnitRange{Int32}(start(layer):endidx(layer))
+export graphidxs
 
 @inline htype(layer::IsingLayer) = layer.graph.htype
 @inline nStates(layer::IsingLayer) = length(state(layer))
+@inline sim(layer::IsingLayer) = sim(graph(layer))
 
 #forward alivelist
 aliveList(layer::IsingLayer) = aliveList(defects(layer))
@@ -103,7 +111,7 @@ Hamiltonians.editHType!(layer::IsingLayer, pairs...) = editHType!(layer.graph, p
 """
 Go from a local idx of layer to idx of the underlying graph
 """
-@inline function idxLToG(layer, idx)::Int32
+@inline function idxLToG(layer, idx::Integer)::Int32
     return Int32(start(layer) + idx - 1)
 end
 
@@ -111,8 +119,9 @@ end
 Go from a local matrix indexing of layer to idx of the underlying graph
 """
 @inline function idxLToG(layer, i, j)::Int32
-    return Int32(start(layer) + coordToIdx(i,j, llength(layer)))
+    return Int32(start(layer) + coordToIdx(i,j, glength(layer)))
 end
+idxLToG(layer, tup::Tuple) = idxLToG(layer, tup[1], tup[2])
 
 """
 Go from graph idx to idx of layer

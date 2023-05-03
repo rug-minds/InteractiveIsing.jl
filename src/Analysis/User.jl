@@ -10,8 +10,7 @@ Usage: Goes from current temperature of simulation, to TF, in stepsizes of TStep
   In between Temperatures there is an optional wait time of stepwait, for equilibration
   There is an initial wait time of equiwait for equilibration
 """
-function tempSweep(sim, layer, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]), corrF = sampleCorrPeriodic, analysisRunning = Observable(true), savelast = true, absvalcorrplot = false)
-    g = sim.layers[layer]
+function tempSweep(layer, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]), corrF = sampleCorrPeriodic, analysisRunning = Observable(true), savelast = true, absvalcorrplot = false)
     # Print details
     println("Starting temperature sweep")
     println("Parameters TI: $TI,TF: $TF, TStep: $TStep, dpoints: $dpoints, dpointwait: $dpointwait, stepwait: $stepwait, equiwait: $equiwait, saveImg: $saveImg")
@@ -74,7 +73,7 @@ function tempSweep(sim, layer, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5,
             tpointi = time()
 
             # Get correlation
-            (lVec,corrVec) = corrF(g)
+            (lVec,corrVec) = corrF(layer)
 
             #=
             Saving dataframes

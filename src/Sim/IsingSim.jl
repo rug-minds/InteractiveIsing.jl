@@ -4,9 +4,9 @@ export IsingSim
 Simulation struct
 """
 mutable struct IsingSim
-    const gs::Vector{IsingGraph}
-
-    # Property map for qml
+    # Graphs
+    gs::Vector{IsingGraph}
+    # Property map used in qml
     const pmap::JuliaPropertyMap
 
     const M_array::Ref{Vector{Float64}}
@@ -42,19 +42,12 @@ mutable struct IsingSim
             colorscheme = ColorSchemes.viridis
         );
         
-        g = IsingGraph(
-            len,
-            wid,
-            continuous = continuous, 
-            weighted = weighted,
-            weightFunc = weighted ? weightFunc : defaultIsingWF
-        )
 
         initbrushR= round(min(len,wid)/10)
 
         sim = new(
             # Graphs
-            [g],
+            IsingGraph[],
             # Property map
             JuliaPropertyMap(),
             zeros(Real,60),
@@ -68,6 +61,17 @@ mutable struct IsingSim
             # memory
             Dict(),
         )
+
+        g = IsingGraph(
+            sim,
+            len,
+            wid,
+            continuous = continuous, 
+            weighted = weighted,
+            weightFunc = weighted ? weightFunc : defaultIsingWF
+        )
+
+        push!(gs(sim), g)
 
         # Initialize image
         initImg = gToImg(layer(g,1); colorscheme)
@@ -89,8 +93,8 @@ mutable struct IsingSim
 
         
     end
-    #= END Initializer =# 
-end
+    #= END of Initializer =# 
+end 
 
 
 """

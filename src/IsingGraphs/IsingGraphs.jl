@@ -1,5 +1,5 @@
-export AbstractIsingGraph, IsingGraph, CIsingGraph, reInitGraph!, coordToIdx, idxToCoord, ising_it, setSpins!, addDefects!, remDefects!, addDefect!, remDefect!, 
-    connIdx, connW, initSqAdj, HFunc, HWeightedFunc, HMagFunc, HWMagFunc, setGHFunc!
+export AbstractIsingGraph, IsingGraph, CIsingGraph, coordToIdx, idxToCoord, ising_it, setSpins!, addDefects!, remDefects!, addDefect!, remDefect!, 
+    connIdx, connW, initSqAdj, HFunc, HWeightedFunc, HMagFunc, HWMagFunc, setGHFunc!, gwidth, glength
 
 # Aliases
 const Edge = Pair{Int32,Int32}
@@ -27,7 +27,11 @@ include("GraphDefects.jl")
 include("Graph.jl")
 
 include("LayerDefects.jl")
+include("LayerTopology.jl")
 
 include("Layer.jl")
 include("SetEls.jl")
+
+include("LayerConnFunc.jl")
+
 include("User.jl")

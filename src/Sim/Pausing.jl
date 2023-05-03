@@ -18,6 +18,8 @@ function pauseSim(sim; print = true)
         yield()
     end
 
+    isPaused(sim)[] = true
+
     return true
 end
 export pauseSim
@@ -40,6 +42,8 @@ function unpauseSim(sim; print = true)
         yield()
     end
 
+    isPaused(sim)[] = false
+
     return true
 end
 export unpauseSim
@@ -54,6 +58,7 @@ function quitSim(sim)
 
     messages(sim) .= :Nothing
 
+    isPaused(sim)[] = true
     return true
 end
 export quitSim
