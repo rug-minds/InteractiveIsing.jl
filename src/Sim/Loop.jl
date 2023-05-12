@@ -41,7 +41,7 @@ function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, updat
     loopTemp = Temp(sim)
 
     try
-        mainLoop(sim, process, params, gidx, g, gstate, gadj, loopTemp, rng, updateFunc, energyFunc)
+        mainLoop(sim, process, params, gidx, g, gstate, gadj, loopTemp, rng, updateFunc, energyFunc; ghtype)
     catch 
         status(process, :Terminated)
         message(process, :Nothing)
@@ -52,7 +52,7 @@ end
 
 export updateGraph
 
-function mainLoop(sim::IsingSim, process, params, gidx, g, gstate, gadj, lTemp, rng, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor; ghtype = htype(g))::Nothing
+function mainLoop(sim::IsingSim, process, params, gidx, g, gstate, gadj::Vector{Vector{Conn}}, lTemp, rng, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor; ghtype::HType = htype(g))::Nothing
 
     status(process, :Running)
 
@@ -72,7 +72,7 @@ function mainLoop(sim::IsingSim, process, params, gidx, g, gstate, gadj, lTemp, 
             message(process, :Nothing)
             return
         else
-            sleep(0.01)
+            sleep(0.1)
         end
             
         yield()
@@ -84,7 +84,7 @@ function mainLoop(sim::IsingSim, process, params, gidx, g, gstate, gadj, lTemp, 
 end
 export mainLoop
 
-function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Int8}, gadj, rng, ghtype, energyFunc)
+function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Int8}, gadj, rng, ghtype::HType, energyFunc)
 
     beta::Float32 = 1/(lTemp[])
     
@@ -102,7 +102,7 @@ function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Int8}, gadj
 
 end
 
-function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Float32}, gadj, rng, ghtype, energyFunc)
+function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Float32}, gadj, rng, ghtype::HType, energyFunc)
     # @inline function deltE(efac,newstate,oldstate)::Float32
     #     return efac*(newstate-oldstate)
     # end

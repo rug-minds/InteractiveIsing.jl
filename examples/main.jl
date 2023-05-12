@@ -15,19 +15,18 @@ include(joinpath(@__DIR__,"test.jl"))
 # weightFunc = radialWF
 
 #= Second nearest neighbor radially falling of weightfunction =#
-const weightFunc = isingNN2
+# const weightFunc = isingNN2
 # weightFunc = isingNN2
-weightFunc.NN = 2
-# Test
-
+# weightFunc.NN = 2
 
 #= Add randomness to the weights =#
 # setAddDist!(weightFunc, Normal(0,0.1))
 
+const weightFunc = defaultIsingWF
 
 const sim = IsingSim(
-    200,
-    200,
+    512,
+    512,
     continuous = false, 
     weighted = true;
     weightFunc,
@@ -37,7 +36,7 @@ const sim = IsingSim(
 const g = sim(true);
 
 # # Add Layers
-#     addLayer!(sim, 200, 200)
+# addLayer!(sim, 200, 200)
 
 # # name them l1, l2, l3 ...
 # @enumeratelayers layers(g) 2

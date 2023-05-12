@@ -7,12 +7,12 @@ export fillAdjList!, numEdges, latmod, adjToMatrix
 """
 Creates a square adjacency matrix (NN must be smaller than width/2 & length/2)
 """
-function createSqAdj(len, wid, weightfunc = defaultIsingWF)
+function createSqAdj(len, wid, weightFunc = defaultIsingWF)
     adj = [Vector{Tuple{Int32,Float32}}() for _ in 1:(len*wid)]
 
     Threads.@threads for idx in eachindex(adj)
     # for idx in eachindex(adj)
-        idxs_weights = getUniqueConnIdxs(weightfunc, idx, len, wid)
+        idxs_weights = getUniqueConnIdxs(weightFunc, idx, len, wid)
 
         for idx_weight in idxs_weights
             addWeight!(adj, idx, idx_weight[1], idx_weight[2])

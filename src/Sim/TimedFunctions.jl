@@ -25,7 +25,8 @@ let avgWindow = 60, updateWindow = zeros(Int64,avgWindow), frames = 0
     global function updatesPerFrame(sim::IsingSim, statelength = length(state(gs(sim)[1])))
         updateWindow = insertShift(updateWindow,sim.params.updates)
         if frames > avgWindow
-            upf(sim)[] = Float32(sum(updateWindow)/avgWindow/statelength)
+            # upf(sim)[] = Float32(sum(updateWindow)/avgWindow/statelength)
+            upf(sim)[] = Float32(sum(updateWindow)/avgWindow)
             frames = 0
         end
         frames += 1

@@ -37,7 +37,7 @@
 
 """
 
-# Radial weightfunc
+# Radial weightFunc
 function radialFunc(pow; dr, i, j, _...)
     return (1/dr^2)*1/((i-256)^2+(j-256)^2)^pow
 end

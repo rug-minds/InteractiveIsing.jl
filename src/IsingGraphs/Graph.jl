@@ -6,7 +6,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
     # Vertices and edges
     state::Vector{T}
     adj::Vector{Vector{Conn}}
-    htype::HType
+    htype::Ref{HType}
     layers::Vector{IsingLayer{T}}
     layerconns::Dict{Set, Int32}
     defects::GraphDefects
@@ -26,7 +26,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
         );
         g.defects = GraphDefects(g);
         g.d = GraphData(g);
-        addLayer!(g, length, width, weightfunc = weightFunc);
+        addLayer!(g, length, width, periodic = periodic(weightFunc); weightFunc, );
         #For performance, don't know why
         g.adj = deepcopy(g.adj);
         return g
@@ -52,12 +52,16 @@ export coords
 layerdefects(g::IsingGraph) = VSI(layers(g), :defects)
 export layerdefects
 
-@setterGetter IsingGraph
+@setterGetter IsingGraph htype
+@inline htype(g::IsingGraph) = g.htype[]
+@inline htype(g::IsingGraph, htype) = g.htype[] = htype
+export htype
+
 @forward IsingGraph GraphData d
 @forward IsingGraph GraphDefects defects
 
-@inline glength(g::IsingGraph) = size(g)[1]
-@inline gwidth(g::IsingGraph) = size(g)[2]
+@inline glength(g::IsingGraph)::Int32 = size(g)[1]
+@inline gwidth(g::IsingGraph)::Int32 = size(g)[2]
 
 @inline graph(g::IsingGraph) = g
 
@@ -66,7 +70,7 @@ export layerdefects
 IsingGraph(g::IsingGraph) = deepcopy(g)
 
 @inline layerdefects(g::IsingGraph) = layerdefects(defects(g))
-@inline size(g::IsingGraph) = (nStates(g), 1)
+@inline size(g::IsingGraph)::Tuple{Int32,Int32} = (nStates(g), 1)
 
 function reset!(g::IsingGraph)
     state(g) .= initRandomState(g)
@@ -133,14 +137,14 @@ end
 
 """
 Initialization of adjacency Vector for a given N
-and using a weightfunc
+and using a weightFunc
 Is a pointer to function in SquareAdj.jl for compatibility
 """
 initSqAdj(len, wid; weightFunc = defaultIsingWF) = createSqAdj(len, wid, weightFunc)
 
 # """
 # Initialization of adjacency Vector for a given N
-# and using a weightfunc with a self energy
+# and using a weightFunc with a self energy
 # """
 # function initSqAdjSelf(len, wid; selfweight = -1 .* ones(len*wid), weightFunc = defaultIsingWF)
 #     return initSqAdj(len, wid; weightFunc, self = true, selfweight)
@@ -217,7 +221,7 @@ end
 
 export resize!
 
-function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = defaultIsingWF)
+function addLayer!(g::IsingGraph, llength, lwidth; weightFunc = defaultIsingWF, periodic = true)
     glayers = layers(g)
 
     # Resize underlying graphs 
@@ -235,11 +239,11 @@ function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = defaultIsingWF)
     end
 
     #Make the new layer
-    newlayer = IsingLayer(g, length(glayers)+1 , startidx, llength, lwidth)
+    newlayer = IsingLayer(g, length(glayers)+1 , startidx, llength, lwidth; periodic)
     # Push it to layers
     push!(glayers, newlayer)
 
-    setAdj!(newlayer, weightfunc)
+    setAdj!(newlayer, weightFunc)
 
     # Add Layer to defects
     addLayer!(defects(g), newlayer)

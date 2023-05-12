@@ -79,12 +79,12 @@ end
 clampImg!(g, layeridx::Integer, imgfile) = clampImg!(layers(g)[layeridx], imgfile)
 export clampImg!
 
-function duplicateState!(layer1, layer2, clamp = false)
+function copyState!(layer1, layer2, clamp = false)
     imresize(state(layer1), (Int64(glength(layer2)), Int64(gwidth(layer2))))
     state(layer2) .= state(layer1)
 end
-duplicateState!(g, layeridx1::Integer, layeridx2::Integer, clamp = false) = duplicateState!(layer(g, layeridx1), layer(g, layeridx2), clamp)
-export duplicateState!
+copyState!(g, layeridx1::Integer, layeridx2::Integer, clamp = false) = copyState!(layer(g, layeridx1), layer(g, layeridx2), clamp)
+export copyState!
 
 function overlayNoise!(layer::IsingLayer, p; noise_values = [-1, 1])
     maskVec = rand(length(state(layer))) .< (p/100)

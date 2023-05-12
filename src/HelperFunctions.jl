@@ -9,7 +9,7 @@ end
 coordToIdx((i, j), length) = coordToIdx(i, j, length)
 
 # Go from idx to lattice coordinates, for rectangular grids
-@inline function idxToCoord(idx::Integer, length::Integer, width::Integer = 1)
+@inline function idxToCoord(idx::T, length::Integer, width::Integer = 1)::Tuple{T, T} where T <: Integer
     return ((idx - 1) % length + 1, (idx - 1) ÷ length + 1)
 end
 
@@ -211,7 +211,7 @@ macro setterGetter(strct, deleted...)
     funcs = quote end
     strctname = string(nameof(eval(strct)))
 
-    for name in fieldnames(eval(strct))
+    for (nameidx,name) in enumerate(fieldnames(eval(strct)))
         if !(name ∈ deleted)
             # strctname = string(nameof(eval(strct)))
             varname = lowercase(string(nameof(eval(strct))))
@@ -220,10 +220,16 @@ macro setterGetter(strct, deleted...)
                 println("importing $name")
                 eval(:(import Base: $name))
             end
-            
-            getstr = "@inline $name($varname::$(strctname)) = $varname.$(string(name))"
 
-            setstr = "@inline $name($varname::$(strctname), val) = $varname.$(string(name)) = val"
+            typestr = string(fieldtypes(eval(strct))[nameidx])
+
+            #check if typestr contains where
+            addtype = occursin("where", typestr) ? false : true
+            
+            typestr = addtype ? "::"*typestr : ""
+
+            getstr = "@inline $name($varname::$(strctname))$typestr = $varname.$(string(name))"
+            setstr = "@inline $name($varname::$(strctname), val)$typestr = $varname.$(string(name)) = val"
 
             push!(funcs.args, Meta.parse(getstr))
             push!(funcs.args, Meta.parse(setstr))

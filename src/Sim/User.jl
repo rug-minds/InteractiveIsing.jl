@@ -59,10 +59,12 @@ function startSim(sim; threads = 1, async = true, loadQML = true)
                 exec()
             end
         end
+    elseif all(status(sim) .== :Terminated)
+        createProcess(sim, threads; gidx = 1)
     else
-        error("Simulation already running")
+        println("Simulation already started")
     end
-
+        sim
 end
 
 function setCircR!(sim, r)
@@ -81,11 +83,11 @@ function setLayerIdx!(sim, layeridx)
 end
 export setLayerIdx!
 
-function addLayer!(sim::IsingSim, glength, gwidth; gidx = 1, weightfunc = defaultIsingWF)
+function addLayer!(sim::IsingSim, glength, gwidth; gidx = 1, weightFunc = defaultIsingWF, periodic = true)
     #pause sim
     pauseSim(sim)
     # add layer to graph
-    addLayer!(gs(sim)[gidx], glength, gwidth; weightfunc = weightfunc)
+    addLayer!(gs(sim)[gidx], glength, gwidth; weightFunc = weightFunc)
     #update number of layers
     nlayers(sim)[] += 1
     # unpause sim

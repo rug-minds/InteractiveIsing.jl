@@ -14,40 +14,10 @@ function torusDist(i1,j1,i2,j2, lngth, wdth)::Float32
     return sqrt(dx^2+dy^2)
 end
 
-# function dist(idx1, idx2, length, width)
-#     i1, j1 = idxToCoord(idx1, length)
-#     i2, j2 = idxToCoord(idx2, length)
+state_copy = copy(state(l1))
 
-#     return torusDist(i1,j1,i2,j2, length, width)
-# end
-
-
-
-# state_copy = copy(state(l1))
-
-state_copy = copy(state(l3))
-
-state32Matrix = MtlArray(Float32.(state_copy)); corrs2 = MtlArray(zeros(Float32, (floor.(Int32, (size(state_copy)) ./ 2) .+ 1)...)); counts = similar(corrs2); l, w = Int32.(size(state_copy)); threads2_2d = 16,16; groups2_2d = cld.(size(corrs2), threads2_2d)
-
-abstract type LatticeEvenOdd end
-struct Even <: LatticeEvenOdd end
-struct Odd <: LatticeEvenOdd end
-
-# function innerFuncCorrMetal(state32, corrs, counts, l, w, i ,j, i_off, j_off, corr_l, corr_w, i_it, j_it)
-#     count = 0
-#     if i_off < corr_l && j_off < corr_w
-#         for j1 in j_it
-#             for i1 in i_it
-#                 i2::Int32 = i1 + i_off > l ? i1 + i_off - l : i1 + i_off
-#                 j2::Int32 = j1 + j_off > w ? j1 + j_off - w : j1 + j_off
-#                 corrs[i,j] += state32[i1,j1]*state32[i2,j2]
-#                 count +=1
-#             end
-#         end
-#         corrs[i,j] = corrs[i,j]/count
-#     end
-#     return
-# end
+state32 = MtlArray(Float32.(state_copy)); corrs2 = MtlArray(zeros(Float32, (floor.(Int32, (size(state_copy)) ./ 2) .+ 1)...)); counts = similar(corrs2); l, w = Int32.(size(state_copy)); threads2_2d = 16,16; groups2_2d = cld.(size(corrs2), threads2_2d)
+dists = similar(corrs2)
 
 
 function corrMetal(state32, corrs, counts, l ,w, ::Type{Periodic})
@@ -80,14 +50,13 @@ function corrMetal(state32, corrs, counts, l ,w, ::Type{Periodic})
     return nothing
 end
 
-dists = similar(corrs2)
-
-function getDistancesMetal(dists, layertop)
+function getDistancesMetal(dists, func)
     i, j = thread_position_in_grid_2d()
 
     if i < size(dists,1) && j < size(dists,2)
-        dists[i,j] = dist(1,1, i,j,layertop)
+        dists[i,j] = func(i,j)
     end
+    return
 end
 
 # function corrMetal(state32, corrs, l ,w, ::Type{Periodic}, ::Type{Odd})

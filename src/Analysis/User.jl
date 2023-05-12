@@ -87,7 +87,7 @@ function tempSweep(layer, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5, dpoi
                 save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), img[])
                 
                 # Image of correlation plot
-                plotCorr(lVec,corrVec, foldername, tidx, point, T)
+                plotCorr(lVec,corrVec; foldername, tidx, point, T)
             end
 
             tpointf = time()

@@ -69,13 +69,13 @@ end
 
 isin((i, j), layer) = isin(i, j, layer)
 
-function dist2(i1, j1, i2, j2, layer1, layer2, alignment = :center)
+function dist2(i1, j1, i2, j2, layer1, layer2, alignment::Symbol = :center)
     _, _, dlz = dlayer(layer1, layer2)
     i21, j21 = coordsl2tol1(i2, j2, layer1, layer2, alignment)
     return (i1 - i21)^2 + (j1 - j21)^2 + dlz^2
 end
 
-function dist2(idx1, idx2, layer1, layer2, alignment = :center) 
+function dist2(idx1, idx2, layer1::IsingLayer, layer2::IsingLayer, alignment::Symbol = :center) 
     i1, j1 = idxToCoords(idx1, glength(layer1))
     i2 ,j2 = idxToCoords(idx2, glength(layer2))
 

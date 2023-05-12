@@ -25,7 +25,7 @@ mutable struct IsingLayer{T} <: AbstractIsingGraph{T}
 
     EmptyLayer(type) = new{type}() 
 
-    IsingLayer(g::IsingGraph{T}, idx, start, length, width; olddefects = 0) where T =
+    IsingLayer(g::IsingGraph{T}, idx, start, length, width; olddefects = 0, periodic = true) where T =
     (
         layer = new{T}(
             # Graph
@@ -46,11 +46,12 @@ mutable struct IsingLayer{T} <: AbstractIsingGraph{T}
             LayerData(d(g), start, length, width)
         );
         layer.defects = LayerDefects(layer, olddefects);
-        layer.top = LayerTopology(layer, [1,0], [0,1]);
+        layer.top = LayerTopology(layer, [1,0], [0,1]; periodic);
 
         return layer
     )
 end
+export IsingLayer
 
 function regenerateViews(layer::IsingLayer)
     layer.state = reshapeView(state(graph(layer)), start(layer), glength(layer), gwidth(layer))
@@ -80,8 +81,9 @@ export setcoords!
 @forward IsingLayer LayerDefects defects
 # Setters and getters
 # @forward IsingLayer IsingGraph g
-@inline glength(layer) = size(layer)[1]
-@inline gwidth(layer) = size(layer)[2]
+@inline size(layer::IsingLayer)::Tuple{Int32,Int32} = layer.size
+@inline glength(layer::IsingLayer)::Int32 = (size(layer)::Tuple{Int32,Int32})[1]::Int32
+@inline gwidth(layer::IsingLayer)::Int32 = (size(layer)::Tuple{Int32,Int32})[2]::Int32
 @inline endidx(layer::IsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
 
 @inline graphidxs(layer::IsingLayer) = UnitRange{Int32}(start(layer):endidx(layer))
@@ -103,6 +105,9 @@ startidx(layer::IsingLayer) = start(layer)
 endidx(layer::IsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
 iterator(layer::IsingLayer) = start(layer):endidx(layer)
 iterator(g::IsingGraph) = 1:(nStates(g))
+
+# LayerTopology
+@inline periodic(layer::IsingLayer) = periodic(top(layer))
 
 Hamiltonians.editHType!(layer::IsingLayer, pairs...) = editHType!(layer.graph, pairs...)
 

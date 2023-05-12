@@ -2,8 +2,8 @@
 Takes a random number of pairs for every length to calculate correlation length function
 This only works without defects.
 """
-rthetas = 2*pi .* rand(10^7) # Saves random angles to save computation time
-function sampleCorrPeriodic(layer, Lstep::Float16 = Float16(.5), lStart::Integer = Int32(1), lEnd::Integer = Int16(256), precision_fac = 5, npairs::Integer = Int32(precision_fac*10000) )
+const rthetas = 2*pi .* rand(10^7) # Saves random angles to save computation time
+function sampleCorrPeriodic(layer; Lstep::Float16 = Float16(.5), lStart::Integer = Int32(1), lEnd::Integer = Int16(256), precision_fac = 5, npairs::Integer = Int32(precision_fac*10000) )
     
     g = deepcopy(layer)
     alives = aliveList(g)
@@ -38,7 +38,7 @@ function sampleCorrPeriodic(layer, Lstep::Float16 = Float16(.5), lStart::Integer
     # Index of above vector
     idx1idx = 1
     # Iterate over all lengths to be checked
-    for (lidx,L) in enumerate(lVec)
+    Threads.@threads for (lidx,L) in collect(enumerate(lVec))
  
         sumprod = 0 #Track the sum of products sig_i*sig_j
         for _ in 1:npairs
@@ -59,8 +59,8 @@ end
 export sampleCorrPeriodic
 
 # Sample correlation length function when there are defects.
-function sampleCorrPeriodicDefects(layer::IsingLayer, lend = -floor(-sqrt(2)*max(gwidth(layer),glength(layer))/2), binsize = .5, precision_fac = 1, npairs::Integer = Int64(round(lend/binsize * precision_fac*40000)); sig = 1000, periodic = true)
-    
+function sampleCorrPeriodicDefects(layer::IsingLayer; lend = -floor(-sqrt(2)*max(gwidth(layer),glength(layer))/2), binsize = .5, precision_fac = 1, npairs::Integer = Int64(round(lend/binsize * precision_fac*40000)), sig = 1000, periodic = true)
+
     g = deepcopy(layer)
 
     function torusDist(i1,j1,i2,j2, g)
