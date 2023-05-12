@@ -211,6 +211,31 @@ macro setterGetter(strct, deleted...)
     funcs = quote end
     strctname = string(nameof(eval(strct)))
 
+    for name in fieldnames(eval(strct))
+        if !(name ∈ deleted)
+            # strctname = string(nameof(eval(strct)))
+            varname = lowercase(string(nameof(eval(strct))))
+
+            if @methodexists name
+                println("importing $name")
+                eval(:(import Base: $name))
+            end
+
+            getstr = "@inline $name($varname::$(strctname))$typestr = $varname.$(string(name))"
+            setstr = "@inline $name($varname::$(strctname), val)$typestr = $varname.$(string(name)) = val"
+
+            push!(funcs.args, Meta.parse(getstr))
+            push!(funcs.args, Meta.parse(setstr))
+            push!(funcs.args, Meta.parse("export $name"))
+        end
+    end
+    return esc(funcs)
+
+end
+macro setterGetterAnnotated(strct, deleted...)
+    funcs = quote end
+    strctname = string(nameof(eval(strct)))
+
     for (nameidx,name) in enumerate(fieldnames(eval(strct)))
         if !(name ∈ deleted)
             # strctname = string(nameof(eval(strct)))
