@@ -6,7 +6,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
     # Vertices and edges
     state::Vector{T}
     adj::Vector{Vector{Conn}}
-    htype::Ref{HType}
+    htype::HType
     layers::Vector{IsingLayer{T}}
     layerconns::Dict{Set, Int32}
     defects::GraphDefects
@@ -52,9 +52,9 @@ export coords
 layerdefects(g::IsingGraph) = VSI(layers(g), :defects)
 export layerdefects
 
-@setterGetter IsingGraph htype
-@inline htype(g::IsingGraph) = g.htype[]
-@inline htype(g::IsingGraph, htype) = g.htype[] = htype
+@setterGetter IsingGraph
+# @inline htype(g::IsingGraph) = g.htype[]
+# @inline htype(g::IsingGraph, htype) = g.htype[] = htype
 export htype
 
 @forward IsingGraph GraphData d

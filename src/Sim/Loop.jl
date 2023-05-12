@@ -41,7 +41,7 @@ function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, updat
     loopTemp = Temp(sim)
 
     try
-        mainLoop(sim, process, params, gidx, g, gstate, gadj, loopTemp, rng, updateFunc, energyFunc; ghtype)
+        mainLoop(process, params, gidx, g, gstate, gadj, loopTemp, rng, updateFunc, energyFunc; ghtype)
     catch 
         status(process, :Terminated)
         message(process, :Nothing)
@@ -52,12 +52,12 @@ end
 
 export updateGraph
 
-function mainLoop(sim::IsingSim, process, params, gidx, g, gstate, gadj::Vector{Vector{Conn}}, lTemp, rng, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor; ghtype::HType = htype(g))::Nothing
+function mainLoop(process, params, gidx, g, gstate, gadj::Vector{Vector{Conn}}, lTemp, rng, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor; ghtype::HType = htype(g))::Nothing
 
     status(process, :Running)
 
     while message(process) == :Nothing
-        updateFunc(sim, g, params, lTemp, gstate, gadj, rng, ghtype, energyFunc)
+        updateFunc(g, params, lTemp, gstate, gadj, rng, ghtype, energyFunc)
         GC.safepoint()
     end
 
@@ -79,12 +79,12 @@ function mainLoop(sim::IsingSim, process, params, gidx, g, gstate, gadj::Vector{
         GC.safepoint()
     end
 
-    updateGraph(sim, process; gidx, energyFunc)
+    updateGraph(sim(g), process; gidx, energyFunc)
     return 
 end
 export mainLoop
 
-function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Int8}, gadj, rng, ghtype::HType, energyFunc)
+function updateMonteCarloIsing(g, params, lTemp, gstate::Vector{Int8}, gadj, rng, ghtype::HType, energyFunc)
 
     beta::Float32 = 1/(lTemp[])
     
@@ -102,7 +102,7 @@ function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Int8}, gadj
 
 end
 
-function updateMonteCarloIsing(sim, g, params, lTemp, gstate::Vector{Float32}, gadj, rng, ghtype::HType, energyFunc)
+function updateMonteCarloIsing(g, params, lTemp, gstate::Vector{Float32}, gadj, rng, ghtype::HType, energyFunc)
     # @inline function deltE(efac,newstate,oldstate)::Float32
     #     return efac*(newstate-oldstate)
     # end
