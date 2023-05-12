@@ -221,8 +221,8 @@ macro setterGetter(strct, deleted...)
                 eval(:(import Base: $name))
             end
 
-            getstr = "@inline $name($varname::$(strctname))$typestr = $varname.$(string(name))"
-            setstr = "@inline $name($varname::$(strctname), val)$typestr = $varname.$(string(name)) = val"
+            getstr = "@inline $name($varname::$(strctname)) = $varname.$(string(name))"
+            setstr = "@inline $name($varname::$(strctname), val) = $varname.$(string(name)) = val"
 
             push!(funcs.args, Meta.parse(getstr))
             push!(funcs.args, Meta.parse(setstr))
