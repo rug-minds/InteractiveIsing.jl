@@ -3,12 +3,14 @@ __precompile__(false)
 module InteractiveIsing
 
 using FileIO, Images, ColorSchemes, Dates, JLD, Random, Distributions, Observables, LinearAlgebra, DataFrames, 
-    CSV, CxxWrap, LaTeXStrings, StatsBase, Metal
+    CSV, CxxWrap, LaTeXStrings, StatsBase, Metal, Qt6ShaderTools_jll
 using Revise
 
 import Plots as pl
 
+
 using QML
+export Qt6ShaderTools_jll
 export QML
 
 # Remove this
