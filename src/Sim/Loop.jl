@@ -52,7 +52,7 @@ end
 
 export updateGraph
 
-function mainLoop(process, params, gidx, g, gstate, gadj::Vector{Vector{Conn}}, lTemp, rng, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor; ghtype::HType = htype(g))::Nothing
+function mainLoop(process, params, gidx, g, gstate, gadj::Vector{Vector{Conn}}, lTemp, rng, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor; ghtype::HT = htype(g))::Nothing where {HT}
 
     status(process, :Running)
 
@@ -84,7 +84,7 @@ function mainLoop(process, params, gidx, g, gstate, gadj::Vector{Vector{Conn}}, 
 end
 export mainLoop
 
-function updateMonteCarloIsing(g, params, lTemp, gstate::Vector{Int8}, gadj, rng, ghtype::HType, energyFunc)
+function updateMonteCarloIsing(g, params, lTemp, gstate::Vector{Int8}, gadj, rng, ghtype::HT, energyFunc) where {HT <: HType}
 
     beta::Float32 = 1/(lTemp[])
     
@@ -102,10 +102,7 @@ function updateMonteCarloIsing(g, params, lTemp, gstate::Vector{Int8}, gadj, rng
 
 end
 
-function updateMonteCarloIsing(g, params, lTemp, gstate::Vector{Float32}, gadj, rng, ghtype::HType, energyFunc)
-    # @inline function deltE(efac,newstate,oldstate)::Float32
-    #     return efac*(newstate-oldstate)
-    # end
+function updateMonteCarloIsing(g, params, lTemp, gstate::Vector{Float32}, gadj, rng, ghtype::HT, energyFunc) where {HT <: HType}
 
     @inline function sampleCState()::Float32
         Float32(2*(rand(rng)-.5))

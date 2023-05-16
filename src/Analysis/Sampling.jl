@@ -2,32 +2,114 @@
 Takes a random number of pairs for every length to calculate correlation length function
 This only works without defects.
 """
-const rthetas = 2*pi .* rand(10^7) # Saves random angles to save computation time
+
+# Should all return x, y, e.g. length_bins and correlation
+abstract type SamplingAlgorithm end
+
+struct Mtl <: SamplingAlgorithm end
+
+correlationLength(layer, type::Type{Mtl} = Mtl) = corrlGPU(layer)
+export correlationLength
+
+function corrlGPU(layer)
+    state_copy = copy(state(layer))
+    l, w = Int32.(size(state_copy))
+    avg2 = (sum(state_copy) / (l*w))^2
+
+    # Metal Arrays
+    stateMtl = MtlArray(Float32.(state_copy))
+    corrsMtl = MtlArray(zeros(Float32, (floor.(Int32, (size(state_copy)) ./ 2))...)) 
+    countsMtl = similar(corrsMtl) 
+    
+    threads2_2d = 16,16
+    groups2_2d = cld.(size(corrsMtl), threads2_2d)
+
+    Metal.@sync @metal threads = threads2_2d groups = groups2_2d corrMetal(stateMtl, corrsMtl, countsMtl, l, w, periodic(layer))
+
+    #convert back to array
+    avg_corrs_cpu = Array(corrsMtl)
+    counts_cpu = Array(countsMtl)
+
+    topology = top(layer)
+     
+    corr_bins = zeros(Float32, floor(Int32,dist(1,1, size(avg_corrs_cpu,1),size(avg_corrs_cpu,2), topology)))
+    bin_counts = zeros(Float32, floor(Int32,dist(1,1, size(avg_corrs_cpu,1),size(avg_corrs_cpu,2), topology)))
+
+    for j in 1:size(avg_corrs_cpu,2)
+        for i in 1:size(avg_corrs_cpu,1)
+            if i == 1 && j == 1
+                continue
+            end
+            # println("i: $i, j: $j")
+            # println("dist: $(dist(1,1, i,j, topology))")
+            distance_bin = floor(Int32, dist(1,1, i,j, topology))
+            corr_bins[distance_bin] += avg_corrs_cpu[i,j]
+            bin_counts[distance_bin] += counts_cpu[i,j]
+        end
+    end
+
+    filter = bin_counts .> 0
+    corr_bins = corr_bins[filter]
+    bin_counts = bin_counts[filter]
+
+    corr_bins = (corr_bins ./ bin_counts) .- avg2
+
+    return [1:length(corr_bins);], corr_bins
+end
+
+# GPU KERNEL Periodic
+function corrMetal(state32, corrs, counts, l ,w, ::Type{Periodic})
+    #metal idx
+    i, j = thread_position_in_grid_2d()
+    i_off = Int32(i - 1)
+    j_off = Int32(j - 1)
+
+    corr_l, corr_w = size(corrs)
+
+    i_it = 1:l
+    j_it = 1:w
+
+    count = 0
+    if i_off < corr_l && j_off < corr_w
+        for j1 in j_it
+            for i1 in i_it
+                i2::Int32 = i1 + i_off > l ? i1 + i_off - l : i1 + i_off
+                j2::Int32 = j1 + j_off > w ? j1 + j_off - w : j1 + j_off
+                corrs[i,j] += state32[i1,j1]*state32[i2,j2]
+                count +=1
+            end
+        end
+        counts[i,j] = count
+    end
+    return
+
+    return nothing
+end
+
+# Old
+
 function sampleCorrPeriodic(layer; Lstep::Float16 = Float16(.5), lStart::Integer = Int32(1), lEnd::Integer = Int16(256), precision_fac = 5, npairs::Integer = Int32(precision_fac*10000) )
     
-    g = deepcopy(layer)
-    alives = aliveList(g)
+    layer_copy = deepcopy(layer)
+    alives = aliveList(layer_copy)
 
     function sigToIJ(sig, L)
         return (L*cos(sig),L*sin(sig))
     end
 
-    function sampleIdx2(idx1,L,rtheta)
+    function sampleIdx2(idx1,L,rtheta, layer)
         # turn idx into coordinates
-        i,j = idxToCoord(idx1,glength(g))
+        i,j = idxToCoord(idx1,glength(layer))
         # Turn angle and length into relative coordinates
         dij = Int32.(round.(sigToIJ(rtheta,L))) 
         # Turn old coordinates plus relative coordinates into and index again
-        idx2 = coordToIdx(latmod(i+dij[1], glength(g)),latmod(j+dij[2], gwidth(g)), gwidth(g))
+        idx2 = coordToIdx(latmod(i+dij[1], glength(layer)),latmod(j+dij[2], gwidth(layer)), gwidth(layer))
 
         # Old code for square lattice
         # idx2 = coordToIdx(latmod.((ij.+dij),g.N),g.N)
         return idx2
     end
-
-    theta_i = rand([1:length(rthetas);])
-
-    avgsum = (sum(state(g))/nStates(g))^2
+    avgsum = (sum(state(layer_copy))/nStates(layer_copy))^2
 
     lVec = [lStart:Lstep:lEnd;]
     corrVec = Vector{Float32}(undef,length(lVec))
@@ -39,14 +121,15 @@ function sampleCorrPeriodic(layer; Lstep::Float16 = Float16(.5), lStart::Integer
     idx1idx = 1
     # Iterate over all lengths to be checked
     Threads.@threads for (lidx,L) in collect(enumerate(lVec))
+    # for (lidx,L) in enumerate(lVec)
  
         sumprod = 0 #Track the sum of products sig_i*sig_j
         for _ in 1:npairs
             idx1 = idx1s[idx1idx]
-            rtheta = rthetas[(theta_i -1) % length(rthetas)+1]
-            idx2 = sampleIdx2(idx1,L,rtheta)
-            sumprod += state(g)[idx1]*state(g)[idx2]
-            theta_i += 1 # Sample next random angle
+            
+            rtheta = 2*pi*rand()
+            idx2 = sampleIdx2(idx1,L,rtheta, layer)
+            sumprod += state(layer_copy)[idx1]*state(layer_copy)[idx2]
             idx1idx += 1 # Sample next random startidx
         end
         # println((sum(g.state)/g.N)^2)

@@ -12,14 +12,14 @@ Coords() = Coords{Tuple{Int32,Int32,Int32}}(nothing)
 Coords(y = 0, x = 0, z = 0) = Coords{Tuple{Int32,Int32,Int32}}((Int32(y), Int32(x), Int32(z)))
 export Coords
 mutable struct IsingLayer{T} <: AbstractIsingGraph{T}
-    graph::IsingGraph{T}
+    const graph::IsingGraph{T}
     layeridx::Int32
     state::Base.ReshapedArray
     adj::Base.ReshapedArray
     start::Int32
-    size::Tuple{Int32,Int32}
+    const size::Tuple{Int32,Int32}
     coords::Coords{Tuple{Int32,Int32,Int32}}
-    d::LayerData
+    const d::LayerData
     defects::LayerDefects
     top::LayerTopology
 

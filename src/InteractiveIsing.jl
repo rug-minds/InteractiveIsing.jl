@@ -3,7 +3,8 @@ __precompile__(false)
 module InteractiveIsing
 
 using FileIO, Images, ColorSchemes, Dates, JLD, Random, Distributions, Observables, LinearAlgebra, DataFrames, 
-    CSV, CxxWrap, LaTeXStrings, StatsBase
+    CSV, CxxWrap, LaTeXStrings, StatsBase, Metal
+using Revise
 
 import Plots as pl
 

@@ -25,8 +25,8 @@ weightFunc.NN = 5
 # const weightFunc = defaultIsingWF
 
 const sim = IsingSim(
-    512,
-    512,
+    400,
+    400,
     continuous = false, 
     weighted = true;
     weightFunc,
@@ -36,14 +36,13 @@ const sim = IsingSim(
 const g = sim(true);
 
 # # Add Layers
-# addLayer!(sim, 200, 200)
+addLayer!(sim, 400, 400)
 
 # # name them l1, l2, l3 ...
-# @enumeratelayers layers(g) 2
+@enumeratelayers layers(g) 2
+setcoords!(l1)
+setcoords!(l2, z = 1)
 
-# setcoords!(l1)
-# setcoords!(l2, z = 1)
-
-# clampImg!(g, 1, "examples/smileys.jpg")
-# overlayNoise!(g, 1, 5, noise_values = [-1,1])
-# connectLayers!(g, 1, 2, (;dr, _...) -> 1, 1)
+clampImg!(g, 1, "examples/smileys.jpg")
+overlayNoise!(g, 1, 5, noise_values = [-1,1])
+connectLayers!(g, 1, 2, (;dr, _...) -> 1, 1)

@@ -1,23 +1,9 @@
 using Metal
 
-function torusDist(i1,j1,i2,j2, lngth, wdth)::Float32
-    dy::Float32 = abs(i2-i1)
-    dx::Float32 = abs(j2-j1)
+# state_copy = copy(state(l1))
 
-    if dy > .5f0 *lngth
-        dy = lngth - dy
-    end
-    if dx > .5f0 *wdth
-        dx = wdth - dx
-    end
-
-    return sqrt(dx^2+dy^2)
-end
-
-state_copy = copy(state(l1))
-
-state32 = MtlArray(Float32.(state_copy)); corrs2 = MtlArray(zeros(Float32, (floor.(Int32, (size(state_copy)) ./ 2) .+ 1)...)); counts = similar(corrs2); l, w = Int32.(size(state_copy)); threads2_2d = 16,16; groups2_2d = cld.(size(corrs2), threads2_2d)
-dists = similar(corrs2)
+# state32 = MtlArray(Float32.(state_copy)); corrs = MtlArray(zeros(Float32, (floor.(Int32, (size(state_copy)) ./ 2) .+ 1)...)); counts = similar(corrs); l, w = Int32.(size(state_copy)); threads2_2d = 16,16; groups2_2d = cld.(size(corrs), threads2_2d)
+# dists = similar(corrs)
 
 
 function corrMetal(state32, corrs, counts, l ,w, ::Type{Periodic})
@@ -28,8 +14,8 @@ function corrMetal(state32, corrs, counts, l ,w, ::Type{Periodic})
 
     corr_l, corr_w = size(corrs)
 
-    i_it = i < corr_l ? (1:l) : (iseven(l) ? (1:(corr_l-1)) : (1:(corr_l-1)))
-    j_it = j < corr_w ? (1:w) : (iseven(w) ? (1:(corr_w-1)) : (1:(corr_w-1)))
+    i_it = 1:l
+    j_it = 1:w
 
     count = 0
     if i_off < corr_l && j_off < corr_w
@@ -45,8 +31,6 @@ function corrMetal(state32, corrs, counts, l ,w, ::Type{Periodic})
     end
     return
 
-    # innerFuncCorrMetal(state32, corrs, counts, l, w, i ,j, i_off, j_off, corr_l, corr_w, i_it, j_it)
-
     return nothing
 end
 
@@ -59,79 +43,81 @@ function getDistancesMetal(dists, func)
     return
 end
 
-# function corrMetal(state32, corrs, l ,w, ::Type{Periodic}, ::Type{Odd})
-#     #metal idx
-#     i, j = thread_position_in_grid_2d()
-#     i_off = Int32(i - 1)
-#     j_off = Int32(j - 1)
-
-#     corr_l, corr_w = size(corrs)
-
-#     i_it = i < corr_l ? (1:l) : (1:(corr_l-1))
-#     j_it = j < corr_w ? (1:w) : (1:(corr_w-1))
-
-#     innerFuncCorrMetal(state32, corrs, counts, l, w, i ,j, i_off, j_off, corr_l, corr_w, i_it, j_it)
-
-#     return nothing
-# end
-
-
-# @metal threads = threads2_2d groups = groups2_2d corrMetal2(state32Matrix, corrs, l, w, Periodic)
-
-function divideCorrs_andSubtractAvg2(corrs,counts, avg2)
-    i = thread_position_in_grid_1d()
-    @inbounds if i < length(corrs) && counts[i] > 0
-        corrs[i] = corrs[i] / counts[i] - avg2
-    end
-    return
-end
-
 function corrlGPU(layer)
     state_copy = copy(state(layer))
     l, w = Int32.(size(state_copy))
+    avg2 = (sum(state_copy) / (l*w))^2
 
     # Metal Arrays
     stateMtl = MtlArray(Float32.(state_copy))
-    corrsMtl = MtlArray(zeros(Float32, (floor.(Int32, (size(state_copy)) ./ 2) .+ 1)...)) 
-    countsMtl = similar(corrs2) 
+    corrsMtl = MtlArray(zeros(Float32, (floor.(Int32, (size(state_copy)) ./ 2))...)) 
+    countsMtl = similar(corrsMtl) 
     
     threads2_2d = 16,16
-    groups2_2d = cld.(size(corrs2), threads2_2d)
+    groups2_2d = cld.(size(corrsMtl), threads2_2d)
 
-    @metal threads = threads2_2d groups = groups2_2d corrlMetal(stateMtl, corrs, counts, len, wid, periodic(layer))
+    Metal.@sync @metal threads = threads2_2d groups = groups2_2d corrMetal(stateMtl, corrsMtl, countsMtl, l, w, periodic(layer))
 
-    #convert back to arrays
-    corrs = Array(corrs)
-    counts = Array(counts)
+    #convert back to array
+    avg_corrs_cpu = Array(corrsMtl)
+    counts_cpu = Array(countsMtl)
 
-    filter = counts .> 0
-    corrs = corrs[filter]
-    counts = counts[filter]
+    topology = top(layer)
+     
+    corr_bins = zeros(Float32, floor(Int32,dist(1,1, size(avg_corrs_cpu,1),size(avg_corrs_cpu,2), topology)))
+    bin_counts = zeros(Float32, floor(Int32,dist(1,1, size(avg_corrs_cpu,1),size(avg_corrs_cpu,2), topology)))
 
-    corrs = corrs ./ counts
-    corrs = corrs .- avg2
-    bins = (1:largest_dist)[filter]
-    return bins, corrs, counts
+    for j in 1:size(avg_corrs_cpu,2)
+        for i in 1:size(avg_corrs_cpu,1)
+            if i == 1 && j == 1
+                continue
+            end
+            # println("i: $i, j: $j")
+            # println("dist: $(dist(1,1, i,j, topology))")
+            distance_bin = floor(Int32, dist(1,1, i,j, topology))
+            corr_bins[distance_bin] += avg_corrs_cpu[i,j]
+            bin_counts[distance_bin] += counts_cpu[i,j]
+        end
+    end
+
+    filter = bin_counts .> 0
+    corr_bins = corr_bins[filter]
+    bin_counts = bin_counts[filter]
+
+    corr_bins = (corr_bins ./ bin_counts) .- avg2
+
+    return corr_bins, bin_counts, corrsMtl
 end
 
-function corrl(state32, corrs)
-    l, w = size(state32)
+function corrl(layer)
+    state_copy = copy(state(layer))
+    l, w = size(state_copy)
 
     #metal idx
 
-    @inbounds for i in 1:l
-                for j in 1:w
-                    for idx in 1:l
-                        for jdx in 1:w
+    corrs = zeros(Float32, floor(Int32,dist(1,1, -floor(Int32,-(l/2)),-floor(Int32,-(w/2)), top(layer))))
+    counts = zeros(Int64, floor(Int32,dist(1,1, -floor(Int32,-(l/2)),-floor(Int32,-(w/2)), top(layer))))
+    avg2 = (sum(state_copy) / (l*w))^2
+
+    @inbounds for j in 1:w
+                for i in 1:l
+                    for jdx in j:(j+floor(Int64,w/2)-1)
+                        for idx in i:(i+floor(Int64,l/2)-1)
                             if idx != i && jdx != j
-                                    dist = (torusDist(i,j,idx,jdx, l, w)) ÷ 1
-                                    corrs[unsafe_trunc(Int32,dist)] += state32[i,j]*state32[idx,jdx]
+                                jdx = jdx > w ? jdx - w : jdx
+                                idx = idx > l ? idx - l : idx
+                                dist_bin = floor(Int32,dist(i,j,idx,jdx, top(layer)))
+                                corrs[dist_bin] += state_copy[i,j]*state_copy[idx,jdx]
+                                counts[dist_bin] += 1
                             end
                         end
                     end
                 end
     end
 
+    corrs = corrs ./ counts
+    corrs = corrs .- avg2
+    return [1:length(corrs);] , corrs
 end
 
 

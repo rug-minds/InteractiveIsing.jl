@@ -17,12 +17,10 @@ struct Rhombic <: LatticeType end
 struct AnyLattice <: LatticeType end
 export LatticeType, Square, Rectangular, Oblique, Hexagonal, Rhombic, AnyLattice
 
-struct LayerTopology
-    layer::IsingLayer
+struct LayerTopology{T <: PeriodicityType,U <: LatticeType, LayerType <: IsingLayer}
+    layer::LayerType
     pvecs::Tuple{TwoVec, TwoVec}
     covecs::Tuple{TwoVec, TwoVec}
-    periodic::Type{T} where T <: PeriodicityType
-    type::Type{U} where U <: LatticeType
 
     function LayerTopology(layer, vec1::AbstractArray, vec2::AbstractArray; periodic = true)
         #calculation of covectors
@@ -43,75 +41,59 @@ struct LayerTopology
         end
             
     
-        return new(layer, (vec1, vec2), (cov1, cov2), ptype, lattice_type)
+        return new{ptype, lattice_type, typeof(layer)}(layer, (vec1, vec2), (cov1, cov2))
     end
 end
 export LayerTopology
 
+periodic(top::LayerTopology{T,U,L}) where {T,U,L} = T
+latticetype(top::LayerTopology{T,U,L}) where {T,U,L} = U
+export periodic, latticetype
 @setterGetter LayerTopology
 
-function testdist(i1,j1,i2,j2,top)
-    l = glength(layer(top))
-    w = gwidth(layer(top))
-
-    i1 = i1 > l ? i1 - l : i1
-    i2 = i2 > l ? i2 - l : i2
-    j1 = j1 > w ? j1 - w : j1
-    j2 = j2 > w ? j2 - w : j2
-
-    pos1 = pos(i1,j1,pvecs(top))
-    pos2 = pos(i2,j2,pvecs(top))
-
-    return sqrt(sum((pos1-pos2).^2))
-end
-
-function testdist(i1,j1,i2,j2,top, l, w)
-
-    i1 = i1 > l ? i1 - l : i1
-    i2 = i2 > l ? i2 - l : i2
-    j1 = j1 > w ? j1 - w : j1
-    j2 = j2 > w ? j2 - w : j2
-
-    pos1 = pos(i1,j1,pvecs(top))
-    pos2 = pos(i2,j2,pvecs(top))
-
-    return sqrt(sum((pos1-pos2).^2))
-end
-export testdist
-
-function pos(i,j, pvecs::Tuple{TwoVec, TwoVec})
+function pos(i,j, pvecs)
     return i*pvecs[1] + j*pvecs[2]
 end
 
 pos(idx, top) = pos(idxToCoord(idx, glength(layer(top))), top)
 export pos
 
-function dist2(i1, j1, i2, j2; pt::Type{NonPeriodic}, lt::Type{T}, pvecs, l::Int32 = 1, w::Int32 = 1) where T <: Union{Square, AnyLattice}
+@inline function dist2(i1, j1, i2, j2; pvecs, l = 1, w = 1, pt::Type{NonPeriodic}, lt::LT) where LT <: Union{Type{Square}, Type{AnyLattice}}
     return sum((pos(i1,j1, pvecs) - pos(i2,j2, pvecs)).^2)
 end
 
-function dist2(i1, j1, i2, j2; pt::Type{Periodic}, lt::Type{T}, pvecs, l::Int32, w::Int32) where T <: Union{Square, AnyLattice}
+@inline function dist2(i1, j1, i2, j2; pvecs, l, w, pt::Type{Periodic}, lt::LT ) where LT <: Union{Type{Square}, Type{AnyLattice}}
     i1 = i1 > l ? i1 - l : i1
     i2 = i2 > l ? i2 - l : i2
     j1 = j1 > w ? j1 - w : j1
     j2 = j2 > w ? j2 - w : j2
 
-    return sum((pos(i1,j1, pvecs) - pos(i2,j2, pvecs)).^2)
+    dists =  pos(i2,j2, pvecs) - pos(i1,j1, pvecs)
+    
+    dy = abs(dists[1]) > l/2 ? dists[1] - sign(dists[1]) * l : dists[1]
+    dx = abs(dists[2]) > w/2 ? dists[2] - sign(dists[2]) * w : dists[2]
+   
+    return dx^2+dy^2
 end
 
-dist2(i1, j1, i2, j2, top::LayerTopology) = dist2(i1, j1, i2, j2, pt = periodic(top), lt = type(top), pvecs = pvecs(top), l = glength(layer(top)), w = gwidth(layer(top)))
+dist2(i1, j1, i2, j2, top::LT) where {LT <: LayerTopology} = dist2(i1, j1, i2, j2, pt = periodic(top), lt = type(top), pvecs = pvecs(top), l = glength(layer(top)), w = gwidth(layer(top)))
 
-dist(i1, j1, i2, j2; pt::Type{PT}, lt::Type{T}, pvecs::Tuple{TwoVec,TwoVec}, l = 1, w = 1) where {PT <: PeriodicityType,T <: Union{Square, AnyLattice}} = sqrt(dist2(i1, j1, i2, j2; pt, lt, pvecs, l, w))
-dist(i1, j1, i2, j2, top::LayerTopology) = dist(i1, j1, i2, j2, pt = periodic(top), lt = type(top), pvecs = pvecs(top), l = glength(layer(top)), w = gwidth(layer(top)))
+function dist(i1, j1, i2, j2, top::LayerTopology{PT,LT}) where {PT, LT}
+    pvecs_val = pvecs(top)
+    l::Int32 = glength(layer(top))
+    w::Int32 = gwidth(layer(top))
+
+    return sqrt(dist2(i1, j1, i2, j2, pt = PT, lt = LT, pvecs = pvecs_val, l = l, w = w))
+end
+
 dist(idx1,idx2,top) = dist(idxToCoord(idx1, glength(layer(top))), idxToCoord(idx2, glength(layer(top))), top)
+
 export dist2, dist
 
 function getDistFunc(top::LayerTopology)
-    periodicity = periodic(top)
-    lattype = type(top)
-    return (i1,j1,i2,j2) -> dist(i1,j1,i2,j2, pt = periodicity, lt = lattype, pvecs = pvecs(top), l = glength(layer(top)))
+    return (i1,j1,i2,j2) -> dist(i1,j1,i2,j2, top)
 end
-export getDistFunc
+  export getDistFunc
 
 
 function (lt::LayerTopology)(y,x)
