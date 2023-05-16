@@ -12,7 +12,7 @@ mutable struct IsingSim
     const M_array::Ref{Vector{Float64}}
 
     # Image of graph
-    const img::Base.RefValue{Matrix{RGB{Float64}}}
+    const img::Ref{Matrix{RGB{Float64}}}
 
     # Thread Locking
     const updatingUpf::Ref{Bool}

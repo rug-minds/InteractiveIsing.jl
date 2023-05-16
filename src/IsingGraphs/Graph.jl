@@ -1,6 +1,6 @@
 # Ising Graph Representation and functions
-mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
-    sim::IsingSim
+mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
+    sim::Sim
     nStates::Int32
 
     # Vertices and edges
@@ -15,7 +15,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
     IsingGraph(sim, length, width; weightFunc::WeightFunc, continuous = false, weighted = false) = 
     (   
         type = continuous ? Float32 : Int8;
-        g = new{type}(
+        g = new{type, typeof(sim)}(
             sim,
             0,
             type[],
@@ -56,6 +56,9 @@ export layerdefects
 # @inline htype(g::IsingGraph) = g.htype[]
 # @inline htype(g::IsingGraph, htype) = g.htype[] = htype
 export htype
+
+# @inline simulation(g::IsingGraph) = g.sim
+# export simulation
 
 @forward IsingGraph GraphData d
 @forward IsingGraph GraphDefects defects

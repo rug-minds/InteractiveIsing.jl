@@ -13,6 +13,8 @@ Usage: Goes from current temperature of simulation, to TF, in stepsizes of TStep
 funct
 
 function tempSweep(layer, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]), samplingAlgo = Mtl, analysisRunning = Observable(true), savelast = true, absvalcorrplot = false)
+    sim = sim(graph(layer))
+    
     # Print details
     println("Starting temperature sweep")
     println("Parameters TI: $TI,TF: $TF, TStep: $TStep, dpoints: $dpoints, dpointwait: $dpointwait, stepwait: $stepwait, equiwait: $equiwait, saveImg: $saveImg")
@@ -86,7 +88,7 @@ function tempSweep(layer, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5, dpoi
             if saveImg && (!savelast || point == dpoints)
 
                 # Image of ising
-                save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), img[])
+                save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), image(sim)[])
                 
                 # Image of correlation plot
                 plotCorr(lVec,corrVec; foldername, tidx, point, T)

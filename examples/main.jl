@@ -1,5 +1,4 @@
 # Example File
-
 using InteractiveIsing
 using InteractiveIsing.Hamiltonians
 using Distributions
