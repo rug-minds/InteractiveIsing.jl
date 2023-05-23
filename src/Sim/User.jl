@@ -83,11 +83,11 @@ function setLayerIdx!(sim, layeridx)
 end
 export setLayerIdx!
 
-function addLayer!(sim::IsingSim, glength, gwidth; gidx = 1, weightFunc = defaultIsingWF, periodic = true)
+function addLayer!(sim::IsingSim, glength, gwidth; gidx = 1, weightFunc = defaultIsingWF, periodic = true, type = typeof(state(gs(sim)[gidx])).parameters[1])
     #pause sim
     pauseSim(sim)
     # add layer to graph
-    addLayer!(gs(sim)[gidx], glength, gwidth; weightFunc = weightFunc)
+    addLayer!(gs(sim)[gidx], glength, gwidth; weightFunc, type)
     #update number of layers
     nlayers(sim)[] += 1
     # unpause sim

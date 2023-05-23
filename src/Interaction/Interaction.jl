@@ -35,23 +35,29 @@ function circleToState(sim, g, i_in, j_in, brush; periodic = true, clamp = false
 end
 
 # Add percantage of defects randomly to lattice
-function addRandomDefects!(sim, g, p)
-    println("Adding random defects to graph")
-    if length(aliveList(g)) <= 1 || p == 0
-        return nothing
-    end
-
-    al = aliveList(g)
-    idxs = al[sample([true, false], Weights([p/100,1-p/100]), length(al))]
-
-    setSpins!(g, idxs, 0, true)
-
-    return
-
-    # for _ in 1:round(length(aliveList(g))*p/100)
-    #     setSpins!(sim, g, 0, true)
+function addRandomDefects!(layer, p)
+    # if length(aliveList(layer)) <= 1 || p == 0
+    #     return nothing
     # end
 
+    println("Adding random defects to layer")
+    # al = aliveList(g)
+    nonzeros = Int32[]
+    for i in 1:length(state(layer))
+        if nand(state(layer)[i] == 0, isDefect(graph(layer))[idxLToG(layer, i)] )
+            push!(nonzeros, i)
+        end
+    end
+
+    # If is empty do nothing
+    isempty(nonzeros) && return nothing
+
+    # From nonzeros or non-defects choose p% to set to 0 and defect
+    idxs = nonzeros[sample([true, false], Weights([p/100,1-p/100]), length(nonzeros))]
+
+    setSpins!(layer, idxs, 0, true)
+
+    return
 end
 
 

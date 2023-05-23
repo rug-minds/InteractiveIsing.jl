@@ -9,7 +9,7 @@ Then, this function itself makes a new branch where getE is defined again.
 export mainLoop
 """
 
-function createProcess(sim::IsingSim, ; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor, rng = MersenneTwister())::Nothing
+function createProcess(sim::IsingSim, ; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor, rng = MersenneTwister(), threaded = true)::Nothing
     process = nothing
     for (idx, p) in enumerate(processes(sim))
         if status(p) == :Terminated
@@ -23,8 +23,12 @@ function createProcess(sim::IsingSim, ; gidx = 1, updateFunc = updateMonteCarloI
             return
         end
     end
+    if threaded 
+        errormonitor(Threads.@spawn updateGraph(sim, process; gidx, updateFunc, energyFunc, rng))
+    else
+        updateGraph(sim, process; gidx, updateFunc, energyFunc, rng)
+    end
 
-    errormonitor(Threads.@spawn updateGraph(sim, process; gidx, updateFunc, energyFunc, rng))
     return
 end
 
@@ -39,9 +43,10 @@ function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, updat
     gadj = adj(g)
     params = sim.params
     loopTemp = Temp(sim)
+    iterator = ising_it(g,ghtype)
 
     try
-        mainLoop(process, params, gidx, g, gstate, gadj, loopTemp, rng, updateFunc, energyFunc; ghtype)
+        mainLoop(process, params, gidx, g, gstate, gadj, loopTemp, iterator, rng, updateFunc, energyFunc; ghtype)
     catch 
         status(process, :Terminated)
         message(process, :Nothing)
@@ -52,12 +57,12 @@ end
 
 export updateGraph
 
-function mainLoop(process, params, gidx, g, gstate, gadj::Vector{Vector{Conn}}, lTemp, rng, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor; ghtype::HT = htype(g))::Nothing where {HT}
+function mainLoop(process, params, gidx, g, gstate, gadj::Vector{Vector{Conn}}, lTemp, iterator, rng, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor; ghtype::HT = htype(g))::Nothing where {HT}
 
     status(process, :Running)
 
     while message(process) == :Nothing
-        updateFunc(g, params, lTemp, gstate, gadj, rng, ghtype, energyFunc)
+        updateFunc(g, params, lTemp, gstate, gadj, iterator, rng, ghtype, energyFunc)
         GC.safepoint()
     end
 
@@ -84,17 +89,22 @@ function mainLoop(process, params, gidx, g, gstate, gadj::Vector{Vector{Conn}}, 
 end
 export mainLoop
 
-function updateMonteCarloIsing(g, params, lTemp, gstate::Vector{Int8}, gadj, rng, ghtype::HT, energyFunc) where {HT <: HType}
+@inline function updateMonteCarloIsing(g, params, lTemp, gstate, gadj, iterator, rng, ghtype::HT, energyFunc) where {HT <: HType}
+    idx = rand(rng, iterator)
+    updateMonteCarloIsing(idx, g, params, lTemp, gstate, gadj, iterator, rng, ghtype, energyFunc)
+end
 
-    beta::Float32 = 1/(lTemp[])
-    
-    idx::Int32 = rand(rng, ising_it(g, ghtype))
+
+
+@inline function updateMonteCarloIsing(idx, g, params, lTemp, gstate::Vector{Int8}, gadj, iterator, rng, ghtype::HT, energyFunc) where {HT <: HType}
+
+    beta::Float32 = 1f0/(lTemp[])
     
     Estate::Float32 = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, ghtype)
 
     minEdiff::Float32 = 2*Estate
 
-    if (Estate >= 0 || rand(rng) < exp(beta*minEdiff))
+    if (Estate >= 0f0 || rand(rng, Float32) < exp(beta*minEdiff))
         @inbounds g.state[idx] *= -1
     end
     
@@ -102,25 +112,24 @@ function updateMonteCarloIsing(g, params, lTemp, gstate::Vector{Int8}, gadj, rng
 
 end
 
-function updateMonteCarloIsing(g, params, lTemp, gstate::Vector{Float32}, gadj, rng, ghtype::HT, energyFunc) where {HT <: HType}
+@inline function updateMonteCarloIsing(idx, g, params, lTemp, gstate::Vector{Float32}, gadj, iterator, rng, ghtype::HT, energyFunc) where {HT <: HType}
 
-    @inline function sampleCState()::Float32
-        Float32(2*(rand(rng)-.5))
+    @inline function sampleCState()
+        2f0*(rand(rng, Float32)- .5f0)
     end
 
-    beta::Float32 = 1/(lTemp[])
-
-    idx::Int32 = rand(rng, ising_it(g))
+    beta = 1f0/(lTemp[])
      
-    oldstate::Float32 = @inbounds gstate[idx]
+    oldstate = @inbounds gstate[idx]
 
-    efactor::Float32 = energyFunc(g, gstate, gadj, idx, ghtype)
+    efactor = energyFunc(g, gstate, gadj, idx, ghtype)
 
-    newstate::Float32 = sampleCState()
-    
-    # Ediff = deltE(efactor,newstate,oldstate)
-    ediff::Float32 = Ediff(g, ghtype, idx, efactor, oldstate, newstate)
-    if (ediff < 0 || rand(rng) < exp(-beta*ediff))
+    newstate = sampleCState()
+
+    # ediff = efactor*(newstate-oldstate)
+
+    ediff = Ediff(g, ghtype, idx, efactor, oldstate, newstate)
+    if (ediff < 0f0 || rand(rng, Float32) < exp(-beta*ediff))
         @inbounds g.state[idx] = newstate 
     end
 

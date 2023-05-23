@@ -10,11 +10,28 @@ Usage: Goes from current temperature of simulation, to TF, in stepsizes of TStep
   In between Temperatures there is an optional wait time of stepwait, for equilibration
   There is an initial wait time of equiwait for equilibration
 """
-funct
+function tempSweep(layer; TI = nothing, TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, samplingAlgo = Mtl, savelast = true, absvalcorrplot = false)
+    println("Starting temperature sweep")
+    lsim = sim(layer)
+    sTemp = Temp(lsim)
+    sM_array = M_array(lsim)
+    analysisObs = analysisRunning(lsim)
 
-function tempSweep(layer, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]), samplingAlgo = Mtl, analysisRunning = Observable(true), savelast = true, absvalcorrplot = false)
-    sim = sim(graph(layer))
-    
+    if TI === nothing
+        TI = sTemp[]
+    end
+
+    try
+        tempSweepInner(layer, sTemp, sM_array; TI = TI, TF = TF, TStep = TStep, dpoints = dpoints, dpointwait = dpointwait, stepwait = stepwait, equiwait = equiwait, saveImg = saveImg, samplingAlgo = samplingAlgo, analysisObs = analysisObs, savelast = savelast, absvalcorrplot = absvalcorrplot)
+    catch
+        analysisObs[] = false
+    end
+
+end
+
+function tempSweepInner(layer, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, samplingAlgo = Mtl, analysisObs = Observable(true), savelast = true, absvalcorrplot = false)
+    analysisObs[] = true
+
     # Print details
     println("Starting temperature sweep")
     println("Parameters TI: $TI,TF: $TF, TStep: $TStep, dpoints: $dpoints, dpointwait: $dpointwait, stepwait: $stepwait, equiwait: $equiwait, saveImg: $saveImg")
@@ -69,7 +86,7 @@ function tempSweep(layer, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5, dpoi
         Actual analysis 
         =#
         for point in 1:dpoints
-            if !(analysisRunning[])
+            if !(analysisObs[])
                 println("Interrupted analysis")
                 return
             end
@@ -88,7 +105,7 @@ function tempSweep(layer, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5, dpoi
             if saveImg && (!savelast || point == dpoints)
 
                 # Image of ising
-                save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), image(sim)[])
+                save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), gToImg(layer))
                 
                 # Image of correlation plot
                 plotCorr(lVec,corrVec; foldername, tidx, point, T)
@@ -105,7 +122,7 @@ function tempSweep(layer, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5, dpoi
         
     end
 
-    analysisRunning[] = false
+    analysisObs[] = false
     # Try to save the image, but always save the data even if it fails
     try
         if saveImg
@@ -120,4 +137,5 @@ function tempSweep(layer, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5, dpoi
     end
 
     println("Temperature sweep done!")
+    return
 end

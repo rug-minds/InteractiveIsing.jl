@@ -1,9 +1,10 @@
-__precompile__(false)
+# __precompile__(false)
+__precompile__(true)
 
 module InteractiveIsing
 
 using FileIO, Images, ColorSchemes, Dates, JLD, Random, Distributions, Observables, LinearAlgebra, DataFrames, 
-    CSV, CxxWrap, LaTeXStrings, StatsBase, Metal, Qt6ShaderTools_jll
+    CSV, CxxWrap, StatsBase, Metal, QML, Qt6ShaderTools_jll, LaTeXStrings, Plots
 using Revise
 
 import Plots as pl
@@ -30,8 +31,6 @@ include("WeightFuncs.jl")
 include("SquareAdj.jl")
 
 include("Hamiltonians/Hamiltonians.jl")
-using .Hamiltonians
-export Hamiltonians
 
 import Base: size
 @ForwardDeclare IsingSim "Sim"

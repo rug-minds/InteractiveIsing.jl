@@ -58,11 +58,11 @@ end
 pos(idx, top) = pos(idxToCoord(idx, glength(layer(top))), top)
 export pos
 
-@inline function dist2(i1, j1, i2, j2; pvecs, l = 1, w = 1, pt::Type{NonPeriodic}, lt::LT) where LT <: Union{Type{Square}, Type{AnyLattice}}
+@inline function dist2(pt::Type{NonPeriodic}, lt::LT, i1, j1, i2, j2; pvecs, l = 1, w = 1) where LT <: Union{Type{Square}, Type{AnyLattice}}
     return sum((pos(i1,j1, pvecs) - pos(i2,j2, pvecs)).^2)
 end
 
-@inline function dist2(i1, j1, i2, j2; pvecs, l, w, pt::Type{Periodic}, lt::LT ) where LT <: Union{Type{Square}, Type{AnyLattice}}
+@inline function dist2(pt::Type{Periodic}, lt::LT, i1, j1, i2, j2; pvecs, l, w) where LT <: Union{Type{Square}, Type{AnyLattice}}
     i1 = i1 > l ? i1 - l : i1
     i2 = i2 > l ? i2 - l : i2
     j1 = j1 > w ? j1 - w : j1
@@ -76,14 +76,14 @@ end
     return dx^2+dy^2
 end
 
-dist2(i1, j1, i2, j2, top::LT) where {LT <: LayerTopology} = dist2(i1, j1, i2, j2, pt = periodic(top), lt = type(top), pvecs = pvecs(top), l = glength(layer(top)), w = gwidth(layer(top)))
+dist2(i1, j1, i2, j2, top::LT) where {LT <: LayerTopology} = dist2(periodic(top), type(top), i1, j1, i2, j2, pvecs = pvecs(top), l = glength(layer(top)), w = gwidth(layer(top)))
 
 function dist(i1, j1, i2, j2, top::LayerTopology{PT,LT}) where {PT, LT}
     pvecs_val = pvecs(top)
     l::Int32 = glength(layer(top))
     w::Int32 = gwidth(layer(top))
 
-    return sqrt(dist2(i1, j1, i2, j2, pt = PT, lt = LT, pvecs = pvecs_val, l = l, w = w))
+    return sqrt(dist2(PT, LT, i1, j1, i2, j2, pvecs = pvecs_val, l = l, w = w))
 end
 
 dist(idx1,idx2,top) = dist(idxToCoord(idx1, glength(layer(top))), idxToCoord(idx2, glength(layer(top))), top)

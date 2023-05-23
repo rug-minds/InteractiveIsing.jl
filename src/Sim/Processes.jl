@@ -1,8 +1,8 @@
 # Probably add a ref to the graph it's working on
-mutable struct Process
+mutable struct Process{F <: Function}
     status::Symbol
     message::Symbol
-    func::Function
+    func::F
 end
 
 @setterGetter Process
@@ -11,7 +11,7 @@ mutable struct Processes
     procs::Vector{Process}
 end
 
-Processes(num) = Processes([Process(:Terminated, :Nothing, _ -> Sleep(0.5)) for _ in 1:num])
+Processes(num::Integer) = Processes([Process(:Terminated, :Nothing, _ -> Sleep(0.5)) for _ in 1:num])
 
 getindex(processes::Processes, num) = processes.procs[num]
 

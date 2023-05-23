@@ -8,48 +8,54 @@ mutable struct Coords{T}
 end
 
 Coords(;y = 0, x = 0, z = 0) = Coords{Tuple{Int32,Int32,Int32}}((Int32(y), Int32(x), Int32(z)))
-Coords() = Coords{Tuple{Int32,Int32,Int32}}(nothing)
-Coords(y = 0, x = 0, z = 0) = Coords{Tuple{Int32,Int32,Int32}}((Int32(y), Int32(x), Int32(z)))
+Coords(n::Nothing) = Coords{Tuple{Int32,Int32,Int32}}(nothing)
+Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val), Int32(val)))
 export Coords
-mutable struct IsingLayer{T} <: AbstractIsingGraph{T}
-    const graph::IsingGraph{T}
+mutable struct IsingLayer{T, IsingGraphType <: IsingGraph, StateReshape <: AbstractMatrix{T}, AdjReshape <: AbstractArray} <: AbstractIsingGraph{T}
+    const graph::IsingGraphType
     layeridx::Int32
-    state::Base.ReshapedArray
-    adj::Base.ReshapedArray
+    state::StateReshape
+    adj::AdjReshape
     start::Int32
     const size::Tuple{Int32,Int32}
+    const nstates::Int32
     coords::Coords{Tuple{Int32,Int32,Int32}}
     const d::LayerData
     defects::LayerDefects
     top::LayerTopology
 
-    EmptyLayer(type) = new{type}() 
 
-    IsingLayer(g::IsingGraph{T}, idx, start, length, width; olddefects = 0, periodic = true) where T =
-    (
-        layer = new{T}(
+    function IsingLayer(LayerType ,g::GraphType, idx, start, length, width; olddefects = 0, periodic = true) where GraphType <: IsingGraph
+        stateview = reshapeView(state(g), start, length, width)
+        adjview = reshapeView(adj(g), start, length, width)
+        statetype = typeof(stateview)
+        adjtype = typeof(adjview)
+        lsize = tuple(Int32(length), Int32(width))
+        layer = new{LayerType, GraphType, statetype, adjtype}(
             # Graph
             g,
             # Layer idx
             Int32(idx),
             # View of state
-            reshapeView(state(g), start, length, width),
+            stateview,
             # View of adj
-            reshapeView(adj(g), start, length, width),
+            adjview,
             # Start idx
             Int32(start),
             # Size
-            tuple(Int32(length), Int32(width)),
+            lsize,
+            # Number of states
+            Int32(lsize[1]*lsize[2]),
             #Coordinates
-            Coords(),
+            Coords(nothing),
             # Layer data
             LayerData(d(g), start, length, width)
-        );
-        layer.defects = LayerDefects(layer, olddefects);
-        layer.top = LayerTopology(layer, [1,0], [0,1]; periodic);
+        )
+        layer.defects = LayerDefects(layer, olddefects)
+        layer.top = LayerTopology(layer, [1,0], [0,1]; periodic)
 
         return layer
-    )
+    end
 end
 export IsingLayer
 
@@ -69,16 +75,17 @@ end
 
 IsingLayer(g, layer::IsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefects(layer))
 
-@setterGetter IsingLayer coords
+@setterGetter IsingLayer coords size
 @inline coords(layer::IsingLayer) = layer.coords.cs
 # Move to user folder
 @inline setcoords!(layer::IsingLayer; x = 0, y = 0, z = 0) = (layer.coords.cs = Int32.((y,x,z)))
-@inline setcoords!(layer::IsingLayer, y = 0, x = 0, z = 0) = (layer.coords.cs = Int32.((y,x,z)))
+@inline setcoords!(layer::IsingLayer, val) = (layer.coords.cs = Int32.((val,val,val)))
 export setcoords!
 
 @inline reladj(layer::IsingLayer) = adjGToL(layer.adj, layer)
 @forward IsingLayer LayerData d
 @forward IsingLayer LayerDefects defects
+
 # Setters and getters
 # @forward IsingLayer IsingGraph g
 @inline size(layer::IsingLayer)::Tuple{Int32,Int32} = layer.size
@@ -89,6 +96,7 @@ export setcoords!
 @inline graphidxs(layer::IsingLayer) = UnitRange{Int32}(start(layer):endidx(layer))
 export graphidxs
 
+# Inherited from Graph
 @inline htype(layer::IsingLayer) = layer.graph.htype
 @inline nStates(layer::IsingLayer) = length(state(layer))
 @inline sim(layer::IsingLayer) = sim(graph(layer))
@@ -101,15 +109,14 @@ defectList(layer::IsingLayer) = defectList(defects(layer))
 @inline hasDefects(layer::IsingLayer) = ndefects(defects(layer)) > 0
 @inline setdefect(layer::IsingLayer, val, idx) = defects(layer)[idx] = val
 
-startidx(layer::IsingLayer) = start(layer)
-endidx(layer::IsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
+@inline startidx(layer::IsingLayer) = start(layer)
 iterator(layer::IsingLayer) = start(layer):endidx(layer)
 iterator(g::IsingGraph) = 1:(nStates(g))
 
 # LayerTopology
 @inline periodic(layer::IsingLayer) = periodic(top(layer))
 
-Hamiltonians.editHType!(layer::IsingLayer, pairs...) = editHType!(layer.graph, pairs...)
+editHType!(layer::IsingLayer, pairs...) = editHType!(layer.graph, pairs...)
 
 
 
@@ -168,7 +175,7 @@ function setAdj!(layer::IsingLayer, wf = defaultIsingWF)
     
     Threads.@threads for idx in eachindex(adj(layer))
     # for idx in eachindex(adj(layer))
-        idxs_weights = getUniqueConnIdxs(wf, idx, glength(layer), gwidth(layer))
+        idxs_weights = getUniqueConnIdxs(wf, idx, glength(layer), gwidth(layer), wt(wf))
         
         for idx_weight in idxs_weights
             addWeight!(layer, idx, idx_weight[1], idx_weight[2])

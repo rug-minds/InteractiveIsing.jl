@@ -56,6 +56,7 @@ function corrlGPU(layer)
 
     return [1:length(corr_bins);], corr_bins
 end
+# precompile(correlationLength, IsingLayer)
 
 # GPU KERNEL Periodic
 function corrMetal(state32, corrs, counts, l ,w, ::Type{Periodic})

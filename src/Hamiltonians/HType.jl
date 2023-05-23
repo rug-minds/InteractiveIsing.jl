@@ -2,7 +2,7 @@ export HType
 struct HType{Symbs, Vals} end
 
 function HType(pairs::Pair...)
-    symbs = getUniqueParams(factors)
+    symbs = factors
     vals = []
 
     for symb in symbs
@@ -14,26 +14,9 @@ function HType(pairs::Pair...)
         end
     end
 
-    return HType{symbs,tuple(vals...)}()
+    return HType{Tuple(symbs),tuple(vals...)}()
 end
 export HType
-
-function getUniqueParams(factors)
-    # Make a set of parameters for hamiltonian, ordered
-    # by the order they are added by the macro addfactor
-    paramset = tuple()
-    for factor in factors
-        symb = factor.symb
-        for el in paramset
-            if el == symb
-                @goto cont
-            end
-        end
-        paramset = (paramset..., symb)
-        @label cont
-    end
-    return  paramset
-end
 
 function getFirstVal(symb)
     for factor in factors
@@ -48,7 +31,7 @@ end
 Generate a struct of the type: struct HType{Symbs, Vals} end
 """
 function HType(vals::Bool...)
-    symbs = getUniqueParams(factors)
+    symbs = factors
 
     if length(vals) > length(symbs)
         error("Cannot be higher than number of symbols")
@@ -56,7 +39,7 @@ function HType(vals::Bool...)
 
     vals = (vals...,repeat([false], length((length(vals)+1):length(symbs)))...)
 
-    return HType{symbs,vals}()
+    return HType{Tuple(symbs),vals}()
 
 end
 

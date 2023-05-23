@@ -1,49 +1,30 @@
 """
-Struct to define factors to be used in hamiltonian
-expr: A string in julia syntax for the factor
-symb: Define a unique symbol for the factor, if two factors use the same symbol
-    a value can be used to pick any of the factors to be added over the others
-val: Value for the symbol to pick one factor instead of the others
-loop: Defines wether the factor is present in the loop or not. - more explanation needed -
-"""
-struct hFactor{T}
-    expr::String
-    symb::Symbol
-    val::T
-    type::Symbol
-end
-
-"""
 Main function that generated the expression for the energy factor term
 This factor is used for the generated function below
 The reason this is a seperate function is for debugging
 """
+
+const unweighted_expr = "-gstate[connIdx(conn)]"
+const weighted_expr = "-connW(conn)*gstate[connIdx(conn)]"
+const mag_expr = "-mlist(g)[idx]"
+
 function getEFacExpr(htype::Type{HType{Symbs,Vals}}) where {Symbs, Vals}
-    exprvec = []
+    weighted = getHParamType(htype, :Weighted)
+    clamp = getHParamType(htype, :Clamp)
+    magfield =  getHParamType(htype, :Magfield)
 
-    # line = "@inbounds @turbo for conn in gadj[idx] \n efactor +="
-    line = "@inbounds @simd for conn_idx in eachindex(gadj[idx]) \n conn = gadj[idx][conn_idx] \n efactor +="
-    # line = "@inbounds for conn_idx in eachindex(gadj[idx]) \n conn = gadj[idx][conn_idx] \n efactor +="
-    line *= buildExpr(:FacLoop, Symbs, Vals)
+    expr = "begin
+        efactor = Float32(0)
+        @inbounds @simd for conn_idx in eachindex(gadj[idx])
+            conn = gadj[idx][conn_idx]
+            efactor += $(weighted ? weighted_expr : unweighted_expr) 
+        end
+        return efactor $(magfield*mag_expr)
+    end"
 
-    line *= "end"
 
-    push!(exprvec, Meta.parse(line))
-    line = "return efactor"
 
-    normalfactor = buildExpr(:FacTerm, Symbs, Vals)
-    
-    # Check if empty otherwise add a plus and the factor
-    line *= normalfactor != "" ? "+ "*normalfactor : ""
-
-    push!(exprvec, Meta.parse(line))
-
-    # println(exprvec)
-    return Expr(
-        :block,
-        :(efactor = Float32(0)),
-        exprvec...
-    ) 
+    return Meta.parse(expr)
 end
 getEFacExpr(htype::HType{Symbs,Vals}) where {Symbs, Vals} = getEFacExpr(typeof(htype))
 export getEFacExpr

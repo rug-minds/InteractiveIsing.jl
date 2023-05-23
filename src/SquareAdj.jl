@@ -12,7 +12,7 @@ function createSqAdj(len, wid, weightFunc = defaultIsingWF)
 
     Threads.@threads for idx in eachindex(adj)
     # for idx in eachindex(adj)
-        idxs_weights = getUniqueConnIdxs(weightFunc, idx, len, wid)
+        idxs_weights = getUniqueConnIdxs(weightFunc, idx, len, wid, wt(wf))
 
         for idx_weight in idxs_weights
             addWeight!(adj, idx, idx_weight[1], idx_weight[2])
@@ -29,7 +29,7 @@ getUniqueConnIdxs(
     idx, 
     len, 
     wid, 
-    wt::WeightType = wt(wf)) =
+    wt::WeightType{A,B,Periodic,false}) where {A,B,Periodic} =
     uniqueIdxsInner(idx, len, wid, NN(wf), 
         (dr,i,j) -> getWeight(wf, dr, i ,j), 
         shapefunc = (dj,di, idx, vec) -> 
@@ -47,7 +47,7 @@ getUniqueConnIdxs(
     idx,
     len, 
     wid, 
-    wt::WeightType{A,B,Periodic,true} = wt(wf)) where {A,B,Periodic} = 
+    wt::WeightType{A,B,Periodic,true}) where {A,B,Periodic} = 
     
     uniqueIdxsInner(idx, len, wid, NN(wf),
         (dr,i,j) -> getWeight(wf, dr, i ,j),
@@ -57,7 +57,7 @@ getUniqueConnIdxs(
             (
                 if di < 1 && dj == 0
                     if dj == 0
-                        vert_i, vert_j = idxToCoord(idx, len, wid)
+                        vert_i, vert_j = idxToCoord(idx, len)
                         sw = selfweight(vert_i, vert_j)
                         push!(vec, (idx, sw ))
                     end
@@ -76,7 +76,7 @@ function uniqueIdxsInner(idx, len, wid, NN, getWeight; selfweight = (i,j) -> 1, 
                 continue
             end
             
-            vert_i, vert_j = idxToCoord(idx, len, wid)
+            vert_i, vert_j = idxToCoord(idx, len)
 
             conn_i = latmod(vert_i + di, len)
             conn_j = latmod(vert_j + dj, wid)

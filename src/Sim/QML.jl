@@ -33,7 +33,7 @@ function qmlFunctions(sim::IsingSim)
 
 
     # Add percentage of defects to lattice
-    addRandomDefectsQML(pDefects) = (layer = currentLayer(sim); try addRandomDefects!(sim, layer, pDefects); catch(error); rethrow(); end)
+    addRandomDefectsQML(pDefects) = (layer = currentLayer(sim); try addRandomDefects!(layer, pDefects); catch(error); rethrow(); end)
     @qmlfunction addRandomDefectsQML
 
     # Initialize isinggraph and display
@@ -49,13 +49,18 @@ function qmlFunctions(sim::IsingSim)
     # Sweep temperatures and record magnetization and correlation lengths
     # Make an interface for this
     function tempSweepQML(TI = s_Temp[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true)
-        if !g.d.defects
-            corrF = sampleCorrPeriodic
-        else
-            corrF = sampleCorrPeriodicDefects
-        end
         # Catching error doesn't work like this, why?
-        Threads.@spawn errormonitor(tempSweep(sim, currentLayer(sim) , s_Temp, s_M_array; TI, TF, TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, s_analysisRunning=s_analysisRunning, corrF))
+            
+        errormonitor(
+            Threads.@spawn begin 
+                    try 
+                        tempSweep(currentLayer(sim); TI, TF, TStep, dpoints , dpointwait, stepwait, equiwait, saveImg)
+                    catch error
+                        display(error)
+                        analysisRunning(sim)[] = false
+                    end 
+            end
+        )
     end
     @qmlfunction tempSweepQML
 

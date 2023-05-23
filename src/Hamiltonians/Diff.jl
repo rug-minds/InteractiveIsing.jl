@@ -2,27 +2,36 @@ function parseall(str)
     return Meta.parse("begin $str end").args
 end
 
-function Ediffstr(gtype, htype::HType{Params, Vals})::String where {Params, Vals}
-    str = " statediff = (newstate-oldstate)
+# function Ediffstr(gtype, htype::HType{Params, Vals})::String where {Params, Vals}
+#     str = " statediff = (newstate-oldstate)
 
-    efac*statediff"
+#     efac*statediff"
 
-    extrastr = buildExpr(:DiffTerm, htype)
+#     extrastr = buildExpr(:DiffTerm, htype)
 
-    if extrastr != ""
-        str *= " + " * extrastr
-    end
+#     if extrastr != ""
+#         str *= " + " * extrastr
+#     end
 
-    return str
+#     return str
+# end
+
+const clampexpr = "+ clampparam(g)/2 * (newstate^2-oldstate^2 - 2 * @inbounds clamps(g)[idx] * (newstate-oldstate))"
+
+function EdiffExpr(htype::HType{Params, Vals}) where {Params, Vals}
+    clamp = getHParamType(typeof(htype), :Clamp)
+
+    expr = "efac*(newstate-oldstate) $(clamp*clampexpr)"
+    return Meta.parse(expr)
 end
 
-Ediffstr(gtype, htype::Type{HType{Params, Vals}}) where {Params, Vals} = Ediffstr(gtype, HType{Params, Vals}())
+EdiffExpr(htype::Type{HType{Params, Vals}}) where {Params, Vals} = EdiffExpr(HType{Params, Vals}())
 
-export Ediffstr
+export EdiffExpr
 
 
-@generated function Ediff(g::T, htype::HType{Params, Vals}, idx, efac, oldstate, newstate)::Floet32 where {T, Params, Vals}
-    return Expr(:block, parseall(Ediffstr(T.parameters[1], htype))...)
+@inline @generated function Ediff(g::T, htype::HType{Params, Vals}, idx, efac, oldstate, newstate)::Floet32 where {T, Params, Vals}
+    return EdiffExpr(HType{Params, Vals}())
 end
 export Ediff
 

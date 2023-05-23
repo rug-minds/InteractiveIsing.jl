@@ -7,7 +7,8 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
     state::Vector{T}
     adj::Vector{Vector{Conn}}
     htype::HType
-    layers::Vector{IsingLayer{T}}
+    stype::Type{ST} where ST <: SType
+    layers::Vector{IsingLayer}
     layerconns::Dict{Set, Int32}
     defects::GraphDefects
     d::GraphData
@@ -21,14 +22,15 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
             type[],
             Vector{Vector{Conn}}[],
             HType(weighted, false),
-            IsingLayer[],
+            SType(:Weighted => weighted, :Continuous => (continuous ? :Continuous : :Discrete)),
+            Vector{IsingLayer}[],
             Dict{Pair, Int32}()
         );
+        g.adj = deepcopy(g.adj);
         g.defects = GraphDefects(g);
         g.d = GraphData(g);
-        addLayer!(g, length, width, periodic = periodic(weightFunc); weightFunc, );
+        addLayer!(g, length, width, periodic = periodic(weightFunc); weightFunc, type);
         #For performance, don't know why
-        g.adj = deepcopy(g.adj);
         return g
     )
     
@@ -49,8 +51,6 @@ end
 
 coords(g::IsingGraph) = VSI(layers(g), :coords)
 export coords
-layerdefects(g::IsingGraph) = VSI(layers(g), :defects)
-export layerdefects
 
 @setterGetter IsingGraph
 # @inline htype(g::IsingGraph) = g.htype[]
@@ -73,6 +73,8 @@ export htype
 IsingGraph(g::IsingGraph) = deepcopy(g)
 
 @inline layerdefects(g::IsingGraph) = layerdefects(defects(g))
+export layerdefects
+
 @inline size(g::IsingGraph)::Tuple{Int32,Int32} = (nStates(g), 1)
 
 function reset!(g::IsingGraph)
@@ -115,7 +117,7 @@ Otherwise it returns all alive spins
     defects = getHParamType(htype, :Defects)
 
     if !defects
-        return Expr(:block, :(return it::UnitRange{Int32} = 1:nStates(g)) )
+        return Expr(:block, :(return UnitRange{Int32}(1:nStates(g)) ))
     else
         return Expr(:block, :(return aliveList(g)))
     end
@@ -224,7 +226,7 @@ end
 
 export resize!
 
-function addLayer!(g::IsingGraph, llength, lwidth; weightFunc = defaultIsingWF, periodic = true)
+function addLayer!(g::IsingGraph, llength, lwidth; weightFunc = defaultIsingWF, periodic = true, type = typeof(state(g)))
     glayers = layers(g)
 
     # Resize underlying graphs 
@@ -242,7 +244,7 @@ function addLayer!(g::IsingGraph, llength, lwidth; weightFunc = defaultIsingWF, 
     end
 
     #Make the new layer
-    newlayer = IsingLayer(g, length(glayers)+1 , startidx, llength, lwidth; periodic)
+    newlayer = IsingLayer(type, g, length(glayers)+1 , startidx, llength, lwidth; periodic)
     # Push it to layers
     push!(glayers, newlayer)
 

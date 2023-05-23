@@ -4,7 +4,7 @@
 Set spins either to a value or clamp them
 """
 #Clean this up
-function setSpins!(g::AbstractIsingGraph{T}, idxs::AbstractArray, brush, clamp = false) where T
+function setSpins!(g::AbstractIsingGraph{T}, idxs::AbstractArray, brush, clamp = false, refresh = true) where T
     if T == Int8
         clamp = brush == 0 ? true : clamp
     end
@@ -14,14 +14,15 @@ function setSpins!(g::AbstractIsingGraph{T}, idxs::AbstractArray, brush, clamp =
     
     # Set the htype to wether it has defects or not
     setSimHType!(sim(g), :Defects => hasDefects(graph(g)))
-    
+    # Refresh the simulation
+    refresh && refreshSim(sim(g))
     # Set the spins
     @inbounds state(g)[idxs] .= brush
 end
 
 setSpins!(g::AbstractIsingGraph, coords::Vector{Tuple{Int16,Int16}}, brush, clamp = false) = setSpins!(g, coordToIdx.(coords, glength(g)), brush, clamp)
 
-function setSpins!(g::AbstractIsingGraph{T}, idx::Int32, brush, clamp = false) where T
+function setSpins!(g::AbstractIsingGraph{T}, idx::Int32, brush, clamp = false, refresh = false) where T
     if T == Int8
         clamp = brush == 0 ? true : clamp
     end
@@ -30,6 +31,8 @@ function setSpins!(g::AbstractIsingGraph{T}, idx::Int32, brush, clamp = false) w
 
     setSimHType!(sim(g), "Defects" =>  hasDefects(defects(graph(g))))
     
+    refresh && refreshSim(sim(g))
+
     @inbounds state(g)[idx] = brush
 end
 

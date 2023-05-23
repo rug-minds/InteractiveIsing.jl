@@ -9,13 +9,9 @@ end
 coordToIdx((i, j), length) = coordToIdx(i, j, length)
 
 # Go from idx to lattice coordinates, for rectangular grids
-@inline function idxToCoord(idx::T, length::Integer, width::Integer = 1)::Tuple{T, T} where T <: Integer
+@inline function idxToCoord(idx::T, length::Integer, wid::Integer = 0)::Tuple{T, T} where T <: Integer
     return ((idx - 1) % length + 1, (idx - 1) ÷ length + 1)
 end
-
-# Go from idx to lattice coordinates, for square grids
-@inline idxToCoord(idx::Integer, N::Integer) = idxToCoord(idx, N, N)
-
 
 # Put a lattice index (i or j) back onto lattice by looping in a direction
 @inline function latmod(idx, N)

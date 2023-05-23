@@ -14,7 +14,7 @@ function setMIdxs!(sim, strengths; idxs = 1:length(strengths), g = currentLayer(
         return      
     end
     mlist(g)[iterator(g)] .= strengths[1:end]
-    setSimHType!(sim, :MagField => true)
+    setSimHType!(sim, :Magfield => true)
 end
 
 export setMFunc!
@@ -79,7 +79,7 @@ Removes magnetic field
 """
 function remM!(sim; g = currentLayer(sim))
     mlist(g) .= Float32(0)
-    setSimHType!(sim, :MagField => false)
+    setSimHType!(sim, :Magfield => false)
 end
 
 export plotM

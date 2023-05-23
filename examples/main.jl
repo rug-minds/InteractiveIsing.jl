@@ -1,6 +1,5 @@
 # Example File
 using InteractiveIsing
-using InteractiveIsing.Hamiltonians
 using Distributions
 using ColorSchemes
 
@@ -14,19 +13,19 @@ include(joinpath(@__DIR__,"test.jl"))
 # weightFunc = radialWF
 
 #= Second nearest neighbor radially falling of weightfunction =#
-const weightFunc = isingNN2
+# const weightFunc = isingNN2
 # weightFunc = isingNN2
-weightFunc.NN = 5
+# weightFunc.NN = 1
 
 #= Add randomness to the weights =#
 # setAddDist!(weightFunc, Normal(0,0.1))
 
-# const weightFunc = defaultIsingWF
+const weightFunc = defaultIsingWF
 
 const sim = IsingSim(
     400,
     400,
-    continuous = false, 
+    continuous = true, 
     weighted = true;
     weightFunc,
     colorscheme = ColorSchemes.winter
@@ -39,9 +38,12 @@ addLayer!(sim, 400, 400)
 
 # # name them l1, l2, l3 ...
 @enumeratelayers layers(g) 2
+
 setcoords!(l1)
 setcoords!(l2, z = 1)
 
 clampImg!(g, 1, "examples/smileys.jpg")
-overlayNoise!(g, 1, 5, noise_values = [-1,1])
 connectLayers!(g, 1, 2, (;dr, _...) -> 1, 1)
+
+
+# overlayNoise!(g, 1, 5, noise_values = [-1,1])
