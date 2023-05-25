@@ -1,3 +1,9 @@
+abstract type StateType end
+struct ContinuousState <: StateType end
+struct DiscreteState <: StateType end
+struct MixedState <: StateType end
+
+
 # Ising Graph Representation and functions
 mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
     sim::Sim
@@ -7,8 +13,10 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
     state::Vector{T}
     adj::Vector{Vector{Conn}}
     htype::HType
-    stype::Type{ST} where ST <: SType
+    stype::SType
     layers::Vector{IsingLayer}
+    continuous::StateType
+    # Connection between layers, I don't think it's neccesary to track this
     layerconns::Dict{Set, Int32}
     defects::GraphDefects
     d::GraphData
@@ -22,8 +30,10 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
             type[],
             Vector{Vector{Conn}}[],
             HType(weighted, false),
-            SType(:Weighted => weighted, :Continuous => (continuous ? :Continuous : :Discrete)),
+            SType(:Weighted => weighted),
             Vector{IsingLayer}[],
+            #ContinuityType
+            continuous ? ContinuousState() : DiscreteState(),
             Dict{Pair, Int32}()
         );
         g.adj = deepcopy(g.adj);
@@ -79,8 +89,8 @@ export layerdefects
 
 function reset!(g::IsingGraph)
     state(g) .= initRandomState(g)
-    currentlyWeighted = getHParam(g.htype, :Weighted)
-    g.htype = HType(:Weighted => currentlyWeighted)
+    currentlyWeighted = getSParam(stype(g), :Weighted)
+    stype(g,SType(:Weighted => currentlyWeighted))
     reset!(defects(g))
     reset!(d(g))
 end
@@ -112,9 +122,9 @@ If there are no defects, returns whole range
 Otherwise it returns all alive spins
 """
 
-@generated function ising_it(g::IsingGraph, htype::HType{Symbs,Params} = htype(g)) where {Symbs,Params}
+@generated function ising_it(g::IsingGraph, stype::SType)
     # Assumes :Defects will be found
-    defects = getHParamType(htype, :Defects)
+    defects = getSParam(stype, :Defects)
 
     if !defects
         return Expr(:block, :(return UnitRange{Int32}(1:nStates(g)) ))
@@ -296,3 +306,34 @@ function updateLayerIdxs!(g::IsingGraph)
         layeridx(layer, i)
     end
 end
+
+# Set the SType
+"""
+Set the SType of the graph g
+Only changes the pairs that are given
+"""
+function setSType!(g::IsingGraph, pairs::Pair...; refresh::Bool = true)
+    oldstype = stype(g)
+    newstype = changeSParam(oldstype, pairs...)
+    if oldstype != newstype
+        stype(g, newstype)
+        if refresh
+            refreshSim(sim(g))
+        end
+    end
+end
+"""
+Set the SType of the graph g to the given type
+"""
+function setSType!(g::IsingGraph, st::SType; refresh::Bool = true)
+    oldstype = stype(g)
+    if oldstype != st
+        stype(g, st)
+        if refresh
+            refreshSim(sim(g))
+        end
+    end
+end
+
+
+export setSType!

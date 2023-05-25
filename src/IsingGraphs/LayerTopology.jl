@@ -22,7 +22,7 @@ struct LayerTopology{T <: PeriodicityType,U <: LatticeType, LayerType <: IsingLa
     pvecs::Tuple{TwoVec, TwoVec}
     covecs::Tuple{TwoVec, TwoVec}
 
-    function LayerTopology(layer, vec1::AbstractArray, vec2::AbstractArray; periodic = true)
+    function LayerTopology(layer, vec1::AbstractArray, vec2::AbstractArray; periodic::Bool = true)
         #calculation of covectors
         y1 = 1/(vec1[1]-(vec1[2]*vec2[1]/vec2[2]))
         x1 = 1/(vec1[2]-(vec1[1]*vec2[2]/vec2[1]))
@@ -44,6 +44,11 @@ struct LayerTopology{T <: PeriodicityType,U <: LatticeType, LayerType <: IsingLa
         return new{ptype, lattice_type, typeof(layer)}(layer, (vec1, vec2), (cov1, cov2))
     end
 end
+
+LayerTopology(tp::LayerTopology; periodic::Bool) = LayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2]; periodic)
+LayerTopology(tp::LayerTopology, pt::Type{<:PeriodicityType}) = LayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2], periodic = pt == Periodic ? true : false)
+
+changePeriodicity = 
 export LayerTopology
 
 periodic(top::LayerTopology{T,U,L}) where {T,U,L} = T

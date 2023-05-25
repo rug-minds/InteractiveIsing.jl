@@ -13,8 +13,7 @@ Removes all defects from graph and branch sim
 function restoreState!(sim, g)
     (@view state(g)[defectList(g)]) .= rand(length(defectlist(g)))
     reset!(defects(g))
-    editHType!(g, :Defects => false)
-    branchSim(sim)
+    setS(g, :Defects => false)
 end
 
 

@@ -1,7 +1,5 @@
 # All the dispatch symbols
 
-
-
 # Define SType which is used for dispatching to ensure fast algorithms based on the type of simulation
 include("SType.jl")
 

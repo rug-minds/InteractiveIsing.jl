@@ -5,7 +5,7 @@ Simulation struct
 """
 mutable struct IsingSim
     # Graphs
-    gs::Vector{IsingGraph}
+    const gs::Vector{IG} where IG <: IsingGraph
     # Property map used in qml
     const pmap::JuliaPropertyMap
 
@@ -17,10 +17,12 @@ mutable struct IsingSim
     # Thread Locking
     const updatingUpf::Ref{Bool}
     const updatingMag::Ref{Bool} 
-    const updatingImg::Ref{Bool} 
+    const updatingImg::Ref{Bool}
 
     # Process being used
     processes::Processes
+    # Timers
+    timers::Vector{Timer}
     # Simulation Parameters
     params::IsingParams
     
@@ -57,6 +59,7 @@ mutable struct IsingSim
             Ref(false),
             Ref(false),
             Processes(4),
+            Timer[],
             IsingParams(;initbrushR, colorscheme),
             # memory
             Dict(),

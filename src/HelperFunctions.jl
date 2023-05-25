@@ -450,6 +450,8 @@ macro ForwardDeclare(structname, subfolder)
     # add the path to the files
     files = map(x -> joinpath(@__DIR__, subfolder, x), files)
     structstring = getstruct(string(structname), files)
+    # println(structstring)
+    println("Searching Dir $(@__DIR__)/$subfolder for struct $structname")
     expr = Meta.parse(structstring)
     return esc(quote
                 try

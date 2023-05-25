@@ -5,6 +5,7 @@ module InteractiveIsing
 
 using FileIO, Images, ColorSchemes, Dates, JLD, Random, Distributions, Observables, LinearAlgebra, DataFrames, 
     CSV, CxxWrap, StatsBase, Metal, QML, Qt6ShaderTools_jll, LaTeXStrings, Plots
+using PrecompileTools
 using Revise
 
 import Plots as pl
@@ -30,13 +31,11 @@ include("HelperFunctions.jl")
 include("WeightFuncs.jl")
 include("SquareAdj.jl")
 
-include("Hamiltonians/Hamiltonians.jl")
-
-import Base: size
 @ForwardDeclare IsingSim "Sim"
+
+include("Hamiltonians/Hamiltonians.jl")
 include("IsingGraphs/IsingGraphs.jl")
 
-# include("IsingMetropolis.jl")
 include("Sim/Sim.jl")
 include("Interaction/Interaction.jl")
 include("Interaction/IsingMagneticFields.jl")
@@ -53,6 +52,38 @@ function __init__()
     global showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest, Cvoid, 
                                                (Array{UInt32,1}, Int32, Int32))
 end
+
+# PRECOMPILATION FUNCTION FOR FAST USAGE
+@setup_workload begin
+    csim = IsingSim(
+        20,
+        20,
+        continuous = true, 
+        weighted = true;
+        colorscheme = ColorSchemes.winter
+    );
+    cg = csim(false)
+    @compile_workload begin
+        addLayer!(csim, 20, 20)
+
+        # # name them l1, l2, l3 ...
+        @enumeratelayers layers(cg) 2
+
+        setcoords!(l1)
+        setcoords!(l2, z = 1)
+
+        clampImg!(cg, 1, "examples/smileys.jpg")
+        connectLayers!(cg, 1, 2, (;dr, _...) -> 1, 1)
+
+        #Plotting correlation length and GPU kernel
+        plotCorr(correlationLength(l1)...)
+
+        setSpins!(l1, 1, 1, true, false)
+
+        
+    end
+end
+
 
 
 end # module InteractiveIsing

@@ -12,10 +12,9 @@ function setSpins!(g::AbstractIsingGraph{T}, idxs::AbstractArray, brush, clamp =
     # Set the defects
     setrange!(defects(g), clamp, idxs)
     
-    # Set the htype to wether it has defects or not
-    setSimHType!(sim(g), :Defects => hasDefects(graph(g)))
-    # Refresh the simulation
-    refresh && refreshSim(sim(g))
+    # Set the stype to wether it has defects or not
+    setSType!(graph(g), :Defects => hasDefects(graph(g)); refresh)
+
     # Set the spins
     @inbounds state(g)[idxs] .= brush
 end
@@ -29,9 +28,7 @@ function setSpins!(g::AbstractIsingGraph{T}, idx::Int32, brush, clamp = false, r
 
     setdefect(g, clamp, idx)
 
-    setSimHType!(sim(g), "Defects" =>  hasDefects(defects(graph(g))))
-    
-    refresh && refreshSim(sim(g))
+    setSType!(graph(g), :Defects => hasDefects(graph(g)); refresh)
 
     @inbounds state(g)[idx] = brush
 end

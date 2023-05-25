@@ -38,15 +38,15 @@ export createProcess
 
 function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor, rng = MersenneTwister())
     g = gs(sim)[gidx]
-    ghtype = htype(g)
+    gstype = stype(g)
     gstate = state(g)
     gadj = adj(g)
     params = sim.params
     loopTemp = Temp(sim)
-    iterator = ising_it(g,ghtype)
+    iterator = ising_it(g,gstype)
 
     try
-        mainLoop(process, params, gidx, g, gstate, gadj, loopTemp, iterator, rng, updateFunc, energyFunc; ghtype)
+        mainLoop(process, params, gidx, g, gstate, gadj, loopTemp, iterator, rng, updateFunc, energyFunc; gstype)
     catch 
         status(process, :Terminated)
         message(process, :Nothing)
@@ -57,12 +57,12 @@ end
 
 export updateGraph
 
-function mainLoop(process, params, gidx, g, gstate, gadj::Vector{Vector{Conn}}, lTemp, iterator, rng, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor; ghtype::HT = htype(g))::Nothing where {HT}
+function mainLoop(process, params, gidx, g, gstate, gadj::Vector{Vector{Conn}}, lTemp, iterator, rng, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor; gstype::ST = stype(g))::Nothing where {ST}
 
     status(process, :Running)
 
     while message(process) == :Nothing
-        updateFunc(g, params, lTemp, gstate, gadj, iterator, rng, ghtype, energyFunc)
+        updateFunc(g, params, lTemp, gstate, gadj, iterator, rng, gstype, energyFunc)
         GC.safepoint()
     end
 
@@ -89,30 +89,41 @@ function mainLoop(process, params, gidx, g, gstate, gadj::Vector{Vector{Conn}}, 
 end
 export mainLoop
 
-@inline function updateMonteCarloIsing(g, params, lTemp, gstate, gadj, iterator, rng, ghtype::HT, energyFunc) where {HT <: HType}
+@inline function updateMonteCarloIsing(g::IsingGraph, params, lTemp, gstate, gadj, iterator, rng, gstype::ST, energyFunc) where {ST <: SType}
     idx = rand(rng, iterator)
-    updateMonteCarloIsing(idx, g, params, lTemp, gstate, gadj, iterator, rng, ghtype, energyFunc)
+    updateMonteCarloIsing(idx, g, lTemp, gstate, gadj, iterator, rng, gstype, energyFunc)
+    params.updates +=1
 end
 
-
-
-@inline function updateMonteCarloIsing(idx, g, params, lTemp, gstate::Vector{Int8}, gadj, iterator, rng, ghtype::HT, energyFunc) where {HT <: HType}
+@inline @generated function updateMonteCarloIsing(idx::Integer, g::IsingGraph, lTemp, gstate, gadj, iterator, rng, gstype::ST, energyFunc, statetype::MixedState) where {ST <: SType}
 
     beta::Float32 = 1f0/(lTemp[])
     
-    Estate::Float32 = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, ghtype)
+    Estate::Float32 = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, gstype)
 
     minEdiff::Float32 = 2*Estate
 
     if (Estate >= 0f0 || rand(rng, Float32) < exp(beta*minEdiff))
-        @inbounds g.state[idx] *= -1
+        @inbounds g.state[idx] *= -Int8(1)
     end
-    
-    params.updates +=1
-
 end
 
-@inline function updateMonteCarloIsing(idx, g, params, lTemp, gstate::Vector{Float32}, gadj, iterator, rng, ghtype::HT, energyFunc) where {HT <: HType}
+
+
+@inline function updateMonteCarloIsing(idx::Integer, g, lTemp, gstate::Vector{Int8}, gadj, iterator, rng, gstype::ST, energyFunc) where {ST <: SType}
+
+    beta::Float32 = 1f0/(lTemp[])
+    
+    Estate::Float32 = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, gstype)
+
+    minEdiff::Float32 = 2*Estate
+
+    if (Estate >= 0f0 || rand(rng, Float32) < exp(beta*minEdiff))
+        @inbounds g.state[idx] *= -Int8(1)
+    end
+end
+
+@inline function updateMonteCarloIsing(idx::Integer, g, lTemp, gstate::Vector{Float32}, gadj, iterator, rng, gstype::ST, energyFunc) where {ST <: SType}
 
     @inline function sampleCState()
         2f0*(rand(rng, Float32)- .5f0)
@@ -122,31 +133,30 @@ end
      
     oldstate = @inbounds gstate[idx]
 
-    efactor = energyFunc(g, gstate, gadj, idx, ghtype)
+    efactor = energyFunc(g, gstate, gadj, idx, gstype)
 
     newstate = sampleCState()
 
     # ediff = efactor*(newstate-oldstate)
 
-    ediff = Ediff(g, ghtype, idx, efactor, oldstate, newstate)
+    ediff = Ediff(g, gstype, idx, efactor, oldstate, newstate)
     if (ediff < 0f0 || rand(rng, Float32) < exp(-beta*ediff))
         @inbounds g.state[idx] = newstate 
     end
 
-    params.updates +=1
 end
 
 export updateMonteCarloIsing
 
 let times = Ref([])
-    global function upDebug(lTemp, g, gstate::Vector, gadj, rng, g_iterator, ghtype, energyFunc, params)
+    global function upDebug(lTemp, g, params, gstate::Vector, gadj, rng, g_iterator, gstype, energyFunc)
 
         beta = 1/(lTemp[])
         
         idx = rand(rng, g_iterator)
         
         ti = time()
-        Estate = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, ghtype)
+        Estate = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, gstype)
         tf = time()
 
         push!(times[], tf-ti)

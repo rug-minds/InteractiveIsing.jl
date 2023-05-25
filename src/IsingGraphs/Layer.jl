@@ -73,6 +73,9 @@ function Base.show(io::IO, layer::IsingLayer)
     print(io, showstr)
 end
 
+show(io, layertype::Type{<:IsingLayer}) = print(io, "IsingLayer")
+
+
 IsingLayer(g, layer::IsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefects(layer))
 
 @setterGetter IsingLayer coords size
@@ -118,7 +121,8 @@ iterator(g::IsingGraph) = 1:(nStates(g))
 
 editHType!(layer::IsingLayer, pairs...) = editHType!(layer.graph, pairs...)
 
-
+# Forward Graph Data
+# @inline mlist(layer::IsingLayer) = @view mlist(graph(layer))[start(layer):endidx(layer)]
 
 """
 Go from a local idx of layer to idx of the underlying graph
@@ -183,4 +187,5 @@ function setAdj!(layer::IsingLayer, wf = defaultIsingWF)
     end
 end
 
-
+# Set the SType
+setSType!(layer::IsingLayer, varargs...; refresh = true) = setSType!(graph(layer), varargs...; refresh = refresh)

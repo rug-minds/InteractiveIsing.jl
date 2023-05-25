@@ -24,6 +24,7 @@ function pauseSim(sim; print = true)
 end
 export pauseSim
 
+
 function unpauseSim(sim; print = true)
     if print
         println("Unpausing sim")

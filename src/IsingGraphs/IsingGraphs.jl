@@ -21,7 +21,6 @@ abstract type AbstractIsingGraph{T} end
 @ForwardDeclare IsingGraph "IsingGraphs"
 @ForwardDeclare IsingLayer "IsingGraphs"
 
-
 include("Data.jl")
 include("GraphDefects.jl")
 include("Graph.jl")
