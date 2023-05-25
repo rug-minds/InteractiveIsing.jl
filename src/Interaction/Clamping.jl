@@ -3,7 +3,7 @@ function setClampIdxs(g::IsingGraph, idxs, strenghts, cfac = 1)
     clamps(g)[idxs] .= strenghts
     clampparam(g, cfac)
 
-    setSimHType!(sim(g), :Clamp => true)
+    setSType!(g, :Clamp => true)
 end
 export setClampIdxs
 
