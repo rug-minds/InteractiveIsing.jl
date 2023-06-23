@@ -131,11 +131,10 @@ function Benchmark(sim::IsingSim, process = processes(sim)[1], gidx = 1; g = gs(
 
     println("Starting Benchmark")
     ti = time()
-    # mainLoop(sim, process, gidx, params, loopTemp, g, gstate, gadj, ghtype, rng, g_iterator, updateFunc, energyFunc)
     mainLoop(sim, process, params, gidx, g, gstate, gadj, loopTemp, rng, g_iterator, updateFunc, energyFunc)
     tf = time()
 
-    # display(gToImg(g))
+    display(gToImg(g))
 
     return tf - ti
 end
@@ -163,7 +162,7 @@ let iterations = 10^7
     end
 end
 
-function simtest(sim)
+function simtest(sim, time = 5)
     quitSim(sim)
     Random.seed!(1234)
     rng = MersenneTwister(1234)
@@ -171,8 +170,72 @@ function simtest(sim)
     g = graph(sim)
     state(g) .= initRandomState(g)
     createProcess(sim; rng)
-    sleep(5)
+    sleep(time)
 
     quitSim(sim)
 
+end
+
+function simtestList(sim, time = 5)
+    quitSim(sim)
+    Random.seed!(1234)
+    rng = MersenneTwister(1234)
+
+    g = graph(sim)
+    state(g) .= initRandomState(g)
+    createProcessList(sim; rng)
+    sleep(time)
+
+    quitSim(sim)
+
+end
+
+function simtestNew(sim, time = 5)
+    quitSim(sim)
+    Random.seed!(1234)
+    rng = MersenneTwister(1234)
+
+    g = graph(sim)
+    state(g) .= initRandomState(g)
+    # createProcessNew(sim; rng)
+    updateGraphList(sim; rng)
+    sleep(time)
+
+    quitSim(sim)
+
+end
+
+function testfun(fstate, fadj, fadjlist, fstype, repeats = 10^8)
+    # fg = graph(sim)
+    # fstate = state(fg)
+    # fadj = adj(fg)
+    # fstype = stype(fg)
+    # fadjlist = adjlist(fg)
+
+    ti1 = time()
+    testloop1(fstate, fadj, fstype)
+    tf1 = time()
+    println(tf1 - ti1)
+
+    ti2 = time()
+    testloop2(fstate, fadjlist, fstype, repeats)
+    tf2 = time()
+    println(tf2 - ti2)
+
+    return
+
+end
+
+const repeats = 10^8
+
+function testloop1(state, adj::Vector{Vector{Tuple{Int32,Float32}}} , stype)
+    # for _ in 1:repeats
+    @rtime getEFactor(state, adj[1], stype) repeats
+    # end
+end
+
+function testloop2(state, adj::AdjList , stype, repeats)
+    for _ in 1:repeats
+        getEFactor(state, adj[1], stype)
+    end
 end

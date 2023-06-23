@@ -72,7 +72,7 @@ function qmlFunctions(sim::IsingSim)
     @qmlfunction newCirc
 
     # Save an image of the graph
-    saveGImgQML() = saveGImg(sim, currentLayer(sim))
+    saveGImgQML() = saveGImg(currentLayer(sim))
     @qmlfunction saveGImgQML
 
     function setTemp(temp)
@@ -93,8 +93,9 @@ function qmlFunctions(sim::IsingSim)
     end
     @qmlfunction changeLayer
     
+    # TODO: Check this
+    #This is not correct?
     function pauseUnpause()
         memory(sim)["Procstatus"] = [process.status for process in processes(sim)]
-        
     end
 end

@@ -11,8 +11,11 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
 
     # Vertices and edges
     state::Vector{T}
-    adj::Vector{Vector{Conn}}
+    const adj::Vector{Vector{Conn}}
+    adjlist::AdjList{Connections}
+    # Depcrecated
     htype::HType
+
     stype::SType
     layers::Vector{IsingLayer}
     continuous::StateType
@@ -21,28 +24,44 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
     defects::GraphDefects
     d::GraphData
 
-    IsingGraph(sim, length, width; weightFunc::WeightFunc, continuous = false, weighted = false) = 
-    (   
-        type = continuous ? Float32 : Int8;
+    function IsingGraph(sim, length, width; periodic = nothing, weightfunc::Union{Nothing,WeightFunc} = nothing, continuous = false, weighted = false)
+      
+        type = continuous ? Float32 : Int8
         g = new{type, typeof(sim)}(
             sim,
             0,
             type[],
+            # Adj
             Vector{Vector{Conn}}[],
+            # AdjList
+            AdjList(length*width),
             HType(weighted, false),
             SType(:Weighted => weighted),
             Vector{IsingLayer}[],
             #ContinuityType
             continuous ? ContinuousState() : DiscreteState(),
             Dict{Pair, Int32}()
-        );
-        g.adj = deepcopy(g.adj);
-        g.defects = GraphDefects(g);
-        g.d = GraphData(g);
-        addLayer!(g, length, width, periodic = periodic(weightFunc); weightFunc, type);
+        )
+
+        # TODO: Later remove this when we have a better way to do this
+
+        # Default Weightfun 
+        # if isnothing(weightfunc) || !weighted
+        #     weightfunc = defaultIsingWF
+        #     if continuous
+        #         setSelf(weightfunc, (i,j) -> -1)
+        #     end
+        # end
+
         #For performance, don't know why
+        # g.adj = deepcopy(g.adj)
+        g.defects = GraphDefects(g)
+        g.d = GraphData(g)
+
+        addLayer!(g, length, width; periodic, weightfunc, type)
+
         return g
-    )
+    end
     
 end
 
@@ -51,12 +70,14 @@ function Base.show(io::IO, g::IsingGraph)
     println(io, "IsingGraph with $(nStates(g)) states")
     println(io, "Layers:")
     for (idx, layer) in enumerate(g.layers)
-        show(io, layer)
+        Base.show(io, layer)
         if idx != length(g.layers)
             print(io, "\n")
         end
     end
 end
+
+Base.show(io::IO, graphtype::Type{IsingGraph}) = print(io, "IsingGraph")
 
 
 coords(g::IsingGraph) = VSI(layers(g), :coords)
@@ -79,6 +100,7 @@ export htype
 @inline graph(g::IsingGraph) = g
 
 @inline layer(g::IsingGraph, idx) = g.layers[idx]
+@inline Base.getindex(g::IsingGraph, idx) = layer(g, idx)
 
 IsingGraph(g::IsingGraph) = deepcopy(g)
 
@@ -106,7 +128,7 @@ function initRandomState(type, nstates)::Vector{type}
     if type == Int8
         return rand([-1,1], nstates)
     elseif type == Float32
-        return 2 .* rand(Float32, nstates) .- .5
+        return 2.f0 .* rand(Float32, nstates) .- 1.f0
     else
         return rand(type[-1,1], nstates)
     end
@@ -122,12 +144,13 @@ If there are no defects, returns whole range
 Otherwise it returns all alive spins
 """
 
-@generated function ising_it(g::IsingGraph, stype::SType)
+@generated function ising_it(g::IsingGraph, stype::SType = stype(g))
     # Assumes :Defects will be found
     defects = getSParam(stype, :Defects)
 
     if !defects
         return Expr(:block, :(return UnitRange{Int32}(1:nStates(g)) ))
+        # return Expr(:block, :(return Base.OneTo(nStates(g)) ))
     else
         return Expr(:block, :(return aliveList(g)))
     end
@@ -155,7 +178,7 @@ Initialization of adjacency Vector for a given N
 and using a weightFunc
 Is a pointer to function in SquareAdj.jl for compatibility
 """
-initSqAdj(len, wid; weightFunc = defaultIsingWF) = createSqAdj(len, wid, weightFunc)
+initSqAdj(len, wid; weightfunc = defaultIsingWF) = createSqAdj(len, wid, weightfunc)
 
 # """
 # Initialization of adjacency Vector for a given N
@@ -236,7 +259,7 @@ end
 
 export resize!
 
-function addLayer!(g::IsingGraph, llength, lwidth; weightFunc = defaultIsingWF, periodic = true, type = typeof(state(g)))
+function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodic = true, type = typeof(state(g)))
     glayers = layers(g)
 
     # Resize underlying graphs 
@@ -246,9 +269,6 @@ function addLayer!(g::IsingGraph, llength, lwidth; weightFunc = defaultIsingWF, 
     # And find the starting idx of the layer
     if length(glayers) != 0
         startidx = start(glayers[end]) + glength(glayers[end])*gwidth(glayers[end])
-        # for layer in glayers
-        #     regenerateViews(layer)
-        # end
     else
         startidx = 1
     end
@@ -258,7 +278,10 @@ function addLayer!(g::IsingGraph, llength, lwidth; weightFunc = defaultIsingWF, 
     # Push it to layers
     push!(glayers, newlayer)
 
-    setAdj!(newlayer, weightFunc)
+    # Set the adjacency matrix
+    if weightfunc != nothing 
+        setAdj!(newlayer, weightfunc)
+    end
 
     # Add Layer to defects
     addLayer!(defects(g), newlayer)
@@ -312,14 +335,17 @@ end
 Set the SType of the graph g
 Only changes the pairs that are given
 """
-function setSType!(g::IsingGraph, pairs::Pair...; refresh::Bool = true)
+function setSType!(g::IsingGraph, pairs::Pair...; refresh::Bool = true, force_refresh = false)
     oldstype = stype(g)
     newstype = changeSParam(oldstype, pairs...)
     if oldstype != newstype
         stype(g, newstype)
-        if refresh
+        if refresh && !force_refresh
             refreshSim(sim(g))
         end
+    end
+    if force_refresh
+        refreshSim(sim(g))
     end
 end
 """

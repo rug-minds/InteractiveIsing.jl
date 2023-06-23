@@ -11,7 +11,7 @@ Coords(;y = 0, x = 0, z = 0) = Coords{Tuple{Int32,Int32,Int32}}((Int32(y), Int32
 Coords(n::Nothing) = Coords{Tuple{Int32,Int32,Int32}}(nothing)
 Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val), Int32(val)))
 export Coords
-mutable struct IsingLayer{T, IsingGraphType <: IsingGraph, StateReshape <: AbstractMatrix{T}, AdjReshape <: AbstractArray} <: AbstractIsingGraph{T}
+mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph, StateReshape <: AbstractMatrix{T}, AdjReshape <: AbstractArray} <: AbstractIsingLayer{T}
     const graph::IsingGraphType
     layeridx::Int32
     state::StateReshape
@@ -25,7 +25,7 @@ mutable struct IsingLayer{T, IsingGraphType <: IsingGraph, StateReshape <: Abstr
     top::LayerTopology
 
 
-    function IsingLayer(LayerType ,g::GraphType, idx, start, length, width; olddefects = 0, periodic = true) where GraphType <: IsingGraph
+    function IsingLayer(LayerType ,g::GraphType, idx, start, length, width; olddefects = 0, periodic::Union{Nothing,Bool} = true) where GraphType <: IsingGraph
         stateview = reshapeView(state(g), start, length, width)
         adjview = reshapeView(adj(g), start, length, width)
         statetype = typeof(stateview)
@@ -73,7 +73,7 @@ function Base.show(io::IO, layer::IsingLayer)
     print(io, showstr)
 end
 
-show(io, layertype::Type{<:IsingLayer}) = print(io, "IsingLayer")
+Base.show(io::IO, layertype::Type{<:IsingLayer}) = print(io, "IsingLayer")
 
 
 IsingLayer(g, layer::IsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefects(layer))
@@ -118,6 +118,8 @@ iterator(g::IsingGraph) = 1:(nStates(g))
 
 # LayerTopology
 @inline periodic(layer::IsingLayer) = periodic(top(layer))
+@inline setPeriodic!(layer, periodic) = top!(layer, LayerTopology(top(layer); periodic))
+export setPeriodic!
 
 editHType!(layer::IsingLayer, pairs...) = editHType!(layer.graph, pairs...)
 

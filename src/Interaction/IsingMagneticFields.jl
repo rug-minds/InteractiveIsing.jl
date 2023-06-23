@@ -61,10 +61,11 @@ function setMFuncRepeating!(layer, func::Function, t_step = .1)
     function loopM()
         t = 0
         while repeating[]
+            ti = time()
             newfunc(;x,y) = func(;x,y,t)
             setMFunc!(layer, newfunc)
             t+= t_step
-            sleep(t_step)
+            sleep(max(0, t_step - (time() - ti)))
         end
         remM!(layer)
     end
@@ -77,18 +78,37 @@ function setMFuncRepeating!(layer, func::Function, t_step = .1)
     return
 end
 
-function setMFuncTimer!(layer, func::Function, t_step = .2) 
-    t = 0
-    while t < interval
-        newfunc(;x,y) = func(;x,y,t)
-        setMFunc!(layer, newfunc)
-        sleep(t_step)
-        t += t_step
-    end
-    remM!(layer)
-end
+"""
 
-export remM!
+"""
+function setMFuncTimer!(layer, func::Function, t_step = .2) 
+    tsim = sim(graph(layer))
+    t = Ref(0.)
+    repeatfunc(timer) = begin
+        ti = time()
+        newfunc(;x,y) = func(;x,y, t=t[])
+        setMFunc!(layer, newfunc)
+        t[] += t_step
+        sleep(max(0, t_step - (time() - ti)))
+    end
+    tm = Timer(repeatfunc,0, interval = t_step)
+    push!(timers(tsim), tm)
+    return tm
+end
+export setMFuncTimer!
+
+function removeTimers!(sim)
+    for (idx,tm) in enumerate(timers(sim))
+        close(tm)
+        deleteat!(timers(sim), idx)
+    end
+    for layer in layers(graph(sim))
+        remM!(layer)
+    end
+end
+export removeTimers!
+
+
 """
 Removes magnetic field
 """
@@ -96,6 +116,8 @@ function remM!(layer)
     mlist(layer) .= Float32(0)
     setSType!(layer, :Magfield => false)
 end
+export remM!
+
 
 export plotM
 """ 

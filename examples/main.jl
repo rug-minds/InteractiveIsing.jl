@@ -21,14 +21,14 @@ include(joinpath(@__DIR__,"test.jl"))
 #= Add randomness to the weights =#
 # setAddDist!(weightFunc, Normal(0,0.1))
 
-const weightFunc = defaultIsingWF
+const weightfunc = defaultIsingWF
 
 const sim = IsingSim(
     400,
     400,
+    periodic = true,
     continuous = true, 
-    weighted = true;
-    weightFunc,
+    weighted = true,
     colorscheme = ColorSchemes.winter
 );
 
@@ -36,14 +36,16 @@ const g = sim(true);
 
 # # Add Layers
 addLayer!(sim, 400, 400)
+addLayer!(sim, 400, 400)
 
-# # name them l1, l2, l3 ...
-@enumeratelayers layers(g) 2
+wg = @WeightGenerator "(dr) -> 1 == true" NN = 1
+
+genAdj!(l1, wg)
 
 setcoords!(l1)
 setcoords!(l2, z = 1)
 
-clampImg!(g, 1, "examples/smileys.jpg")
+# clampImg!(g, 1, "examples/smileys.jpg")
 connectLayers!(g, 1, 2, (;dr, _...) -> 1, 1)
 
 

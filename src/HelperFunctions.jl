@@ -1,7 +1,7 @@
 #=Grid lattice functions=#
 
 # Matrix Coordinates to vector Coordinates
-@inline function coordToIdx(i, j, length)::Int32
+@inline function coordToIdx(i, j, length)
     return Int32(i + (j - 1) * length)
 end
 
@@ -17,6 +17,18 @@ end
 @inline function latmod(idx, N)
     return mod((idx - 1), N) + 1
 end
+
+@inline function latmod(i,j,layer)
+    len = glength(layer)
+    wid = gwidth(layer)
+
+    return latmod(i,len), latmod(j,wid)
+end 
+
+@inline function latmod(i,j,len,wid)
+    return latmod(i,len), latmod(j,wid)
+end
+export latmod
 
 # Array functions
 
@@ -190,10 +202,12 @@ macro forward(Outer, Inner, fieldname = lowercase(string(nameof(eval(Inner)))))
         end
 
         getstr = "@inline $name($outervarname::$(outername)) = $outervarname.$fieldname.$(string(name))"
+        setstr = "@inline $(name)!($outervarname::$(outername), val) = $outervarname.$fieldname.$(string(name)) = val"
+        setstrdel = "@inline $name($outervarname::$(outername), val) = $outervarname.$fieldname.$(string(name)) = val"
 
-        setstr = "@inline $name($outervarname::$(outername), val) = $outervarname.$fieldname.$(string(name)) = val"
         push!(funcs.args, Meta.parse(getstr))
         push!(funcs.args, Meta.parse(setstr))
+        push!(funcs.args, Meta.parse(setstrdel))
         push!(funcs.args, Meta.parse("export $name"))
         
     end
@@ -218,10 +232,13 @@ macro setterGetter(strct, deleted...)
             end
 
             getstr = "@inline $name($varname::$(strctname)) = $varname.$(string(name))"
-            setstr = "@inline $name($varname::$(strctname), val) = $varname.$(string(name)) = val"
+            setstr = "@inline $(name)!($varname::$(strctname), val) = $varname.$(string(name)) = val"
+            setstrdel = "@inline $name($varname::$(strctname), val) = $varname.$(string(name)) = val"
+
 
             push!(funcs.args, Meta.parse(getstr))
             push!(funcs.args, Meta.parse(setstr))
+            push!(funcs.args, Meta.parse(setstrdel))
             push!(funcs.args, Meta.parse("export $name"))
         end
     end
@@ -451,7 +468,7 @@ macro ForwardDeclare(structname, subfolder)
     files = map(x -> joinpath(@__DIR__, subfolder, x), files)
     structstring = getstruct(string(structname), files)
     # println(structstring)
-    println("Searching Dir $(@__DIR__)/$subfolder for struct $structname")
+    # println("Searching Dir $(@__DIR__)/$subfolder for struct $structname")
     expr = Meta.parse(structstring)
     return esc(quote
                 try
@@ -460,6 +477,19 @@ macro ForwardDeclare(structname, subfolder)
                 end
             end)
 end
+
+# Repeat and time
+macro rtime(n, expr)
+    return esc(quote
+        local ti = time()
+        for _ in 1:$n
+            $expr
+        end
+        local tf = time()
+        println("The repetitions took $(tf-ti) seconds")
+    end)
+end
+export @rtime
 
 # If a struct has a vector of some structs, this will create an object that essentially
 # acts like a vector view of the field of the structs

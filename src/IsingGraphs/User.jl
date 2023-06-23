@@ -13,7 +13,7 @@ function setSpins!(g::AbstractIsingGraph{T}, idxs::AbstractArray, brush, clamp =
     setrange!(defects(g), clamp, idxs)
     
     # Set the stype to wether it has defects or not
-    setSType!(graph(g), :Defects => hasDefects(graph(g)); refresh)
+    setSType!(graph(g), :Defects => hasDefects(graph(g)), force_refresh = refresh)
 
     # Set the spins
     @inbounds state(g)[idxs] .= brush
@@ -28,21 +28,22 @@ function setSpins!(g::AbstractIsingGraph{T}, idx::Int32, brush, clamp = false, r
 
     setdefect(g, clamp, idx)
 
-    setSType!(graph(g), :Defects => hasDefects(graph(g)); refresh)
+    setSType!(graph(g), :Defects => hasDefects(graph(g)), force_refresh = refresh)
 
     @inbounds state(g)[idx] = brush
 end
 
 
+export addWeight!
+
 """
 Adding weights
 """
 
-addWeight!(g::IsingGraph, idx, conn_idx, weight) = addWeight!(adj(g), idx, conn_idx, weight)
+addWeight!(g::IsingGraph, idx, conn_idx, weight; sidx1 = 1, sidx2 = 1, eidx1 = nothing, eidx2 = nothing) = addWeight!(adj(g), idx, conn_idx, weight; sidx1, sidx2, eidx1, eidx2)
 
-addWeight!(g::IsingLayer, idx, conn_idx, weight) = addWeight!(graph(g), idxLToG(g, idx), idxLToG(g, conn_idx), weight)
+addWeight!(g::IsingLayer, idx, conn_idx, weight; sidx1 = 1, sidx2 = 1, eidx1 = nothing, eidx2 = nothing) = addWeight!(adj(graph(g)), idxLToG(g, idx), idxLToG(g, conn_idx), weight; sidx1, sidx2, eidx1, eidx2)
 
-export addWeight!
 
 addWeight!(layer1::IsingLayer, layer2::IsingLayer, idx1::Integer, idx2::Integer, weight; sidx1 = 1) = 
     addWeight!(adj(graph(layer1)), idxLToG(layer1, idx1), idxLToG(layer2, idx2), weight; sidx1)
@@ -52,12 +53,16 @@ addWeight!(layer1::IsingLayer, layer2::IsingLayer, coords1::Tuple, coords2::Tupl
 
 
 # For performance, but should generally not be used
+# Sidx is the first index of the adjacency matrix to start looking for connections
+# This is useful if you know that the connections are in a certain range for performance
 addWeightDirected!(layer1::IsingLayer, layer2::IsingLayer, idx1::Integer, idx2::Integer, weight; sidx = 1) = 
     addWeightDirected!(adj(graph(layer1)), idxLToG(layer1, idx1), idxLToG(layer2, idx2), weight; sidx)
 
 addWeightDirected!(layer1::IsingLayer, layer2::IsingLayer, coords1::Tuple, coords2::Tuple, weight; sidx = 1) = 
     addWeightDirected!(layer1, layer2, coordToIdx(coords1, glength(layer1)), coordToIdx(coords2, glength(layer2)), weight; sidx)
 
+addWeightDirected!(layer::IsingLayer, idx, conn_idx, weight; sidx = 1) = addWeightDirected!(adj(graph(layer)), idxLToG(layer, idx), idxLToG(layer, conn_idx), weight; sidx)
+export addWeightDirected!
 # Clamp an image to a layer
 
 function clampImg!(layer::IsingLayer, imgfile)

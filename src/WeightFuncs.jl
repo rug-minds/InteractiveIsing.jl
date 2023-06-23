@@ -17,7 +17,7 @@ end
 struct WeightType{Add,Mult,Periodic,Self} end
 
 mutable struct WeightFunc
-    NN::Integer
+    NN::Int16
     selfweight::Function
     func::Function
     wt::WeightType
@@ -26,10 +26,14 @@ mutable struct WeightFunc
 end
 
 WeightFunc(func; NN = 1, periodic = true, self = false, selfweight = (i,j) -> 1) = WeightFunc(NN, selfweight, func, WeightType{false,false,periodic,self}(), (;_...) -> 1, (;_...) -> 1)
+setSelf(wf::WeightFunc, selffunc) = begin wf.selfweight = selffunc; self(wf, true) end
+
 
 @setterGetter WeightFunc
 periodic(wt::WeightType{A,B,Periodic,C}) where {A,B,Periodic,C} = Periodic
 periodic(wf::WeightFunc) = periodic(wt(wf))
+periodic(wf::Nothing) = nothing
+
 self(wt::WeightType{A,B,C,Self}) where {A,B,C,Self} = Self
 self(wf::WeightFunc) = self(wt(wf))
 self(wf::WeightFunc, selfval; weighttype::WeightType{A,B,C,D} = wt(wf)) where {A,B,C,D} = wf.wt = WeightType{A,B,C,selfval}()
@@ -56,14 +60,15 @@ import Base: *
 *(b::Bool, s::String) = *(s,b)
 
 @generated function getWeight(wt::WeightType{Add,Mult}, func, addDist, multDist, dr, i ,j) where {Add,Mult}
-    addString = "+rand(addDist(;dr,i,j))"
-    multString = "rand(multDist(;dr,i,j))*"
+    addString = "+rand(Float32, addDist(;dr,i,j))"
+    multString = "rand(Float32, multDist(;dr,i,j))*"
     generalString = "func(;dr,i,j)"
     finalstring = (Mult*multString)*generalString*(Add*addString)
     return Meta.parse(finalstring)
 end
 
 getWeight(wf::WeightFunc, dr, i ,j) = getWeight(wt(wf), func(wf), addDist(wf), multDist(wf), dr, i ,j)
+
 export getWeight
 
 # mutable struct WeightFunc

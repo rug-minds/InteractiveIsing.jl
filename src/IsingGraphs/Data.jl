@@ -1,11 +1,11 @@
 mutable struct GraphData
     # Magnetic field
-    mlist::Vector{Float32}
+    const mlist::Vector{Float32}
 
     #Beta clamp
     clampparam::Float32
     #clamps
-    clamps::Vector{Float32}
+    const clamps::Vector{Float32}
     
 end
 

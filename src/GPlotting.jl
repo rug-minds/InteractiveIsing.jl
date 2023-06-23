@@ -60,11 +60,12 @@ function checkImgSize(sim, layer, glength, gwidth, qmllen, qmlwid)
 end
 
 
-function saveGImg(sim, layer)
-    g = sim.layers[layer]
-    foldername = imgFolder()
-    println("Image saved to $(foldername)")
-    save(File{format"PNG"}("$(foldername)/Ising Img $(nowStr()).PNG"), gToImg(g,500))
+function saveGImg(layers...)
+    for layer in layers
+        foldername = imgFolder()
+        println("Image saved to $(foldername)")
+        save(File{format"PNG"}("$(foldername)/Ising Img $(nowStr()).PNG"), gToImg(layer))
+    end
 end
 
 function imgFolder()

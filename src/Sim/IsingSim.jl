@@ -24,7 +24,7 @@ mutable struct IsingSim
     # Timers
     timers::Vector{Timer}
     # Simulation Parameters
-    params::IsingParams
+    const params::IsingParams
     
     memory::Dict
 
@@ -36,9 +36,10 @@ mutable struct IsingSim
     function IsingSim(
             len = 500,
             wid = 500;
+            periodic = nothing,
             continuous = false,
             weighted = true,
-            weightFunc = defaultIsingWF,
+            weightfunc = nothing,
             initTemp = 1.,
             start = false,
             colorscheme = ColorSchemes.viridis
@@ -68,16 +69,19 @@ mutable struct IsingSim
         g = IsingGraph(
             sim,
             len,
-            wid,
-            continuous = continuous, 
-            weighted = weighted,
-            weightFunc = weighted ? weightFunc : defaultIsingWF
+            wid;
+            periodic,
+            continuous,
+            weighted,
+            weightfunc
         )
 
         push!(gs(sim), g)
 
         # Initialize image
-        initImg = gToImg(layer(g,1); colorscheme)
+        if !isempty(layers(g))
+            initImg = gToImg(layer(g,1); colorscheme)
+        end
 
         #Observables
         sim.obs = Obs(;length = len, width = wid, initTemp, initbrushR, initImg)

@@ -83,7 +83,7 @@ function dist2(idx1, idx2, layer1::IsingLayer, layer2::IsingLayer, alignment::Sy
 end
 
 function lattice2_iterator(i1, j1, layer1, layer2, NN, alignment = :center)
-    _, _, dlz = dlayer(layer1, layer2)
+    _, _, dlz = abs.(dlayer(layer1, layer2))
     coordinates2 = coordsl1tol2.([(i1+i,j1+j) for i in (-(NN-dlz)):(NN-dlz), j in (-(NN-dlz)):(NN-dlz)], Ref(layer1), Ref(layer2), Ref(alignment))
     filter = isin.(coordinates2, Ref(layer2))
     leftovers = coordinates2[filter]

@@ -83,11 +83,14 @@ function setLayerIdx!(sim, layeridx)
 end
 export setLayerIdx!
 
-function addLayer!(sim::IsingSim, glength, gwidth; gidx = 1, weightFunc = defaultIsingWF, periodic = true, type = typeof(state(gs(sim)[gidx])).parameters[1])
+"""
+
+"""
+function addLayer!(sim::IsingSim, glength, gwidth; gidx = 1, weightfunc = defaultIsingWF, periodic = true, type = typeof(state(gs(sim)[gidx])).parameters[1])
     #pause sim
     pauseSim(sim)
     # add layer to graph
-    addLayer!(gs(sim)[gidx], glength, gwidth; weightFunc, type)
+    addLayer!(gs(sim)[gidx], glength, gwidth; periodic, weightfunc, type)
     #update number of layers
     nlayers(sim)[] += 1
     # unpause sim
@@ -97,7 +100,8 @@ end
 function removeLayer!(sim::IsingSim, layeridx; gidx = 1)
     pauseSim(sim)
     
-    if layerIdx(sim)[] >= layeridx
+    # If the slected layer is after the layer to be removed, decrement layerIdx
+    if layerIdx(sim)[] >= layeridx && layerIdx(sim)[] > 1
         layerIdx(sim)[] -= 1
     end
 

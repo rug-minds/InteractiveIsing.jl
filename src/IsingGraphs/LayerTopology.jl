@@ -3,11 +3,6 @@ using LinearAlgebra
 
 TwoVec = SVector{2,Float32}
 
-abstract type PeriodicityType end
-struct Periodic <: PeriodicityType end
-struct NonPeriodic <: PeriodicityType end
-export PeriodicityType, Periodic, NonPeriodic
-
 abstract type LatticeType end
 struct Square <: LatticeType end
 struct Rectangular <: LatticeType end
@@ -22,7 +17,7 @@ struct LayerTopology{T <: PeriodicityType,U <: LatticeType, LayerType <: IsingLa
     pvecs::Tuple{TwoVec, TwoVec}
     covecs::Tuple{TwoVec, TwoVec}
 
-    function LayerTopology(layer, vec1::AbstractArray, vec2::AbstractArray; periodic::Bool = true)
+    function LayerTopology(layer, vec1::AbstractArray, vec2::AbstractArray; periodic::Union{Nothing, Bool} = nothing)
         #calculation of covectors
         y1 = 1/(vec1[1]-(vec1[2]*vec2[1]/vec2[2]))
         x1 = 1/(vec1[2]-(vec1[1]*vec2[2]/vec2[1]))
@@ -31,8 +26,12 @@ struct LayerTopology{T <: PeriodicityType,U <: LatticeType, LayerType <: IsingLa
         
         cov1 = TwoVec(y1, x1)
         cov2 = TwoVec(y2, x2)
-    
-        ptype = periodic ? Periodic : NonPeriodic
+        
+        if !isnothing(periodic)
+            ptype = periodic ? Periodic : NonPeriodic
+        else
+            ptype = NoPeriodicity
+        end
 
         lattice_type = AnyLattice
 
@@ -95,7 +94,7 @@ dist(idx1,idx2,top) = dist(idxToCoord(idx1, glength(layer(top))), idxToCoord(idx
 
 export dist2, dist
 
-function getDistFunc(top::LayerTopology)
+function getDistFunc(top::LT) where {LT <: LayerTopology}
     return (i1,j1,i2,j2) -> dist(i1,j1,i2,j2, top)
 end
   export getDistFunc

@@ -7,12 +7,13 @@ export fillAdjList!, numEdges, latmod, adjToMatrix
 """
 Creates a square adjacency matrix (NN must be smaller than width/2 & length/2)
 """
-function createSqAdj(len, wid, weightFunc = defaultIsingWF)
-    adj = [Vector{Tuple{Int32,Float32}}() for _ in 1:(len*wid)]
+function createSqAdj(len, wid, weightfunc = defaultIsingWF)
+    adj = Vector{Tuple{Int32,Float32}}[Vector{Tuple{Int32,Float32}}() for _ in 1:(len*wid)]
 
+    
     Threads.@threads for idx in eachindex(adj)
     # for idx in eachindex(adj)
-        idxs_weights = getUniqueConnIdxs(weightFunc, idx, len, wid, wt(wf))
+        idxs_weights = getUniqueConnIdxs(weightfunc, idx, len, wid, wt(weightfunc))
 
         for idx_weight in idxs_weights
             addWeight!(adj, idx, idx_weight[1], idx_weight[2])
@@ -24,6 +25,7 @@ end
 
 export createSqAdj
 
+# TODO: COMPLETELY CHANGE THIS!
 getUniqueConnIdxs(
     wf, 
     idx, 
@@ -41,7 +43,6 @@ getUniqueConnIdxs(
             )
     )
 
-
 getUniqueConnIdxs(
     wf, 
     idx,
@@ -51,14 +52,16 @@ getUniqueConnIdxs(
     
     uniqueIdxsInner(idx, len, wid, NN(wf),
         (dr,i,j) -> getWeight(wf, dr, i ,j),
-        selfweight = selfweight(wf),
+        selfwfunc = (i,j) -> 1,
+        # selfwfunc = (selfweight(wf)),
         shapefunc =
         (dj, di, idx, vec) -> 
             (
                 if di < 1 && dj == 0
                     if dj == 0
                         vert_i, vert_j = idxToCoord(idx, len)
-                        sw = selfweight(vert_i, vert_j)
+                        # sw = selfwfunc(vert_i, vert_j)
+                        sw = (i,j) -> 1
                         push!(vec, (idx, sw ))
                     end
                     return true
@@ -67,7 +70,7 @@ getUniqueConnIdxs(
             )
     )
 
-function uniqueIdxsInner(idx, len, wid, NN, getWeight; selfweight = (i,j) -> 1, shapefunc)
+function uniqueIdxsInner(idx, len, wid, NN, getWeight; selfwfunc = (i,j) -> 1, shapefunc)
     vec::Vector{Tuple{Int32,Float32}} = []
 
     for dj in 0:(NN)
@@ -112,18 +115,23 @@ adjToMatrix(g) = adjToMatrix(adj(g), glength(g), gwidth(g))
 
 function setAdj!(sim, layeridx, wf)
     g = sim.layers[layeridx]
-    adj(g) = initSqAdj(glength(g), gwidth(g), weightFunc = wf)
+    adj(g) = initSqAdj(glength(g), gwidth(g), weightfunc = wf)
     refreshSim(sim)
 end
 export setAdj!
 
 # Doesn't work with layers
-function setGAdj!(sim, idx, weightFunc)
+function setGAdj!(sim, idx, weightfunc)
     g = gs(sim)[idx]
-    adj(graph(g))[iterator(g)] = initSqAdj(glength(g), gwidth(g); weightFunc)
+    adj(graph(g))[iterator(g)] = initSqAdj(glength(g), gwidth(g); weightfunc)
     refreshSim(sim)
 end
 export setGAdj!
+
+
+
+#TODO:: MOVE THIS TO A DIFFERENT FILE
+# MAKE ADJ it's own type
 
 # Find connection in adjacency list (directed)
 function findconn(adj, idx, connidx; startidx = 1, endidx = length(adj[idx]))::Tuple{Symbol, Int32}
@@ -138,17 +146,19 @@ function findconn(adj, idx, connidx; startidx = 1, endidx = length(adj[idx]))::T
         end
     end
 
-    return :Append, length(adj[idx])
+    return :Push, length(adj[idx])+1
 end
 export findconn
 
 """
 Adds weight to adjacency matrix
 """
-function addWeight!(adj::Vector, idx, conn_idx, weight; sidx1 = 1, sidx2 = 1, eidx1 = length(adj[idx]), eidx2 = length(adj[conn_idx]))
+function addWeight!(adj::Vector, idx, conn_idx, weight; sidx1 = 1, sidx2 = 1, eidx1 = nothing, eidx2 = nothing)
+    
+    isnothing(eidx1) && (eidx1 = length(adj[idx]))
     action, insertidx1 = findconn(adj, idx, conn_idx, startidx = sidx1, endidx = eidx1)
 
-    if action == :Append
+    if action == :Push
         push!(adj[idx], (conn_idx, weight))
     elseif action == :Insert
         insert!(adj[idx], insertidx1, (conn_idx, weight))
@@ -156,9 +166,10 @@ function addWeight!(adj::Vector, idx, conn_idx, weight; sidx1 = 1, sidx2 = 1, ei
         adj[idx][insertidx1] = (conn_idx, weight)
     end
 
+    isnothing(eidx2) && (eidx2 = length(adj[conn_idx]))
     action, insertidx2 = findconn(adj, conn_idx, idx, startidx = sidx2, endidx = eidx2)
 
-    if action == :Append
+    if action == :Push
         push!(adj[conn_idx], (idx, weight))
     elseif action == :Insert
         insert!(adj[conn_idx], insertidx2, (idx, weight))
@@ -172,7 +183,7 @@ end
 function addWeightDirected!(adj::Vector, idx, conn_idx, weight; sidx = 1, eidx = length(adj[idx]))
     action, insertidx = findconn(adj, idx, conn_idx, startidx = sidx, endidx = eidx)
 
-    if action == :Append
+    if action == :Push
         push!(adj[idx], (conn_idx, weight))
     elseif action == :Insert
         insert!(adj[idx], insertidx, (conn_idx, weight))
@@ -192,7 +203,7 @@ export addWeightOld!
 function removeWeight!(adj::Vector, idx, conn_idx)
     action, insertidx = findconn(adj, idx, conn_idx)
 
-    if (action == :Append || action == :Insert)
+    if (action == :Push || action == :Insert)
         return
     else # action == :Found
         deleteat!(adj[idx], insertidx)
@@ -209,7 +220,7 @@ end
 function removeWeightDirected!(adj::Vector, idx, conn_idx; sidx = 1, eidx = length(adj[idx]))
     action, insertidx = findconn(adj, idx, conn_idx; startidx = sidx, endidx = eidx)
 
-    if (action == :Append || action == :Insert)
+    if (action == :Push || action == :Insert)
         return false
     else # action == :Found
         deleteat!(adj[idx], insertidx)
@@ -220,6 +231,13 @@ function removeWeightDirected!(adj::Vector, idx, conn_idx; sidx = 1, eidx = leng
 end
 
 shiftWeight(tupl, idx_offset) = (tupl[1] + idx_offset, tupl[2])
+
+function emptyAdj!(adj::Vector{Vector{Tuple{Int32,Float32}}})
+    for vert_idx in eachindex(adj)
+        adj[vert_idx] = Vector{Tuple{Int32,Float32}}()
+    end
+end
+export emptyAdj!
 
 export addWeight!
 export removeWeight!
