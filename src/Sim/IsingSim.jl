@@ -139,7 +139,7 @@ function layer(sim, layeridx)
             error("Layer index out of bounds")
         end
     else
-        return layers(sim[graphindex])[layeridx]
+        return sim[graphindex][layeridx]
     end
 end
 

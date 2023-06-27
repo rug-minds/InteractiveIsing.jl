@@ -17,7 +17,10 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
     htype::HType
 
     stype::SType
+    
     layers::Vector{IsingLayer}
+    layeridxs::Vector{Int32}
+
     continuous::StateType
     # Connection between layers, I don't think it's neccesary to track this
     layerconns::Dict{Set, Int32}
@@ -37,7 +40,9 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
             AdjList(length*width),
             HType(weighted, false),
             SType(:Weighted => weighted),
+            #Layers
             Vector{IsingLayer}[],
+            Int32[],
             #ContinuityType
             continuous ? ContinuousState() : DiscreteState(),
             Dict{Pair, Int32}()
@@ -99,8 +104,21 @@ export htype
 
 @inline graph(g::IsingGraph) = g
 
+# Access the layers
 @inline layer(g::IsingGraph, idx) = g.layers[idx]
-@inline Base.getindex(g::IsingGraph, idx) = layer(g, idx)
+@inline Base.getindex(g::IsingGraph, idx) = layer(g, layeridxs(g)[idx])
+#TODO: Give new idx
+@inline function layerIdx!(g, oldidx, newidx)
+    newidxs = Vector{Int32}(undef, length(g.layeridxs))
+    l_idx = g.layeridxs[oldidx]
+
+    newidxs[1:l_idx-1] .= g.layeridxs[1:l_idx-1]
+    newidxs[l_idx] = newidx
+    newidxs[l_idx+1:end] .= g.layeridxs[l_idx+1:end] .+ 1
+
+    g.layeridxs = newidxs
+end
+export layerIdx!
 
 IsingGraph(g::IsingGraph) = deepcopy(g)
 
@@ -277,6 +295,8 @@ function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodi
     newlayer = IsingLayer(type, g, length(glayers)+1 , startidx, llength, lwidth; periodic)
     # Push it to layers
     push!(glayers, newlayer)
+    # Give it an idx by placing it at the end
+    push!(layeridxs(g), length(layers(g)))
 
     # Set the adjacency matrix
     if weightfunc != nothing 

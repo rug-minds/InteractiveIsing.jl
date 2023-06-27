@@ -1,3 +1,5 @@
+#TODO: Create a cleaner interface for plotting
+
 """
 Plot and save correlation data from a vec with sampled lengths and vec with correlation data for those lengths
 the other arguments are for the file names 

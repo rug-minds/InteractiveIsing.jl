@@ -2,6 +2,7 @@
 User functions
 =#
 
+# TODO: Getting a segfault when running this function
 """
 Does analysis over multiple temperatures.
 Analyzes magnetization and correlation length.

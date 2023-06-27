@@ -40,10 +40,10 @@ addLayer!(sim, 400, 400)
 
 wg = @WeightGenerator "(dr) -> 1 == true" NN = 1
 
-genAdj!(l1, wg)
+genAdj!(g[1], wg)
 
-setcoords!(l1)
-setcoords!(l2, z = 1)
+setcoords!(g[1])
+setcoords!(g[2], z = 1)
 
 # clampImg!(g, 1, "examples/smileys.jpg")
 connectLayers!(g, 1, 2, (;dr, _...) -> 1, 1)
