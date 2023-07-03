@@ -9,116 +9,121 @@ abstract type SamplingAlgorithm end
 
 struct Mtl <: SamplingAlgorithm end
 
-correlationLength(layer, type::Type{Mtl} = Mtl) = corrlMtl(layer)
-export correlationLength
+@static if Sys.isapple()
+    import Metal
 
-function corrlMtl(layer; periodicity = nothing)
-    state_copy = copy(state(layer))
-    l, w = Int32.(size(state_copy))
-    avg2 = (sum(state_copy) / (l*w))^2
-
-    periodicity = periodicity == nothing ? periodic(layer) : periodicity
-    if periodicity <: Periodic
-        corrs_size = floor.(Int32, (size(state_copy)) ./ 2)
-    else
-        corrs_size = floor.(Int32, (size(state_copy)))
-    end
-
-    # Metal Arrays
-    stateMtl = MtlArray(Float32.(state_copy))
-    corrsMtl = MtlArray(zeros(Float32, corrs_size...)) 
-    countsMtl = similar(corrsMtl) 
+    correlationLength(layer, type::Type{Mtl} = Mtl) = corrlMtl(layer)
     
-    threads2_2d = 16,16
-    groups2_2d = cld.(size(corrsMtl), threads2_2d)
+    export correlationLength
 
-    Metal.@sync @metal threads = threads2_2d groups = groups2_2d corrMetal(stateMtl, corrsMtl, countsMtl, l, w, periodicity)
+    function corrlMtl(layer; periodicity = nothing)
+        state_copy = copy(state(layer))
+        l, w = Int32.(size(state_copy))
+        avg2 = (sum(state_copy) / (l*w))^2
 
-    #convert back to array
-    avg_corrs_cpu = Array(corrsMtl)
-    counts_cpu = Array(countsMtl)
-
-    topology = LayerTopology(top(layer), periodicity)
-    max_dist = dist(1,1, size(avg_corrs_cpu)..., topology)
-    max_bin = floor(Int32, max_dist)
-     
-    corr_bins = zeros(Float32, max_bin)
-    bin_counts = zeros(Float32, max_bin)
-
-    for j in 1:size(avg_corrs_cpu,2)
-        for i in 1:size(avg_corrs_cpu,1)
-            if i == 1 && j == 1
-                continue
-            end
-            # println("i: $i, j: $j")
-            # println("dist: $(dist(1,1, i,j, topology))")
-            distance_bin = floor(Int32, dist(1,1, i,j, topology))
-            corr_bins[distance_bin] += avg_corrs_cpu[i,j]
-            bin_counts[distance_bin] += counts_cpu[i,j]
+        periodicity = periodicity == nothing ? periodic(layer) : periodicity
+        if periodicity <: Periodic
+            corrs_size = floor.(Int32, (size(state_copy)) ./ 2)
+        else
+            corrs_size = floor.(Int32, (size(state_copy)))
         end
-    end
 
-    filter = bin_counts .> 0
-    corr_bins = corr_bins[filter]
-    bin_counts = bin_counts[filter]
+        # Metal Arrays
+        stateMtl = MtlArray(Float32.(state_copy))
+        corrsMtl = MtlArray(zeros(Float32, corrs_size...)) 
+        countsMtl = similar(corrsMtl) 
+        
+        threads2_2d = 16,16
+        groups2_2d = cld.(size(corrsMtl), threads2_2d)
 
-    corr_bins = (corr_bins ./ bin_counts) .- avg2
+        Metal.@sync @metal threads = threads2_2d groups = groups2_2d corrMetal(stateMtl, corrsMtl, countsMtl, l, w, periodicity)
 
-    return [1:length(corr_bins);], corr_bins
-end
+        #convert back to array
+        avg_corrs_cpu = Array(corrsMtl)
+        counts_cpu = Array(countsMtl)
 
-# GPU KERNEL Periodic
-function corrMetal(state32, corrs, counts, l ,w, ::Type{Periodic})
-    #metal idx
-    i, j = thread_position_in_grid_2d()
-    i_off = Int32(i - 1)
-    j_off = Int32(j - 1)
+        topology = LayerTopology(top(layer), periodicity)
+        max_dist = dist(1,1, size(avg_corrs_cpu)..., topology)
+        max_bin = floor(Int32, max_dist)
+        
+        corr_bins = zeros(Float32, max_bin)
+        bin_counts = zeros(Float32, max_bin)
 
-    corr_l, corr_w = size(corrs)
-
-    i_it = 1:l
-    j_it = 1:w
-
-    count = 0
-    if i_off < corr_l && j_off < corr_w
-        for j1 in j_it
-            for i1 in i_it
-                i2::Int32 = i1 + i_off > l ? i1 + i_off - l : i1 + i_off
-                j2::Int32 = j1 + j_off > w ? j1 + j_off - w : j1 + j_off
-                corrs[i,j] += state32[i1,j1]*state32[i2,j2]
-                count +=1
+        for j in 1:size(avg_corrs_cpu,2)
+            for i in 1:size(avg_corrs_cpu,1)
+                if i == 1 && j == 1
+                    continue
+                end
+                # println("i: $i, j: $j")
+                # println("dist: $(dist(1,1, i,j, topology))")
+                distance_bin = floor(Int32, dist(1,1, i,j, topology))
+                corr_bins[distance_bin] += avg_corrs_cpu[i,j]
+                bin_counts[distance_bin] += counts_cpu[i,j]
             end
         end
-        counts[i,j] = count
+
+        filter = bin_counts .> 0
+        corr_bins = corr_bins[filter]
+        bin_counts = bin_counts[filter]
+
+        corr_bins = (corr_bins ./ bin_counts) .- avg2
+
+        return [1:length(corr_bins);], corr_bins
     end
 
-    return nothing
-end
+    # GPU KERNEL Periodic
+    function corrMetal(state32, corrs, counts, l ,w, ::Type{Periodic})
+        #metal idx
+        i, j = thread_position_in_grid_2d()
+        i_off = Int32(i - 1)
+        j_off = Int32(j - 1)
 
-function corrMetal(state32, corrs, counts, l ,w, ::Type{NonPeriodic})
-    i, j = thread_position_in_grid_2d()
-    i_off = Int32(i - 1)
-    j_off = Int32(j - 1)
+        corr_l, corr_w = size(corrs)
 
-    corr_l, corr_w = size(corrs)
+        i_it = 1:l
+        j_it = 1:w
 
-    i_it = 1:(l-i_off)
-    j_it = 1:(w-j_off)
-
-    count = 0
-    if i_off < corr_l && j_off < corr_w
-        for j1 in j_it
-            for i1 in i_it
-                
-                i2::Int32 = i1 + i_off
-                j2::Int32 = j1 + j_off
-
-                corrs[i,j] += state32[i1,j1]*state32[i2,j2]
-                count +=1
+        count = 0
+        if i_off < corr_l && j_off < corr_w
+            for j1 in j_it
+                for i1 in i_it
+                    i2::Int32 = i1 + i_off > l ? i1 + i_off - l : i1 + i_off
+                    j2::Int32 = j1 + j_off > w ? j1 + j_off - w : j1 + j_off
+                    corrs[i,j] += state32[i1,j1]*state32[i2,j2]
+                    count +=1
+                end
             end
+            counts[i,j] = count
         end
-        counts[i,j] = count
+
+        return nothing
     end
 
-    return nothing
+    function corrMetal(state32, corrs, counts, l ,w, ::Type{NonPeriodic})
+        i, j = thread_position_in_grid_2d()
+        i_off = Int32(i - 1)
+        j_off = Int32(j - 1)
+
+        corr_l, corr_w = size(corrs)
+
+        i_it = 1:(l-i_off)
+        j_it = 1:(w-j_off)
+
+        count = 0
+        if i_off < corr_l && j_off < corr_w
+            for j1 in j_it
+                for i1 in i_it
+                    
+                    i2::Int32 = i1 + i_off
+                    j2::Int32 = j1 + j_off
+
+                    corrs[i,j] += state32[i1,j1]*state32[i2,j2]
+                    count +=1
+                end
+            end
+            counts[i,j] = count
+        end
+
+        return nothing
+    end
 end
