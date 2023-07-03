@@ -36,5 +36,6 @@ function adjToAdjList(adj::Vector)
     
     return adjlist
 end
+export adjToAdjList
 
 
