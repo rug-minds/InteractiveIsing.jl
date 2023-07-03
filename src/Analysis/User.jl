@@ -2,6 +2,14 @@
 User functions
 =#
 
+"""
+Get the correlation length function,
+should return two vectors x: The start of every length bin, y: The correlation for that length bin
+Standard algorithm is algorithm using Metal
+"""
+correlationLength(layer, type::Type = Mtl) = corrlMtl(layer)
+export correlationLength
+
 # TODO: Getting a segfault when running this function
 """
 Does analysis over multiple temperatures.

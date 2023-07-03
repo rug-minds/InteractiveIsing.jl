@@ -4,6 +4,7 @@
 Set spins either to a value or clamp them
 """
 #Clean this up
+# TODO: Shouldn't always refresh sim if the iterator didn't change
 function setSpins!(g::AbstractIsingGraph{T}, idxs::AbstractArray, brush, clamp = false, refresh = true) where T
     if T == Int8
         clamp = brush == 0 ? true : clamp

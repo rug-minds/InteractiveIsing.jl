@@ -1,4 +1,5 @@
 # Pauses sim and waits until paused
+# TODO: Might crash when refresh sim is run too many times
 function pauseSim(sim; print = true)
     if print
         println("Pausing sim")
