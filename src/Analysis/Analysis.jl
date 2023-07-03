@@ -11,7 +11,7 @@ end
 
 include("User.jl")
 include("Plotting.jl")
-include("Sampling.jl")
+include("Correlationlength.jl")
 include("Data.jl")
 
 # Correlation Length Data
