@@ -46,7 +46,7 @@ end
 # end
 
 function gToImg(g::AbstractIsingGraph; colorscheme = ColorSchemes.viridis )
-    tempimg = imagesc(reshape(state(g), glength(g), gwidth(g)), maxsize = 1000; colorscheme)
+    tempimg = imagesc(reshape(state(g), glength(g), gwidth(g)), maxsize = 2000; colorscheme)
     return tempimg
 end
 export gToImg

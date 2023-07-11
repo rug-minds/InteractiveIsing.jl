@@ -47,7 +47,7 @@ end
 LayerTopology(tp::LayerTopology; periodic::Bool) = LayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2]; periodic)
 LayerTopology(tp::LayerTopology, pt::Type{<:PeriodicityType}) = LayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2], periodic = pt == Periodic ? true : false)
 
-changePeriodicity = 
+# changePeriodicity = 
 export LayerTopology
 
 periodic(top::LayerTopology{T,U,L}) where {T,U,L} = T
@@ -90,7 +90,7 @@ function dist(i1, j1, i2, j2, top::LayerTopology{PT,LT}) where {PT, LT}
     return sqrt(dist2(PT, LT, i1, j1, i2, j2, pvecs = pvecs_val, l = l, w = w))
 end
 
-dist(idx1,idx2,top) = dist(idxToCoord(idx1, glength(layer(top))), idxToCoord(idx2, glength(layer(top))), top)
+dist(idx1::Integer,idx2::Integer,top::LayerTopology) = dist(idxToCoord(idx1, glength(layer(top))), idxToCoord(idx2, glength(layer(top))), top)
 
 export dist2, dist
 

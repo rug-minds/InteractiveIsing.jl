@@ -54,7 +54,7 @@ function qmlFunctions(sim::IsingSim)
         errormonitor(
             Threads.@spawn begin 
                     try 
-                        tempSweep(currentLayer(sim); TI, TF, TStep, dpoints , dpointwait, stepwait, equiwait, saveImg)
+                        tempSweep(sim; TI, TF, TStep, dpoints , dpointwait, stepwait, equiwait, saveImg)
                     catch error
                         display(error)
                         analysisRunning(sim)[] = false

@@ -78,7 +78,8 @@ Base.show(io::IO, layertype::Type{<:IsingLayer}) = print(io, "IsingLayer")
 
 IsingLayer(g, layer::IsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefects(layer))
 
-@setterGetter IsingLayer coords size
+@setterGetter IsingLayer coords size layeridx
+@inline layeridx(layer) = layeridxs(graph(layer))[layer.layeridx]
 @inline coords(layer::IsingLayer) = layer.coords.cs
 # Move to user folder
 @inline setcoords!(layer::IsingLayer; x = 0, y = 0, z = 0) = (layer.coords.cs = Int32.((y,x,z)))
@@ -94,6 +95,24 @@ export setcoords!
 @inline size(layer::IsingLayer)::Tuple{Int32,Int32} = layer.size
 @inline glength(layer::IsingLayer)::Int32 = (size(layer)::Tuple{Int32,Int32})[1]::Int32
 @inline gwidth(layer::IsingLayer)::Int32 = (size(layer)::Tuple{Int32,Int32})[2]::Int32
+@inline maxdist(layer::IsingLayer) = maxdist(layer, periodic(layer))
+@inline maxdist(layer::IsingLayer, ::Type) = max(size(layer)...)
+@inline function maxdist(layer::IsingLayer, ::Type{Periodic})
+    l, w = size(layer)
+    maxdist = dist(1,1, 1 + l÷2, 1 + w÷2, top(layer))
+    return maxdist
+end
+export maxdist
+
+@inline coordToIdx(i,j,layer::IsingLayer) = coordToIdx(latmod(i, glength(layer)), latmod(j, gwidth(layer)), glength(layer))
+
+@inline dist(idx1::Integer, idx2::Integer, layer::IsingLayer) = dist(idxToCoord(idx1, glength(layer))..., idxToCoord(idx2, glength(layer))..., top(layer))
+
+
+
+@inline getindex(layer::IsingLayer, idx) = state(layer)[idx]
+@inline setindex!(layer::IsingLayer, val, idx) = state(layer)[idx] = val
+
 @inline endidx(layer::IsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
 
 @inline graphidxs(layer::IsingLayer) = UnitRange{Int32}(start(layer):endidx(layer))

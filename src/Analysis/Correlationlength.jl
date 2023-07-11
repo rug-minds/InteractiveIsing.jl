@@ -8,5 +8,73 @@ This only works without defects.
 abstract type SamplingAlgorithm end
 
 struct Mtl <: SamplingAlgorithm end
+struct CPU <: SamplingAlgorithm end
 
-include("CorrelationMetal.jl")
+#= 
+Correlation length functions should collect the correlation of units from  i - i+1 in a bin, starting from 0.
+=#
+
+@static if Sys.isapple()
+   using Metal
+   include("CorrelationMetal.jl")
+   s_algo = Mtl
+
+else
+   #Fallback
+   s_algo = CPU
+end
+
+
+# Seems not interely accurate for higher distances, why?
+function correlationLength(layer, ::Type{CPU})
+   @inline function bin(dist)
+      floor(Int32, dist)
+   end 
+
+   @inline function randvec(len)
+      theta = rand() * 2 * pi
+      round.(Int32,[len*cos(theta), len*sin(theta)])
+   end
+   # percentage of pairs to sample per thread
+   pairs = 100000
+
+   state_copy = copy(state(layer))
+
+   l, w = Int32.(size(state_copy))
+
+   mdist = floor(Int32,maxdist(layer))
+
+   bins = zeros(Float32, mdist)
+
+   allidxs = collect(UnitRange{Int32}(1:nStates(layer)))
+
+   avg2 = (sum(state_copy) / (l*w))^2 
+
+   Threads.@threads for len in 1:mdist
+      for _ in 1:pairs
+         idx1 = rand(allidxs)
+         idx2 = sampleDistantState(layer, idx1, len)
+
+         bins[len] += state_copy[idx1] * state_copy[idx2]
+      end
+   end
+
+   bins = (bins ./ pairs) .- avg2
+   return [1:length(bins);], bins
+end
+export corrCPU
+
+function sampleDistantState(layer, idx1, sdist)
+   @inline function randvec(len, theta = nothing)
+      if isnothing(theta)
+         theta = rand() * 2 * pi
+      end
+      return (round.(Int32,(len*cos(theta), len*sin(theta))), theta)
+   end
+
+   i, j = idxToCoord(idx1, glength(layer))
+   (di, dj), theta = randvec(sdist)
+
+   idx2 = coordToIdx(i+di, j+dj, layer)   
+end
+export sampleDistantState

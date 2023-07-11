@@ -9,10 +9,12 @@ mutable struct AFloat32
     @atomic x::Float32
 end
 
-include("User.jl")
 include("Plotting.jl")
-include("Correlationlength.jl")
+include("CorrelationLength.jl")
 include("Data.jl")
+include("TempSweep.jl")
+include("User.jl")
+
 
 # Correlation Length Data
 # Save correlation date (lVec,corrVec) to dataframe
