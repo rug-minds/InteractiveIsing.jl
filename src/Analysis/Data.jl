@@ -1,13 +1,14 @@
-mutable struct DataPoint <: AbstractDict{Symbol, Any}
+mutable struct DataPoint
     M::     Float32
     bins::  Vector{Float32}
     corrs:: Vector{Float32}
     img::Union{Nothing, Array}
     other:: Dict{Symbol, Any}
-    DataPoint(M,bins,corrs) = new(M,bins,corrs,nothing,Dict{Symbol, Any}())
+    
+    DataPoint(M,bins,corrs) = new(M,bins,corrs,nothing, Dict{Symbol, Any}())
 end
 
-DataPoint() = DataPoint(0.0, Float32[], Float32[], Dict{Symbol, Any}())
+DataPoint() = DataPoint(0.0, Float32[], Float32[])
 
 function getindex(d::DataPoint, key::Symbol)
     if key == :M
@@ -35,10 +36,14 @@ end
 
 Base.keys(d::DataPoint) = [:M, :bins, :corrs, keys(d.other)...]
 
+Base.show(io::IO, d::DataPoint) = print(io, "DataPoint(", d.M, ", ", d.bins, ", ", d.corrs, ", ", d.other, ")")
 struct TempDataPoints <: AbstractVector{DataPoint}
     data::Vector{DataPoint}
     temp::Float32
 end
+
+TempDataPoints(ndatapoints::Integer, temp::Real) = TempDataPoints(DataPoint[DataPoint() for _ in 1:ndatapoints], temp)
+
 size(tdp::TempDataPoints) = size(tdp.data)
 getindex(tdp::TempDataPoints, idx::Integer) = tdp.data[idx]
 getindex(tdp::TempDataPoints, idxs::Integer...) = tdp.data[idxs...]
@@ -52,6 +57,8 @@ struct LayerDataPoints <: AbstractVector{TempDataPoints}
     layeridx::Int32
 end
 
+LayerDataPoints(temps, ndatapoints, lidx) = LayerDataPoints(TempDataPoints[TempDataPoints(ndatapoints, temp) for temp in temps], lidx)
+
 size(ldp::LayerDataPoints) = size(ldp.data)
 getindex(ldp::LayerDataPoints, idx::Integer) = ldp.data[idx]
 getindex(ldp::LayerDataPoints, idxs::Integer...) = ldp.data[idxs...]
@@ -64,21 +71,24 @@ struct TempSweepData <: AbstractDict{String, Any}
     layers::Dict{String, LayerDataPoints}
 end
 
-getindex!(tsd::TempSweepData, key::String) = getindex(tsd.layers, key)
-getindex!(tsd::TempSweepData, key::Integer) = getindex(tsd.layers, String(key))
+TempSweepData() = TempSweepData(Dict{String, LayerDataPoints}())
+
+getindex(tsd::TempSweepData, key::String) = getindex(tsd.layers, key)
+getindex(tsd::TempSweepData, key::Integer) = getindex(tsd.layers, string(key))
 setindex!(tsd::TempSweepData, value, key::String) = setindex!(tsd.layers, value, key)
 Base.keys(tsd::TempSweepData) = keys(tsd.layers)
 Base.values(tsd::TempSweepData) = values(tsd.layers)
 Base.iterate(tsd::TempSweepData, state = 1) = iterate(tsd.layers, state)
+Base.length(tsd::TempSweepData) = length(tsd.layers)
 
 function TempSweepData(g, layeridxs, temps, ndatapoints; original_lidx = false)
-    nlayers = length(layeridxs)
-    layers = TempSweepData(Dict{LayerDataPoints}())
+    # nlayers = length(layeridxs)
+    layerdata = TempSweepData()
     for (i, lidx) in enumerate(layeridxs)
         idx = original_lidx ? lidx : i
-        layers[String(idx)] = LayerDataPoints([TempDataPoints([DataPoint() for _ in 1:ndatapoints], t) for t in temps], lidx)
+        layerdata[string(idx)] = LayerDataPoints(temps, ndatapoints, lidx)
     end
-    return layers
+    return layerdata
 end
 
 layeridxs(tsd::TempSweepData) = [layer.layeridx for layer in tsd.layers]

@@ -145,7 +145,7 @@ end
 
 export layer
 
-@inline graph(sim, graphidx = 1) = gs(sim)[graphidx]
+@inline graph(sim::IsingSim, graphidx = 1) = gs(sim)[graphidx]
 export graph
 
 export currentLayer

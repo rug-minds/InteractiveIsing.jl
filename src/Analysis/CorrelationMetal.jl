@@ -1,6 +1,9 @@
 correlationLength(layer, type::Type{Mtl}) = corrMtl(layer)
 
 function corrMtl(layer; periodicity = nothing)
+    # Will hang when run from other thread
+    GC.enable(false)
+
     state_copy = copy(state(layer))
     l, w = Int32.(size(state_copy))
     avg2 = (sum(state_copy) / (l*w))^2
@@ -12,19 +15,24 @@ function corrMtl(layer; periodicity = nothing)
         corrs_size = floor.(Int32, (size(state_copy)))
     end
 
-    # Metal Arrays
-    stateMtl = MtlArray(Float32.(state_copy))
-    corrsMtl = MtlArray(zeros(Float32, corrs_size...)) 
-    countsMtl = similar(corrsMtl) 
-    
-    threads2_2d = 16,16
-    groups2_2d = cld.(size(corrsMtl), threads2_2d)
+    Metal.@sync begin
+        # Metal Arrays
+        stateMtl = MtlArray(Float32.(state_copy))
 
-    Metal.@sync @metal threads = threads2_2d groups = groups2_2d corrMtlKernel(stateMtl, corrsMtl, countsMtl, l, w, periodicity)
+        corrsMtl = Metal.zeros(Float32, Int64.(corrs_size)...)
+        # corrsMtl = MtlArray(zeros(Float32, corrs_size...)) 
+        countsMtl = Metal.zeros(Float32, Int64.(corrs_size)...)
+        # countsMtl = MtlArray(zeros(Float32, corrs_size...)) 
+        
+        threads2_2d = 16,16
+        groups2_2d = cld.(size(corrsMtl), threads2_2d)
 
-    #convert back to array
-    avg_corrs_cpu = Array(corrsMtl)
-    counts_cpu = Array(countsMtl)
+        @metal threads = threads2_2d groups = groups2_2d corrMtlKernel(stateMtl, corrsMtl, countsMtl, l, w, periodicity)
+
+        #convert back to array
+        avg_corrs_cpu = Array(corrsMtl)
+        counts_cpu = Array(countsMtl)
+    end
 
     topology = LayerTopology(top(layer), periodicity)
     max_dist = dist(1,1, size(avg_corrs_cpu)..., topology)
@@ -52,6 +60,7 @@ function corrMtl(layer; periodicity = nothing)
 
     corr_bins = (corr_bins ./ bin_counts) .- avg2
 
+    GC.enable(true)
     return [1:length(corr_bins);], corr_bins
 end
 export corrMtl

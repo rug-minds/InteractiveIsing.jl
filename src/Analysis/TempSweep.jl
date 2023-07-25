@@ -1,7 +1,26 @@
 """
 Function that automaticall runs the temperature sweep
 """
-function tempSweepInner(g, layeridxs, Temp, M_array; TI = Temp[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, samplingAlgo = Mtl, analysisObs = Observable(true), savelast = true, absvalcorrplot = false)
+function tempSweepInner(
+    g, 
+    layeridxs, 
+    Temp, 
+    M_array; 
+    TI = Temp[], 
+    TF = 13, 
+    TStep = 0.5, 
+    dpoints = 6, 
+    dpointwait = 5, 
+    stepwait = 0, 
+    equiwait = 0, 
+    saveImg = false, 
+    analysisObs = Observable(true), 
+    savelast = true, 
+    absvalcorrplot = false, 
+    layer_analysis = (layer, layerdata, idx) -> (), 
+    other_analysis = (layercopies, layerdata) -> ()
+    )
+    
     analysisObs[] = true
 
     # Print details
@@ -10,7 +29,7 @@ function tempSweepInner(g, layeridxs, Temp, M_array; TI = Temp[], TF = 13, TStep
     
 
     """ Make folder """
-    foldername = dataFolderNow("Tempsweep")
+    foldername = dataFolderNow("TempSweep")
 
     # If temperature range goes down, tstep needs to be negative
     if TF < TI
@@ -18,54 +37,64 @@ function tempSweepInner(g, layeridxs, Temp, M_array; TI = Temp[], TF = 13, TStep
     end
 
     TRange =  TI:TStep:TF
-    
-    # DataFrames
-    mdf = DataFrame()
-    cldf = DataFrame()
 
     dwaits = []
     dwait_actual = dpointwait
 
-    #Create data dict
-    #TODO: FINISH
-    data = TempSweepData(g, layeridxs, length(TRange), dpoints)
+    # Initialize data
+    data = TempSweepData(g, layeridxs, collect(TRange), dpoints)
 
     for (tidx, T) in enumerate(TRange)
-        
-        # Print estimated time left
-        tempEstTime(tidx, T, TStep, TF, dpoints, dpointwait, dwait_actual, stepwait, equiwait)
+        Temp[] = Float32(T)
+
+        # Print estimated time left and wait
+        wait_esttime(tidx, T, TStep, TF, dpoints, dpointwait, dwait_actual, stepwait, equiwait)
 
         #=
         Actual analysis 
         =#
         for point in 1:dpoints
+
             if !(analysisObs[])
                 println("Interrupted analysis")
                 return
             end
 
             # Layers to be analysed
-            layers = @view g[layeridxs]
 
             tpointi = time()
 
+            # Make copies of all the layers
+            layercopies = [IsingLayerCopy(layer) for layer in (@view g[layeridxs])]
 
-            Threads.@threads for stateidx in eachindex(states)
-                layer = layers[stateidx]
+            for stateidx in eachindex(layercopies)
+            # for stateidx in eachindex(layers)
+
+                layer = layercopies[stateidx]
+                lidx = layeridx(layer)
+                lVec = []
+                corrVec = []
                 lVec, corrVec = correlationLength(layer)
                 M = sum(state(layer))
                 datapoint = DataPoint(M, lVec, corrVec)
                 data[stateidx][tidx][point] = datapoint
 
+                # Other analysis
+                layer_analysis(layer, data, stateidx)
+                
                 if saveImg && (!savelast || point == dpoints)
 
                     # Image of ising
-                    save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), gToImg(layer))
+                    save(File{format"PNG"}("$(foldername)Ising L$lidx $tidx T$T d$point.PNG"), gToImg(layer))
                     
                     # Image of correlation plot
-                    plotCorr(lVec,corrVec; foldername, tidx, point, T)
+                    plotCorr(lVec,corrVec; foldername, lidx, tidx, point, T)
                 end
             end
+
+            # Other analysis
+            other_analysis(layercopies, data)
+            
             # Print amount of time taken for datapoint
             tpointf = time()
             dtpoint = tpointf-tpointi
@@ -86,9 +115,10 @@ function tempSweepInner(g, layeridxs, Temp, M_array; TI = Temp[], TF = 13, TStep
     
     # Save data
     
-    save("$(foldername)data.jld2", "data", data)
+    save("$(foldername)data.jld2", data)
     
     println("Temperature sweep done!")
+    # return data
     return
 end
 
@@ -106,11 +136,9 @@ function gatherLayerData(layer; save = true, foldername = dataFolderNow("Layer $
     return M, lvec, corrVec
 end
 
-@inline function tempEstTime(tidx, T, TStep, TF, dpoints, dpointwait, dwait_actual, stepwait, equiwait)
+@inline function wait_esttime(tidx, T, TStep, TF, dpoints, dpointwait, dwait_actual, stepwait, equiwait)
     println("Gathering data for temperature $T, $dpoints data points in intervals of $dpointwait seconds")
     waittime = length(T:TStep:TF)*(dpoints*dwait_actual + stepwait)
-
-    Temp[] = Float32(T)
 
     if tidx == 1 # If first run, wait equiwait seconds for equibrilation
         println("The sweep will take approximately $(equiwait + waittime) seconds")

@@ -57,6 +57,48 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph, StateReshape 
         return layer
     end
 end
+
+mutable struct IsingLayerCopy{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIsingLayer{T}
+    const graph::IsingGraphType
+    layeridx::Int32
+    state::Matrix{T}
+    adj::Matrix{Vector{Tuple{Int32, Float32}}}
+    start::Int32
+    const size::Tuple{Int32,Int32}
+    const nstates::Int32
+    coords::Coords{Tuple{Int32,Int32,Int32}}
+    const d::LayerData
+    defects::LayerDefects
+    top::LayerTopology
+
+    function IsingLayerCopy(layer::IsingLayer{A,B,C,D}) where {A,B,C,D}
+        
+        new{A, B}(
+            # Graph
+            layer.graph,
+            # Layer idx at the time of copying
+            layeridx(layer),
+            # State
+            copy(state(layer)),
+            # Adj
+            copy(adj(layer)),
+            # Start idx
+            layer.start,
+            # Size
+            layer.size,
+            # Number of states
+            layer.nstates,
+            # Coordinates
+            layer.coords,
+            # Layer data
+            layer.d,
+            layer.defects,
+            layer.top
+        )
+    end
+end
+
+
 export IsingLayer
 
 function regenerateViews(layer::IsingLayer)
@@ -65,7 +107,7 @@ function regenerateViews(layer::IsingLayer)
 end
 
 # Extend show for IsingLayer, showing the layer idx, and the size of the layer
-function Base.show(io::IO, layer::IsingLayer)
+function Base.show(io::IO, layer::AbstractIsingLayer)
     showstr = "IsingLayer $(layer.layeridx) with size $(size(layer))"
     if coords(layer) != nothing
         showstr *= " \t at coordinates $(coords(layer))"
@@ -73,74 +115,82 @@ function Base.show(io::IO, layer::IsingLayer)
     print(io, showstr)
 end
 
-Base.show(io::IO, layertype::Type{<:IsingLayer}) = print(io, "IsingLayer")
+Base.show(io::IO, layertype::Type{<:AbstractIsingLayer}) = print(io, "IsingLayer")
 
 
-IsingLayer(g, layer::IsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefects(layer))
+IsingLayer(g, layer::AbstractIsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefects(layer))
 
 @setterGetter IsingLayer coords size layeridx
-@inline layeridx(layer) = layeridxs(graph(layer))[layer.layeridx]
-@inline coords(layer::IsingLayer) = layer.coords.cs
+@setterGetter IsingLayerCopy coords size
+
+
+# Get current layeridx through graph
+@inline layeridx(layer::IsingLayer) = layeridxs(graph(layer))[layer.layeridx]
+
+@inline coords(layer::AbstractIsingLayer) = layer.coords.cs
 # Move to user folder
-@inline setcoords!(layer::IsingLayer; x = 0, y = 0, z = 0) = (layer.coords.cs = Int32.((y,x,z)))
-@inline setcoords!(layer::IsingLayer, val) = (layer.coords.cs = Int32.((val,val,val)))
+@inline setcoords!(layer::AbstractIsingLayer; x = 0, y = 0, z = 0) = (layer.coords.cs = Int32.((y,x,z)))
+@inline setcoords!(layer::AbstractIsingLayer, val) = (layer.coords.cs = Int32.((val,val,val)))
 export setcoords!
 
-@inline reladj(layer::IsingLayer) = adjGToL(layer.adj, layer)
+@inline reladj(layer::AbstractIsingLayer) = adjGToL(layer.adj, layer)
 @forward IsingLayer LayerData d
 @forward IsingLayer LayerDefects defects
 
+@forward IsingLayerCopy LayerData d
+@forward IsingLayerCopy LayerDefects defects
+
 # Setters and getters
 # @forward IsingLayer IsingGraph g
-@inline size(layer::IsingLayer)::Tuple{Int32,Int32} = layer.size
-@inline glength(layer::IsingLayer)::Int32 = (size(layer)::Tuple{Int32,Int32})[1]::Int32
-@inline gwidth(layer::IsingLayer)::Int32 = (size(layer)::Tuple{Int32,Int32})[2]::Int32
-@inline maxdist(layer::IsingLayer) = maxdist(layer, periodic(layer))
-@inline maxdist(layer::IsingLayer, ::Type) = max(size(layer)...)
-@inline function maxdist(layer::IsingLayer, ::Type{Periodic})
+@inline size(layer::AbstractIsingLayer)::Tuple{Int32,Int32} = layer.size
+@inline glength(layer::AbstractIsingLayer)::Int32 = (size(layer)::Tuple{Int32,Int32})[1]::Int32
+@inline gwidth(layer::AbstractIsingLayer)::Int32 = (size(layer)::Tuple{Int32,Int32})[2]::Int32
+@inline maxdist(layer::AbstractIsingLayer) = maxdist(layer, periodic(layer))
+@inline maxdist(layer::AbstractIsingLayer, ::Type) = max(size(layer)...)
+@inline function maxdist(layer::AbstractIsingLayer, ::Type{Periodic})
     l, w = size(layer)
     maxdist = dist(1,1, 1 + l÷2, 1 + w÷2, top(layer))
     return maxdist
 end
 export maxdist
 
-@inline coordToIdx(i,j,layer::IsingLayer) = coordToIdx(latmod(i, glength(layer)), latmod(j, gwidth(layer)), glength(layer))
+@inline coordToIdx(i,j,layer::AbstractIsingLayer) = coordToIdx(latmod(i, glength(layer)), latmod(j, gwidth(layer)), glength(layer))
 
-@inline dist(idx1::Integer, idx2::Integer, layer::IsingLayer) = dist(idxToCoord(idx1, glength(layer))..., idxToCoord(idx2, glength(layer))..., top(layer))
+@inline dist(idx1::Integer, idx2::Integer, layer::AbstractIsingLayer) = dist(idxToCoord(idx1, glength(layer))..., idxToCoord(idx2, glength(layer))..., top(layer))
 
 
 
-@inline getindex(layer::IsingLayer, idx) = state(layer)[idx]
-@inline setindex!(layer::IsingLayer, val, idx) = state(layer)[idx] = val
+@inline getindex(layer::AbstractIsingLayer, idx) = state(layer)[idx]
+@inline setindex!(layer::AbstractIsingLayer, val, idx) = state(layer)[idx] = val
 
-@inline endidx(layer::IsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
+@inline endidx(layer::AbstractIsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
 
-@inline graphidxs(layer::IsingLayer) = UnitRange{Int32}(start(layer):endidx(layer))
+@inline graphidxs(layer::AbstractIsingLayer) = UnitRange{Int32}(start(layer):endidx(layer))
 export graphidxs
 
 # Inherited from Graph
-@inline htype(layer::IsingLayer) = layer.graph.htype
-@inline nStates(layer::IsingLayer) = length(state(layer))
-@inline sim(layer::IsingLayer) = sim(graph(layer))
+@inline htype(layer::AbstractIsingLayer) = layer.graph.htype
+@inline nStates(layer::AbstractIsingLayer) = length(state(layer))
+@inline sim(layer::AbstractIsingLayer) = sim(graph(layer))
 
 #forward alivelist
-aliveList(layer::IsingLayer) = aliveList(defects(layer))
+aliveList(layer::AbstractIsingLayer) = aliveList(defects(layer))
 #forward defectList
-defectList(layer::IsingLayer) = defectList(defects(layer))
+defectList(layer::AbstractIsingLayer) = defectList(defects(layer))
 
-@inline hasDefects(layer::IsingLayer) = ndefects(defects(layer)) > 0
-@inline setdefect(layer::IsingLayer, val, idx) = defects(layer)[idx] = val
+@inline hasDefects(layer::AbstractIsingLayer) = ndefects(defects(layer)) > 0
+@inline setdefect(layer::AbstractIsingLayer, val, idx) = defects(layer)[idx] = val
 
-@inline startidx(layer::IsingLayer) = start(layer)
-iterator(layer::IsingLayer) = start(layer):endidx(layer)
+@inline startidx(layer::AbstractIsingLayer) = start(layer)
+iterator(layer::AbstractIsingLayer) = start(layer):endidx(layer)
 iterator(g::IsingGraph) = 1:(nStates(g))
 
 # LayerTopology
-@inline periodic(layer::IsingLayer) = periodic(top(layer))
-@inline setPeriodic!(layer, periodic) = top!(layer, LayerTopology(top(layer); periodic))
+@inline periodic(layer::AbstractIsingLayer) = periodic(top(layer))
+@inline setPeriodic!(layer::AbstractIsingLayer, periodic) = top!(layer, LayerTopology(top(layer); periodic))
 export setPeriodic!
 
-editHType!(layer::IsingLayer, pairs...) = editHType!(layer.graph, pairs...)
+editHType!(layer::AbstractIsingLayer, pairs...) = editHType!(layer.graph, pairs...)
 
 # Forward Graph Data
 # @inline mlist(layer::IsingLayer) = @view mlist(graph(layer))[start(layer):endidx(layer)]
@@ -209,4 +259,4 @@ function setAdj!(layer::IsingLayer, wf = defaultIsingWF)
 end
 
 # Set the SType
-setSType!(layer::IsingLayer, varargs...; refresh = true) = setSType!(graph(layer), varargs...; refresh = refresh)
+setSType!(layer::AbstractIsingLayer, varargs...; refresh = true) = setSType!(graph(layer), varargs...; refresh = refresh)

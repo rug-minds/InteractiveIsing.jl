@@ -4,6 +4,7 @@ struct DiscreteState <: StateType end
 struct MixedState <: StateType end
 
 
+
 # Ising Graph Representation and functions
 mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
     sim::Sim
@@ -107,6 +108,9 @@ export htype
 # Access the layers
 @inline layer(g::IsingGraph, idx) = g.layers[idx]
 @inline Base.getindex(g::IsingGraph, idx) = layer(g, layeridxs(g)[idx])
+@inline length(g::IsingGraph) = length(g.layers)
+Base.view(g::IsingGraph, idx) = view(g.layers, idx)
+
 #TODO: Give new idx
 @inline function layerIdx!(g, oldidx, newidx)
     newidxs = Vector{Int32}(undef, length(g.layeridxs))

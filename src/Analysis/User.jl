@@ -19,7 +19,23 @@ Usage: Goes from current temperature of simulation, to TF, in stepsizes of TStep
   In between Temperatures there is an optional wait time of stepwait, for equilibration
   There is an initial wait time of equiwait for equilibration
 """
-function tempSweep(sim, layeridxs = 1:length(gs(sim)[1]), TI = nothing, TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, samplingAlgo = Mtl, savelast = true, absvalcorrplot = false)
+function tempSweep(
+        sim, 
+        layeridxs = 1:length(gs(sim)[1]); 
+        TI = nothing, 
+        TF = 13, 
+        TStep = 0.5, 
+        dpoints = 6, 
+        dpointwait = 5, 
+        stepwait = 0, 
+        equiwait = 0, 
+        saveImg = false, 
+        savelast = true, 
+        absvalcorrplot = false,
+        layer_analysis = (layer, layerdata, idx) -> (), 
+        other_analysis = (layercopies, layerdata) -> ()
+    )
+    
     println("Starting temperature sweep")
     sTemp = Temp(sim)
     sM_array = M_array(sim)
@@ -33,9 +49,11 @@ function tempSweep(sim, layeridxs = 1:length(gs(sim)[1]), TI = nothing, TF = 13,
 
     #Function barrier
     try
-        tempSweepInner(g, layeridxs, sTemp, sM_array; TI, TF, TStep, dpoints, dpointwait, stepwait, equiwait, saveImg, samplingAlgo, analysisObs, savelast, absvalcorrplot)
+        tempSweepInner(g, layeridxs, sTemp, sM_array; TI, TF, TStep, dpoints, dpointwait, stepwait, equiwait, saveImg, analysisObs, savelast, absvalcorrplot, layer_analysis, other_analysis)
     catch
+        rethrow()
         analysisObs[] = false
     end
 
 end
+export tempSweep

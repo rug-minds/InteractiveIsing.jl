@@ -35,10 +35,10 @@ const sim = IsingSim(
 const g = sim(true);
 
 # # # Add Layers
-# addLayer!(sim, 400, 400)
+addLayer!(sim, 400, 400)
 # addLayer!(sim, 400, 400)
 
-wg = @WeightGenerator "(dr) -> 1" NN = 1
+wg = @WeightGenerator "(dr) -> dr == 1" NN = 1
 
 genAdj!(g[1], wg)
 
