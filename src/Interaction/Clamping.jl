@@ -1,14 +1,21 @@
-function setClampIdxs(g::IsingGraph, idxs, strenghts, cfac = 1)
+function remClamp!(layer::IsingLayer)
+    clamps(layer) .= 0
+
+    # If there are no clamps, set Clamp to false
+    isnothing(findfirst(x -> x != 0, clamps(graph(layer) ))) && setSType!(layer, :Clamp => false)
+end
+
+function setClampIdxs!(g::IsingGraph, idxs, strenghts, cfac = 1)
     # println(strenghts)
     clamps(g)[idxs] .= strenghts
     clampparam(g, cfac)
 
     setSType!(g, :Clamp => true)
 end
-export setClampIdxs
+export setClampIdxs!
 
 
-setClampFunc!(layer, func, cfac = 1) = let vecs = functionToVecs(func, layer); setClampIdxs(graph(layer), vecs..., cfac) end
+setClampFunc!(layer, func, cfac = 1) = let vecs = functionToVecs(func, layer); setClampIdxs!(graph(layer), vecs..., cfac) end
 export setClampFunc!
 
 function functionToVecs(func, g)

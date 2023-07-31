@@ -78,15 +78,20 @@ mutable struct IsingSim
 
         push!(gs(sim), g)
 
-        # Initialize image
-        if !isempty(layers(g))
-            initImg = gToImg(layer(g,1); colorscheme)
-        end
-
         #Observables
-        sim.obs = Obs(;length = len, width = wid, initTemp, initbrushR, initImg)
+        sim.obs = Obs(;length = len, width = wid, initTemp, initbrushR)
+
+        println(typeof(state(g)))
+        addLayer!(g, len, wid, type = continuous ? Float32 : Int8)
+
+        # Initialize image
+         if !isempty(layers(g))
+            initImg = gToImg(g[1]; colorscheme)
+        end
         
         sim.img[] = initImg
+
+        sim.obs.layerName[] = name(g[1])
         # Register observables
         register(sim, sim.obs)
 
@@ -147,6 +152,30 @@ export layer
 
 @inline graph(sim::IsingSim, graphidx = 1) = gs(sim)[graphidx]
 export graph
+
+function newGraph!(sim, len, wid; periodic = nothing, continuous = false, weighted = true, weightfunc = nothing)
+    g = IsingGraph(
+        sim,
+        len,
+        wid;
+        periodic,
+        continuous,
+        weighted,
+        weightfunc
+    )
+
+    push!(gs(sim), g)
+
+    return g
+end
+
+deleteGraph!(sim, graphidx) = deleteGraph!(gs(sim)[graphidx])
+
+function resetGraph!(sim, graphidx)
+    cont = continuous(gs(sim)[graphidx]) == ContinuousState() ? true : false
+    
+
+end
 
 export currentLayer
 @inline currentLayer(sim) = layer(sim,layerIdx(sim)[])

@@ -90,7 +90,7 @@ function getENormMag(g, gstate, gadj, idx, htype)::Float32
         conn::Tuple{Int32,Float32} = gadj[idx][conn_idx]
         efac += -connW(conn)*gstate[connIdx(conn)] 
     end
-    return efac - mlist(g)[idx]
+    return efac - bfield(g)[idx]
 end
 
 getENormSum(g, gstate, gadj, idx, htype) =let adjentry = gadj[idx]; sum(i -> -connW(adjentry[i]) * gstate[connIdx(adjentry[i])], 1:length(gadj[idx])) end

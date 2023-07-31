@@ -1,6 +1,8 @@
 struct Obs
     # Active Layer
     layerIdx::Observable{Int32}
+    # Name of the selected layer
+    layerName::Observable{String}
     #number of layers
     nlayers::Observable{Int32}
     # length/width of graph
@@ -32,11 +34,14 @@ struct Obs
     
     # Run the timed functions
     runTimedFunctions::Observable{Bool}
+
 end
 
-Obs(;nlayers = 1, length, width, initTemp = 1, initbrushR, initImg) = Obs(  
+Obs(;nlayers = 0, length, width, initTemp = 1, initbrushR, initName = "") = Obs(  
     # Active Layer
     Observable(Int32(1)),
+    # Name of the selected layer
+    Observable(initName),
     # Nlayers
     Observable(Int32(nlayers)),
     # length of screen
@@ -54,7 +59,7 @@ Obs(;nlayers = 1, length, width, initTemp = 1, initbrushR, initImg) = Obs(
     # UPF
     Observable(0),
     # Image Size
-    Observable(size(initImg)),
+    Observable(Int64.((length,width))),
     # Analysis Running
     Observable(false),
     # Is Paused

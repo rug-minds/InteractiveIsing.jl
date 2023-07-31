@@ -38,10 +38,13 @@ end
 #Initialize GraphDefects
 GraphDefects(g) = GraphDefects(g, false, Bool[], Int32[], Int32[])
 
+"""
+Get a vector of the number defects in each layer
+"""
 function layerdefects(gd::GraphDefects)
     # Init empty layer vector
     vec = Vector{LayerDefects}(undef, length(layers(g(gd))) )
-    for (idx, layer) in enumerate(layers( g(gd)) )
+    for (idx, layer) in enumerate(unshuffled( layers(g(gd))) )
         vec[idx] = defects(layer)
     end
 

@@ -6,7 +6,7 @@ The reason this is a seperate function is for debugging
 
 const unweighted_expr = "-gstate[connIdx(conn)]"
 const weighted_expr = "-connW(conn)*gstate[connIdx(conn)]"
-const mag_expr = "-mlist(g)[idx]"
+const mag_expr = "-bfield(g)[idx]"
 
 function getEFacExpr(stype::Type{<:SType}) 
     weighted = getSParam(stype, :Weighted)

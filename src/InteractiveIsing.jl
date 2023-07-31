@@ -22,6 +22,7 @@ using BenchmarkTools
 
 import Base: getindex, setindex!, length, iterate, isless, push!, resize!, size
 
+const modulefolder = @__DIR__
 
 # Restart MCMC loop to define new Hamiltonian function
 # Is needed for fast execution if part of hamiltonian doesn't need to be checked
@@ -29,7 +30,7 @@ import Base: getindex, setindex!, length, iterate, isless, push!, resize!, size
 branchSim(sim) = refreshSim(sim)
 export branchSim
 
-include("HelperFunctions.jl")
+include("HelperFiles/HelperFiles.jl")
 include("WeightFuncs.jl")
 include("SquareAdj.jl")
 

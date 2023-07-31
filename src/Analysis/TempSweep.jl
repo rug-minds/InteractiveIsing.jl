@@ -16,7 +16,8 @@ function tempSweepInner(
     saveImg = false, 
     analysisObs = Observable(true), 
     savelast = true, 
-    absvalcorrplot = false, 
+    absvalcorrplot = false,
+    savedata, 
     layer_analysis = (layer, layerdata, idx) -> (), 
     other_analysis = (layercopies, layerdata) -> ()
     )
@@ -72,11 +73,13 @@ function tempSweepInner(
 
                 layer = layercopies[stateidx]
                 lidx = layeridx(layer)
-                lVec = []
-                corrVec = []
+           
                 lVec, corrVec = correlationLength(layer)
+
                 M = sum(state(layer))
+
                 datapoint = DataPoint(M, lVec, corrVec)
+                
                 data[stateidx][tidx][point] = datapoint
 
                 # Other analysis
@@ -115,25 +118,10 @@ function tempSweepInner(
     
     # Save data
     
-    save("$(foldername)data.jld2", data)
+    savedata && save("$(foldername)data.jld2", data)
     
     println("Temperature sweep done!")
-    # return data
-    return
-end
-
-function gatherLayerData(layer; save = true, foldername = dataFolderNow("Layer $(layeridx(layer)) data"))
-    lidx = layeridx(layer)
-
-    statecopy = copy(state(layer))
-
-    println("Gathering data from layer $lidx")
- 
-    (lVec,corrVec) = correlationLength(layer)
-
-    M = last(M_array(sim(layer)))
-
-    return M, lvec, corrVec
+    return data
 end
 
 @inline function wait_esttime(tidx, T, TStep, TF, dpoints, dpointwait, dwait_actual, stepwait, equiwait)

@@ -1,87 +1,113 @@
 # Pauses sim and waits until paused
 # TODO: Might crash when refresh sim is run too many times
-function pauseSim(sim; print = true)
+function pauseSim(sim; block = false, ignore_lock = false, print = true)
     if print
         println("Pausing sim")
     end
 
-    # If no processes are running
-    if !any(x -> x == :Running, status(sim))
-        return true
+    running = status(sim) .== :Running
+    idxs = [1:length(processes(sim));][running]
+    for process in (@view processes(sim)[idxs])
+        signal!(process, false, :Pause; ignore_lock)
     end
 
-    # Set all running to paused
-    messages(sim)[ [status == :Running for status in status(sim)] ] .= :Pause
+    if block
+        # Wait for all to terminate
+        while any(x -> x == :Running, status(sim))
+            yield()
+        end
+    end
 
-    # While any are running, yield
+    isPaused(sim)[] = true
+
+    return
+end
+export pauseSim
+
+"""
+Pause sim and lock pausing untill it's unlocked
+This garantuees that the sim cannot be unpaused by a user
+"""
+function lockPause(sim; block = true)
+    lock(processes(sim))
+    pauseSim(sim, ignore_lock = true; block)
+end
+export lockPause
+"""
+Unlock and unpause the sim
+"""
+function unlockPause(sim; block = true)
+    unpauseSim(sim, ignore_lock = true)
+    unlock(processes(sim))
+end
+export unlockPause
+
+
+function unpauseSim(sim; block = false, ignore_lock = false, print = true)
+    if print
+        println("Unpausing sim")
+    end
+    # Find running processes
+    running = status(sim) .== :Paused
+    idxs = [1:length(processes(sim));][running]
+    for process in (@view processes(sim)[idxs])
+        signal!(process, true, :Nothing; ignore_lock)
+    end
+
+    if block
+        # Wait for all to terminate
+        while any(x -> x == :Paused, status(sim))
+            # sleep(.5)
+            yield()
+        end
+    end
+
+    isPaused(sim)[] = false
+
+    return
+end
+export unpauseSim
+
+"""
+Quit sim and block until all processes are terminated
+"""
+function quitSim(sim)
+    # Find running processes
+    running = status(sim) .== :Running
+    idxs = [1:length(processes(sim));][running]
+    for process in (@view processes(sim)[idxs])
+        signal!(process, false, :Quit)
+    end
+
+    # Wait for all to terminate
     while any(x -> x == :Running, status(sim))
         # sleep(.5)
         yield()
     end
 
-    isPaused(sim)[] = true
-
-    return true
-end
-export pauseSim
-
-
-function unpauseSim(sim; print = true)
-    if print
-        println("Unpausing sim")
-    end
-    
-    # If none are paused return
-    if !any(x -> x == :Paused, status(sim))
-        return true
-    end
-
-    # Remove all messages
-    messages(sim)[ [status == :Paused for status in status(sim)] ] .= :Nothing
-
-    while any(x -> x == :Paused, status(sim))
-        # sleep(.5)
-        yield()
-    end
-
-    isPaused(sim)[] = false
-
-    return true
-end
-export unpauseSim
-
-function quitSim(sim)
-
-    messages(sim) .= :Quit
-
-    while !all(x -> x == :Terminated, status(sim))
-        yield()
-    end
-
-    messages(sim) .= :Nothing
-
-    isPaused(sim)[] = true
-    return true
+    return
 end
 export quitSim
 
 function refreshSim(sim)
-    pauseSim(sim, print = false)
-    unpauseSim(sim, print = false)
+    # Find running processes
+    running = status(sim) .== :Running
+    idxs = [1:length(processes(sim));][running]
+    for process in (@view processes(sim)[idxs])
+        run!(process, false)
+    end
+    return
 end
 export refreshSim
 
 """
-Restart the sim with a single process and possible a given energy factor function
-Has some errors if the process terminated
+Restart Sim with same number of processes
 """
 function restartSim(sim, gidx = 1; updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)
     processNum = count(stat -> stat == :Running, status(sim)) 
     processNum = processNum < 1 ? 1 : processNum
-    println(processNum)
     quitSim(sim)
     createProcess(sim, processNum; gidx, updateFunc, energyFunc)
-    println("Restarted Sim")
     return
 end 
 export restartSim

@@ -19,8 +19,7 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
 
     stype::SType
     
-    layers::Vector{IsingLayer}
-    layeridxs::Vector{Int32}
+    layers::ShuffleVec{IsingLayer}
 
     continuous::StateType
     # Connection between layers, I don't think it's neccesary to track this
@@ -42,8 +41,7 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
             HType(weighted, false),
             SType(:Weighted => weighted),
             #Layers
-            Vector{IsingLayer}[],
-            Int32[],
+            ShuffleVec{IsingLayer}(),
             #ContinuityType
             continuous ? ContinuousState() : DiscreteState(),
             Dict{Pair, Int32}()
@@ -64,8 +62,7 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
         g.defects = GraphDefects(g)
         g.d = GraphData(g)
 
-        addLayer!(g, length, width; periodic, weightfunc, type)
-
+        # addLayer!(g, length, width; periodic, weightfunc, type)
         return g
     end
     
@@ -107,20 +104,13 @@ export htype
 
 # Access the layers
 @inline layer(g::IsingGraph, idx) = g.layers[idx]
-@inline Base.getindex(g::IsingGraph, idx) = layer(g, layeridxs(g)[idx])
+@inline Base.getindex(g::IsingGraph, idx) = g.layers[idx]
 @inline length(g::IsingGraph) = length(g.layers)
 Base.view(g::IsingGraph, idx) = view(g.layers, idx)
 
 #TODO: Give new idx
 @inline function layerIdx!(g, oldidx, newidx)
-    newidxs = Vector{Int32}(undef, length(g.layeridxs))
-    l_idx = g.layeridxs[oldidx]
-
-    newidxs[1:l_idx-1] .= g.layeridxs[1:l_idx-1]
-    newidxs[l_idx] = newidx
-    newidxs[l_idx+1:end] .= g.layeridxs[l_idx+1:end] .+ 1
-
-    g.layeridxs = newidxs
+    shuffle!(g.layers, oldidx, newidx)
 end
 export layerIdx!
 
@@ -281,7 +271,10 @@ end
 
 export resize!
 
-function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodic = true, type = typeof(state(g)))
+function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodic = true, type = eltype(state(g)))
+    fsim = sim(g)
+    lockPause(fsim)
+
     glayers = layers(g)
 
     # Resize underlying graphs 
@@ -299,8 +292,6 @@ function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodi
     newlayer = IsingLayer(type, g, length(glayers)+1 , startidx, llength, lwidth; periodic)
     # Push it to layers
     push!(glayers, newlayer)
-    # Give it an idx by placing it at the end
-    push!(layeridxs(g), length(layers(g)))
 
     # Set the adjacency matrix
     if weightfunc != nothing 
@@ -309,6 +300,13 @@ function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodi
 
     # Add Layer to defects
     addLayer!(defects(g), newlayer)
+
+    # Update the layer idxs
+    nlayers(fsim)[] += 1
+
+
+    # unpause sim
+    unlockPause(fsim)
     
     return
 end
@@ -320,29 +318,41 @@ function removeLayer!(g::IsingGraph, lidx::Integer)
         error("Cannot remove last layer")
     end
 
-    layervec = layers(g)
-    layer = layervec[lidx]
 
-    # Resize the graph
-    resize!(g, nStates(g) - glength(layer)*gwidth(layer), lidx)
+    # lockPause(sim(g))
+    @tryLockPause sim(g)  begin
+        # If the slected layer is after the layer to be removed, decrement layerIdx
+        if layerIdx(sim(g))[] >= lidx && layerIdx(sim(g))[] > 1
+            layerIdx(sim(g))[] -= 1
+        end
 
-    # Remove the layer from the graph defects
-    removeLayer!(defects(g), lidx)
+        layervec = layers(g)
+        layer = layervec[lidx]
+        nstates_layer = glength(layer)*gwidth(layer)
 
-    # Remove the layer from the graph
-    deleteat!(layervec, lidx)
-    
-    #Update the layer idxs
-    updateLayerIdxs!(g)
+        i_idx = internal_idx(layer)
 
+        # Resize the graph
+        resize!(g, nStates(g) - nstates_layer, lidx)
 
-    #Fix the layers to point towards the right spins
-    for i in (lidx):length(layervec)
-        llayer = layervec[i]
-        layeridx(llayer, layeridx(llayer)-1)
-        start(llayer, start(llayer) - glength(layer)*gwidth(layer))
-        regenerateViews(llayer)
+        # Remove the layer from the graph defects
+        removeLayer!(defects(g), lidx)
+
+        # Remove the layer from the graph
+        deleteat!(layervec, lidx) do layer, newidx
+            internal_idx(layer, newidx)
+            start(layer, start(llayer) - nstates_layer)
+            regenerateViews(layer)
+        end
+
+        nlayers(sim(g))[] -= 1
     end
+
+    # unpause sim
+    # unlockPause(sim(g))
+
+
+    return
 
 end
 
@@ -368,6 +378,7 @@ function setSType!(g::IsingGraph, pairs::Pair...; refresh::Bool = true, force_re
             refreshSim(sim(g))
         end
     end
+    
     if force_refresh
         refreshSim(sim(g))
     end

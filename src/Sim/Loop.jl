@@ -61,29 +61,32 @@ function mainLoop(process, params, gidx, g, gstate, gadj::AT, lTemp, iterator, r
 
     status(process, :Running)
 
-    while message(process) == :Nothing
+    while run(process)
         updateFunc(g, params, lTemp, gstate, gadj, iterator, rng, gstype, energyFunc)
         GC.safepoint()
     end
     
-
     status(process, :Paused)
 
-    while message(process) != :Nothing
-        
-        if message(process) == :Execute
-            func(process)(sim, gidx, energyFunc)
-        elseif message(process) == :Quit
-            status(process, :Terminated)
-            message(process, :Nothing)
-            return
-        else
-            sleep(0.1)
-        end
-            
-        yield()
-        GC.safepoint()
+
+    # Atomic set it back to run
+    if atomic_message(process) == :Quit
+        signal!(process, true, :Nothing)
+        status(process, :Terminated)
+        return
     end
+
+    if message(process) == :Pause
+        status(process, :Paused)
+        while message(process) == :Pause
+            yield()
+            sleep(0.1)
+            GC.safepoint()
+        end
+    end
+
+    # Consume message and mark process to run
+    signal!(process, true, :Nothing)
 
     updateGraph(sim(g), process; gidx, energyFunc)
     return 

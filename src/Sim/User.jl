@@ -59,6 +59,7 @@ function startSim(sim; threads = 1, async = true, loadQML = true)
                 exec()
             end
         end
+    # If no processes are started just create a new one
     elseif all(status(sim) .== :Terminated)
         createProcess(sim, threads; gidx = 1)
     else
@@ -88,17 +89,19 @@ export setLayerIdx!
 """
 function addLayer!(sim::IsingSim, glength, gwidth; gidx = 1, weightfunc = defaultIsingWF, periodic = true, type = typeof(state(gs(sim)[gidx])).parameters[1])
     #pause sim
-    pauseSim(sim)
+    lock(processes(sim))
+    pauseSim(sim, ignore_lock = true)
     # add layer to graph
     addLayer!(gs(sim)[gidx], glength, gwidth; periodic, weightfunc, type)
     #update number of layers
     nlayers(sim)[] += 1
     # unpause sim
-    unpauseSim(sim)
+    unpauseSim(sim, ignore_lock = true)
+    unlock(processes(sim))
 end
 
 function removeLayer!(sim::IsingSim, layeridx; gidx = 1)
-    pauseSim(sim)
+    pauseSim(sim, block = true)
     
     # If the slected layer is after the layer to be removed, decrement layerIdx
     if layerIdx(sim)[] >= layeridx && layerIdx(sim)[] > 1

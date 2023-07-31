@@ -1,8 +1,8 @@
 mutable struct DataPoint
-    M::     Float32
-    bins::  Vector{Float32}
-    corrs:: Vector{Float32}
-    img::Union{Nothing, Array}
+    M::     Union{Nothing, Float32}
+    bins::  Union{Nothing, Vector{Float32}}
+    corrs:: Union{Nothing, Vector{Float32}}
+    img::   Union{Nothing, Array}
     other:: Dict{Symbol, Any}
     
     DataPoint(M,bins,corrs) = new(M,bins,corrs,nothing, Dict{Symbol, Any}())
@@ -35,14 +35,39 @@ function setindex!(d::DataPoint, value, key::Symbol)
 end
 
 Base.keys(d::DataPoint) = [:M, :bins, :corrs, keys(d.other)...]
+function Base.show(io::IO, d::DataPoint)
+    print("Data point with")
+    hasM = !isnothing(d.M)
+    hascorrs = !isnothing(d.corrs)
+    hasimg = !isnothing(d.img)
+    hasother = !isempty(d.other)
 
-Base.show(io::IO, d::DataPoint) = print(io, "DataPoint(", d.M, ", ", d.bins, ", ", d.corrs, ", ", d.other, ")")
-struct TempDataPoints <: AbstractVector{DataPoint}
-    data::Vector{DataPoint}
+    hasM && print("\n\tMagnetization: $(d.M)")
+    hascorrs && print("\n\tCorrelation data")
+    hasimg && print("\n\tImage data")
+    if hasother 
+        println("\n\tOther data")
+        print(keys(d.other))
+    end
+    if !hasM && !hascorrs && !hasimg && !hasother
+        println(" no data")
+    end
+end
+Base.display(d::DataPoint) = show(d)
+# @ForwardDeclare LayerDataPoints
+struct TempDataPoints{DP <: DataPoint} <: AbstractVector{DP}
+    data::Vector{DP}
     temp::Float32
 end
 
-TempDataPoints(ndatapoints::Integer, temp::Real) = TempDataPoints(DataPoint[DataPoint() for _ in 1:ndatapoints], temp)
+function Base.show(io::IO, tdp::TempDataPoints)
+    println(io, "Data for temperature $(tdp.temp)")
+    multiple = length(tdp.data) > 1
+    println(io, "$(length(tdp.data)) recorded datapoint"*("s"^(multiple ? 1 : 0)))
+end
+Base.display(tdp::TempDataPoints) = show(tdp)
+
+TempDataPoints(ndatapoints::Integer, temp::Real) = TempDataPoints(DataPoint[DataPoint() for _ in 1:ndatapoints], Float32(temp))
 
 size(tdp::TempDataPoints) = size(tdp.data)
 getindex(tdp::TempDataPoints, idx::Integer) = tdp.data[idx]
@@ -52,25 +77,35 @@ setindex!(tdp::TempDataPoints, value, idx::Integer) = tdp.data[idx] = value
 magnetization(tempdata::TempDataPoints) = sum([point.M for point in tempdata])/length(tempdata)
 
 
-struct LayerDataPoints <: AbstractVector{TempDataPoints}
-    data::Vector{TempDataPoints}
+struct LayerDataPoints{TDP <: TempDataPoints} <: AbstractVector{TDP}
+    data::Vector{TDP}
     layeridx::Int32
 end
 
-LayerDataPoints(temps, ndatapoints, lidx) = LayerDataPoints(TempDataPoints[TempDataPoints(ndatapoints, temp) for temp in temps], lidx)
+function Base.show(io::IO, ldp::LayerDataPoints{TempDataPoints})
+    println(io, "Data for layer $(ldp.layeridx):")
+    println(io, "$(length(ldp.data)) recorded temperatures: ")
+    print("| ")
+    for idx in 1:length(ldp.data)    
+        print(io, ldp.data[idx].temp, " | ")
+    end
+end
+
+Base.display(ldp::LayerDataPoints) = show(ldp)
+
+LayerDataPoints(temps, ndatapoints, lidx) = LayerDataPoints(TempDataPoints[TempDataPoints(ndatapoints, temp) for temp in temps], Int32(lidx))
 
 size(ldp::LayerDataPoints) = size(ldp.data)
 getindex(ldp::LayerDataPoints, idx::Integer) = ldp.data[idx]
 getindex(ldp::LayerDataPoints, idxs::Integer...) = ldp.data[idxs...]
 setindex!(ldp::LayerDataPoints, value, idx::Integer) = ldp.data[idx] = value
 
-struct TempSweepData <: AbstractDict{String, Any}
+struct TempSweepData <: AbstractDict{String, LayerDataPoints}
     # Entry for each layer
     # Then entry for each temperature
     # Then an entry for each datapoint
     layers::Dict{String, LayerDataPoints}
 end
-
 TempSweepData() = TempSweepData(Dict{String, LayerDataPoints}())
 
 getindex(tsd::TempSweepData, key::String) = getindex(tsd.layers, key)
@@ -91,7 +126,14 @@ function TempSweepData(g, layeridxs, temps, ndatapoints; original_lidx = false)
     return layerdata
 end
 
-layeridxs(tsd::TempSweepData) = [layer.layeridx for layer in tsd.layers]
+function Base.show(io::IO, tsd::TempSweepData)
+    ks = keys(tsd)
+    print(io, "TempSweepData with $(length(ks)) recorded layers: $ks")
+end
+
+Base.display(tsd::TempSweepData) = show(tsd)
+
+layeridxs(tsd::TempSweepData) = [internal_idx(layer) for layer in tsd.layers]
 
 function magnetizationPlot(tsData::TempSweepData, layer::Integer)
     ldata = tsData.layers[layer]
@@ -102,56 +144,8 @@ function magnetizationPlot(tsData::TempSweepData, layer::Integer)
     plot(temps, ms, label = "M = $M")
 end
 
-savaSweepData(tsd::TempSweepData; foldername::String = dataFolderNow("TempSweepData")) = save(foldername, tsd)
-openSweepData(filename) = load(filename)
 
 """
-Save magnetization data to a dataframe
-"""
-function MToDF(M, dpoint::Integer = Int32(1), T::Real = Float16(1))
-    return DataFrame(M = M, D = dpoint, T = T)
-end
-
-""" 
-Determine amount of datapoints per temperature from dataframe data (if homogeneous over temps)
-"""
-function detDPoints(dat)
-    dpoint = 0
-    lastt = dat[:,1][1]
-    for temp in dat[:,1]
-        if temp == lastt
-            dpoint += 1
-        else 
-            return dpoint
-        end
-    end
-    return dpoint
-end
-
-"""
-Input the temperature sweep data into a dataframe
-"""
-function dataToDF(tsData, lMax = length(tsData[2][1]))
-    return DataFrame(Temperature = tsData[1], Correlation_Function = [corrLXY[1:lMax] for corrLXY in  tsData[2]], Magnetization = tsData[3] )
-end
-
-"""
-Read CSV and outputs dataframe
-Make this use julia data format
-"""
-csvToDF(filename) = DataFrame(CSV.File(filename)) 
-
-"""
-Helper Functions 
-"""
-function insertShift(vec::Vector{T}, el) where T
-    newVec = Vector{T}(undef, length(vec))
-    newVec[1:(end-1)] = @view vec[2:end]
-    newVec[end] = T(el)
-    return newVec
-end
-
-""" 
 Create folder in data folder with given name and return path
 Tries to create a folder if it doesn't exist, and doesn't do anything if it does
 """

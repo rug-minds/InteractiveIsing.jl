@@ -13,15 +13,18 @@ Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val),
 export Coords
 mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph, StateReshape <: AbstractMatrix{T}, AdjReshape <: AbstractArray} <: AbstractIsingLayer{T}
     const graph::IsingGraphType
-    layeridx::Int32
+    name::String
+    # Internal idx of layer in shufflevec of graph
+    internal_idx::Int32
     state::StateReshape
     adj::AdjReshape
     start::Int32
     const size::Tuple{Int32,Int32}
     const nstates::Int32
     coords::Coords{Tuple{Int32,Int32,Int32}}
-    const d::LayerData
+    # const d::LayerData
     defects::LayerDefects
+    timers::Vector{Timer}
     top::LayerTopology
 
 
@@ -34,6 +37,8 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph, StateReshape 
         layer = new{LayerType, GraphType, statetype, adjtype}(
             # Graph
             g,
+            # Name
+            "$(length)x$(width) Layer",
             # Layer idx
             Int32(idx),
             # View of state
@@ -49,7 +54,7 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph, StateReshape 
             #Coordinates
             Coords(nothing),
             # Layer data
-            LayerData(d(g), start, length, width)
+            # LayerData(d(g), start, length, width)
         )
         layer.defects = LayerDefects(layer, olddefects)
         layer.top = LayerTopology(layer, [1,0], [0,1]; periodic)
@@ -57,6 +62,9 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph, StateReshape 
         return layer
     end
 end
+export IsingLayer
+
+# IsingLayer(g, layer::AbstractIsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefects(layer))
 
 mutable struct IsingLayerCopy{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIsingLayer{T}
     const graph::IsingGraphType
@@ -67,7 +75,7 @@ mutable struct IsingLayerCopy{T, IsingGraphType <: AbstractIsingGraph} <: Abstra
     const size::Tuple{Int32,Int32}
     const nstates::Int32
     coords::Coords{Tuple{Int32,Int32,Int32}}
-    const d::LayerData
+    # const d::LayerData
     defects::LayerDefects
     top::LayerTopology
 
@@ -91,7 +99,7 @@ mutable struct IsingLayerCopy{T, IsingGraphType <: AbstractIsingGraph} <: Abstra
             # Coordinates
             layer.coords,
             # Layer data
-            layer.d,
+            # layer.d,
             layer.defects,
             layer.top
         )
@@ -99,16 +107,13 @@ mutable struct IsingLayerCopy{T, IsingGraphType <: AbstractIsingGraph} <: Abstra
 end
 
 
-export IsingLayer
 
-function regenerateViews(layer::IsingLayer)
-    layer.state = reshapeView(state(graph(layer)), start(layer), glength(layer), gwidth(layer))
-    layer.adj = reshapeView(adj(graph(layer)), start(layer), glength(layer), gwidth(layer))
-end
+@setterGetter IsingLayer coords size layeridx
+@setterGetter IsingLayerCopy coords size
 
 # Extend show for IsingLayer, showing the layer idx, and the size of the layer
 function Base.show(io::IO, layer::AbstractIsingLayer)
-    showstr = "IsingLayer $(layer.layeridx) with size $(size(layer))"
+    showstr = "IsingLayer $(layeridx(layer)) with size $(size(layer))"
     if coords(layer) != nothing
         showstr *= " \t at coordinates $(coords(layer))"
     end
@@ -118,14 +123,16 @@ end
 Base.show(io::IO, layertype::Type{<:AbstractIsingLayer}) = print(io, "IsingLayer")
 
 
-IsingLayer(g, layer::AbstractIsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefects(layer))
+#TODO: Cean this up
 
-@setterGetter IsingLayer coords size layeridx
-@setterGetter IsingLayerCopy coords size
-
+function regenerateViews(layer::IsingLayer)
+    layer.state = reshapeView(state(graph(layer)), start(layer), glength(layer), gwidth(layer))
+    layer.adj = reshapeView(adj(graph(layer)), start(layer), glength(layer), gwidth(layer))
+end
 
 # Get current layeridx through graph
-@inline layeridx(layer::IsingLayer) = layeridxs(graph(layer))[layer.layeridx]
+@inline layeridx(layer::IsingLayer) = layeridxs(graph(layer))[layer.internal_idx]
+@inline idx(layer::IsingLayer) = internal_idx(layer)
 
 @inline coords(layer::AbstractIsingLayer) = layer.coords.cs
 # Move to user folder
@@ -134,10 +141,10 @@ IsingLayer(g, layer::AbstractIsingLayer) = IsingLayer(g, layeridx(layer), start(
 export setcoords!
 
 @inline reladj(layer::AbstractIsingLayer) = adjGToL(layer.adj, layer)
-@forward IsingLayer LayerData d
+# @forward IsingLayer LayerData d
 @forward IsingLayer LayerDefects defects
 
-@forward IsingLayerCopy LayerData d
+# @forward IsingLayerCopy LayerData
 @forward IsingLayerCopy LayerDefects defects
 
 # Setters and getters
@@ -156,17 +163,21 @@ export maxdist
 
 @inline coordToIdx(i,j,layer::AbstractIsingLayer) = coordToIdx(latmod(i, glength(layer)), latmod(j, gwidth(layer)), glength(layer))
 
-@inline dist(idx1::Integer, idx2::Integer, layer::AbstractIsingLayer) = dist(idxToCoord(idx1, glength(layer))..., idxToCoord(idx2, glength(layer))..., top(layer))
 
-
+@inline startidx(layer::AbstractIsingLayer) = start(layer)
+@inline endidx(layer::AbstractIsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
 
 @inline getindex(layer::AbstractIsingLayer, idx) = state(layer)[idx]
 @inline setindex!(layer::AbstractIsingLayer, val, idx) = state(layer)[idx] = val
 
-@inline endidx(layer::AbstractIsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
-
+"""
+Range of idx of layer for underlying graph
+"""
 @inline graphidxs(layer::AbstractIsingLayer) = UnitRange{Int32}(start(layer):endidx(layer))
 export graphidxs
+
+bfield(layer::AbstractIsingLayer) = @view bfield(graph(layer))[graphidxs(layer)]
+clamps(layer::AbstractIsingLayer) = @view clamps(graph(layer))[graphidxs(layer)]
 
 # Inherited from Graph
 @inline htype(layer::AbstractIsingLayer) = layer.graph.htype
@@ -181,19 +192,19 @@ defectList(layer::AbstractIsingLayer) = defectList(defects(layer))
 @inline hasDefects(layer::AbstractIsingLayer) = ndefects(defects(layer)) > 0
 @inline setdefect(layer::AbstractIsingLayer, val, idx) = defects(layer)[idx] = val
 
-@inline startidx(layer::AbstractIsingLayer) = start(layer)
 iterator(layer::AbstractIsingLayer) = start(layer):endidx(layer)
 iterator(g::IsingGraph) = 1:(nStates(g))
 
 # LayerTopology
 @inline periodic(layer::AbstractIsingLayer) = periodic(top(layer))
 @inline setPeriodic!(layer::AbstractIsingLayer, periodic) = top!(layer, LayerTopology(top(layer); periodic))
+@inline dist(idx1::Integer, idx2::Integer, layer::AbstractIsingLayer) = dist(idxToCoord(idx1, glength(layer))..., idxToCoord(idx2, glength(layer))..., top(layer))
+
 export setPeriodic!
 
-editHType!(layer::AbstractIsingLayer, pairs...) = editHType!(layer.graph, pairs...)
 
 # Forward Graph Data
-# @inline mlist(layer::IsingLayer) = @view mlist(graph(layer))[start(layer):endidx(layer)]
+# @inline bfield(layer::IsingLayer) = @view bfield(graph(layer))[start(layer):endidx(layer)]
 
 """
 Go from a local idx of layer to idx of the underlying graph

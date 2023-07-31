@@ -459,17 +459,18 @@ end
 # with a field that has a type that's gona make it fail
 macro ForwardDeclare(structname, subfolder)
     #get files from current dir
-    files = readdir(joinpath(@__DIR__, subfolder))
+    files = readdir(joinpath(modulefolder, subfolder))
 
     # get all files that end in .jl
     files = filter(x -> endswith(x, ".jl"), files)
 
     # add the path to the files
-    files = map(x -> joinpath(@__DIR__, subfolder, x), files)
+    files = map(x -> joinpath(modulefolder, subfolder, x), files)
     structstring = getstruct(string(structname), files)
     # println(structstring)
     # println("Searching Dir $(@__DIR__)/$subfolder for struct $structname")
     expr = Meta.parse(structstring)
+
     return esc(quote
                 try
                     $expr
@@ -522,6 +523,15 @@ function VSIA(vec::Vector{T}, accessor) where T
    return VecStructIteratorAccessor{T}(vec, accessor)
 end
 
+"""
+
+"""
+function insertShift(vec::Vector{T}, el) where T
+    newVec = Vector{T}(undef, length(vec))
+    newVec[1:(end-1)] = @view vec[2:end]
+    newVec[end] = T(el)
+    return newVec
+end
 
 macro enumeratelayers(layers, length)
     expr = quote end
@@ -532,3 +542,12 @@ macro enumeratelayers(layers, length)
     esc(expr)
 end
 export @enumeratelayers
+
+macro tryLockPause(sim, expr)
+    fexp = quote end
+    push!(fexp.args, :(lockPause($sim)))
+    push!(fexp.args, :(try $expr ;finally unlockPause($sim) end))
+
+    return esc(fexp)
+end
+export @tryLockPause

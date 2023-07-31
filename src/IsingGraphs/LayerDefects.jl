@@ -42,7 +42,7 @@ end
 #NOT WORKING
 function defectList(defects::LayerDefects)
     currentlayer = layer(defects)
-    lidx = layeridx(currentlayer)
+    lidx = internal_idx(currentlayer)
     g = graph(currentlayer)
 
     preceding_defects = precedingDefects(defects)
@@ -52,7 +52,7 @@ end
 
 function aliveList(defects::LayerDefects)
     currentlayer = layer(defects)
-    lidx = layeridx(currentlayer)
+    lidx = internal_idx(currentlayer)
     g = graph(currentlayer)
 
     preceding_states = precedingAlives(defects)
@@ -64,7 +64,7 @@ function precedingDefects(defects::LayerDefects)
     currentlayer = layer(defects)
 
     preceding_defects = 0
-    for i in 1:(layeridx(currentlayer)-1)
+    for i in 1:(internal_idx(currentlayer)-1)
         otherlayer = layerdefects(graphdefects(defects))[i]
         preceding_defects += ndefects(otherlayer)
     end
@@ -76,7 +76,7 @@ function precedingAlives(defects::LayerDefects)
     currentlayer = layer(defects)
 
     preceding_states = 0
-    for i in 1:(layeridx(currentlayer)-1)
+    for i in 1:(internal_idx(currentlayer)-1)
         otherlayer = layerdefects(graphdefects(defects))[i]
         preceding_states += (nStates(layer(otherlayer)) - ndefects(otherlayer))
     end

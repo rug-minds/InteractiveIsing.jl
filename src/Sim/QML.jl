@@ -89,7 +89,8 @@ function qmlFunctions(sim::IsingSim)
         setLayerIdx!(sim, layerIdx(sim)[] + inc)
         newR = round(min(size(currentLayer(sim))...) / 10)
 
-        setCircR!(sim, newR) 
+        setCircR!(sim, newR)
+        layerName(sim)[] = name(currentLayer(sim))
     end
     @qmlfunction changeLayer
     
@@ -98,4 +99,10 @@ function qmlFunctions(sim::IsingSim)
     function pauseUnpause()
         memory(sim)["Procstatus"] = [process.status for process in processes(sim)]
     end
+
+    function setLayerName(str)
+        layer = currentLayer(sim)
+        name(layer,str)
+    end
+    @qmlfunction setLayerName
 end
