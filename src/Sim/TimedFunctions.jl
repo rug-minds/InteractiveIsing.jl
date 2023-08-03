@@ -1,22 +1,36 @@
+# All functions that are run from the QML Timer
+function timedFunctions(sim)
+    c_layer = currentLayer(sim)
+    if runTimedFunctions(sim)[]
+        updatesPerFrame(sim)
+        # spawnOne(updatesPerFrame, sim.updatingUpf, "", sim)
+        spawnOne(magnetization, sim.updatingMag, "", sim)
+    end
+
+    checkImgSize(sim, c_layer, glength(c_layer), gwidth(c_layer), qmllength(sim), qmllength(sim))
+    spawnOne(updateImg, sim.updatingImg, "UpdateImg", sim)
+
+end
 
 # Timed Functions 
 # Updating image of graph
 export updateImg
 function updateImg(sim)
-    sim.img[] = gToImg(sim.g)
+    sim.img[] = gToImg(currentLayer(sim), colorscheme = colorscheme(sim))
     return
 end
 
 # Track number of updates per frame
 let avgWindow = 60, updateWindow = zeros(Int64,avgWindow), frames = 0
-    global function updatesPerFrame(sim::IsingSim)
-        updateWindow = insertShift(updateWindow,sim.updates)
+    global function updatesPerFrame(sim::IsingSim, statelength = length(state(gs(sim)[1])))
+        updateWindow = insertShift(updateWindow,sim.params.updates)
         if frames > avgWindow
-            sim.upf[] = round(sum(updateWindow)/avgWindow)
+            # upf(sim)[] = Float32(sum(updateWindow)/avgWindow/statelength)
+            upf(sim)[] = Float32(sum(updateWindow)/avgWindow)
             frames = 0
         end
         frames += 1
-        sim.updates = 0
+        sim.params.updates = 0
     end
 end
 
@@ -25,9 +39,9 @@ end
 let avg_window = 60, frames = 0
     global function magnetization(sim::IsingSim)
         avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
-        sim.M_array[] = insertShift(sim.M_array[], sum(sim.g.state))
+        sim.M_array[] = insertShift(sim.M_array[], sum(state(currentLayer(sim))))
         if frames > avg_window
-            sim.M[] = sum(sim.M_array[])/avg_window 
+            M(sim)[] = sum(sim.M_array[])/avg_window 
             frames = 0
         end 
         frames += 1 

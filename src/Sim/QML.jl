@@ -14,73 +14,95 @@ end
 Register all qml functions.
 Should work since the macro only calls a function
 and all the local variables are actually variables that live in the sim object outside of the function
-"""
+# """
 function qmlFunctions(sim::IsingSim)
-    g = sim.g
-    circ = sim.circ
-    brush = sim.brush
-    TIs = sim.TIs
-    M_array = sim.M_array
-    M = sim.M
-    brushR = sim.brushR
+    s_brush = brush(sim)
+    s_Temp = Temp(sim)
+    s_M_array = M_array(sim)
+    s_M = M(sim)
+    s_brushR = brushR(sim)
 
-    # Locks for ensuring spawned functions are not created
-    # if old one is still running
-    
-    # Clean up this system
-    # Maybe with a dict
-    updatingImg = sim.updatingImg
-    updatingUpf = sim.updatingUpf
-    updatingMag = sim.updatingMag
-
-    analysisRunning = sim.analysisRunning
+    s_analysisRunning = analysisRunning(sim)
 
     @qmlfunction println
 
     # All functions that are run from the QML Timer
-    function timedFunctions()
-        spawnOne(updateImg, updatingImg, "UpdateImg", sim)
-        spawnOne(updatesPerFrame, updatingUpf, "", sim)
-        spawnOne(magnetization, updatingMag, "", sim)
-    end
-    @qmlfunction timedFunctions
+    timedFunctionsQML() = timedFunctions(sim)
+
+    @qmlfunction timedFunctionsQML
 
 
     # Add percentage of defects to lattice
-    addRandomDefectsQML(pDefects) = addRandomDefects!(sim, g,pDefects)
+    addRandomDefectsQML(pDefects) = (layer = currentLayer(sim); try addRandomDefects!(layer, pDefects); catch(error); rethrow(); end)
     @qmlfunction addRandomDefectsQML
 
     # Initialize isinggraph and display
     function initIsing()
-        reInitSim(sim) 
+        reset!(sim) 
     end
     @qmlfunction initIsing
 
     # Draw circle to state
-    circleToStateQML(i,j,clamp=false) = errormonitor(Threads.@spawn circleToState(sim, g,circ[],i,j,brush[]; clamp, imgsize = size(img[])[1]))
+    circleToStateQML(i,j,clamp=false) = (errormonitor(Threads.@spawn circleToState(sim, currentLayer(sim), i, j, s_brush[]; clamp, imgsize = size(img[]))))
     @qmlfunction circleToStateQML
 
     # Sweep temperatures and record magnetization and correlation lengths
     # Make an interface for this
-    function tempSweepQML(TI = TIs[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true)
-        if !g.d.defects
-            corrF = sampleCorrPeriodic
-        else
-            corrF = sampleCorrPeriodicDefects
-        end
+    function tempSweepQML(TI = s_Temp[], TF = 13, TStep = 0.5, dpoints = 12, dpointwait = 5, stepwait = 0, equiwait = 0 , saveImg = true)
         # Catching error doesn't work like this, why?
-        Threads.@spawn errormonitor(tempSweep(g,TIs,M_array; TI,TF,TStep, dpoints , dpointwait, stepwait, equiwait, saveImg, img=img, analysisRunning=analysisRunning, corrF))
+            
+        errormonitor(
+            Threads.@spawn begin 
+                    try 
+                        tempSweep(sim; TI, TF, TStep, dpoints , dpointwait, stepwait, equiwait, saveImg)
+                    catch error
+                        display(error)
+                        analysisRunning(sim)[] = false
+                    end 
+            end
+        )
     end
     @qmlfunction tempSweepQML
 
 
-    # Save a new circle with size brushR[]
+    # Save a new circle with size s_brushR[]
     function newCirc()
-        circ[] = getOrdCirc(brushR[])
+        circ(sim, getOrdCirc(s_brushR[]))
     end
     @qmlfunction newCirc
 
     # Save an image of the graph
-    saveGImgQML() = saveGImg(g)
+    saveGImgQML() = saveGImg(currentLayer(sim))
     @qmlfunction saveGImgQML
+
+    function setTemp(temp)
+        sim.params.Temp = temp
+    end
+    @qmlfunction setTemp
+
+    function toggleSimRunning()
+        togglePauseSim(sim)
+    end
+    @qmlfunction toggleSimRunning
+
+    function changeLayer(inc)
+        setLayerIdx!(sim, layerIdx(sim)[] + inc)
+        newR = round(min(size(currentLayer(sim))...) / 10)
+
+        setCircR!(sim, newR)
+        layerName(sim)[] = name(currentLayer(sim))
+    end
+    @qmlfunction changeLayer
+    
+    # TODO: Check this
+    #This is not correct?
+    function pauseUnpause()
+        memory(sim)["Procstatus"] = [process.status for process in processes(sim)]
+    end
+
+    function setLayerName(str)
+        layer = currentLayer(sim)
+        name(layer,str)
+    end
+    @qmlfunction setLayerName
 end

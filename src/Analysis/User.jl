@@ -3,6 +3,15 @@ User functions
 =#
 
 """
+Get the correlation length function,
+should return two vectors x: The start of every length bin, y: The correlation for that length bin
+Standard algorithm is algorithm using Metal
+"""
+correlationLength(layer) = correlationLength(layer, s_algo)
+export correlationLength
+
+# TODO: Getting a segfault when running this function
+"""
 Does analysis over multiple temperatures.
 Analyzes magnetization and correlation length.
 Usage: Goes from current temperature of simulation, to TF, in stepsizes of TStep.
@@ -10,112 +19,53 @@ Usage: Goes from current temperature of simulation, to TF, in stepsizes of TStep
   In between Temperatures there is an optional wait time of stepwait, for equilibration
   There is an initial wait time of equiwait for equilibration
 """
-function tempSweep(g, TIs, M_array; TI = TIs[], TF = 13, TStep = 0.5, dpoints = 6, dpointwait = 5, stepwait = 0, equiwait = 0, saveImg = false, img = Ref([]), corrF = sampleCorrPeriodic, analysisRunning = Observable(true), savelast = true, absvalcorrplot = false)
+function tempSweep(
+        sim, 
+        layeridxs = 1:length(gs(sim)[1]); 
+        TI = nothing, 
+        TF = 13, 
+        TStep = 0.5, 
+        dpoints = 6, 
+        dpointwait = 5, 
+        stepwait = 0, 
+        equiwait = 0, 
+        saveImg = false, 
+        savelast = true, 
+        absvalcorrplot = false,
+        savadata = true,
+        layer_analysis = (layer, layerdata, idx) -> (), 
+        other_analysis = (layercopies, layerdata) -> ()
+    )
     
-    # Print details
     println("Starting temperature sweep")
-    println("Parameters TI: $TI,TF: $TF, TStep: $TStep, dpoints: $dpoints, dpointwait: $dpointwait, stepwait: $stepwait, equiwait: $equiwait, saveImg: $saveImg")
-    
+    sTemp = Temp(sim)
+    sM_array = M_array(sim)
+    analysisObs = analysisRunning(sim)
+    g = gs(sim)[1]
 
-    """ Make folder """
-    foldername = dataFolderNow("Tempsweep")
-
-    # Constants
-    first = true
-
-    # If temperature range goes down, tstep needs to be negative
-    if TF < TI
-        TStep *= -1
+    if TI === nothing
+        TI = sTemp[]
     end
 
-    TRange =  TI:TStep:TF
-    
-    # DataFrames
-    mdf = DataFrame()
-    cldf = DataFrame()
 
-    dwaits = []
-    dwait_actual = dpointwait
-    for (tidx, T) in enumerate(TRange)
-
-        #=
-        Printing stuff
-        =#
-        println("Gathering data for temperature $T, $dpoints data points in intervals of $dpointwait seconds")
-        waittime = length(T:TStep:TF)*(dpoints*dwait_actual + stepwait)
-
-        TIs[] = Float32(T)
-
-        if first # If first run, wait equiwait seconds for equibrilation
-            println("The sweep will take approximately $(equiwait + waittime) seconds")
-            if equiwait != 0
-                println("Waiting $equiwait seconds for equilibration")
-                sleep(equiwait)
-            end
-            first=false
-        else # Else wait in between temperature steps
-            # User feedback of remaining time
-            println("Approximately $waittime seconds remaining")
-            println("Now waiting $stepwait seconds in between temperatures")
-            sleep(stepwait)
-        end
-
-        
-
-        #=
-        Actual analysis 
-        =#
-        for point in 1:dpoints
-            if !(analysisRunning[])
-                println("Interrupted analysis")
-                return
-            end
-
-            tpointi = time()
-
-            # Get correlation
-            (lVec,corrVec) = corrF(g)
-
-            #=
-            Saving dataframes
-            =#
-            cldf = vcat(cldf, corrToDF((lVec,corrVec) , point, TIs[]) )
-            mdf = vcat(mdf, MToDF(last(M_array[]),point, TIs[]) )
-
-            if saveImg && (!savelast || point == dpoints)
-
-                # Image of ising
-                save(File{format"PNG"}("$(foldername)Ising $tidx d$point T$T.PNG"), img[])
-                
-                # Image of correlation plot
-                plotCorr(lVec,corrVec, foldername, tidx, point, T)
-            end
-
-            tpointf = time()
-            dtpoint = tpointf-tpointi
-            append!(dwaits,dtpoint)
-            dwait_actual = sum(dwait_actual)/length(dwait_actual)
-            println("Datapoint $point took $dtpoint seconds")
-
-            sleep(max(dpointwait-dtpoint,0))
-        end
-        
-    end
-
-    analysisRunning[] = false
-
-    # Try to save the image, but always save the data even if it fails
+    #Function barrier
     try
-        if saveImg
-            dfMPlot(mdf, foldername)
-        end
-
-    catch(error)
-        error(error)
-    finally
-        CSV.write("$(foldername)Ising 0 CorrData.csv", cldf)
-        CSV.write("$(foldername)Ising 0 MData.csv", mdf)
+        tempSweepInner(g, layeridxs, sTemp, sM_array; TI, TF, TStep, dpoints, dpointwait, stepwait, equiwait, saveImg, analysisObs, savelast, absvalcorrplot, savedata, layer_analysis, other_analysis)
+    catch
+        rethrow()
+        analysisObs[] = false
     end
 
-    println("Temperature sweep done!")
 end
+export tempSweep
+
+"""
+Save tempsweep data to a file in the julia file format
+Standard folder is data folder with subfolder that shows the time of creation
+"""
+savesweep(tsd::TempSweepData; foldername::String = dataFolderNow("TempSweepData")) = save("$(foldername)data.jld2", tsd)
+"""
+Returns TempSweepData struct from a path to a JLD2 file
+"""
+opensweep(filename::String) = TempSweepData(load(filename))
+export savesweep, opensweep

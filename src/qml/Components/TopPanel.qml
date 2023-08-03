@@ -23,7 +23,7 @@ Item{
         Button{
             Layout.alignment: Qt.AlignCenter
             text: {
-                if(!obs.shouldRun)
+                if(obs.isPaused)
                 {
                     "Paused"
                 }
@@ -32,8 +32,27 @@ Item{
                 }
             }
             onClicked: {
-                obs.shouldRun = !obs.shouldRun
+                Julia.toggleSimRunning()
             }
         }
+
+        TextField{
+            Layout.alignment: Qt.AlignCenter
+            text: obs.layerName
+            // Deselect when pressing elsewhere or enter
+            Keys.onPressed: {
+                if(event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                {
+                    forceActiveFocus()
+                }
+            }
+            onTextChanged: {
+                Julia.setLayerName(text)
+            }
+            // onAccepted: {
+            //     Julia.setLayerName(text)
+            // }
+        }
+ 
     }
 }

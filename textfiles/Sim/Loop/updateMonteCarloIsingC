@@ -1,0 +1,24 @@
+function updateMonteCarloIsingC()
+    @inline function deltE(efac,newstate,oldstate)::Float32
+        return efac*(newstate-oldstate)
+    end
+
+    @inline function sampleCState()::Float32
+        Float32(2*(rand(rng)-.5))
+    end
+
+    beta = 1/(s_TIs[])
+
+    idx = rand(rng, g_iterator)
+     
+    oldstate = @inbounds g.state[idx]
+
+    efactor = getEFactor(g.state, idx, ghtype)
+
+    newstate = sampleCState()
+    
+    Ediff = deltE(efactor,newstate,oldstate)
+    if (Ediff < 0 || rand(rng) < exp(-beta*Ediff))
+        @inbounds g.state[idx] = newstate 
+    end
+end

@@ -1,0 +1,19 @@
+function updateMonteCarloIsingD()
+
+    T = s_TIs[]
+
+    beta = T>0 ? 1/T : Inf
+    
+    idx = rand(rng, g_iterator)
+    Estate = 0
+    for conn in g.adj[idx]
+        Estate += -g.state[connIdx(conn)]
+    end
+
+    Estate *= g.state[idx]
+    
+    if (Estate >= 0 || rand() < exp(2*beta*Estate))
+        @inbounds g.state[idx] *= -1
+    end
+    
+end

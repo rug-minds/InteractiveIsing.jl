@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import org.julialang
 import Qt.labs.platform
 
-import "../TSweepWindow"
+import "TSweepWindow"
 
 // Panels under plot
 // Inserting Defects
@@ -82,7 +82,7 @@ Item{
       onClicked: {
         if(obs.analysisRunning == false)
         {
-          var component = Qt.createComponent("../TSweepWindow/Tsweep.qml")
+          var component = Qt.createComponent("TSweepWindow/Tsweep.qml")
           var window = component.createObject(root)
           window.show()
         }

@@ -13,7 +13,7 @@ function mnist_lab(num)
 end
 
 # Mnist value to ising value
-@inline function mToI(int::UInt8, irange = (0,1))::Float32
+@inline function mToI(int::UInt32, irange = (0,1))::Float32
   return irange[1]+(irange[2]-irange[1])/256*int
 end
 
@@ -85,7 +85,7 @@ function blockReadMatrix(sim::IsingSim, groupsize = 3, border = 8; imsize = 28)
                   repeat([1/8],groupsize), repeat([0], g.N-groupsize),
                   repeat([1/8],groupsize ÷ 2), [0], repeat([1/8],groupsize ÷ 2), repeat([0], g.N-groupsize),
                   repeat([1/8],groupsize))
-  first_row = vcat(first_row, repeat([0], g.size-length(first_row)) )
+  first_row = vcat(first_row, repeat([0], nStates(g)-length(first_row)) )
 
   sparse = SparseVector(first_row)
   shift = 0
@@ -146,8 +146,8 @@ function readIdxs(sim)
   return idxs
 end
 
-function readPixelIdxs(sim,idx, groupsize = 3, border = 8)
-  g = sim.g
+function readPixelIdxs(sim, layer, idx, groupsize = 3, border = 8)
+  g = sim.layers[layer]
   startIdx = border*g.N + border
   idxs = [startIdx, startIdx+1, startIdx+2, startIdx+g.N , startIdx+g.N + 2 , startIdx+2*g.N,startIdx+2*g.N+1, startIdx+2*g.N+2]
   shift = groupsize * ( (idx-1) % 28) + g.N * (idx ÷ 28)

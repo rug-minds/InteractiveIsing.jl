@@ -27,7 +27,7 @@ Rectangle{
             height: childrenRect.height
             Text{
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: qsTr("T=\n") + obs.TIs.toFixed(2)
+                text: qsTr("T=\n") + tslider.value.toFixed(2)
             }
         }
 
@@ -37,7 +37,7 @@ Rectangle{
             // anchors.verticalCenter: parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter
             height: 200
-            value: obs.TIs
+            value: obs.Temp
             orientation: Qt.Vertical
             // minimumValue: 0.0
             // maximumValue: 20
@@ -45,7 +45,7 @@ Rectangle{
             to: 20.
             stepSize: 0.01
             onValueChanged: {
-                obs.TIs = value
+                obs.Temp = value
             }
         }
 

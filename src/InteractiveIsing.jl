@@ -1,52 +1,48 @@
-__precompile__(false)
+# __precompile__(false)
+__precompile__(true)
 
 module InteractiveIsing
 
-using FileIO, Images, ColorSchemes, Dates, JLD, Random, Distributions, Observables, LinearAlgebra, DataFrames, 
-    CSV, CxxWrap, LaTeXStrings
+using FileIO, Images, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, LinearAlgebra, 
+    CxxWrap, StatsBase, LaTeXStrings
+using Plots
+using PrecompileTools
+using Revise
 
 import Plots as pl
 
-using QML
+using QML, Qt6ShaderTools_jll
+# export Qt6ShaderTools_jll
 export QML
+
+# Remove this
+using BenchmarkTools
+
+import Base: getindex, setindex!, length, iterate, isless, push!, resize!, size
+
+const modulefolder = @__DIR__
 
 # Restart MCMC loop to define new Hamiltonian function
 # Is needed for fast execution if part of hamiltonian doesn't need to be checked
 # Should be in IsingSim.jl
-function branchSim(sim)
-    if sim.shouldRun[]
-        sim.shouldRun[] = false 
-        while sim.isRunning[]
-            yield()
-        end
-        sim.shouldRun[] = true;
-    end
-end
+branchSim(sim) = refreshSim(sim)
 export branchSim
 
-export HType
-struct HType{Symbs, Vals} end
-
-
-
-include("HelperFunctions.jl")
+include("HelperFiles/HelperFiles.jl")
 include("WeightFuncs.jl")
 include("SquareAdj.jl")
 
-include("Hamiltonians.jl")
-using .Hamiltonians
-export Hamiltonians
+@ForwardDeclare IsingSim "Sim"
 
-include("IsingGraphs.jl")
+include("Hamiltonians/Hamiltonians.jl")
+include("IsingGraphs/IsingGraphs.jl")
 
-include("SetEls.jl")
-
-# include("IsingMetropolis.jl")
 include("Sim/Sim.jl")
 include("Interaction/Interaction.jl")
+include("Interaction/IsingMagneticFields.jl")
+include("Interaction/Clamping.jl")
 include("Analysis/Analysis.jl")
 include("GPlotting.jl")
-include("IsingMagneticFields.jl")
 
 # include("Learning/IsingLearning.jl")
 
@@ -57,6 +53,38 @@ function __init__()
     global showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest, Cvoid, 
                                                (Array{UInt32,1}, Int32, Int32))
 end
+
+# PRECOMPILATION FUNCTION FOR FAST USAGE
+@setup_workload begin
+    csim = IsingSim(
+        20,
+        20,
+        continuous = true, 
+        weighted = true;
+        colorscheme = ColorSchemes.winter
+    );
+    cg = csim(false)
+    @compile_workload begin
+        addLayer!(csim, 20, 20)
+
+        # # name them l1, l2, l3 ...
+        @enumeratelayers layers(cg) 2
+
+        setcoords!(l1)
+        setcoords!(l2, z = 1)
+
+        clampImg!(cg, 1, "examples/smileys.jpg")
+        connectLayers!(cg, 1, 2, (;dr, _...) -> 1, 1)
+
+        #Plotting correlation length and GPU kernel
+        plotCorr(correlationLength(l1)...)
+
+        setSpins!(l1, 1, 1, true, false)
+
+        
+    end
+end
+
 
 
 end # module InteractiveIsing

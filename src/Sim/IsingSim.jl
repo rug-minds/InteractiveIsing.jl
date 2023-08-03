@@ -4,124 +4,112 @@ export IsingSim
 Simulation struct
 """
 mutable struct IsingSim
-    # Graph
-    const g::IsingGraph
-    # Property map for qml
+    # Graphs
+    const gs::Vector{IG} where IG <: IsingGraph
+    # Property map used in qml
     const pmap::JuliaPropertyMap
-    
-    # length/width of graph
-    const gSize::Observable{Int32}
+    # const pmap::Dict{String,Any}
 
-    # Temperature Observable
-    const TIs::Observable{Float32}
-
-    # For drawing to simulation
-    const brush::Observable{Float32} 
-    const brushR::Observable{Int32} 
-    const circ::Observable 
-
-    # Magnetization
-    const M::Observable{Float32} 
-    const M_array::Ref{Vector{Real}}
-
-    const analysisRunning::Observable{Bool} 
-    
-    # For tracking updates
-    updates::Int
-    # Updates per frame average
-    const upf::Observable{Int} 
+    const M_array::Ref{Vector{Float64}}
 
     # Image of graph
-    const img::Base.RefValue{Matrix{RGB{Float64}}}
-    const imgSize::Observable
+    const img::Ref{Matrix{RGB{Float64}}}
 
     # Thread Locking
     const updatingUpf::Ref{Bool}
     const updatingMag::Ref{Bool} 
-    const updatingImg::Ref{Bool} 
+    const updatingImg::Ref{Bool}
 
-    # For Branching Simulation
-    const shouldRun::Observable{Bool} 
-    isRunning::Bool
+    # Process being used
+    processes::Processes
+    # Timers
+    timers::Vector{Timer}
+    # Simulation Parameters
+    const params::IsingParams
+    
+    memory::Dict
 
-    # Is sim already started?
-    started::Bool
+    # Observables
+    obs::Obs
 
 
     #= Initializer =#
-    function IsingSim(;
+    function IsingSim(
+            len = 500,
+            wid = 500;
+            periodic = nothing,
             continuous = false,
-            graphSize = 512,
             weighted = true,
-            weightFunc = defaultIsingWF,
+            weightfunc = nothing,
             initTemp = 1.,
-            start = false
+            start = false,
+            colorscheme = ColorSchemes.viridis
         );
-
-        type = continuous ? Float32 : Int8
-
-        g = IsingGraph(
-            graphSize,
-            continuous = continuous, 
-            weighted = weighted,
-            weightFunc = weighted ? weightFunc : defaultIsingWF
-        )
         
-        initImg = gToImg(g)
-        initbrushR= round(graphSize/10)
+
+        initbrushR= round(min(len,wid)/10)
 
         sim = new(
-            # Graph
-            g,
+            # Graphs
+            IsingGraph[],
             # Property map
             JuliaPropertyMap(),
-            # Size of sim
-            Observable(Int32(graphSize)),
-            Observable(Float32(initTemp)),
-            Observable(Float32(0.)),
-            Observable( Int32(initbrushR) ),
-            Observable(getOrdCirc(Int32(initbrushR))),
-            Observable(Float32(0.0)),
+            # Dict{String,Any}(),
             zeros(Real,60),
-            Observable(false),
-            0,
-            Observable(0),
+            # Image from module
             img,
-            Observable(size(initImg)),
             Ref(false),
             Ref(false),
             Ref(false),
-            Observable(true),
-            true,
-            false
+            Processes(4),
+            Timer[],
+            IsingParams(;initbrushR, colorscheme),
+            # memory
+            Dict(),
         )
 
+        g = IsingGraph(
+            sim,
+            len,
+            wid;
+            periodic,
+            continuous,
+            weighted,
+            weightfunc
+        )
+
+        push!(gs(sim), g)
+
+        #Observables
+        sim.obs = Obs(;length = len, width = wid, initTemp, initbrushR)
+
+        println(typeof(state(g)))
+        addLayer!(g, len, wid, type = continuous ? Float32 : Int8)
+
         # Initialize image
+         if !isempty(layers(g))
+            initImg = gToImg(g[1]; colorscheme)
+        end
+        
         sim.img[] = initImg
 
-        # Initializing propertymap
-        sim.pmap["imgSize"] = sim.imgSize
-        sim.pmap["shouldRun"] = sim.shouldRun
-        sim.pmap["TIs"] = sim.TIs
-        sim.pmap["brush"] = sim.brush
-        sim.pmap["brushR"] = sim.brushR
-        sim.pmap["circ"] = sim.circ 
-        sim.pmap["M"] = sim.M
-        sim.pmap["analysisRunning"] = sim.analysisRunning
-        sim.pmap["upf"] = sim.upf
-        sim.pmap["gSize"] = sim.gSize
+        sim.obs.layerName[] = name(g[1])
+        # Register observables
+        register(sim, sim.obs)
+
 
 
         if start
             s()
         end
+
         return sim
+
+        
     end
-    #= END Initializer =#
+    #= END of Initializer =# 
+end 
 
-
-    
-end
 
 """
 Start the simulation and interface
@@ -135,5 +123,62 @@ function (sim::IsingSim)(start = true; async = true)
             startSim(sim; async)
         end
     end
-    return sim.g;
+    return gs(sim)[1];
 end
+
+@forward IsingSim Obs
+@forward IsingSim IsingParams params
+@setterGetter IsingSim img
+
+@inline image(sim::IsingSim) = sim.img
+export image
+
+getindex(sim::IsingSim, idx) = gs(sim)[idx]
+
+#get n-th layer, starting the counting from the first graph
+function layer(sim, layeridx)
+    graphindex = 1
+    if layeridx > length(layers(sim[graphindex]))
+        layeridx -= length(layers(sim[graphindex]))
+        graphindex += 1
+
+        if layeridx > length(layers(sim[graphindex]))
+            error("Layer index out of bounds")
+        end
+    else
+        return sim[graphindex][layeridx]
+    end
+end
+
+export layer
+
+@inline graph(sim::IsingSim, graphidx = 1) = gs(sim)[graphidx]
+export graph
+
+function newGraph!(sim, len, wid; periodic = nothing, continuous = false, weighted = true, weightfunc = nothing)
+    g = IsingGraph(
+        sim,
+        len,
+        wid;
+        periodic,
+        continuous,
+        weighted,
+        weightfunc
+    )
+
+    push!(gs(sim), g)
+
+    return g
+end
+
+deleteGraph!(sim, graphidx) = deleteGraph!(gs(sim)[graphidx])
+
+function resetGraph!(sim, graphidx)
+    cont = continuous(gs(sim)[graphidx]) == ContinuousState() ? true : false
+    
+
+end
+
+export currentLayer
+@inline currentLayer(sim) = layer(sim,layerIdx(sim)[])
+
