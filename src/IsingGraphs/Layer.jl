@@ -131,7 +131,7 @@ function regenerateViews(layer::IsingLayer)
 end
 
 # Get current layeridx through graph
-@inline layeridx(layer::IsingLayer) = layeridxs(graph(layer))[layer.internal_idx]
+@inline layeridx(layer::IsingLayer) = externalidx(layers(graph(layer)), layer.internal_idx)
 @inline idx(layer::IsingLayer) = internal_idx(layer)
 
 @inline coords(layer::AbstractIsingLayer) = layer.coords.cs

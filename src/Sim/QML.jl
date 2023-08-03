@@ -14,7 +14,7 @@ end
 Register all qml functions.
 Should work since the macro only calls a function
 and all the local variables are actually variables that live in the sim object outside of the function
-"""
+# """
 function qmlFunctions(sim::IsingSim)
     s_brush = brush(sim)
     s_Temp = Temp(sim)

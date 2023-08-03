@@ -8,6 +8,7 @@ mutable struct IsingSim
     const gs::Vector{IG} where IG <: IsingGraph
     # Property map used in qml
     const pmap::JuliaPropertyMap
+    # const pmap::Dict{String,Any}
 
     const M_array::Ref{Vector{Float64}}
 
@@ -53,6 +54,7 @@ mutable struct IsingSim
             IsingGraph[],
             # Property map
             JuliaPropertyMap(),
+            # Dict{String,Any}(),
             zeros(Real,60),
             # Image from module
             img,

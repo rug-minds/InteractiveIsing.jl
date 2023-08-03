@@ -4,17 +4,15 @@ __precompile__(true)
 module InteractiveIsing
 
 using FileIO, Images, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, LinearAlgebra, 
-    CxxWrap, StatsBase, QML, Qt6ShaderTools_jll, LaTeXStrings, Plots
+    CxxWrap, StatsBase, LaTeXStrings
+using Plots
 using PrecompileTools
 using Revise
 
 import Plots as pl
 
-# TODO: Remove these and rely purely on JLD
-using DataFrames, CSV
-
-using QML
-export Qt6ShaderTools_jll
+using QML, Qt6ShaderTools_jll
+# export Qt6ShaderTools_jll
 export QML
 
 # Remove this

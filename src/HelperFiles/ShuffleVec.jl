@@ -21,7 +21,7 @@ Base.setindex!(sv::ShuffleVec, val, i::Int) = sv.data[sv.idxs[i]] = val
 Base.IndexStyle(::Type{<:ShuffleVec}) = IndexLinear()
 Base.eltype(p::ShuffleVec{T}) where T = T
 Base.length(p::ShuffleVec) = length(p.data)
-Base.iterate(p::ShuffleVec, state = 1) = i > length(p) ? nothing : (p[state], state+1)
+Base.iterate(p::ShuffleVec, state = 1) = state > length(p) ? nothing : (p[state], state+1)
 unshuffled(p::ShuffleVec) = p.data
 
 function Base.deleteat!(p::ShuffleVec, i::Int, datafunc::Function = (vars...) -> nothing)
@@ -79,8 +79,8 @@ function shuffle!(p::ShuffleVec, oldidx, newidx)
     p.idxs .= newidxs
 end
 
-@inline internalidx(p::ShuffleVec, external_idx::Int) = p.idxs[external_idx]
-@inline externalidx(p::ShuffleVec, internal_idx::Int) = findfirst(p.idxs .== internal_idx)
+@inline internalidx(p::ShuffleVec, external_idx::Integer) = p.idxs[external_idx]
+@inline externalidx(p::ShuffleVec, internal_idx::Integer) = findfirst(p.idxs .== internal_idx)
 
 Base.convert(::Type{ShuffleVec{T}}, p::Vector{T}) where T = ShuffleVec(p)
 Base.convert(::Type{Vector{T}}, p::ShuffleVec{T}) where T = p.dataß
