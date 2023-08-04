@@ -7,6 +7,11 @@ end
 const c = Container(rand(500,500))
 const obc = Observable(c.m)
 
+on(obc) do m
+    println("Observable changed")
+end
+
+
 f = Figure()
 ax = Axis(f[1,1])
 scene = image!(ax, obc, colormap = :thermal)
@@ -14,9 +19,5 @@ GLMakie.activate!(inline=false)
 
 display(f)
 
-tm = Timer((timer) -> notify(obc), 0., interval = 1/60)
-
-Threads.@spawn while true
-    c.m .= rand(500,500)
-    GC.safepoint()
-end
+c.m .= rand(500,500)
+notify(obc)

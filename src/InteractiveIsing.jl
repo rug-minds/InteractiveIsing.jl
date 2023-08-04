@@ -3,6 +3,8 @@ __precompile__(true)
 
 module InteractiveIsing
 
+const modulefolder = @__DIR__
+
 using FileIO, Images, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, LinearAlgebra, 
     CxxWrap, StatsBase, LaTeXStrings
 using Plots
@@ -11,16 +13,13 @@ using Revise
 
 import Plots as pl
 
+include("./QML.jl")
 using QML, Qt6ShaderTools_jll
 # export Qt6ShaderTools_jll
 export QML
 
-# Remove this
-using BenchmarkTools
-
 import Base: getindex, setindex!, length, iterate, isless, push!, resize!, size
 
-const modulefolder = @__DIR__
 
 # Restart MCMC loop to define new Hamiltonian function
 # Is needed for fast execution if part of hamiltonian doesn't need to be checked
