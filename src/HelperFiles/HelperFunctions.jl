@@ -543,10 +543,10 @@ macro enumeratelayers(layers, length)
 end
 export @enumeratelayers
 
-macro tryLockPause(sim, expr)
+macro tryLockPause(sim, expr, block = false)
     fexp = quote end
-    push!(fexp.args, :(lockPause($sim)))
-    push!(fexp.args, :(try $expr ;finally unlockPause($sim) end))
+    push!(fexp.args, :(lockPause($sim, block = $block)))
+    push!(fexp.args, :(try $expr ;finally unlockPause($sim, block = $block) end))
 
     return esc(fexp)
 end

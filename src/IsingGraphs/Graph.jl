@@ -213,14 +213,6 @@ function resize!(g::IsingGraph{T}, newlength, layeridx = 0) where T
     oldlength = nStates(g)
     sizediff = newlength - oldlength
 
-    # If making smaller save states and copy them
-    # if sizediff < 0
-    #     savedstates = state(g)[(endidx(layer(g,layeridx))+1):end]
-    #     
-    # end
-
-    
-
     if sizediff > 0
         resize!(state(g), newlength)
         resize!(adj(g), newlength)

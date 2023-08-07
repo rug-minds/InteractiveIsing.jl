@@ -30,14 +30,14 @@ This garantuees that the sim cannot be unpaused by a user
 """
 function lockPause(sim; block = true)
     lock(processes(sim))
-    pauseSim(sim, ignore_lock = true; block)
+    pauseSim(sim, ignore_lock = true, print = false; block)
 end
 export lockPause
 """
 Unlock and unpause the sim
 """
 function unlockPause(sim; block = true)
-    unpauseSim(sim, ignore_lock = true)
+    unpauseSim(sim, ignore_lock = true, print = false; block)
     unlock(processes(sim))
 end
 export unlockPause
