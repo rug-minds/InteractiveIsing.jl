@@ -24,25 +24,6 @@ function pauseSim(sim; block = false, ignore_lock = false, print = true)
 end
 export pauseSim
 
-"""
-Pause sim and lock pausing untill it's unlocked
-This garantuees that the sim cannot be unpaused by a user
-"""
-function lockPause(sim; block = true)
-    lock(processes(sim))
-    pauseSim(sim, ignore_lock = true, print = false; block)
-end
-export lockPause
-"""
-Unlock and unpause the sim
-"""
-function unlockPause(sim; block = true)
-    unpauseSim(sim, ignore_lock = true, print = false; block)
-    unlock(processes(sim))
-end
-export unlockPause
-
-
 function unpauseSim(sim; block = false, ignore_lock = false, print = true)
     if print
         println("Unpausing sim")
@@ -67,6 +48,24 @@ function unpauseSim(sim; block = false, ignore_lock = false, print = true)
     return
 end
 export unpauseSim
+
+"""
+Pause sim and lock pausing untill it's unlocked
+This garantuees that the sim cannot be unpaused by a user
+"""
+function lockPause(sim; block = true)
+    lock(processes(sim))
+    pauseSim(sim, ignore_lock = true, print = false; block)
+end
+export lockPause
+"""
+Unlock and unpause the sim
+"""
+function unlockPause(sim; block = true)
+    unpauseSim(sim, ignore_lock = true, print = false; block)
+    unlock(processes(sim))
+end
+export unlockPause
 
 """
 Quit sim and block until all processes are terminated

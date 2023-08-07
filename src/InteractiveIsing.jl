@@ -55,6 +55,7 @@ end
 
 # PRECOMPILATION FUNCTION FOR FAST USAGE
 @setup_workload begin
+    println("Precompiling workload")
     csim = IsingSim(
         20,
         20,
@@ -62,23 +63,28 @@ end
         weighted = true;
         colorscheme = ColorSchemes.winter
     );
+
+    println("Made sim")
+
     cg = csim(false)
+
     @compile_workload begin
-        addLayer!(csim, 20, 20)
+        println("adding layers")
+        addLayer!(cg, 20, 20)
 
-        # # name them l1, l2, l3 ...
-        @enumeratelayers layers(cg) 2
+        println("setting coords")
+        setcoords!(cg[1])
+        setcoords!(cg[2], z = 1)
 
-        setcoords!(l1)
-        setcoords!(l2, z = 1)
-
+        println("clamping img")
         clampImg!(cg, 1, "examples/smileys.jpg")
+        println("connecting layers")
         connectLayers!(cg, 1, 2, (;dr, _...) -> 1, 1)
 
         #Plotting correlation length and GPU kernel
-        plotCorr(correlationLength(l1)...)
+        plotCorr(cg[2])
 
-        setSpins!(l1, 1, 1, true, false)
+        setSpins!(cg[1], 1, 1, true, false)
 
         
     end

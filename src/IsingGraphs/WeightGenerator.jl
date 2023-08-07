@@ -36,6 +36,7 @@ end
 export WeightGenerator
 
 
+
 function Base.show(io::IO, wg::WeightGenerator)
     println(io, "WeightGenerator with")
     println(io, "\t NN: \t\t\t\t", wg.NN)

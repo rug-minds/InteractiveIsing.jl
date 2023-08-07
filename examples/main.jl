@@ -1,6 +1,6 @@
 # Example File
 using InteractiveIsing, Preferences
-set_preferences!(InteractiveIsing, "precompile_workload" => false; force=true)
+set_preferences!(InteractiveIsing, "precompile_workload" => true; force=true)
 using Distributions
 # using ColorSchemes
 
