@@ -69,23 +69,17 @@ end
     cg = csim(false)
 
     @compile_workload begin
-        println("adding layers")
         addLayer!(cg, 20, 20)
 
-        println("setting coords")
         setcoords!(cg[1])
         setcoords!(cg[2], z = 1)
 
-        println("clamping img")
-        clampImg!(cg, 1, "examples/smileys.jpg")
-        println("connecting layers")
         connectLayers!(cg, 1, 2, (;dr, _...) -> 1, 1)
 
         #Plotting correlation length and GPU kernel
         plotCorr(cg[2])
 
         setSpins!(cg[1], 1, 1, true, false)
-
         
     end
 end
