@@ -39,3 +39,5 @@ jlqml_jll = "0.4.0"
 
 [extras]
 Preferences = "21216c6a-2e73-6563-6e65-726566657250"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+

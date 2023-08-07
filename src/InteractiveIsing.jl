@@ -29,7 +29,7 @@ export branchSim
 
 include("HelperFiles/HelperFiles.jl")
 include("WeightFuncs.jl")
-include("SquareAdj.jl")
+include("AdjList/AdjList.jl")
 
 @ForwardDeclare IsingSim "Sim"
 
@@ -38,8 +38,6 @@ include("IsingGraphs/IsingGraphs.jl")
 
 include("Sim/Sim.jl")
 include("Interaction/Interaction.jl")
-include("Interaction/IsingMagneticFields.jl")
-include("Interaction/Clamping.jl")
 include("Analysis/Analysis.jl")
 include("GPlotting.jl")
 
@@ -55,7 +53,6 @@ end
 
 # PRECOMPILATION FUNCTION FOR FAST USAGE
 @setup_workload begin
-    println("Precompiling workload")
     csim = IsingSim(
         20,
         20,
@@ -63,8 +60,6 @@ end
         weighted = true;
         colorscheme = ColorSchemes.winter
     );
-
-    println("Made sim")
 
     cg = csim(false)
 
@@ -77,9 +72,11 @@ end
         connectLayers!(cg, 1, 2, (;dr, _...) -> 1, 1)
 
         #Plotting correlation length and GPU kernel
-        plotCorr(cg[2])
+        plotCorr(cg[2], dodisplay = false, save = false)
 
         setSpins!(cg[1], 1, 1, true, false)
+
+        drawCircle(cg[1], 1, 1, 1, clamp = true)
         
     end
 end

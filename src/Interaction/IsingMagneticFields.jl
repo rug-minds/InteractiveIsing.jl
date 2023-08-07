@@ -8,7 +8,7 @@ export setBIdxs!
 Set the magnetic field using two vectors, one gives the indexes of the positions,
 the other gives the magnetic field strength for the corresponding index
 """
-function setBIdxs!(layer, strengths; idxs = 1:length(strengths))
+function setBIdxs!(layer, idxs::Vector, strengths::Vector)
 
     if length(idxs) != length(strengths)
         error("Idxs and strengths lengths not the same")
@@ -19,6 +19,7 @@ function setBIdxs!(layer, strengths; idxs = 1:length(strengths))
 
     setSType!(graph(layer), :Magfield => true)
 end
+setBIdxs!(layer, strengths) = setBIdxs!(layer, 1:length(strengths), strengths)
 
 """ 
 Set the magnetic field based on a given function of x and y.
@@ -27,7 +28,7 @@ have the named arguments x and y. The syntax to define an anonymous function
 is (;x,y) -> f(x,y)
 """
 function setBFunc!(layer, func::Function)
-    b_mat = reshape(bfield(layer), glength(layer), gwidth(layer))
+    b_mat = bfield(layer)
     for x in 1:gwidth(layer)
         for y in 1:glength(layer)
             b_mat[y,x] = func(;x,y)

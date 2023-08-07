@@ -5,9 +5,8 @@ test3.jl
 test4.jl
 test5.jl
 
-DataIsing Corrplot 0 d0 T0.png
-DataIsing Corrplot 1 d0 T0.png
-DataIsing Corrplot 3 d0 T0.png
-DataIsing Corrplot 4 d0 T0.png
+.vscode
+LocalPreferences.toml
+# /docs/build
 ManifestOld.toml
 ProjectOld.toml

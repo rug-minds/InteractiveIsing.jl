@@ -176,8 +176,8 @@ Range of idx of layer for underlying graph
 @inline graphidxs(layer::AbstractIsingLayer) = UnitRange{Int32}(start(layer):endidx(layer))
 export graphidxs
 
-bfield(layer::AbstractIsingLayer) = @view bfield(graph(layer))[graphidxs(layer)]
-clamps(layer::AbstractIsingLayer) = @view clamps(graph(layer))[graphidxs(layer)]
+bfield(layer::AbstractIsingLayer) = reshape((@view bfield(graph(layer))[graphidxs(layer)]), glength(layer), gwidth(layer))
+clamps(layer::AbstractIsingLayer) = reshape((@view clamps(graph(layer))[graphidxs(layer)]), glength(layer), gwidth(layer))
 
 # Inherited from Graph
 @inline htype(layer::AbstractIsingLayer) = layer.graph.htype
