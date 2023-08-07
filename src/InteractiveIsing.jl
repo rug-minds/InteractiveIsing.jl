@@ -13,8 +13,8 @@ using Revise
 
 import Plots as pl
 
-include("./QML.jl")
-using QML, Qt6ShaderTools_jll
+include("../QML.jl/src/QML.jl")
+using .QML, Qt6ShaderTools_jll
 # export Qt6ShaderTools_jll
 export QML
 
