@@ -17,12 +17,12 @@ ApplicationWindow {
   visible: true
 
   // UPS Counter
-  UpdateCounter{
+  UpdateCounter {
     anchors.left: parent.left
   }
 
   // Save Button
-  Image{
+  Image {
     anchors.right: parent.right
     width: 32
     height: 26
@@ -37,7 +37,7 @@ ApplicationWindow {
     }
   }
 
-  TopPanel{
+  TopPanel {
     anchors.top: parent.top
     anchors.horizontalCenter: parent.horizontalCenter
 
@@ -46,13 +46,13 @@ ApplicationWindow {
 
   // Whole application in a column
   // Screen stuff above, panels and text under
-  // Column{
+  // Column {
   //   id: midcolumn
   //   // anchors.fill: parent
   //   anchors.centerIn: parent
   //   spacing: 2
 
-  LayerSelector{
+  LayerSelector {
     // Layout.alignment: Qt.AlignHCenter
     // anchors.bottom: mainrow.top
     anchors.horizontalCenter: canvas.horizontalCenter
@@ -61,13 +61,13 @@ ApplicationWindow {
 
   // Middle row
   // Brush - Screen - Temperature
-  // RowLayout{
-  // Row{
+  // RowLayout {
+  // Row {
   // id: mainrow
   // spacing: 6
   // Layout.alignment: Qt.AlignHCenter
 
-  Item{
+  Item {
     anchors {
       left: root.left
       verticalCenter: canvas.verticalCenter
@@ -79,19 +79,19 @@ ApplicationWindow {
 
 
 
-    BrushPanel{
+    BrushPanel {
       id: bpanel
       anchors.centerIn: parent
     }
   }
 
 
-  Item{
+  Item {
     id: canvas
     anchors.centerIn: parent
     height: (obs.qmlwidth < 500) ? 500 : obs.qmlwidth
     width: (obs.qmlwidth < 500) ? 500 : obs.qmlwidth
-    JuliaCanvas{
+    JuliaCanvas {
       // Layout.alignment: Qt.AlignCenter
       anchors.centerIn: parent
       // id: canvas
@@ -102,7 +102,7 @@ ApplicationWindow {
 
       paintFunction: showlatest
 
-      MouseArea{
+      MouseArea {
         anchors.fill: parent
         onClicked: {
           Julia.circleToStateQML(mouseY, mouseX, bpanel.clamp)
@@ -112,7 +112,7 @@ ApplicationWindow {
     }
   }
 
-  Item{
+  Item {
     anchors.right: parent.right
     anchors.verticalCenter: canvas.verticalCenter
     // anchors {
@@ -124,14 +124,14 @@ ApplicationWindow {
     width: (root.width - canvas.width) / 2
     height: canvas.height
 
-    TempSlider{
+    TempSlider {
       anchors.centerIn: parent
     }
   }
 
   // }
 
-  BottomPanel{
+  BottomPanel {
     anchors.bottom: parent.bottom
     anchors.horizontalCenter: parent.horizontalCenter
   }

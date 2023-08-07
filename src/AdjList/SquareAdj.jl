@@ -2,7 +2,7 @@
 Stuff for initialization of adjacency matrix
 =#
  
-export fillAdjList!, numEdges, latmod, adjToMatrix
+export fillAdjList!, numEdges, adjToMatrix
 
 """
 Creates a square adjacency matrix (NN must be smaller than width/2 & length/2)

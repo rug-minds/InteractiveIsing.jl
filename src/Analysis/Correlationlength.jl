@@ -26,6 +26,10 @@ end
 
 
 # Seems not interely accurate for higher distances, why?
+"""
+Sample correlation length for a given layer with the CPU
+Will sample ranodm angles for every length
+"""
 function correlationLength(layer, ::Type{CPU})
    @inline function bin(dist)
       floor(Int32, dist)

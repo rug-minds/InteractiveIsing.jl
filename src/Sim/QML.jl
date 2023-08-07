@@ -43,7 +43,7 @@ function qmlFunctions(sim::IsingSim)
     @qmlfunction initIsing
 
     # Draw circle to state
-    circleToStateQML(i,j,clamp=false) = (errormonitor(Threads.@spawn circleToState(sim, currentLayer(sim), i, j, s_brush[]; clamp, imgsize = size(img[]))))
+    circleToStateQML(i,j,clamp=false) = (errormonitor(Threads.@spawn drawCircle(currentLayer(sim), i, j, s_brush[]; clamp)))
     @qmlfunction circleToStateQML
 
     # Sweep temperatures and record magnetization and correlation lengths

@@ -83,7 +83,6 @@ mutable struct IsingSim
         #Observables
         sim.obs = Obs(;length = len, width = wid, initTemp, initbrushR)
 
-        println(typeof(state(g)))
         addLayer!(g, len, wid, type = continuous ? Float32 : Int8)
 
         # Initialize image
