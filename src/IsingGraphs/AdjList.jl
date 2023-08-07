@@ -10,23 +10,23 @@ end
 @inline Base.eachindex(conns::Connections) = Base.eachindex(conns.idxs)
 
 
-struct AdjList{Connections} <: AbstractVector{Connections}
+struct AdjConn{Connections} <: AbstractVector{Connections}
     data::Vector{Connections}
 end
-export AdjList
+export AdjConn
 
-@inline Base.size(adj::AdjList) = size(adj.data)
-@inline Base.length(adj::AdjList) = length(adj.data)
-@inline @inbounds getindex(adj::AdjList, idx) = adj.data[idx]
+@inline Base.size(adj::AdjConn) = size(adj.data)
+@inline Base.length(adj::AdjConn) = length(adj.data)
+@inline @inbounds getindex(adj::AdjConn, idx) = adj.data[idx]
 
-function AdjList(n::Integer)
+function AdjConn(n::Integer)
     data = [Connections() for i in 1:n]
-    return AdjList(data)
+    return AdjConn(data)
 end
 
-function adjToAdjList(adj::Vector)
+function adjToAdjConn(adj::Vector)
     n = length(adj)
-    adjlist = AdjList(n)
+    adjlist = AdjConn(n)
     for idx in 1:n
         idxs_weights = adj[idx]
         for idx_weight in idxs_weights
@@ -36,6 +36,6 @@ function adjToAdjList(adj::Vector)
     
     return adjlist
 end
-export adjToAdjList
+export adjToAdjConn
 
 

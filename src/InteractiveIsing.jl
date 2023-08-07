@@ -76,7 +76,7 @@ end
 
         setSpins!(cg[1], 1, 1, true, false)
 
-        drawCircle(cg[1], 1, 1, 1, clamp = true)
+        # drawCircle(cg[1], 1, 1, 1, clamp = true)
         
     end
 end

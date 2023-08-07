@@ -2,17 +2,19 @@ export drawCircle, addRandomDefects!, setBField!, remBField!, setClamp!, remClam
 """
 Draw circle of some size to the layer g with center at i,j, and state value of val.
 """
-function drawCircle(layer, i_in, j_in, val, size = nothing; periodic = true, clamp = false, debug = false)
+function drawCircle(layer, i_in, j_in, val, r = nothing; periodic = true, clamp = false, debug = false)
     fsim = sim(graph(layer))
 
-    imgsize = size(img[])
-
+    imgsize = size(image(fsim)[])
+    
     # If img is size of underlying graph, use rounded coordinate, otherwise scale
     i = glength(layer) == imgsize[1]    ? Int16(round(i_in)) : Int16(round(i_in/imgsize*glength(layer)))
     j = gwidth(layer) == imgsize[2]     ? Int16(round(j_in)) : Int16(round(j_in/imgsize*gwidth(layer)))
    
-    circ = size = isnothing(size) ? circ(fsim) : getOrdCirc(size)
-    offcirc = offCirc(circ, i,j)
+    circle = isnothing(r) ? circ(fsim) : getOrdCirc(r)
+
+
+    offcirc = offCirc(circle, i,j)
 
     if periodic 
         circle = sort(loopCirc(offcirc, glength(layer), gwidth(layer)), by = x -> reverse(x))
@@ -86,9 +88,7 @@ end
 Set magnetic field by idxs and strength. 
 """
 setBField!(layer::AbstractIsingLayer, idxs::Vector, strengths::Vector) = setBIdxs!(layer, idxs, strengths)
-
-remBField!(layer::AbstractIsingLayer) = remB!(layer)
-
+#remBField!
 
 """
 Add a term to the Hamiltonian of the form beta 1/2(sigma_i - y)^2 where sigma_i is the i-th state and y is the target for that state
@@ -96,6 +96,4 @@ Give a function in the form of (x,y)
 """
 setClamp!(layer::AbstractIsingLayer, func::Function) = setClampFunc!(layer, (;x,y) -> func(x,y))
 setClamp!(layer::AbstractIsingLayer, idxs::Vector, strengths::Vector) = setClampIdxs!(layer, idxs, strengths)
-remClamp!(layer::AbstractIsingLayer) = remClamp!(layer)
-remClamp!(g)
-
+#remClamp!

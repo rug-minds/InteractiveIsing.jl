@@ -13,8 +13,6 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
     # Vertices and edges
     state::Vector{T}
     const adj::Vector{Vector{Conn}}
-    adjlist::AdjList{Connections}
-    # Depcrecated
     htype::HType
 
     stype::SType
@@ -36,8 +34,6 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
             type[],
             # Adj
             Vector{Vector{Conn}}[],
-            # AdjList
-            AdjList(length*width),
             HType(weighted, false),
             SType(:Weighted => weighted),
             #Layers
@@ -47,18 +43,6 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
             Dict{Pair, Int32}()
         )
 
-        # TODO: Later remove this when we have a better way to do this
-
-        # Default Weightfun 
-        # if isnothing(weightfunc) || !weighted
-        #     weightfunc = defaultIsingWF
-        #     if continuous
-        #         setSelf(weightfunc, (i,j) -> -1)
-        #     end
-        # end
-
-        #For performance, don't know why
-        # g.adj = deepcopy(g.adj)
         g.defects = GraphDefects(g)
         g.d = GraphData(g)
 

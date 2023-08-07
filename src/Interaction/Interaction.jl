@@ -3,3 +3,4 @@
 include("Cirlces.jl")
 include("MagneticFields.jl")
 include("Clamping.jl")
+include("User.jl")
