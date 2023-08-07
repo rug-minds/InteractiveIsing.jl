@@ -390,3 +390,5 @@ function fillEntry!(::Self, layer::L, idx, vert_i, vert_j, layer_top, wg, pre_3t
     
     return
 end
+
+const wg_isingdefault = @WeightGenerator "(dr) -> dr == 1" NN = 1

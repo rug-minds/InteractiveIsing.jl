@@ -248,42 +248,44 @@ end
 export resize!
 
 function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodic = true, type = eltype(state(g)))
-    fsim = sim(g)
-    lockPause(fsim)
-
     glayers = layers(g)
 
-    # Resize underlying graphs 
-    resize!(g, nStates(g) + llength*lwidth)
+    newlayer = 0
 
-    # If this is not the first, regenerate the views because state now points to new memory
-    # And find the starting idx of the layer
-    if length(glayers) != 0
-        startidx = start(glayers[end]) + glength(glayers[end])*gwidth(glayers[end])
-    else
-        startidx = 1
+    @tryLockPause sim(g) begin
+        # Resize underlying graphs 
+        resize!(g, nStates(g) + llength*lwidth)
+
+        # If this is not the first, regenerate the views because state now points to new memory
+        # And find the starting idx of the layer
+        if length(glayers) != 0
+            startidx = start(glayers[end]) + glength(glayers[end])*gwidth(glayers[end])
+        else
+            startidx = 1
+        end
+
+        #Make the new layer
+        newlayer = IsingLayer(type, g, length(glayers)+1 , startidx, llength, lwidth; periodic)
+        # Push it to layers
+        push!(glayers, newlayer)
+
+        # Set the adjacency matrix
+        if weightfunc != nothing 
+            setAdj!(newlayer, weightfunc)
+        end
+
+        # Add Layer to defects
+        addLayer!(defects(g), newlayer)
+
+        # Update the layer idxs
+        nlayers(sim(g))[] += 1
     end
 
-    #Make the new layer
-    newlayer = IsingLayer(type, g, length(glayers)+1 , startidx, llength, lwidth; periodic)
-    # Push it to layers
-    push!(glayers, newlayer)
-
-    # Set the adjacency matrix
-    if weightfunc != nothing 
-        setAdj!(newlayer, weightfunc)
+    if weightfunc == nothing
+        println("No weightfunc given, using default")
+        genAdj!(newlayer, wg_isingdefault)
     end
 
-    # Add Layer to defects
-    addLayer!(defects(g), newlayer)
-
-    # Update the layer idxs
-    nlayers(fsim)[] += 1
-
-
-    # unpause sim
-    unlockPause(fsim)
-    
     return
 end
 

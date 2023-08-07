@@ -149,12 +149,14 @@ end
 Create folder in data folder with given name and return path
 Tries to create a folder if it doesn't exist, and doesn't do anything if it does
 """
-function dataFolderNow(subfoldername::String, foldername::String = "Data")
-    nowtime = "$(now())"[1:(end-7)]
-    try; mkdir(joinpath(dirname(Base.source_path()), foldername)); catch end
-    try; mkdir(joinpath(dirname(Base.source_path()), foldername, subfoldername)); catch end
-    try; mkdir(joinpath(dirname(Base.source_path()), foldername, subfoldername, "$nowtime")); catch end
-    return "Data/Tempsweep/$nowtime/"
+function dataFolderNow(subfoldername::String; foldername::String = "Data", startfolder = nothing)
+    nowtime = string(now())[1:(end-7)]
+    nowtime = replace(nowtime, ":" => ".")
+    startfolder = isnothing(startfolder) ? dirname(Base.source_path()) : startfolder
+    try; mkdir(joinpath(startfolder, foldername)); catch end
+    try; mkdir(joinpath(startfolder, foldername, subfoldername)); catch end
+    try; mkdir(joinpath(startfolder, foldername, subfoldername, "$nowtime")); catch end
+    return "$foldername/$subfoldername/$nowtime/"
 end
 
 """

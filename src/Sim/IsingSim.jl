@@ -106,9 +106,54 @@ mutable struct IsingSim
 
         
     end
+
+    function sim(g::IsingGraph; start = false)
+
+        initbrushR= round(min(glength(g[1]),gwidth(g[1]))/10)
+
+        sim = new(
+            # Graphs
+            IsingGraph[g],
+            # Property map
+            JuliaPropertyMap(),
+            # Dict{String,Any}(),
+            zeros(Real,60),
+            # Image from module
+            img,
+            Ref(false),
+            Ref(false),
+            Ref(false),
+            Processes(4),
+            Timer[],
+            IsingParams(;initbrushR, colorscheme),
+            # memory
+            Dict(),
+        )
+
+        #Observables
+        sim.obs = Obs(;length = len, width = wid, initTemp, initbrushR)
+        
+        sim.img[] = initImg
+
+        sim.obs.layerName[] = name(g[1])
+
+        # Register observables
+        register(sim, sim.obs)
+        
+        if start
+            s()
+        end
+
+        return sim
+
+    end
     #= END of Initializer =# 
 end 
 
+"""
+Open from file
+"""
+IsingSim(graphfile::String; start = false) = IsingSim(open(graphfile, "r"); start)
 
 """
 Start the simulation and interface
