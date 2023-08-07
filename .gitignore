@@ -7,6 +7,6 @@ test5.jl
 
 .vscode
 LocalPreferences.toml
-# /docs/build
+/docs/build
 ManifestOld.toml
 ProjectOld.toml
