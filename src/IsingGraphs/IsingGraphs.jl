@@ -13,18 +13,8 @@ Makes a reshaped view of a vector so that a part of memory can be interpreted as
 @inline function reshapeView(vec, start, length, width)
     return reshape((@view vec[start:(start + width*length - 1)]), length, width)
 end
+
 export reshapeView
-
-export AbstractIsingGraph
-abstract type AbstractIsingGraph{T} end
-abstract type AbstractIsingLayer{T} <: AbstractIsingGraph{T} end
-
-abstract type PeriodicityType end
-struct Periodic <: PeriodicityType end
-struct NonPeriodic <: PeriodicityType end
-struct NoPeriodicity <: PeriodicityType end
-
-export PeriodicityType, Periodic, NonPeriodic
 
 # TODO: Self weight with continuous graphs
 # TODO: Generation ranges of states
@@ -32,7 +22,6 @@ export PeriodicityType, Periodic, NonPeriodic
 @ForwardDeclare IsingGraph "IsingGraphs"
 @ForwardDeclare IsingLayer "IsingGraphs"
 
-include("WeightGenerator.jl")
 include("AdjList.jl")
 
 include("Data.jl")

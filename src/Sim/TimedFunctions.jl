@@ -21,16 +21,19 @@ function updateImg(sim)
 end
 
 # Track number of updates per frame
-let avgWindow = 60, updateWindow = zeros(Int64,avgWindow), frames = 0
+let avgWindow = 60, updateWindow = CircularBuffer{Int64}(avgWindow) , frames = 0
     global function updatesPerFrame(sim::IsingSim, statelength = length(state(gs(sim)[1])))
-        updateWindow = insertShift(updateWindow,sim.params.updates)
+        _updates = sum(p_updates.(processes(sim)))
+        reset!.(processes(sim))
+        push!(updateWindow,_updates)
+
         if frames > avgWindow
-            # upf(sim)[] = Float32(sum(updateWindow)/avgWindow/statelength)
-            upf(sim)[] = Float32(sum(updateWindow)/avgWindow)
+            sm_avgw = sum(updateWindow)/avgWindow
+            upf(sim)[] = Float32(sm_avgw)
+            upfps(sim)[] = Float32(sm_avgw/statelength)
             frames = 0
         end
         frames += 1
-        sim.params.updates = 0
     end
 end
 
@@ -39,7 +42,7 @@ end
 let avg_window = 60, frames = 0
     global function magnetization(sim::IsingSim)
         avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
-        sim.M_array[] = insertShift(sim.M_array[], sum(state(currentLayer(sim))))
+        push!(sim.M_array[], sum(state(currentLayer(sim))))
         if frames > avg_window
             M(sim)[] = sum(sim.M_array[])/avg_window 
             frames = 0

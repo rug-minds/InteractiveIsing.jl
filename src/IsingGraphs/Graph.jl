@@ -6,13 +6,14 @@ struct MixedState <: StateType end
 
 
 # Ising Graph Representation and functions
-mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
-    sim::Sim
+mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
+    sim::Union{Nothing, IsingSim}
     nStates::Int32
 
     # Vertices and edges
     state::Vector{T}
     const adj::Vector{Vector{Conn}}
+    sp_adj::SparseMatrixCSC{Float32,Int32}
     htype::HType
 
     stype::SType
@@ -28,12 +29,13 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
     function IsingGraph(sim, length, width; periodic = nothing, weightfunc::Union{Nothing,WeightFunc} = nothing, continuous = false, weighted = false)
       
         type = continuous ? Float32 : Int8
-        g = new{type, typeof(sim)}(
+        g = new{type}(
             sim,
             0,
             type[],
             # Adj
             Vector{Vector{Conn}}[],
+            SparseMatrixCSC{Float32,Int32}(undef,0,0),
             HType(weighted, false),
             SType(:Weighted => weighted),
             #Layers
@@ -51,6 +53,41 @@ mutable struct IsingGraph{T <: Real, Sim <: IsingSim} <: AbstractIsingGraph{T}
     end
     
 end
+
+function tuples2sparse(adj)
+    colidx_len = 0
+    for col in adj
+        colidx_len += length(col)
+    end
+    colidx = Vector{Int32}(undef, colidx_len)
+    colidxidx = 1
+    for (idx,col) in enumerate(adj)
+        for i in 1:length(col)
+            colidx[colidxidx] = Int32(idx)
+            colidxidx += 1
+        end
+    end
+
+    rowidx = Vector{Int32}(undef, colidx_len)
+    rowidxidx = 1
+    for (idx,col) in enumerate(adj)
+        for i in 1:length(col)
+            rowidx[rowidxidx] = Int32(adj[idx][i][1])
+            rowidxidx += 1
+        end
+    end
+
+    vals = Vector{Float32}(undef, colidx_len)
+    valsidx = 1
+    for (idx,col) in enumerate(adj)
+        for i in 1:length(col)
+            vals[valsidx] = adj[idx][i][2]
+            valsidx += 1
+        end
+    end
+    return deepcopy(sparse(rowidx, colidx, vals))
+end
+export tuples2sparse
 
 #extend show to print out the graph, showing the length of the state, and the layers
 function Base.show(io::IO, g::IsingGraph)
@@ -247,6 +284,13 @@ end
 
 export resize!
 
+"""
+Add a layer to graph g.
+addLayer(g::IsingGraph, length, width)
+
+Give keyword argument weightfunc to set a weightfunc.
+If weightfunc = :Default, uses default weightfunc for the Ising Model
+"""
 function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodic = true, type = eltype(state(g)))
     glayers = layers(g)
 
@@ -281,7 +325,7 @@ function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodi
         nlayers(sim(g))[] += 1
     end
 
-    if weightfunc == nothing
+    if weightfunc == :Default
         println("No weightfunc given, using default")
         genAdj!(newlayer, wg_isingdefault)
     end

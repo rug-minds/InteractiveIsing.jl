@@ -76,8 +76,8 @@ function dist2(i1, j1, i2, j2, layer1, layer2, alignment::Symbol = :center)
 end
 
 function dist2(idx1, idx2, layer1::IsingLayer, layer2::IsingLayer, alignment::Symbol = :center) 
-    i1, j1 = idxToCoords(idx1, glength(layer1))
-    i2 ,j2 = idxToCoords(idx2, glength(layer2))
+    i1, j1 = idxToCoord(idx1, glength(layer1))
+    i2 ,j2 = idxToCoord(idx2, glength(layer2))
 
     return dist2(i1, j1, i2, j2, layer1, layer2, alignment)
 end

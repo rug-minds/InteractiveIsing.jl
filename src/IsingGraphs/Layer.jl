@@ -11,13 +11,11 @@ Coords(;y = 0, x = 0, z = 0) = Coords{Tuple{Int32,Int32,Int32}}((Int32(y), Int32
 Coords(n::Nothing) = Coords{Tuple{Int32,Int32,Int32}}(nothing)
 Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val), Int32(val)))
 export Coords
-mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph, StateReshape <: AbstractMatrix{T}, AdjReshape <: AbstractArray} <: AbstractIsingLayer{T}
+mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIsingLayer{T}
     const graph::IsingGraphType
     name::String
     # Internal idx of layer in shufflevec of graph
     internal_idx::Int32
-    state::StateReshape
-    adj::AdjReshape
     start::Int32
     const size::Tuple{Int32,Int32}
     const nstates::Int32
@@ -29,22 +27,14 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph, StateReshape 
 
 
     function IsingLayer(LayerType ,g::GraphType, idx, start, length, width; olddefects = 0, periodic::Union{Nothing,Bool} = true) where GraphType <: IsingGraph
-        stateview = reshapeView(state(g), start, length, width)
-        adjview = reshapeView(adj(g), start, length, width)
-        statetype = typeof(stateview)
-        adjtype = typeof(adjview)
         lsize = tuple(Int32(length), Int32(width))
-        layer = new{LayerType, GraphType, statetype, adjtype}(
+        layer = new{LayerType, GraphType}(
             # Graph
             g,
             # Name
             "$(length)x$(width) Layer",
             # Layer idx
             Int32(idx),
-            # View of state
-            stateview,
-            # View of adj
-            adjview,
             # Start idx
             Int32(start),
             # Size
@@ -79,7 +69,7 @@ mutable struct IsingLayerCopy{T, IsingGraphType <: AbstractIsingGraph} <: Abstra
     defects::LayerDefects
     top::LayerTopology
 
-    function IsingLayerCopy(layer::IsingLayer{A,B,C,D}) where {A,B,C,D}
+    function IsingLayerCopy(layer::IsingLayer{A,B}) where {A,B}
         
         new{A, B}(
             # Graph
@@ -122,13 +112,18 @@ end
 
 Base.show(io::IO, layertype::Type{<:AbstractIsingLayer}) = print(io, "IsingLayer")
 
+# @inline state(l::IsingLayer) = reshapeView(state(graph(l)), start(l), glength(l), gwidth(l))
+@inline state(l::IsingLayer) = reshape((@view state(graph(l))[graphidxs(l)]), glength(l), gwidth(l))
+@inline adj(l::IsingLayer) = reshape((@view adj(graph(l))[graphidxs(l)]), glength(l), gwidth(l))
+@inline sp_adj(l::IsingLayer) = @view sp_adj(graph(l))[graphidxs(l),:] 
+export state, adj
 
 #TODO: Cean this up
 
-function regenerateViews(layer::IsingLayer)
-    layer.state = reshapeView(state(graph(layer)), start(layer), glength(layer), gwidth(layer))
-    layer.adj = reshapeView(adj(graph(layer)), start(layer), glength(layer), gwidth(layer))
-end
+# function regenerateViews(layer::IsingLayer)
+#     layer.state = reshapeView(state(graph(layer)), start(layer), glength(layer), gwidth(layer))
+#     layer.adj = reshapeView(adj(graph(layer)), start(layer), glength(layer), gwidth(layer))
+# end
 
 # Get current layeridx through graph
 @inline layeridx(layer::IsingLayer) = externalidx(layers(graph(layer)), layer.internal_idx)
@@ -199,6 +194,7 @@ iterator(g::IsingGraph) = 1:(nStates(g))
 @inline periodic(layer::AbstractIsingLayer) = periodic(top(layer))
 @inline setPeriodic!(layer::AbstractIsingLayer, periodic) = top!(layer, LayerTopology(top(layer); periodic))
 @inline dist(idx1::Integer, idx2::Integer, layer::AbstractIsingLayer) = dist(idxToCoord(idx1, glength(layer))..., idxToCoord(idx2, glength(layer))..., top(layer))
+@inline idxToCoord(idx::Integer, layer::AbstractIsingLayer) = idxToCoord(idx, glength(layer))
 
 export setPeriodic!
 

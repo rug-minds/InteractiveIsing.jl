@@ -265,6 +265,20 @@ mutable struct SPrealloc{S,T} <: AbstractPreAlloc{T}
 
 end
 
+struct ThreadedPrealloc{PreallocT}
+    vec::Vector{PreallocT}
+end
+@inline getindex(pre::ThreadedPrealloc, i) = pre.vec[i]
+
+function ThreadedPrealloc(type::Type, N, nthreads)
+    PreallocT = typeof(SPrealloc(type, N))
+    vec = Vector{PreallocT}(undef, nthreads)
+    for i in 1:nthreads
+        vec[i] = SPrealloc(type, N)
+    end
+    return ThreadedPrealloc(vec)
+end
+
 getindex(pre::AbstractPreAlloc, i) = pre.vec[i]
 setindex!(pre::AbstractPreAlloc, tup, i) = (pre.vec[i] = tup; pre.used = max(pre.used, i))
 length(pre::AbstractPreAlloc) = pre.used
@@ -289,17 +303,23 @@ function SelfType(wg::WeightGenerator{A,SelfFunc,B,C}) where {A,SelfFunc,B,C}
         return Self()
     end
 end
+export SelfType
 
 genAdj!(layer::L, wg::WG) where {L <: AbstractIsingLayer, WG <: WeightGenerator} = genAdj!(SelfType(wg), layer, top(layer), wg)
 
 # Base.@propagate_inbounds function genAdj!(layer::L, layer_top::LT, wg::WG) where {L <: AbstractIsingLayer, LT, WG <: WeightGenerator}
 Base.@propagate_inbounds function genAdj!(st::ST, layer::L, layer_top::LT, wg::WG) where {ST <: SelfType, L <: AbstractIsingLayer, LT, WG <: WeightGenerator}
     fNN = NN(wg)
-    # fadj = Vector{Tuple{Int32, Float32}}[[(typemax(Int32),0f0) for _ in  1:(2*fNN+1)^2] for i in 1:nStates(layer)]
+
+    # Get the adjacency list
     fadj = adj(graph(layer))
+    # Number of states
     num_verts = nStates(layer)
 
+    # Keeps track of the last index that was accessed
+    # Used to avoid searching every time in the adjacency list
     last_access = ones(Int32, num_verts)
+
     pre_3tuple = SPrealloc(NTuple{3, Int32}, (2*fNN+1)^2)
 
     # layer_top = top(layer)
@@ -313,10 +333,6 @@ Base.@propagate_inbounds function genAdj!(st::ST, layer::L, layer_top::LT, wg::W
         reset!(pre_3tuple)
     end
 
-    # for vert_idx in eachindex(fadj)
-    #     resize!(fadj[vert_idx], last_access[vert_idx])
-    # end
-
     # For performance
     # Probably helps with data locality
     adj(graph(layer)) .= deepcopy(fadj)
@@ -325,6 +341,12 @@ Base.@propagate_inbounds function genAdj!(st::ST, layer::L, layer_top::LT, wg::W
 end
 export genAdj!
 
+
+"""
+Get all indices of a vertex with idx vert_idx and coordinates vert_i, vert_j
+that are larger than vert_idx
+Works in layer indices
+"""
 function getConnIdxs!(::NoSelf, vert_idx, vert_i, vert_j, len, wid, NN, pre_3tuple)
     for j in -NN:NN
         for i in -NN:NN
@@ -339,6 +361,10 @@ function getConnIdxs!(::NoSelf, vert_idx, vert_i, vert_j, len, wid, NN, pre_3tup
     end
 end
 
+"""
+Get all indices of a vertex with idx vert_idx and coordinates vert_i, vert_j
+that are larger than vert_idx and include self connection
+"""
 function getConnIdxs!(::Self, vert_idx, vert_i, vert_j, len, wid, NN, pre_3tuple)
     for j in -NN:NN
         for i in -NN:NN

@@ -102,11 +102,12 @@ export refreshSim
 """
 Restart Sim with same number of processes
 """
-function restartSim(sim, gidx = 1; updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)
+function restartSim(sim, gidx = 1; kwargs...)
     processNum = count(stat -> stat == :Running, status(sim)) 
     processNum = processNum < 1 ? 1 : processNum
     quitSim(sim)
-    createProcess(sim, processNum; gidx, updateFunc, energyFunc)
+    # createProcess(sim, processNum; gidx, updateFunc, energyFunc)
+    createProcess(sim; gidx, kwargs...)
     return
 end 
 export restartSim

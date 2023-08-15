@@ -37,5 +37,3 @@ function adjToAdjConn(adj::Vector)
     return adjlist
 end
 export adjToAdjConn
-
-

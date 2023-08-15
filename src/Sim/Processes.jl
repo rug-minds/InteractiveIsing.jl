@@ -2,14 +2,24 @@
 import Base: Threads.SpinLock, lock, unlock
 mutable struct Process{F <: Function}
     status::Symbol
-    func::F
+    func::F       
+    p_updates::Int   
     # To make sure other processes don't interfere
-    lock::SpinLock
+    lock::SpinLock 
     @atomic signal::Tuple{Bool,Symbol}
 end
 
+Process() = Process(:Terminated, _ -> Sleep(0.5), 0, Threads.SpinLock(), (true, :Nothing))
+@setterGetter Process lock
+
+
+@inline inc(p::Process) = p.p_updates += 1
+@inline reset!(p::Process) = p.p_updates = 0
+
 @inline run(p::Process) = p.signal[1]
 @inline message(p::Process) = p.signal[2]
+
+@inline atomic_message(p::Process, val) = @atomic p.signal = (p.signal[1], val)
 
 @inline function atomic_run(p::Process; ignore_lock = false)
     !ignore_lock && lock(p)
@@ -54,9 +64,6 @@ end
 # Base.close(p::Process) = close(p.refresh)
 @inline Base.isempty(p::Process) = isempty(p.refresh)
 
-Process() = Process(:Terminated, _ -> Sleep(0.5), Threads.SpinLock(), (true, :Nothing))
-
-@setterGetter Process lock
 
 mutable struct Processes <: AbstractVector{Process}
     procs::Vector{Process}

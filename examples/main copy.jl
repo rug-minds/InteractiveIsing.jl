@@ -3,8 +3,8 @@ using InteractiveIsing, Preferences
 using Distributions
 
 const sim = IsingSim(
-    50,
-    50,
+    200,
+    200,
     periodic = true,
     continuous = true, 
     weighted = true,
@@ -15,22 +15,16 @@ const g = sim(true);
 
 # # Add Layers
 addLayer!(g, 100, 100)
-addLayer!(g, 100, 100)
-addLayer!(g, 75, 75)
-addLayer!(g, 1, 10)
-connectLayersFull(g, 1, 2)
-connectLayersFull(g, 2, 3)
-connectLayersFull(g, 3, 4)
-connectLayersFull(g, 4, 5)
 
+
+
+
+wg = @WeightGenerator "(dr) -> 1/dr" NN = 10
+
+genAdj!(g[1], wg)
+genAdj!(g[2], wg)
 sp_adj(g, tuples2sparse(adj(g)))
 
-
-
-
-# wg = @WeightGenerator "(dr) -> 1/dr" NN = 1
-
-# genAdj!(g[1], wg)
 
 # createProcess(sim)
 
@@ -55,4 +49,4 @@ sp_adj(g, tuples2sparse(adj(g)))
 
 
 
-# # # overlayNoise!(g, 1, 5, noise_values = [-1,1])
+# # # overlayNoise!(g, 1, 5, noise_values = [-1,1])``

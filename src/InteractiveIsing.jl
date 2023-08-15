@@ -1,25 +1,34 @@
 # __precompile__(false)
-__precompile__(true)
+# __precompile__(true)
 
 module InteractiveIsing
 
 const modulefolder = @__DIR__
 
+using QML
+export QML
+
 using FileIO, Images, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, LinearAlgebra, 
-    CxxWrap, StatsBase, LaTeXStrings
-using Plots
+    CxxWrap, StatsBase, LaTeXStrings, DataStructures
 using PrecompileTools
-using Revise
 
 import Plots as pl
 
-include("../QML.jl/src/QML.jl")
-using .QML, Qt6ShaderTools_jll
-# export Qt6ShaderTools_jll
-export QML
+#Temps
+using SparseArrays, LoopVectorization
 
 import Base: getindex, setindex!, length, iterate, isless, push!, resize!, size
 
+export AbstractIsingGraph
+abstract type AbstractIsingGraph{T} end
+abstract type AbstractIsingLayer{T} <: AbstractIsingGraph{T} end
+
+abstract type PeriodicityType end
+struct Periodic <: PeriodicityType end
+struct NonPeriodic <: PeriodicityType end
+struct NoPeriodicity <: PeriodicityType end
+
+export PeriodicityType, Periodic, NonPeriodic
 
 # Restart MCMC loop to define new Hamiltonian function
 # Is needed for fast execution if part of hamiltonian doesn't need to be checked
@@ -52,34 +61,34 @@ function __init__()
 end
 
 # PRECOMPILATION FUNCTION FOR FAST USAGE
-@setup_workload begin
-    csim = IsingSim(
-        20,
-        20,
-        continuous = true, 
-        weighted = true;
-        colorscheme = ColorSchemes.winter
-    );
+# @setup_workload begin
+#     csim = IsingSim(
+#         20,
+#         20,
+#         continuous = true, 
+#         weighted = true;
+#         colorscheme = ColorSchemes.winter
+#     );
 
-    cg = csim(false)
+#     cg = csim(false)
 
-    @compile_workload begin
-        addLayer!(cg, 20, 20)
+#     @compile_workload begin
+#         addLayer!(cg, 20, 20)
 
-        setcoords!(cg[1])
-        setcoords!(cg[2], z = 1)
+#         setcoords!(cg[1])
+#         setcoords!(cg[2], z = 1)
 
-        connectLayers!(cg, 1, 2, (;dr, _...) -> 1, 1)
+#         connectLayers!(cg, 1, 2, (;dr, _...) -> 1, 1)
 
-        #Plotting correlation length and GPU kernel
-        plotCorr(cg[2], dodisplay = false, save = false)
+#         #Plotting correlation length and GPU kernel
+#         plotCorr(cg[2], dodisplay = false, save = false)
 
-        setSpins!(cg[1], 1, 1, true, false)
+#         setSpins!(cg[1], 1, 1, true, false)
 
-        # drawCircle(cg[1], 1, 1, 1, clamp = true)
+#         # drawCircle(cg[1], 1, 1, 1, clamp = true)
         
-    end
-end
+#     end
+# end
 
 
 

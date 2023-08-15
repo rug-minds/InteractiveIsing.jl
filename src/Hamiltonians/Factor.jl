@@ -10,12 +10,11 @@ const mag_expr = "-bfield(g)[idx]"
 
 function getEFacExpr(stype::Type{<:SType}) 
     weighted = getSParam(stype, :Weighted)
-    # clamp = getSParam(stype, :Clamp)
     magfield =  getSParam(stype, :Magfield)
 
     expr = "begin
         efactor = Float32(0)
-        @inbounds @simd for conn_idx in eachindex(gadj[idx])
+        @inbounds @fastmath @simd for conn_idx in eachindex(gadj[idx])
             conn = gadj[idx][conn_idx]
             efactor += $(weighted ? weighted_expr : unweighted_expr) 
         end

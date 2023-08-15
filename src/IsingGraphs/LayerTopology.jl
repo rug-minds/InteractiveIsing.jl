@@ -82,7 +82,7 @@ end
 
 dist2(i1, j1, i2, j2, top::LT) where {LT <: LayerTopology} = dist2(periodic(top), type(top), i1, j1, i2, j2, pvecs = pvecs(top), l = glength(layer(top)), w = gwidth(layer(top)))
 
-function dist(i1, j1, i2, j2, top::LayerTopology{PT,LT}) where {PT, LT}
+function dist(i1, j1, i2, j2, top::LayerTopology{PT,LT, LayerT}) where {PT, LT, LayerT}
     pvecs_val = pvecs(top)
     l::Int32 = glength(layer(top))
     w::Int32 = gwidth(layer(top))
@@ -90,7 +90,7 @@ function dist(i1, j1, i2, j2, top::LayerTopology{PT,LT}) where {PT, LT}
     return sqrt(dist2(PT, LT, i1, j1, i2, j2, pvecs = pvecs_val, l = l, w = w))
 end
 
-dist(idx1::Integer,idx2::Integer,top::LayerTopology) = dist(idxToCoord(idx1, glength(layer(top))), idxToCoord(idx2, glength(layer(top))), top)
+dist(idx1::Integer,idx2::Integer, top::LayerTopology) = dist(idxToCoord(idx1, glength(layer(top)))..., idxToCoord(idx2, glength(layer(top)))..., top)
 
 export dist2, dist
 

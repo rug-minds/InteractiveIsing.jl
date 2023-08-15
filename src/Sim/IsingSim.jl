@@ -10,7 +10,7 @@ mutable struct IsingSim
     const pmap::JuliaPropertyMap
     # const pmap::Dict{String,Any}
 
-    const M_array::Ref{Vector{Float64}}
+    const M_array::Ref{CircularBuffer{Float64}}
 
     # Image of graph
     const img::Ref{Matrix{RGB{Float64}}}
@@ -35,13 +35,13 @@ mutable struct IsingSim
 
     #= Initializer =#
     function IsingSim(
-            len = 500,
-            wid = 500;
+            len::Integer = 500,
+            wid::Integer = 500;
             periodic = nothing,
             continuous = false,
             weighted = true,
             weightfunc = nothing,
-            initTemp = 1.,
+            initTemp = 1f0,
             start = false,
             colorscheme = ColorSchemes.viridis
         );
@@ -55,7 +55,8 @@ mutable struct IsingSim
             # Property map
             JuliaPropertyMap(),
             # Dict{String,Any}(),
-            zeros(Real,60),
+            # M_array
+            CircularBuffer{Float64}(60),
             # Image from module
             img,
             Ref(false),
@@ -81,7 +82,8 @@ mutable struct IsingSim
         push!(gs(sim), g)
 
         #Observables
-        sim.obs = Obs(;length = len, width = wid, initTemp, initbrushR)
+        sim.obs = Obs(len, wid, initbrushR, initTemp)
+        # sim.obs = Obs(;length = len, width = wid, initTemp, initbrushR)
 
         addLayer!(g, len, wid, type = continuous ? Float32 : Int8)
 
@@ -107,7 +109,7 @@ mutable struct IsingSim
         
     end
 
-    function sim(g::IsingGraph; start = false)
+    function sim(g::IsingGraph; start = false, initTemp = 1f0)
 
         initbrushR= round(min(glength(g[1]),gwidth(g[1]))/10)
 
@@ -117,7 +119,8 @@ mutable struct IsingSim
             # Property map
             JuliaPropertyMap(),
             # Dict{String,Any}(),
-            zeros(Real,60),
+            # M_array
+            CircularBuffer{Float64}(60),
             # Image from module
             img,
             Ref(false),
@@ -131,7 +134,7 @@ mutable struct IsingSim
         )
 
         #Observables
-        sim.obs = Obs(;length = len, width = wid, initTemp, initbrushR)
+        sim.obs = Obs(len, wid, initbrushR, initTemp)
         
         sim.img[] = initImg
 
@@ -153,7 +156,7 @@ end
 """
 Open from file
 """
-IsingSim(graphfile::String; start = false) = IsingSim(open(graphfile, "r"); start)
+IsingSim(graphfile::String; start = false) = IsingSim(load(graphfile); start)
 
 """
 Start the simulation and interface

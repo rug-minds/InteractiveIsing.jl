@@ -41,7 +41,8 @@ function startSim(sim; threads = 1, async = true, loadQML = true)
         started(sim,true)
 
         # Spawn MCMC thread on layer 1
-        createProcess(sim, threads; gidx = 1)
+        # createProcess(sim, threads; gidx = 1)
+        createProcess(sim; gidx = 1)
 
         # Load QML interface?
         if loadQML
@@ -87,32 +88,32 @@ export setLayerIdx!
 """
 
 """
-function addLayer!(sim::IsingSim, glength, gwidth; gidx = 1, weightfunc = defaultIsingWF, periodic = true, type = typeof(state(gs(sim)[gidx])).parameters[1])
-    #pause sim
-    lock(processes(sim))
-    pauseSim(sim, ignore_lock = true)
-    # add layer to graph
-    addLayer!(gs(sim)[gidx], glength, gwidth; periodic, weightfunc, type)
-    #update number of layers
-    nlayers(sim)[] += 1
-    # unpause sim
-    unpauseSim(sim, ignore_lock = true)
-    unlock(processes(sim))
-end
+# function addLayer!(sim::IsingSim, glength, gwidth; gidx = 1, weightfunc = defaultIsingWF, periodic = true, type = typeof(state(gs(sim)[gidx])).parameters[1])
+#     #pause sim
+#     lock(processes(sim))
+#     pauseSim(sim, ignore_lock = true)
+#     # add layer to graph
+#     addLayer!(gs(sim)[gidx], glength, gwidth; periodic, weightfunc, type)
+#     #update number of layers
+#     nlayers(sim)[] += 1
+#     # unpause sim
+#     unpauseSim(sim, ignore_lock = true)
+#     unlock(processes(sim))
+# end
 
-function removeLayer!(sim::IsingSim, layeridx; gidx = 1)
-    pauseSim(sim, block = true)
+# function removeLayer!(sim::IsingSim, layeridx; gidx = 1)
+#     pauseSim(sim, block = true)
     
-    # If the slected layer is after the layer to be removed, decrement layerIdx
-    if layerIdx(sim)[] >= layeridx && layerIdx(sim)[] > 1
-        layerIdx(sim)[] -= 1
-    end
+#     # If the slected layer is after the layer to be removed, decrement layerIdx
+#     if layerIdx(sim)[] >= layeridx && layerIdx(sim)[] > 1
+#         layerIdx(sim)[] -= 1
+#     end
 
-    removeLayer!(gs(sim)[gidx], layeridx)
-    nlayers(sim)[] -= 1
+#     removeLayer!(gs(sim)[gidx], layeridx)
+#     nlayers(sim)[] -= 1
 
-    unpauseSim(sim)
-end
+#     unpauseSim(sim)
+# end
 export addLayer!
 export removeLayer!
 
