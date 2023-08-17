@@ -260,7 +260,7 @@ mutable struct SPrealloc{S,T} <: AbstractPreAlloc{T}
         vec = MVector{N, type}(Vector{type}(undef, N))
         maxsize = N
         used = 0
-        new{N, type}(vec, used, maxsize)
+        return new{N, type}(vec, used, maxsize)
     end
 
 end

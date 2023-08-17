@@ -316,6 +316,7 @@ function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodi
         # Set the adjacency matrix
         if weightfunc != nothing 
             setAdj!(newlayer, weightfunc)
+            genSPAdj!(newlayer, weightfunc)
         end
 
         # Add Layer to defects

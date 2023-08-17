@@ -19,9 +19,6 @@ export reshapeView
 # TODO: Self weight with continuous graphs
 # TODO: Generation ranges of states
 
-@ForwardDeclare IsingGraph "IsingGraphs"
-@ForwardDeclare IsingLayer "IsingGraphs"
-
 include("AdjList.jl")
 
 include("Data.jl")

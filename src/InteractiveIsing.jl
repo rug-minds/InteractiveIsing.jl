@@ -35,8 +35,12 @@ export PeriodicityType, Periodic, NonPeriodic
 # Should be in IsingSim.jl
 branchSim(sim) = refreshSim(sim)
 export branchSim
-
 include("HelperFiles/HelperFiles.jl")
+
+
+@ForwardDeclare IsingGraph "IsingGraphs"
+@ForwardDeclare IsingLayer "IsingGraphs"
+
 include("WeightFuncs.jl")
 include("AdjList/AdjList.jl")
 
