@@ -44,7 +44,14 @@ function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, kwarg
     params = sim.params
     lTemp = Temp(sim)
     iterator = ising_it(g,gstype)
-    gadj = haskey(kwargs, :gadj) ? kwargs[:gadj] : sp_adj(g)
+    gadj = sp_adj(g)
+    if haskey(kwargs, :gadj)
+        if typeof(kwargs[:gadj]) <: Function
+            gadj = kwargs[:gadj](g)
+        else 
+            gadj = kwargs[:gadj]
+        end
+    end
     updateFunc = haskey(kwargs, :updateFunc) ? kwargs[:updateFunc] : updateMonteCarloIsing
     energyFunc = haskey(kwargs, :energyFunc) ? kwargs[:energyFunc] : getEFactor
     rng = haskey(kwargs, :rng) ? kwargs[:rng] : MersenneTwister()

@@ -13,23 +13,24 @@ const sim = IsingSim(
 
 const g = sim(true);
 
-# # Add Layers
-addLayer!(g, 100, 100)
+wg1 = @WeightGenerator "(dr) -> 1/dr" NN = 1
+const wg5 = @WeightGenerator "(dr) -> 1/dr" NN = 5
+
+wg10 = @WeightGenerator "(dr) -> 1/dr" NN = 10
+
+addLayer!(g, 100, 100, weightfunc = wg1)
+
+genAdj!(g[1], wg10)
+genSPAdj!(g[1], wg10)
 
 
-
-
-wg = @WeightGenerator "(dr) -> 1/dr" NN = 10
-
-genAdj!(g[1], wg)
-genAdj!(g[2], wg)
-sp_adj(g, tuples2sparse(adj(g)))
+# sp_adj(g, tuples2sparse(adj(g)))
 
 
 # createProcess(sim)
 
-# setcoords!(g[1])
-# setcoords!(g[2], z = 1)
+setcoords!(g[1])
+setcoords!(g[2], z = 1)
 # setcoords!(g[3], z = 2)
 # setcoords!(g[4], z = 3)
 # setcoords!(g[5], z = 4)

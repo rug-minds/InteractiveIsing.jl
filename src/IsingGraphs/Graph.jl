@@ -107,13 +107,15 @@ Base.show(io::IO, graphtype::Type{IsingGraph}) = print(io, "IsingGraph")
 coords(g::IsingGraph) = VSI(layers(g), :coords)
 export coords
 
-@setterGetter IsingGraph
-# @inline htype(g::IsingGraph) = g.htype[]
-# @inline htype(g::IsingGraph, htype) = g.htype[] = htype
-export htype
-
-# @inline simulation(g::IsingGraph) = g.sim
-# export simulation
+@setterGetter IsingGraph sp_adj
+@inline sp_adj(g::IsingGraph) = g.sp_adj
+@inline function sp_adj(g::IsingGraph, sp_adj)
+    g.sp_adj = sp_adj
+    refreshSim(sim(g))
+    return sp_adj
+end
+set_sp_adj!(g::IsingGraph, vecs::Tuple) = sp_adj(g, sparse(vecs..., nStates(g), nStates(g)))
+export sp_adj
 
 @forward IsingGraph GraphData d
 @forward IsingGraph GraphDefects defects
@@ -313,17 +315,22 @@ function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodi
         # Push it to layers
         push!(glayers, newlayer)
 
+        # Increase the size of the Sparse matrix
+        sp_adj(g, changesize(sp_adj(g), nStates(g), nStates(g)))
+
         # Set the adjacency matrix
         if weightfunc != nothing 
-            setAdj!(newlayer, weightfunc)
+            genAdj!(newlayer, weightfunc)
             genSPAdj!(newlayer, weightfunc)
         end
 
         # Add Layer to defects
         addLayer!(defects(g), newlayer)
 
+        
         # Update the layer idxs
         nlayers(sim(g))[] += 1
+
     end
 
     if weightfunc == :Default

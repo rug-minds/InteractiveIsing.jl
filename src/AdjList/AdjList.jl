@@ -30,3 +30,4 @@ AdjTuple(N) = AdjTuple{Tuple{Int32,Float32}}(Vector{Tuple{Int32,Float32}}(undef,
 include("WeightGenerator.jl")
 include("SquareAdj.jl")
 include("SparseAdj.jl")
+include("User.jl")

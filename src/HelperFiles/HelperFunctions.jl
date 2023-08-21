@@ -551,3 +551,5 @@ macro tryLockPause(sim, expr, block = false)
     return esc(fexp)
 end
 export @tryLockPause
+
+changesize(sp::SparseMatrixCSC, rows, cols) = sparse(findnz(sp)..., rows, cols)

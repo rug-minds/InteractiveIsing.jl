@@ -4,16 +4,21 @@
 #     NN::Integer
 # end
 
+abstract type Alignment end
+struct None <: Alignment end
+struct Center <: Alignment end
+
 # Alignment modes
 # 1: :none - no alignment (default)
 # 2: :center - center layer 2 in layer 1
 
 # Gives a vector of the relative lattice positions
-function dlayer(layer1, layer2)
+function dlayer(layer1, layer2)::NTuple{3,Int32}
     if coords(layer1) != nothing && coords(layer2) != nothing
-        rel_coords = coords(layer2) .- coords(layer1)
+        return rel_coords = coords(layer2) .- coords(layer1)
     else
         error("Can only connect adjacent layers")
+        return Int32.((0,0,0))
     end
 end
 
@@ -31,6 +36,7 @@ function dcoords(layer1, layer2, alignment = :center)
     return (dly*ysize1+ (abs(dlx) + abs(dlz))*center_mask*(ysize1-ysize2)/2, dlx*xsize1 + (abs(dly)+ abs(dlz))*center_mask*(xsize1-xsize2)/2, dlz)
     
 end
+export dcoords
 
 # Interprets a coordinate of layer 1 as on of layer 2 given the relative position
 coordsl1tol2(i1, j1, layer1, layer2, alignment = :center)::Tuple{Int32,Int32} = let dyxz = dcoords(layer1, layer2, alignment); (i1, j1) .- dyxz[1:2] end
@@ -82,12 +88,33 @@ function dist2(idx1, idx2, layer1::IsingLayer, layer2::IsingLayer, alignment::Sy
     return dist2(i1, j1, i2, j2, layer1, layer2, alignment)
 end
 
+dist(i1, j1, i2, j2, layer1, layer2, alignment::Symbol = :center) = sqrt(dist2(i1, j1, i2, j2, layer1, layer2, alignment))
+
 function lattice2_iterator(i1, j1, layer1, layer2, NN, alignment = :center)
-    _, _, dlz = abs.(dlayer(layer1, layer2))
-    coordinates2 = coordsl1tol2.([(i1+i,j1+j) for i in (-(NN-dlz)):(NN-dlz), j in (-(NN-dlz)):(NN-dlz)], Ref(layer1), Ref(layer2), Ref(alignment))
-    filter = isin.(coordinates2, Ref(layer2))
-    leftovers = coordinates2[filter]
-    return coordToIdx.(leftovers, glength(layer2))
+    # Get a square around the coordinate
+    coordsl1 = [(i1+i,j1+j) for i in (-(NN)):(NN), j in (-(NN)):(NN)]
+    # Given the relative positions of the layers
+    # Give to what coordinates in layer 2 the coordinates in layer 1 correspond
+    map!(x -> coordsl1tol2(x, layer1, layer2, alignment), coordsl1, coordsl1)
+    # Reshape to a vector
+    coordinates2 = reshape(coordsl1, (2*NN+1)^2)
+    # Filter out coordinates that are not in layer 2
+    filter!(x -> isin(x, layer2), coordinates2)
+    # Return the graph indices of the coordinates
+    return map(x -> coordToIdx(x, glength(layer2)), coordinates2)
+end
+
+function lattice2_iterator(layer1, layer2, i1, j1, NN, prealloc::AbstractPreAlloc, alignment = :center)
+    it = (-(NN)):(NN)
+    for j in it
+        for i in it
+            i2, j2 = coordsl1tol2(i1+i, j1+j, layer1, layer2, alignment)
+            if isin(i2, j2, layer2)
+                push!(prealloc, (i2, j2, coordToIdx(i2, j2, glength(layer2))))
+            end
+        end
+    end
+    return
 end
 
 export lattice2_iterator
@@ -129,7 +156,6 @@ function disconnectLayers!(g, layeridx1, layeridx2)
                 push!(idxs, adj_idx)
             end
         end
-        # println(idxs)
         deleteat!(adj(g)[idx1], idxs)
         idxs = []
     end

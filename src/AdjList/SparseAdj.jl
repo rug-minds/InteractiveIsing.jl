@@ -7,48 +7,6 @@ struct SparseConnections
     weights::Vector{Float32}
 end
 
-Base.@propagate_inbounds function genSPAdj(layer, wg)
-    row_idxs = Int32[]
-    col_idxs = Int32[]
-    weights = Float32[]
-
-    g = graph(layer)
-
-    _NN = wg.NN
-    blocksize = (2*_NN+1)^2
-    n_conns = nStates(g)*blocksize
-    sizehint!(col_idxs, n_conns)
-    sizehint!(row_idxs, n_conns)
-    sizehint!(weights, n_conns)
-
-    pre_3tuple = SPrealloc(NTuple{3, Int32}, 2*blocksize)
-    _fillSparseVecs(layer, row_idxs, col_idxs, weights, _NN, top(layer), wg, pre_3tuple, SelfType(wg))
-
-    addConnections(layer, row_idxs, col_idxs, weights, :All)
-end
-@inline genSPAdj!(layer, wg) = sp_adj(graph(layer), genSPAdj(layer, wg))
-export genSPAdj, genSPAdj!
-
-function _fillSparseVecs(layer, row_idxs, col_idxs, weights, NN, topology, wg, pre_3tuple, selftype::ST) where ST
-    for row_idx in 1:nStates(layer)
-        vert_i, vert_j = idxToCoord(row_idx, glength(layer))
-        getConnIdxs!(selftype, row_idx, vert_i, vert_j, glength(layer) , gwidth(layer), NN, pre_3tuple)
-        for conn in pre_3tuple
-            conn_i, conn_j = conn[1], conn[2]
-            dr = dist(vert_i, vert_j, conn_i, conn_j, topology)
-            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2)
-        
-            conn_idx = conn[3]
-
-            push!(row_idxs, row_idx)
-            push!(col_idxs, conn_idx)
-            push!(weights, weight)
-
-        end
-        reset!(pre_3tuple)
-    end
-end
-
 function addConnections(layer, vert_idxs, conn_idxs, weights, replace_rows = nothing, replace_cols = nothing)
     # Either replace rows and replace cols is nothing or both are not nothing
     g = graph(layer)
@@ -59,20 +17,15 @@ function addConnections(layer, vert_idxs, conn_idxs, weights, replace_rows = not
 
     old_rows, old_cols, old_weights  = findnz(_sp_adj)
     
-    append!(old_rows, vert_idxs)
-    append!(old_cols, conn_idxs)
-    append!(old_weights, weights)
-
-    append!(old_rows, conn_idxs)
-    append!(old_cols, vert_idxs)
-    append!(old_weights, weights)
+    append!(old_rows, vert_idxs, conn_idxs)
+    append!(old_cols, conn_idxs, vert_idxs)
+    append!(old_weights, weights, weights)
 
     return sparse(old_rows, old_cols, old_weights, nStates(g), nStates(g))
 end
 addConnections!(layer, vert_idxs, conn_idxs, weights, replace_rows = nothing, replace_cols = nothing) = sp_adj(graph(layer), addConnections(layer, vert_idxs, conn_idxs, weights, replace_rows, replace_cols))
 export addConnections, addConnections!
 
-export removeConnections, removeConnections!
 
 function coordinates2Cartesian(is,js, ::Val{N} = Val{2}()) where N
     @assert length(is) == length(js)
@@ -92,12 +45,8 @@ Base.@propagate_inbounds function genSPAdj(layer, wg)
     return row_idxs, col_idxs, weights
 end
 
-@inline genSPAdj!(layer, wg ) = sp_adj(g, sparse(row_idxs, col_idxs, weights, nStates(g), nStates(g)))
+@inline genSPAdj!(layer, wg) = set_sp_adj!(graph(layer), genSPAdj(layer, wg))
 export genSPAdj!
-
-function clearLayerConections(layer)
-
-end
 
 function genLayerConnections(layer, wg)
     row_idxs = Int32[]
@@ -113,7 +62,7 @@ function genLayerConnections(layer, wg)
     sizehint!(row_idxs, 2*n_conns)
     sizehint!(weights, 2*n_conns)
 
-    pre_3tuple = SPrealloc(NTuple{3, Int32}, 2*blocksize)
+    pre_3tuple = Prealloc(NTuple{3, Int32}, blocksize)
     _fillSparseVecs(layer, row_idxs, col_idxs, weights, _NN, top(layer), wg, pre_3tuple, SelfType(wg))
 
     append!(row_idxs, col_idxs)
@@ -123,6 +72,84 @@ function genLayerConnections(layer, wg)
     return row_idxs, col_idxs, weights
 end
 
+function genLayerConnections(layer1, layer2, wg)
+    row_idxs = Int32[]
+    col_idxs = Int32[]
+    weights = Float32[]
+
+    g = graph(layer1)
+
+    _NN = wg.NN
+    blocksize = (2*_NN+1)^2
+    n_conns = nStates(g)*blocksize
+    sizehint!(col_idxs, 2*n_conns)
+    sizehint!(row_idxs, 2*n_conns)
+    sizehint!(weights, 2*n_conns)
+
+    pre_3tuple = Prealloc(NTuple{3, Int32}, blocksize)
+    @time _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, _NN, wg, pre_3tuple)
+
+    append!(row_idxs, col_idxs)
+    append!(col_idxs, @view(row_idxs[1:end÷2]))
+    append!(weights, weights)
+
+    return row_idxs, col_idxs, weights
+end
+export genLayerConnections
+
+# For connecting a layer internally
+function _fillSparseVecs(layer, row_idxs, col_idxs, weights, NN, topology, wg, pre_3tuple, selftype::ST) where ST
+    for col_idx in 1:nStates(layer)
+        vert_i, vert_j = idxToCoord(col_idx, glength(layer))
+        getConnIdxs!(selftype, col_idx, vert_i, vert_j, glength(layer) , gwidth(layer), NN, pre_3tuple)
+        for conn in pre_3tuple
+            conn_i, conn_j = conn[1], conn[2]
+            dr = dist(vert_i, vert_j, conn_i, conn_j, topology)
+            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2)
+        
+            if weight == 0
+                continue
+            end
+
+            g_col_idx     = idxLToG(layer, col_idx)
+            g_conn_idx    = idxLToG(layer, conn[3])
+
+            push!(row_idxs, g_conn_idx)
+            push!(col_idxs, g_col_idx)
+            push!(weights, weight)
+
+        end
+        reset!(pre_3tuple)
+    end
+end
+
+# For connecting layers 
+function _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, NN, wg, pre_3tuple)
+    for col_idx in 1:nStates(layer1)
+        vert_i, vert_j = idxToCoord(col_idx, glength(layer1))
+        lattice2_iterator(layer1, layer2, vert_i, vert_j, NN, pre_3tuple)
+        for conn in pre_3tuple
+            conn_i, conn_j = conn[1], conn[2]
+            dr = dist(vert_i, vert_j, conn_i, conn_j, layer1, layer2)
+            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2)
+
+            if weight == 0
+                continue
+            end
+        
+            g_col_idx     = idxLToG(layer1, col_idx)
+            g_row_idx    = idxLToG(layer2, conn[3])
+
+            push!(row_idxs, g_row_idx)
+            push!(col_idxs, g_col_idx)
+            push!(weights, weight)
+
+        end
+        reset!(pre_3tuple)
+    end
+end
+
+
 abstract type ConnectionReturnType end
 struct View <: ConnectionReturnType end
 struct Copy <: ConnectionReturnType end
@@ -130,31 +157,20 @@ struct Copy <: ConnectionReturnType end
 """
 Remove all connections within layer
 """
-@inline removeConnections(layer::IsingLayer) = removeConnections(layer, View)
-function removeConnections(layer::IsingLayer, ::Type{View})
+# @inline removeConnections(layer::IsingLayer) = removeConnections(layer, View)
+function removeConnections(layer::IsingLayer)
     old_rows, old_cols, old_weights  = findnz(sp_adj(graph(layer)))
 
     filter = Vector{Bool}(undef , length(old_rows))
 
-    Threads.@threads for idx in eachindex(old_rows)
-        filter[idx]= !(old_rows[idx] in graphidxs(layer) && old_cols[idx] in graphidxs(layer))
+    for idx in eachindex(old_rows)
+        @inbounds filter[idx]= !(old_rows[idx] in graphidxs(layer) && old_cols[idx] in graphidxs(layer))
     end
 
     return (@view old_rows[filter]), (@view old_cols[filter]), (@view old_weights[filter])
 end
-function removeConnections(layer::IsingLayer, ::Type{Copy})
-    old_rows, old_cols, old_weights  = findnz(sp_adj(graph(layer)))
 
-    filter = Vector{Bool}(undef , length(old_rows))
-
-    Threads.@threads for idx in eachindex(old_rows)
-        filter[idx]= !(old_rows[idx] in graphidxs(layer) && old_cols[idx] in graphidxs(layer))
-    end
-
-    return old_rows[filter], old_cols[filter], old_weights[filter]
-end
-
-function removeConnections(layer1, layer2, ::Type{View})
+function removeConnections(layer1, layer2)
     old_rows, old_cols, old_weights  = findnz(sp_adj(graph(layer1)))
 
     filter = Vector{Bool}(undef , length(old_rows))
@@ -172,15 +188,26 @@ Remove all connections within layer and going in and out of layer
 """
 @inline removeConnectionsAll(layer::IsingLayer) = removeConnectionsAll(layer, View)
 function removeConnectionsAll(layer::IsingLayer, ::Type{View})
-    old_rows, old_cols, old_weights  = findnz(sp_adj(graph(layer)))
+    # old_rows, old_cols, old_weights  = findnz(sp_adj(graph(layer)))
 
-    filter = Vector{Bool}(undef , length(old_rows))
+    # filter = Vector{Bool}(undef , length(old_rows))
 
-    Threads.@threads for idx in eachindex(old_rows)
-        filter[idx]= !(old_rows[idx] in graphidxs(layer) || old_cols[idx] in graphidxs(layer))
-    end
+    # Threads.@threads for idx in eachindex(old_rows)
+    #     filter[idx]= !(old_rows[idx] in graphidxs(layer) || old_cols[idx] in graphidxs(layer))
+    # end
 
-    return (@view old_rows[filter]), (@view old_cols[filter]), (@view old_weights[filter])
+    # return (@view old_rows[filter]), (@view old_cols[filter]), (@view old_weights[filter])
+    _sp_adj = copy(sp_adj(graph(layer)))
+    # for col_idx in graphidxs(layer)
+    col_idx = 1
+    row_idx_range = 1:10000
+        # row_idx_range = _sp_adj.colptr[col_idx]:(_sp_adj.colptr[col_idx+1]-1)
+        for row_idx in _sp_adj.rowval[row_idx_range]
+            # println("Row idx: ", row_idx, " Col idx: ", col_idx)
+            _sp_adj = remConnection!(_sp_adj, row_idx, col_idx)
+        end
+    # end
+    return findnz(_sp_adj)
 end
 
 function removeConnectionsAll(layer::IsingLayer, ::Type{Copy})
@@ -194,18 +221,7 @@ function removeConnectionsAll(layer::IsingLayer, ::Type{Copy})
 
     return old_rows[filter], old_cols[filter], old_weights[filter]
 end
-
-function removeConnections(sp_adj, vert_idxs, conn_idxs)
-    sp_adj = copy(sp_adj)
-
-    sp_adj[coordinates2Cartesian(vert_idxs, conn_idxs)] .= 0
-    sp_adj[coordinates2Cartesian(conn_idxs, vert_idxs)] .= 0
-
-    dropzeros!(sp_adj)
-
-    return findnz(sp_adj)
-end
-export removeConnections
+export removeConnectionsAll
 
 function remConnection!(sp_adj, i, j)
     deleteval!(sp_adj, i, j)
@@ -214,21 +230,3 @@ function remConnection!(sp_adj, i, j)
 end
 export remConnection!
 
-function deleteval!(sp_adj, i,j) 
-    searchrange = sp_adj.colptr[j]:(sp_adj.colptr[j+1]-1)
-    idx = findfirst(x -> x == i, sp_adj.rowval , searchrange)
-    if !isnothing(idx)
-        deleteat!(sp_adj.rowval, idx)
-        deleteat!(sp_adj.nzval, idx)
-        sp_adj.colptr[j+1:end] .-= 1
-    end
-    return sp_adj
-end
-export deleteval!
-
-function Base.findfirst(predicate::Function, A, searchrange::UnitRange)
-    idx = findfirst(predicate, (@view A[searchrange]))
-
-    !isnothing(idx) && (idx += searchrange.start - 1)
-    return idx
-end

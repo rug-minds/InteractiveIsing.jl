@@ -157,7 +157,7 @@ end
 export maxdist
 
 @inline coordToIdx(i,j,layer::AbstractIsingLayer) = coordToIdx(latmod(i, glength(layer)), latmod(j, gwidth(layer)), glength(layer))
-
+@inline idxToCoord(idx, layer::AbstractIsingLayer) = idxToCoord(idx, glength(layer))
 
 @inline startidx(layer::AbstractIsingLayer) = start(layer)
 @inline endidx(layer::AbstractIsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
@@ -213,7 +213,7 @@ end
 Go from a local matrix indexing of layer to idx of the underlying graph
 """
 @inline function idxLToG(layer, i, j)::Int32
-    return Int32(start(layer) + coordToIdx(i,j, glength(layer)))
+    return Int32(start(layer) + coordToIdx(i,j, glength(layer)) - 1)
 end
 idxLToG(layer, tup::Tuple) = idxLToG(layer, tup[1], tup[2])
 
