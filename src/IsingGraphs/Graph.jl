@@ -12,7 +12,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
 
     # Vertices and edges
     state::Vector{T}
-    const adj::Vector{Vector{Conn}}
+    adj::Vector{Vector{Conn}}
     sp_adj::SparseMatrixCSC{Float32,Int32}
     htype::HType
 
@@ -21,8 +21,9 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
     layers::ShuffleVec{IsingLayer}
 
     continuous::StateType
-    # Connection between layers, I don't think it's neccesary to track this
+    # Connection between layers, Could be useful to track for faster removing of layers
     layerconns::Dict{Set, Int32}
+
     defects::GraphDefects
     d::GraphData
 
@@ -52,42 +53,33 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
         return g
     end
     
+    function IsingGraph(
+        state,
+        sp_adj,
+        stype,
+        layers,
+        continuous,
+        defects,
+        data
+        )
+        return new{eltype(state)}(
+            nothing,
+            length(state),
+            state,
+            Vector{Vector{Conn}}[],
+            sp_adj,
+            HType(false, false),
+            stype,
+            layers,
+            continuous,
+            Dict{Pair, Int32}(),
+            defects,
+            data
+        )
+    end
 end
 
-function tuples2sparse(adj)
-    colidx_len = 0
-    for col in adj
-        colidx_len += length(col)
-    end
-    colidx = Vector{Int32}(undef, colidx_len)
-    colidxidx = 1
-    for (idx,col) in enumerate(adj)
-        for i in 1:length(col)
-            colidx[colidxidx] = Int32(idx)
-            colidxidx += 1
-        end
-    end
 
-    rowidx = Vector{Int32}(undef, colidx_len)
-    rowidxidx = 1
-    for (idx,col) in enumerate(adj)
-        for i in 1:length(col)
-            rowidx[rowidxidx] = Int32(adj[idx][i][1])
-            rowidxidx += 1
-        end
-    end
-
-    vals = Vector{Float32}(undef, colidx_len)
-    valsidx = 1
-    for (idx,col) in enumerate(adj)
-        for i in 1:length(col)
-            vals[valsidx] = adj[idx][i][2]
-            valsidx += 1
-        end
-    end
-    return deepcopy(sparse(rowidx, colidx, vals))
-end
-export tuples2sparse
 
 #extend show to print out the graph, showing the length of the state, and the layers
 function Base.show(io::IO, g::IsingGraph)
@@ -102,7 +94,6 @@ function Base.show(io::IO, g::IsingGraph)
 end
 
 Base.show(io::IO, graphtype::Type{IsingGraph}) = print(io, "IsingGraph")
-
 
 coords(g::IsingGraph) = VSI(layers(g), :coords)
 export coords
@@ -125,11 +116,16 @@ export sp_adj
 
 @inline graph(g::IsingGraph) = g
 
-# Access the layers
+### Access the layer ###
 @inline layer(g::IsingGraph, idx) = g.layers[idx]
 @inline Base.getindex(g::IsingGraph, idx) = g.layers[idx]
 @inline length(g::IsingGraph) = length(g.layers)
 Base.view(g::IsingGraph, idx) = view(g.layers, idx)
+Base.deleteat!(layervec::ShuffleVec{IsingLayer}, lidx::Integer) = deleteat!(layervec, lidx) do layer, newidx
+    internal_idx(layer, newidx)
+    start(layer, start(layer) - nstates_layer)
+end
+
 
 #TODO: Give new idx
 @inline function layerIdx!(g, oldidx, newidx)
@@ -173,12 +169,10 @@ end
 Methods
 =#
 
+# Doesn't need to use multiple dispatch
 """ 
-Returns an iterator over the ising lattice
-If there are no defects, returns whole range
-Otherwise it returns all alive spins
+Returns in iterator which can be used to choose a random index among alive spins
 """
-
 @generated function ising_it(g::IsingGraph, stype::SType = stype(g))
     # Assumes :Defects will be found
     defects = getSParam(stype, :Defects)
@@ -193,20 +187,6 @@ Otherwise it returns all alive spins
 end
 
 export ising_it
-
-"""
-Get index of connection
-"""
-@inline function connIdx(conn::Conn)::Vert
-    conn[1]
-end
-
-"""
-Get weight of connection
-"""
-@inline function connW(conn::Conn)::Weight
-    conn[2]
-end
 
 """
 Initialization of adjacency Vector for a given N
@@ -247,14 +227,8 @@ function resize!(g::IsingGraph{T}, newlength, layeridx = 0) where T
         # idxs to be removed
         g_idxs = graphidxs(d_layer) 
 
-            
-        # Delete everything from adj
-        for idx in g_idxs
-            Threads.@threads for conn in adj(g)[idx]
-                conn_idx = connIdx(conn)
-                removeWeightDirected!(adj(g), conn_idx, idx)
-            end
-        end
+        # Remove all connections that the layer had
+        removeConnectionsAll!(g[layeridx])
 
         #Shift all the leftovers from adj
         for idx in g_idxs[end]:length(adj(g))
@@ -273,18 +247,13 @@ function resize!(g::IsingGraph{T}, newlength, layeridx = 0) where T
     return
 end
 
-#Remove states from state(graph) and return new vector
-function removeStates(state, startidx, endidx)
-    #initialize new vec
-    newstate = Vector{eltype(state)}(undef, length(state) - (endidx - startidx + 1))
-    #copy old vec
-    newstate[1:startidx-1] = state[1:startidx-1]
-    newstate[startidx:end] = state[endidx+1:end]
-
-    return newstate
-end
-
 export resize!
+
+function addLayer!(g, dims::Vector, wgs...; kwargs...)
+    @tryLockPause sim(g) for dim in dims
+        _addLayer!(g, dim[1], dim[2]; kwargs...)
+    end
+end
 
 """
 Add a layer to graph g.
@@ -293,45 +262,44 @@ addLayer(g::IsingGraph, length, width)
 Give keyword argument weightfunc to set a weightfunc.
 If weightfunc = :Default, uses default weightfunc for the Ising Model
 """
-function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodic = true, type = eltype(state(g)))
+function _addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodic = true, type = eltype(state(g)))
     glayers = layers(g)
 
-    newlayer = 0
+    newlayer = nothing
 
-    @tryLockPause sim(g) begin
-        # Resize underlying graphs 
-        resize!(g, nStates(g) + llength*lwidth)
+    # Resize underlying graphs 
+    resize!(g, nStates(g) + llength*lwidth)
 
-        # If this is not the first, regenerate the views because state now points to new memory
-        # And find the starting idx of the layer
-        if length(glayers) != 0
-            startidx = start(glayers[end]) + glength(glayers[end])*gwidth(glayers[end])
-        else
-            startidx = 1
-        end
-
-        #Make the new layer
-        newlayer = IsingLayer(type, g, length(glayers)+1 , startidx, llength, lwidth; periodic)
-        # Push it to layers
-        push!(glayers, newlayer)
-
-        # Increase the size of the Sparse matrix
-        sp_adj(g, changesize(sp_adj(g), nStates(g), nStates(g)))
-
-        # Set the adjacency matrix
-        if weightfunc != nothing 
-            genAdj!(newlayer, weightfunc)
-            genSPAdj!(newlayer, weightfunc)
-        end
-
-        # Add Layer to defects
-        addLayer!(defects(g), newlayer)
-
-        
-        # Update the layer idxs
-        nlayers(sim(g))[] += 1
-
+    # If this is not the first, regenerate the views because state now points to new memory
+    # And find the starting idx of the layer
+    if length(glayers) != 0
+        startidx = start(glayers[end]) + glength(glayers[end])*gwidth(glayers[end])
+    else
+        startidx = 1
     end
+
+    #Make the new layer
+    newlayer = IsingLayer(type, g, length(glayers)+1 , startidx, llength, lwidth; periodic)
+    # Push it to layers
+    push!(glayers, newlayer)
+
+    # Increase the size of the Sparse matrix
+    sp_adj(g, changesize(sp_adj(g), nStates(g), nStates(g)))
+
+    # Set the adjacency matrix
+    if weightfunc != nothing 
+        genAdj!(newlayer, weightfunc)
+        genSPAdj!(newlayer, weightfunc)
+    end
+
+    # Add Layer to defects
+    addLayer!(defects(g), newlayer)
+
+    
+    # Update the layer idxs
+    nlayers(sim(g))[] += 1
+
+    
 
     if weightfunc == :Default
         println("No weightfunc given, using default")
@@ -341,58 +309,50 @@ function addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodi
     return
 end
 
+addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodic = true, type = eltype(state(g))) = @tryLockPause sim(g) _addLayer!(g, llength, lwidth; weightfunc, periodic, type)
 
-function removeLayer!(g::IsingGraph, lidx::Integer)
+
+function _removeLayer!(g::IsingGraph, lidx::Integer)
     #if only one layer error
     if length(layers(g)) <= 1
         error("Cannot remove last layer")
     end
 
 
-    # lockPause(sim(g))
-    @tryLockPause sim(g)  begin
-        # If the slected layer is after the layer to be removed, decrement layerIdx
-        if layerIdx(sim(g))[] >= lidx && layerIdx(sim(g))[] > 1
-            layerIdx(sim(g))[] -= 1
-        end
-
-        layervec = layers(g)
-        layer = layervec[lidx]
-        nstates_layer = glength(layer)*gwidth(layer)
-
-        i_idx = internal_idx(layer)
-
-        # Resize the graph
-        resize!(g, nStates(g) - nstates_layer, lidx)
-
-        # Remove the layer from the graph defects
-        removeLayer!(defects(g), lidx)
-
-        # Remove the layer from the graph
-        deleteat!(layervec, lidx) do layer, newidx
-            internal_idx(layer, newidx)
-            start(layer, start(llayer) - nstates_layer)
-            regenerateViews(layer)
-        end
-
-        nlayers(sim(g))[] -= 1
+    # If the slected layer is after the layer to be removed, decrement layerIdx
+    if layerIdx(sim(g))[] >= lidx && layerIdx(sim(g))[] > 1
+        layerIdx(sim(g))[] -= 1
     end
 
-    # unpause sim
-    # unlockPause(sim(g))
+    layervec = layers(g)
+    layer = layervec[lidx]
 
+    # Resize the graph
+    resize!(g, nStates(g) - nStates(layer), lidx)
+
+    # Remove the layer from the graph defects
+    removeLayer!(defects(g), lidx)
+
+    # Remove the layer from the graph
+    deleteat!(layervec, lidx)
+
+    nlayers(sim(g))[] -= 1
 
     return
 
 end
 
-removeLayer!(g::IsingGraph, layer::IsingLayer) = removeLayer!(g, layeridx(layer))
+removeLayer!(g::IsingGraph, lidx::Integer) = @tryLockPause sim(g) _removeLayer!(g, lidx)
 
-function updateLayerIdxs!(g::IsingGraph)
-    for (i, layer) in enumerate(layers(g))
-        layeridx(layer, i)
+function removeLayer!(g, idxs::Vector{Int}) 
+    _layers = layers(g)
+    # Sort by internal storage order from last to first, this causes minimal relocations
+    sort!(idxs, lt = (x,y) -> internalidx(_layers, x) > internalidx(_layers, y))
+    @tryLockPause sim(g) for idx in idxs
+        _removeLayer!(g, idx)
     end
 end
+removeLayer!(g::IsingGraph, layer::IsingLayer) = removeLayer!(g, layeridx(layer))
 
 # Set the SType
 """
@@ -428,3 +388,59 @@ end
 
 
 export setSType!
+
+
+
+
+
+### ETC ###
+
+### Old adjacency list stuff ###
+function tuples2sparse(adj)
+    colidx_len = 0
+    for col in adj
+        colidx_len += length(col)
+    end
+    colidx = Vector{Int32}(undef, colidx_len)
+    colidxidx = 1
+    for (idx,col) in enumerate(adj)
+        for i in 1:length(col)
+            colidx[colidxidx] = Int32(idx)
+            colidxidx += 1
+        end
+    end
+
+    rowidx = Vector{Int32}(undef, colidx_len)
+    rowidxidx = 1
+    for (idx,col) in enumerate(adj)
+        for i in 1:length(col)
+            rowidx[rowidxidx] = Int32(adj[idx][i][1])
+            rowidxidx += 1
+        end
+    end
+
+    vals = Vector{Float32}(undef, colidx_len)
+    valsidx = 1
+    for (idx,col) in enumerate(adj)
+        for i in 1:length(col)
+            vals[valsidx] = adj[idx][i][2]
+            valsidx += 1
+        end
+    end
+    return deepcopy(sparse(rowidx, colidx, vals))
+end
+export tuples2sparse
+
+"""
+Get index of connection
+"""
+@inline function connIdx(conn::Conn)::Vert
+    conn[1]
+end
+
+"""
+Get weight of connection
+"""
+@inline function connW(conn::Conn)::Weight
+    conn[2]
+end

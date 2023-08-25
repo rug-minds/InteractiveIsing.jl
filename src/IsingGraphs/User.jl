@@ -102,8 +102,3 @@ end
 overlayNoise!(g, layeridx::Integer, p; noise_values = [-1, 1]) = overlayNoise!(layers(g)[layeridx], p; noise_values)
 export overlayNoise!
 
-function saveGraph(g::IsingGraph)
-    folder = dataFolderNow("Graphs")
-    save(folder * "/g.jld2", "g", g)
-end
-export saveGraph

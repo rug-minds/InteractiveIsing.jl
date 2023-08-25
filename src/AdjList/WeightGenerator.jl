@@ -80,16 +80,19 @@ function prunekwargs(args...)
     end
 end
 
-# Can this be turned into a function?
+# Can this be turned into a function, sinze we're using string?
+# Don't think so due to world age.
 """
 Create a WeightGenerator
 Accepted keywords are: NN, selfWeight, addDist, multDist, weightFunc
+Either: Either give a string with a function or
+give a previous weightfunc and supply keyword args to modify
 """
 macro WeightGenerator(wg_or_func, kwargs...)
     # Default Params
     NN = 1
 
-    allowedargs_func = [:dr, :i, :j]
+    allowedargs_func = [:dr, :i, :j, :di, :dj]
     allowedargs_self = [:i, :j]
 
     is_a_wg = false
@@ -99,27 +102,27 @@ macro WeightGenerator(wg_or_func, kwargs...)
         selfWeight = addDist = multDist = nothing
         selfstr = addstr = multstr = nothing
         
-        # Get the func str        
-        funcstr = wg_or_func
-        # Parse the func to get expression
-        func = Meta.parse(funcstr)
+        kwargs = (kwargs...,:(weightFunc = $wg_or_func))
+        # # Get the func str        
+        # funcstr = wg_or_func
+        # # Parse the func to get expression
+        # func = Meta.parse(funcstr)
 
-        # MAIN FUNCTION
-        # Get argument names
-        argnames = method_argnames(last(methods(eval(func))))[2:end]
-        # Check if argnames only contain a subset of the symbols :dr, :i, :j
-        if !(all([arg ∈ allowedargs_func for arg in argnames]))
-            error("Function must only contain arguments :dr, :i, :j")
-        end
+        # # MAIN FUNCTION
+        # # Get argument names
+        # argnames = method_argnames(last(methods(eval(func))))[2:end]
+        # # Check if argnames only contain a subset of the symbols :dr, :i, :j
+        # if !(all([arg ∈ allowedargs_func for arg in argnames]))
+        #     error("Function must only contain arguments $allowedargs_func")
+        # end
 
-        # Get function body
-        funcbody = func.args[2]
-        func =  quote (;dr,i,j) -> Float32($funcbody) end
+        # # Get function body
+        # funcbody = func.args[2]
+        # func =  quote (;dr,i,j) -> Float32($funcbody) end
     else
         is_a_wg = true
         NN = func = selfWeight = addDist = multDist = funcstr = selfstr = addstr = multstr = nothing
     end
-
     # Get keyword arguments
     if !isempty(kwargs)
         params = prunekwargs(kwargs...)
@@ -147,8 +150,6 @@ macro WeightGenerator(wg_or_func, kwargs...)
         func_key = selfWeight_key = addDist_key = multDist_key = nothing
     end
     
-
-
     # FUNC
     if !isnothing(func_key)
         funcstr = func_key
@@ -157,7 +158,7 @@ macro WeightGenerator(wg_or_func, kwargs...)
         argnames_func = method_argnames(last(methods(eval(funcexpr))))[2:end]
         # Check if argnames only contain a subset of the symbols :dr, :i, :j
         if !(all([arg ∈ allowedargs_func for arg in argnames_func]))
-            error("Function must only contain arguments :dr, :i, :j")
+            error("Function must only contain arguments $allowedargs_func")
         end
 
         # Get function body
@@ -205,6 +206,7 @@ macro WeightGenerator(wg_or_func, kwargs...)
             multDist = Meta.parse( "@inline () -> Float32(rand($multDist_key))" )
         end
     end
+
     if !is_a_wg
         return esc(quote
             WeightGenerator($NN, $func, $selfWeight, $addDist, $multDist, $funcstr, $selfstr, $addstr, $multstr)

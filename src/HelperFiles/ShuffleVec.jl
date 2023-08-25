@@ -6,7 +6,7 @@ struct ShuffleVec{T} <: AbstractVector{T}
     idxs::Vector{Int}
 
     function ShuffleVec(data::Vector{T}) where T
-        idxs = shuffle(1:length(data))
+        idxs = collect(1:length(data))
         return new{T}(data, idxs)
     end
 
@@ -24,7 +24,7 @@ Base.length(p::ShuffleVec) = length(p.data)
 Base.iterate(p::ShuffleVec, state = 1) = state > length(p) ? nothing : (p[state], state+1)
 unshuffled(p::ShuffleVec) = p.data
 
-function Base.deleteat!(p::ShuffleVec, i::Int, datafunc::Function = (vars...) -> nothing)
+function Base.deleteat!(p::ShuffleVec, i::Integer, datafunc::Function = (vars...) -> nothing)
     internal_idx = p.idxs[i]
     deleteat!(p.data, p.idxs[i])
     deleteat!(p.idxs, i)
@@ -46,7 +46,7 @@ function Base.deleteat!(p::ShuffleVec, i::Int, datafunc::Function = (vars...) ->
 end
 
 # For do syntax
-Base.deleteat!(f::Function, p::ShuffleVec, i::Int) = deleteat!(p, i, f)
+Base.deleteat!(f::Function, p::ShuffleVec, i::Integer) = deleteat!(p, i, f)
 
 function Base.deleteat!(p::ShuffleVec, i::AbstractVector)
     for idx in i
@@ -83,4 +83,4 @@ end
 @inline externalidx(p::ShuffleVec, internal_idx::Integer) = findfirst(p.idxs .== internal_idx)
 
 Base.convert(::Type{ShuffleVec{T}}, p::Vector{T}) where T = ShuffleVec(p)
-Base.convert(::Type{Vector{T}}, p::ShuffleVec{T}) where T = p.dataß
+Base.convert(::Type{Vector{T}}, p::ShuffleVec{T}) where T = p.data

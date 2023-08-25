@@ -1,6 +1,8 @@
+## Move this all to graphdefects, 
+## just keep track of the number of defecs in a vector
 
 mutable struct LayerDefects
-    layer::IsingLayer
+    layer::Union{Nothing, IsingLayer}
     # graphdefects::GraphDefects
     ndefects::Int32
 end

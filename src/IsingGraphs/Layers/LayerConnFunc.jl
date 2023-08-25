@@ -39,10 +39,10 @@ end
 export dcoords
 
 # Interprets a coordinate of layer 1 as on of layer 2 given the relative position
-coordsl1tol2(i1, j1, layer1, layer2, alignment = :center)::Tuple{Int32,Int32} = let dyxz = dcoords(layer1, layer2, alignment); (i1, j1) .- dyxz[1:2] end
+coordsl1tol2(i1, j1, layer1, layer2, alignment = :center)::Tuple{Int32,Int32} = let dyxz = dcoords(layer1, layer2, alignment); floor.(Int32,(i1, j1) .- dyxz[1:2]) end
 coordsl1tol2((i1, j1)::Tuple, layer1, layer2, alignment = :center) = coordsl1tol2(i1, j1, layer1, layer2, alignment)
 # Interprets a coordinate of layer 2 as on of layer 1 given the relative position
-coordsl2tol1(i2, j2, layer1, layer2, alignment = :center)::Tuple{Int32,Int32} = let dyxz = dcoords(layer1, layer2, alignment); (i2, j2) .+ dyxz[1:2] end
+coordsl2tol1(i2, j2, layer1, layer2, alignment = :center)::Tuple{Int32,Int32} = let dyxz = dcoords(layer1, layer2, alignment); floor.(Int32, (i2, j2) .+ dyxz[1:2]) end
 coordsl2tol1((i2, j2)::Tuple, layer1, layer2, alignment = :center) = coordsl2tol1(i2, j2, layer1, layer2, alignment)
 export coordsl1tol2, coordsl2tol1
 

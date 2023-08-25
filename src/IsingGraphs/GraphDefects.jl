@@ -2,7 +2,7 @@
 Vert = Int32
 
 mutable struct GraphDefects
-    g::IsingGraph
+    g::Union{Nothing, IsingGraph}
     hasDefects::Bool
     isDefect::Vector{Bool}
     aliveList::Vector{Vert}
@@ -33,7 +33,9 @@ function Base.show(io::IO, defects::GraphDefects)
     end
 end
 
-@setterGetter GraphDefects
+@setterGetter GraphDefects g
+@inline g(gd::GraphDefects)::IsingGraph = gd.g
+@inline g(gd::GraphDefects, g::IsingGraph) = gd.g = g
 
 #Initialize GraphDefects
 GraphDefects(g) = GraphDefects(g, false, Bool[], Int32[], Int32[])

@@ -213,15 +213,15 @@ export upDebug
     return efac
 end
 
-@inline function getEFactor1(g, state, sparse::SparseMatrixCSC, idx, stype::SType)
-    efac = 0f0 
-    # @inbounds @fastmath @simd for idx in nzrange(sparse, idx)
-    connections = sparse[:,idx]
-    @turbo check_empty = true for (idx, weight) in enumerate(connections)
-    # for idx in nzrange(sparse, idx)
-        efac += -state[sparse.rowval[idx]] * weight
-    end
-    return efac
-end
+# @inline function getEFactor1(g, state, sparse::SparseMatrixCSC, idx, stype::SType)
+#     efac = 0f0 
+#     # @inbounds @fastmath @simd for idx in nzrange(sparse, idx)
+#     connections = sparse[:,idx]
+#     @turbo check_empty = true for (idx, weight) in enumerate(connections)
+#     # for idx in nzrange(sparse, idx)
+#         efac += -state[sparse.rowval[idx]] * weight
+#     end
+#     return efac
+# end
 export getEFactor, getEFactor1
 

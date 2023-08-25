@@ -7,6 +7,7 @@ function pauseSim(sim; block = false, ignore_lock = false, print = true)
 
     running = status(sim) .== :Running
     idxs = [1:length(processes(sim));][running]
+
     for process in (@view processes(sim)[idxs])
         signal!(process, false, :Pause; ignore_lock)
     end
@@ -14,6 +15,10 @@ function pauseSim(sim; block = false, ignore_lock = false, print = true)
     if block
         # Wait for all to terminate
         while any(x -> x == :Running, status(sim))
+
+            # for process in (@view processes(sim)[idxs])
+            #     signal!(process, false, :Pause; ignore_lock)
+            # end
             yield()
         end
     end

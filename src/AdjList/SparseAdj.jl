@@ -7,47 +7,6 @@ struct SparseConnections
     weights::Vector{Float32}
 end
 
-function addConnections(layer, vert_idxs, conn_idxs, weights, replace_rows = nothing, replace_cols = nothing)
-    # Either replace rows and replace cols is nothing or both are not nothing
-    g = graph(layer)
-    _sp_adj = sp_adj(graph(layer))
-
-
-    removeConnections!(layer, replace_rows, replace_cols)
-
-    old_rows, old_cols, old_weights  = findnz(_sp_adj)
-    
-    append!(old_rows, vert_idxs, conn_idxs)
-    append!(old_cols, conn_idxs, vert_idxs)
-    append!(old_weights, weights, weights)
-
-    return sparse(old_rows, old_cols, old_weights, nStates(g), nStates(g))
-end
-addConnections!(layer, vert_idxs, conn_idxs, weights, replace_rows = nothing, replace_cols = nothing) = sp_adj(graph(layer), addConnections(layer, vert_idxs, conn_idxs, weights, replace_rows, replace_cols))
-export addConnections, addConnections!
-
-
-function coordinates2Cartesian(is,js, ::Val{N} = Val{2}()) where N
-    @assert length(is) == length(js)
-    return [CartesianIndex{N}(is[idx],js[idx]) for idx in eachindex(is)]
-end
-
-Base.@propagate_inbounds function genSPAdj(layer, wg)
-    g = graph(layer)
-
-    row_idxs, col_idxs, weights = genLayerConnections(layer, wg)
-    old_row_idxs, old_col_idxs, old_weights = removeConnections(layer)
-
-    append!(row_idxs,    old_row_idxs)
-    append!(col_idxs,    old_col_idxs)
-    append!(weights ,    old_weights)
-
-    return row_idxs, col_idxs, weights
-end
-
-@inline genSPAdj!(layer, wg) = set_sp_adj!(graph(layer), genSPAdj(layer, wg))
-export genSPAdj!
-
 function genLayerConnections(layer, wg)
     row_idxs = Int32[]
     col_idxs = Int32[]
@@ -87,7 +46,7 @@ function genLayerConnections(layer1, layer2, wg)
     sizehint!(weights, 2*n_conns)
 
     pre_3tuple = Prealloc(NTuple{3, Int32}, blocksize)
-    @time _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, _NN, wg, pre_3tuple)
+    _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, _NN, wg, pre_3tuple)
 
     append!(row_idxs, col_idxs)
     append!(col_idxs, @view(row_idxs[1:end÷2]))
@@ -186,31 +145,7 @@ end
 """
 Remove all connections within layer and going in and out of layer
 """
-@inline removeConnectionsAll(layer::IsingLayer) = removeConnectionsAll(layer, View)
-function removeConnectionsAll(layer::IsingLayer, ::Type{View})
-    # old_rows, old_cols, old_weights  = findnz(sp_adj(graph(layer)))
-
-    # filter = Vector{Bool}(undef , length(old_rows))
-
-    # Threads.@threads for idx in eachindex(old_rows)
-    #     filter[idx]= !(old_rows[idx] in graphidxs(layer) || old_cols[idx] in graphidxs(layer))
-    # end
-
-    # return (@view old_rows[filter]), (@view old_cols[filter]), (@view old_weights[filter])
-    _sp_adj = copy(sp_adj(graph(layer)))
-    # for col_idx in graphidxs(layer)
-    col_idx = 1
-    row_idx_range = 1:10000
-        # row_idx_range = _sp_adj.colptr[col_idx]:(_sp_adj.colptr[col_idx+1]-1)
-        for row_idx in _sp_adj.rowval[row_idx_range]
-            # println("Row idx: ", row_idx, " Col idx: ", col_idx)
-            _sp_adj = remConnection!(_sp_adj, row_idx, col_idx)
-        end
-    # end
-    return findnz(_sp_adj)
-end
-
-function removeConnectionsAll(layer::IsingLayer, ::Type{Copy})
+function removeConnectionsAll(layer::IsingLayer)
     old_rows, old_cols, old_weights  = findnz(sp_adj(graph(layer)))
 
     filter = Vector{Bool}(undef , length(old_rows))
@@ -219,7 +154,7 @@ function removeConnectionsAll(layer::IsingLayer, ::Type{Copy})
         filter[idx]= !(old_rows[idx] in graphidxs(layer) || old_cols[idx] in graphidxs(layer))
     end
 
-    return old_rows[filter], old_cols[filter], old_weights[filter]
+    return (@view old_rows[filter]), (@view old_cols[filter]), (@view old_weights[filter])
 end
 export removeConnectionsAll
 
@@ -230,3 +165,39 @@ function remConnection!(sp_adj, i, j)
 end
 export remConnection!
 
+remConnectionDirected(sp_adj, i, j) = deleteval!(sp_adj, i, j)
+
+function connectLayersFullSP(layer1, layer2)
+    n_conns = nStates(layer1)*nStates(layer2)
+
+    rows = Vector{Int32}(undef, 2*n_conns)
+    cols = similar(rows)
+    weights = Vector{Float32}(undef, length(rows))
+
+    for (jdx, j) in collect(enumerate(graphidxs(layer1)))
+    # for (jdx, j) in enumerate(graphidxs(layer1))
+        for (idx, i) in enumerate(graphidxs(layer2))
+            thread_idx = idx + (jdx-1)*length(graphidxs(layer2))
+
+            rows[thread_idx] = i
+            cols[thread_idx] = j
+            weights[thread_idx] = 1
+
+            rows[n_conns+thread_idx] = j
+            cols[n_conns+thread_idx] = i
+            weights[n_conns+thread_idx] = 1
+        end
+    end
+
+    old_rows, old_cols, old_weights = removeConnections(layer1, layer2)
+
+    append!(rows, old_rows)
+    append!(cols, old_cols)
+    append!(weights, old_weights)
+
+    return rows, cols, weights
+end
+export connectLayersFullSP
+
+connectLayersFullSP!(layer1, layer2) = set_sp_adj!(graph(layer1), connectLayersFullSP(layer1, layer2))
+export connectLayersFullSP!

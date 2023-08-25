@@ -12,8 +12,8 @@ struct Rhombic <: LatticeType end
 struct AnyLattice <: LatticeType end
 export LatticeType, Square, Rectangular, Oblique, Hexagonal, Rhombic, AnyLattice
 
-struct LayerTopology{T <: PeriodicityType,U <: LatticeType, LayerType <: IsingLayer}
-    layer::LayerType
+mutable struct LayerTopology{T <: PeriodicityType,U <: LatticeType, LayerType <: IsingLayer}
+    layer::Union{Nothing, LayerType}
     pvecs::Tuple{TwoVec, TwoVec}
     covecs::Tuple{TwoVec, TwoVec}
 

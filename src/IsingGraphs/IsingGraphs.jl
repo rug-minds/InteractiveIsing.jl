@@ -25,12 +25,11 @@ include("Data.jl")
 include("GraphDefects.jl")
 include("Graph.jl")
 
-include("LayerDefects.jl")
-include("LayerTopology.jl")
+include("Layers/Layers.jl")
 
-include("Layer.jl")
 include("SetEls.jl")
 
-include("LayerConnFunc.jl")
+
+include("Saving.jl")
 
 include("User.jl")

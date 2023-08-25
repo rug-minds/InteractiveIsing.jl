@@ -9,7 +9,7 @@ using QML
 export QML
 
 using FileIO, Images, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, LinearAlgebra, 
-    CxxWrap, StatsBase, LaTeXStrings, DataStructures
+    CxxWrap, StatsBase, LaTeXStrings, DataStructures, Preferences
 using PrecompileTools
 
 import Plots as pl
@@ -39,7 +39,7 @@ include("HelperFiles/HelperFiles.jl")
 
 
 @ForwardDeclare IsingGraph "IsingGraphs"
-@ForwardDeclare IsingLayer "IsingGraphs"
+@ForwardDeclare IsingLayer "IsingGraphs/Layers"
 
 include("WeightFuncs.jl")
 include("AdjList/AdjList.jl")

@@ -543,13 +543,13 @@ macro enumeratelayers(layers, length)
 end
 export @enumeratelayers
 
-macro tryLockPause(sim, expr, block = false)
+changesize(sp::SparseMatrixCSC, rows, cols) = sparse(findnz(sp)..., rows, cols)
+
+macro tryLockPause(sim, expr, blockpause = false, blockunpause = false)
     fexp = quote end
-    push!(fexp.args, :(lockPause($sim, block = $block)))
-    push!(fexp.args, :(try $expr ;finally unlockPause($sim, block = $block) end))
+    push!(fexp.args, :(lockPause($sim, block = $blockpause)))
+    push!(fexp.args, :(try $expr ;finally unlockPause($sim, block = $blockunpause) end))
 
     return esc(fexp)
 end
 export @tryLockPause
-
-changesize(sp::SparseMatrixCSC, rows, cols) = sparse(findnz(sp)..., rows, cols)

@@ -232,12 +232,25 @@ end
 
 shiftWeight(tupl, idx_offset) = (tupl[1] + idx_offset, tupl[2])
 
-function emptyAdj!(adj::Vector{Vector{Tuple{Int32,Float32}}})
+function clearAdj!(adj::Vector{Vector{Tuple{Int32,Float32}}})
     for vert_idx in eachindex(adj)
         adj[vert_idx] = Vector{Tuple{Int32,Float32}}()
     end
 end
-export emptyAdj!
+export clearAdj!
 
 export addWeight!
 export removeWeight!
+
+function sparse2tuples(sp_adj)
+    vec = Vector{Vector{Tuple{Int32,Float32}}}(undef, size(sp_adj,2))
+
+    for vert_idx in eachindex(vec)
+        vec[vert_idx] = Vector{Tuple{Int32,Float32}}(undef, length(nzrange(sp_adj, vert_idx)))
+        for conn_idx in 1:length(nzrange(sp_adj, vert_idx))
+            vec[vert_idx][conn_idx] = (sp_adj.rowval[nzrange(sp_adj, vert_idx)[conn_idx]], sp_adj.nzval[nzrange(sp_adj, vert_idx)[conn_idx]])
+        end
+    end
+    return deepcopy(vec)
+end
+export sparse2tuples
