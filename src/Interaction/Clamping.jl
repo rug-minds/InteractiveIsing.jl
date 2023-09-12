@@ -27,9 +27,9 @@ function setClampFunc!(layer, func, cfac = 1)
     _clamps = clamps(layer)
     clampparam(graph(layer), cfac)
 
-    for i in 1:size(clamps)[1]
-        for j in 1:size(clamps)[2]
-            _clamps[i,j] = func(;x=j,y=i)
+    for y in 1:size(clamps)[1]
+        for x in 1:size(clamps)[2]
+            _clamps[x,y] = func(;x,y)
         end
     end
     return

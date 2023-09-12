@@ -179,6 +179,15 @@ function setdefectrange!(gd::GraphDefects, idxs)::Int32
     return length(d_idxs)
 end
 
+function setdefectrange!(g::IsingGraph, idxs)
+    setdefectrange!(defects(g), idxs)
+    setSType!(g, :Defects => hasDefects(graph(l)))
+
+end
+function setdefectrange!(l::IsingLayer, idxs)
+    setdefectrange!(defects(graph(l)), idxLToG.(idxs, Ref(l)))
+    setSType!(graph(l), :Defects => hasDefects(graph(l)))
+end
 """
 Reset all the defects
 """

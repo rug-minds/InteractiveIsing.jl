@@ -1,5 +1,5 @@
 include("LayerDefects.jl")
 include("LayerTopology.jl")
 
-include("Layer.jl")
+include("IsingLayer.jl")
 include("LayerConnFunc.jl")

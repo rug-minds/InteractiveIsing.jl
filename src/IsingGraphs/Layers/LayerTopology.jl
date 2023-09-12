@@ -1,7 +1,7 @@
-using StaticArrays
 using LinearAlgebra
 
-TwoVec = SVector{2,Float32}
+# TwoVec = SVector{2,Float32}
+TwoVec = Point2f
 
 abstract type LatticeType end
 struct Square <: LatticeType end

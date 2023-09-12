@@ -29,9 +29,9 @@ is (;x,y) -> f(x,y)
 """
 function setBFunc!(layer, func::Function)
     b_mat = bfield(layer)
-    for x in 1:gwidth(layer)
-        for y in 1:glength(layer)
-            b_mat[y,x] = func(;x,y)
+    for y in 1:gwidth(layer)
+        for x in 1:glength(layer)
+            b_mat[x,y] = func(;x,y)
         end
     end
     setSType!(graph(layer), :Magfield => true)

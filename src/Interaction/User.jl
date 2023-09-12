@@ -2,15 +2,21 @@ export drawCircle, addRandomDefects!, setBField!, remBField!, setClamp!, remClam
 """
 Draw circle of some size to the layer g with center at i,j, and state value of val.
 """
-function drawCircle(layer, i_in, j_in, val, r = nothing; periodic = true, clamp = false, debug = false)
+function drawCircle(layer, x_in, y_in, val, r = nothing; periodic = true, clamp = false, debug = false)
     fsim = sim(graph(layer))
 
-    imgsize = size(image(fsim)[])
+    if !( 1 <= x_in <= size(layer)[1] && 1 <= y_in <= size(layer)[2])
+        return
+    end
+
+    # imgsize = size(image(fsim)[])
     
     # If img is size of underlying graph, use rounded coordinate, otherwise scale
-    i = glength(layer) == imgsize[1]    ? Int16(round(i_in)) : Int16(round(i_in/imgsize*glength(layer)))
-    j = gwidth(layer) == imgsize[2]     ? Int16(round(j_in)) : Int16(round(j_in/imgsize*gwidth(layer)))
-   
+    # i = glength(layer) == imgsize[1]    ? Int16(round(x_in)) : Int16(round(x_in/imgsize[1]*glength(layer)))
+    # j = gwidth(layer) == imgsize[2]     ? Int16(round(y_in)) : Int16(round(y_in/imgsize[2]*gwidth(layer)))
+    i = Int16(round(x_in))
+    j = Int16(round(y_in))
+
     circle = isnothing(r) ? circ(fsim) : getOrdCirc(r)
 
 
@@ -23,7 +29,7 @@ function drawCircle(layer, i_in, j_in, val, r = nothing; periodic = true, clamp 
     end
 
     if debug
-        println("i_in $i_in, j_in $j_in")
+        println("x_in $x_in, y_in $y_in")
         println("i $i, j$j")
         println("Value used $val")
         # println("Drew circle at y=$i and x=$j")
@@ -31,7 +37,7 @@ function drawCircle(layer, i_in, j_in, val, r = nothing; periodic = true, clamp 
     end
 
     setSpins!(layer, circle, val, clamp)
-    
+    return
 end
 
 """
@@ -42,7 +48,7 @@ function addRandomDefects!(layer, p)
 
     nonzeros = Int32[]
     for i in 1:length(state(layer))
-        if nand(state(layer)[i] == 0, isDefect(graph(layer))[idxLToG(layer, i)] )
+        if nand(state(layer)[i] == 0, isDefect(graph(layer))[idxLToG(i, layer)] )
             push!(nonzeros, i)
         end
     end
@@ -60,9 +66,7 @@ end
 
 """
 Set a magneticfield to a layer
-"""
 
-"""
 Enter a funcion f(x,y)
 Can use mode :Static, :Timed, :Repeating, :Timer
 

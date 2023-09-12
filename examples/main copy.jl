@@ -11,7 +11,7 @@ const sim = IsingSim(
     # colorscheme = ColorSchemes.winter
 );
 
-const g = sim(true);
+const g = sim(false);
 
 wg1 = @WeightGenerator "(dr) -> 1/dr" NN = 1
 wg5 = @WeightGenerator "(dr) -> 1/dr" NN = 5

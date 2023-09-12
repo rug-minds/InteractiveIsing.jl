@@ -1,4 +1,3 @@
-using BenchmarkTools, Distributions
 
 struct WeightGenerator{Func <: Function , SelfFunc <: Union{Nothing, Function}, AddFunc <: Union{Nothing, Function}, MultFunc <: Union{Nothing, Function}}
     NN::Int16
@@ -88,12 +87,18 @@ Accepted keywords are: NN, selfWeight, addDist, multDist, weightFunc
 Either: Either give a string with a function or
 give a previous weightfunc and supply keyword args to modify
 """
+const allowedargs_func = [:dr, :x, :y, :dx, :dy]
+const allowedargs_self = [:x, :y]
+function args_to_str(args)
+    return join(string.(args), ",")
+end
+
 macro WeightGenerator(wg_or_func, kwargs...)
     # Default Params
     NN = 1
 
-    allowedargs_func = [:dr, :i, :j, :di, :dj]
-    allowedargs_self = [:i, :j]
+    # allowedargs_func = [:dr, :x, :y, :dx, :dy]
+    # allowedargs_self = [:x, :y]
 
     is_a_wg = false
     # When a string is given
@@ -102,23 +107,8 @@ macro WeightGenerator(wg_or_func, kwargs...)
         selfWeight = addDist = multDist = nothing
         selfstr = addstr = multstr = nothing
         
+        # Set kwargs
         kwargs = (kwargs...,:(weightFunc = $wg_or_func))
-        # # Get the func str        
-        # funcstr = wg_or_func
-        # # Parse the func to get expression
-        # func = Meta.parse(funcstr)
-
-        # # MAIN FUNCTION
-        # # Get argument names
-        # argnames = method_argnames(last(methods(eval(func))))[2:end]
-        # # Check if argnames only contain a subset of the symbols :dr, :i, :j
-        # if !(all([arg ∈ allowedargs_func for arg in argnames]))
-        #     error("Function must only contain arguments $allowedargs_func")
-        # end
-
-        # # Get function body
-        # funcbody = func.args[2]
-        # func =  quote (;dr,i,j) -> Float32($funcbody) end
     else
         is_a_wg = true
         NN = func = selfWeight = addDist = multDist = funcstr = selfstr = addstr = multstr = nothing
@@ -156,14 +146,14 @@ macro WeightGenerator(wg_or_func, kwargs...)
         funcexpr = Meta.parse(func_key)
         # get func argnames
         argnames_func = method_argnames(last(methods(eval(funcexpr))))[2:end]
-        # Check if argnames only contain a subset of the symbols :dr, :i, :j
+        # Check if argnames only contain a subset of the symbols allowedargs_func
         if !(all([arg ∈ allowedargs_func for arg in argnames_func]))
             error("Function must only contain arguments $allowedargs_func")
         end
 
         # Get function body
         funcbody = funcexpr.args[2]
-        func = quote @inline (;dr,i,j) -> Float32($funcbody) end
+        func = quote @inline (;dr,x,y,dx,dy) -> Float32($funcbody) end
     end
     
     # SELF WEIGHT
@@ -178,13 +168,13 @@ macro WeightGenerator(wg_or_func, kwargs...)
         argnames_self = method_argnames(last(methods(eval(selfWeightExpr))))[2:end]
         # Check if argnames only contain a subset of the symbols :i, :j
         if !(all([arg ∈ allowedargs_self for arg in argnames_self]))
-            error("Self weight Function must only contain arguments :i, :j")
+            error("Self weight Function must only contain arguments $allowedargs_self")
         end
         
         # Get function body
         selfweightbody = selfWeightExpr.args[2]
 
-        selfWeight = quote @inline (;i,j) -> Float32($selfweightbody) end
+        selfWeight = quote @inline (;x,y) -> Float32($selfweightbody) end
     end
 
     # ADDITIVE DISTRIBTION
@@ -226,69 +216,14 @@ var"@WG" = var"@WeightGenerator"
 var"@WG!" = var"@WeightGenerator!"
 export @WeightGenerator, @WeightGenerator!, @WG, @WG!
 
-@generated function getWeight(wg::WeightGenerator{Func, SelfFunc, AddFunc, MultFunc}, dr, i, j) where {Func, SelfFunc, AddFunc, MultFunc}
-    return Meta.parse("wg.func(;dr,i,j)"*(!isa(MultFunc, Type{Nothing})*"*wg.multDist()" * (!isa(AddFunc, Type{Nothing})*" + wg.addDist()")))
+@generated function getWeight(wg::WeightGenerator{Func, SelfFunc, AddFunc, MultFunc}, dr, x, y, dx = 0, dy = 0) where {Func, SelfFunc, AddFunc, MultFunc}
+    return Meta.parse("wg.func(;$(args_to_str(allowedargs_func)))"*(!isa(MultFunc, Type{Nothing})*"*wg.multDist()" * (!isa(AddFunc, Type{Nothing})*" + wg.addDist()")))
 end
 
-@generated function getSelfWeight(wg::WeightGenerator{Func, SelfFunc, AddFunc, MultFunc}, i, j) where {Func, SelfFunc, AddFunc, MultFunc}
-    return Meta.parse("wg.selfWeight(;i,j)"*(!isa(MultFunc, Type{Nothing})*"*wg.multDist()" * (!isa(AddFunc, Type{Nothing})*" + wg.addDist()")))
+@generated function getSelfWeight(wg::WeightGenerator{Func, SelfFunc, AddFunc, MultFunc}, x, y) where {Func, SelfFunc, AddFunc, MultFunc}
+    return Meta.parse("wg.selfWeight(;$(args_to_str(allowedargs_self)))"*(!isa(MultFunc, Type{Nothing})*"*wg.multDist()" * (!isa(AddFunc, Type{Nothing})*" + wg.addDist()")))
 end
 export getWeight, getSelfWeight
-
-using StaticArrays
-abstract type AbstractPreAlloc{T} <: AbstractVector{T} end
-
-mutable struct Prealloc{T} <: AbstractPreAlloc{T}
-    const vec::Vector{T} 
-    used::Int32
-    const maxsize::Int32
-
-    function Prealloc(type::Type, N)
-        vec = Vector{type}(undef, N)
-        maxsize = N
-        used = 0
-        new{type}(vec, used, maxsize)
-    end
-
-end
-
-# Using StaticArrays
-mutable struct SPrealloc{S,T} <: AbstractPreAlloc{T}
-    const vec::MVector{S,T} 
-    used::Int32
-    const maxsize::Int32
-
-    function SPrealloc(type::Type, N)
-        vec = MVector{N, type}(Vector{type}(undef, N))
-        maxsize = N
-        used = 0
-        return new{N, type}(vec, used, maxsize)
-    end
-
-end
-
-struct ThreadedPrealloc{PreallocT}
-    vec::Vector{PreallocT}
-end
-@inline getindex(pre::ThreadedPrealloc, i) = pre.vec[i]
-
-function ThreadedPrealloc(type::Type, N, nthreads)
-    PreallocT = typeof(SPrealloc(type, N))
-    vec = Vector{PreallocT}(undef, nthreads)
-    for i in 1:nthreads
-        vec[i] = SPrealloc(type, N)
-    end
-    return ThreadedPrealloc(vec)
-end
-
-getindex(pre::AbstractPreAlloc, i) = pre.vec[i]
-setindex!(pre::AbstractPreAlloc, tup, i) = (pre.vec[i] = tup; pre.used = max(pre.used, i))
-length(pre::AbstractPreAlloc) = pre.used
-push!(pre::AbstractPreAlloc, tup) = (pre.vec[pre.used+1] = tup; pre.used += 1)
-reset!(pre::AbstractPreAlloc) = (pre.used = 0; return)
-size(pre::AbstractPreAlloc) = tuple(pre.used)
-
-export Prealloc, SPrealloc
 
 
 Base.zero(::Type{NTuple{N,T}}) where {N,T} = NTuple{N,T}(Base.zero(T) for i in 1:N)
@@ -307,43 +242,9 @@ function SelfType(wg::WeightGenerator{A,SelfFunc,B,C}) where {A,SelfFunc,B,C}
 end
 export SelfType
 
-genAdj!(layer::L, wg::WG) where {L <: AbstractIsingLayer, WG <: WeightGenerator} = genAdj!(SelfType(wg), layer, top(layer), wg)
-
-# Base.@propagate_inbounds function genAdj!(layer::L, layer_top::LT, wg::WG) where {L <: AbstractIsingLayer, LT, WG <: WeightGenerator}
-Base.@propagate_inbounds function genAdj!(st::ST, layer::L, layer_top::LT, wg::WG) where {ST <: SelfType, L <: AbstractIsingLayer, LT, WG <: WeightGenerator}
-    fNN = NN(wg)
-
-    # Get the adjacency list
-    fadj = adj(graph(layer))
-    # Number of states
-    num_verts = nStates(layer)
-
-    # Keeps track of the last index that was accessed
-    # Used to avoid searching every time in the adjacency list
-    last_access = ones(Int32, num_verts)
-
-    pre_3tuple = SPrealloc(NTuple{3, Int32}, (2*fNN+1)^2)
-
-    # layer_top = top(layer)
-    len = glength(layer)
-    wid = gwidth(layer)
-
-    for vert_idx in 1:num_verts
-        vert_i, vert_j = idxToCoord(vert_idx, len)
-        getConnIdxs!(st, vert_idx, vert_i, vert_j, len ,wid, fNN, pre_3tuple)
-        fillEntry!(st, layer, vert_idx, vert_i, vert_j, layer_top, wg, pre_3tuple, last_access)
-        reset!(pre_3tuple)
-    end
-
-    # For performance
-    # Probably helps with data locality
-    adj(graph(layer)) .= deepcopy(fadj)
-
-    return fadj
-end
-export genAdj!
 
 
+# TODO: Shouldn't be here probably?
 """
 Get all indices of a vertex with idx vert_idx and coordinates vert_i, vert_j
 that are larger than vert_idx
@@ -379,44 +280,4 @@ function getConnIdxs!(::Self, vert_idx, vert_i, vert_j, len, wid, NN, pre_3tuple
         end
     end
 end
-
-function fillEntry!(::NoSelf, layer::L, idx, vert_i, vert_j, layer_top, wg, pre_3tuple, last_access) where L # Force specialization
-
-    sort!(pre_3tuple, by = x -> x[3])
-    for conn in pre_3tuple
-        conn_i, conn_j = conn[1], conn[2]
-        dr = dist(vert_i, vert_j, conn_i, conn_j, layer_top)
-        weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2)
-        if weight != 0
-            lastacces1, lastacces2 = addWeight!(layer, idx, conn[3], weight, sidx1 = last_access[idx], sidx2 = last_access[conn[3]])
-            last_access[idx] = lastacces1
-            last_access[conn[3]] = lastacces2
-        end
-    end
-
-    return
-end
-
-# Fill with self weights
-function fillEntry!(::Self, layer::L, idx, vert_i, vert_j, layer_top, wg, pre_3tuple, last_access) where L # Force specialization
-
-    sort!(pre_3tuple, by = x -> x[3])
-    for conn in pre_3tuple
-        if conn[3] == idx
-            weight = getSelfWeight(wg, vert_i, vert_j)
-        else
-            conn_i, conn_j = conn[1], conn[2]
-            dr = dist(vert_i, vert_j, conn_i, conn_j, layer_top)
-            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2)
-        end
-        if weight != 0
-            lastacces1, lastacces2 = addWeight!(layer, idx, conn[3], weight, sidx1 = last_access[idx], sidx2 = last_access[conn[3]])
-            last_access[idx] = lastacces1
-            last_access[conn[3]] = lastacces2
-        end
-    end
-    
-    return
-end
-
 const wg_isingdefault = @WeightGenerator "(dr) -> dr == 1" NN = 1

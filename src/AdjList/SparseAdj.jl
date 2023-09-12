@@ -64,14 +64,16 @@ function _fillSparseVecs(layer, row_idxs, col_idxs, weights, NN, topology, wg, p
         for conn in pre_3tuple
             conn_i, conn_j = conn[1], conn[2]
             dr = dist(vert_i, vert_j, conn_i, conn_j, topology)
-            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2)
+            
+            # TODO: Self weight???
+            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2, conn_i-vert_i, conn_j - vert_j)
         
             if weight == 0
                 continue
             end
 
-            g_col_idx     = idxLToG(layer, col_idx)
-            g_conn_idx    = idxLToG(layer, conn[3])
+            g_col_idx     = idxLToG(col_idx, layer)
+            g_conn_idx    = idxLToG(conn[3], layer)
 
             push!(row_idxs, g_conn_idx)
             push!(col_idxs, g_col_idx)
@@ -85,19 +87,21 @@ end
 # For connecting layers 
 function _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, NN, wg, pre_3tuple)
     for col_idx in 1:nStates(layer1)
-        vert_i, vert_j = idxToCoord(col_idx, glength(layer1))
+        vert_i, vert_j = idxToCoord(col_idx, layer1)
         lattice2_iterator(layer1, layer2, vert_i, vert_j, NN, pre_3tuple)
         for conn in pre_3tuple
             conn_i, conn_j = conn[1], conn[2]
             dr = dist(vert_i, vert_j, conn_i, conn_j, layer1, layer2)
-            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2)
+
+            conn_i_layer1, conn_j_layer1 = coordsl2tol1(conn_i, conn_j, layer1, layer2) 
+            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2, conn_i_layer1-vert_i, conn_j_layer1-vert_j)
 
             if weight == 0
                 continue
             end
         
-            g_col_idx     = idxLToG(layer1, col_idx)
-            g_row_idx    = idxLToG(layer2, conn[3])
+            g_col_idx     = idxLToG(col_idx, layer1)
+            g_row_idx    = idxLToG(conn[3], layer2)
 
             push!(row_idxs, g_row_idx)
             push!(col_idxs, g_col_idx)
@@ -167,7 +171,7 @@ export remConnection!
 
 remConnectionDirected(sp_adj, i, j) = deleteval!(sp_adj, i, j)
 
-function connectLayersFullSP(layer1, layer2)
+function connectLayersFull(layer1, layer2)
     n_conns = nStates(layer1)*nStates(layer2)
 
     rows = Vector{Int32}(undef, 2*n_conns)
@@ -199,5 +203,9 @@ function connectLayersFullSP(layer1, layer2)
 end
 export connectLayersFullSP
 
-connectLayersFullSP!(layer1, layer2) = set_sp_adj!(graph(layer1), connectLayersFullSP(layer1, layer2))
-export connectLayersFullSP!
+function connectLayersFull!(layer1, layer2)
+    set_sp_adj!(graph(layer1), connectLayersFullSP(layer1, layer2))
+    connections(layer1)[internal_idx(layer1) => internal_idx(layer2)] = :All
+    connections(layer2)[internal_idx(layer2) => internal_idx(layer1)] = :All
+end
+export connectLayersFull!

@@ -9,24 +9,25 @@ Then, this function itself makes a new branch where getE is defined again.
 export mainLoop
 """
 
-function createProcess(sim::IsingSim; gidx = 1, threaded = true, kwargs...)::Nothing
+function createProcess(g::IsingGraph, threaded = true; kwargs...)::Nothing
+    _sim = sim(g)
     process = nothing
-    for (idx, p) in enumerate(processes(sim))
+    for (idx, p) in enumerate(processes(_sim))
         if status(p) == :Terminated
             process = p
             status(p, :Starting)
             break
         end
 
-        if idx == length(processes(sim))
+        if idx == length(processes(_sim))
             println("No available process")
             return
         end
     end
     if threaded 
-        errormonitor(Threads.@spawn updateGraph(sim, process; gidx, kwargs...))
+        errormonitor(Threads.@spawn updateGraph(g, process; kwargs...))
     else
-        updateGraph(sim, process; gidx, updateFunc, energyFunc, rng, kwargs...)
+        updateGraph(g, process; updateFunc, energyFunc, rng, kwargs...)
     end
 
     return
@@ -37,14 +38,16 @@ end
 
 export createProcess
 
-function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, kwargs...)
-    g = gs(sim)[gidx]
+function updateGraph(g, process = processes(sim(g))[1]; kwargs...)
+    _sim = sim(g)
+    
     gstype = stype(g)
     gstate = state(g)
-    params = sim.params
-    lTemp = Temp(sim)
+    params = _sim.params
+    lTemp = Temp(_sim)
     iterator = ising_it(g,gstype)
     gadj = sp_adj(g)
+
     if haskey(kwargs, :gadj)
         if typeof(kwargs[:gadj]) <: Function
             gadj = kwargs[:gadj](g)
@@ -52,12 +55,16 @@ function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, kwarg
             gadj = kwargs[:gadj]
         end
     end
+    
     updateFunc = haskey(kwargs, :updateFunc) ? kwargs[:updateFunc] : updateMonteCarloIsing
     energyFunc = haskey(kwargs, :energyFunc) ? kwargs[:energyFunc] : getEFactor
     rng = haskey(kwargs, :rng) ? kwargs[:rng] : MersenneTwister()
 
+    check_empty = haskey(kwargs, :check_empty) ? SIMDCheck{kwargs[:check_empty]}() : SIMDCheck{true}()
+
+
     try
-        mainLoop(process, gidx, g, gstate, gadj, lTemp, iterator, rng, updateFunc, energyFunc, gstype; kwargs...)
+        mainLoop(process, g, gstate, gadj, lTemp, iterator, rng, updateFunc, energyFunc, gstype, check_empty; kwargs...)
     catch 
         status(process, :Terminated)
         atomic_message(process, :Nothing)
@@ -68,12 +75,12 @@ end
 
 export updateGraph
 
-function mainLoop(process, gidx, g, gstate, gadj, lTemp, iterator, rng, updateFunc, energyFunc, gstype::ST; kwargs...)::Nothing where {ST <: SType}
+function mainLoop(process, g, gstate, gadj, lTemp, iterator, rng, updateFunc, energyFunc, gstype::ST, check_empty; kwargs...)::Nothing where {ST <: SType}
 
     status(process, :Running)
 
     while run(process)
-        updateFunc(g, lTemp, gstate, gadj, iterator, rng, gstype, energyFunc)
+        updateFunc(g, lTemp, gstate, gadj, iterator, rng, gstype, energyFunc, check_empty)
         inc(process)
         GC.safepoint()
     end
@@ -100,22 +107,22 @@ function mainLoop(process, gidx, g, gstate, gadj, lTemp, iterator, rng, updateFu
     # Consume message and mark process to run
     signal!(process, true, :Nothing)
 
-    updateGraph(sim(g), process; gidx, energyFunc, kwargs...)
+    updateGraph(g, process; energyFunc, kwargs...)
     return 
 end
 export mainLoop
 
-@inline function updateMonteCarloIsing(g::IsingGraph, lTemp, gstate, gadj, iterator, rng, gstype::ST, energyFunc) where {ST <: SType}
+@inline function updateMonteCarloIsing(g::IsingGraph, lTemp, gstate, gadj, iterator, rng, gstype::ST, energyFunc, check_empty) where {ST <: SType}
     idx = rand(rng, iterator)
-    updateMonteCarloIsing(idx, g, lTemp, gstate, gadj, rng, gstype, energyFunc)
+    updateMonteCarloIsing(idx, g, lTemp, gstate, gadj, rng, gstype, energyFunc, check_empty)
 end
 
 
-@inline function updateMonteCarloIsing(idx::Integer, g, lTemp, gstate::Vector{Int8}, gadj, rng, gstype::ST, energyFunc) where {ST <: SType}
+@inline function updateMonteCarloIsing(idx::Integer, g, lTemp, gstate::Vector{Int8}, gadj, rng, gstype::ST, energyFunc, check_empty) where {ST <: SType}
 
     beta::Float32 = 1f0/(lTemp[])
     
-    Estate::Float32 = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, gstype)
+    Estate::Float32 = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, gstype, check_empty)
 
     minEdiff::Float32 = 2*Estate
 
@@ -125,7 +132,7 @@ end
 end
 
 
-@inline function updateMonteCarloIsing(idx::Integer, g, lTemp, gstate::Vector{Float32}, gadj, rng, gstype::ST, energyFunc) where {ST <: SType}
+@inline function updateMonteCarloIsing(idx::Integer, g, lTemp, gstate::Vector{Float32}, gadj, rng, gstype::ST, energyFunc, check_empty) where {ST <: SType}
 
     @inline function sampleCState()
         2f0*(rand(rng, Float32)- .5f0)
@@ -135,7 +142,7 @@ end
      
     oldstate = @inbounds gstate[idx]
 
-    efactor = energyFunc(g, gstate, gadj, idx, gstype)
+    efactor = energyFunc(g, gstate, gadj, idx, gstype, check_empty)
 
     newstate = sampleCState()
 
@@ -203,15 +210,15 @@ let times = Ref([])
 end
 export upDebug
 
-@inline function getEFactor(g, state, sparse::SparseMatrixCSC, idx, stype::SType)
-    efac = 0f0 
-    # @inbounds @fastmath @simd for idx in nzrange(sparse, idx)
-    @turbo check_empty = true for idx in nzrange(sparse, idx)
-    # for idx in nzrange(sparse, idx)
-        efac += -state[sparse.rowval[idx]] * sparse.nzval[idx]
-    end
-    return efac
-end
+# @inline function getEFactor(g, state, sparse::SparseMatrixCSC, idx, stype::SType)
+#     efac = 0f0 
+#     # @inbounds @fastmath @simd for idx in nzrange(sparse, idx)
+#     @turbo check_empty = true for idx in nzrange(sparse, idx)
+#     # for idx in nzrange(sparse, idx)
+#         efac += -state[sparse.rowval[idx]] * sparse.nzval[idx]
+#     end
+#     return efac
+# end
 
 # @inline function getEFactor1(g, state, sparse::SparseMatrixCSC, idx, stype::SType)
 #     efac = 0f0 
@@ -223,5 +230,5 @@ end
 #     end
 #     return efac
 # end
-export getEFactor, getEFactor1
+# export getEFactor, getEFactor1
 

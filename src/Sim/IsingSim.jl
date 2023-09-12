@@ -7,13 +7,13 @@ mutable struct IsingSim
     # Graphs
     const gs::Vector{IG} where IG <: IsingGraph
     # Property map used in qml
-    const pmap::JuliaPropertyMap
-    # const pmap::Dict{String,Any}
+    # const pmap::JuliaPropertyMap
+    const pmap::Dict{String,Any}
 
     const M_array::Ref{CircularBuffer{Float64}}
 
     # Image of graph
-    const img::Ref{Matrix{RGB{Float64}}}
+    # const img::Ref{Matrix{RGB{Float64}}}
 
     # Thread Locking
     const updatingUpf::Ref{Bool}
@@ -53,12 +53,12 @@ mutable struct IsingSim
             # Graphs
             IsingGraph[],
             # Property map
-            JuliaPropertyMap(),
-            # Dict{String,Any}(),
+            # JuliaPropertyMap(),
+            Dict{String,Any}(),
             # M_array
             CircularBuffer{Float64}(60),
             # Image from module
-            img,
+            # img,
             Ref(false),
             Ref(false),
             Ref(false),
@@ -88,15 +88,16 @@ mutable struct IsingSim
         addLayer!(g, len, wid, type = continuous ? Float32 : Int8)
 
         # Initialize image
-         if !isempty(layers(g))
-            initImg = gToImg(g[1]; colorscheme)
-        end
+        #  if !isempty(layers(g))
+        #     initImg = gToImg(g[1]; colorscheme)
+        # end
         
-        sim.img[] = initImg
+        # sim.img[] = initImg
 
         sim.obs.layerName[] = name(g[1])
+
         # Register observables
-        register(sim, sim.obs)
+        # register(sim, sim.obs)
 
 
 
@@ -119,12 +120,12 @@ mutable struct IsingSim
             # Graphs
             IsingGraph[g],
             # Property map
-            JuliaPropertyMap(),
-            # Dict{String,Any}(),
+            # JuliaPropertyMap(),
+            Dict{String,Any}(),
             # M_array
             CircularBuffer{Float64}(60),
             # Image from module
-            img,
+            # img,
             Ref(false),
             Ref(false),
             Ref(false),
@@ -138,7 +139,7 @@ mutable struct IsingSim
         #Observables
         sim.obs = Obs(len, wid, initbrushR, initTemp)
         
-        sim.img[] = gToImg(g[1]; colorscheme)
+        # sim.img[] = gToImg(g[1]; colorscheme)
 
         sim.obs.layerName[] = name(g[1])
 
@@ -186,8 +187,8 @@ end
 @forward IsingSim IsingParams params
 @setterGetter IsingSim img
 
-@inline image(sim::IsingSim) = sim.img
-export image
+# @inline image(sim::IsingSim) = sim.img
+# export image
 
 getindex(sim::IsingSim, idx) = gs(sim)[idx]
 

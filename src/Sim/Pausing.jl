@@ -107,25 +107,28 @@ export refreshSim
 """
 Restart Sim with same number of processes
 """
-function restartSim(sim, gidx = 1; kwargs...)
-    processNum = count(stat -> stat == :Running, status(sim)) 
+function restart(g; kwargs...)
+    _sim = sim(g)
+    processNum = count(stat -> stat == :Running, status(_sim)) 
     processNum = processNum < 1 ? 1 : processNum
-    quitSim(sim)
+    quitSim(_sim)
     # createProcess(sim, processNum; gidx, updateFunc, energyFunc)
-    createProcess(sim; gidx, kwargs...)
+    createProcess(g; kwargs...)
     return
 end 
-export restartSim
+export restart
 
-function togglePauseSim(sim)
+function togglePause(g)
+    _sim = sim(g)
     # If any are paused, unpause else pause
-    if any(x -> x == :Paused, status(sim))
-        unpauseSim(sim)
+    if any(x -> x == :Paused, status(_sim))
+        unpauseSim(_sim)
     else
-        pauseSim(sim)
+        pauseSim(_sim)
     end
 end
-export togglePauseSim
+
+export togglePause
 
 function resetStatus!(sim)
     status(sim) .= :Terminated

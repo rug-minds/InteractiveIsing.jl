@@ -21,12 +21,12 @@ graphdefects(df::LayerDefects) = defects(graph(layer(df)))
 reset!(defects::LayerDefects) = ndefects(defects,0)
 
 function getindex(defects::LayerDefects, idx)
-    graphdefects(defects)[idxLToG(defects.layer, idx)]
+    graphdefects(defects)[idxLToG(idx, defects.layer)]
 end
 
 function setindex!(defects::LayerDefects, val, idx)
     oldval = defects[idx]
-    graphdefects(defects)[idxLToG(defects.layer, idx)] = val
+    graphdefects(defects)[idxLToG(idx, defects.layer)] = val
     if val == true && oldval == false
         defects.ndefects += 1
     end
@@ -34,7 +34,7 @@ function setindex!(defects::LayerDefects, val, idx)
 end
 
 function setrange!(defects::LayerDefects, val, idxs)
-    num_set = setrange!(graphdefects(defects), val, idxLToG.(Ref(layer(defects)), idxs))
+    num_set = setrange!(graphdefects(defects), val, idxLToG.(idxs, Ref(layer(defects))))
     defects.ndefects += num_set
     return num_set
 end
@@ -49,7 +49,7 @@ function defectList(defects::LayerDefects)
 
     preceding_defects = precedingDefects(defects)
 
-    return idxGToL.(Ref(currentlayer), defectList(graphdefects(defects))[(preceding_defects+1):(preceding_defects+ndefects(defects))])
+    return idxGToL.(defectList(graphdefects(defects))[(preceding_defects+1):(preceding_defects+ndefects(defects))], Ref(currentlayer))
 end
 
 function aliveList(defects::LayerDefects)
@@ -59,7 +59,7 @@ function aliveList(defects::LayerDefects)
 
     preceding_states = precedingAlives(defects)
     
-    return idxGToL.(Ref(currentlayer), aliveList(graphdefects(defects))[(preceding_states+1):(preceding_states + nStates(currentlayer) - ndefects(defects))] )
+    return idxGToL.(aliveList(graphdefects(defects))[(preceding_states+1):(preceding_states + nStates(currentlayer) - ndefects(defects))], Ref(currentlayer) )
 end
 
 function precedingDefects(defects::LayerDefects)

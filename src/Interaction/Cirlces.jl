@@ -14,6 +14,8 @@ function getOrdCirc(r::Integer)
     end
     return circpoints
 end    
+#TODO: Remove export
+export getOrdCirc
 
 # Offset a circle so that center is at i,j
 function offCirc(points,i,j)

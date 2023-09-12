@@ -553,3 +553,4 @@ macro tryLockPause(sim, expr, blockpause = false, blockunpause = false)
     return esc(fexp)
 end
 export @tryLockPause
+

@@ -34,38 +34,6 @@ function setSpins!(g::AbstractIsingGraph{T}, idx::Integer, brush, clamp = false,
     @inbounds state(g)[idx] = brush
 end
 
-
-export addWeight!
-
-"""
-Adding weights
-"""
-
-addWeight!(g::IsingGraph, idx, conn_idx, weight; sidx1 = 1, sidx2 = 1, eidx1 = nothing, eidx2 = nothing) = addWeight!(adj(g), idx, conn_idx, weight; sidx1, sidx2, eidx1, eidx2)
-
-addWeight!(g::IsingLayer, idx, conn_idx, weight; sidx1 = 1, sidx2 = 1, eidx1 = nothing, eidx2 = nothing) = addWeight!(adj(graph(g)), idxLToG(g, idx), idxLToG(g, conn_idx), weight; sidx1, sidx2, eidx1, eidx2)
-
-
-addWeight!(layer1::IsingLayer, layer2::IsingLayer, idx1::Integer, idx2::Integer, weight; sidx1 = 1) = 
-    addWeight!(adj(graph(layer1)), idxLToG(layer1, idx1), idxLToG(layer2, idx2), weight; sidx1)
-
-# Using coordinate indexing
-addWeight!(layer1::IsingLayer, layer2::IsingLayer, coords1::Tuple, coords2::Tuple, weight) = addWeight!(layer1, layer2, coordToIdx(coords1, glength(layer1)), coordToIdx(coords2, glength(layer2)), weight)
-
-
-# For performance, but should generally not be used
-# Sidx is the first index of the adjacency matrix to start looking for connections
-# This is useful if you know that the connections are in a certain range for performance
-addWeightDirected!(layer1::IsingLayer, layer2::IsingLayer, idx1::Integer, idx2::Integer, weight; sidx = 1) = 
-    addWeightDirected!(adj(graph(layer1)), idxLToG(layer1, idx1), idxLToG(layer2, idx2), weight; sidx)
-
-addWeightDirected!(layer1::IsingLayer, layer2::IsingLayer, coords1::Tuple, coords2::Tuple, weight; sidx = 1) = 
-    addWeightDirected!(layer1, layer2, coordToIdx(coords1, glength(layer1)), coordToIdx(coords2, glength(layer2)), weight; sidx)
-
-addWeightDirected!(layer::IsingLayer, idx, conn_idx, weight; sidx = 1) = addWeightDirected!(adj(graph(layer)), idxLToG(layer, idx), idxLToG(layer, conn_idx), weight; sidx)
-export addWeightDirected!
-# Clamp an image to a layer
-
 function clampImg!(layer::IsingLayer, imgfile)
     # Load the image
     img = load(imgfile)
@@ -76,9 +44,11 @@ function clampImg!(layer::IsingLayer, imgfile)
     # # Convert to black and white image
     img = Gray.(img)
     img = img .> 0.5
-    img = img .*2 .- 1
+    img = img .*2 .- 1    
 
-    setSpins!(layer, [1:length(img);], img[:] , true)
+    setSpins!(layer, [1:length(img);], (permutedims(img)[:,end:-1:1])[:] , true)
+
+    return
 
 end
 

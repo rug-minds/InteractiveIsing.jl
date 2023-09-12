@@ -21,7 +21,7 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIs
     const nstates::Int32
     coords::Coords{Tuple{Int32,Int32,Int32}}
 
-    connections::Dict{Pair{Int32,Int32}, WeightGenerator} 
+    connections::Dict{Pair{Int32,Int32}, Any} 
 
     timers::Vector{Timer}
 
@@ -115,15 +115,65 @@ function Base.show(io::IO, layer::AbstractIsingLayer)
     if coords(layer) != nothing
         showstr *= " \t at coordinates $(coords(layer))"
     end
-    print(io, showstr)
+    print(io, showstr, "\n")
+    println(io, " with connections:")
+    for key in keys(connections(layer))
+        println(io, "\tConnected to layer $(key[2]) using ")
+        println("\t", (connections(layer)[key]))
+    end
+    print(io, "and $(ndefects(layer)) defects")
+    return
 end
 
 Base.show(io::IO, layertype::Type{<:AbstractIsingLayer}) = print(io, "IsingLayer")
 
-@inline state(l::IsingLayer) = reshape((@view state(graph(l))[graphidxs(l)]), glength(l), gwidth(l))
-@inline adj(l::IsingLayer) = reshape((@view adj(graph(l))[graphidxs(l)]), glength(l), gwidth(l))
+@inline state(l::IsingLayer) = reshape((@view state(graph(l))[graphidxs(l)]), size(l,1), size(l,2))
+# @inline adj(l::IsingLayer) = reshape((@view adj(graph(l))[graphidxs(l)]), glength(l), gwidth(l))
 @inline sp_adj(l::IsingLayer) = @view sp_adj(graph(l))[:, graphidxs(l)] 
+@inline function set_sp_adj!(layer, wg, rcw)
+    connections(layer)[internal_idx(layer) => internal_idx(layer)] = wg
+    set_sp_adj!(graph(layer), rcw)
+end
+
+@inline function set_sp_adj!(layer1, layer2, wg, rcw)
+    connections(layer1)[internal_idx(layer1) => internal_idx(layer2)] = wg
+    set_sp_adj!(graph(layer1), rcw)
+end
 export state, adj
+
+"""
+Get the connections for an idx in the graph
+"""
+function conns(idx::Integer, g::IsingGraph)
+    return sp_adj(g)[:, idx]
+end
+
+"""
+Get the connections for an idx in the layer, given in graphidxs
+"""
+function conns(idx::Integer, layer::IsingLayer)
+    return sp_adj(graph(layer))[:, idxLToG(idx,layer)]
+end
+
+# TODO:: Make a way to show the coordinates of the connections
+"""
+Get the connections for a coordinate of the layer, given in graphidxs
+"""
+conns(i::Integer, j::Integer, layer::IsingLayer) = conns(idxLToG(i,j, layer), layer)
+"""
+Get the connections for a coordinate of the layer, given in layeridxs
+"""
+conns(i::Integer, j::Integer, layer1::IsingLayer, layer2::IsingLayer) = conns(idxLToG(i, j, layer1),layer1)[graphidxs(layer2)]
+"""
+Get the coordinates of all the connected units for a unit at coordinates i,j for layer 1, given in layer coordinates of layer 2
+Connections to self can be obtained by setting layer2 = layer1
+"""
+function conncoords(i::Integer, j::Integer, layer1::IsingLayer, layer2::IsingLayer = layer1)
+    _conns = conns(i,j,layer1,layer2)
+    return idxToCoord.(_conns.nzind, Ref(layer2))
+end
+export conns, conncoords
+
 
 # Get Graph
 @inline function graph(layer::IsingLayer{T,G})::G where {T,G}
@@ -154,6 +204,7 @@ export setcoords!
 # Setters and getters
 # @forward IsingLayer IsingGraph g
 @inline size(layer::AbstractIsingLayer)::Tuple{Int32,Int32} = layer.size
+@inline size(layer::AbstractIsingLayer, i) = layer.size[i]
 @inline glength(layer::AbstractIsingLayer)::Int32 = (size(layer)::Tuple{Int32,Int32})[1]::Int32
 @inline gwidth(layer::AbstractIsingLayer)::Int32 = (size(layer)::Tuple{Int32,Int32})[2]::Int32
 @inline maxdist(layer::AbstractIsingLayer) = maxdist(layer, periodic(layer))
@@ -165,14 +216,19 @@ export setcoords!
 end
 export maxdist
 
-@inline coordToIdx(i,j,layer::AbstractIsingLayer) = coordToIdx(latmod(i, glength(layer)), latmod(j, gwidth(layer)), glength(layer))
-@inline idxToCoord(idx, layer::AbstractIsingLayer) = idxToCoord(idx, glength(layer))
+@inline coordToIdx(i,j,layer::AbstractIsingLayer) = coordToIdx(latmod(i, size(layer,1)), latmod(j, size(layer,2)), size(layer,1))
+@inline idxToCoord(idx, layer::AbstractIsingLayer) = idxToCoord(idx, size(layer,1))
+@inline c2i(i, j, layer::AbstractIsingLayer) = coordToIdx(i, j, layer)
+@inline i2c(i, layer::AbstractIsingLayer) = idxToCoord(i, layer)
 
 @inline startidx(layer::AbstractIsingLayer) = start(layer)
-@inline endidx(layer::AbstractIsingLayer) = start(layer) + glength(layer)*gwidth(layer) - 1
+@inline endidx(layer::AbstractIsingLayer) = start(layer) + prod(size(layer)) - 1
 
 @inline getindex(layer::AbstractIsingLayer, idx) = state(layer)[idx]
+@inline getindex(layer::AbstractIsingLayer, i, j) = state(layer)[i,j]
 @inline setindex!(layer::AbstractIsingLayer, val, idx) = state(layer)[idx] = val
+@inline setindex!(layer::AbstractIsingLayer, val, i, j) = state(layer)[i,j] = val
+
 @inline Base.in(idx::Integer, layer::IsingLayer) = idx ∈ graphidxs(layer)
 
 
@@ -182,8 +238,8 @@ Range of idx of layer for underlying graph
 @inline graphidxs(layer::AbstractIsingLayer) = UnitRange{Int32}(start(layer):endidx(layer))
 export graphidxs
 
-bfield(layer::AbstractIsingLayer) = reshape((@view bfield(graph(layer))[graphidxs(layer)]), glength(layer), gwidth(layer))
-clamps(layer::AbstractIsingLayer) = reshape((@view clamps(graph(layer))[graphidxs(layer)]), glength(layer), gwidth(layer))
+bfield(layer::AbstractIsingLayer) = reshape((@view bfield(graph(layer))[graphidxs(layer)]), size(layer,1), size(layer,2))
+clamps(layer::AbstractIsingLayer) = reshape((@view clamps(graph(layer))[graphidxs(layer)]), size(layer,1), size(layer,2))
 
 # Inherited from Graph
 @inline htype(layer::AbstractIsingLayer) = layer.graph.htype
@@ -204,8 +260,8 @@ iterator(g::IsingGraph) = 1:(nStates(g))
 # LayerTopology
 @inline periodic(layer::AbstractIsingLayer) = periodic(top(layer))
 @inline setPeriodic!(layer::AbstractIsingLayer, periodic) = top!(layer, LayerTopology(top(layer); periodic))
-@inline dist(idx1::Integer, idx2::Integer, layer::AbstractIsingLayer) = dist(idxToCoord(idx1, glength(layer))..., idxToCoord(idx2, glength(layer))..., top(layer))
-@inline idxToCoord(idx::Integer, layer::AbstractIsingLayer) = idxToCoord(idx, glength(layer))
+@inline dist(idx1::Integer, idx2::Integer, layer::AbstractIsingLayer) = dist(idxToCoord(idx1, glength(layer))..., idxToCoord(idx2, size(layer,1))..., top(layer))
+@inline idxToCoord(idx::Integer, layer::AbstractIsingLayer) = idxToCoord(idx, size(layer,1))
 
 export setPeriodic!
 
@@ -216,71 +272,29 @@ export setPeriodic!
 """
 Go from a local idx of layer to idx of the underlying graph
 """
-@inline function idxLToG(layer::IsingLayer, idx::Integer)::Int32
+@inline function idxLToG(idx::Integer, layer::IsingLayer)::Int32
     return Int32(start(layer) + idx - 1)
 end
 
 """
 Go from a local matrix indexing of layer to idx of the underlying graph
 """
-@inline function idxLToG(layer::IsingLayer, i::Integer, j::Integer)::Int32
+@inline function idxLToG(i::Integer, j::Integer, layer::IsingLayer)::Int32
     return Int32(start(layer) + coordToIdx(i,j, glength(layer)) - 1)
 end
 
-@inline idxLToG(i::Integer, j::Integer, layer::IsingLayer) = idxLToG(layer, i, j)
-idxLToG(layer, tup::Tuple) = idxLToG(layer, tup[1], tup[2])
+idxLToG(tup::Tuple, layer) = idxLToG(tup[1], tup[2], layer)
 
 """
 Go from graph idx to idx of layer
 """
-@inline function idxGToL(layer::IsingLayer, idx::Integer)
-    return Int32(idx + 1 - start(layer))
-end
 @inline function idxGToL(idx::Integer, layer::IsingLayer)
     return Int32(idx + 1 - start(layer))
 end
 
 
-"""
-Convert adjacency matrix of a layer to adjacency matrix with idxs of underlying graph
-"""
-function adjLToG(adj, layer)
-    for entry in adj
-        for idx in 1:length(entry)
-            entry[idx] = tuple(idxLToG(layer, connIdx(entry[idx])), connW(entry[idx]))
-        end
-    end
-end
-# debug
-export adjLToG
-
-# What is this used for?
-function adjGToL(adj::AbstractArray{T}, layer) where T
-    newadj = Vector{T}(undef, length(adj))
-    for adjidx in 1:length(adj)
-        entry = adj[adjidx]
-        newentry = typeof(entry)(undef, length(entry))
-        for entryidx in 1:length(entry)
-            conn = entry[entryidx]
-            newentry[entryidx] = tuple(idxGToL(layer, connIdx(conn)), connW(conn))
-        end
-        newadj[adjidx] = newentry
-    end
-    return newadj
-end
-export adjGToL
-
-function setAdj!(layer::IsingLayer, wf = defaultIsingWF)
-    
-    Threads.@threads for idx in eachindex(adj(layer))
-    # for idx in eachindex(adj(layer))
-        idxs_weights = getUniqueConnIdxs(wf, idx, glength(layer), gwidth(layer), wt(wf))
-        
-        for idx_weight in idxs_weights
-            addWeight!(layer, idx, idx_weight[1], idx_weight[2])
-        end
-    end
-end
-
 # Set the SType
+"""
+Set the simulation type through a layer
+"""
 setSType!(layer::AbstractIsingLayer, varargs...; refresh = true) = setSType!(graph(layer), varargs...; refresh = refresh)

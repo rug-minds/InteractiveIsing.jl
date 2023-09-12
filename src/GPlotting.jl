@@ -17,25 +17,25 @@ end
 # Determines integer factor based on specifying some max size
 # N = image size (why not read this from img????)
 # Maxsize specifies maxsize
-function resizeGImg(img,N,maxsize)
-    factor = Int32(floor(maxsize/N))
+# function resizeGImg(img,N,maxsize)
+#     factor = Int32(floor(maxsize/N))
 
-    newN = (N*factor)
-    # new_size = trunc.(Int, (size,size) .* factor)
-    # println(new_size)
-    newimg = Matrix{RGB{Float64}}(undef,newN,newN)
+#     newN = (N*factor)
+#     # new_size = trunc.(Int, (size,size) .* factor)
+#     # println(new_size)
+#     newimg = Matrix{RGB{Float64}}(undef,newN,newN)
     
-    slices = 1:factor:newN
+#     slices = 1:factor:newN
 
-    step = factor-1
-    for (vidx,vert_slice) in enumerate(slices[1:end])
-        for (hidx,hori_slice) in enumerate(slices[1:end])
-            newimg[vert_slice:(vert_slice+step), hori_slice:(hori_slice+step)] .= img[vidx,hidx]
-        end
-    end
+#     step = factor-1
+#     for (vidx,vert_slice) in enumerate(slices[1:end])
+#         for (hidx,hori_slice) in enumerate(slices[1:end])
+#             newimg[vert_slice:(vert_slice+step), hori_slice:(hori_slice+step)] .= img[vidx,hidx]
+#         end
+#     end
     
-    return newimg
-end
+#     return newimg
+# end
 
 # function gToImg(g::AbstractIsingGraph, maxsize = 600; colorscheme = ColorSchemes.viridis)
 #     tempimg = imagesc(reshape(state(g), glength(g), gwidth(g)); colorscheme)

@@ -16,9 +16,9 @@ function LayerSavaData(layer::IsingLayer{T,GT}) where {T,GT}
     dict["nstates"] = nstates(layer)
     dict["coords"] = coords(layer)
     dict["connections"] = connections(layer)
-    dict["defects"] = defects(layer)
-    dict["timers"] = timers(layer)
-    dict["top"] = top(layer)
+    dict["defects"] = deepcopy(defects(layer))
+    dict["timers"] = deepcopy(timers(layer))
+    dict["top"] = deepcopy(top(layer))
 
     dict["defects"].layer = nothing
     dict["top"].layer = nothing
@@ -31,9 +31,10 @@ Base.keys(lsd::LayerSavaData) = keys(lsd.data)
 Base.values(lsd::LayerSavaData) = values(lsd.data)
 Base.length(lsd::LayerSavaData) = length(lsd.data)
 Base.haskey(lsd::LayerSavaData, key::String) = haskey(lsd.data, key)
+Base.iterate(lsd::LayerSavaData, state = 1) = iterate(lsd.data, state)
 
-
-function IsingLayer(g, lsd::LayerSavaData)
+function IsingLayer(g, ls::LayerSavaData)
+    lsd = ls.data
     l = IsingLayer(
         lsd["T"],
         g,
@@ -49,47 +50,15 @@ function IsingLayer(g, lsd::LayerSavaData)
     l.top = lsd["top"]
     l.defects.layer = l
     l.top.layer = l
-    # l.defects = lsd.defects
-    # l.timers = lsd.timers
-    # l.top = lsd.top
-    # l.defects.layer = l
 
     return l
 end
 
-# struct LayerSaveData_v1
-#     T::Type
-#     name::String
-#     internal_idx::Int32
-#     start::Int32
-#     size::Tuple{Int32,Int32}
-#     nstates::Int32
-#     coords::Coords{Tuple{Int32,Int32,Int32}}
-#     connections::Dict{Pair{Int32,Int32}, WeightGenerator}
-#     defects::LayerDefects
-#     timers::Vector{Timer}
-#     top::LayerTopology
-# end
-
-# LayerSaveData_v1(layer::IsingLayer{T, GT}) where {T,GT} = LayerSaveData_v1(
-#     T,
-#     layer.name,
-#     layer.internal_idx,
-#     layer.start,
-#     layer.size,
-#     layer.nstates,
-#     layer.coords,
-#     layer.connections,
-#     layer.defects,
-#     layer.timers,
-#     layer.top
-# )
-
-struct GraphSaveData_v1
+struct GraphSaveData{Version}
     state::Union{Nothing, Vector{Float32}}
     sp_adj::SparseMatrixCSC{Float32,Int32}
     stype::SType
-    layers::ShuffleVec{LayerSavaData}
+    shuffle_idxs::Vector{Int}
     continuous::StateType
     defects::GraphDefects
     gdata::GraphData
@@ -97,29 +66,21 @@ end
 
 
 
-function Base.show(io::IO, gsd::GraphSaveData_v1)
+function Base.show(io::IO, gsd::GraphSaveData)
     print(io, "GraphSaveData")
 end
 
+function GraphSaveData(g::IsingGraph)
 
-
-function GraphSaveData_v1(g::IsingGraph)
-    savelayers = ShuffleVec{LayerSavaData}()
-
-    for layer in layers(g)
-        push!(savelayers, LayerSavaData(layer))
-    end
-
-    savelayers.idxs .= layers(g).idxs
-
-    gsd = GraphSaveData_v1(deepcopy(state(g)), deepcopy(sp_adj(g)), deepcopy(stype(g)), savelayers, deepcopy(continuous(g)), deepcopy(defects(g)), deepcopy(d(g)))
+    gsd = GraphSaveData{graph_version}(deepcopy(state(g)), deepcopy(sp_adj(g)), deepcopy(stype(g)), layers(g).idxs, deepcopy(continuous(g)), deepcopy(defects(g)), deepcopy(d(g)))
 
     gsd.defects.g = nothing
   
     return gsd
 end
 
-function IsingGraph(gsd::GraphSaveData_v1) 
+function IsingGraph(sd::Dict{String, Any})
+    gsd = sd["gsd"]
     # Initialize graph
     g = IsingGraph(
         gsd.state,
@@ -132,33 +93,37 @@ function IsingGraph(gsd::GraphSaveData_v1)
     )
 
     # Reconstruct layer from layer save data
-    for layer_save in gsd.layers
-        push!(g.layers, IsingLayer(g, layer_save))
+    for layer in 1:sd["num_layers"]
+        push!(g.layers, IsingLayer(g, sd["layer_$layer"]))
     end
-    g.layers.idxs .= gsd.layers.idxs
+    g.layers.idxs .= gsd.shuffle_idxs
 
     # Reconstruct all pointers
     g.defects.g = g
 
-    for layer in g.layers
-        layer.graph = g
-        layer.defects.layer = layer
-    end
-
     return g
 end
-export GraphSaveData_v1
+export GraphSaveData
 
-function saveGraph(g::IsingGraph)
+function saveGraph(g::IsingGraph; savepref = true)
     folder = dataFolderNow("Graphs")
-    savedata = GraphSaveData_v1(g)
+    savedata = Dict{String, Any}()
+    savedata["gsd"] = GraphSaveData(g)
+    savedata["num_layers"] = length(g.layers)
+    for (idx, layer) in enumerate(g.layers.data)
+        savedata["layer_$idx"] = LayerSavaData(layer)
+    end
     filename = folder * "/g.jld2"
-    save(filename, "g", savedata)
-    @set_preferences!("last_save" => filename)
+    save(filename, savedata)
+    if savepref
+        @set_preferences!("last_save" => filename)
+    end
     return filename
 end
 
 loadGraph() = loadGraph(@load_preference("last_save"))
-loadGraph(folder) = IsingGraph(load(folder)["g"])
-
+function loadGraph(folder)
+    savedata = load(folder)
+    IsingGraph(savedata)
+end
 export saveGraph, loadGraph

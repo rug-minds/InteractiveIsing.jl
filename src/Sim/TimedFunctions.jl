@@ -1,16 +1,17 @@
 # All functions that are run from the QML Timer
 function timedFunctions(sim)
-    c_layer = currentLayer(sim)
-    if runTimedFunctions(sim)[]
+    # c_layer = currentLayer(sim)
+    # if runTimedFunctions(sim)[]
         updatesPerFrame(sim)
         # spawnOne(updatesPerFrame, sim.updatingUpf, "", sim)
         spawnOne(magnetization, sim.updatingMag, "", sim)
-    end
+    # end
 
-    checkImgSize(sim, c_layer, glength(c_layer), gwidth(c_layer), qmllength(sim), qmllength(sim))
-    spawnOne(updateImg, sim.updatingImg, "UpdateImg", sim)
+    # checkImgSize(sim, c_layer, glength(c_layer), gwidth(c_layer), qmllength(sim), qmllength(sim))
+    # spawnOne(updateImg, sim.updatingImg, "UpdateImg", sim)
 
 end
+export timedFunctions
 
 # Timed Functions 
 # Updating image of graph
@@ -36,6 +37,7 @@ let avgWindow = 60, updateWindow = CircularBuffer{Int64}(avgWindow) , frames = 0
         frames += 1
     end
 end
+export updatesPerFrame
 
 # Averages M_array over an amount of steps
 # Updates magnetization (which is thus the averaged value)

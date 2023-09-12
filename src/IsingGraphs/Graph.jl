@@ -249,6 +249,12 @@ end
 
 export resize!
 
+export addLayer!
+
+addLayer!(g::IsingGraph, llength, lwidth, wg) = addLayer!(g, llength, lwidth; weightfunc = wg)
+
+addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodic = true, type = eltype(state(g))) = @tryLockPause sim(g) _addLayer!(g, llength, lwidth; weightfunc, periodic, type)
+
 function addLayer!(g, dims::Vector, wgs...; kwargs...)
     @tryLockPause sim(g) for dim in dims
         _addLayer!(g, dim[1], dim[2]; kwargs...)
@@ -289,7 +295,6 @@ function _addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, period
     # Set the adjacency matrix
     if weightfunc != nothing 
         genAdj!(newlayer, weightfunc)
-        genSPAdj!(newlayer, weightfunc)
     end
 
     # Add Layer to defects
@@ -308,9 +313,6 @@ function _addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, period
 
     return
 end
-
-addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodic = true, type = eltype(state(g))) = @tryLockPause sim(g) _addLayer!(g, llength, lwidth; weightfunc, periodic, type)
-
 
 function _removeLayer!(g::IsingGraph, lidx::Integer)
     #if only one layer error

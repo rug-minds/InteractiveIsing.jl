@@ -63,3 +63,13 @@ Get a modified version of the standard SType where the given parameters are chan
 function SType(pairs::Pair...)
     return changeSParam(SType(), pairs...)
 end
+
+function Base.show(io::IO, st::SType) 
+    println(io, "SType with parameters:")
+    for (idx, factor) in enumerate(string.(factors))
+        print(io, " $factor => $(typeof(st).parameters[idx])")
+        if idx != length(factors)
+            print(io, "\n")
+        end
+    end
+end

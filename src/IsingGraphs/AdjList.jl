@@ -1,3 +1,5 @@
+# NOT USED
+
 struct Connections
     idxs::Vector{Int32}
     weights::Vector{Float32}

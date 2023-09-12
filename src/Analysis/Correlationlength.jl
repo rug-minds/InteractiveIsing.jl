@@ -9,6 +9,7 @@ abstract type SamplingAlgorithm end
 
 struct Mtl <: SamplingAlgorithm end
 struct CPU <: SamplingAlgorithm end
+struct CPU_Sampling <: SamplingAlgorithm end
 
 #= 
 Correlation length functions should collect the correlation of units from  i - i+1 in a bin, starting from 0.
@@ -30,7 +31,7 @@ end
 Sample correlation length for a given layer with the CPU
 Will sample ranodm angles for every length
 """
-function correlationLength(layer, ::Type{CPU})
+function correlationLength(layer, ::Type{CPU_Sampling})
    @inline function bin(dist)
       floor(Int32, dist)
    end 
@@ -82,3 +83,23 @@ function sampleDistantState(layer, idx1, sdist)
    idx2 = coordToIdx(i+di, j+dj, layer)   
 end
 export sampleDistantState
+
+function correlationLength(layer, ::Type{CPU})
+   @inline function bin(dist)
+      floor(Int32, dist)
+   end 
+
+   avg_sq = (sum(state(layer))/length(state(layer)))^2
+
+   bins = zeros(Float32, floor(Int, maxdist(layer)))
+
+   println("Ass")
+   for s1 in eachindex(state(layer))
+      for s2 in s1:length(state(layer))
+         _dist = dist(s1, s2, layer)
+         bins[bin(_dist)] += state(layer)[s1] * state(layer)[s2]
+      end
+   end
+   bins = (bins ./ length(state(layer))) .- avg_sq
+end
+
