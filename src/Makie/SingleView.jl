@@ -10,19 +10,19 @@ function create_singleview(ml, g)
     poplist = etc(ml)["poplist"]
 
     # LAYER SELECTOR  BUTTONS
-    selector_buttons = GridLayout(toppanel(ml)[][3,2], tellwidth = false)
+    toppanel(ml)["sb"] = selector_buttons = GridLayout(toppanel(ml)[][3,2], tellwidth = false)
     selected_layer_label = lift((x,y) -> "$x/$y", layerIdx(simulation), nlayers(simulation))
     # Pop this listener when the label is removed
     push!(poplist, layerIdx(simulation))
     push!(poplist, nlayers(simulation))
 
-    selector_buttons[1,2] = Label(f, selected_layer_label, fontsize = 18)
-    selector_buttons[1,1] = leftbutton = Button(f, label = "<", padding = (0,0,0,0), fontsize = 14, width = 40, height = 28)
-    selector_buttons[1,3] = rightbutton = Button(f, label = ">", padding = (0,0,0,0), fontsize = 14, width = 40, height = 28)
+    toppanel(ml)["sb_label"] = selector_buttons[1,2] = Label(f, selected_layer_label, fontsize = 18)
+    toppanel(ml)["sb_<"] = selector_buttons[1,1] = leftbutton = Button(f, label = "<", padding = (0,0,0,0), fontsize = 14, width = 40, height = 28)
+    toppanel(ml)["sb_>"] = selector_buttons[1,3] = rightbutton = Button(f, label = ">", padding = (0,0,0,0), fontsize = 14, width = 40, height = 28)
     # rowsize!(_grid[1,1].layout, 1, 80)
 
     # ISING IMAGE
-    img_ob = Observable{Base.ReshapedArray}(state(currentLayer(simulation)))
+    mp["sv_img_ob"] = img_ob = Observable{Base.ReshapedArray}(state(currentLayer(simulation)))
     # img_ob = Observable{Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Vector{Float32}, Tuple{UnitRange{Int32}}, true}, Tuple{}}}(state(currentLayer(simulation)))
 
     # max_r_slider(simulation, midpanel(ml)["rslider"]) 

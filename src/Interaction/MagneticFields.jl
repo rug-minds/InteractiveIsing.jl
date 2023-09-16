@@ -120,6 +120,10 @@ function remB!(layer::IsingLayer)
 end
 
 function remB!(g::IsingGraph)
+    for layer in layers(g)
+        close.(timers(layer))
+        deleteat!(timers(layer), 1:length(timers(layer)))
+    end
     bfield(g) .= Float32(0)
     setSType!(g, :Magfield => false)
 end

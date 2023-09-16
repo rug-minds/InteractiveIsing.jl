@@ -83,7 +83,7 @@ function setBField!(layer::AbstractIsingLayer, func::Function, mode::Symbol = :S
     elseif mode == :Timed
         setBFuncTimed!(layer, (;x,y) -> func(x,y), args...)
     elseif mode == :Timer
-        setBFuncTimer!(layer, (;x,y) -> func(x,y))
+        setBFuncTimer!(layer, (;x,y,t) -> func(x,y,t))
     else
         error("Mode $mode not recognized")
     end
@@ -92,6 +92,7 @@ end
 Set magnetic field by idxs and strength. 
 """
 setBField!(layer::AbstractIsingLayer, idxs::Vector, strengths::Vector) = setBIdxs!(layer, idxs, strengths)
+export setBField!
 #remBField!
 
 """

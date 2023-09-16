@@ -12,9 +12,10 @@ function create_midpanel(ml,g)
     # LEFT Panel
     mp["leftpanel"] = leftpanel = GridLayout(midgrid[1,1], tellheight = false)
 
+            # LEFT PANEL 1,1
+            mp["buttons"] = buttons = GridLayout(leftpanel[1,1])
 
             # Brush buttons
-                mp["buttons"] = buttons = GridLayout(leftpanel[1,1])
                 mp["bs"] = bs = [Button(buttons[-i+2,1], padding = (0,0,0,0), fontsize = 24, width = 40, height = 40, label = "$i") for i in 1:-1:-1]
 
                 for (idx,val) in enumerate(1:-1:-1)
@@ -29,7 +30,8 @@ function create_midpanel(ml,g)
 
                 mp["clamptoggle"] = clamptoggle = Toggle(buttons[5,1], active = false)
 
-            # SIZE TEXTBOX
+            # LEFT PANEL 2,2
+            # SIZE TEXTBOX 
                 mp["sizetextbox"] = size_grid = GridLayout(leftpanel[2,1])
 
                 size_validator(r_string) = try 0 < parse(UInt, r_string) < sim_max_r(simulation); catch; false; end
@@ -49,7 +51,19 @@ function create_midpanel(ml,g)
                     if s != string(brushR(simulation)[])
                         brushR(simulation)[] = parse(UInt, s)
                     end 
-                end 
+                end
+
+            # SHOW BFIELD
+            mp["showbfield"] = showbfield = Toggle(leftpanel[4,1], active = false)
+            mp["showbfieldlabel"] = Label(leftpanel[3,1], "Show BField", fontsize = 18)
+
+            on(showbfield.active) do x
+                if x
+                    midpanel(ml)["sv_img_ob"][] = bfield(currentLayer(simulation))
+                else
+                    midpanel(ml)["sv_img_ob"][] = state(currentLayer(simulation))
+                end
+            end
         
 
             # SIZE SLIDER

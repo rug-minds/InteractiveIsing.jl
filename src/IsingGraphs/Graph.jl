@@ -346,6 +346,7 @@ function _removeLayer!(g::IsingGraph, lidx::Integer)
 end
 
 removeLayer!(g::IsingGraph, lidx::Integer) = @tryLockPause sim(g) _removeLayer!(g, lidx)
+export removeLayer!
 
 function removeLayer!(g, idxs::Vector{Int}) 
     _layers = layers(g)

@@ -164,7 +164,7 @@ end
 """
 Get the connections for a coordinate of the layer, given in graphidxs
 """
-conns(i::Integer, j::Integer, layer::IsingLayer) = conns(idxLToG(i,j, layer), layer)
+conns(i::Integer, j::Integer, layer::IsingLayer) = conns(coordToIdx(i,j, layer), layer)
 """
 Get the connections for a coordinate of the layer, given in layeridxs
 """
