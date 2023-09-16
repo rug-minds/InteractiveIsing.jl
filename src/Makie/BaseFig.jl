@@ -4,7 +4,17 @@ const ml = MakieLayout(Figure())
 export ml, midpanel, toppanel, bottompanel
 
 function createBaseFig(g, create_view  = (a,b) -> nothing)
-    f = fig(ml, Figure(resolution = (1200, 1500)))
+    f = fig(ml, Figure(resolution = (1500, 1500)))
+
+    set_window_config!(;
+        vsync = false,
+        framerate = 60.0,
+        pause_renderloop = false,
+        focus_on_show = true,
+        decorated = true,
+        title = "Interactive Ising Simulation"
+    )
+
 
     # Delete all observables from last fig
     if haskey(etc(ml), "poplist")

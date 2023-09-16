@@ -13,9 +13,15 @@ coordToIdx((i, j), length) = coordToIdx(i, j, length)
     return (Int32((idx - 1) % length + 1), Int32((idx - 1) ÷ length + 1))
 end
 
-# Put a lattice index (i or j) back onto lattice by looping in a direction
-@inline function latmod(idx, N)
-    return mod((idx - 1), N) + 1
+"""
+Put a lattice index (i or j) back onto lattice by looping in a direction
+First argument is index, second is length in that direction
+"""
+# @inline function latmod(idx::T, L::T) where T
+#     return mod((idx - T(1)), L) + T(1)
+# end
+@inline function latmod(idx, L) 
+    return mod((idx - (1)), L) + (1)
 end
 
 @inline function latmod(i,j,layer)

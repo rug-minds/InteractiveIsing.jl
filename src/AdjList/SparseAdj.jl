@@ -66,7 +66,7 @@ function _fillSparseVecs(layer, row_idxs, col_idxs, weights, NN, topology, wg, p
             dr = dist(vert_i, vert_j, conn_i, conn_j, topology)
             
             # TODO: Self weight???
-            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2, conn_i-vert_i, conn_j - vert_j)
+            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2)
         
             if weight == 0
                 continue

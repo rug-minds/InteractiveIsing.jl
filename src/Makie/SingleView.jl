@@ -22,7 +22,8 @@ function create_singleview(ml, g)
     # rowsize!(_grid[1,1].layout, 1, 80)
 
     # ISING IMAGE
-    img_ob = Observable{Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Vector{Float32}, Tuple{UnitRange{Int32}}, true}, Tuple{}}}(state(currentLayer(simulation)))
+    img_ob = Observable{Base.ReshapedArray}(state(currentLayer(simulation)))
+    # img_ob = Observable{Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Vector{Float32}, Tuple{UnitRange{Int32}}, true}, Tuple{}}}(state(currentLayer(simulation)))
 
     # max_r_slider(simulation, midpanel(ml)["rslider"]) 
 
@@ -64,6 +65,12 @@ function create_singleview(ml, g)
     #     # close(mp["mousedrag_timer"])
     #     return
     # end
+
+    # Weightgenerator display
+    wf_label_obs = lift(x-> "$(wg(g[x]))", layerIdx(simulation))
+    push!(poplist, layerIdx(simulation))
+    bg = bottompanel(ml)["bottomgrid"]
+    bottompanel(ml)["wf_label"] = Label(bg[0,1], wf_label_obs, fontsize = 18)
 
     if haskey(etc(ml), "timedfunctions_timer")
         close(etc(ml)["timedfunctions_timer"])

@@ -1,6 +1,9 @@
 Base.@kwdef struct Obs
     # Active Layer
     layerIdx::Observable{Int32} = Observable(Int32(1))
+    
+    # currentLayer::
+
     # Name of the selected layer
     layerName::Observable{String} = Observable("")
     #number of layers
@@ -36,6 +39,8 @@ Base.@kwdef struct Obs
     
     # Run the timed functions
     runTimedFunctions::Observable{Bool} = Observable(true)
+
+    data::Dict{Symbol, Observable} = Dict{String, Any}()
 
 end
 

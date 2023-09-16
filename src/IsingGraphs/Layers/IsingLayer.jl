@@ -11,6 +11,7 @@ Coords(;y = 0, x = 0, z = 0) = Coords{Tuple{Int32,Int32,Int32}}((Int32(y), Int32
 Coords(n::Nothing) = Coords{Tuple{Int32,Int32,Int32}}(nothing)
 Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val), Int32(val)))
 export Coords
+# TODO: Make the topology part of the layertype
 mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIsingLayer{T}
     graph::Union{Nothing, IsingGraphType}
     name::String
@@ -133,11 +134,15 @@ Base.show(io::IO, layertype::Type{<:AbstractIsingLayer}) = print(io, "IsingLayer
 @inline function set_sp_adj!(layer, wg, rcw)
     connections(layer)[internal_idx(layer) => internal_idx(layer)] = wg
     set_sp_adj!(graph(layer), rcw)
+    notify(layer)
+    return sp_adj(graph(layer))
 end
 
 @inline function set_sp_adj!(layer1, layer2, wg, rcw)
     connections(layer1)[internal_idx(layer1) => internal_idx(layer2)] = wg
     set_sp_adj!(graph(layer1), rcw)
+    notify(layer1)
+    return sp_adj(graph(layer1))
 end
 export state, adj
 
@@ -173,6 +178,9 @@ function conncoords(i::Integer, j::Integer, layer1::IsingLayer, layer2::IsingLay
     return idxToCoord.(_conns.nzind, Ref(layer2))
 end
 export conns, conncoords
+
+@inline wg(layer::IsingLayer) = try connections(layer)[internal_idx(layer) => internal_idx(layer)]; catch; return ""; end
+@inline wg(layer1::IsingLayer, layer2::IsingLayer) = try connections(layer1)[internal_idx(layer1) => internal_idx(layer2)]; catch; return ""; end
 
 
 # Get Graph
@@ -246,11 +254,18 @@ clamps(layer::AbstractIsingLayer) = reshape((@view clamps(graph(layer))[graphidx
 @inline nStates(layer::AbstractIsingLayer) = length(graphidxs(layer))
 @inline sim(layer::AbstractIsingLayer) = sim(graph(layer))
 
-#forward alivelist
+"""
+Get the indexes of all alive spins in the layer
+"""
 aliveList(layer::AbstractIsingLayer) = aliveList(defects(layer))
-#forward defectList
+"""
+Get the indexes of all defect spins in the layer
+"""
 defectList(layer::AbstractIsingLayer) = defectList(defects(layer))
 
+"""
+Returns wether layer has any defects
+"""
 @inline hasDefects(layer::AbstractIsingLayer) = ndefects(defects(layer)) > 0
 @inline setdefect(layer::AbstractIsingLayer, val, idx) = defects(layer)[idx] = val
 
@@ -261,7 +276,11 @@ iterator(g::IsingGraph) = 1:(nStates(g))
 @inline periodic(layer::AbstractIsingLayer) = periodic(top(layer))
 @inline setPeriodic!(layer::AbstractIsingLayer, periodic) = top!(layer, LayerTopology(top(layer); periodic))
 @inline dist(idx1::Integer, idx2::Integer, layer::AbstractIsingLayer) = dist(idxToCoord(idx1, glength(layer))..., idxToCoord(idx2, size(layer,1))..., top(layer))
+@inline dist(i1::Integer, j1::Integer, i2::Integer, j2::Integer, layer::AbstractIsingLayer) = dist(i1, j1, i2, j2, top(layer))
 @inline idxToCoord(idx::Integer, layer::AbstractIsingLayer) = idxToCoord(idx, size(layer,1))
+
+# Simulation stuff
+Base.notify(layer::AbstractIsingLayer) = let _sim = sim(layer); notify(layerIdx(_sim)); end
 
 export setPeriodic!
 

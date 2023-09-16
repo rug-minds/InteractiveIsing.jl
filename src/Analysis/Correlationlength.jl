@@ -30,6 +30,10 @@ end
 """
 Sample correlation length for a given layer with the CPU
 Will sample ranodm angles for every length
+Doesn't seem to produce entirely accurate results
+
+Took this approach because it can be parallelized easily since every thread
+has it's own distances to sample
 """
 function correlationLength(layer, ::Type{CPU_Sampling})
    @inline function bin(dist)
@@ -89,17 +93,31 @@ function correlationLength(layer, ::Type{CPU})
       floor(Int32, dist)
    end 
 
-   avg_sq = (sum(state(layer))/length(state(layer)))^2
+   _state = copy(state(layer))
+   avg_sq = (sum(state(layer))/nStates(layer))^2
 
    bins = zeros(Float32, floor(Int, maxdist(layer)))
+   counts = zeros(Float32, floor(Int, maxdist(layer)))
 
-   println("Ass")
-   for s1 in eachindex(state(layer))
-      for s2 in s1:length(state(layer))
+   for s1 in eachindex(_state)
+      for s2 in (s1+1):length(_state)
          _dist = dist(s1, s2, layer)
-         bins[bin(_dist)] += state(layer)[s1] * state(layer)[s2]
+         bins[bin(_dist)] += _state[s1] * _state[s2]
+         counts[bin(_dist)] += 1
+
+         if s1 == 1 && bin(_dist) >= 37
+            i1,j1 = idxToCoord(s1, glength(layer))
+            i2,j2 = idxToCoord(s2, glength(layer))
+         end
       end
    end
-   bins = (bins ./ length(state(layer))) .- avg_sq
+   # return counts
+   bins = (bins ./ counts) .- avg_sq
+
+   # To synchronize bins with GPU method
+   halfdims = floor.(Int32, size(_state)./2)
+   maxreach = floor(Int32, sqrt(sum(halfdims.^2)))
+
+   return [1:maxreach;], bins[1:maxreach]
 end
 

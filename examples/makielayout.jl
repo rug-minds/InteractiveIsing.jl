@@ -1,20 +1,13 @@
 using InteractiveIsing
 
-simulation = IsingSim(loadGraph())
+g = simulate(500,500, continuous = true)
 
-const g = simulation(false);
+w_generator = @WG "(dr) -> 1/dr" NN = 1
 
-createProcess(g)
+genAdj!(g[1], w_generator)
 
-wg = @WG "(dr, dy, dx) -> (sign(dy)/(abs(dy)+1))" NN = 1
-wg2 = @WG "() -> 1" NN = 1
+addLayer!(g, 200, 100, w_generator)
 
-# removeConnections!(g[2])
-# genAdj!(g[2], wg2)
+layer_w_generator = @WG "(dr) -> dr" NN = 2
 
-# genAdj!(g[1], g[2], wg)
-
-createBaseFig(g, create_singleview)
-
-addLayer!(g, 30,30)
-genAdj!(g[6], wg2)
+genAdj!(g[1], g[2], layer_w_generator)

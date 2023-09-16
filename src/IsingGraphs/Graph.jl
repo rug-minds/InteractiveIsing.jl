@@ -120,6 +120,7 @@ export sp_adj
 @inline layer(g::IsingGraph, idx) = g.layers[idx]
 @inline Base.getindex(g::IsingGraph, idx) = g.layers[idx]
 @inline length(g::IsingGraph) = length(g.layers)
+@inline Base.lastindex(g::IsingGraph) = length(g)
 Base.view(g::IsingGraph, idx) = view(g.layers, idx)
 Base.deleteat!(layervec::ShuffleVec{IsingLayer}, lidx::Integer) = deleteat!(layervec, lidx) do layer, newidx
     internal_idx(layer, newidx)
@@ -304,7 +305,7 @@ function _addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, period
     # Update the layer idxs
     nlayers(sim(g))[] += 1
 
-    
+    setcoords!(g[end], z = length(g)-1)
 
     if weightfunc == :Default
         println("No weightfunc given, using default")

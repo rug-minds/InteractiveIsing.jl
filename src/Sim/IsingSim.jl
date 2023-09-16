@@ -83,27 +83,10 @@ mutable struct IsingSim
 
         #Observables
         sim.obs = Obs(len, wid, initbrushR, initTemp)
-        # sim.obs = Obs(;length = len, width = wid, initTemp, initbrushR)
 
         addLayer!(g, len, wid, type = continuous ? Float32 : Int8)
 
-        # Initialize image
-        #  if !isempty(layers(g))
-        #     initImg = gToImg(g[1]; colorscheme)
-        # end
-        
-        # sim.img[] = initImg
-
         sim.obs.layerName[] = name(g[1])
-
-        # Register observables
-        # register(sim, sim.obs)
-
-
-
-        if start
-            s()
-        end
 
         return sim
 
@@ -164,7 +147,7 @@ end
 Open from file
 """
 function IsingSim(graphfile::String; kwargs...)
-    g = loadGraph(graphfile)
+    g = loadGraph(graphfile)ß
     return IsingSim(g; kwargs...)
 end
 

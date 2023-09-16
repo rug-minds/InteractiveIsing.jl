@@ -12,7 +12,7 @@ struct Rhombic <: LatticeType end
 struct AnyLattice <: LatticeType end
 export LatticeType, Square, Rectangular, Oblique, Hexagonal, Rhombic, AnyLattice
 
-mutable struct LayerTopology{T <: PeriodicityType,U <: LatticeType, LayerType <: IsingLayer}
+mutable struct LayerTopology{T <: PeriodicityType, U <: LatticeType, LayerType <: IsingLayer}
     layer::Union{Nothing, LayerType}
     pvecs::Tuple{TwoVec, TwoVec}
     covecs::Tuple{TwoVec, TwoVec}
@@ -116,3 +116,37 @@ function latToPoint(layer, i::Integer, j::Integer)
     return zig*pvecs(tp)[1] + zag*zagvec + j*pvecs(tp)[2]
 end
 export latToPoint
+
+@inline function dx(i1, j1, i2, j2, layer, lt::LayerTopology{Periodic,A,B} = top(layer)) where {A,B}
+    di = i2 - i1
+    if di > glength(layer)/Int32(2)
+        di -= glength(layer)
+    end
+    # di = di > glength(layer)/2 ? di - glength(layer) : di
+    dj = j2 - j1
+    # dj = dj > gwidth(layer)/2 ? dj - gwidth(layer) : dj
+    if dj > gwidth(layer)/Int32(2)
+        dj -= gwidth(layer)
+    end
+
+    return  di*pvecs(lt)[1][1] + dj*pvecs(lt)[2][1]
+end
+
+@inline function dy(i1, j1, i2, j2, layer, lt::LayerTopology{Periodic,A,B} = top(layer)) where {A,B}
+    dj = j2 - j1
+    dj = dj > gwidth(layer)/2 ? dj - gwidth(layer) : dj
+    di = i2 - i1
+    di = di > glength(layer)/2 ? di - glength(layer) : di
+    return di*pvecs(lt)[1][2] + dj*pvecs(lt)[2][2]
+end
+
+@inline function dxdy(i1, j1, i2, j2, layer, lt::LayerTopology{Periodic,A,B} = top(layer)) where {A,B}
+    return (dx(i1,j1,i2,j2, layer, lt), dy(i1,j1,i2,j2, layer, lt))
+end
+
+@inline dx(idx1::Integer,idx2::Integer, layer) = dx(idxToCoord(idx1, layer)..., idxToCoord(idx2, layer)..., layer)
+@inline dy(idx1::Integer,idx2::Integer, layer) = dy(idxToCoord(idx1, layer)..., idxToCoord(idx2, layer)..., layer)
+
+@inline dxdy(idx1::Integer,idx2::Integer, layer) = (dx(idx1,idx2, layer), dy(idx1,idx2, layer))
+
+export dy, dx, dxdy

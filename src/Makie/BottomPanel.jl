@@ -7,7 +7,9 @@ function create_bottompanel(ml, g)
     # BOTTOM PANEL
     bg = GridLayout(f[3,1], tellheight = false, tellwidth = false)
     bp = bottompanel(ml, LayoutPanel(bg))
-
+    bp["bottomgrid"] = bg
+    
+    # Magnetization label for layer
     bp["m_text"] = m_text = lift(x -> "Magnetization: $x", M(simulation))
     # Pop this listener when the label is removed
     push!(poplist, M(simulation))
