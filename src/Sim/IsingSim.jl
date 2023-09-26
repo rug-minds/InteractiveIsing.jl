@@ -40,9 +40,8 @@ mutable struct IsingSim
             periodic = nothing,
             continuous = false,
             weighted = true,
-            weightfunc = nothing,
+            weights = nothing,
             initTemp = 1f0,
-            start = false,
             colorscheme = ColorSchemes.viridis
         );
         
@@ -76,7 +75,7 @@ mutable struct IsingSim
             periodic,
             continuous,
             weighted,
-            weightfunc
+            weights
         )
 
         push!(gs(sim), g)
@@ -133,9 +132,6 @@ mutable struct IsingSim
         # Register observables
         register(sim, sim.obs)
         
-        if start
-            s()
-        end
 
         return sim
 
@@ -195,7 +191,7 @@ export layer
 @inline graph(sim::IsingSim, graphidx = 1) = gs(sim)[graphidx]
 export graph
 
-function newGraph!(sim, len, wid; periodic = nothing, continuous = false, weighted = true, weightfunc = nothing)
+function newGraph!(sim, len, wid; periodic = nothing, continuous = false, weighted = true, weights = nothing)
     g = IsingGraph(
         sim,
         len,
@@ -203,7 +199,7 @@ function newGraph!(sim, len, wid; periodic = nothing, continuous = false, weight
         periodic,
         continuous,
         weighted,
-        weightfunc
+        weights
     )
 
     push!(gs(sim), g)

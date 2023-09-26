@@ -17,31 +17,36 @@ function simulate(
     periodic = nothing,
     continuous = false,
     weighted = true,
-    weightfunc = nothing,
+    weights = nothing,
     initTemp = 1f0,
     start = true,
     gui = true,
-    colorscheme = ColorSchemes.viridis
+    colorscheme = ColorSchemes.viridis,
+    #for precompilation, should otherwise be set to true always
+    register_sim = true,
+    kwargs...
     )
-    if isnothing(simulation)
-        simulation[] = IsingSim(len, wid; periodic, continuous, weighted, weightfunc, initTemp, start, colorscheme)
+    _sim = IsingSim(len, wid; periodic, continuous, weighted, weights, initTemp, colorscheme)
+    if isnothing(simulation) && register_sim
+        simulation[] = _sim
     end
-    g = simulation[].gs[1]
-    _simulate(g; start, gui)
+    g = _sim.gs[1]
+    _simulate(g; start, gui, kwargs...)
     return g
 end
 
-function (g::IsingGraph; start = true, giu = true, initTemp = 1f0, colorscheme = ColorSchemes.viridis)
-    if isnothing(simulation)
-        simulation[] = IsingSim(graph; start, initTemp, colorscheme)
+function simulate(g::IsingGraph; start = true, giu = true, initTemp = 1f0, colorscheme = ColorSchemes.viridis, register_sim = true, kwargs...)
+    _sim = IsingSim(graph; start, initTemp, colorscheme)
+    if isnothing(simulation) && register_sim
+        simulation[] = _sim
     end
-    g = simulation[].gs[1]
-    _simulate(g; start, gui)
+    g = _sim.gs[1]
+    _simulate(g; start, gui, kwargs...)
     return g
 end
 
-function simulate(filename::String; start = true, kwargs...)
-    if isnothing(simulation)
+function simulate(filename::String; start = true, register_sim = true, kwargs...)
+    if isnothing(simulation) && register_sim
         simulation[] = IsingSim(filename; kwargs...)
     end
     
@@ -50,18 +55,22 @@ end
 
 getgraph() = gs(simulation[])[1]
 
-function interface(g)
-    createBaseFig(g, create_singleview)
-end
-
-function _simulate(g ;kwargs...)
-    g = simulation[].gs[1]
+function _simulate(g; kwargs...)
     if kwargs[:start]
         createProcess(g)
     end
     if kwargs[:gui]
-        interface(g)
+        interface(g; kwargs...)
     end
+end
+
+function interface(g; kwargs...)
+    if haskey(kwargs, :disp)
+        createBaseFig(g, create_singleview, disp = kwargs[:disp])
+    else
+        createBaseFig(g, create_singleview)
+    end
+
 end
 
 export simulate, getgraph

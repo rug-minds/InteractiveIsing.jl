@@ -91,7 +91,8 @@ function quitSim(sim)
 
     return
 end
-export quitSim
+quit(g) = quitSim(sim(g))
+export quitSim, quit
 
 function refreshSim(sim)
     # Find running processes

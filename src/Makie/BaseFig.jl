@@ -3,7 +3,7 @@ const ml = MakieLayout(Figure())
 # DEV:
 export ml, midpanel, toppanel, bottompanel
 
-function createBaseFig(g, create_view  = (a,b) -> nothing)
+function createBaseFig(g, create_view  = (a,b) -> nothing; disp = true)
     f = fig(ml, Figure(resolution = (1500, 1500)))
 
     set_window_config!(;
@@ -32,8 +32,11 @@ function createBaseFig(g, create_view  = (a,b) -> nothing)
     create_bottompanel(ml, g)
 
     create_view(ml, g)
-    
-    display(f)
+
+    if disp
+        println("Displaying")
+        display(f)
+    end
 
     return f
 end

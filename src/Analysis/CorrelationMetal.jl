@@ -40,6 +40,8 @@ function corrMtl(layer; periodicity = nothing)
         @metal threads = threads3d groups = groups3d corrMtlKernel(stateMtl, corrsMtl, countsMtl, l, w, periodicity)
 
         #convert back to array
+        # This takes a lot of time?
+        # Because async?
         corrsCPU = Array(corrsMtl)
         countsCPU = Array(countsMtl)
     end
@@ -85,6 +87,7 @@ function corrMtl(layer; periodicity = nothing)
     end
 
     corr_bins = (corr_bins ./ bin_counts) .- avg2
+    # corr_bins = (corr_bins ./ bin_counts)
 
     GC.enable(true)
     return [1:length(corr_bins);], corr_bins

@@ -160,6 +160,10 @@ function conns(idx::Integer, layer::IsingLayer)
     return sp_adj(graph(layer))[:, idxLToG(idx,layer)]
 end
 
+function conns(idx::Integer, layer1::IsingLayer, layer2::IsingLayer)
+    return sp_adj(graph(layer1))[:, idxLToG(idx,layer1)][graphidxs(layer2)]
+end
+
 # TODO:: Make a way to show the coordinates of the connections
 """
 Get the connections for a coordinate of the layer, given in graphidxs
@@ -168,7 +172,7 @@ conns(i::Integer, j::Integer, layer::IsingLayer) = conns(coordToIdx(i,j, layer),
 """
 Get the connections for a coordinate of the layer, given in layeridxs
 """
-conns(i::Integer, j::Integer, layer1::IsingLayer, layer2::IsingLayer) = conns(idxLToG(i, j, layer1),layer1)[graphidxs(layer2)]
+conns(i::Integer, j::Integer, layer1::IsingLayer, layer2::IsingLayer) = conns(coordToIdx(i, j, layer1),layer1)[graphidxs(layer2)]
 """
 Get the coordinates of all the connected units for a unit at coordinates i,j for layer 1, given in layer coordinates of layer 2
 Connections to self can be obtained by setting layer2 = layer1

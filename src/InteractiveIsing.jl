@@ -19,8 +19,8 @@ const modulefolder = @__DIR__
 # export QML
 
 using FileIO, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, LinearAlgebra,
-    StatsBase, LaTeXStrings, DataStructures, Preferences, GLMakie, SparseArrays
-# using Images
+    StatsBase, LaTeXStrings, DataStructures, Preferences, GLMakie, SparseArrays, FFTW
+using Images
 using PrecompileTools
 
 #TEMP
@@ -81,23 +81,20 @@ include("GPlotting.jl")
 
 # PRECOMPILATION FUNCTION FOR FAST USAGE
 # @setup_workload begin
-#     csim = IsingSim(
-#         20,
-#         20,
-#         continuous = true, 
-#         weighted = true;
-#         colorscheme = ColorSchemes.winter
-#     );
-
-#     cg = csim(false)
+#     GC.enable(false)
+#     cg = simulate(20,20, continuous = true, start = false, disp = false, register_sim = false)
+#     _sim = sim(cg)
 
 #     @compile_workload begin
+
 #         addLayer!(cg, 20, 20)
 
 #         setcoords!(cg[1])
 #         setcoords!(cg[2], z = 1)
+#         cwg = @WG "(dr) -> 1" NN=1
 
-#         connectLayers!(cg, 1, 2, (;dr, _...) -> 1, 1)
+#         genAdj!(cg[1], cwg)
+#         genAdj!(cg[1],cg[2], cwg)
 
 #         #Plotting correlation length and GPU kernel
 #         plotCorr(cg[2], dodisplay = false, save = false)
@@ -108,9 +105,10 @@ include("GPlotting.jl")
 
 #         path = saveGraph(cg, savepref = false)
 
-#         loadGraph(path)        
-
-#         # TODO: Deletefile
+#         close.(timers(_sim))
+#         loadGraph(path)       
+#         quitSim(_sim)
+#         GC.enable(true)
 #     end
 # end
 

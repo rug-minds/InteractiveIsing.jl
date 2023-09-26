@@ -31,7 +31,7 @@ end
 
 removeConnectionsAll!(layer) = set_sp_adj!(graph(layer), removeConnectionsAll(layer))
 
-export genAdj!, genAdj, removeConnections!, removeConnections
+export genAdj!, removeConnections!, removeConnectionsAll!
 
 # viewConnections(layer::IsingLayer, i,j) = viewConnections(layer, coordToIdx(i,j,layer))
 

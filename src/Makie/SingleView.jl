@@ -67,10 +67,10 @@ function create_singleview(ml, g)
     # end
 
     # Weightgenerator display
-    wf_label_obs = lift(x-> "$(wg(g[x]))", layerIdx(simulation))
+    wg_label_obs = lift(x-> "$(wg(g[x]))", layerIdx(simulation))
     push!(poplist, layerIdx(simulation))
     bg = bottompanel(ml)["bottomgrid"]
-    bottompanel(ml)["wf_label"] = Label(bg[0,1], wf_label_obs, fontsize = 18)
+    bottompanel(ml)["wf_label"] = Label(bg[0,1], wg_label_obs, fontsize = 18)
 
     if haskey(etc(ml), "timedfunctions_timer")
         close(etc(ml)["timedfunctions_timer"])

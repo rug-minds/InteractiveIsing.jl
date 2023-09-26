@@ -16,9 +16,9 @@ function LayerSavaData(layer::IsingLayer{T,GT}) where {T,GT}
     dict["nstates"] = nstates(layer)
     dict["coords"] = coords(layer)
     dict["connections"] = connections(layer)
-    dict["defects"] = deepcopy(defects(layer))
-    dict["timers"] = deepcopy(timers(layer))
-    dict["top"] = deepcopy(top(layer))
+    dict["defects"] = defects(layer)
+    dict["timers"] = timers(layer)
+    dict["top"] = top(layer)
 
     dict["defects"].layer = nothing
     dict["top"].layer = nothing
@@ -72,7 +72,7 @@ end
 
 function GraphSaveData(g::IsingGraph)
 
-    gsd = GraphSaveData{graph_version}(deepcopy(state(g)), deepcopy(sp_adj(g)), deepcopy(stype(g)), layers(g).idxs, deepcopy(continuous(g)), deepcopy(defects(g)), deepcopy(d(g)))
+    gsd = GraphSaveData{graph_version}(copy(state(g)), copy(sp_adj(g)), stype(g), copy(layers(g).idxs), continuous(g), defects(g), d(g))
 
     gsd.defects.g = nothing
   

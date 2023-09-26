@@ -27,7 +27,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
     defects::GraphDefects
     d::GraphData
 
-    function IsingGraph(sim, length, width; periodic = nothing, weightfunc::Union{Nothing,WeightFunc} = nothing, continuous = false, weighted = false)
+    function IsingGraph(sim, length, width; periodic = nothing, weights::Union{Nothing,WeightGenerator} = nothing, continuous = false, weighted = false)
       
         type = continuous ? Float32 : Int8
         g = new{type}(
@@ -194,7 +194,7 @@ Initialization of adjacency Vector for a given N
 and using a weightFunc
 Is a pointer to function in SquareAdj.jl for compatibility
 """
-initSqAdj(len, wid; weightfunc = defaultIsingWF) = createSqAdj(len, wid, weightfunc)
+# initSqAdj(len, wid; weights = defaultIsingWF) = createSqAdj(len, wid, weights)
 
 # """
 # Initialization of adjacency Vector for a given N
@@ -252,9 +252,9 @@ export resize!
 
 export addLayer!
 
-addLayer!(g::IsingGraph, llength, lwidth, wg) = addLayer!(g, llength, lwidth; weightfunc = wg)
+addLayer!(g::IsingGraph, llength, lwidth, wg) = addLayer!(g, llength, lwidth; weights = wg)
 
-addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodic = true, type = eltype(state(g))) = @tryLockPause sim(g) _addLayer!(g, llength, lwidth; weightfunc, periodic, type)
+addLayer!(g::IsingGraph, llength, lwidth; weights = nothing, periodic = true, type = eltype(state(g))) = @tryLockPause sim(g) _addLayer!(g, llength, lwidth; weights, periodic, type)
 
 function addLayer!(g, dims::Vector, wgs...; kwargs...)
     @tryLockPause sim(g) for dim in dims
@@ -269,7 +269,7 @@ addLayer(g::IsingGraph, length, width)
 Give keyword argument weightfunc to set a weightfunc.
 If weightfunc = :Default, uses default weightfunc for the Ising Model
 """
-function _addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, periodic = true, type = eltype(state(g)))
+function _addLayer!(g::IsingGraph, llength, lwidth; weights = nothing, periodic = true, type = eltype(state(g)))
     glayers = layers(g)
 
     newlayer = nothing
@@ -294,8 +294,8 @@ function _addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, period
     sp_adj(g, changesize(sp_adj(g), nStates(g), nStates(g)))
 
     # Set the adjacency matrix
-    if weightfunc != nothing 
-        genAdj!(newlayer, weightfunc)
+    if weights != nothing 
+        genAdj!(newlayer, weights)
     end
 
     # Add Layer to defects
@@ -307,8 +307,8 @@ function _addLayer!(g::IsingGraph, llength, lwidth; weightfunc = nothing, period
 
     setcoords!(g[end], z = length(g)-1)
 
-    if weightfunc == :Default
-        println("No weightfunc given, using default")
+    if weights == :Default
+        println("No weightgenerator given, using default")
         genAdj!(newlayer, wg_isingdefault)
     end
 
