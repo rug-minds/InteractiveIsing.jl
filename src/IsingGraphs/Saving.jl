@@ -43,10 +43,8 @@ function IsingLayer(g, ls::LayerSavaData)
         connections = lsd["connections"],
         name = lsd["name"]
     )
-    l.defects = lsd["defects"]
     l.timers = lsd["timers"]
     l.top = lsd["top"]
-    l.defects.layer = l
     l.top.layer = l
 
     return l

@@ -9,35 +9,9 @@ function getSingleViewImg(g, ml)
         return state(currentLayer(simulation))
     end
 end
-function liftcouple(f, obs::AbstractObservable, args...)
-    newob = lift(f, obs, args...)
-    append!(newob.inputs, [obs, args...])
-    return newob
-end
-function findcallback(input, obs)
-    for (l_idx, listener_pair) in enumerate(input.listeners)
-        listener = listener_pair[2]
-        if typeof(listener) == Observables.MapCallback
-            if listener.result == obs
-                return l_idx
-            end
-        end
-    end
-    return nothing
-end
-
-function decouple!(obs::AbstractObservable)
-    for (i_idx, input_ob) in enumerate(obs.inputs)
-        if typeof(input_ob) <: Observable
-            callback_idx = findcallback(input_ob, obs)
-            deleteat!(input_ob.listeners, callback_idx)
-            deleteat!(obs.inputs, i_idx)
-            return true
-        end
-    end
-    return false
-end
 """
+Create a view of the graph that shows a single layer at the time
+cycling through layers is possible with the < and > buttons
 """
 function singleView(ml, g)
     mp = midpanel(ml)
@@ -46,8 +20,8 @@ function singleView(ml, g)
 
     ml["current_view"] = singleView
 
-    obs_funcs = etc(ml)["obs_funcs"] = []
-    coupled_obs = etc(ml)["coupled_obs"] = Observable[]
+    obs_funcs = etc(ml)["obs_funcs_singleView"] = ObserverFunction[]
+    coupled_obs = etc(ml)["coupled_obs_singleView"] = Observable[]
 
     # LAYER SELECTOR  BUTTONS
     toppanel(ml)["sb"] = selector_buttons = GridLayout(toppanel(ml)["mid_grid"][3,1], tellwidth = false)
@@ -128,11 +102,10 @@ create_singleview = singleView
 using GLMakie.Makie.GridLayoutBase: deleterow!
 function cleanup(ml, ::typeof(singleView))
     # Observables
-    etc(ml)["obs_funcs"] = []
-    for obs in etc(ml)["coupled_obs"]
-        println(decouple!(obs))
-    end
-    etc(ml)["coupled_obs"] = Observable[]
+    off.(etc(ml)["obs_funcs_singleView"])
+    delete!(ml, "obs_funcs_singleView")
+    decouple!.(ml["coupled_obs_singleView"])
+    delete!(ml, "coupled_obs_singleView")
 
 
     # Selector buttons

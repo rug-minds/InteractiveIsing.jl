@@ -45,6 +45,7 @@ Base.length(ml::MakieLayout) = length(ml.etc)
 Base.haskey(ml::MakieLayout, key::String) = haskey(ml.etc, key)
 Base.keys(ml::MakieLayout) = keys(ml.etc)
 Base.values(ml::MakieLayout) = values(ml.etc)
+Base.delete!(ml::MakieLayout, key::String) = delete!(ml.etc, key)
 
 cleanView(ml) = begin
     if haskey(etc(ml), "current_view")

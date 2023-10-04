@@ -17,6 +17,7 @@ end
 
 # Drawing on the axis
 function MDrawCircle(ax, buttons, sim)
+    ml = mlref[]
     if ispressed(ax.scene, Mouse.left)
         pos = mouseposition(ax.scene)
         drawCircle(currentLayer(sim), pos[1], pos[2], brush(sim)[]; clamp = midpanel(ml)["clamptoggle"].active[])
@@ -25,6 +26,7 @@ function MDrawCircle(ax, buttons, sim)
 end
 
 function MDrawCircle2(ax, sim)
+    ml = mlref[]
     pos = mouseposition(ax.scene)
     @async drawCircle(currentLayer(sim), pos[1], pos[2], brush(sim)[]; clamp = midpanel(ml)["clamptoggle"].active[])
     return

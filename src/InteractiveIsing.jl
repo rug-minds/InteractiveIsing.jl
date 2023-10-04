@@ -105,6 +105,10 @@ include("GPlotting.jl")
         close.(timers(_sim))
         loadGraph(path)       
         quitSim(_sim)
+
+
+        closeinterface()
+        reset!(simulation)
         GC.enable(true)
     end
 end

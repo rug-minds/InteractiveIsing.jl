@@ -1,8 +1,9 @@
-function create_midpanel(ml,g)
+function midPanel(ml,g)
     f = fig(ml)
     simulation = sim(g)
 
-    poplist = etc(ml)["poplist"]
+    obs_funcs = ml["obs_funcs_midPanel"] = ObserverFunction[]
+    coupled_obs = ml["coupled_obs_midPanel"] = Observable[]
 
     # Mid Panel
     midgrid = GridLayout(f[2,1])
@@ -19,10 +20,10 @@ function create_midpanel(ml,g)
                 mp["bs"] = bs = [Button(buttons[-i+2,1], padding = (0,0,0,0), fontsize = 24, width = 40, height = 40, label = "$i") for i in 1:-1:-1]
 
                 for (idx,val) in enumerate(1:-1:-1)
-                    on(bs[idx].clicks) do _
+                    push!(obs_funcs, on(bs[idx].clicks) do _
                         # println("clicked $val")
                         brush(simulation)[] = Float32(val)
-                    end
+                    end)
                 end
 
             # Clamp toggle
@@ -46,21 +47,21 @@ function create_midpanel(ml,g)
                     reset_on_defocus = true)
 
 
-                on(brushR(simulation)) do x
+                push!(obs_funcs, on(brushR(simulation)) do x
                     sizefield.placeholder[] = string(x)
-                end
+                end)
 
             # SHOW BFIELD
             mp["showbfield"] = showbfield = Toggle(leftpanel[4,1], active = false)
             mp["showbfieldlabel"] = Label(leftpanel[3,1], "Show BField", fontsize = 18)
 
-            on(showbfield.active) do x
+            push!(obs_funcs, on(showbfield.active) do x
                 if x
                     midpanel(ml)["sv_img_ob"][] = bfield(currentLayer(simulation))
                 else
                     midpanel(ml)["sv_img_ob"][] = state(currentLayer(simulation))
                 end
-            end
+            end)
         
 
             # SIZE SLIDER
@@ -94,22 +95,29 @@ function create_midpanel(ml,g)
 
         # TEMP SLIDER
             mp["temptext"] = lift(x -> "T: $x", Temp(simulation))
+            push!(coupled_obs, mp["temptext"])
             # Pop this listener when the label is removed
-            push!(poplist, Temp(simulation))
+            
 
 
             Box(rightpanel[1,1], width = 100, height = 50, visible = false)
             mp["templabel"] = Label(rightpanel[1,1], mp["temptext"], fontsize = 18)
             tempslider = mp["tempslider"] = tempslider = Slider(rightpanel[2,1], range = 0.0:0.1:20, value = 1.0, horizontal = false)
             
-            on(tempslider.value) do value
+            push!(obs_funcs, on(tempslider.value) do value
                 Temp(simulation)[] = value
-            end
+            end)
         
     # rowsize!(f.layout, 1, Auto())
     colsize!(mp[], 1, 200)
     # colsize!(mp[], 3, 100)
+end
 
+function cleanup(ml, ::typeof(midPanel))
+    off.(ml["obs_funcs_midPanel"])
+    delete!(ml, "obs_funcs_midPanel")
+    decouple!.(ml["coupled_obs_midPanel"])
+    delete!(ml, "coupled_obs_midPanel")
 
-    
+    midpanel(ml, LayoutPanel())
 end

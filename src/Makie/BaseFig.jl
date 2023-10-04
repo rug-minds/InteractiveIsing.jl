@@ -1,9 +1,15 @@
-const ml = MakieLayout(Figure())
+const mlref = UnRef(MakieLayout(Figure()))
 
 # DEV:
 export ml, midpanel, toppanel, bottompanel
 
-function createBaseFig(g; disp = true)
+function baseFig(g; disp = true)
+    ml = mlref[]
+    if haskey(ml, "basefig_active") && ml["basefig_active"]
+        cleanup(ml, baseFig)
+    end
+
+
     ml["basefig_active"] = true
 
     f = fig(ml, Figure(resolution = (1500, 1500)))
@@ -19,24 +25,46 @@ function createBaseFig(g; disp = true)
 
 
     # Delete all observables from last fig
-    if haskey(etc(ml), "poplist")
-        for idx in eachindex(etc(ml)["poplist"])
-            pop!(etc(ml)["poplist"][idx].listeners)
-        end
-    end
+    # if haskey(etc(ml), "poplist")
+    #     for idx in eachindex(etc(ml)["poplist"])
+    #         pop!(etc(ml)["poplist"][idx].listeners)
+    #     end
+    # ends
 
-    etc(ml)["poplist"] = Observable[]
+    # etc(ml)["poplist"] = Observable[]
 
-    create_toppanel(ml, g)
+    topPanel(ml, g)
 
-    create_midpanel(ml,g)
+    midPanel(ml,g)
 
-    create_bottompanel(ml, g)
+    bottomPanel(ml, g)
 
     if disp
         println("Displaying")
-        display(f)
+        screen = display(f)
+        ml["screen"] = screen
     end
 
     return f
+end
+
+function cleanup(ml, ::typeof(baseFig))
+    currentview = ml["current_view"]
+    if !isnothing(currentview)
+        cleanup(ml, currentview)
+    end
+
+    cleanup(ml, topPanel)
+    cleanup(ml, midPanel)
+    cleanup(ml, bottomPanel)
+
+    reset!(mlref)
+    mlref[] = MakieLayout(Figure())
+    return nothing
+end
+
+function closeinterface()
+    ml = mlref[]
+    cleanup(ml, baseFig)
+    close(ml["screen"])
 end

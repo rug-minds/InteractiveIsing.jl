@@ -7,11 +7,12 @@ struct MixedState <: StateType end
 
 # Ising Graph Representation and functions
 mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
+    # Simulation
     sim::Union{Nothing, IsingSim}
     # Vertices and edges
     state::Vector{T}
     sp_adj::SparseMatrixCSC{Float32,Int32}
-    htype::HType
+    # htype::HType
 
     stype::SType
     
@@ -32,7 +33,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
             sim,
             type[],
             SparseMatrixCSC{Float32,Int32}(undef,0,0),
-            HType(weighted, false),
+            # HType(weighted, false),
             SType(:Weighted => weighted),
             #Layers
             ShuffleVec{IsingLayer}(),
@@ -48,6 +49,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
         return g
     end
     
+    # Constructor for copying from other graph or savedata.
     function IsingGraph(
         state,
         sp_adj,
@@ -58,17 +60,23 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
         data
         )
         return new{eltype(state)}(
+            # Sim
             nothing,
-            length(state),
+            #state
             state,
-            Vector{Vector{Conn}}[],
+            # Adjacency
             sp_adj,
-            HType(false, false),
+            # stype
             stype,
+            # Layers
             layers,
+            # Continuous
             continuous,
+            # Connections between layers
             Dict{Pair, Int32}(),
+            # Defects
             defects,
+            # Data
             data
         )
     end

@@ -207,7 +207,7 @@ function setdefectrange!(gd::GraphDefects, idxs)::Int32
     hasDefects(gd, true)
 
     # Set all the defects in the layers
-    @time setlayerdefects(gd, g(gd), d_idxs, true)
+    setlayerdefects(gd, g(gd), d_idxs, true)
 
     #return amount set
     return length(d_idxs)

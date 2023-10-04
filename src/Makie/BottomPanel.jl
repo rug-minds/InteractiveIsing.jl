@@ -1,4 +1,4 @@
-function create_bottompanel(ml, g)
+function bottomPanel(ml, g)
     f = fig(ml)
     simulation = sim(g)
 
@@ -20,3 +20,8 @@ function create_bottompanel(ml, g)
 
     rowsize!(f.layout, 3, 140)    
 end
+
+function cleanup(ml, ::typeof(bottomPanel))
+    bottompanel(ml, LayoutPanel())
+end
+
