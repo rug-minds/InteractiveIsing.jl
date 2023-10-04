@@ -16,11 +16,9 @@ function LayerSavaData(layer::IsingLayer{T,GT}) where {T,GT}
     dict["nstates"] = nstates(layer)
     dict["coords"] = coords(layer)
     dict["connections"] = connections(layer)
-    dict["defects"] = defects(layer)
     dict["timers"] = timers(layer)
     dict["top"] = top(layer)
 
-    dict["defects"].layer = nothing
     dict["top"].layer = nothing
 
     return LayerSavaData{layer_version}(dict)

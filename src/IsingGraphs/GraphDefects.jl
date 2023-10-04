@@ -100,7 +100,7 @@ function setindex!(gd::GraphDefects, val, idx::Int32)
         end
     end
 
-    layeridx = spinidx2layer_i_index
+    layeridx = spinidx2layer_i_index(g(gd), idx)
     layerdefects(gd)[layeridx] += val ? 1 : -1
 
     return isDefect(gd)[idx] = val

@@ -117,7 +117,7 @@ export sp_adj
 ### Access the layer ###
 @inline function spinidx2layer(g::IsingGraph, idx)::IsingLayer
     @assert idx <= nStates(g) "Index out of bounds"
-    for layer in enumerate(layers(g))
+    for layer in unshuffled(layers(g))
         if idx ∈ layer
             return layer
         end
@@ -125,7 +125,7 @@ export sp_adj
     return g[1]
 end
 layeridxs(g::IsingGraph) = UnitRange{Int32}[graphidxs(unshuffled(layers(g))[i]) for i in 1:length(g)]
-@inline spinidx2layer_i_index(g, idx) = internal_idx(spinidx2layer(g, idx))::Int32
+@inline spinidx2layer_i_index(g, idx) = internal_idx(spinidx2layer(g, idx))
 @inline layer(g::IsingGraph, idx) = g.layers[idx]
 @inline Base.getindex(g::IsingGraph, idx) = g.layers[idx]
 @inline Base.getindex(g::IsingGraph) = g.layers[1]
