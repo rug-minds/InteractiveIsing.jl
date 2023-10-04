@@ -1,6 +1,3 @@
-# __precompile__(false)
-# __precompile__(true)
-
 module InteractiveIsing
 
 macro time_sm(using_expr)
@@ -17,9 +14,9 @@ const modulefolder = @__DIR__
 
 # using QML
 # export QML
-
 using FileIO, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, LinearAlgebra,
     StatsBase, LaTeXStrings, DataStructures, Preferences, GLMakie, SparseArrays, FFTW
+using InvertedIndices: Not
 using Images
 using PrecompileTools
 
@@ -49,16 +46,16 @@ export PeriodicityType, Periodic, NonPeriodic
 # Should be in IsingSim.jl
 branchSim(sim) = refreshSim(sim)
 export branchSim
-include("HelperFiles/HelperFiles.jl")
+include("Utils/Utils.jl")
 
 
 @ForwardDeclare IsingGraph "IsingGraphs"
 @ForwardDeclare IsingLayer "IsingGraphs/Layers"
+@ForwardDeclare IsingSim "Sim"
 
 include("WeightFuncs.jl")
 include("AdjList/AdjList.jl")
 
-@ForwardDeclare IsingSim "Sim"
 
 include("Hamiltonians/Hamiltonians.jl")
 include("IsingGraphs/IsingGraphs.jl")

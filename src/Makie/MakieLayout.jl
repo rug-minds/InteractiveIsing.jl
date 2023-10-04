@@ -13,6 +13,12 @@ Base.length(p::LayoutPanel) = length(p.elements)+1
 Base.haskey(p::LayoutPanel, key::String) = haskey(p.elements, key)
 Base.keys(p::LayoutPanel) = keys(p.elements)
 Base.values(p::LayoutPanel) = values(p.elements)
+Base.delete!(p::LayoutPanel, key::String) = delete!(p.elements, key)
+function Base.delete!(p::LayoutPanel, keys...)
+    for key in keys
+        delete!(p.elements, key)
+    end
+end
 
 mutable struct MakieLayout
     fig::Figure
@@ -32,13 +38,19 @@ midpanel(ml::MakieLayout, p) = ml.midpanel = p
 bottompanel(ml::MakieLayout) = ml.bottompanel
 bottompanel(ml::MakieLayout, p) = ml.bottompanel = p
 etc(ml::MakieLayout) = ml.etc
-Base.getindex(ml::MakieLayout, idx) = ml.etc[idx]
+Base.getindex(ml::MakieLayout, idx) = try ml.etc[idx]; catch; return nothing; end
 Base.setindex!(ml::MakieLayout, val, idx) = setindex!(ml.etc, val, idx)
 Base.iterate(ml::MakieLayout, state = 1) = iterate(ml.etc, state)
 Base.length(ml::MakieLayout) = length(ml.etc)
 Base.haskey(ml::MakieLayout, key::String) = haskey(ml.etc, key)
 Base.keys(ml::MakieLayout) = keys(ml.etc)
 Base.values(ml::MakieLayout) = values(ml.etc)
+
+cleanView(ml) = begin
+    if haskey(etc(ml), "current_view")
+        cleanup(ml, etc(ml)["current_view"])
+    end
+end
 
 ImageAxis(layout; kwargs...) = 
     Axis(   layout,

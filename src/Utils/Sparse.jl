@@ -114,3 +114,24 @@ function findorderedrange(startrange, endrange, A, searchrange)
     (range = range .+ (searchrange.start - 1))
     return range
 end
+
+"""
+Insert empty rows and columns into a sparse matrix at the given range.
+E.g. if the range is n:m, new columns at n to m AND new rows at n:m will be added
+"""
+function insertrowcol(m::SparseMatrixCSC, range::UnitRange)
+    newmm = m.m + length(range)
+    newmn = m.n + length(range)
+    colptr = copy(m.colptr)
+    rowval = copy(m.rowval)
+    nzval = copy(m.nzval)
+    
+    start_idx = first(range)
+    insert!(colptr, start_idx, repeat([colptr[start_idx]], length(range)))
+    for (idx, row_idx) in enumerate(rowval)
+        if row_idx >= start_idx
+            rowval[idx] += length(range)
+        end
+    end
+    return SparseMatrixCSC(newmm, newmn, colptr, rowval, nzval)
+end

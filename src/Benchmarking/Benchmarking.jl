@@ -21,16 +21,15 @@ let iterations = 10^7
     end
 end
 
-function simtest(sim, time = 5)
-    quitSim(sim)
+using Random
+function simtest(g, time = 5)
+    quit(g)
     Random.seed!(1234)
     rng = MersenneTwister(1234)
-
-    g = graph(sim)
     state(g) .= initRandomState(g)
-    createProcess(sim; rng)
+    createProcess(g; rng)
     sleep(time)
-
-    quitSim(sim)
+    quit(g)
 
 end
+export simtest

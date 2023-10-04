@@ -33,8 +33,8 @@ function setindex!(defects::LayerDefects, val, idx)
     return val
 end
 
-function setrange!(defects::LayerDefects, val, idxs)
-    num_set = setrange!(graphdefects(defects), val, idxLToG.(idxs, Ref(layer(defects))))
+function clamprange!(defects::LayerDefects, val, idxs)
+    num_set = clamprange!(graphdefects(defects), val, idxLToG.(idxs, Ref(layer(defects))))
     defects.ndefects += num_set
     return num_set
 end

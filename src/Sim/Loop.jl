@@ -60,11 +60,9 @@ function updateGraph(g, process = processes(sim(g))[1]; kwargs...)
     energyFunc = haskey(kwargs, :energyFunc) ? kwargs[:energyFunc] : getEFactor
     rng = haskey(kwargs, :rng) ? kwargs[:rng] : MersenneTwister()
 
-    check_empty = haskey(kwargs, :check_empty) ? SIMDCheck{kwargs[:check_empty]}() : SIMDCheck{true}()
-
 
     try
-        mainLoop(process, g, gstate, gadj, lTemp, iterator, rng, updateFunc, energyFunc, gstype, check_empty; kwargs...)
+        mainLoop(process, g, gstate, gadj, lTemp, iterator, rng, updateFunc, energyFunc, gstype; kwargs...)
     catch 
         status(process, :Terminated)
         atomic_message(process, :Nothing)
@@ -75,12 +73,12 @@ end
 
 export updateGraph
 
-function mainLoop(process, g, gstate, gadj, lTemp, iterator, rng, updateFunc, energyFunc, gstype::ST, check_empty; kwargs...)::Nothing where {ST <: SType}
+function mainLoop(process, g, gstate, gadj, lTemp, iterator, rng, updateFunc, energyFunc, gstype::ST; kwargs...)::Nothing where {ST <: SType}
 
     status(process, :Running)
 
     while run(process)
-        updateFunc(g, lTemp, gstate, gadj, iterator, rng, gstype, energyFunc, check_empty)
+        updateFunc(g, lTemp, gstate, gadj, iterator, rng, gstype, energyFunc)
         inc(process)
         GC.safepoint()
     end
@@ -112,17 +110,17 @@ function mainLoop(process, g, gstate, gadj, lTemp, iterator, rng, updateFunc, en
 end
 export mainLoop
 
-@inline function updateMonteCarloIsing(g::IsingGraph, lTemp, gstate, gadj, iterator, rng, gstype::ST, energyFunc, check_empty) where {ST <: SType}
+@inline function updateMonteCarloIsing(g::IsingGraph, lTemp, gstate, gadj, iterator, rng, gstype::ST, energyFunc) where {ST <: SType}
     idx = rand(rng, iterator)
-    updateMonteCarloIsing(idx, g, lTemp, gstate, gadj, rng, gstype, energyFunc, check_empty)
+    updateMonteCarloIsing(idx, g, lTemp, gstate, gadj, rng, gstype, energyFunc)
 end
 
 
-@inline function updateMonteCarloIsing(idx::Integer, g, lTemp, gstate::Vector{Int8}, gadj, rng, gstype::ST, energyFunc, check_empty) where {ST <: SType}
+@inline function updateMonteCarloIsing(idx::Integer, g, lTemp, gstate::Vector{Int8}, gadj, rng, gstype::ST, energyFunc) where {ST <: SType}
 
     beta::Float32 = 1f0/(lTemp[])
     
-    Estate::Float32 = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, gstype, check_empty)
+    Estate::Float32 = @inbounds gstate[idx]*energyFunc(g, gstate, gadj, idx, gstype)
 
     minEdiff::Float32 = 2*Estate
 
@@ -132,7 +130,7 @@ end
 end
 
 
-@inline function updateMonteCarloIsing(idx::Integer, g, lTemp, gstate::Vector{Float32}, gadj, rng, gstype::ST, energyFunc, check_empty) where {ST <: SType}
+@inline function updateMonteCarloIsing(idx::Integer, g, lTemp, gstate::Vector{Float32}, gadj, rng, gstype::ST, energyFunc) where {ST <: SType}
 
     @inline function sampleCState()
         2f0*(rand(rng, Float32)- .5f0)
@@ -142,7 +140,7 @@ end
      
     oldstate = @inbounds gstate[idx]
 
-    efactor = energyFunc(g, gstate, gadj, idx, gstype, check_empty)
+    efactor = energyFunc(g, gstate, gadj, idx, gstype)
 
     newstate = sampleCState()
 
@@ -155,34 +153,6 @@ end
 
 end
 
-# @inline function updateMonteCarloIsingSparse(g, lTemp, gstate, sp_adj::SparseMatrixCSC, iterator, rng, gstype::ST, energyFunc) where {ST <: SType}
-
-#     @inline function sampleCState()
-#         2f0*(rand(rng, Float32)- .5f0)
-#     end
-
-#     idx = rand(iterator)
-
-#     beta = 1f0/(lTemp[])
-     
-#     oldstate = @inbounds gstate[idx]
-
-#     efactor = energyFunc(g, gstate, sp_adj, idx, gstype)
-
-#     newstate = sampleCState()
-
-#     # ediff = efactor*(newstate-oldstate)
-
-#     ediff = Ediff(g, gstype, idx, efactor, oldstate, newstate)
-#     if (ediff < 0f0 || rand(rng, Float32) < exp(-beta*ediff))
-#         @inbounds g.state[idx] = newstate 
-#     end
-
-# end
-
-# export updateMonteCarloIsingSparse
-
-# updateFunc(g, params, lTemp, gstate, gadj, iterator, rng, gstype, energyFunc)
 let times = Ref([])
     global function upDebug(g, params, lTemp, gstate::Vector, gadj, iterator, rng, gstype, energyFunc)
 
@@ -209,26 +179,4 @@ let times = Ref([])
     end
 end
 export upDebug
-
-# @inline function getEFactor(g, state, sparse::SparseMatrixCSC, idx, stype::SType)
-#     efac = 0f0 
-#     # @inbounds @fastmath @simd for idx in nzrange(sparse, idx)
-#     @turbo check_empty = true for idx in nzrange(sparse, idx)
-#     # for idx in nzrange(sparse, idx)
-#         efac += -state[sparse.rowval[idx]] * sparse.nzval[idx]
-#     end
-#     return efac
-# end
-
-# @inline function getEFactor1(g, state, sparse::SparseMatrixCSC, idx, stype::SType)
-#     efac = 0f0 
-#     # @inbounds @fastmath @simd for idx in nzrange(sparse, idx)
-#     connections = sparse[:,idx]
-#     @turbo check_empty = true for (idx, weight) in enumerate(connections)
-#     # for idx in nzrange(sparse, idx)
-#         efac += -state[sparse.rowval[idx]] * weight
-#     end
-#     return efac
-# end
-# export getEFactor, getEFactor1
 

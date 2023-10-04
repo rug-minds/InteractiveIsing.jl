@@ -10,7 +10,7 @@ function create_toppanel(ml, g)
     # TOP BUTTONS
 
         # Create an invisible box
-        toppanel(ml)["topbox"] = topbox = Box(topgrid[1:2,1:3], visible = false)
+        toppanel(ml)["topbox"] = topbox = Box(topgrid[1,1:3], visible = false)
         # leftbox = Box(topgrid[1:2,1], visible = true)
         colsize!(topgrid, 1, Relative(1/3))
         colsize!(topgrid, 2, Relative(1/3))
@@ -18,14 +18,15 @@ function create_toppanel(ml, g)
 
 
 
-        tp["resetbutton"] = resetbutton = Button(topgrid[1,2], label = "Reset Graph", fontsize = 18, height = 30, halign = :center, tellwidth = false)
+        tp["mid_grid"] = mid_grid = GridLayout(topgrid[1,2], tellwidth = false)
+        tp["resetbutton"] = resetbutton = Button(mid_grid[1,1], label = "Reset Graph", fontsize = 18, height = 30, halign = :center, tellwidth = false)
         
         tp["buttontext"] = buttontext = lift(x -> x ? "Paused" : "Running", isPaused(simulation))
         
         # Pop this listener when the button is removed
         push!(poplist, isPaused(simulation))
 
-        tp["pausebutton"] = pausebutton = Button(topgrid[2,2], padding = (0,0,0,0), fontsize = 18, width = 100, height = 30, label = buttontext, halign = :center, tellwidth = false)
+        tp["pausebutton"] = pausebutton = Button(mid_grid[2,1], padding = (0,0,0,0), fontsize = 18, width = 100, height = 30, label = buttontext, halign = :center, tellwidth = false)
         
         on(resetbutton.clicks) do _
             reset!(simulation)
@@ -37,7 +38,7 @@ function create_toppanel(ml, g)
 
     # UPDATE COUNTERS
 
-        topgrid[1,1] = upsgrid = GridLayout()
+        tp["upsgrid"] = upsgrid = GridLayout(topgrid[1,1])
 
         update_label_upf = lift(x -> "Updates per frame: $x", upf(simulation))
         # Pop this listener when the label is removed
@@ -53,7 +54,7 @@ function create_toppanel(ml, g)
     # TOP RIGHT PANEL
 
     # Etcetera buttons
-    etc_bs = GridLayout(topgrid[:,3], halign = :right)
+    etc_bs = GridLayout(topgrid[1,3], halign = :right)
 
     # Saving Image
     img = rotr90(load(modulefolder*"/Makie/Icons/cam.png"))

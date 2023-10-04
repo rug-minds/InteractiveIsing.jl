@@ -64,15 +64,6 @@ function _simulate(g; kwargs...)
     end
 end
 
-function interface(g; kwargs...)
-    if haskey(kwargs, :disp)
-        createBaseFig(g, create_singleview, disp = kwargs[:disp])
-    else
-        createBaseFig(g, create_singleview)
-    end
-
-end
-
 export simulate, getgraph
 
 

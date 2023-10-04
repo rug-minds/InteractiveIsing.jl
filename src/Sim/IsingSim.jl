@@ -49,6 +49,45 @@ mutable struct IsingSim
         initbrushR= round(min(len,wid)/10)
 
         sim = new(
+            IsingGraph[],
+            Dict{String,Any}(),
+            CircularBuffer{Float64}(60),
+            Ref(false),
+            Ref(false),
+            Ref(false),
+            Processes(4),
+            Timer[],
+            IsingParams(;initbrushR, colorscheme),
+            # memory
+            Dict(),
+        )
+        
+        sim.obs = Obs(len, wid, initbrushR, initTemp)
+
+        g = IsingGraph(
+            sim,
+            len,
+            wid;
+            periodic,
+            continuous,
+            weighted,
+            weights
+        )
+
+        initSim!(sim, g, len, wid, initbrushR, initTemp) 
+
+        return sim
+
+        
+    end
+
+    function IsingSim(g::IsingGraph; start = false, initTemp = 1f0, colorscheme = ColorSchemes.viridis)
+        len = glength(g[1])
+        wid = gwidth(g[1])
+
+        initbrushR= round(min(glength(g[1]),gwidth(g[1]))/10)
+
+        sim = new(
             # Graphs
             IsingGraph[],
             # Property map
@@ -68,70 +107,7 @@ mutable struct IsingSim
             Dict(),
         )
 
-        g = IsingGraph(
-            sim,
-            len,
-            wid;
-            periodic,
-            continuous,
-            weighted,
-            weights
-        )
-
-        push!(gs(sim), g)
-
-        #Observables
-        sim.obs = Obs(len, wid, initbrushR, initTemp)
-
-        addLayer!(g, len, wid, type = continuous ? Float32 : Int8)
-
-        sim.obs.layerName[] = name(g[1])
-
-        return sim
-
-        
-    end
-
-    function IsingSim(g::IsingGraph; start = false, initTemp = 1f0, colorscheme = ColorSchemes.viridis)
-        len = glength(g[1])
-        wid = gwidth(g[1])
-
-        initbrushR= round(min(glength(g[1]),gwidth(g[1]))/10)
-
-        sim = new(
-            # Graphs
-            IsingGraph[g],
-            # Property map
-            # JuliaPropertyMap(),
-            Dict{String,Any}(),
-            # M_array
-            CircularBuffer{Float64}(60),
-            # Image from module
-            # img,
-            Ref(false),
-            Ref(false),
-            Ref(false),
-            Processes(4),
-            Timer[],
-            IsingParams(;initbrushR, colorscheme),
-            # memory
-            Dict(),
-        )
-
-        #Observables
-        sim.obs = Obs(len, wid, initbrushR, initTemp)
-        
-        # sim.img[] = gToImg(g[1]; colorscheme)
-
-        sim.obs.layerName[] = name(g[1])
-
-        nlayers(sim)[] = length(layers(g))
-
-        g.sim = sim
-
-        # Register observables
-        register(sim, sim.obs)
-        
+        initSim!(sim, g, len, wid, initbrushR, initTemp)
 
         return sim
 
@@ -139,11 +115,26 @@ mutable struct IsingSim
     #= END of Initializer =# 
 end 
 
+function initSim!(sim, g, len, wid, initbrushR, initTemp)
+    push!(gs(sim), g)
+    sim.obs = Obs(len, wid, initbrushR, initTemp)
+    sim.obs.layerName[] = name(g[1])
+    nlayers(sim)[] = length(layers(g))
+    g.sim = sim
+    # register(sim, sim.obs)
+
+    on(brushR(sim)) do val
+        circ(sim, getOrdCirc(val))
+    end
+
+end
+
+
 """
 Open from file
 """
 function IsingSim(graphfile::String; kwargs...)
-    g = loadGraph(graphfile)ß
+    g = loadGraph(graphfile)
     return IsingSim(g; kwargs...)
 end
 

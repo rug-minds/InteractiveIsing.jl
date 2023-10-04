@@ -37,20 +37,17 @@ function create_midpanel(ml,g)
                 size_validator(r_string) = try 0 < parse(UInt, r_string) < sim_max_r(simulation); catch; false; end
                 mp["size_label_text"] = sl_text = lift(x -> "Radius < $(sim_max_r(simulation))", layerIdx(simulation)) 
                 mp["sizelabel"] = Label(size_grid[1,1], sl_text)
-                mp["sizefield"] = sizefield = Textbox(size_grid[2,1], placeholder = " ", validator = size_validator, width = 40)
-                sizefield.stored_string[] = sizefield.displayed_string[] = string(sim_max_r(simulation))
+                mp["sizefield"] = sizefield = UIntTextbox(size_grid[2,1], 
+                    onfunc = (num) -> brushR(simulation)[] = num,
+                    placeholder = "$(brushR(simulation)[])",
+                    upper = () -> sim_max_r(simulation), 
+                    width = 40, 
+                    defocus_on_submit = true, 
+                    reset_on_defocus = true)
 
 
                 on(brushR(simulation)) do x
-                    if mp["sizefield"].stored_string[] != string(x)
-                        mp["sizefield"].stored_string[] = string(x)
-                    end
-                end
-
-                on(sizefield.stored_string) do s
-                    if s != string(brushR(simulation)[])
-                        brushR(simulation)[] = parse(UInt, s)
-                    end 
+                    sizefield.placeholder[] = string(x)
                 end
 
             # SHOW BFIELD

@@ -1,7 +1,7 @@
 """
 Re initialize simulation while running
 """
-function reset!(sim)::Nothing
+function reset!(sim::IsingSim)::Nothing
     for g in sim.gs
         reset!(g)
     end

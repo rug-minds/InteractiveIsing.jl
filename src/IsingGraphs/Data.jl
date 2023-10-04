@@ -40,10 +40,19 @@ end
 #         )
 
 
-function resize!(data::GraphData, newsize)
+function Base.resize!(data::GraphData, newsize, lidxs = nothing)
     oldsize = length(data.bfield)
-    resize!(data.bfield, newsize)
-    resize!(data.clamps, newsize)
-    data.bfield[oldsize+1:end] .= 0
-    data.clamps[oldsize+1:end] .= 0
+    sizediff = newsize - oldsize
+    if sizediff == 0
+        return
+    elseif sizediff > 0
+        resize!(data.bfield, newsize)
+        resize!(data.clamps, newsize)
+        data.bfield[oldsize+1:end] .= 0
+        data.clamps[oldsize+1:end] .= 0
+    else # sizediff < 0
+        deleteat!(data.bfield, lidxs)
+        deleteat!(data.clamps, lidxs)
+    end
+    return data
 end

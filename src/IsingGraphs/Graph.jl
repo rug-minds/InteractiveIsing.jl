@@ -8,11 +8,8 @@ struct MixedState <: StateType end
 # Ising Graph Representation and functions
 mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
     sim::Union{Nothing, IsingSim}
-    nStates::Int32
-
     # Vertices and edges
     state::Vector{T}
-    adj::Vector{Vector{Conn}}
     sp_adj::SparseMatrixCSC{Float32,Int32}
     htype::HType
 
@@ -27,15 +24,13 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
     defects::GraphDefects
     d::GraphData
 
+    # Default Initializer for IsingGraph
     function IsingGraph(sim, length, width; periodic = nothing, weights::Union{Nothing,WeightGenerator} = nothing, continuous = false, weighted = false)
       
         type = continuous ? Float32 : Int8
         g = new{type}(
             sim,
-            0,
             type[],
-            # Adj
-            Vector{Vector{Conn}}[],
             SparseMatrixCSC{Float32,Int32}(undef,0,0),
             HType(weighted, false),
             SType(:Weighted => weighted),
@@ -49,7 +44,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
         g.defects = GraphDefects(g)
         g.d = GraphData(g)
 
-        # addLayer!(g, length, width; periodic, weightfunc, type)
+        addLayer!(g, length, width; periodic, weights, type)
         return g
     end
     
@@ -98,7 +93,10 @@ Base.show(io::IO, graphtype::Type{IsingGraph}) = print(io, "IsingGraph")
 coords(g::IsingGraph) = VSI(layers(g), :coords)
 export coords
 
+@inline setrange!(g::AbstractIsingGraph, clamp, idxs) = setrange!(defects(g), clamp, idxs)
+
 @setterGetter IsingGraph sp_adj
+@inline nStates(g) = length(state(g))
 @inline sp_adj(g::IsingGraph) = g.sp_adj
 @inline function sp_adj(g::IsingGraph, sp_adj)
     g.sp_adj = sp_adj
@@ -117,8 +115,20 @@ export sp_adj
 @inline graph(g::IsingGraph) = g
 
 ### Access the layer ###
+@inline function spinidx2layer(g::IsingGraph, idx)::IsingLayer
+    @assert idx <= nStates(g) "Index out of bounds"
+    for layer in enumerate(layers(g))
+        if idx ∈ layer
+            return layer
+        end
+    end
+    return g[1]
+end
+layeridxs(g::IsingGraph) = UnitRange{Int32}[graphidxs(unshuffled(layers(g))[i]) for i in 1:length(g)]
+@inline spinidx2layer_i_index(g, idx) = internal_idx(spinidx2layer(g, idx))::Int32
 @inline layer(g::IsingGraph, idx) = g.layers[idx]
 @inline Base.getindex(g::IsingGraph, idx) = g.layers[idx]
+@inline Base.getindex(g::IsingGraph) = g.layers[1]
 @inline length(g::IsingGraph) = length(g.layers)
 @inline Base.lastindex(g::IsingGraph) = length(g)
 Base.view(g::IsingGraph, idx) = view(g.layers, idx)
@@ -126,6 +136,7 @@ Base.deleteat!(layervec::ShuffleVec{IsingLayer}, lidx::Integer) = deleteat!(laye
     internal_idx(layer, newidx)
     start(layer, start(layer) - nstates_layer)
 end
+
 
 
 #TODO: Give new idx
@@ -136,8 +147,8 @@ export layerIdx!
 
 IsingGraph(g::IsingGraph) = deepcopy(g)
 
-@inline layerdefects(g::IsingGraph) = layerdefects(defects(g))
-export layerdefects
+# @inline layerdefects(g::IsingGraph) = layerdefects(defects(g))
+# export layerdefects
 
 @inline size(g::IsingGraph)::Tuple{Int32,Int32} = (nStates(g), 1)
 
@@ -213,39 +224,28 @@ setdefect(g::IsingGraph, val, idx) = defects(g)[idx] = val
 Resize Graph to new size with random states and no connections for the new states
 Need to be bigger than original size?
 """
-function resize!(g::IsingGraph{T}, newlength, layeridx = 0) where T
+function Base.resize!(g::IsingGraph{T}, newlength, layeridx = nothing) where T
     oldlength = nStates(g)
     sizediff = newlength - oldlength
 
     if sizediff > 0
         resize!(state(g), newlength)
-        resize!(adj(g), newlength)
         randomstate = initRandomState(T, sizediff)
         state(g)[oldlength+1:newlength] .= randomstate
-        adj(g)[oldlength+1:newlength] .= [Vector{Conn}[] for _ in oldlength+1:newlength]
+        sp_adj(g, sparse(findnz(sp_adj(g))..., newlength, newlength))
+        resize!(d(g), newlength)
     else # if making smaller
         d_layer = layer(g,layeridx)
         # idxs to be removed
         g_idxs = graphidxs(d_layer) 
 
-        # Remove all connections that the layer had
-        removeConnectionsAll!(g[layeridx])
-
-        #Shift all the leftovers from adj
-        for idx in g_idxs[end]:length(adj(g))
-            adj(g)[idx] = shiftWeight.(adj(g)[idx], -nStates(d_layer))
-        end
-
-        deleteat!(adj(g), g_idxs)
         deleteat!(state(g), g_idxs)
+        sp_adj(g, sp_adj(g)[Not(g_idxs), Not(g_idxs)])
+        resize!(d(g), newlength, graphidxs(layer(g,layeridx)) )
+
     end
-
-    nStates(g, newlength)
-
-    # Resize Data
-    resize!(d(g), newlength)
-
-    return
+    
+    return g
 end
 
 export resize!
@@ -294,7 +294,7 @@ function _addLayer!(g::IsingGraph, llength, lwidth; weights = nothing, periodic 
     sp_adj(g, changesize(sp_adj(g), nStates(g), nStates(g)))
 
     # Set the adjacency matrix
-    if weights != nothing 
+    if !isnothing(weights)
         genAdj!(newlayer, weights)
     end
 

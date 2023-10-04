@@ -26,7 +26,7 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIs
 
     timers::Vector{Timer}
 
-    defects::LayerDefects
+    # defects::LayerDefects
     top::LayerTopology
 
 
@@ -55,7 +55,7 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIs
             # LayerData(d(g), start, length, width)
         )
         # TODO: What's olddefects for
-        layer.defects = LayerDefects(layer, olddefects)
+        # layer.defects = LayerDefects(layer, olddefects)
         layer.top = LayerTopology(layer, [1,0], [0,1]; periodic)
 
         return layer
@@ -75,7 +75,7 @@ mutable struct IsingLayerCopy{T, IsingGraphType <: AbstractIsingGraph} <: Abstra
     const nstates::Int32
     coords::Coords{Tuple{Int32,Int32,Int32}}
     # const d::LayerData
-    defects::LayerDefects
+    # defects::LayerDefects
     top::LayerTopology
 
     function IsingLayerCopy(layer::IsingLayer{A,B}) where {A,B}
@@ -99,7 +99,7 @@ mutable struct IsingLayerCopy{T, IsingGraphType <: AbstractIsingGraph} <: Abstra
             layer.coords,
             # Layer data
             # layer.d,
-            layer.defects,
+            # layer.defects,
             layer.top
         )
     end
@@ -186,6 +186,26 @@ export conns, conncoords
 @inline wg(layer::IsingLayer) = try connections(layer)[internal_idx(layer) => internal_idx(layer)]; catch; return ""; end
 @inline wg(layer1::IsingLayer, layer2::IsingLayer) = try connections(layer1)[internal_idx(layer1) => internal_idx(layer2)]; catch; return ""; end
 
+function Base.resize!(layer::IsingLayer, len, wid)
+    g = graph(layer)
+    old_nstates = nStates(layer)
+    new_nstates = len*wid
+    extra_states = new_nstates - old_nstates
+    if extra_states == 0
+        return
+    end
+    _startidx = startidx(layer)
+    _endidx = endidx(layer)
+    if extra_states > 0
+        insert!(state(g), _endidx+1, rand(len*wid))
+        sp_adj(g, insertrowcol(g, _endidx+1:(_endidx+1 + extra_states)))
+    else # extra_states < 0
+        notidxs = graphidxs(layer)[end+extra_states+1:end]
+        deleteat!(state(g), _startidx:_endidx)
+        sp_adj(g, sp_adj(g)[Not(notidxs), Not(notidxs)])
+    end
+    return layer
+end
 
 # Get Graph
 @inline function graph(layer::IsingLayer{T,G})::G where {T,G}
@@ -208,10 +228,10 @@ export setcoords!
 
 @inline reladj(layer::AbstractIsingLayer) = adjGToL(layer.adj, layer)
 # @forward IsingLayer LayerData d
-@forward IsingLayer LayerDefects defects
+# @forward IsingLayer LayerDefects defects
 
 # @forward IsingLayerCopy LayerData
-@forward IsingLayerCopy LayerDefects defects
+# @forward IsingLayerCopy LayerDefects defects
 
 # Setters and getters
 # @forward IsingLayer IsingGraph g
@@ -254,24 +274,29 @@ bfield(layer::AbstractIsingLayer) = reshape((@view bfield(graph(layer))[graphidx
 clamps(layer::AbstractIsingLayer) = reshape((@view clamps(graph(layer))[graphidxs(layer)]), size(layer,1), size(layer,2))
 
 # Inherited from Graph
-@inline htype(layer::AbstractIsingLayer) = layer.graph.htype
 @inline nStates(layer::AbstractIsingLayer) = length(graphidxs(layer))
 @inline sim(layer::AbstractIsingLayer) = sim(graph(layer))
 
-"""
-Get the indexes of all alive spins in the layer
-"""
-aliveList(layer::AbstractIsingLayer) = aliveList(defects(layer))
-"""
-Get the indexes of all defect spins in the layer
-"""
-defectList(layer::AbstractIsingLayer) = defectList(defects(layer))
 
-"""
-Returns wether layer has any defects
-"""
-@inline hasDefects(layer::AbstractIsingLayer) = ndefects(defects(layer)) > 0
-@inline setdefect(layer::AbstractIsingLayer, val, idx) = defects(layer)[idx] = val
+### DEFECTS
+    """
+    Get the indexes of all alive spins in the layer
+    """
+    aliveList(layer::AbstractIsingLayer) = aliveList(defects(layer))
+    """
+    Get the indexes of all defect spins in the layer
+    """
+    defectList(layer::AbstractIsingLayer) = defectList(defects(layer))
+
+    """
+    Returns wether layer has any defects
+    """
+    @inline ndefects(layer::AbstractIsingLayer) = layerdefects(defects(graph(layer)))[internal_idx(layer)]
+    export ndefects
+    @inline hasDefects(layer::AbstractIsingLayer) = ndefects(layer) > 0
+    @inline setdefect(layer::AbstractIsingLayer, val, idx) = defects(graph(layer))[idxLToG(idx, layer)] = val
+    @inline clamprange!(layer::AbstractIsingLayer, val, idxs) = clamprange!(defects(graph(layer)), val, idxLToG.(idxs, Ref(layer)))
+###
 
 iterator(layer::AbstractIsingLayer) = start(layer):endidx(layer)
 iterator(g::IsingGraph) = 1:(nStates(g))

@@ -1,4 +1,4 @@
-include("HelperFunctions.jl")
+include("Functions.jl")
 include("ShuffleVec.jl")
 include("PreAlloc.jl")
 include("Sparse.jl")

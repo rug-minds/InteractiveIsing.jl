@@ -83,10 +83,10 @@ Obs(len, wid, brushR, initTemp) = Obs(
 )
 
 # Register QML observables to property map of sim
-function register(sim, obs::Obs)
-    for name in fieldnames(typeof(obs))
-        sim.pmap[string(name)] = getproperty(obs, name)
-    end
-end
+# function register(sim, obs::Obs)
+#     for name in fieldnames(typeof(obs))
+#         sim.pmap[string(name)] = getproperty(obs, name)
+#     end
+# end
 
 

@@ -438,7 +438,7 @@ function getstruct(strctname, files)
     stream.ptr = endrange[end]
     open_expressions = 1
     num_ends = 0
-    open_expression_terms = ["function", "while", "for", "if", "begin", "let", "quote"]
+    open_expression_terms = ["function", "while", "for", "if", "begin", "let", "quote", "do"]
     while open_expressions > num_ends || eof(stream)
         # Fix so that it also works         
         # word = readuntil(stream, ' ', keep = false)
@@ -455,7 +455,6 @@ function getstruct(strctname, files)
     end
 
     endrange = stream.ptr - 1
-
     str = file[range[1]:endrange[end]]
     return str
 
@@ -498,8 +497,10 @@ macro rtime(n, expr)
 end
 export @rtime
 
-# If a struct has a vector of some structs, this will create an object that essentially
-# acts like a vector view of the field of the structs
+""" 
+If a struct has a vector of some structs, this will create an object that essentially
+acts like a vector view of the field of the structs
+"""
 struct VecStructIterator{T} <: AbstractVector{T}
     vec::Vector{T}
     fieldname::Symbol
@@ -514,7 +515,10 @@ function VSI(vec::Vector{T}, fieldname) where T
    return VecStructIterator{T}(vec, fieldname)
 end
 
-# Same as above, but now works through accessor functions
+"""
+If a struct has a vec of some structs with some accessor function to a value,
+this will create an object that behaves like a vector of the values
+"""
 struct VecStructIteratorAccessor{T} <: AbstractVector{T}
     vec::Vector{T}
     accessor::Function
@@ -525,18 +529,12 @@ setindex!(vsia::VecStructIteratorAccessor, val, idx) = vsi.accessor(vsi.vec[idx]
 iterate(vsia::VecStructIteratorAccessor, state = 1) = state > length(vsia.vec) ? nothing : (vsia.accessor(vsia.vec[state]), state + 1)
 size(vsia::VecStructIteratorAccessor) = size(vsia.vec)
 
+"""
+If a struct has a vec of some structs with some accessor function to a value,
+this will create an object that behaves like a vector of the values
+"""
 function VSIA(vec::Vector{T}, accessor) where T
    return VecStructIteratorAccessor{T}(vec, accessor)
-end
-
-"""
-
-"""
-function insertShift(vec::Vector{T}, el) where T
-    newVec = Vector{T}(undef, length(vec))
-    newVec[1:(end-1)] = @view vec[2:end]
-    newVec[end] = T(el)
-    return newVec
 end
 
 macro enumeratelayers(layers, length)
@@ -560,3 +558,14 @@ macro tryLockPause(sim, expr, blockpause = false, blockunpause = false)
 end
 export @tryLockPause
 
+"""
+Insert a vector into another vector
+"""
+function Base.insert!(collection::Vector{T}, idx::Integer, items::Vector{T}) where T
+    original_len = length(collection)
+    shifted_items = length(collection) - idx + 1
+    resize!(collection, length(collection) + length(items))
+    collection[end-shifted_items+1:end] = collection[idx:original_len]
+    collection[idx:idx+length(items)-1] = items
+    return collection
+end

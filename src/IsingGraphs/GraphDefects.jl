@@ -5,8 +5,9 @@ mutable struct GraphDefects
     g::Union{Nothing, IsingGraph}
     hasDefects::Bool
     isDefect::Vector{Bool}
-    aliveList::Vector{Vert}
-    defectList::Vector{Vert}
+    aliveList::Vector{Int32}
+    defectList::Vector{Int32}
+    layerdefects::Vector{Int32}
 end
 
 function getIterator(gd::GraphDefects)
@@ -38,20 +39,20 @@ end
 @inline g(gd::GraphDefects, g::IsingGraph) = gd.g = g
 
 #Initialize GraphDefects
-GraphDefects(g) = GraphDefects(g, false, Bool[], Int32[], Int32[])
+GraphDefects(g) = GraphDefects(g, false, Bool[], Int32[], Int32[], Int32[])
 
 """
 Get a vector of the number defects in each layer
 """
-function layerdefects(gd::GraphDefects)
-    # Init empty layer vector
-    vec = Vector{LayerDefects}(undef, length(layers(g(gd))) )
-    for (idx, layer) in enumerate(unshuffled( layers(g(gd))) )
-        vec[idx] = defects(layer)
-    end
+# function layerdefects(gd::GraphDefects)
+#     # Init empty layer vector
+#     vec = Vector{LayerDefects}(undef, length(layers(g(gd))) )
+#     for (idx, layer) in enumerate(unshuffled( layers(g(gd))) )
+#         vec[idx] = defects(layer)
+#     end
 
-    return vec
-end
+#     return vec
+# end
 
 # Zip elements from d_idxs into zipList and remove them from removeList using the set and get functions
 # Should be a fast way to add elements to an ordered list and remove them from another
@@ -99,6 +100,9 @@ function setindex!(gd::GraphDefects, val, idx::Int32)
         end
     end
 
+    layeridx = spinidx2layer_i_index
+    layerdefects(gd)[layeridx] += val ? 1 : -1
+
     return isDefect(gd)[idx] = val
 
 end
@@ -110,7 +114,7 @@ Set a range of spins as defect or not
     val = false -> set as alive
 This function is faster than setting each spin individually
 """
-function setrange!(gd::GraphDefects, val, idxs::Vector{Int32})::Int32
+function clamprange!(gd::GraphDefects, val, idxs::Vector{Int32})::Int32
     if !val
         return setaliverange!(gd, idxs)
     else
@@ -118,11 +122,35 @@ function setrange!(gd::GraphDefects, val, idxs::Vector{Int32})::Int32
     end
 end
 
-setrange!(gd::GraphDefects, val, idxs::Vector{Int64}) = setrange!(gd, val, Int32.(idxs))
+clamprange!(gd::GraphDefects, val, idxs::Vector{Int64}) = clamprange!(gd, val, Int32.(idxs))
 
+function setlayerdefects(gd, graph, idxs, defect)
+    idxs_startidx = 1
+    for (layeridx, graphidxs) in enumerate(layeridxs(graph))
+        idxs_startidx = _setlayerdefectsloop(gd, layeridx, graphidxs, idxs_startidx, idxs, defect)
+        (idxs_startidx <= (nStates(graph))) && break
+    end
+    return nothing
+end
+function _setlayerdefectsloop(gd, layeridx, graphidxs, spin_startidx, idxs, defect)
+    defects = 0
+    lastidxs_idx = 0
+    for idxs_idx in spin_startidx:length(idxs)
+            if idxs[idxs_idx] ∈ graphidxs
+                defects += 1
+            else
+                lastidxs_idx = idxs_idx
+                break
+            end
+    end
+    layerdefects(gd)[layeridx] += (defect ? 1 : -1)*defects
+    return lastidxs_idx
+end
+
+# TODO: Does it assume idxs to be ordered? I think so
 """
 Set a range of spins as alive
-This function is faster than setting each spin individually
+This function is faster than setting each spin individually in a loop
 """
 function setaliverange!(gd::GraphDefects, idxs)::Int32
     # If there were no defects, do nothing
@@ -144,6 +172,9 @@ function setaliverange!(gd::GraphDefects, idxs)::Int32
 
     # Spins not defect anymore
     @inbounds isDefect(gd)[d_idxs] .= false
+
+    # Set all the defects in the layers
+    setlayerdefects(gd, g(gd), d_idxs, false)
 
     if length(defectList(gd)) == 0
         hasDefects(gd, false)
@@ -175,6 +206,9 @@ function setdefectrange!(gd::GraphDefects, idxs)::Int32
     # Mark lattice as having defects
     hasDefects(gd, true)
 
+    # Set all the defects in the layers
+    @time setlayerdefects(gd, g(gd), d_idxs, true)
+
     #return amount set
     return length(d_idxs)
 end
@@ -196,9 +230,7 @@ function reset!(gd::GraphDefects)
     isDefect(gd) .= false
     aliveList(gd, Int32[1:length(isDefect(gd));])
     defectList(gd, Int32[])
-    for layer in layerdefects(gd)
-        reset!(layer)
-    end
+    layerdefects(gd) .= 0
 end
 
 """
@@ -210,6 +242,8 @@ function addLayer!(gd::GraphDefects, layer)
 
     #set new alive list
     gd.aliveList = vcat(gd.aliveList, Int32[start(layer):(start(layer)+nStates(layer)-1);])
+
+    push!(layerdefects(gd), 0)
 end
 
 """
@@ -239,6 +273,9 @@ function removeLayer!(gd::GraphDefects, lidx)
 
     gd.defectList = newdefectlist
     gd.aliveList = newalivelist
+
+    # Fix layerdefects
+    deleteat!(layerdefects(gd), internal_idx(layer))
 
     return
 end

@@ -11,7 +11,7 @@ function setSpins!(g::AbstractIsingGraph{T}, idxs::AbstractArray, brush, clamp =
     end
 
     # Set the defects
-    setrange!(defects(g), clamp, idxs)
+    clamprange!(g, clamp, idxs)
     
     # Set the stype to wether it has defects or not
     setSType!(graph(g), :Defects => hasDefects(graph(g)), force_refresh = refresh)
