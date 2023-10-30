@@ -5,23 +5,10 @@ function pauseSim(sim; block = false, ignore_lock = false, print = true)
         println("Pausing sim")
     end
 
-    running = status(sim) .== :Running
+    running = isrunning.(processes(sim))
     idxs = [1:length(processes(sim));][running]
 
-    for process in (@view processes(sim)[idxs])
-        signal!(process, false, :Pause; ignore_lock)
-    end
-
-    if block
-        # Wait for all to terminate
-        while any(x -> x == :Running, status(sim))
-
-            # for process in (@view processes(sim)[idxs])
-            #     signal!(process, false, :Pause; ignore_lock)
-            # end
-            yield()
-        end
-    end
+    pause.((@view processes(sim)[idxs]))
 
     isPaused(sim)[] = true
 
@@ -34,18 +21,11 @@ function unpauseSim(sim; block = false, ignore_lock = false, print = true)
         println("Unpausing sim")
     end
     # Find running processes
-    running = status(sim) .== :Paused
-    idxs = [1:length(processes(sim));][running]
+    wasrunning = ispaused.(processes(sim))
+    idxs = [1:length(processes(sim));][wasrunning]
     for process in (@view processes(sim)[idxs])
-        signal!(process, true, :Nothing; ignore_lock)
-    end
-
-    if block
-        # Wait for all to terminate
-        while any(x -> x == :Paused, status(sim))
-            # sleep(.5)
-            yield()
-        end
+        kwargs = retval(process)
+        createProcess(g, process; kwargs...)
     end
 
     isPaused(sim)[] = false
@@ -75,65 +55,60 @@ export unlockPause
 """
 Quit sim and block until all processes are terminated
 """
-function quitSim(sim)
-    # Find running processes
-    running = status(sim) .== :Running
-    idxs = [1:length(processes(sim));][running]
-    for process in (@view processes(sim)[idxs])
-        signal!(process, false, :Quit)
-    end
-
-    # Wait for all to terminate
-    while any(x -> x == :Running, status(sim))
-        # sleep(.5)
-        yield()
-    end
-
-    return
+function quit(sim::IsingSim)
+    quit.(processes(sim))
 end
-quit(g) = quitSim(sim(g))
-export quitSim, quit
 
-function refreshSim(sim)
-    # Find running processes
-    running = status(sim) .== :Running
-    idxs = [1:length(processes(sim));][running]
-    for process in (@view processes(sim)[idxs])
-        run!(process, false)
-    end
-    return
+function pause(sim::IsingSim)
+    pause.(processes(sim))
 end
-export refreshSim
+
+function quit(g) 
+    quit.(processes(g))
+end
+
+function pause(g)
+    pause.(processes(g))
+end
+
+unpause(g::IsingGraph) = restart(g)
+
+export quitSim, quit, pause, unpause
 
 """
 Restart Sim with same number of processes
 """
 function restart(g; kwargs...)
-    _sim = sim(g)
-    processNum = count(stat -> stat == :Running, status(_sim)) 
-    processNum = processNum < 1 ? 1 : processNum
-    quitSim(_sim)
-    # createProcess(sim, processNum; gidx, updateFunc, energyFunc)
-    createProcess(g; kwargs...)
+    _processes = processes(g)
+    for process in _processes
+        # Do this all at once, not in the loop
+        paused_or_running = ispaused(process) || isrunning(process)
+        pause(process)
+        ###
+        args = retval(process)
+        if paused_or_running
+            newkwargs = mergekwargs(args, kwargs)
+            task = process -> errormonitor(Threads.@spawn updateGraph(g, process; newkwargs...))
+            runtask(process, task, g)
+        end
+    end
     return
 end 
 export restart
 
 function togglePause(g)
-    _sim = sim(g)
-    # If any are paused, unpause else pause
-    if any(x -> x == :Paused, status(_sim))
-        unpauseSim(_sim)
+    if any(isrunning.(processes(sim(g))))
+        pause.(processes(sim(g)))
     else
-        pauseSim(_sim)
-    end
+        for process in processes(sim(g))
+            if ispaused(process)
+                args = fetch(process)
+                task = process -> Threads.@spawn updateGraph(g, process; args...)
+                errormonitor(runtask(process, task, g))
+            end
+        end
+    end    
 end
+
 
 export togglePause
-
-function resetStatus!(sim)
-    status(sim) .= :Terminated
-    messages(sim) .= :Nothing
-end
-
-export resetStatus!

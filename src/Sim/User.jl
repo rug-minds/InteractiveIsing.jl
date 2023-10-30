@@ -1,15 +1,17 @@
 """
 Re initialize simulation while running
 """
-function reset!(sim::IsingSim)::Nothing
+function reset!(sim::IsingSim)
     for g in sim.gs
+        pause(g)
         reset!(g)
     end
 
     M(sim)[] = 0
-    updates(sim, 0)
 
-    branchSim(sim)
+    for g in sim.gs
+        restart(g)
+    end
     return
 end
 export reset!

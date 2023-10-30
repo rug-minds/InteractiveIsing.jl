@@ -1,7 +1,7 @@
 mutable struct IsingParams
     started::Bool
 
-    updates::Int64
+    # updates::Int64
 
     circ::Vector{Tuple{Int16, Int16}}
 
@@ -12,8 +12,8 @@ IsingParams(;initbrushR = 1, colorscheme = ColorSchemes.viridis) =
     IsingParams(
         # started
         false,
-        # Updates
-        0,
+        # # Updates
+        # 0,
         # Circ
         getOrdCirc(Int32(initbrushR)),
         #ColorScheme

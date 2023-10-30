@@ -116,7 +116,7 @@ adjToMatrix(g) = adjToMatrix(adj(g), glength(g), gwidth(g))
 function setAdj!(sim, layeridx, wf)
     g = sim.layers[layeridx]
     adj(g) = initSqAdj(glength(g), gwidth(g), weightfunc = wf)
-    refreshSim(sim)
+    restart(g)
 end
 export setAdj!
 
@@ -124,7 +124,7 @@ export setAdj!
 function setGAdj!(sim, idx, weightfunc)
     g = gs(sim)[idx]
     adj(graph(g))[iterator(g)] = initSqAdj(glength(g), gwidth(g); weightfunc)
-    refreshSim(sim)
+    restart(g)
 end
 export setGAdj!
 

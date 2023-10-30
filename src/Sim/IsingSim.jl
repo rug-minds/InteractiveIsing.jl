@@ -115,18 +115,32 @@ mutable struct IsingSim
     #= END of Initializer =# 
 end 
 
+function destructor(sim::IsingSim)
+    @async println("destructor sim")
+    quit.(sim.processes)
+    close.(sim.timers)
+    destructor.(gs(sim))
+    return nothing
+end
+
 function initSim!(sim, g, len, wid, initbrushR, initTemp)
     push!(gs(sim), g)
     sim.obs = Obs(len, wid, initbrushR, initTemp)
     sim.obs.layerName[] = name(g[1])
     nlayers(sim)[] = length(layers(g))
     g.sim = sim
-    # register(sim, sim.obs)
+    # Temperature Observable
+    Temp(sim)[] = temp(g)
 
-    on(brushR(sim)) do val
+    on(Temp(sim), weak = true) do val
+        temp(g, val)
+    end
+
+    on(brushR(sim), weak = true) do val
         circ(sim, getOrdCirc(val))
     end
 
+    # finalizer(destructor, sim)
 end
 
 

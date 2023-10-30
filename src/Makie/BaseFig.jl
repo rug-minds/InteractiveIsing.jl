@@ -1,4 +1,3 @@
-const mlref = UnRef(MakieLayout(Figure()))
 
 # DEV:
 export ml, midpanel, toppanel, bottompanel
@@ -57,14 +56,6 @@ function cleanup(ml, ::typeof(baseFig))
     cleanup(ml, topPanel)
     cleanup(ml, midPanel)
     cleanup(ml, bottomPanel)
-
-    reset!(mlref)
-    mlref[] = MakieLayout(Figure())
     return nothing
 end
 
-function closeinterface()
-    ml = mlref[]
-    cleanup(ml, baseFig)
-    close(ml["screen"])
-end

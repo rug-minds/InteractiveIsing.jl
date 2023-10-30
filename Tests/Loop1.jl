@@ -9,7 +9,7 @@ Then, this function itself makes a new branch where getE is defined again.
 export mainLoop
 """
 
-function createProcess(sim::IsingSim, ; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor, rng = MersenneTwister())::Nothing
+function createProcess(sim::IsingSim, ; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getdE, rng = MersenneTwister())::Nothing
     process = nothing
     for (idx, p) in enumerate(processes(sim))
         if status(p) == :Terminated
@@ -27,7 +27,7 @@ function createProcess(sim::IsingSim, ; gidx = 1, updateFunc = updateMonteCarloI
     errormonitor(Threads.@spawn updateGraph(sim, process; gidx, updateFunc, energyFunc, rng))
     return
 end
-createProcess(sim::IsingSim, num; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor, rng = MersenneTwister())::Nothing = 
+createProcess(sim::IsingSim, num; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getdE, rng = MersenneTwister())::Nothing = 
     for _ in 1:num; createProcess(sim; gidx, updateFunc, energyFunc) end
 export createProcess
 
@@ -53,7 +53,7 @@ registerLoopParams(sim, gidx = 1; rng = MersenneTwister()) =
 
 export registerLoopParams
 
-function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor, rng = MersenneTwister())
+function updateGraph(sim::IsingSim, process = processes(sim)[1]; gidx = 1, updateFunc = updateMonteCarloIsing, energyFunc = getdE, rng = MersenneTwister())
     loopParams = registerLoopParams(sim, gidx; rng)
 
     try
@@ -69,7 +69,7 @@ end
 
 export updateGraph
 
-function mainLoop(sim::IsingSim, process, loopParams, updateFunc = updateMonteCarloIsing, energyFunc = getEFactor)::Nothing
+function mainLoop(sim::IsingSim, process, loopParams, updateFunc = updateMonteCarloIsing, energyFunc = getdE)::Nothing
 
     status(process, :Running)
 

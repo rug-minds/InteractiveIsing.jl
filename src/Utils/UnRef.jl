@@ -1,10 +1,14 @@
 mutable struct UnRef{T}
     val::Union{Nothing, T}
+    destructor::Function
 end
 
-UnRef(tp::DataType) = UnRef{tp}(nothing)
+UnRef(val::Any) = UnRef{typeof(val)}(val, (v) -> nothing)
+UnRef(tp::DataType) = UnRef{tp}(nothing, (v) -> nothing)
+UnRef(tp::DataType, destructor::Function) = UnRef{tp}(nothing, destructor)
 
-reset!(u::UnRef) = u.val = nothing
+reset!(u::UnRef) = begin u.destructor(u.val); u.val = nothing; end
+reset!(u::UnRef{T}, val::T) where T = begin u.destructor(u.val); u.val = val; end
 
 Base.isnothing(u::UnRef) = isnothing(u.val)
 

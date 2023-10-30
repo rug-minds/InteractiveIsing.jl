@@ -4,14 +4,15 @@ Vector that allows the shuffling of indexes without moving any internal data
 struct ShuffleVec{T} <: AbstractVector{T}
     data::Vector{T}
     idxs::Vector{Int}
+    coupledvecs::Vector{ShuffleVec}
 
     function ShuffleVec(data::Vector{T}) where T
         idxs = collect(1:length(data))
-        return new{T}(data, idxs)
+        return new{T}(data, idxs, Vector{ShuffleVec{T}}())
     end
 
     function ShuffleVec{T}() where T
-        return new{T}(Vector{T}(), Vector{Int}())
+        return new{T}(Vector{T}(), Vector{Int}(), Vector{ShuffleVec{T}}())
     end
 end
 
@@ -23,8 +24,9 @@ Base.eltype(p::ShuffleVec{T}) where T = T
 Base.length(p::ShuffleVec) = length(p.data)
 Base.iterate(p::ShuffleVec, state = 1) = state > length(p) ? nothing : (p[state], state+1)
 unshuffled(p::ShuffleVec) = p.data
+couple(p1::ShuffleVec, p2::ShuffleVec) = begin push!(p1.coupledvecs, p2); push!(p2.coupledvecs, p1); end
 
-function Base.deleteat!(p::ShuffleVec, i::Integer, datafunc::Function = (vars...) -> nothing)
+function Base.deleteat!(p::ShuffleVec, i::Integer, deletefunc::Function = (vars...) -> nothing)
     internal_idx = p.idxs[i]
     deleteat!(p.data, p.idxs[i])
     deleteat!(p.idxs, i)
@@ -36,11 +38,16 @@ function Base.deleteat!(p::ShuffleVec, i::Integer, datafunc::Function = (vars...
         end
     end
 
-    # Cleanup internal data for all elements that have been shifted
+    # Call delete function for data in the shufflevec
+    # Not standard but can be easy to clean all data
+    # Note that this doesn't work well when the shufflevecs are coupled
+    # Since it is not known what data they hold and how to clean
     for new_i_idx in internal_idx:length(p)
         data_el = p.data[new_i_idx]
-        datafunc(data_el, new_i_idx)
+        deletefunc(data_el, new_i_idx)
     end
+
+    deleteat!.(p.coupledvecs, i)
 
     return p
 end
@@ -48,6 +55,8 @@ end
 # For do syntax
 Base.deleteat!(f::Function, p::ShuffleVec, i::Integer) = deleteat!(p, i, f)
 
+
+##TODO: Shouldn't this work inversed?
 function Base.deleteat!(p::ShuffleVec, i::AbstractVector)
     for idx in i
         deleteat!(p.data, p.idxs[idx])
@@ -77,6 +86,8 @@ function shuffle!(p::ShuffleVec, oldidx, newidx)
     end
 
     p.idxs .= newidxs
+
+    shuffle!.(p.coupledvecs, oldidx, newidx)
 end
 
 @inline internalidx(p::ShuffleVec, external_idx::Integer) = p.idxs[external_idx]

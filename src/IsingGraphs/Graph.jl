@@ -12,7 +12,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
     # Vertices and edges
     state::Vector{T}
     sp_adj::SparseMatrixCSC{Float32,Int32}
-    # htype::HType
+    temp::Float32
 
     stype::SType
     
@@ -33,7 +33,8 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
             sim,
             type[],
             SparseMatrixCSC{Float32,Int32}(undef,0,0),
-            # HType(weighted, false),
+            #Temp            
+            1f0,
             SType(:Weighted => weighted),
             #Layers
             ShuffleVec{IsingLayer}(),
@@ -66,6 +67,8 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
             state,
             # Adjacency
             sp_adj,
+            #Temp
+            1f0,
             # stype
             stype,
             # Layers
@@ -96,6 +99,10 @@ function Base.show(io::IO, g::IsingGraph)
     end
 end
 
+function destructor(g::IsingGraph)
+    destructor.(layers(g))
+end
+
 Base.show(io::IO, graphtype::Type{IsingGraph}) = print(io, "IsingGraph")
 
 coords(g::IsingGraph) = VSI(layers(g), :coords)
@@ -108,7 +115,7 @@ export coords
 @inline sp_adj(g::IsingGraph) = g.sp_adj
 @inline function sp_adj(g::IsingGraph, sp_adj)
     g.sp_adj = sp_adj
-    refreshSim(sim(g))
+    restart(g)
     return sp_adj
 end
 set_sp_adj!(g::IsingGraph, vecs::Tuple) = sp_adj(g, sparse(vecs..., nStates(g), nStates(g)))
@@ -145,6 +152,9 @@ Base.deleteat!(layervec::ShuffleVec{IsingLayer}, lidx::Integer) = deleteat!(laye
     start(layer, start(layer) - nstates_layer)
 end
 
+function processes(g::IsingGraph)
+    return processes(sim(g))[map(process -> process.objectref === g, processes(sim(g)))]
+end
 
 
 #TODO: Give new idx
@@ -160,12 +170,20 @@ IsingGraph(g::IsingGraph) = deepcopy(g)
 
 @inline size(g::IsingGraph)::Tuple{Int32,Int32} = (nStates(g), 1)
 
+function closetimers(g::IsingGraph)
+    for layer in layers(g)
+        close.(timers(layer))
+        deleteat!(timers(layer), 1:length(timers(layer)))
+    end
+end
+
 function reset!(g::IsingGraph)
     state(g) .= initRandomState(g)
     currentlyWeighted = getSParam(stype(g), :Weighted)
     stype(g,SType(:Weighted => currentlyWeighted))
     reset!(defects(g))
     reset!(d(g))
+    closetimers(g)
 end
  
 export initRandomState
@@ -377,12 +395,12 @@ function setSType!(g::IsingGraph, pairs::Pair...; refresh::Bool = true, force_re
     if oldstype != newstype
         stype(g, newstype)
         if refresh && !force_refresh
-            refreshSim(sim(g))
+            restart(g)
         end
     end
     
     if force_refresh
-        refreshSim(sim(g))
+        restart(g)
     end
 end
 """
@@ -393,7 +411,7 @@ function setSType!(g::IsingGraph, st::SType; refresh::Bool = true)
     if oldstype != st
         stype(g, st)
         if refresh
-            refreshSim(sim(g))
+            restart(g)
         end
     end
 end

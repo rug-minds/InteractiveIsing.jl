@@ -497,46 +497,6 @@ macro rtime(n, expr)
 end
 export @rtime
 
-""" 
-If a struct has a vector of some structs, this will create an object that essentially
-acts like a vector view of the field of the structs
-"""
-struct VecStructIterator{T} <: AbstractVector{T}
-    vec::Vector{T}
-    fieldname::Symbol
-end
-
-getindex(vsi::VecStructIterator, idx) = getfield(vsi.vec[idx], vsi.fieldname)
-setindex!(vsi::VecStructIterator, val, idx) = setfield!(vsi.vec[idx], vsi.fieldname, val)
-iterate(vsi::VecStructIterator, state = 1) = state > length(vsi.vec) ? nothing : (getfield(vsi.vec[state], vsi.fieldname), state + 1)
-size(vsi::VecStructIterator) = size(vsi.vec)
-
-function VSI(vec::Vector{T}, fieldname) where T
-   return VecStructIterator{T}(vec, fieldname)
-end
-
-"""
-If a struct has a vec of some structs with some accessor function to a value,
-this will create an object that behaves like a vector of the values
-"""
-struct VecStructIteratorAccessor{T} <: AbstractVector{T}
-    vec::Vector{T}
-    accessor::Function
-end
-
-getindex(vsia::VecStructIteratorAccessor, idx) = vsi.accessor(vsi.vec[idx])
-setindex!(vsia::VecStructIteratorAccessor, val, idx) = vsi.accessor(vsi.vec[idx], val)
-iterate(vsia::VecStructIteratorAccessor, state = 1) = state > length(vsia.vec) ? nothing : (vsia.accessor(vsia.vec[state]), state + 1)
-size(vsia::VecStructIteratorAccessor) = size(vsia.vec)
-
-"""
-If a struct has a vec of some structs with some accessor function to a value,
-this will create an object that behaves like a vector of the values
-"""
-function VSIA(vec::Vector{T}, accessor) where T
-   return VecStructIteratorAccessor{T}(vec, accessor)
-end
-
 macro enumeratelayers(layers, length)
     expr = quote end
 
@@ -569,3 +529,39 @@ function Base.insert!(collection::Vector{T}, idx::Integer, items::Vector{T}) whe
     collection[idx:idx+length(items)-1] = items
     return collection
 end
+
+"""
+Merge 2 kwargs. If a key is present in both, the value from the top is used
+"""
+function mergekwargs(bottom, top)
+    if typeof(top) == Base.Pairs{Symbol, Union{}, Tuple{}, @NamedTuple{}}
+        return bottom
+    end
+    _keys = collect(keys(top))
+    _values = collect(values(top))
+    for key in keys(bottom)
+        if !(key in _keys)
+            push!(_keys, key)
+            push!(_values, bottom[key])
+        end
+    end
+    return pairs((;(_keys .=> _values)...))
+end
+
+function replacekwargs(bottom, top)
+    #If top is empty, return bottom
+    if typeof(top) == Base.Pairs{Symbol, Union{}, Tuple{}, @NamedTuple{}}
+        return bottom
+    end
+    bottomkeys = collect(keys(bottom))
+    bottomvalues = collect(values(bottom))
+    for topkey in keys(top)
+        if (idx = findfirst(x -> x == topkey, bottomkeys)) != nothing
+            bottomvalues[idx] = top[topkey]
+        else
+            println("Unsupported key $topkey ignored")
+        end
+    end
+    return pairs((;(bottomkeys .=> bottomvalues)...))
+end
+export mergekwargs, replacekwargs

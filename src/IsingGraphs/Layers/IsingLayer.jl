@@ -24,7 +24,7 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIs
 
     connections::Dict{Pair{Int32,Int32}, Any} 
 
-    timers::Vector{Timer}
+    timers::Vector{PTimer}
 
     # defects::LayerDefects
     top::LayerTopology
@@ -49,15 +49,15 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIs
             coords,
             # Connections
             connections,
-            # Timers
-            Vector{Timer}(),
+            # PTimers
+            Vector{PTimer}(),
             # Layer data
             # LayerData(d(g), start, length, width)
         )
         # TODO: What's olddefects for
         # layer.defects = LayerDefects(layer, olddefects)
         layer.top = LayerTopology(layer, [1,0], [0,1]; periodic)
-
+        finalizer(destructor, layer)
         return layer
     end
 end
@@ -65,6 +65,7 @@ export IsingLayer
 
 # IsingLayer(g, layer::AbstractIsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefects(layer))
 
+# TODO: Is this still needed?
 mutable struct IsingLayerCopy{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIsingLayer{T}
     const graph::IsingGraphType
     layeridx::Int32
@@ -105,6 +106,9 @@ mutable struct IsingLayerCopy{T, IsingGraphType <: AbstractIsingGraph} <: Abstra
     end
 end
 
+function destructor(layer::IsingLayer)
+    close.(timers(layer))
+end
 
 
 @setterGetter IsingLayer coords size layeridx graph
@@ -277,6 +281,10 @@ clamps(layer::AbstractIsingLayer) = reshape((@view clamps(graph(layer))[graphidx
 @inline nStates(layer::AbstractIsingLayer) = length(graphidxs(layer))
 @inline sim(layer::AbstractIsingLayer) = sim(graph(layer))
 
+### TIMERS
+    pausetimers(layer) = close.(timers(layer))
+    starttimers(layer) = start.(timers(layer))
+    removetimers(layer) = begin close.(timers(layer)); layer.timers = Vector{PTimer}(); end
 
 ### DEFECTS
     """

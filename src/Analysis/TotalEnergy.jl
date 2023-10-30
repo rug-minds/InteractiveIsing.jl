@@ -13,7 +13,7 @@ function totalEnergy(layer::IsingLayer)
     _stype = stype(g)
     total_E = 0f0
     for state_idx in graphidxs(layer)
-        total_E += _state[state_idx] * getEFactor(g, _state, adj, state_idx, _stype)
+        total_E += _state[state_idx] * getdE(g, _state, adj, state_idx, _stype)
     end
     return total_E
 end

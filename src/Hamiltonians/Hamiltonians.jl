@@ -10,7 +10,7 @@ include("HType.jl")
 # include("Expressions.jl")
 # This means the part of the hamiltonian where the state can be factorized out
 # E.g. - σ_i * H_fac (check if the minus sign is in H_fac or not)
-include("Factor.jl")
+include("DeltaE.jl")
 
 # Difference term
 include("Diff.jl")

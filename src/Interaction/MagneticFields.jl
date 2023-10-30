@@ -92,7 +92,7 @@ function setBFuncTimer!(layer, func::Function, t_step = .2)
         t[] += t_step
         sleep(max(0, t_step - (time() - ti)))
     end
-    tm = Timer(repeatfunc,0, interval = t_step)
+    tm = PTimer(repeatfunc,0, interval = t_step)
     push!(timers(layer), tm)
     return tm
 end

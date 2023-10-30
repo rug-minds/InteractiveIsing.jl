@@ -97,7 +97,7 @@ function setSimHType!(sim, pairs...; gidx = 1, prt = false)
 
     if oldhtype != newhtype
         htype(g, newhtype)
-        refreshSim(sim)
+        restart(g)
     end
 
     if prt

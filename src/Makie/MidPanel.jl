@@ -94,18 +94,21 @@ function midPanel(ml,g)
     mp["rightpanel"] = rightpanel = GridLayout(midgrid[1,3])
 
         # TEMP SLIDER
-            mp["temptext"] = lift(x -> "T: $x", Temp(simulation))
-            push!(coupled_obs, mp["temptext"])
+            # push!(coupled_obs, mp["temptext"])
             # Pop this listener when the label is removed
             
 
 
             Box(rightpanel[1,1], width = 100, height = 50, visible = false)
-            mp["templabel"] = Label(rightpanel[1,1], mp["temptext"], fontsize = 18)
             tempslider = mp["tempslider"] = tempslider = Slider(rightpanel[2,1], range = 0.0:0.1:20, value = 1.0, horizontal = false)
+            tempslider.value[] = temp(g)
+            mp["temptext"] = lift(x -> "T: $x", tempslider.value)
+
+            mp["templabel"] = Label(rightpanel[1,1], mp["temptext"], fontsize = 18)
+
             
             push!(obs_funcs, on(tempslider.value) do value
-                Temp(simulation)[] = value
+                temp(g, Float32(value))
             end)
         
     # rowsize!(f.layout, 1, Auto())

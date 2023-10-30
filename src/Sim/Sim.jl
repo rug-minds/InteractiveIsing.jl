@@ -4,12 +4,12 @@ include("Processes.jl")
 include("Pausing.jl")
 include("IsingSim.jl")
 
-# include("QML.jl")
+include("Algorithms.jl")
 include("Loop.jl")
 include("timedFunctions.jl")
 include("User.jl")
 
-const simulation = UnRef(IsingSim)
+const simulation = UnRef(IsingSim, destructor)
 
 function simulate(
     len::Integer = 500,
@@ -26,31 +26,49 @@ function simulate(
     register_sim = true,
     kwargs...
     )
-    _sim = IsingSim(len, wid; periodic, continuous, weighted, weights, initTemp, colorscheme)
-    if isnothing(simulation) && register_sim
-        simulation[] = _sim
-    end
-    g = _sim.gs[1]
+    createsimfunc = () -> IsingSim(len, wid; periodic, continuous, weighted, weights, initTemp, colorscheme)
+    _assign_or_createsim(createsimfunc, register_sim)
+    g = simulation[].gs[1]
     _simulate(g; start, gui, kwargs...)
     return g
 end
 
 function simulate(g::IsingGraph; start = true, giu = true, initTemp = 1f0, colorscheme = ColorSchemes.viridis, register_sim = true, kwargs...)
-    _sim = IsingSim(graph; start, initTemp, colorscheme)
-    if isnothing(simulation) && register_sim
-        simulation[] = _sim
-    end
+    createsimfunc = () -> IsingSim(graph; start, initTemp, colorscheme)
+    _assign_or_createsim(createsimfunc, register_sim)
     g = _sim.gs[1]
     _simulate(g; start, gui, kwargs...)
     return g
 end
 
 function simulate(filename::String; start = true, register_sim = true, kwargs...)
-    if isnothing(simulation) && register_sim
-        simulation[] = IsingSim(filename; kwargs...)
-    end
-    
+    createsimfunc = () -> IsingSim(filename; kwargs...)
+    _assign_or_createsim(createsimfunc, register_sim)
+    __simulate(_sim.gs[1]; start, gui, kwargs...)
     return g
+end
+
+# Why use register sim?
+function _assign_or_createsim(create_sim_func, register_sim = true)
+    if isnothing(simulation) && register_sim
+        simulation[] = create_sim_func()
+    elseif register_sim
+        println("Simulation already active, create a new one and overwrite it? [y/n]")
+        while true
+            s = read(stdin, Char)
+            println("Character entered: $s")
+            if s == 'y'
+                reset!(simulation)
+                closeinterface()
+                simulation[] = create_sim_func()
+                return
+            elseif s == 'n'
+                return
+            else
+                println("Please enter y or n")
+            end
+        end
+    end
 end
 
 getgraph() = gs(simulation[])[1]

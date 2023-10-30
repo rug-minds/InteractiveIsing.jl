@@ -132,7 +132,8 @@ function cleanup(ml, ::typeof(singleView))
     deleterow!(bp["mid_grid"], bp_midgrid_toprow)
 
     #Timer
-    close(etc(ml)["timedfunctions_timer"])
+    close(ml["timedfunctions_timer"])
+
     delete!(etc(ml), "timedfunctions_timer")
 
     ml["current_view"] = nothing

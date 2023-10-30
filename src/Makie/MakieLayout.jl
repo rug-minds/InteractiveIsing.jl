@@ -26,8 +26,15 @@ mutable struct MakieLayout
     midpanel::LayoutPanel
     bottompanel::LayoutPanel
     etc::Dict{String, Any}
+    timers::Vector{Any}
 end
-MakieLayout(f::Figure) = MakieLayout(f, LayoutPanel(), LayoutPanel(), LayoutPanel(), Dict{String, Any}())
+
+MakieLayout(f::Figure) = MakieLayout(f, LayoutPanel(), LayoutPanel(), LayoutPanel(), Dict{String, Any}(), Any[])
+function deconstruct(ml::MakieLayout)
+    cleanup(ml, baseFig)
+    GLFW.SetWindowShouldClose(to_native(ml["screen"]), true)
+    return nothing
+end
 
 fig(ml::MakieLayout) = ml.fig
 fig(ml::MakieLayout, f) = ml.fig = f
