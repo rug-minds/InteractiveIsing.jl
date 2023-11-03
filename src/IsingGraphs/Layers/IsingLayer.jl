@@ -1,5 +1,5 @@
 """
-ndefects not tracking correctly FIX
+ndefect not tracking correctly FIX
 """
 
 # Coordinates that can be left uninitialized
@@ -10,9 +10,15 @@ end
 Coords(;y = 0, x = 0, z = 0) = Coords{Tuple{Int32,Int32,Int32}}((Int32(y), Int32(x), Int32(z)))
 Coords(n::Nothing) = Coords{Tuple{Int32,Int32,Int32}}(nothing)
 Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val), Int32(val)))
+
+struct Discrete <: StateType end
+struct Continuous <: StateType end
+export Discrete, Continuous
+
 export Coords
 # TODO: Make the topology part of the layertype
 mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIsingLayer{T}
+    # Reference to the graph holding it    
     graph::Union{Nothing, IsingGraphType}
     name::String
     # Internal idx of layer in shufflevec of graph
@@ -21,7 +27,7 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIs
     const size::Tuple{Int32,Int32}
     const nstates::Int32
     coords::Coords{Tuple{Int32,Int32,Int32}}
-
+    # Keeps track of the connected layers
     connections::Dict{Pair{Int32,Int32}, Any} 
 
     timers::Vector{PTimer}
@@ -63,7 +69,7 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIs
 end
 export IsingLayer
 
-# IsingLayer(g, layer::AbstractIsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefects(layer))
+# IsingLayer(g, layer::AbstractIsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefect(layer))
 
 # TODO: Is this still needed?
 mutable struct IsingLayerCopy{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIsingLayer{T}
@@ -126,12 +132,16 @@ function Base.show(io::IO, layer::AbstractIsingLayer)
         println(io, "\tConnected to layer $(key[2]) using ")
         println("\t", (connections(layer)[key]))
     end
-    print(io, "and $(ndefects(layer)) defects")
+    print(io, "and $(ndefect(layer)) defects")
     return
 end
 
-Base.show(io::IO, layertype::Type{<:AbstractIsingLayer}) = print(io, "IsingLayer")
+## DEFAULT NEW LAYER TYPE BASED ON GRAPH
+default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous 
 
+Base.show(io::IO, layertype::Type{IsingLayer{A,B}}) where {A,B} = print(io, "$A IsingLayer")
+
+@inline statetype(layer::IsingLayer{ST, B}) where {ST,B} = ST
 @inline state(l::IsingLayer) = reshape((@view state(graph(l))[graphidxs(l)]), size(l,1), size(l,2))
 # @inline adj(l::IsingLayer) = reshape((@view adj(graph(l))[graphidxs(l)]), glength(l), gwidth(l))
 @inline sp_adj(l::IsingLayer) = @view sp_adj(graph(l))[:, graphidxs(l)] 
@@ -299,13 +309,26 @@ clamps(layer::AbstractIsingLayer) = reshape((@view clamps(graph(layer))[graphidx
     """
     Returns wether layer has any defects
     """
-    @inline ndefects(layer::AbstractIsingLayer) = layerdefects(defects(graph(layer)))[internal_idx(layer)]
-    export ndefects
-    @inline hasDefects(layer::AbstractIsingLayer) = ndefects(layer) > 0
+    @inline ndefect(layer::AbstractIsingLayer) = layerdefects(defects(graph(layer)))[internal_idx(layer)]
+    @inline nalive(layer::AbstractIsingLayer) = nStates(layer) - ndefect(layer)
+    export ndefect, nalive
+    @inline hasDefects(layer::AbstractIsingLayer) = ndefect(layer) > 0
     @inline setdefect(layer::AbstractIsingLayer, val, idx) = defects(graph(layer))[idxLToG(idx, layer)] = val
     @inline clamprange!(layer::AbstractIsingLayer, val, idxs) = clamprange!(defects(graph(layer)), val, idxLToG.(idxs, Ref(layer)))
 ###
 
+### RELOCATING
+### Shift from placing 1 layer before
+function relocate!(movable_layer::IsingLayer, causing_layer::IsingLayer, shift, copy::Bool = true)
+    oldstate_view = state(movable_layer)
+    movable_layer.start += shift*nStates(causing_layer)
+    movable_layer.internal_idx += shift*1
+    if copy  
+        state(movable_layer) .= oldstate_view
+    end
+end
+
+### GET INDEXES
 iterator(layer::AbstractIsingLayer) = start(layer):endidx(layer)
 iterator(g::IsingGraph) = 1:(nStates(g))
 
@@ -354,3 +377,14 @@ end
 Set the simulation type through a layer
 """
 setSType!(layer::AbstractIsingLayer, varargs...; refresh = true) = setSType!(graph(layer), varargs...; refresh = refresh)
+
+
+### GENERATING STATE
+@inline Base.rand(layer::IsingLayer{Continuous,B}) where {B} = rand(Uniform(-1f0,1f0))
+@inline Base.rand(layer::IsingLayer{Continuous,B}, num::Integer) where {B} = rand(Uniform(-1f0,1f0), num)
+@inline Base.rand(layer::IsingLayer{Discrete,B}) where {B} = rand([-1f0,1f0])
+@inline Base.rand(layer::IsingLayer{Discrete,B}, num::Integer) where {B} = rand([-1f0,1f0], num)
+
+@inline function initstate!(layer::IsingLayer)
+    state(layer)[:] .= rand(layer, nStates(layer))
+end

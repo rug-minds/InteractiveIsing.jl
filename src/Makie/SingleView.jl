@@ -1,12 +1,13 @@
 export singleView
 max_r_slider(simulation, slider) = slider.range[] = 1:(floor(Int64,min(size(currentLayer(simulation))...)/2))
 sim_max_r(simulation) = (floor(Int64,min(size(currentLayer(simulation))...)/2))
+
 function getSingleViewImg(g, ml)
     simulation = sim(g)
     if midpanel(ml)["showbfield"].active[]
-        return bfield(currentLayer(simulation))
+        return midpanel(ml)["sv_img_ob"][] = bfield(currentLayer(simulation))
     else
-        return state(currentLayer(simulation))
+        return midpanel(ml)["sv_img_ob"][] = state(currentLayer(simulation))
     end
 end
 """
@@ -20,12 +21,16 @@ function singleView(ml, g)
 
     ml["current_view"] = singleView
 
+    # ISING IMAGE
+    
+    mp["sv_img_ob"] = img_ob = Observable{Base.ReshapedArray}(state(currentLayer(simulation)))
+    img_ob[] = getSingleViewImg(g, ml)
     obs_funcs = etc(ml)["obs_funcs_singleView"] = ObserverFunction[]
     coupled_obs = etc(ml)["coupled_obs_singleView"] = Observable[]
 
     # LAYER SELECTOR  BUTTONS
     toppanel(ml)["sb"] = selector_buttons = GridLayout(toppanel(ml)["mid_grid"][3,1], tellwidth = false)
-    selected_layer_label = liftcouple((x,y) -> "$x/$y", layerIdx(simulation), nlayers(simulation))
+    toppanel(ml)["sll"] = selected_layer_label = liftcouple((x,y) -> "$x/$y", layerIdx(simulation), nlayers(simulation))
     push!(coupled_obs, selected_layer_label)
 
     toppanel(ml)["sb_<"] = selector_buttons[1,1] = leftbutton = Button(f, label = "<", padding = (0,0,0,0), fontsize = 14, width = 40, height = 28)
@@ -33,28 +38,28 @@ function singleView(ml, g)
     toppanel(ml)["sb_>"] = selector_buttons[1,3] = rightbutton = Button(f, label = ">", padding = (0,0,0,0), fontsize = 14, width = 40, height = 28)
     # rowsize!(_grid[1,1].layout, 1, 80)
 
-    # ISING IMAGE
-    mp["sv_img_ob"] = img_ob = Observable{Base.ReshapedArray}(getSingleViewImg(g, ml))
+    # BFIELD BUTTON
     push!(obs_funcs, on(midpanel(ml)["showbfield"].active, weak = true) do _
         img_ob[] = getSingleViewImg(g, ml)
     end)
     # img_ob = Observable{Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Vector{Float32}, Tuple{UnitRange{Int32}}, true}, Tuple{}}}(state(currentLayer(simulation)))
 
-    # max_r_slider(simulation, midpanel(ml)["rslider"]) 
+    
 
     push!(obs_funcs, on(leftbutton.clicks, weak = true) do _
-        changeLayer(-1, simulation)
-        img_ob[] = getSingleViewImg(g, ml)
-        # max_r_slider(simulation, midpanel(ml)["rslider"]) 
-        reset_limits!(ax)
+        setLayerIdx!(simulation, layerIdx(simulation)[] -1)
     end)
 
     push!(obs_funcs, on(rightbutton.clicks, weak = true) do _
-        changeLayer(1, simulation)
-        img_ob[] = getSingleViewImg(g, ml)
-        # max_r_slider(simulation, midpanel(ml)["rslider"]) 
-        reset_limits!(ax)
+        setLayerIdx!(simulation, layerIdx(simulation)[] + 1)
     end)
+
+    push!(obs_funcs, on(layerIdx(simulation), weak = true) do val
+        setLayerSV(val)
+    end)
+
+    
+
     # ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), ypanlock = true, xpanlock = true, yzoomlock = true, xzoomlock = true)
     ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
     im = image!(ax, img_ob, colormap = :thermal, fxaa = false, interpolate = false)
@@ -89,11 +94,11 @@ function singleView(ml, g)
     bp_midgrid_toprow = 1+bp["mid_grid"].offsets[1]
     bottompanel(ml)["wf_label"] = Label(bp["mid_grid"][bp_midgrid_toprow - 1,1], wg_label_obs, fontsize = 12)
 
-    if haskey(etc(ml), "timedfunctions_timer")
-        close(etc(ml)["timedfunctions_timer"])
+    # TIMER FOR THE SCREEN
+    if haskey(ml, "timedfunctions_timer")
+        close(ml["timedfunctions_timer"])
     end
-
-    etc(ml)["timedfunctions_timer"] = Timer((timer) -> (notify(mp["obs"]); timedFunctions(simulation)) ,0., interval = 1/60)
+    ml["timedfunctions_timer"] = PTimer((timer) -> (notify(mp["obs"]); timedFunctions(simulation)) ,0., interval = 1/60)
 
     return
 end

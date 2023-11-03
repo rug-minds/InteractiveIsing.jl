@@ -237,45 +237,56 @@ end
 Add a layer to the graph defects
 """
 function addLayer!(gd::GraphDefects, layer)
+    layer_idx =  internal_idx(layer)
+    startidx = start(layer)
     #set new isdefect vector 
-    gd.isDefect = vcat(gd.isDefect, [false for x in 1:nStates(layer)])
+    splice!(gd.isDefect, startidx:startidx-1, [false for x in 1:nStates(layer)])
+    # gd.isDefect = vcat(gd.isDefect, [false for x in 1:nStates(layer)])
 
     #set new alive list
-    gd.aliveList = vcat(gd.aliveList, Int32[start(layer):(start(layer)+nStates(layer)-1);])
+    splice!(gd.aliveList, startidx:startidx-1, Int32[start(layer):(start(layer)+nStates(layer)-1);])
+    # gd.aliveList = vcat(gd.aliveList, Int32[start(layer):(start(layer)+nStates(layer)-1);])
 
-    push!(layerdefects(gd), 0)
+    insert!(layerdefects(gd), layer_idx, 0)
 end
 
 """
 Remove a layer from the graph defects
 """
+# NEEDS TO BE CALLED AFTER REMOVING THE LAYER FROM THE GRAPH
 function removeLayer!(gd::GraphDefects, lidx)
-    # Get the layer to be removed
-    layer = g(gd)[lidx]
-
+   
+    _graph = g(gd)
+    _layers = unshuffled(layers(_graph))
+    preceding_layers = _layers[1:(lidx-1)]
     # Get the number of defects in the layer
-    l_ndefects = ndefects(layer)
+    l_ndefect = layerdefects(gd)[lidx]
+    nstates_layer = length(gd.isDefect) - sum(nStates.(_layers)) 
+    lidx = min(lidx, length(_layers))
+    start_idx = start(_layers[lidx])
 
+    # TODO: Make lazy
     # Get the number of defects and alives in the preceding layers
-    preceding_defects = precedingDefects(defects(layer))
-    preceding_alives = precedingAlives(defects(layer))
+    preceding_defects = sum(ndefect.(preceding_layers))
+    preceding_alives = sum(nalive.(preceding_layers))
 
     # Remove defects from defect list
-    newdefectlist = Vector{Int32}(undef, length(defectList(gd))-l_ndefects)
+    newdefectlist = Vector{Int32}(undef, length(defectList(gd))-l_ndefect)
     newdefectlist[1:preceding_defects] = defectList(gd)[1:preceding_defects]
-    newdefectlist[preceding_defects+1:end] = (defectList(gd)[(preceding_defects+l_ndefects+1):end] .- nStates(layer))
+    newdefectlist[preceding_defects+1:end] = (defectList(gd)[(preceding_defects+l_ndefect+1):end] .- nstates_layer)
 
     # Fix alive list
-    l_alivelist_length = nStates(layer) - l_ndefects
+    l_alivelist_length = nstates_layer - l_ndefect
     newalivelist = Vector{Int32}(undef, length(aliveList(gd)) - l_alivelist_length)
     newalivelist[1:preceding_alives] = aliveList(gd)[1:preceding_alives]
-    newalivelist[(preceding_alives+1):end] = (aliveList(gd)[(preceding_alives+1 + l_alivelist_length):end] .- nStates(layer))
+    newalivelist[(preceding_alives+1):end] = (aliveList(gd)[(preceding_alives+1 + l_alivelist_length):end] .- nstates_layer)
 
     gd.defectList = newdefectlist
     gd.aliveList = newalivelist
+    deleteat!(gd.isDefect, start_idx:(start_idx+nstates_layer-1))
 
     # Fix layerdefects
-    deleteat!(layerdefects(gd), internal_idx(layer))
+    deleteat!(layerdefects(gd), lidx)
 
     return
 end

@@ -93,7 +93,7 @@ function midPanel(ml,g)
     # RIGHT PANEL
     mp["rightpanel"] = rightpanel = GridLayout(midgrid[1,3])
 
-        # TEMP SLIDER
+        # TEMPERATURE SLIDER
             # push!(coupled_obs, mp["temptext"])
             # Pop this listener when the label is removed
             
@@ -101,7 +101,7 @@ function midPanel(ml,g)
 
             Box(rightpanel[1,1], width = 100, height = 50, visible = false)
             tempslider = mp["tempslider"] = tempslider = Slider(rightpanel[2,1], range = 0.0:0.1:20, value = 1.0, horizontal = false)
-            tempslider.value[] = temp(g)
+            tempslider.value[] = temp(g)[]
             mp["temptext"] = lift(x -> "T: $x", tempslider.value)
 
             mp["templabel"] = Label(rightpanel[1,1], mp["temptext"], fontsize = 18)

@@ -1,19 +1,15 @@
 # Pauses sim and waits until paused
-# TODO: Might crash when refresh sim is run too many times
 function pauseSim(sim; block = false, ignore_lock = false, print = true)
     if print
         println("Pausing sim")
     end
-
     running = isrunning.(processes(sim))
     idxs = [1:length(processes(sim));][running]
-
     pause.((@view processes(sim)[idxs]))
-
     isPaused(sim)[] = true
-
     return
 end
+
 export pauseSim
 
 function unpauseSim(sim; block = false, ignore_lock = false, print = true)
@@ -24,12 +20,11 @@ function unpauseSim(sim; block = false, ignore_lock = false, print = true)
     wasrunning = ispaused.(processes(sim))
     idxs = [1:length(processes(sim));][wasrunning]
     for process in (@view processes(sim)[idxs])
+        g = objectref(process)
         kwargs = retval(process)
         createProcess(g, process; kwargs...)
     end
-
     isPaused(sim)[] = false
-
     return
 end
 export unpauseSim

@@ -135,3 +135,20 @@ function insertrowcol(m::SparseMatrixCSC, range::UnitRange)
     end
     return SparseMatrixCSC(newmm, newmn, colptr, rowval, nzval)
 end
+
+function deleterowcol(m::SparseMatrixCSC, range::UnitRange)
+    rows, cols, vals = findnz(m)
+
+    idxs_to_remove = Int[]
+    sizehint!(idxs_to_remove, length(rows))
+    for idx in eachindex(rows)
+        if rows[idx] in range || cols[idx] in range
+            push!(idxs_to_remove, idx)
+        end
+    end
+    deleteat!(rows, idxs_to_remove)
+    deleteat!(cols, idxs_to_remove)
+    deleteat!(vals, idxs_to_remove)
+
+    return sparse(rows, cols, vals, m.m - length(range), m.n - length(range))
+end

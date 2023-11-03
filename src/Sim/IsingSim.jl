@@ -115,8 +115,8 @@ mutable struct IsingSim
     #= END of Initializer =# 
 end 
 
+# TODO: Is this still needed?
 function destructor(sim::IsingSim)
-    @async println("destructor sim")
     quit.(sim.processes)
     close.(sim.timers)
     destructor.(gs(sim))

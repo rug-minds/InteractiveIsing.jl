@@ -7,12 +7,20 @@ function rslider_func(x, sim)
         # circ(sim, getOrdCirc(brushR(simulation)[]))
 end
 
-function changeLayer(inc, sim)
-    setLayerIdx!(sim, layerIdx(sim)[] + inc)
+function setLayerSV(idx)
+    ml = mlref[]
+    sim = simulation[]
+    # setLayerIdx!(sim, idx)
     newR = round(min(size(currentLayer(sim))...) / 10)
 
     setCircR!(sim, newR)
     layerName(sim)[] = name(currentLayer(sim))
+
+    g = gs(sim)[1]
+
+    getSingleViewImg(g, ml)
+    ax = midpanel(ml)["axis"]
+    reset_limits!(ax)
 end
 
 # Drawing on the axis

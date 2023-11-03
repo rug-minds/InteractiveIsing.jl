@@ -1,15 +1,7 @@
 # All functions that are run from the QML Timer
 function timedFunctions(sim)
-    # c_layer = currentLayer(sim)
-    # if runTimedFunctions(sim)[]
-        updatesPerFrame(sim)
-        # spawnOne(updatesPerFrame, sim.updatingUpf, "", sim)
-        spawnOne(magnetization, sim.updatingMag, "", sim)
-    # end
-
-    # checkImgSize(sim, c_layer, glength(c_layer), gwidth(c_layer), qmllength(sim), qmllength(sim))
-    # spawnOne(updateImg, sim.updatingImg, "UpdateImg", sim)
-
+    updatesPerFrame(sim)
+    spawnOne(magnetization, sim.updatingMag, "", sim)
 end
 export timedFunctions
 

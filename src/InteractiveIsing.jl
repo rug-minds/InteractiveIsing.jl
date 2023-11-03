@@ -20,7 +20,6 @@ const modulefolder = @__DIR__
 # export QML
 using FileIO, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, LinearAlgebra,
     StatsBase, LaTeXStrings, DataStructures, Preferences, GLMakie, SparseArrays, FFTW
-using InvertedIndices: Not
 using Images
 using PrecompileTools
 

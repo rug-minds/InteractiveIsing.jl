@@ -1,8 +1,9 @@
 using InteractiveIsing
 
 g = simulate(28, 28, continuous = true)
-addLayer!(g,16,32)
-addLayer!(g,32,32)
+addLayer!(g,16,32, type = Discrete)
+addLayer!(g,32,32, type = Discrete)
+addLayer!(g,40,40, type = Continuous)
 
 function weights12_2_sparse(w1, w2)
     n_conns = length(w1)+length(w2)

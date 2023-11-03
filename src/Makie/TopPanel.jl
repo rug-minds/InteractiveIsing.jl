@@ -22,16 +22,20 @@ function topPanel(ml, g)
         tp["mid_grid"] = mid_grid = GridLayout(topgrid[1,2], tellwidth = false)
         tp["resetbutton"] = resetbutton = Button(mid_grid[1,1], label = "Reset Graph", fontsize = 18, height = 30, halign = :center, tellwidth = false)
         
+        # PAUSE BUTTON
         tp["buttontext"] = buttontext = liftcouple(x -> x ? "Paused" : "Running", isPaused(simulation))
         push!(coupled_obs, tp["buttontext"])
 
         tp["pausebutton"] = pausebutton = Button(mid_grid[2,1], padding = (0,0,0,0), fontsize = 18, width = 100, height = 30, label = buttontext, halign = :center, tellwidth = false)
         
+        # RESET BUTTON
         push!(obs_funcs, on(resetbutton.clicks) do _
             reset!(simulation)
         end)
 
+        # PAUSE BUTTON
         push!(obs_funcs, on(pausebutton.clicks) do _
+            isPaused(simulation)[] = !isPaused(simulation)[]
             togglePause(g)
         end)
 

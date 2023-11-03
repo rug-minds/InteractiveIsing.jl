@@ -30,7 +30,7 @@ Base.sizehint!(ad::AvgData, n::Int) = begin
     sizehint!(ad.windowavgs, n - ad.windowsize + 1)
     return ad
 end
-Base.getindex(ad) = ad.avgs[end]
+Base.getindex(ad::AvgData) = ad.avgs[end]
 plot_conv(ad) = pl.plot(ad.windowavgs, xlabel = "Step", ylabel = "Window RMSD", title = "Convergence")
 export plot_conv
 plot_avgs(ad) = pl.plot(ad.avgs, xlabel = "Step", ylabel = "Average", title = "Averages")
