@@ -68,6 +68,20 @@ avgs = zeros(Float32, 28, 28)
 const im_obs = Observable(avgs)
 image!(ax, im_obs, colormap = :thermal, fxaa = false, interpolate = false)
 
+slidergrid = GridLayout(f[1,2], tellheight = false)
+but = Button(slidergrid[1,1], label = "R", padding = (0,0,0,0), fontsize = 24, width = 20, height = 40, tellheight = false)
+slidergrid[1,2:4] = sliders = [Slider(f, range = -3.0:0.02:1.0, value = 0.0, horizontal = false) for _ in 1:3]
+buttonlabeltexts = [lift(x -> "$x", sliders[i].value) for i in 1:3]
+buttonlabels = [Label(slidergrid[2,1+i], buttonlabeltexts[i], fontsize = 18, width = 32, tellwidth = false) for i in 1:3]
+# On button click reset state
+on(but.clicks) do _
+    resetstate!(g)
+end
+for i in 1:3
+    on(sliders[i].value) do val
+        setB!(g[i], val)
+    end
+end
 
 
 function updateshitload(shitload, state)

@@ -42,9 +42,9 @@ ax = Axis(f[1, 1], aspect = 1)
 d = display(GLMakie.Screen(), f)
 
 
-const shitload = Matrix{CircularBuffer{Float32}}(undef, 28, 28)
+const shitload = Matrix{AverageCircular{Float32}}(undef, 28, 28)
 for idx in eachindex(shitload)
-    shitload[idx] = CircularBuffer{Float32}(512)
+    shitload[idx] = AverageCircular(Float32, 1024)
 end
 avgs = zeros(Float32, 28, 28)
 const img_ob = Observable(avgs)
@@ -60,16 +60,19 @@ end
 
 function updateavgs(avgs, shitload)
     for idx in eachindex(avgs)
-        avgs[idx] = sum(shitload[idx])/length(shitload[idx])
+        avgs[idx] = avg(shitload[idx])
     end
 end
 
 const tShouldRun = Ref(true)
 
 function update(g, shitload, avgs, img_ob)
-    updateshitload(shitload, state(g[1]))
-    updateavgs(avgs, shitload)
+    t = Threads.@spawn begin
+        updateshitload(shitload, state(g[1]))
+        updateavgs(avgs, shitload)
+    end
+    wait(t)
     notify(img_ob)
 end
 
-timer = Timer(t -> update(g, shitload, avgs, img_ob), 0, interval = 1/512)
+timer = Timer(t -> update(g, shitload, avgs, img_ob), 0, interval = 1/1024)
