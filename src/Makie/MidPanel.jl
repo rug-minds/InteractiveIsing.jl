@@ -100,7 +100,7 @@ function midPanel(ml,g)
 
 
             Box(rightpanel[1,1], width = 100, height = 50, visible = false)
-            tempslider = mp["tempslider"] = tempslider = Slider(rightpanel[2,1], range = 0.0:0.1:20, value = 1.0, horizontal = false)
+            tempslider = mp["tempslider"] = tempslider = Slider(rightpanel[2,1], range = 0.0:0.02:20, value = 1.0, horizontal = false)
             tempslider.value[] = temp(g)[]
             mp["temptext"] = lift(x -> "T: $x", tempslider.value)
 

@@ -48,6 +48,7 @@ mutable struct ShuffleVec{T, Mode} <: AbstractVector{T}
     data::Tuple
     idxs::Vector{Int}
     callbacks::Vector{ShuffleCallback}
+    # set_callbacks::Vector{Function}
     relocate::Function
 
     ## TODO: Define constructors for uncoupled objects
@@ -71,7 +72,8 @@ insert(t::Tuple, idx, val) = (t[1:idx-1]..., val, t[idx:end]...)
 # end
 Base.size(sv::ShuffleVec) = (length(sv.data),)
 Base.getindex(sv::ShuffleVec{T, Mode}, i::Int) where {T, Mode} = sv.data[sv.idxs[i]]::T
-Base.setindex!(sv::ShuffleVec{T, Mode}, val::T, i::Int) where {T, Mode} = sv.data = (sv.data[1:sv.idxs[i]-1]..., val, sv.data[sv.idxs[i]+1:end])
+# THIS SHOULD TAKE INTO ACCOUNT A CHANGE OF TYPE
+Base.setindex!(sv::ShuffleVec{T, Mode}, val::T, i::Int) where {T, Mode} = sv.data = (sv.data[1:sv.idxs[i]-1]..., val, sv.data[sv.idxs[i]+1:end]...)
 Base.IndexStyle(::Type{<:ShuffleVec}) = IndexLinear()
 Base.eltype(p::ShuffleVec{T, Mode}) where {T, Mode} = T
 Base.length(p::ShuffleVec) = length(p.data)
@@ -151,11 +153,10 @@ Base.push!(p::ShuffleVec{T, Grouped}, item) where T = push!(p, (i) -> item, type
 Functions should be a function that takes the idx where it is inserted and returns an item
 """
 function Base.push!(p::ShuffleVec{T, Grouped}, item_f::Function, item_type) where T
-    insert_idx = 0
     found_idx = findlast(x -> typeof(x) == item_type, unshuffled(p))
+    # println("Type $item_type found at $found_idx")
     insert_idx = 0
     if !isnothing(found_idx)
-
         insert_idx = found_idx + 1
         # Update all internal indexes
         for idx in eachindex(p.idxs)
@@ -163,7 +164,6 @@ function Base.push!(p::ShuffleVec{T, Grouped}, item_f::Function, item_type) wher
                 p.idxs[idx] += 1
             end
         end
-        
     else # Insertidx is at the end
         insert_idx = length(p.data) + 1
     end
@@ -173,7 +173,7 @@ function Base.push!(p::ShuffleVec{T, Grouped}, item_f::Function, item_type) wher
     p.idxs = push!(p.idxs, insert_idx)
 
     # Call relocator function for all data that is moved from back to front
-    # TODO: Can I make this a view?
+    # TODO: Can I make this a view? Or lazy
     movable_objs = p.data[end:-1:insert_idx+1]
     for movable_obj in movable_objs
         p.relocate(movable_obj, new_obj, 1)

@@ -9,4 +9,7 @@ end
 
 gettype(nt::NamedTuple, symb::Symbol) = gettype(typeof(nt), symb)
 
+"""
+Get the val from a val type
+"""
 getval(::Type{Val{T}}) where T = T 

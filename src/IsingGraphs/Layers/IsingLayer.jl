@@ -11,22 +11,21 @@ Coords(;y = 0, x = 0, z = 0) = Coords{Tuple{Int32,Int32,Int32}}((Int32(y), Int32
 Coords(n::Nothing) = Coords{Tuple{Int32,Int32,Int32}}(nothing)
 Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val), Int32(val)))
 
-struct Discrete <: StateType end
-struct Continuous <: StateType end
-export Discrete, Continuous
 
 export Coords
 # TODO: Make the topology part of the layertype
-mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIsingLayer{T}
+mutable struct IsingLayer{T, StateSet, IsingGraphType <: AbstractIsingGraph} <: AbstractIsingLayer{T}
     # Reference to the graph holding it    
     graph::Union{Nothing, IsingGraphType}
     name::String
     # Internal idx of layer in shufflevec of graph
     internal_idx::Int32
     start::Int32
-    const size::Tuple{Int32,Int32}
-    const nstates::Int32
+    size::Tuple{Int32,Int32}
+    nstates::Int32
+
     coords::Coords{Tuple{Int32,Int32,Int32}}
+    
     # Keeps track of the connected layers
     connections::Dict{Pair{Int32,Int32}, Any} 
 
@@ -36,9 +35,9 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIs
     top::LayerTopology
 
 
-    function IsingLayer(LayerType, g::GraphType, idx, start, length, width; name = "$(length)x$(width) Layer", coords = Coords(nothing), connections = Dict{Pair{Int32,Int32}, WeightGenerator}(), olddefects = 0, periodic::Union{Nothing,Bool} = true) where GraphType <: IsingGraph
+    function IsingLayer(LayerType, g::GraphType, idx, start, length, width; rangebegin = -1f0, rangeend = 1f0, name = "$(length)x$(width) Layer", coords = Coords(nothing), connections = Dict{Pair{Int32,Int32}, WeightGenerator}(), periodic::Union{Nothing,Bool} = true) where GraphType <: IsingGraph
         lsize = tuple(Int32(length), Int32(width))
-        layer = new{LayerType, GraphType}(
+        layer = new{LayerType, (rangebegin,rangeend), GraphType}(
             # Graph
             g,
             # Name
@@ -68,6 +67,8 @@ mutable struct IsingLayer{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIs
     end
 end
 export IsingLayer
+
+
 
 # IsingLayer(g, layer::AbstractIsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefect(layer))
 
@@ -121,10 +122,10 @@ end
 @setterGetter IsingLayerCopy coords size
 
 # Extend show for IsingLayer, showing the layer idx, and the size of the layer
-function Base.show(io::IO, layer::AbstractIsingLayer)
-    showstr = "IsingLayer $(layeridx(layer)) with size $(size(layer))"
+function Base.show(io::IO, layer::IsingLayer{A,B}) where {A,B}
+    showstr = "$A IsingLayer $(layeridx(layer)) with size $(size(layer)) and stateset $B\n"
     if coords(layer) != nothing
-        showstr *= " \t at coordinates $(coords(layer))"
+        showstr *= " at coordinates $(coords(layer))"
     end
     print(io, showstr, "\n")
     println(io, " with connections:")
@@ -132,17 +133,23 @@ function Base.show(io::IO, layer::AbstractIsingLayer)
         println(io, "\tConnected to layer $(key[2]) using ")
         println("\t", (connections(layer)[key]))
     end
-    print(io, "and $(ndefect(layer)) defects")
+    print(io, " and $(ndefect(layer)) defects")
     return
 end
 
-## DEFAULT NEW LAYER TYPE BASED ON GRAPH
-default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous 
-
+# SHOW THE TYPE
 Base.show(io::IO, layertype::Type{IsingLayer{A,B}}) where {A,B} = print(io, "$A IsingLayer")
 
-@inline statetype(layer::IsingLayer{ST, B}) where {ST,B} = ST
+## LAYERTYPE STUFF
+## DEFAULT NEW LAYER TYPE BASED ON GRAPH
+default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous 
+@inline statetype(layer::IsingLayer{ST}) where {ST} = ST
+@inline statetype(::Type{IsingLayer{ST,A,B}}) where {ST,A,B} = ST
+export statetype
+## ACCESSORS
 @inline state(l::IsingLayer) = reshape((@view state(graph(l))[graphidxs(l)]), size(l,1), size(l,2))
+
+
 # @inline adj(l::IsingLayer) = reshape((@view adj(graph(l))[graphidxs(l)]), glength(l), gwidth(l))
 @inline sp_adj(l::IsingLayer) = @view sp_adj(graph(l))[:, graphidxs(l)] 
 @inline function set_sp_adj!(layer, wg, rcw)
@@ -178,6 +185,10 @@ function conns(idx::Integer, layer1::IsingLayer, layer2::IsingLayer)
     return sp_adj(graph(layer1))[:, idxLToG(idx,layer1)][graphidxs(layer2)]
 end
 
+function conns(l1::IsingLayer, l2::IsingLayer)
+    return sp_adj(graph(l1))[graphidxs(l1), graphidxs(l2)]
+end
+
 # TODO:: Make a way to show the coordinates of the connections
 """
 Get the connections for a coordinate of the layer, given in graphidxs
@@ -200,7 +211,12 @@ export conns, conncoords
 @inline wg(layer::IsingLayer) = try connections(layer)[internal_idx(layer) => internal_idx(layer)]; catch; return ""; end
 @inline wg(layer1::IsingLayer, layer2::IsingLayer) = try connections(layer1)[internal_idx(layer1) => internal_idx(layer2)]; catch; return ""; end
 
+"""
+Resize a layer
+Is this used?
+"""
 function Base.resize!(layer::IsingLayer, len, wid)
+    println("This one is called")
     g = graph(layer)
     old_nstates = nStates(layer)
     new_nstates = len*wid
@@ -212,21 +228,27 @@ function Base.resize!(layer::IsingLayer, len, wid)
     _endidx = endidx(layer)
     if extra_states > 0
         insert!(state(g), _endidx+1, rand(len*wid))
+        println("HIER")
         sp_adj(g, insertrowcol(g, _endidx+1:(_endidx+1 + extra_states)))
     else # extra_states < 0
         notidxs = graphidxs(layer)[end+extra_states+1:end]
         deleteat!(state(g), _startidx:_endidx)
-        sp_adj(g, sp_adj(g)[Not(notidxs), Not(notidxs)])
+        sp_adj(g, deleterowcol(g, notidxs))
     end
     return layer
 end
 
-# Get Graph
-@inline function graph(layer::IsingLayer{T,G})::G where {T,G}
-    g::G = layer.graph
+"""
+Get graph of layer
+"""
+@inline function graph(layer::IsingLayer{<:Any,<:Any, G})::G where G
+    g = layer.graph::G
     return g
 end
 
+"""
+Set graph of layer
+"""
 @inline graph(layer::IsingLayer, g::IsingGraph) = layer.graph = g 
 
 
@@ -234,18 +256,17 @@ end
 @inline layeridx(layer::IsingLayer) = externalidx(layers(graph(layer)), layer.internal_idx)
 @inline idx(layer::IsingLayer) = internal_idx(layer)
 
+### COORDINATES OF LAYERS
 @inline coords(layer::AbstractIsingLayer) = layer.coords.cs
 # Move to user folder
 @inline setcoords!(layer::AbstractIsingLayer; x = 0, y = 0, z = 0) = (layer.coords.cs = Int32.((y,x,z)))
 @inline setcoords!(layer::AbstractIsingLayer, val) = (layer.coords.cs = Int32.((val,val,val)))
 export setcoords!
 
+"""
+Get adjacency of layer in layer coordinates
+"""
 @inline reladj(layer::AbstractIsingLayer) = adjGToL(layer.adj, layer)
-# @forward IsingLayer LayerData d
-# @forward IsingLayer LayerDefects defects
-
-# @forward IsingLayerCopy LayerData
-# @forward IsingLayerCopy LayerDefects defects
 
 # Setters and getters
 # @forward IsingLayer IsingGraph g
@@ -318,7 +339,11 @@ clamps(layer::AbstractIsingLayer) = reshape((@view clamps(graph(layer))[graphidx
 ###
 
 ### RELOCATING
-### Shift from placing 1 layer before
+### Shift from placing 1 layer befor
+"""
+When shifting a layer by one index,
+Copy over the state to the right position, except the adjacency matrix
+"""
 function relocate!(movable_layer::IsingLayer, causing_layer::IsingLayer, shift, copy::Bool = true)
     oldstate_view = state(movable_layer)
     movable_layer.start += shift*nStates(causing_layer)
@@ -379,11 +404,46 @@ Set the simulation type through a layer
 setSType!(layer::AbstractIsingLayer, varargs...; refresh = true) = setSType!(graph(layer), varargs...; refresh = refresh)
 
 
+
+### STATE SET
+function changeset(l::IsingLayer{SType}, set) where SType
+    newlayer = IsingLayer(SType, l.graph, l.internal_idx, l.start, l.size[1], l.size[2], name = l.name, coords = l.coords, connections = l.connections, rangebegin = set[1], rangeend = set[2])
+    newlayer.top = l.top
+    newlayer.timers = l.timers
+
+    return newlayer
+end
+
+function changeset!(l, set)
+    _layers = layers(graph(l))
+    _layeridx = layeridx(l)
+    _layers[_layeridx] = changeset(l, set)
+    notify(l)
+    return _layers[_layeridx]
+end
+
+stateset(l::IsingLayer{<:Any, SS}) where SS = SS
+stateset(::Type{IsingLayer{A, SS, B}}) where {A, SS, B} = SS
+function extremiseDiscrete!(l::IsingLayer{ST, SS}) where {ST,SS}
+    if ST == Discrete
+        a = SS[1]
+        b = SS[2]
+        map!(x -> x >= (a+b)/2f0 ? b : a, state(l), state(l))
+    end
+    return state(l)
+end
+function extremise!(l::IsingLayer{ST, SS}) where {ST,SS}
+    a = SS[1]
+    b = SS[2]
+    map!(x -> x >= (a+b)/2f0 ? b : a, state(l), state(l))
+end
+
+export changeset!, stateset
+
 ### GENERATING STATE
-@inline Base.rand(layer::IsingLayer{Continuous,B}) where {B} = rand(Uniform(-1f0,1f0))
-@inline Base.rand(layer::IsingLayer{Continuous,B}, num::Integer) where {B} = rand(Uniform(-1f0,1f0), num)
-@inline Base.rand(layer::IsingLayer{Discrete,B}) where {B} = rand([-1f0,1f0])
-@inline Base.rand(layer::IsingLayer{Discrete,B}, num::Integer) where {B} = rand([-1f0,1f0], num)
+@inline Base.rand(layer::IsingLayer{StateType, StateSet}) where {StateType, StateSet} = sample_from_stateset(StateType, StateSet)
+@inline Base.rand(layer::IsingLayer{StateType, StateSet}, num::Integer) where {StateType, StateSet} =  sample_from_stateset(StateType, StateSet, num)
+
 
 @inline function initstate!(layer::IsingLayer)
     state(layer)[:] .= rand(layer, nStates(layer))

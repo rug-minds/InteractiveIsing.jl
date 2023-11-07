@@ -51,9 +51,16 @@ export PeriodicityType, Periodic, NonPeriodic
 include("Utils/Utils.jl")
 
 
+### DECLARED TYPES
 @ForwardDeclare IsingGraph "IsingGraphs"
 @ForwardDeclare IsingLayer "IsingGraphs/Layers"
 @ForwardDeclare IsingSim "Sim"
+
+abstract type StateType end
+struct Discrete <: StateType end
+struct Continuous <: StateType end
+export Discrete, Continuous
+
 
 include("WeightFuncs.jl")
 include("AdjList/AdjList.jl")

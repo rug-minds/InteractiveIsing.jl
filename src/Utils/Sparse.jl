@@ -145,6 +145,12 @@ function deleterowcol(m::SparseMatrixCSC, range::UnitRange)
         if rows[idx] in range || cols[idx] in range
             push!(idxs_to_remove, idx)
         end
+        if rows[idx] > last(range)
+            rows[idx] -= length(range)
+        end
+        if cols[idx] > last(range)
+            cols[idx] -= length(range)
+        end
     end
     deleteat!(rows, idxs_to_remove)
     deleteat!(cols, idxs_to_remove)

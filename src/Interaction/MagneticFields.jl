@@ -21,6 +21,9 @@ function setBIdxs!(layer, idxs::Vector, strengths::Vector)
 end
 setBIdxs!(layer, strengths) = setBIdxs!(layer, 1:length(strengths), strengths)
 
+
+
+
 """ 
 Set the magnetic field based on a given function of x and y.
 Function needs to be specified as a julia anonymous functions that needs to

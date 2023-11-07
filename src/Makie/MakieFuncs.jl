@@ -9,6 +9,9 @@ end
 
 function setLayerSV(idx)
     ml = mlref[]
+    mp = midpanel(ml)
+    # close(ml["timedfunctions_timer"])
+    # wait(ml["timedfunctions_timer"])
     sim = simulation[]
     # setLayerIdx!(sim, idx)
     newR = round(min(size(currentLayer(sim))...) / 10)
@@ -18,9 +21,14 @@ function setLayerSV(idx)
 
     g = gs(sim)[1]
 
-    getSingleViewImg(g, ml)
-    ax = midpanel(ml)["axis"]
-    reset_limits!(ax)
+    delete!(mp["axis"], mp["image"])
+    mp["sv_img_ob"][] = getSingleViewImg(g, ml)
+    img_ob = mp["sv_img_ob"]
+    mp["image"] = image!(mp["axis"], img_ob, colormap = :thermal, fxaa = false, interpolate = false)
+
+    # callback(ml["timedfunctions_timer"]) do timer; notify(img_ob); timedFunctions(sim, currentLayer(sim)) end
+    start(ml["timedfunctions_timer"])
+    reset_limits!(mp["axis"])
 end
 
 # Drawing on the axis

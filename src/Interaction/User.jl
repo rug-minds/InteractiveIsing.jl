@@ -102,3 +102,21 @@ Give a function in the form of (x,y)
 setClamp!(layer::AbstractIsingLayer, func::Function) = setClampFunc!(layer, (;x,y) -> func(x,y))
 setClamp!(layer::AbstractIsingLayer, idxs::Vector, strengths::Vector) = setClampIdxs!(layer, idxs, strengths)
 #remClamp!
+
+function globalB!(g, strength)
+    bfield(g) .= strength
+
+    setSType!(graph(g), :Magfield => true)
+end
+
+function setB!(g::IsingGraph, val::Real, idxs::AbstractVector)
+    bfield(g)[idxs] .= val
+    setSType!(g, :Magfield => true)
+end
+
+setB!(l::IsingLayer, val) = setB!(graph(l), val, graphidxs(l))
+setB!(val::Real, ls::IsingLayer...) = for l in ls; setB!(l, val); end
+export globalB!, setB!
+
+avgB(l::IsingLayer) = sum(bfield(l))/length(bfield(l))
+export avgB

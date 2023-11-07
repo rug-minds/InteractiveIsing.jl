@@ -107,7 +107,7 @@ function setindex!(gd::GraphDefects, val, idx::Int32)
 
 end
 setindex!(gd::GraphDefects, val, idx::Int64) = setindex!(gd, val, Int32(idx))
-
+setindex!(gd::GraphDefects, val, idxs::AbstractRange) = clamprange!(gd, val, collect(idxs))
 """
 Set a range of spins as defect or not
     val = true -> set as defect
@@ -267,8 +267,13 @@ function removeLayer!(gd::GraphDefects, lidx)
 
     # TODO: Make lazy
     # Get the number of defects and alives in the preceding layers
-    preceding_defects = sum(ndefect.(preceding_layers))
-    preceding_alives = sum(nalive.(preceding_layers))
+    preceding_defects = 0
+    preceding_alives = 0
+    if !isempty(preceding_layers)
+        preceding_defects = sum(ndefect.(preceding_layers))
+        preceding_alives = sum(nalive.(preceding_layers))
+    end
+    
 
     # Remove defects from defect list
     newdefectlist = Vector{Int32}(undef, length(defectList(gd))-l_ndefect)

@@ -23,7 +23,7 @@ mutable struct IsingSim
     # Process being used
     processes::Processes
     # Timers
-    timers::Vector{Timer}
+    timers::Dict{String,PTimer}
     # Simulation Parameters
     const params::IsingParams
     
@@ -38,11 +38,12 @@ mutable struct IsingSim
             len::Integer = 500,
             wid::Integer = 500;
             periodic = nothing,
-            continuous = false,
+            type = Continuous,
             weighted = true,
             weights = nothing,
             initTemp = 1f0,
-            colorscheme = ColorSchemes.viridis
+            colorscheme = ColorSchemes.viridis,
+            kwargs...
         );
         
 
@@ -56,7 +57,7 @@ mutable struct IsingSim
             Ref(false),
             Ref(false),
             Processes(4),
-            Timer[],
+            Dict{String,Timer}(),
             IsingParams(;initbrushR, colorscheme),
             # memory
             Dict(),
@@ -69,9 +70,10 @@ mutable struct IsingSim
             len,
             wid;
             periodic,
-            continuous,
+            type,
             weighted,
-            weights
+            weights,
+            kwargs...
         )
 
         initSim!(sim, g, len, wid, initbrushR, initTemp) 
@@ -101,7 +103,7 @@ mutable struct IsingSim
             Ref(false),
             Ref(false),
             Processes(4),
-            Timer[],
+            Dict{String,Timer}(),
             IsingParams(;initbrushR, colorscheme),
             # memory
             Dict(),
@@ -118,7 +120,7 @@ end
 # TODO: Is this still needed?
 function destructor(sim::IsingSim)
     quit.(sim.processes)
-    close.(sim.timers)
+    close.(values(timers(sim)))
     destructor.(gs(sim))
     return nothing
 end
@@ -177,18 +179,24 @@ end
 getindex(sim::IsingSim, idx) = gs(sim)[idx]
 
 #get n-th layer, starting the counting from the first graph
-function layer(sim, layeridx)
-    graphindex = 1
-    if layeridx > length(layers(sim[graphindex]))
-        layeridx -= length(layers(sim[graphindex]))
-        graphindex += 1
+# function layer(sim, layeridx)
+#     graphindex = 1
+#     if layeridx > length(layers(sim[graphindex]))
+#         layeridx -= length(layers(sim[graphindex]))
+#         graphindex += 1
 
-        if layeridx > length(layers(sim[graphindex]))
-            error("Layer index out of bounds")
-        end
-    else
-        return sim[graphindex][layeridx]
-    end
+#         if layeridx > length(layers(sim[graphindex]))
+#             error("Layer index out of bounds")
+#         end
+#     else
+#         return sim[graphindex][layeridx]
+#     end
+# end
+
+function layer(sim, layeridx)
+    g = gs(sim)[1]
+    # println("Layers ", length(layers(g)))
+    return g[layeridx]
 end
 
 export layer

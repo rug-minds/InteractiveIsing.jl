@@ -8,10 +8,11 @@ mutable struct Process
     @atomic run::Bool
     objectref::Any
     retval::Any
+    errorlog::Any
 end
 
 # Process() = Process(nothing, 0, Threads.SpinLock(), (true, :Nothing))
-Process() = Process(nothing, 0, Threads.SpinLock(), false, nothing, nothing)
+Process() = Process(nothing, 0, Threads.SpinLock(), false, nothing, nothing, nothing)
 @setterGetter Process lock run
 
 function Base.show(io::IO, p::Process)
@@ -57,7 +58,13 @@ end
 
 function pause(p::Process)
     @atomic p.run = false
-    p.retval = fetch(p)
+    
+    try 
+        p.retval = fetch(p)
+    catch e
+        p.errorlog = e
+    end
+
     return true
 end
 

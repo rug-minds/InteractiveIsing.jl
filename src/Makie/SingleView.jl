@@ -2,12 +2,14 @@ export singleView
 max_r_slider(simulation, slider) = slider.range[] = 1:(floor(Int64,min(size(currentLayer(simulation))...)/2))
 sim_max_r(simulation) = (floor(Int64,min(size(currentLayer(simulation))...)/2))
 
+# Maybe I can just make makie get the latest image always?
 function getSingleViewImg(g, ml)
     simulation = sim(g)
+    mp = midpanel(ml)
     if midpanel(ml)["showbfield"].active[]
-        return midpanel(ml)["sv_img_ob"][] = bfield(currentLayer(simulation))
+        return bfield(currentLayer(simulation))
     else
-        return midpanel(ml)["sv_img_ob"][] = state(currentLayer(simulation))
+        return state(currentLayer(simulation))
     end
 end
 """
@@ -25,8 +27,10 @@ function singleView(ml, g)
     
     mp["sv_img_ob"] = img_ob = Observable{Base.ReshapedArray}(state(currentLayer(simulation)))
     img_ob[] = getSingleViewImg(g, ml)
+    mp["axis_size"] = size(img_ob[])
     obs_funcs = etc(ml)["obs_funcs_singleView"] = ObserverFunction[]
     coupled_obs = etc(ml)["coupled_obs_singleView"] = Observable[]
+    
 
     # LAYER SELECTOR  BUTTONS
     toppanel(ml)["sb"] = selector_buttons = GridLayout(toppanel(ml)["mid_grid"][3,1], tellwidth = false)
@@ -98,7 +102,9 @@ function singleView(ml, g)
     if haskey(ml, "timedfunctions_timer")
         close(ml["timedfunctions_timer"])
     end
-    ml["timedfunctions_timer"] = PTimer((timer) -> (notify(mp["obs"]); timedFunctions(simulation)) ,0., interval = 1/60)
+    # ml["timedfunctions_timer"] = PTimer((timer) -> (notify(mp["obs"]); timedFunctions(simulation)) ,0., interval = 1/60)
+    ml["timedfunctions_timer"] = PTimer((timer) -> (notify(img_ob); timedFunctions(simulation)) ,0., interval = 1/60)
+    timers(simulation)["makie"] = ml["timedfunctions_timer"]
 
     return
 end
@@ -140,6 +146,11 @@ function cleanup(ml, ::typeof(singleView))
     close(ml["timedfunctions_timer"])
 
     delete!(etc(ml), "timedfunctions_timer")
+    if !isnothing(simulation)
+        close(timers(simulation[])["makie"])
+        delete!(timers(simulation[]), "makie")
+    end
+    
 
     ml["current_view"] = nothing
     

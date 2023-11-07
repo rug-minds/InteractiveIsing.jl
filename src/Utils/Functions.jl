@@ -530,38 +530,3 @@ function Base.insert!(collection::Vector{T}, idx::Integer, items::Vector{T}) whe
     return collection
 end
 
-"""
-Merge 2 kwargs. If a key is present in both, the value from the top is used
-"""
-function mergekwargs(bottom, top)
-    if typeof(top) == Base.Pairs{Symbol, Union{}, Tuple{}, @NamedTuple{}}
-        return bottom
-    end
-    _keys = collect(keys(top))
-    _values = collect(values(top))
-    for key in keys(bottom)
-        if !(key in _keys)
-            push!(_keys, key)
-            push!(_values, bottom[key])
-        end
-    end
-    return pairs((;(_keys .=> _values)...))
-end
-
-function replacekwargs(bottom, top)
-    #If top is empty, return bottom
-    if typeof(top) == Base.Pairs{Symbol, Union{}, Tuple{}, @NamedTuple{}}
-        return bottom
-    end
-    bottomkeys = collect(keys(bottom))
-    bottomvalues = collect(values(bottom))
-    for topkey in keys(top)
-        if (idx = findfirst(x -> x == topkey, bottomkeys)) != nothing
-            bottomvalues[idx] = top[topkey]
-        else
-            println("Unsupported key $topkey ignored")
-        end
-    end
-    return pairs((;(bottomkeys .=> bottomvalues)...))
-end
-export mergekwargs, replacekwargs

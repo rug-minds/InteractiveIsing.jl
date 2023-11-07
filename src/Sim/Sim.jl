@@ -4,7 +4,7 @@ include("Processes.jl")
 include("Pausing.jl")
 include("IsingSim.jl")
 
-include("Algorithms.jl")
+include("Algorithms/Algorithms.jl")
 include("Loop.jl")
 include("timedFunctions.jl")
 include("User.jl")
@@ -15,7 +15,7 @@ function simulate(
     len::Integer = 500,
     wid::Integer = 500;
     periodic = nothing,
-    continuous = false,
+    type = Continuous,
     weighted = true,
     weights = nothing,
     initTemp = 1f0,
@@ -26,7 +26,7 @@ function simulate(
     register_sim = true,
     kwargs...
     )
-    createsimfunc = () -> IsingSim(len, wid; periodic, continuous, weighted, weights, initTemp, colorscheme)
+    createsimfunc = () -> IsingSim(len, wid; periodic, type, weighted, weights, initTemp, colorscheme, kwargs...)
     _assign_or_createsim(createsimfunc, register_sim)
     g = simulation[].gs[1]
     _simulate(g; start, gui, kwargs...)
@@ -34,7 +34,7 @@ function simulate(
 end
 
 function simulate(g::IsingGraph; start = true, giu = true, initTemp = 1f0, colorscheme = ColorSchemes.viridis, register_sim = true, kwargs...)
-    createsimfunc = () -> IsingSim(graph; start, initTemp, colorscheme)
+    createsimfunc = () -> IsingSim(graph; start, initTemp, colorscheme, kwargs...)
     _assign_or_createsim(createsimfunc, register_sim)
     g = _sim.gs[1]
     _simulate(g; start, gui, kwargs...)
@@ -49,6 +49,9 @@ function simulate(filename::String; start = true, register_sim = true, kwargs...
 end
 
 # Why use register sim?
+"""
+Pass in the appropraite IsingSim constructorß
+"""
 function _assign_or_createsim(create_sim_func, register_sim = true)
     if isnothing(simulation) && register_sim
         simulation[] = create_sim_func()

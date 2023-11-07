@@ -43,10 +43,16 @@ createProcesses(g::IsingGraph, num; kwargs...) =
 
 export createProcess, createProcesses
 
-function updateGraph(g, process = processes(sim(g))[1]; kwargs...)    
+function updateGraph(g, process = processes(sim(g))[1], oldkwargs = pairs((;)); kwargs...)
+    # Keywords reserved for the main loop itself
+    reserved_keywords = (:algorithm,)    
+    
+    # Set the algorithm, should pull from the struct
     algorithm = haskey(kwargs, :algorithm) ? kwargs[:algorithm] : updateMetropolis
-    args = prepare(algorithm, g; kwargs...)
 
+    # Delete keywards reserved for the preparation of the main loop itself
+    args_kwargs = deletekeys(kwargs, reserved_keywords...)
+    args = prepare(algorithm, g; args_kwargs...)
     return mainLoop(process, algorithm, args; kwargs...)
 
 end

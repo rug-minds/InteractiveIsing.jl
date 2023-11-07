@@ -35,6 +35,7 @@ This garantuees that the sim cannot be unpaused by a user
 """
 function lockPause(sim; block = true)
     lock(processes(sim))
+    close.(values(timers(sim)))
     pauseSim(sim, ignore_lock = true, print = false; block)
 end
 export lockPause
@@ -43,6 +44,7 @@ Unlock and unpause the sim
 """
 function unlockPause(sim; block = true)
     unpauseSim(sim, ignore_lock = true, print = false; block)
+    start.(values(timers(sim)))
     unlock(processes(sim))
 end
 export unlockPause
@@ -77,13 +79,17 @@ function restart(g; kwargs...)
     _processes = processes(g)
     for process in _processes
         # Do this all at once, not in the loop
-        paused_or_running = ispaused(process) || isrunning(process)
+        # TODO: Fix this behavior
+        _isrunning = ispaused(process) || isrunning(process)
         pause(process)
-        ###
-        args = retval(process)
-        if paused_or_running
-            newkwargs = mergekwargs(args, kwargs)
-            task = process -> errormonitor(Threads.@spawn updateGraph(g, process; newkwargs...))
+        # Get args from return value of process
+        oldkwargs = retval(process)
+        if _isrunning
+            # Use the old kwargs
+            newkwargs = mergekwargs(oldkwargs, kwargs)
+
+            task = process -> errormonitor(Threads.@spawn updateGraph(g, process, oldkwargs; newkwargs...))
+            # task = process -> errormonitor(Threads.@spawn updateGraph(g, process; kwargs...))
             runtask(process, task, g)
         end
     end

@@ -1,7 +1,13 @@
 # All functions that are run from the QML Timer
 function timedFunctions(sim)
     updatesPerFrame(sim)
-    spawnOne(magnetization, sim.updatingMag, "", sim)
+    @async magnetization(sim)
+    # spawnOne(magnetization, sim.updatingMag, "", sim)
+end
+function timedFunctions(sim, layer)
+    @async updatesPerFrame(sim)
+    magnetization(sim, layer)
+    # spawnOne(magnetization, sim.updatingMag, "", sim)
 end
 export timedFunctions
 
@@ -33,10 +39,22 @@ export updatesPerFrame
 
 # Averages M_array over an amount of steps
 # Updates magnetization (which is thus the averaged value)
-let avg_window = 60, frames = 0
+let avg_window = 60, frames = 0, M_array = CircularBuffer{Float32}(avg_window)
     global function magnetization(sim::IsingSim)
         avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
-        push!(sim.M_array[], sum(state(currentLayer(sim))))
+        push!(M_array, sum(state(currentLayer(sim))))
+        if frames > avg_window
+            M(sim)[] = sum(M_array)/avg_window 
+            frames = 0
+        end 
+        frames += 1 
+    end
+end
+
+let avg_window = 60, frames = 0
+    global function magnetization(sim, layer::IsingLayer)
+        avg_window = 60 # Averaging window = Sec * FPS, becomes max length of vector
+        push!(sim.M_array[], sum(state(layer)))
         if frames > avg_window
             M(sim)[] = sum(sim.M_array[])/avg_window 
             frames = 0

@@ -34,6 +34,14 @@ function setSpins!(g::AbstractIsingGraph{T}, idx::Integer, brush, clamp = false,
     @inbounds state(g)[idx] = brush
 end
 
+function setDefects!(g, val, idxs)
+    defects(g)[idxs] = val
+    setSType!(graph(g), :Defects => hasDefects(graph(g)))
+
+    return idxs
+end
+export setDefects!
+
 function clampImg!(layer::IsingLayer, imgfile)
     # Load the image
     img = load(imgfile)
@@ -70,5 +78,9 @@ function overlayNoise!(layer::IsingLayer, p; noise_values = [-1, 1])
 end
 
 overlayNoise!(g, layeridx::Integer, p; noise_values = [-1, 1]) = overlayNoise!(layers(g)[layeridx], p; noise_values)
-export overlayNoise!
+resetstate!(g::IsingGraph) = state(g) .= initRandomState(g)
+resetstate!(l::IsingLayer) = state(l)[:] .= rand(l, length(state(l)))
+#TODO: This is a shitty implementation
+resetstate!(layers::IsingLayer...) = for l in layers; resetstate!(l); end
+export overlayNoise!, resetstate!
 
