@@ -8,7 +8,7 @@ Then, this function itself makes a new branch where getE is defined again.
 export mainLoop
 """
 
-function createProcess(g::IsingGraph, process = nothing, looptype = mainLoop; threaded = true, kwargs...)
+function createProcess(g::IsingGraph, process = nothing, looptype = mainLoop; run = true, threaded = true, kwargs...)
     _sim = sim(g)
     if isnothing(process)
         for p in processes(_sim)
@@ -30,7 +30,7 @@ function createProcess(g::IsingGraph, process = nothing, looptype = mainLoop; th
     
     if threaded
         task = process -> errormonitor(Threads.@spawn looptype(g, process; kwargs...))
-        runtask(process, task, g)
+        runtask(process, task, g; run)
     else
         looptype(g, process; kwargs...)
     end

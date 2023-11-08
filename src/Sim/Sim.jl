@@ -53,7 +53,7 @@ end
 """
 Pass in the appropraite IsingSim constructorß
 """
-function _assign_or_createsim(create_sim_func, noinput = true)
+function _assign_or_createsim(create_sim_func, noinput = true, register_sim = true)
     if isnothing(simulation) && noinput
         simulation[] = create_sim_func()
     elseif register_sim
@@ -77,11 +77,12 @@ end
 
 getgraph() = gs(simulation[])[1]
 
-function _simulate(g; kwargs...)
-    if kwargs[:start]
-        createProcess(g)
+function _simulate(g; start = true, gui = true, kwargs...)
+    run = searchkey(kwargs, :run; fallback = true)
+    if start
+        createProcess(g; run)
     end
-    if kwargs[:gui]
+    if gui
         interface(g; kwargs...)
     end
 end

@@ -68,18 +68,18 @@ function pause(p::Process)
     return true
 end
 
-function runtask(p, taskf::Function, objectref = nothing)
+function runtask(p, taskf::Function, objectref = nothing; run = true)
     p.objectref = objectref
-    @atomic p.run = true
+    @atomic p.run = run
     t = taskf(p)
     p.task = t
     p.retval = nothing
     return t
 end
 
-function runtask(p, task::Task, objectref = nothing)
+function runtask(p, task::Task, objectref = nothing; run = true)
     p.objectref = objectref
-    @atomic p.run = true
+    @atomic p.run = run
     task.sticky = false
     schedule(task)
     p.task = task

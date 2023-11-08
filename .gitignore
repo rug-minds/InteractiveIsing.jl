@@ -17,3 +17,4 @@ examples/bin/train_b_x.csv
 examples/bin/train_b_z.csv
 examples/bin/train_W_xh.csv
 examples/bin/train_W_zh.csv
+Manifest.toml

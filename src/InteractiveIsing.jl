@@ -101,12 +101,13 @@ include("GPlotting.jl")
 # PRECOMPILATION FUNCTION FOR FAST USAGE
 @setup_workload begin
     GC.enable(false)
-    cg = simulate(20,20, continuous = true, start = false, disp = false, noinput = true)
+    cg = simulate(20,20, type = Continuous, start = false, run = false, disp = false, noinput = true)
+    quit(cg)
     _sim = sim(cg)
 
     @compile_workload begin
 
-        addLayer!(cg, 20, 20)
+        addLayer!(cg, 20, 20, type = Discrete)
 
         setcoords!(cg[1])
         setcoords!(cg[2], z = 1)
@@ -126,7 +127,6 @@ include("GPlotting.jl")
 
         close.(values(timers(_sim)))
         loadGraph(path)       
-        quit(cg)
 
 
         closeinterface()
