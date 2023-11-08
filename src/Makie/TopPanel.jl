@@ -76,10 +76,10 @@ function topPanel(ml, g)
 end
 
 function cleanup(ml, ::typeof(topPanel))
-    off.(ml["obs_funcs_topPanel"])
-    delete!(ml, "obs_funcs_topPanel")
-    decouple!.(ml["coupled_obs_topPanel"])
-    delete!(ml, "coupled_obs_topPanel")
+    @justtry off.(ml["obs_funcs_topPanel"])
+    @justtry delete!(ml, "obs_funcs_topPanel")
+    @justtry decouple!.(ml["coupled_obs_topPanel"])
+    @justtry delete!(ml, "coupled_obs_topPanel")
     
-    toppanel(ml, LayoutPanel())
+    @justtry toppanel(ml, LayoutPanel())
 end

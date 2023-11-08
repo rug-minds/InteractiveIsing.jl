@@ -534,3 +534,12 @@ end
 getnowtime() =  begin nowtime = string(now())[1:(end-7)]; nowtime = replace(nowtime, ":" => "."); return nowtime end
 
 
+macro justtry(ex)
+    quote
+        try
+            $(esc(ex))
+        catch
+            
+        end
+    end
+end

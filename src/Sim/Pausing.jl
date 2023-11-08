@@ -34,6 +34,7 @@ function lockPause(sim; block = true)
     close.(values(timers(sim)))
     pauseSim(sim, ignore_lock = true, print = false; block)
 end
+lockPause(::Nothing; kwargs...) = nothing
 export lockPause
 """
 Unlock and unpause the sim
@@ -43,6 +44,7 @@ function unlockPause(sim; block = true)
     start.(values(timers(sim)))
     unlock(processes(sim))
 end
+unlockPause(::Nothing; kwargs...) = nothing
 export unlockPause
 
 """

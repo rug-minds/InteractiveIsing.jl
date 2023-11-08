@@ -176,7 +176,7 @@ function find_insertidx(p::ShuffleVec{<:Any,Grouped, Ordered}, item_type)
             idx +=1
             continue
         elseif item_type < type # If item_type is smaller than type, insert it here
-                return index
+                return idx
         end #This will move forward if no ordering is defined for types
         idx += 1
     end

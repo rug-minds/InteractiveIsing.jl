@@ -6,7 +6,8 @@ struct MixedState <: StateType end
 
 getIntType(::Float64) = Int64
 getFloatType(::Float64) = Float64
-
+isarchitecturetype(::Any) = @show false
+isarchitecturetype(t::Tuple{A,B,C}) where {A,B,C} = (A<:Integer && B<:Integer && t[3]<:StateType)
 # Ising Graph Representation and functions
 mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     # Simulation
@@ -32,9 +33,22 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
 
 
     # Default Initializer for IsingGraph
-    function IsingGraph(sim, length, width; periodic = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = false, precision = Float32, kwargs...)
-      
-        # TODO: ADD SUPPORT FOR DOUBLE PRECISION
+    function IsingGraph(sim = nothing, length = nothing, width=nothing; periodic = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = false, precision = Float32, kwargs...)
+        architecture = searchkey(kwargs, :architecture, fallback = nothing)
+        @assert (!isnothing(length) && !isnothing(width)) || !isnothing(architecture) "Either give length and width or architecture"
+        
+        println("Architecture: $architecture")
+
+        if isnothing(architecture)
+            architecture = [(length, width, type)]
+        end
+        for idx in eachindex(architecture)
+            if !isarchitecturetype(architecture[idx])
+                architecture[idx] = (architecture[idx][1], architecture[idx][2], Continuous)
+            end
+        end
+        println("Architecture: $architecture")
+
         g = new{precision}(
             sim,
             precision[],
@@ -57,8 +71,9 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
         internalcouple!(g.layers, g.defects, (layer) -> Int32(0), push = addLayer!, insert = (obj, idx, item) -> addLayer!(obj, item), deleteat = removeLayer!)
 
         g.d = GraphData(precision, g)
-
-        addLayer!(g, length, width; type, periodic, weights, kwargs...)
+        for arc in architecture
+            _addLayer!(g, arc[1], arc[2]; weights, periodic, type = arc[3], kwargs...)
+        end
         return g
     end
     
@@ -335,8 +350,8 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth; weights = nothing, period
         type = default_ltype(g)
     end
 
-    (;set) = (;kwargs...)
-    set = T.(set)
+    set = searchkey(kwargs, :set, fallback = convert.(eltype(g),(-1,1)))
+    set = T.(set) # Safeness
    
     # Function that makes the new layer based on the insertidx
     # Found by the shufflevec
