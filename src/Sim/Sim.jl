@@ -84,12 +84,10 @@ getgraph() = gs(simulation[])[1]
 function _simulate(g; start = true, gui = true, kwargs...)
     run = searchkey(kwargs, :run; fallback = true)
     if start
-        println("Creating processes")
         createProcess(g; run)
         println("Process created ", processes(g))
     end
     if gui
-        println("Creating interface")
         interface(g; kwargs...)
     end
 end
