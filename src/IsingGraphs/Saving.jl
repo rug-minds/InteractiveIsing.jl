@@ -140,7 +140,7 @@ function loadadj(g, path)
     data = load(path)
     adj = data["adj"]
     architecture = data["architecture"]
-    @assert architecture == size.(unshuffled(layers(g)))
+    @assert architecture == getarchitecture
     sp_adj(g, adj)
     return g
 end
@@ -159,7 +159,7 @@ function loadparameters(g, path)
     data = load(path)
     adj = data["adj"]
     architecture = data["architecture"]
-    @assert architecture == size.(unshuffled(layers(g)))
+    @assert architecture == getarchitecture
     sp_adj(g, adj)
     g.d = data["data"]
     return g

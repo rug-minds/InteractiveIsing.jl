@@ -483,7 +483,14 @@ end
 
 export setSType!
 
-
+### ARCHITECTURE
+function getarchitecture(g)
+    architecture = []
+    for layer in layers(g)
+        push!(architecture, (length(layer), width(layer), type(layer)))
+    end
+    return architecture
+end
 
 
 
