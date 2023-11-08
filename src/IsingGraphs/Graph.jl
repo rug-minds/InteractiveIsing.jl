@@ -4,15 +4,17 @@ struct DiscreteState <: StateType end
 struct MixedState <: StateType end
 
 
+getIntType(::Float64) = Int64
+getFloatType(::Float64) = Float64
 
 # Ising Graph Representation and functions
-mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
+mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     # Simulation
     sim::Union{Nothing, IsingSim}
     # Vertices and edges
     state::Vector{T}
-    sp_adj::SparseMatrixCSC{Float32,Int32}
-    temp::Float32
+    sp_adj::SparseMatrixCSC{T,Int32}
+    temp::T
 
     default_algorithm::Function
     stype::SType
@@ -30,13 +32,13 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
 
 
     # Default Initializer for IsingGraph
-    function IsingGraph(sim, length, width; periodic = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = false, kwargs...)
+    function IsingGraph(sim, length, width; periodic = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = false, precision = Float32, kwargs...)
       
         # TODO: ADD SUPPORT FOR DOUBLE PRECISION
-        g = new{Float32}(
+        g = new{precision}(
             sim,
-            Float32[],
-            SparseMatrixCSC{Float32,Int32}(undef,0,0),
+            precision[],
+            SparseMatrixCSC{precision,Int32}(undef,0,0),
             #Temp            
             1f0,
             # Default algorithm
@@ -54,7 +56,7 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
         # Couple the shufflevec and the defects
         internalcouple!(g.layers, g.defects, (layer) -> Int32(0), push = addLayer!, insert = (obj, idx, item) -> addLayer!(obj, item), deleteat = removeLayer!)
 
-        g.d = GraphData(g)
+        g.d = GraphData(precision, g)
 
         addLayer!(g, length, width; type, periodic, weights, kwargs...)
         return g
@@ -99,7 +101,8 @@ mutable struct IsingGraph{T <: Real} <: AbstractIsingGraph{T}
     end
 end
 
-
+Base.eltype(::IsingGraph{T}) where T = T
+Base.eltype(::Type{IsingGraph{T}}) where T = T
 
 #extend show to print out the graph, showing the length of the state, and the layers
 function Base.show(io::IO, g::IsingGraph)
@@ -218,16 +221,6 @@ function initRandomState(g)
     return _state
 end
 
-function initRandomState(type, nstates)::Vector{type}
-    if type == Discrete
-        return rand([-1f0,1f0], nstates)
-    elseif type == Continuous
-        return 2.f0 .* rand(Float32, nstates) .- 1.f0
-    else
-        return rand(type[-1,1], nstates)
-    end
-
-end
 #=
 Methods
 =#
@@ -281,7 +274,7 @@ function Base.resize!(g::IsingGraph{T}, newlength, startidx = length(state(g))) 
 
     if sizediff > 0
         resize!(state(g), newlength)
-        randomstate = initRandomState(T, sizediff)
+        randomstate = rand(T, sizediff)
         state(g)[oldlength+1:newlength] .= randomstate
         idxs_to_add = startidx:(startidx + sizediff - 1)
         g.sp_adj = insertrowcol(sp_adj(g), idxs_to_add)
@@ -303,12 +296,12 @@ export resize!
 
 export addLayer!
 
-function addLayer!(g::IsingGraph, llength, lwidth; weights = nothing, periodic = true, type = default_ltype(g), set = (-1f0,1f0), rangebegin = set[1], rangeend = set[2], kwargs...)
+function addLayer!(g::IsingGraph, llength, lwidth; weights = nothing, periodic = true, type = default_ltype(g), set = (-1,1), rangebegin = set[1], rangeend = set[2], kwargs...)
     # println("Adding layer")
     # println("set ", set)
     # println("Rangebegin ", rangebegin)
     # println("Rangeend ", rangeend)
-    @tryLockPause sim(g) _addLayer!(g, llength, lwidth; rangebegin, rangeend, weights, periodic, type, kwargs...)
+    @tryLockPause sim(g) _addLayer!(g, llength, lwidth; set, weights, periodic, type, kwargs...)
 end
 
 addLayer!(g::IsingGraph, llength, lwidth, wg; kwargs...) = addLayer!(g, llength, lwidth; weights = wg, kwargs...)
@@ -331,12 +324,13 @@ This is handled by the relocate! function automatically in the shufflevec
 Because the shufflevec knows then internal data is being pushed around
 Not sure if this is the most transparent way to do it since resizing is not done within the shufflevec
 """
-function _addLayer!(g::IsingGraph, llength, lwidth; weights = nothing, periodic = true, type = nothing, kwargs...)
+function _addLayer!(g::IsingGraph{T}, llength, lwidth; weights = nothing, periodic = true, type = nothing, kwargs...) where T
     if isnothing(type)
         type = default_ltype(g)
     end
 
-    (;rangebegin, rangeend) = (;kwargs...)
+    (;set) = (;kwargs...)
+    set = T.(set)
     # println("rangebegin ", rangebegin)
     # println("rangeend ", rangeend)
    
@@ -360,10 +354,10 @@ function _addLayer!(g::IsingGraph, llength, lwidth; weights = nothing, periodic 
         resize!(g, nStates(g) + extra_states, _startidx)
 
 
-        return IsingLayer(type, g, idx , _startidx, llength, lwidth; periodic, rangebegin, rangeend)
+        return IsingLayer(type, g, idx , _startidx, llength, lwidth; periodic, set)
     end
 
-    push!(layers(g), make_newlayer, IsingLayer{type, (rangebegin, rangeend), typeof(g)})
+    push!(layers(g), make_newlayer, IsingLayer{type, set, typeof(g)})
     newlayer = layers(g)[end]
     initstate!(newlayer)
 

@@ -8,14 +8,14 @@ export setBIdxs!
 Set the magnetic field using two vectors, one gives the indexes of the positions,
 the other gives the magnetic field strength for the corresponding index
 """
-function setBIdxs!(layer, idxs::Vector, strengths::Vector)
+function setBIdxs!(layer, idxs::AbstractArray, strengths::AbstractArray)
 
     if length(idxs) != length(strengths)
         error("Idxs and strengths lengths not the same")
         return      
     end
 
-    bfield(layer)[idxs] .= strengths[1:end]
+    bfield(layer)[idxs] .= (@view strengths[1:end])
 
     setSType!(graph(layer), :Magfield => true)
 end

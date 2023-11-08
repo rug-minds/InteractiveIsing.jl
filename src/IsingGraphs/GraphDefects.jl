@@ -132,6 +132,7 @@ function setlayerdefects(gd, graph, idxs, defect)
     end
     return nothing
 end
+
 function _setlayerdefectsloop(gd, layeridx, graphidxs, spin_startidx, idxs, defect)
     defects = 0
     lastidxs_idx = 0
@@ -207,7 +208,8 @@ function setdefectrange!(gd::GraphDefects, idxs)::Int32
     hasDefects(gd, true)
 
     # Set all the defects in the layers
-    setlayerdefects(gd, g(gd), d_idxs, true)
+    # TODO: NOT SETTING CORRECT
+    # setlayerdefects(gd, g(gd), d_idxs, true)
 
     #return amount set
     return length(d_idxs)
@@ -216,12 +218,19 @@ end
 function setdefectrange!(g::IsingGraph, idxs)
     setdefectrange!(defects(g), idxs)
     setSType!(g, :Defects => hasDefects(graph(l)))
-
 end
 function setdefectrange!(l::IsingLayer, idxs)
-    setdefectrange!(defects(graph(l)), idxLToG.(idxs, Ref(l)))
+    d_idxs = setdefectrange!(defects(graph(l)), idxLToG.(idxs, Ref(l)))
+    defects(graph(l)).layerdefects[internal_idx(l)] += d_idxs
     setSType!(graph(l), :Defects => hasDefects(graph(l)))
 end
+function setaliverange!(l::IsingLayer, idxs)
+    d_idxs = setaliverange!(defects(graph(l)), idxLToG.(idxs, Ref(l)))
+    defects(graph(l)).layerdefects[internal_idx(l)] -= d_idxs
+    setSType!(graph(l), :Defects => hasDefects(graph(l)))
+end
+export setdefectrange!, setaliverange!
+
 """
 Reset all the defects
 """
@@ -231,7 +240,9 @@ function reset!(gd::GraphDefects)
     aliveList(gd, Int32[1:length(isDefect(gd));])
     defectList(gd, Int32[])
     layerdefects(gd) .= 0
+    gd
 end
+export reset!
 
 """
 Add a layer to the graph defects

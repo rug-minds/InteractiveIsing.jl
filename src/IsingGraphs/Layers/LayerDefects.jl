@@ -1,40 +1,39 @@
 ## Move this all to graphdefects, 
 ## just keep track of the number of defecs in a vector
 
-mutable struct LayerDefects
-    layer::Union{Nothing, IsingLayer}
-    # graphdefects::GraphDefects
-    ndefect::Int32
+struct LayerDefects
+    g::IsingGraph
+    l::IsingLayer
+    layeridx::Integer
 end
 
+defects(layer::IsingLayer) = LayerDefects(graph(layer), layer, internal_idx(layer))
+export defects
 #extend base show for Layerdefects, showing only the number of defects
 function Base.show(io::IO, defects::LayerDefects)
     print(io, "LayerDefects with $(ndefect(defects)) defects")
 end
 
+ndefect(defects::LayerDefects) = ndefect(defects.l)
 @setterGetter LayerDefects
 
 maxdefects(defects::LayerDefects) = nStates(defects.layer)
 
-graphdefects(df::LayerDefects) = defects(graph(layer(df)))
+graphdefects(df::LayerDefects) = defects(df.g)
 
 reset!(defects::LayerDefects) = ndefect(defects,0)
 
-function getindex(defects::LayerDefects, idx)
-    graphdefects(defects)[idxLToG(idx, defects.layer)]
+function getindex(d::LayerDefects, idx)
+    defects(d.g)[idxLToG(idx, d.l)]
 end
 
-function setindex!(defects::LayerDefects, val, idx)
-    oldval = defects[idx]
-    graphdefects(defects)[idxLToG(idx, defects.layer)] = val
-    if val == true && oldval == false
-        defects.ndefect += 1
-    end
+function setindex!(d::LayerDefects, val, idx)
+    graphdefects(d)[idxLToG(idx, d.l)] = val
     return val
 end
 
-function clamprange!(defects::LayerDefects, val, idxs)
-    num_set = clamprange!(graphdefects(defects), val, idxLToG.(idxs, Ref(layer(defects))))
+function clamprange!(d::LayerDefects, val, idxs)
+    num_set = clamprange!(graphdefects(d), val, idxLToG.(idxs, Ref(d.l)))
     defects.ndefect += num_set
     return num_set
 end

@@ -11,3 +11,9 @@ LocalPreferences.toml
 ManifestOld.toml
 ProjectOld.toml
 DataIsing Corrplot L0 0 T0 d0.png
+examples/bin/p.py
+examples/bin/train_b_h.csv
+examples/bin/train_b_x.csv
+examples/bin/train_b_z.csv
+examples/bin/train_W_xh.csv
+examples/bin/train_W_zh.csv

@@ -82,5 +82,6 @@ resetstate!(g::IsingGraph) = state(g) .= initRandomState(g)
 resetstate!(l::IsingLayer) = state(l)[:] .= rand(l, length(state(l)))
 #TODO: This is a shitty implementation
 resetstate!(layers::IsingLayer...) = for l in layers; resetstate!(l); end
-export overlayNoise!, resetstate!
+activateone!(l::IsingLayer, idx, val = 1, allval = 0) = begin state(l) .= allval; state(l)[idx] = val end
+export overlayNoise!, resetstate!, activateone!
 

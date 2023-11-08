@@ -1,16 +1,16 @@
-@inline function uniform_rand(rng::AbstractRNG, rangebegin, rangeend)
-    return rand(rng)*(rangeend-rangebegin) + rangebegin
+@inline function uniform_rand(rng::AbstractRNG, rangebegin::T, rangeend::T) where T
+    return rand(rng, T)*(rangeend-rangebegin) + rangebegin
 end
 
-@inline function uniform_rand(rangebegin, rangeend)
-    return rand()*(rangeend-rangebegin) + rangebegin
+@inline function uniform_rand(rangebegin::T, rangeend::T) where T
+    return rand(T)*(rangeend-rangebegin) + rangebegin
 end
 
-@inline function uniform_rand(rng::AbstractRNG, rangebegin, rangeend, num)
-    return (rand(rng, num)).*(rangeend-rangebegin) .+ rangebegin
+@inline function uniform_rand(rng::AbstractRNG, rangebegin::T, rangeend::T, num) where T
+    return (rand(rng,T, num)).*(rangeend-rangebegin) .+ rangebegin
 end
 
-@inline function uniform_rand(rangebegin, rangeend, num)
-    return (rand(num)).*(rangeend-rangebegin) .+ rangebegin
+@inline function uniform_rand(rangebegin::T, rangeend::T, num) where T
+    return (rand(T, num)).*(rangeend-rangebegin) .+ rangebegin
 end
 

@@ -101,6 +101,18 @@ Give a function in the form of (x,y)
 """
 setClamp!(layer::AbstractIsingLayer, func::Function) = setClampFunc!(layer, (;x,y) -> func(x,y))
 setClamp!(layer::AbstractIsingLayer, idxs::Vector, strengths::Vector) = setClampIdxs!(layer, idxs, strengths)
+function setClamp!(l::AbstractIsingLayer, idx::Integer, strength::Real)
+    defects(l)[idx] = true
+    state(l)[idx] = 1
+    setSType!(graph(l), :Defects => true)
+    return state(l)
+end
+function setClamp!(l::AbstractIsingLayer, strength::Real)
+    setdefectrange!(l, Int32[1:length(state(l));])
+    state(l) .= strength
+    setSType!(graph(l), :Defects => true)
+    return state(l)
+end
 #remClamp!
 
 function globalB!(g, strength)
@@ -116,6 +128,7 @@ end
 
 setB!(l::IsingLayer, val) = setB!(graph(l), val, graphidxs(l))
 setB!(val::Real, ls::IsingLayer...) = for l in ls; setB!(l, val); end
+setB!(l::IsingLayer, strengths::AbstractVector) = setBIdxs!(graph(l), (@view graphidxs(l)[1:length(strengths)]), strengths)
 export globalB!, setB!
 
 avgB(l::IsingLayer) = sum(bfield(l))/length(bfield(l))

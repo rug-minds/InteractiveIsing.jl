@@ -5,7 +5,7 @@ export updateLangevin
 using Distributions: Normal
 const stepsize = Ref(0.01f0)
 # PREALLOCATED MEMORY
-const langevin_prealloc  = Float32[]
+const langevin_prealloc64  = Float64[]
 setstepsize(val) = stepsize[] = val
 export setstepsize
 
@@ -36,16 +36,16 @@ function updateLangevinThreaded(g::IsingGraph, gstate, gadj, iterator, rng, gsty
         langevin_prealloc[i_idx] = dEFunc(g, gstate, gadj, s_idx, gstype)
     end
     grad = @view langevin_prealloc[1:length(iterator)]
-    noise = rand(Normal(0f0,1f0), length(iterator))
-    @inbounds (@view gstate[iterator]) .= clamp!((@view gstate[iterator]) - (stepsize[])*grad + sqrt(2f0*stepsize[]*temp(g))*noise, -1f0, 1f0)
+    noise = rand(Normal(zero(T),one(T)), length(iterator))
+    @inbounds (@view gstate[iterator]) .= clamp!((@view gstate[iterator]) - (stepsize[])*grad + sqrt(T(2)*stepsize[]*temp(g))*noise, -one(T), one(T))
 end
 
-function updateLangevin(g::IsingGraph, gstate, gadj, iterator, rng, gstype::ST, dEFunc) where {ST <: SType}
+function updateLangevin(g::IsingGraph{T}, gstate, gadj, iterator, rng, gstype::ST, dEFunc) where {T,ST <: SType}
     for (i_idx, s_idx) in enumerate(iterator)
         langevin_prealloc[i_idx] = dEFunc(g, gstate, gadj, s_idx, gstype)
     end
     grad = @view langevin_prealloc[1:length(iterator)]
-    noise = rand(Normal(0f0,1f0), length(iterator))
-    @inbounds (@view gstate[iterator]) .= clamp!((@view gstate[iterator]) - (stepsize[])*grad + sqrt(2f0*stepsize[]*temp(g))*noise, -1f0, 1f0)
+    noise = rand(Normal(zero(T),one(T)), length(iterator))
+    @inbounds (@view gstate[iterator]) .= clamp!((@view gstate[iterator]) - (stepsize[])*grad + sqrt(T(2)*stepsize[]*temp(g))*noise, -one(T), one(T))
 end
 

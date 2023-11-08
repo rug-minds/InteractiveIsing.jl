@@ -86,41 +86,41 @@ include("GPlotting.jl")
 # end
 
 # PRECOMPILATION FUNCTION FOR FAST USAGE
-# @setup_workload begin
-#     GC.enable(false)
-#     cg = simulate(20,20, continuous = true, start = false, disp = false, register_sim = false)
-#     _sim = sim(cg)
+@setup_workload begin
+    GC.enable(false)
+    cg = simulate(20,20, continuous = true, start = false, disp = false, register_sim = false)
+    _sim = sim(cg)
 
-#     @compile_workload begin
+    @compile_workload begin
 
-#         addLayer!(cg, 20, 20)
+        addLayer!(cg, 20, 20)
 
-#         setcoords!(cg[1])
-#         setcoords!(cg[2], z = 1)
-#         cwg = @WG "(dr) -> 1" NN=1
+        setcoords!(cg[1])
+        setcoords!(cg[2], z = 1)
+        cwg = @WG "(dr) -> 1" NN=1
 
-#         genAdj!(cg[1], cwg)
-#         genAdj!(cg[1],cg[2], cwg)
+        genAdj!(cg[1], cwg)
+        genAdj!(cg[1],cg[2], cwg)
 
-#         #Plotting correlation length and GPU kernel
-#         plotCorr(cg[2], dodisplay = false, save = false)
+        #Plotting correlation length and GPU kernel
+        plotCorr(cg[2], dodisplay = false, save = false)
 
-#         setSpins!(cg[1], 1, 1, true, false)
+        setSpins!(cg[1], 1, 1, true, false)
 
-#         drawCircle(cg[1], 1, 1, 1, clamp = true)
+        drawCircle(cg[1], 1, 1, 1, clamp = true)
 
-#         path = saveGraph(cg, savepref = false)
+        path = saveGraph(cg, savepref = false)
 
-#         close.(timers(_sim))
-#         loadGraph(path)       
-#         quitSim(_sim)
+        close.(timers(_sim))
+        loadGraph(path)       
+        quitSim(_sim)
 
 
-#         closeinterface()
-#         reset!(simulation)
-#         GC.enable(true)
-#     end
-# end
+        closeinterface()
+        reset!(simulation)
+        GC.enable(true)
+    end
+end
 
 
 

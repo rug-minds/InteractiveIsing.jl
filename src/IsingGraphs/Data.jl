@@ -1,22 +1,22 @@
-mutable struct GraphData
+mutable struct GraphData{T}
     # Magnetic field
-    const bfield::Vector{Float32}
+    const bfield::Vector{T}
 
     #Beta clamp
-    clampparam::Float32
+    clampparam::T
     #clamps
-    const clamps::Vector{Float32}
+    const clamps::Vector{T}
     
 end
 
-GraphData(g) = 
-    GraphData(
+GraphData(precision, g) = 
+    GraphData{precision}(
         # bfield
-        zeros(Float32, nStates(g)),
+        zeros(precision, nStates(g)),
         # Clamp Param
         0, 
         # Clamp values
-        zeros(Float32, nStates(g))
+        zeros(precision, nStates(g))
     )
 
 function reset!(data::GraphData)

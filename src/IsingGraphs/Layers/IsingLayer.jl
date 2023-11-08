@@ -34,10 +34,14 @@ mutable struct IsingLayer{T, StateSet, IsingGraphType <: AbstractIsingGraph} <: 
     # defects::LayerDefects
     top::LayerTopology
 
+    # DEFAULT INIT
+    IsingLayer{ST, SS}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top) where {ST, SS} = new{ST, SS, typeof(g)}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top)
 
-    function IsingLayer(LayerType, g::GraphType, idx, start, length, width; rangebegin = -1f0, rangeend = 1f0, name = "$(length)x$(width) Layer", coords = Coords(nothing), connections = Dict{Pair{Int32,Int32}, WeightGenerator}(), periodic::Union{Nothing,Bool} = true) where GraphType <: IsingGraph
+
+    function IsingLayer(LayerType, g::GraphType, idx, start, length, width; set = Base.eltype(g).(-1,1), name = "$(length)x$(width) Layer", coords = Coords(nothing), connections = Dict{Pair{Int32,Int32}, WeightGenerator}(), periodic::Union{Nothing,Bool} = true) where GraphType <: IsingGraph
         lsize = tuple(Int32(length), Int32(width))
-        layer = new{LayerType, (rangebegin,rangeend), GraphType}(
+        set = eltype(g).(set)
+        layer = new{LayerType, set, GraphType}(
             # Graph
             g,
             # Name
@@ -68,6 +72,7 @@ mutable struct IsingLayer{T, StateSet, IsingGraphType <: AbstractIsingGraph} <: 
 end
 export IsingLayer
 
+Base.eltype(l::IsingLayer{<:Any, <:Any, GT}) where GT = eltype(GT)
 
 
 # IsingLayer(g, layer::AbstractIsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefect(layer))
@@ -140,12 +145,7 @@ end
 # SHOW THE TYPE
 Base.show(io::IO, layertype::Type{IsingLayer{A,B}}) where {A,B} = print(io, "$A IsingLayer")
 
-## LAYERTYPE STUFF
-## DEFAULT NEW LAYER TYPE BASED ON GRAPH
-default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous 
-@inline statetype(layer::IsingLayer{ST}) where {ST} = ST
-@inline statetype(::Type{IsingLayer{ST,A,B}}) where {ST,A,B} = ST
-export statetype
+
 ## ACCESSORS
 @inline state(l::IsingLayer) = reshape((@view state(graph(l))[graphidxs(l)]), size(l,1), size(l,2))
 
@@ -306,11 +306,24 @@ Range of idx of layer for underlying graph
 export graphidxs
 
 bfield(layer::AbstractIsingLayer) = reshape((@view bfield(graph(layer))[graphidxs(layer)]), size(layer,1), size(layer,2))
+bvec(layer::AbstractIsingLayer) = (@view bfield(graph(layer))[graphidxs(layer)])
 clamps(layer::AbstractIsingLayer) = reshape((@view clamps(graph(layer))[graphidxs(layer)]), size(layer,1), size(layer,2))
-
+clampsvec(layer::AbstractIsingLayer) = (@view clamps(graph(layer))[graphidxs(layer)])
+export bfield, bvec
 # Inherited from Graph
 @inline nStates(layer::AbstractIsingLayer) = length(graphidxs(layer))
 @inline sim(layer::AbstractIsingLayer) = sim(graph(layer))
+
+##
+function aliveidxs(layer::AbstractIsingLayer)
+    ds = defects(graph(layer))
+    preceding_defects = sum(ds.layerdefects[1:layer.internal_idx-1])
+    these_defects = ds.layerdefects[layer.internal_idx]
+    alivelist_range = (startidx(layer)-preceding_defects):(endidx(layer)-preceding_defects-these_defects)
+    aliveList(ds)[alivelist_range]
+end
+export aliveidxs
+
 
 ### TIMERS
     pausetimers(layer) = close.(timers(layer))
@@ -330,7 +343,7 @@ clamps(layer::AbstractIsingLayer) = reshape((@view clamps(graph(layer))[graphidx
     """
     Returns wether layer has any defects
     """
-    @inline ndefect(layer::AbstractIsingLayer) = layerdefects(defects(graph(layer)))[internal_idx(layer)]
+    @inline ndefect(layer::AbstractIsingLayer) = defects(graph(layer)).layerdefects[layer.internal_idx]
     @inline nalive(layer::AbstractIsingLayer) = nStates(layer) - ndefect(layer)
     export ndefect, nalive
     @inline hasDefects(layer::AbstractIsingLayer) = ndefect(layer) > 0
@@ -439,6 +452,14 @@ function extremise!(l::IsingLayer{ST, SS}) where {ST,SS}
 end
 
 export changeset!, stateset
+
+### STATE TYPE
+## DEFAULT NEW LAYER TYPE BASED ON GRAPH
+default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous 
+@inline statetype(layer::IsingLayer{ST}) where {ST} = ST
+@inline statetype(::Type{IsingLayer{ST,A,B}}) where {ST,A,B} = ST
+setstatetype(l::IsingLayer{ST,SET,GT}, stype) where {ST,SET,GT} = IsingLayer{stype,SET}(l.graph, l.name, l.internal_idx, l.start, l.size, l.nstates, l.coords, l.connections, l.timers, l.top)
+export statetype, setstatetype
 
 ### GENERATING STATE
 @inline Base.rand(layer::IsingLayer{StateType, StateSet}) where {StateType, StateSet} = sample_from_stateset(StateType, StateSet)

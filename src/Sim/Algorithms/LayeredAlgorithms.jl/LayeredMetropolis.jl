@@ -36,15 +36,15 @@ end
     return expr
 end
 
-@inline function updateMetropolisLayered(idx::Integer, g, gstate, gadj, rng, gstype::SimT, ΔEFunc, ::Type{StateT}, StateSet) where {SimT <: SType, StateT <: StateType}
-    β = 1f0/(temp(g))
+@inline function updateMetropolisLayered(idx::Integer, g::IsingGraph{T}, gstate, gadj, rng, gstype::SimT, ΔEFunc, ::Type{StateT}, StateSet) where {T, SimT <: SType, StateT <: StateType}
+    β = one(T)/(temp(g))
     
     oldstate = @inbounds gstate[idx]
     newstate = sampleState(StateT, oldstate, rng, StateSet)
     ΔE = ΔEFunc(g, oldstate, newstate, gstate, gadj, idx, gstype, StateT)
     efac = exp(-β*ΔE)
     randnum = rand(rng, Float32)
-    if (ΔE < 0f0 || randnum < efac)
+    if (ΔE < zero(T) || randnum < efac)
         @inbounds gstate[idx] = newstate 
     end
     return nothing

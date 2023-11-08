@@ -14,11 +14,12 @@ const simulation = UnRef(IsingSim, destructor)
 function simulate(
     len::Integer = 500,
     wid::Integer = 500;
+    precision = Float32,
     periodic = nothing,
     type = Continuous,
     weighted = true,
     weights = nothing,
-    initTemp = 1f0,
+    initTemp = one(precision),
     start = true,
     gui = true,
     colorscheme = ColorSchemes.viridis,
@@ -26,15 +27,15 @@ function simulate(
     register_sim = true,
     kwargs...
     )
-    createsimfunc = () -> IsingSim(len, wid; periodic, type, weighted, weights, initTemp, colorscheme, kwargs...)
+    createsimfunc = () -> IsingSim(len, wid; precision, periodic, type, weighted, weights, initTemp, colorscheme, kwargs...)
     _assign_or_createsim(createsimfunc, register_sim)
     g = simulation[].gs[1]
     _simulate(g; start, gui, kwargs...)
     return g
 end
 
-function simulate(g::IsingGraph; start = true, giu = true, initTemp = 1f0, colorscheme = ColorSchemes.viridis, register_sim = true, kwargs...)
-    createsimfunc = () -> IsingSim(graph; start, initTemp, colorscheme, kwargs...)
+function simulate(g::IsingGraph; start = true, giu = true, precision = Float32, initTemp = one(precision), colorscheme = ColorSchemes.viridis, register_sim = true, kwargs...)
+    createsimfunc = () -> IsingSim(graph; start, initTemp, colorscheme, precision, kwargs...)
     _assign_or_createsim(createsimfunc, register_sim)
     g = _sim.gs[1]
     _simulate(g; start, gui, kwargs...)

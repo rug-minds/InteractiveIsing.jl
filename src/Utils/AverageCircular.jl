@@ -7,6 +7,9 @@ end
 
 AverageCircular(T::DataType, len::Integer) = AverageCircular{T}(zeros(T,len), 1, zero(T), len)
 
+Base.push!(ac::AverageCircular{T}, val::OT) where {T, OT >: T} = push!(ac, convert(T, val))
+
+
 function Base.push!(ac::AverageCircular{T}, val::T) where T
     currentval = ac.data[ac.ptr]
     ac.data[ac.ptr] = val

@@ -12,11 +12,11 @@ abstract type dE end
 
 @inline function ΔEIsing(g, oldstate, newstate, gstate, gadj, idx, @specialize(gstype), ::Type{Continuous})
     efactor = dEIsing(g, gstate, gadj, idx, gstype)
-    return @inbounds efactor*(newstate-oldstate)
+    return efactor*(newstate-oldstate)
 end
 @inline function ΔEIsing(g, oldstate, newstate, gstate, gadj, idx, @specialize(gstype), ::Type{Discrete})
     efactor = dEIsing(g, gstate, gadj, idx, gstype)
-    return @inbounds efactor*(newstate-oldstate)
+    return efactor*(newstate-oldstate)
 end
 
 (ΔE)(::typeof(ΔEIsing)) = true

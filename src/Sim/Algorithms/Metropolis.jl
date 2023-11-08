@@ -39,17 +39,17 @@ export updateMetropolis
 end
 
 
-@inline function updateMetropolis(idx::Integer, g, gstate::Vector{Float32}, gadj, rng, gstype::ST, ΔEFunc) where {ST <: SType}
+@inline function updateMetropolis(idx::Integer, g, gstate::Vector{T}, gadj, rng, gstype::ST, ΔEFunc) where {ST <: SType, T <: AbstractFloat}
 
-    β = 1f0/(temp(g))
+    β = one(T)/(temp(g))
 
     oldstate = @inbounds gstate[idx]
 
-    newstate = 2f0*(rand(rng, Float32)- .5f0)
+    newstate = T(2)*(rand(rng, Float32)- T(0.5))
 
     ΔE = ΔEFunc(g, oldstate, newstate, gstate, gadj, idx, gstype, Continuous)
 
-    if (ΔE < 0f0 || rand(rng, Float32) < exp(-β*ΔE))
+    if (ΔE < zero(T) || rand(rng, Float32) < exp(-β*ΔE))
         @inbounds g.state[idx] = newstate 
     end
 
