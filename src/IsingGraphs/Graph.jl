@@ -33,7 +33,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
 
 
     # Default Initializer for IsingGraph
-    function IsingGraph(sim = nothing, length = nothing, width=nothing; periodic = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = false, precision = Float32, kwargs...)
+    function IsingGraph(sim = nothing, length = nothing, width=nothing; periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = false, precision = Float32, kwargs...)
         architecture = searchkey(kwargs, :architecture, fallback = nothing)
         @assert (!isnothing(length) && !isnothing(width)) || !isnothing(architecture) "Either give length and width or architecture"
     
@@ -43,6 +43,20 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
         for idx in eachindex(architecture)
             if !isarchitecturetype(architecture[idx])
                 architecture[idx] = (architecture[idx][1], architecture[idx][2], Continuous)
+            end
+        end
+
+        if isnothing(sets)
+            
+        else 
+            sets = convert.(precision, sets)
+            if length(sets) <= length(architecture)
+                lengthdiff = length(architecture) - length(sets)
+                for _ in 1:lengthdiff
+                push!(sets, convert(precision,(-1,1)))
+                end
+            else
+                error("Too many sets given")
             end
         end
 

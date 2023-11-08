@@ -35,11 +35,13 @@ mutable struct IsingLayer{T, StateSet, IsingGraphType <: AbstractIsingGraph} <: 
     top::LayerTopology
 
     # DEFAULT INIT
-    IsingLayer{ST, SS}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top) where {ST, SS} = new{ST, SS, typeof(g)}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top)
+    function IsingLayer{ST, SS}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top) where {ST, SS}
+        return new{ST, SS, typeof(g)}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top)
+    end
 
 
     function IsingLayer(
-            LayerType, 
+            StateType, 
             g::GraphType, 
             idx, 
             start, 
@@ -55,7 +57,7 @@ mutable struct IsingLayer{T, StateSet, IsingGraphType <: AbstractIsingGraph} <: 
             
         lsize = tuple(Int32(length), Int32(width))
         set = convert.(eltype(g), set)
-        layer = new{LayerType, set, GraphType}(
+        layer = new{StateType, set, GraphType}(
             # Graph
             g,
             # Name
@@ -426,8 +428,11 @@ setSType!(layer::AbstractIsingLayer, varargs...; refresh = true) = setSType!(gra
 
 ### STATE SET
 function changeset(l::IsingLayer{SType}, set) where SType
-    newlayer = IsingLayer(SType, l.graph, l.internal_idx, l.start, l.size[1], l.size[2], name = l.name, coords = l.coords, connections = l.connections, rangebegin = set[1], rangeend = set[2])
-    newlayer.top = l.top
+    _eltype = eltype(graph(l))
+    newset = convert.(_eltype, set)
+    g = graph(l)
+    # newlayer = IsingLayer(SType, l.graph, l.internal_idx, l.start, l.size[1], l.size[2], name = l.name, coords = l.coords, connections = l.connections, rangebegin = set[1], rangeend = set[2])
+    newlayer = IsingLayer{SType, newset}(g, l.name, l.internal_idx, l.start, l.size, l.nstates,  l.coords, l.connections, l.timers, l.top)
     newlayer.timers = l.timers
 
     return newlayer
@@ -440,6 +445,7 @@ function changeset!(l, set)
     notify(l)
     return _layers[_layeridx]
 end
+export changeset, changeset!
 
 stateset(l::IsingLayer{<:Any, SS}) where SS = SS
 stateset(::Type{IsingLayer{A, SS, B}}) where {A, SS, B} = SS
