@@ -36,10 +36,7 @@ end
 
 function simulate(g::IsingGraph{T}; start = true, gui = true, precision = T, initTemp = one(precision), colorscheme = ColorSchemes.viridis, register_sim = true, kwargs...) where T
     createsimfunc = () -> IsingSim(g; start, initTemp, colorscheme)
-    println("Making the sim")
     _assign_or_createsim(createsimfunc, register_sim)
-    println("Assigning g")
-    println("Simulating")
     _simulate(g; start, gui, kwargs...)
     return g
 end
