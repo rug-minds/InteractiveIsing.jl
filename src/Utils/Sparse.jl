@@ -158,3 +158,6 @@ function deleterowcol(m::SparseMatrixCSC, range::UnitRange)
 
     return sparse(rows, cols, vals, m.m - length(range), m.n - length(range))
 end
+
+emptysparse(length,width, T = Float32) = sparse(Int[], Int[], T[], length, width)
+export emptysparse

@@ -219,6 +219,8 @@ function reset!(g::IsingGraph)
     closetimers(g)
 end
  
+statelen(g::IsingGraph) = length(state(g))
+export statelen
 export initRandomState
 """ 
 Initialize from a graph
