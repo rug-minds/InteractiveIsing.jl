@@ -131,7 +131,7 @@ function saveadj(g, filename = "adj-$(getnowtime())"; subfolder = false)
     subfolder_st = "/"*subfolder
     path = pwd() * "$subfolder_st/$filename.jld2"
     adj = sp_adj(g)
-    architecture = size.(unshuffled(layers(g)))
+    architecture = getarchitecture(g)
     save(path, "adj", adj, "architecture", architecture)
     return path
 end
@@ -139,9 +139,11 @@ end
 function loadadj(g, path; ignorearchitecture = false)
     data = load(path)
     adj = data["adj"]
-    architecture = data["architecture"]
+    dataarchitecture = data["architecture"]
     if !ignorearchitecture
-        @assert architecture == getarchitecture
+        @assert compare_architecture_sizes(dataarchitecture, getarchitecture(g)) "Architecture sizes not the same"
+    else
+        adj = sparse(findnz(adj)..., length(g), length(g))
     end
     sp_adj(g, adj)
     return g
@@ -152,7 +154,7 @@ function saveparameters(g, filename = "parameters-$(getnowtime())"; subfolder = 
     path = pwd() * "$subfolder_st/$filename.jld2"
     data = g.d
     adj = sp_adj(g)
-    architecture = size.(unshuffled(layers(g)))
+    architecture = getarchitecture(g)
     save(path, "data", data, "adj", adj, "architecture", architecture)
     return path
 end
@@ -160,12 +162,16 @@ end
 function loadparameters(g, path; ignorearchitecture = false)
     data = load(path)
     adj = data["adj"]
-    architecture = data["architecture"]
+    gdata = data["data"]
+    dataarchitecture = data["architecture"]
     if !ignorearchitecture
-        @assert architecture == getarchitecture
+        @assert compare_architecture_sizes(dataarchitecture, getarchitecture(g)) "Architecture sizes not the same"
+    else
+        adj = sparse(findnz(adj)..., length(state(g)), length(state(g)))
+        resize!(gdata, length(state(g)))
     end
     sp_adj(g, adj)
-    g.d = data["data"]
+    g.d = gdata
     return g
 end
 

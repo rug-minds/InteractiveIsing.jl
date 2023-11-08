@@ -82,14 +82,6 @@ mutable struct IsingLayer{T, StateSet, IsingGraphType <: AbstractIsingGraph} <: 
 end
 export IsingLayer
 
-### TYPE STUFF
-
-Base.eltype(l::IsingLayer{<:Any, <:Any, GT}) where GT = eltype(GT)
-# ORDER LAYER TYPES BASED ON STATETYPE
-Base.isless(::Type{IsingLayer{A,B,C}}, ::Type{IsingLayer{D,E,F}}) where {A,B,C,D,E,F} = isless(A,D)
-
-
-# IsingLayer(g, layer::AbstractIsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefect(layer))
 
 # TODO: Is this still needed?
 mutable struct IsingLayerCopy{T, IsingGraphType <: AbstractIsingGraph} <: AbstractIsingLayer{T}
@@ -467,12 +459,19 @@ end
 
 export changeset!, stateset
 
-### STATE TYPE
+### TYPE STUFF
 ## DEFAULT NEW LAYER TYPE BASED ON GRAPH
 default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous 
 @inline statetype(layer::IsingLayer{ST}) where {ST} = ST
 @inline statetype(::Type{IsingLayer{ST,A,B}}) where {ST,A,B} = ST
 setstatetype(l::IsingLayer{ST,SET,GT}, stype) where {ST,SET,GT} = IsingLayer{stype,SET}(l.graph, l.name, l.internal_idx, l.start, l.size, l.nstates, l.coords, l.connections, l.timers, l.top)
+
+Base.eltype(l::IsingLayer{<:Any, <:Any, GT}) where GT = eltype(GT)
+
+# ORDER LAYER TYPES BASED ON STATETYPE
+Base.isless(::Type{IsingLayer{A,B,C}}, ::Type{IsingLayer{D,E,F}}) where {A,B,C,D,E,F} = isless(A,D)
+
+
 export statetype, setstatetype
 
 ### GENERATING STATE

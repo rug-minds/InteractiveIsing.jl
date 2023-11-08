@@ -36,9 +36,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     function IsingGraph(sim = nothing, length = nothing, width=nothing; periodic = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = false, precision = Float32, kwargs...)
         architecture = searchkey(kwargs, :architecture, fallback = nothing)
         @assert (!isnothing(length) && !isnothing(width)) || !isnothing(architecture) "Either give length and width or architecture"
-        
-        println("Architecture: $architecture")
-
+    
         if isnothing(architecture)
             architecture = [(length, width, type)]
         end
@@ -47,7 +45,6 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
                 architecture[idx] = (architecture[idx][1], architecture[idx][2], Continuous)
             end
         end
-        println("Architecture: $architecture")
 
         g = new{precision}(
             sim,
@@ -487,9 +484,22 @@ export setSType!
 function getarchitecture(g)
     architecture = []
     for layer in layers(g)
-        push!(architecture, (length(layer), width(layer), type(layer)))
+        push!(architecture, (glength(layer), gwidth(layer), statetype(layer)))
     end
     return architecture
+end
+
+function compare_architecture_sizes(architecture1, architecture2)
+    if length(architecture1) != length(architecture2)
+        return false
+    else
+        for (idx, layer) in enumerate(architecture1)
+            if layer[1] != architecture2[idx][1] || layer[2] != architecture2[idx][2]
+                return false
+            end
+        end
+    end
+    return true
 end
 
 
