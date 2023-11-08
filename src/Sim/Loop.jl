@@ -8,7 +8,7 @@ Then, this function itself makes a new branch where getE is defined again.
 export mainLoop
 """
 
-function createProcess(g::IsingGraph, process = nothing; threaded = true, kwargs...)
+function createProcess(g::IsingGraph, process = nothing, looptype = mainLoop; threaded = true, kwargs...)
     _sim = sim(g)
     if isnothing(process)
         for p in processes(_sim)
@@ -29,10 +29,10 @@ function createProcess(g::IsingGraph, process = nothing; threaded = true, kwargs
     end
     
     if threaded
-        task = process -> errormonitor(Threads.@spawn updateGraph(g, process; kwargs...))
+        task = process -> errormonitor(Threads.@spawn looptype(g, process; kwargs...))
         runtask(process, task, g)
     else
-        updateGraph(g, process; kwargs...)
+        looptype(g, process; kwargs...)
     end
 
     return
@@ -43,21 +43,17 @@ createProcesses(g::IsingGraph, num; kwargs...) =
 
 export createProcess, createProcesses
 
-function updateGraph(g, process = processes(sim(g))[1], oldkwargs = pairs((;)); kwargs...)
-    # Keywords reserved for the main loop itself
-    reserved_keywords = (:algorithm,)    
-    
-    # Set the algorithm, should pull from the struct
-    algorithm = haskey(kwargs, :algorithm) ? kwargs[:algorithm] : g.default_algorithm
+function mainLoop(g::IsingGraph, process = processes(sim(g))[1], oldkwargs = pairs((;));
+        algorithm = g.default_algorithm,
+        kwargs...)
 
-    # Delete keywards reserved for the preparation of the main loop itself
-    args_kwargs = deletekeys(kwargs, reserved_keywords...)
-    args = prepare(algorithm, g; args_kwargs...)
+    args = prepare(algorithm, g; kwargs...)
+
     return mainLoop(process, algorithm, args; kwargs...)
 
 end
 
-export updateGraph
+export mainLoop
 # g, gstate, gadj, iterator, rng, updateFunc, dEFunc, gstype::ST
 function mainLoop(process, @specialize(algorithm::Function), @specialize(args); kwargs...)
 
@@ -71,5 +67,30 @@ function mainLoop(process, @specialize(algorithm::Function), @specialize(args); 
 end
 export mainLoop
 
+function mainLoopIterated(g::IsingGraph, process = processes(sim(g))[1], oldkwargs = pairs((;));
+        algorithm = g.default_algorithm,
+        iterations = 10000,
+        kwargs...)
+    # Keywords reserved for the main loop itself
+    reserved_keywords = (:algorithm, iterations)    
+
+    args = prepare(algorithm, g; kwargs...)
+    
+    return mainLoopIterated(process, algorithm, args, iterations; kwargs...)
+
+end
+
+export mainLoop
+# g, gstate, gadj, iterator, rng, updateFunc, dEFunc, gstype::ST
+function mainLoopIterated(process, @specialize(algorithm::Function), @specialize(args), iterations; kwargs...)
+
+    while process.updates < iterations
+        algorithm(args)
+        inc(process)
+        GC.safepoint()
+    end
+
+    return kwargs
+end
 
 

@@ -83,7 +83,7 @@ function restart(g; kwargs...)
         if _isrunning
             # Use the old kwargs
             newkwargs = mergekwargs(oldkwargs, kwargs)
-            task = process -> errormonitor(Threads.@spawn updateGraph(g, process, oldkwargs; newkwargs...))
+            task = process -> errormonitor(Threads.@spawn mainLoop(g, process, oldkwargs; newkwargs...))
             runtask(process, task, g)
         end
     end
@@ -98,7 +98,7 @@ function togglePause(g)
         for process in processes(sim(g))
             if ispaused(process)
                 args = fetch(process)
-                task = process -> Threads.@spawn updateGraph(g, process; args...)
+                task = process -> Threads.@spawn mainLoop(g, process; args...)
                 errormonitor(runtask(process, task, g))
             end
         end
