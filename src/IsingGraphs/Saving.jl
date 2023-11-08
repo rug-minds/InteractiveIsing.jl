@@ -136,11 +136,13 @@ function saveadj(g, filename = "adj-$(getnowtime())"; subfolder = false)
     return path
 end
 
-function loadadj(g, path)
+function loadadj(g, path; ignorearchitecture = false)
     data = load(path)
     adj = data["adj"]
     architecture = data["architecture"]
-    @assert architecture == getarchitecture
+    if !ignorearchitecture
+        @assert architecture == getarchitecture
+    end
     sp_adj(g, adj)
     return g
 end
@@ -155,11 +157,13 @@ function saveparameters(g, filename = "parameters-$(getnowtime())"; subfolder = 
     return path
 end
 
-function loadparameters(g, path)
+function loadparameters(g, path; ignorearchitecture = false)
     data = load(path)
     adj = data["adj"]
     architecture = data["architecture"]
-    @assert architecture == getarchitecture
+    if !ignorearchitecture
+        @assert architecture == getarchitecture
+    end
     sp_adj(g, adj)
     g.d = data["data"]
     return g
