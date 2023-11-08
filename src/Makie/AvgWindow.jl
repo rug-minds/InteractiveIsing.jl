@@ -1,5 +1,4 @@
-createAvgWindow(layer; buffersize = 512, window_time = 1) = createAvgWindow(layer; buffersize, framerate = buffersize*window_time)
-function createAvgWindow(layer; buffersize = 512, framerate = 256)
+function createAvgWindow(layer; buffersize = 512, window_time = 1, framerate = buffersize*window_time)
     ml = mlref[]
     if haskey(ml, "avgwindow_active") && ml["avgwindow_active"]
         cleanup(ml, avgWindow)
