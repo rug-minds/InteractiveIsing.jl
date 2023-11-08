@@ -123,3 +123,46 @@ function loadGraph(folder)
     IsingGraph(savedata)
 end
 export saveGraph, loadGraph
+
+
+### Adj
+
+function saveadj(g, filename = "adj-$(getnowtime())"; subfolder = false)
+    subfolder_st = "/"*subfolder
+    path = pwd() * "$subfolder_st/$filename.jld2"
+    adj = sp_adj(g)
+    architecture = size.(unshuffled(layers(g)))
+    save(path, "adj", adj, "architecture", architecture)
+    return path
+end
+
+function loadadj(g, path)
+    data = load(path)
+    adj = data["adj"]
+    architecture = data["architecture"]
+    @assert architecture == size.(unshuffled(layers(g)))
+    sp_adj(g, adj)
+    return g
+end
+
+function saveparameters(g, filename = "parameters-$(getnowtime())"; subfolder = false)
+    subfolder_st = "/"*subfolder
+    path = pwd() * "$subfolder_st/$filename.jld2"
+    data = g.d
+    adj = sp_adj(g)
+    architecture = size.(unshuffled(layers(g)))
+    save(path, "data", data, "adj", adj, "architecture", architecture)
+    return path
+end
+
+function loadparameters(g, path)
+    data = load(path)
+    adj = data["adj"]
+    architecture = data["architecture"]
+    @assert architecture == size.(unshuffled(layers(g)))
+    sp_adj(g, adj)
+    g.d = data["data"]
+    return g
+end
+
+export loadadj, saveadj, loadparameters, saveparameters

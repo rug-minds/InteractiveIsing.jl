@@ -530,3 +530,7 @@ function Base.insert!(collection::Vector{T}, idx::Integer, items::Vector{T}) whe
     return collection
 end
 
+#TIME 
+getnowtime() =  begin nowtime = string(now())[1:(end-7)]; nowtime = replace(nowtime, ":" => "."); return nowtime end
+
+

@@ -1,3 +1,4 @@
+
 mutable struct DataPoint
     M::     Union{Nothing, Float32}
     bins::  Union{Nothing, Vector{Float32}}
@@ -144,14 +145,12 @@ function magnetizationPlot(tsData::TempSweepData, layer::Integer)
     plot(temps, ms, label = "M = $M")
 end
 
-
 """
 Create folder in data folder with given name and return path
 Tries to create a folder if it doesn't exist, and doesn't do anything if it does
 """
 function dataFolderNow(subfoldername::String; foldername::String = "Data", startfolder = nothing)
-    nowtime = string(now())[1:(end-7)]
-    nowtime = replace(nowtime, ":" => ".")
+    nowtime = getnowtime()
     startfolder = isnothing(startfolder) ? dirname(Base.source_path()) : startfolder
     try; mkdir(joinpath(startfolder, foldername)); catch end
     try; mkdir(joinpath(startfolder, foldername, subfoldername)); catch end
