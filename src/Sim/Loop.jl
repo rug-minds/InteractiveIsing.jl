@@ -34,7 +34,6 @@ function createProcess(g::IsingGraph, process = nothing, looptype = mainLoop; ru
     else
         looptype(g, process; kwargs...)
     end
-    println("Process created ", process)
     return
 end
 
@@ -47,10 +46,7 @@ function mainLoop(g::IsingGraph, process = processes(sim(g))[1], oldkwargs = pai
         algorithm = g.default_algorithm,
         kwargs...)
     
-    println("Main loop")
-
     args = prepare(algorithm, g; kwargs...)
-    println("Args prepared")
     return mainLoop(process, algorithm, args; kwargs...)
 
 end
@@ -58,7 +54,6 @@ end
 export mainLoop
 # g, gstate, gadj, iterator, rng, updateFunc, dEFunc, gstype::ST
 function mainLoop(process, @specialize(algorithm::Function), @specialize(args); kwargs...)
-    println("Main loop")
     while run(process)
         algorithm(args)
         inc(process)
