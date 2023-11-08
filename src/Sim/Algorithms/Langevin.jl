@@ -16,7 +16,7 @@ function prepare(::Union{typeof(updateLangevin), typeof(updateLangevinThreaded)}
                         gstate = state(g),
                         gadj = sp_adj(g),
                         gparams = params(g),
-                        iterator = ising_it(g, stype(g)),
+                        iterator = stateiterator(g),
                         rng = MersenneTwister(),
                         gstype = stype(g),
                         dEFunc = dEIsing,

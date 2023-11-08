@@ -53,8 +53,8 @@ end
 """
 Pass in the appropraite IsingSim constructorß
 """
-function _assign_or_createsim(create_sim_func, register_sim = true)
-    if isnothing(simulation) && register_sim
+function _assign_or_createsim(create_sim_func, noinput = true)
+    if isnothing(simulation) && noinput
         simulation[] = create_sim_func()
     elseif register_sim
         println("Simulation already active, create a new one and overwrite it? [y/n]")

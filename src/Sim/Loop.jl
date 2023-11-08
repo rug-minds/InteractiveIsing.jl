@@ -48,7 +48,7 @@ function updateGraph(g, process = processes(sim(g))[1], oldkwargs = pairs((;)); 
     reserved_keywords = (:algorithm,)    
     
     # Set the algorithm, should pull from the struct
-    algorithm = haskey(kwargs, :algorithm) ? kwargs[:algorithm] : updateMetropolis
+    algorithm = haskey(kwargs, :algorithm) ? kwargs[:algorithm] : g.default_algorithm
 
     # Delete keywards reserved for the preparation of the main loop itself
     args_kwargs = deletekeys(kwargs, reserved_keywords...)

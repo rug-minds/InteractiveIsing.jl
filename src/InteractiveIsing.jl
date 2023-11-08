@@ -59,7 +59,20 @@ include("Utils/Utils.jl")
 abstract type StateType end
 struct Discrete <: StateType end
 struct Continuous <: StateType end
-export Discrete, Continuous
+struct Static <: StateType end
+
+Base.isless(::Type{Continuous}, ::Type{Discrete}) = true
+Base.isless(::Type{Discrete}, ::Type{Continuous}) = false
+
+Base.isless(::Type{Discrete}, ::Type{Static}) = true
+Base.isless(::Type{Static}, ::Type{Discrete}) = false
+
+Base.isless(::Type{Continuous}, ::Type{Static}) = true
+Base.isless(::Type{Static}, ::Type{Continuous}) = false
+
+Base.isless(::Type{<:StateType}, ::Type{<:StateType}) = false
+    
+export Discrete, Continuous, Static
 
 
 include("WeightFuncs.jl")
@@ -88,7 +101,7 @@ include("GPlotting.jl")
 # PRECOMPILATION FUNCTION FOR FAST USAGE
 @setup_workload begin
     GC.enable(false)
-    cg = simulate(20,20, continuous = true, start = false, disp = false, register_sim = false)
+    cg = simulate(20,20, continuous = true, start = false, disp = false, noinput = true)
     _sim = sim(cg)
 
     @compile_workload begin
@@ -111,9 +124,9 @@ include("GPlotting.jl")
 
         path = saveGraph(cg, savepref = false)
 
-        close.(timers(_sim))
+        close.(values(timers(_sim)))
         loadGraph(path)       
-        quitSim(_sim)
+        quit(cg)
 
 
         closeinterface()

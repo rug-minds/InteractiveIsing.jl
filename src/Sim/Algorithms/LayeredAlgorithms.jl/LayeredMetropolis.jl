@@ -69,6 +69,9 @@ function generate_layerswitch(::typeof(layeredMetropolis), typeidx_zip)
     statements = 1
     for (layertype, gidxs) in typeidx_zip
         _statetype = statetype(layertype)
+        if _statetype == Static
+            continue
+        end
         _stateset = stateset(layertype)
         if statements == 1
             startstr *= "if"

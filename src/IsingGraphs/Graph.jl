@@ -224,7 +224,13 @@ end
 #=
 Methods
 =#
-
+function stateiterator(g::IsingGraph)
+    if hasDefects(g)
+        return aliveList(g)
+    else
+        return UnitRange{Int32}(1:nStates(g))
+    end
+end
 # Doesn't need to use multiple dispatch
 """ 
 Returns in iterator which can be used to choose a random index among alive spins
@@ -241,8 +247,6 @@ Returns in iterator which can be used to choose a random index among alive spins
     end
 
 end
-
-export ising_it
 
 """
 Initialization of adjacency Vector for a given N
@@ -296,12 +300,13 @@ export resize!
 
 export addLayer!
 
-function addLayer!(g::IsingGraph, llength, lwidth; weights = nothing, periodic = true, type = default_ltype(g), set = (-1,1), rangebegin = set[1], rangeend = set[2], kwargs...)
-    # println("Adding layer")
-    # println("set ", set)
-    # println("Rangebegin ", rangebegin)
-    # println("Rangeend ", rangeend)
-    @tryLockPause sim(g) _addLayer!(g, llength, lwidth; set, weights, periodic, type, kwargs...)
+function addLayer!(g::IsingGraph, llength, lwidth; weights = nothing, periodic = true, type = default_ltype(g), set = convert.(eltype(g),(-1,1)), rangebegin = set[1], rangeend = set[2], kwargs...)
+    @tryLockPause sim(g) begin 
+        _addLayer!(g, llength, lwidth; set, weights, periodic, type, kwargs...)
+        # Update the layer idxs
+        nlayers(sim(g))[] += 1
+    end
+    return layers(g)
 end
 
 addLayer!(g::IsingGraph, llength, lwidth, wg; kwargs...) = addLayer!(g, llength, lwidth; weights = wg, kwargs...)
@@ -310,6 +315,7 @@ function addLayer!(g, dims::Vector, wgs...; kwargs...)
     for (dimidx,dim) in enumerate(dims)
         addLayer!(g, dim[1], dim[2], wgs[dimidx]; kwargs...)
     end
+    return layers(g)
 end
 
 """
@@ -331,8 +337,6 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth; weights = nothing, period
 
     (;set) = (;kwargs...)
     set = T.(set)
-    # println("rangebegin ", rangebegin)
-    # println("rangeend ", rangeend)
    
     # Function that makes the new layer based on the insertidx
     # Found by the shufflevec
@@ -356,11 +360,14 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth; weights = nothing, period
 
         return IsingLayer(type, g, idx , _startidx, llength, lwidth; periodic, set)
     end
-
-    push!(layers(g), make_newlayer, IsingLayer{type, set, typeof(g)})
+    layertype =  IsingLayer{type, set, typeof(g)}
+    push!(layers(g), make_newlayer, layertype)
     newlayer = layers(g)[end]
-    initstate!(newlayer)
 
+    # If layer of different type, change default algorithm to layered updateMetropolis
+    if hasmixedtypes(layers(g)) && g.default_algorithm == updateMetropolis
+        g.default_algorithm = layeredMetropolis
+    end
 
     # Generate the adjacency matrix from the weightfunc
     if !isnothing(weights)
@@ -370,14 +377,13 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth; weights = nothing, period
         genAdj!(newlayer, wg_isingdefault)
     end
 
-    # MOVE THIS
-    # Update the layer idxs
-    nlayers(sim(g))[] += 1
-
     # SET COORDS
     setcoords!(g[end], z = length(g)-1)
 
-    return
+    # Init the state
+    initstate!(newlayer)
+
+    return layers(g)
 end
 
 function _removeLayer!(g::IsingGraph, lidx::Integer)
@@ -395,19 +401,23 @@ function _removeLayer!(g::IsingGraph, lidx::Integer)
 
     resize!(g, nStates(g) - nStates(layer), start(layer))
 
-    # If the slected layer is after the layer to be removed, decrement layerIdx
-    if layerIdx(sim(g))[] >= lidx && layerIdx(sim(g))[] > 1
-        layerIdx(sim(g))[] -= 1
-    else
-        notify(layerIdx(sim(g)))
-    end
-    nlayers(sim(g))[] -= 1
-
-    return
+    return layers(g)
 
 end
 
-removeLayer!(g::IsingGraph, lidx::Integer) = @tryLockPause sim(g) _removeLayer!(g, lidx)
+function removeLayer!(g::IsingGraph, lidx::Integer)
+    @tryLockPause sim(g) begin 
+        _removeLayer!(g, lidx) 
+         # If the slected layer is after the layer to be removed, decrement layerIdx
+        if layerIdx(sim(g))[] >= lidx && layerIdx(sim(g))[] > 1
+            layerIdx(sim(g))[] -= 1
+        else
+            notify(layerIdx(sim(g)))
+        end
+        nlayers(sim(g))[] -= 1 
+    end
+    return layers(g)
+end
 removeLayer!(layer::IsingLayer) = removeLayer!(graph(layer), layer)
 export removeLayer!
 
@@ -417,7 +427,9 @@ function removeLayer!(g, idxs::Vector{Int})
     sort!(idxs, lt = (x,y) -> internalidx(_layers, x) > internalidx(_layers, y))
     @tryLockPause sim(g) for idx in idxs
         _removeLayer!(g, idx)
+        nlayers(sim(g))[] -= 1
     end
+    return layers(g)
 end
 removeLayer!(g::IsingGraph, layer::IsingLayer) = removeLayer!(g, layeridx(layer))
 

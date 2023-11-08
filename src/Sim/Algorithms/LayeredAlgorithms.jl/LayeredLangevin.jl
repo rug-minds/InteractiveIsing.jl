@@ -12,7 +12,7 @@ function prepare(::typeof(layeredLangevin), g; kwargs...)
                         gadj = sp_adj(g),
                         gparams = params(g),
                         params = g.params,
-                        giterator = ising_it(g, stype(g)),
+                        giterator = stateiterator(g),
                         rng = MersenneTwister(),
                         gstype = stype(g),
                         ΔEFunc = ΔEIsing,

@@ -17,9 +17,11 @@ end
 Merge 2 kwargs. If a key is present in both, the value from the top is used
 """
 function mergekwargs(bottom, top)
-    if isnothing(top) || isempty(top)
+    if isnothing(bottom) && isnothing(top)
+        return pairs((;))
+    elseif isnothing(top) || (!isnothing(bottom) && isempty(top))
         return bottom
-    elseif isnothing(bottom) || isempty(bottom)
+    elseif isnothing(bottom) || (!isnothing(top) && isempty(bottom))
         return top
     end
     topkeys = collect(Any, keys(top))
@@ -38,8 +40,10 @@ Replace kwargs in bottom that are also specified in top,
 Keys in top that are not in bottom are ignored
 """
 function replacekwargs(bottom, top)
+    if isnothing(bottom) && isnothing(top)
+        return pairs((;))
     #If top is empty, return bottom
-    if isnothing(top) || isempty(top)
+    elseif isnothing(top) || isempty(top)
         return bottom
     end
     bottomkeys = collect(Any, keys(bottom))

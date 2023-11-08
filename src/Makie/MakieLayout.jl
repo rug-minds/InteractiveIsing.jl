@@ -27,11 +27,13 @@ mutable struct MakieLayout
     bottompanel::LayoutPanel
     etc::Dict{String, Any}
     timers::Vector{Any}
+    cleanuplist::Vector{Any}
 end
 
-MakieLayout(f::Figure) = MakieLayout(f, LayoutPanel(), LayoutPanel(), LayoutPanel(), Dict{String, Any}(), Any[])
+MakieLayout(f::Figure) = MakieLayout(f, LayoutPanel(), LayoutPanel(), LayoutPanel(), Dict{String, Any}(), Any[], Any[])
 function deconstruct(ml::MakieLayout)
     cleanup(ml, baseFig)
+    cleanup.(Ref(ml), ml.cleanuplist)
     GLFW.SetWindowShouldClose(to_native(ml["screen"]), true)
     return nothing
 end

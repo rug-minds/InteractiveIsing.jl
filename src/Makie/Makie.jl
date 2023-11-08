@@ -22,6 +22,7 @@ include("MidPanel.jl")
 include("BottomPanel.jl")
 
 include("BaseFig.jl")
+include("AvgWindow.jl")
 
 """
 Start the interface for the simulation displaying the graph genAdj

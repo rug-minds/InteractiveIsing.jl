@@ -38,9 +38,23 @@ mutable struct IsingLayer{T, StateSet, IsingGraphType <: AbstractIsingGraph} <: 
     IsingLayer{ST, SS}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top) where {ST, SS} = new{ST, SS, typeof(g)}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top)
 
 
-    function IsingLayer(LayerType, g::GraphType, idx, start, length, width; set = Base.eltype(g).(-1,1), name = "$(length)x$(width) Layer", coords = Coords(nothing), connections = Dict{Pair{Int32,Int32}, WeightGenerator}(), periodic::Union{Nothing,Bool} = true) where GraphType <: IsingGraph
+    function IsingLayer(
+            LayerType, 
+            g::GraphType, 
+            idx, 
+            start, 
+            length, 
+            width; 
+            set = convert.(eltype(g),(-1,1)), 
+            name = "$(length)x$(width) Layer", 
+            coords = Coords(nothing), 
+            connections = Dict{Pair{Int32,Int32}, 
+            WeightGenerator}(), 
+            periodic::Union{Nothing,Bool} = true
+        ) where GraphType <: IsingGraph
+            
         lsize = tuple(Int32(length), Int32(width))
-        set = eltype(g).(set)
+        set = convert.(eltype(g), set)
         layer = new{LayerType, set, GraphType}(
             # Graph
             g,
@@ -60,11 +74,7 @@ mutable struct IsingLayer{T, StateSet, IsingGraphType <: AbstractIsingGraph} <: 
             connections,
             # PTimers
             Vector{PTimer}(),
-            # Layer data
-            # LayerData(d(g), start, length, width)
         )
-        # TODO: What's olddefects for
-        # layer.defects = LayerDefects(layer, olddefects)
         layer.top = LayerTopology(layer, [1,0], [0,1]; periodic)
         finalizer(destructor, layer)
         return layer
@@ -72,7 +82,11 @@ mutable struct IsingLayer{T, StateSet, IsingGraphType <: AbstractIsingGraph} <: 
 end
 export IsingLayer
 
+### TYPE STUFF
+
 Base.eltype(l::IsingLayer{<:Any, <:Any, GT}) where GT = eltype(GT)
+# ORDER LAYER TYPES BASED ON STATETYPE
+Base.isless(::Type{IsingLayer{A,B,C}}, ::Type{IsingLayer{D,E,F}}) where {A,B,C,D,E,F} = isless(A,D)
 
 
 # IsingLayer(g, layer::AbstractIsingLayer) = IsingLayer(g, layeridx(layer), start(layer), glength(layer), gwidth(layer), olddefects = ndefect(layer))

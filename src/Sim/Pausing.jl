@@ -17,12 +17,8 @@ function unpauseSim(sim; block = false, ignore_lock = false, print = true)
         println("Unpausing sim")
     end
     # Find running processes
-    wasrunning = ispaused.(processes(sim))
-    idxs = [1:length(processes(sim));][wasrunning]
-    for process in (@view processes(sim)[idxs])
-        g = objectref(process)
-        kwargs = retval(process)
-        createProcess(g, process; kwargs...)
+    for g in gs(sim)
+        unpause(g)
     end
     isPaused(sim)[] = false
     return
@@ -87,9 +83,7 @@ function restart(g; kwargs...)
         if _isrunning
             # Use the old kwargs
             newkwargs = mergekwargs(oldkwargs, kwargs)
-
             task = process -> errormonitor(Threads.@spawn updateGraph(g, process, oldkwargs; newkwargs...))
-            # task = process -> errormonitor(Threads.@spawn updateGraph(g, process; kwargs...))
             runtask(process, task, g)
         end
     end
@@ -113,3 +107,4 @@ end
 
 
 export togglePause
+

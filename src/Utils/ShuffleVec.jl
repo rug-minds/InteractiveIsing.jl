@@ -5,6 +5,10 @@ abstract type ShuffleMode end
 struct Grouped <: ShuffleMode end
 struct Ungrouped <: ShuffleMode end
 
+abstract type OrderMode end
+struct Ordered <: OrderMode end
+struct Unordered <: OrderMode end
+
 abstract type CallbackMode end
 struct External end
 struct Internal end
@@ -44,7 +48,7 @@ The coupled objects will be updated when the ShuffleVec is updated
 
 Internally coupled objects will be coupled to the internal representation of the ShuffleVec
 """
-mutable struct ShuffleVec{T, Mode} <: AbstractVector{T}
+mutable struct ShuffleVec{T, Mode, OrderMode} <: AbstractVector{T}
     data::Tuple
     idxs::Vector{Int}
     callbacks::Vector{ShuffleCallback}
@@ -54,11 +58,11 @@ mutable struct ShuffleVec{T, Mode} <: AbstractVector{T}
     ## TODO: Define constructors for uncoupled objects
     function ShuffleVec(data::Vector{T}; relocate = (effect, cause, shift) -> effect) where T
         idxs = collect(1:length(data))
-        return new{T, Grouped}(data, idxs, ShuffleCallback[], relocate)
+        return new{T, Grouped, Ordered}(data, idxs, ShuffleCallback[], relocate)
     end
 
     function ShuffleVec{T}(; relocate = (effect, cause, shift) -> effect) where T
-        return new{T, Grouped}(tuple(), Vector{Int}(), ShuffleCallback[], relocate)
+        return new{T, Grouped, Ordered}(tuple(), Vector{Int}(), ShuffleCallback[], relocate)
     end
 end
 
@@ -73,6 +77,7 @@ insert(t::Tuple, idx, val) = (t[1:idx-1]..., val, t[idx:end]...)
 Base.size(sv::ShuffleVec) = (length(sv.data),)
 Base.getindex(sv::ShuffleVec{T, Mode}, i::Int) where {T, Mode} = sv.data[sv.idxs[i]]::T
 # THIS SHOULD TAKE INTO ACCOUNT A CHANGE OF TYPE
+# THIS IS UNSAFE SINCE IT DOESN"T REORDER
 Base.setindex!(sv::ShuffleVec{T, Mode}, val::T, i::Int) where {T, Mode} = sv.data = (sv.data[1:sv.idxs[i]-1]..., val, sv.data[sv.idxs[i]+1:end]...)
 Base.IndexStyle(::Type{<:ShuffleVec}) = IndexLinear()
 Base.eltype(p::ShuffleVec{T, Mode}) where {T, Mode} = T
@@ -148,24 +153,48 @@ function Base.deleteat!(p::ShuffleVec, i::AbstractVector)
     return p
 end
 
+function find_insertidx(p::ShuffleVec{<:Any,Grouped, Unordered}, item_type)
+    if isempty(p.data)
+        return 1
+    end 
+    found_idx = findlast(x -> typeof(x) == typeof(item), unshuffled(p))
+    if !isnothing(found_idx)
+        return found_idx + 1
+    else
+        return length(p.data) + 1
+    end
+end
+
+## FOR THIS AN ORDERING OF TYPES NEEDS TO BE DEFINED
+function find_insertidx(p::ShuffleVec{<:Any,Grouped, Ordered}, item_type)
+    if isempty(p.data)
+        return 1
+    end 
+    idx = 1
+    for type in typeof.(p.data)
+        if type == item_type
+            idx +=1
+            continue
+        elseif item_type < type # If item_type is smaller than type, insert it here
+                return index
+        end #This will move forward if no ordering is defined for types
+        idx += 1
+    end
+    return length(p.data) + 1
+end
+
 Base.push!(p::ShuffleVec{T, Grouped}, item) where T = push!(p, (i) -> item, typeof(item))
 """
 Functions should be a function that takes the idx where it is inserted and returns an item
 """
 function Base.push!(p::ShuffleVec{T, Grouped}, item_f::Function, item_type) where T
-    found_idx = findlast(x -> typeof(x) == item_type, unshuffled(p))
-    # println("Type $item_type found at $found_idx")
-    insert_idx = 0
-    if !isnothing(found_idx)
-        insert_idx = found_idx + 1
-        # Update all internal indexes
-        for idx in eachindex(p.idxs)
-            if p.idxs[idx] >= insert_idx
-                p.idxs[idx] += 1
-            end
+    insert_idx = find_insertidx(p, item_type)
+    
+    # Shit all indexes before inserting
+    for idx in eachindex(p.idxs)
+        if p.idxs[idx] >= insert_idx
+            p.idxs[idx] += 1
         end
-    else # Insertidx is at the end
-        insert_idx = length(p.data) + 1
     end
 
     new_obj = item_f(insert_idx)
@@ -229,5 +258,16 @@ end
 @inline internalidx(p::ShuffleVec, external_idx::Integer) = p.idxs[external_idx]
 @inline externalidx(p::ShuffleVec, internal_idx::Integer) = findfirst(p.idxs .== internal_idx)
 
-Base.convert(::Type{ShuffleVec{T}}, p::Vector{T}) where T = ShuffleVec(p)
+Base.convert(::Type{ShuffleVec{T,X,Y}}, p::Vector{T}) where {T,X,Y} = ShuffleVec(p)
 Base.convert(::Type{Vector{T}}, p::ShuffleVec{T}) where T = p.data
+
+function hasmixedtypes(sv::ShuffleVec)
+    lasttype = typeof(sv.data[1])
+    for el in sv.data
+        if typeof(el) != lasttype
+            return true
+        end
+    end
+    return false
+end
+export hasmixedtypes

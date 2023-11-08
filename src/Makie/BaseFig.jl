@@ -22,16 +22,6 @@ function baseFig(g; disp = true)
         title = "Interactive Ising Simulation"
     )
 
-
-    # Delete all observables from last fig
-    # if haskey(etc(ml), "poplist")
-    #     for idx in eachindex(etc(ml)["poplist"])
-    #         pop!(etc(ml)["poplist"][idx].listeners)
-    #     end
-    # ends
-
-    # etc(ml)["poplist"] = Observable[]
-
     topPanel(ml, g)
 
     midPanel(ml,g)
