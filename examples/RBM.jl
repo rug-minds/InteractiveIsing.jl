@@ -2,6 +2,7 @@ using InteractiveIsing
 
 g = simulate(28, 28, type = Continuous, set = (0f0, 1f0))
 addLayer!(g,32,32, type = Discrete, set = (0f0, 1f0))
+addLayer!(g, 2, 5, type = Discrete)
 
 function weights_2_sparse(w1)
     nstates = length(state(g))

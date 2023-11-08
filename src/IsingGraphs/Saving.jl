@@ -143,7 +143,7 @@ function loadadj(g, path; ignorearchitecture = false)
     if !ignorearchitecture
         @assert compare_architecture_sizes(dataarchitecture, getarchitecture(g)) "Architecture sizes not the same"
     else
-        adj = sparse(findnz(adj)..., length(g), length(g))
+        adj = sparse(findnz(adj)..., length(state(g)), length(state(g)))
     end
     sp_adj(g, adj)
     return g
