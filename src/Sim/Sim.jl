@@ -61,13 +61,11 @@ function _assign_or_createsim(create_sim_func, noinput = true, register_sim = tr
             s = read(stdin, Char)
             println("Character entered: $s")
             if s == 'y'
-                println("Overwriting old sim")
                 reset!(simulation)
                 closeinterface()
                 simulation[] = create_sim_func()
                 return
             elseif s == 'n' 
-                println("Doing nothing")
                 return create_sim_func()
             else
                 println("Please enter y or n")

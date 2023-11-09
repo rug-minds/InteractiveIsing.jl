@@ -4,18 +4,18 @@ end
 
 const clampexpr = "+ clampparam(g)/T(2) * (newstate^2-oldstate^2 - T(2) * @inbounds clamps(g)[idx] * (newstate-oldstate))"
 
-function EdiffIsingExpr(stype::Type{ST}) where {ST <: SType}
+function ΔEIsingClampExpr(stype::Type{ST}) where {ST <: SType}
     clamp = getSParam(stype, :Clamp)
 
-    expr = "efac*(newstate-oldstate) $(clamp*clampexpr)"
+    expr = "dE*(newstate-oldstate) $(clamp*clampexpr)"
     return Meta.parse(expr)
 end
 
-export EdiffIsingExpr
+export ΔEIsingClampExpr
 
 
-@inline @generated function EdiffIsing(g::IsingGraph{T}, stype::SType, idx, efac, oldstate, newstate)::Float32 where T
-    return EdiffIsingExpr(stype)
+@inline @generated function ΔEIsingClamp(g::IsingGraph{T}, dE, oldstate, newstate, stype::SType,)::Float32 where T
+    return ΔEIsingClampExpr(stype)
 end
-export EdiffIsing
+export ΔEIsingClamp
 

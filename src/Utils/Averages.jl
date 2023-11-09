@@ -1,15 +1,25 @@
+"""
+Struct to gather averages of arbitrary functions and gauge convergence
+"""
 mutable struct AvgData{Func<:Function}
     const data::Vector{Float64}
     const avgs::Vector{Float64}
     const windowavgs::Vector{Float64}
     const func::Func
+    lastsum::Float64
     windowsize::Int
     convergence::Float64
     converged::Bool
     convergence_step::Int
 end
-
-function AvgData(func::Function = identity; windowsize::Int = 4, storagesize = 128, convergence = 1e-8) 
+export AvgData
+"""
+Function is the function to average over
+windowsize is the size of the window to gauge convergence
+Storagesize is the initial storage size for faster pushing
+convergence is the convergence threshold of the window average 
+"""
+function AvgData(func::Function = identity; windowsize::Int = 4, storagesize = 128, convergence = 1e-5) 
     data = Float64[]
     avgs = Float64[]
     sizehint!(data, storagesize)
@@ -17,7 +27,7 @@ function AvgData(func::Function = identity; windowsize::Int = 4, storagesize = 1
     windowavgs = Float64[]
     sizehint!(windowavgs, storagesize - windowsize + 1)
 
-    return AvgData(data, avgs, windowavgs, func, windowsize, convergence, false, 0)
+    return AvgData(data, avgs, windowavgs, func, 0, windowsize, convergence, false, 0)
 end
 
 converged(ad::AvgData) = ad.converged
@@ -36,7 +46,8 @@ export plot_conv
 plot_avgs(ad) = pl.plot(ad.avgs, xlabel = "Step", ylabel = "Average", title = "Averages")
 export plot_avgs
 
-avg(vec) = sum(vec)/length(vec)
+# avg(vec) = sum(vec)/length(vec)
+avg(ad::AvgData) = ad.lastsum/length(ad.data)
 
 
 function window_rmsd(ad::AvgData)
@@ -57,7 +68,8 @@ export window_rmsd
 
 Base.push!(ad::AvgData, x) = begin
     push!(ad.data, ad.func(x))
-    push!(ad.avgs, avg(ad.data))
+    ad.lastsum += ad.data[end]
+    push!(ad.avgs, avg(ad))
     w_rmsd = window_rmsd(ad)
     if !isnothing(w_rmsd)
         push!(ad.windowavgs, w_rmsd)

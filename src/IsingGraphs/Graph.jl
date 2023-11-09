@@ -6,7 +6,7 @@ struct MixedState <: StateType end
 
 getIntType(::Float64) = Int64
 getFloatType(::Float64) = Float64
-isarchitecturetype(::Any) = @show false
+isarchitecturetype(::Any) = false
 isarchitecturetype(t::Tuple{A,B,C}) where {A,B,C} = (A<:Integer && B<:Integer && t[3]<:StateType)
 # Ising Graph Representation and functions
 # TODO: REMOVE SUPPORT FOR UNWEIGHTED GRAPHS
@@ -34,12 +34,14 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
 
 
     # Default Initializer for IsingGraph
-    function IsingGraph(sim = nothing, length = nothing, width=nothing; periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
+    function IsingGraph(sim = nothing, glength = nothing, gwidth=nothing; periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
         architecture = searchkey(kwargs, :architecture, fallback = nothing)
-        @assert (!isnothing(length) && !isnothing(width)) || !isnothing(architecture) "Either give length and width or architecture"
+        @assert (!isnothing(glength) && !isnothing(gwidth)) || !isnothing(architecture) "Either give length and width or architecture"
     
+
+        # Create the architecture
         if isnothing(architecture)
-            architecture = [(length, width, type)]
+            architecture = [(glength, gwidth, type)]
         end
         for idx in eachindex(architecture)
             if !isarchitecturetype(architecture[idx])
@@ -47,17 +49,18 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
             end
         end
 
-        if isnothing(sets)
-            
-        else 
-            sets = convert.(precision, sets)
-            if length(sets) <= length(architecture)
+        # Create the sets for each layer
+        if isnothing(sets) # Just make some sets
+            sets = repeat([convert.(precision,(-1,1))], length(architecture))
+        else # Correct the given sets
+            sets = map(x->convert.(precision, x), sets)
+            if length(sets) < length(architecture)
                 lengthdiff = length(architecture) - length(sets)
                 for _ in 1:lengthdiff
-                push!(sets, convert(precision,(-1,1)))
+                    push!(sets, convert(precision,(-1,1)))
                 end
             else
-                error("Too many sets given")
+                sets = sets[1:length(architecture)]
             end
         end
 
@@ -83,8 +86,8 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
         internalcouple!(g.layers, g.defects, (layer) -> Int32(0), push = addLayer!, insert = (obj, idx, item) -> addLayer!(obj, item), deleteat = removeLayer!)
 
         g.d = GraphData(precision, g)
-        for arc in architecture
-            _addLayer!(g, arc[1], arc[2]; weights, periodic, type = arc[3], kwargs...)
+        for (arc_idx,arc) in enumerate(architecture)
+            _addLayer!(g, arc[1], arc[2]; weights, periodic, type = arc[3], set = sets[arc_idx], kwargs...)
         end
         return g
     end

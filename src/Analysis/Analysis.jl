@@ -10,7 +10,6 @@ mutable struct AFloat32
 end
 
 # Data structure for gathering averages and gauging convergence
-include("Averages.jl")
 include("Plotting.jl")
 include("CorrelationLength.jl")
 include("Data.jl")

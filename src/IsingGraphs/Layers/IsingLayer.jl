@@ -224,7 +224,6 @@ Resize a layer
 Is this used?
 """
 function Base.resize!(layer::IsingLayer, len, wid)
-    println("This one is called")
     g = graph(layer)
     old_nstates = nStates(layer)
     new_nstates = len*wid
@@ -236,7 +235,6 @@ function Base.resize!(layer::IsingLayer, len, wid)
     _endidx = endidx(layer)
     if extra_states > 0
         insert!(state(g), _endidx+1, rand(len*wid))
-        println("HIER")
         sp_adj(g, insertrowcol(g, _endidx+1:(_endidx+1 + extra_states)))
     else # extra_states < 0
         notidxs = graphidxs(layer)[end+extra_states+1:end]

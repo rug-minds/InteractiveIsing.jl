@@ -19,7 +19,7 @@ The reason this is a seperate function is for debugging
 # const unweighted_expr_sp = "-gstate[conn_idx(gadj,ptr)]"
 const weighted_expr_sp = "-(@conn_s) * @weight"
 
-const unweighted_expr_sp = "-gstate[gadj.rowval[idx]]"
+const unweighted_expr_sp = "-gstate[gadj.rowval[ptr]]"
 # const weighted_expr_sp = "-gstate[gadj.rowval[ptr]] * gadj.nzval[ptr]"
 const mag_expr = "-bfield(g)[idx]"
 const check_empty = Observable{String}("true")
