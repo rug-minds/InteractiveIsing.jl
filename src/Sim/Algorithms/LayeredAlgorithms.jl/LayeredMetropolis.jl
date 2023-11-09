@@ -4,6 +4,7 @@ function get_args(::typeof(layeredMetropolis))
     return (:g, :gstate, :gadj, :gparams, :iterator, :rng, :gstype, :ΔEFunc)
 end
 
+
 """
 Should take in kwargs and return a namedtuple that has all variables the algorithm needs
 """

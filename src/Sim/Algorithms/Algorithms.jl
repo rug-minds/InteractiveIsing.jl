@@ -89,3 +89,12 @@ export getexpression
 sampleState(::Any, oldstate, rng, stateset) = rand(stateset)
 sampleState(::Type{Discrete}, oldstate, rng, stateset) = oldstate == stateset[1] ? stateset[2] : stateset[1]
 sampleState(::Type{Continuous}, oldstate, rng, stateset) = sample_from_stateset(Continuous, rng, stateset)
+
+## Iterator that changes without having to recompile the loop
+struct DynamicalIterator{GT}
+    g::GT
+end
+
+function Base.rand(rng::MersenneTwister, it::DynamicalIterator)
+    return rand(rng, it.g.defects.adjlist)
+end
