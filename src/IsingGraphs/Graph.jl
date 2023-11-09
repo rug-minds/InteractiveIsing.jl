@@ -30,7 +30,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
 
 
     defects::GraphDefects
-    d::GraphData
+    d::GraphData{T}
 
 
     # Default Initializer for IsingGraph
