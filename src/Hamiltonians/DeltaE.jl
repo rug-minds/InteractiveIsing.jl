@@ -40,7 +40,6 @@ function expr_dEIsing(::Any)
     return nothing
 end
 
-
 function expr_dEIsing(stype::Type{<:SType}) 
     weighted = getSParam(stype, :Weighted)
     magfield =  getSParam(stype, :Magfield)

@@ -47,6 +47,7 @@ function mainLoop(g::IsingGraph, process = processes(sim(g))[1], oldkwargs = pai
         kwargs...)
     
     args = prepare(algorithm, g; kwargs...)
+    display(args)
     return mainLoop(process, algorithm, args; kwargs...)
 
 end

@@ -9,6 +9,7 @@ getFloatType(::Float64) = Float64
 isarchitecturetype(::Any) = @show false
 isarchitecturetype(t::Tuple{A,B,C}) where {A,B,C} = (A<:Integer && B<:Integer && t[3]<:StateType)
 # Ising Graph Representation and functions
+# TODO: REMOVE SUPPORT FOR UNWEIGHTED GRAPHS
 mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     # Simulation
     sim::Union{Nothing, IsingSim}
@@ -33,7 +34,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
 
 
     # Default Initializer for IsingGraph
-    function IsingGraph(sim = nothing, length = nothing, width=nothing; periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = false, precision = Float32, kwargs...)
+    function IsingGraph(sim = nothing, length = nothing, width=nothing; periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
         architecture = searchkey(kwargs, :architecture, fallback = nothing)
         @assert (!isnothing(length) && !isnothing(width)) || !isnothing(architecture) "Either give length and width or architecture"
     
