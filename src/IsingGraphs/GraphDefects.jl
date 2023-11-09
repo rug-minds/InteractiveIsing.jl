@@ -108,6 +108,7 @@ function setindex!(gd::GraphDefects, val, idx::Int32)
 end
 setindex!(gd::GraphDefects, val, idx::Int64) = setindex!(gd, val, Int32(idx))
 setindex!(gd::GraphDefects, val, idxs::AbstractRange) = clamprange!(gd, val, collect(idxs))
+setindex!(gd::GraphDefects, val, idxs::AbstractVector) = clamprange!(gd, val, idxs)
 """
 Set a range of spins as defect or not
     val = true -> set as defect

@@ -6,9 +6,9 @@ Set spins either to a value or clamp them
 #Clean this up
 # TODO: Shouldn't always refresh sim if the iterator didn't change
 function setSpins!(g::AbstractIsingGraph{T}, idxs::AbstractArray, brush, clamp = false, refresh = true) where T
-    if T == Int8
-        clamp = brush == 0 ? true : clamp
-    end
+    # if T == Int8
+    #     clamp = brush == 0 ? true : clamp
+    # end
 
     # Set the defects
     clamprange!(g, clamp, idxs)
@@ -23,9 +23,9 @@ end
 setSpins!(g::AbstractIsingGraph, coords::Vector{Tuple{Int16,Int16}}, brush, clamp = false) = setSpins!(g, coordToIdx.(coords, glength(g)), brush, clamp)
 
 function setSpins!(g::AbstractIsingGraph{T}, idx::Integer, brush, clamp = false, refresh = false) where T
-    if T == Int8
-        clamp = brush == 0 ? true : clamp
-    end
+    # if T == Int8
+    #     clamp = brush == 0 ? true : clamp
+    # end
 
     setdefect(g, clamp, idx)
 

@@ -201,10 +201,10 @@ function connectLayersFull(layer1, layer2)
 
     return rows, cols, weights
 end
-export connectLayersFullSP
+export connectLayersFull
 
 function connectLayersFull!(layer1, layer2)
-    set_sp_adj!(graph(layer1), connectLayersFullSP(layer1, layer2))
+    set_sp_adj!(graph(layer1), connectLayersFull(layer1, layer2))
     connections(layer1)[internal_idx(layer1) => internal_idx(layer2)] = :All
     connections(layer2)[internal_idx(layer2) => internal_idx(layer1)] = :All
 end
