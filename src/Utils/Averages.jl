@@ -32,6 +32,18 @@ function AvgData(func::Function = identity; windowsize::Int = 4, storagesize = 1
     return AvgData(data, avgs, windowavgs, func, 0, windowsize, convergence, false, 0)
 end
 
+function reset!(ad::AvgData, sz = 128)
+    ad.data = Float64[]
+    ad.avgs = Float64[]
+    sizehint!(ad.data, sz)
+    sizehint!(ad.avgs, sz)
+    ad.windowavgs = Float64[]
+    ad.lastsum = 0
+    ad.converged = false
+    ad.convergence_step = 0
+    return ad
+end
+
 converged(ad::AvgData) = ad.converged
 export converged
 Base.isempty(ad::AvgData) = isempty(ad.data)
