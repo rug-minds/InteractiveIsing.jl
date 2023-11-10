@@ -21,7 +21,7 @@ convergence is the convergence threshold of the window average
 
 AvgData(func::Function = identity; windowsize::Int = 4, storagesize = 128, convergence = 1e-5) 
 """
-function AvgData(T, func::Function = identity; windowsize::Int = 4, storagesize = 128, convergence = 1e-5) where T 
+function AvgData(T, func::Function = identity; windowsize::Int = 4, storagesize = 128, convergence = 1e-5)
     data = T[]
     avgs = T[]
     sizehint!(data, storagesize)
