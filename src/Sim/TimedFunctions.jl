@@ -20,7 +20,7 @@ function updateImg(sim)
 end
 
 # Track number of updates per frame
-let avgWindow = 60, updateWindow = CircularBuffer{Int64}(avgWindow) , frames = 0
+let avgWindow = 60, updateWindow = CircularBuffer{Int64}(avgWindow) , frames = 1
     global function updatesPerFrame(sim::IsingSim, statelength = length(aliveList(gs(sim)[1])))
         _updates = sum(updates.(processes(sim)))
         updates.(processes(sim), 0)
@@ -30,9 +30,10 @@ let avgWindow = 60, updateWindow = CircularBuffer{Int64}(avgWindow) , frames = 0
             sm_avgw = sum(updateWindow)/avgWindow
             upf(sim)[] = Float32(sm_avgw)
             upfps(sim)[] = Float32(sm_avgw/statelength)
-            frames = 0
+            frames = 1
+        else
+            frames += 1
         end
-        frames += 1
     end
 end
 export updatesPerFrame

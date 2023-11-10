@@ -21,7 +21,7 @@ convergence is the convergence threshold of the window average
 
 AvgData(func::Function = identity; windowsize::Int = 4, storagesize = 128, convergence = 1e-5) 
 """
-function AvgData(T, func::Function = identity; windowsize::Int = 4, storagesize = 128, convergence = 1e-5)
+function AvgData(T, func = identity; windowsize::Int = 4, storagesize = 128, convergence = 1e-5)
     data = T[]
     avgs = T[]
     sizehint!(data, storagesize)
@@ -29,7 +29,7 @@ function AvgData(T, func::Function = identity; windowsize::Int = 4, storagesize 
     windowavgs = T[]
     sizehint!(windowavgs, storagesize - windowsize + 1)
 
-    return AvgData(data, avgs, windowavgs, func, T(0), windowsize, T(convergence), false, 0)
+    return AvgData{T, typeof(func)}(data, avgs, windowavgs, func, T(0), windowsize, T(convergence), false, 0)
 end
 
 function reset!(ad::AvgData{T}, sz = 128) where T
@@ -62,7 +62,7 @@ export plot_avgs
 
 # avg(vec) = sum(vec)/length(vec)
 avg(ad::AvgData) = ad.lastsum/length(ad.data)
-
+avg(sub::SubArray) = sum(sub)/length(sub)
 
 function window_rmsd(ad::AvgData)
     avgs = ad.avgs
@@ -80,7 +80,7 @@ function window_rmsd(ad::AvgData)
 end
 export window_rmsd
 
-Base.push!(ad::AvgData, x) = begin
+function Base.push!(ad::AvgData{T}, x) where {T}
     push!(ad.data, ad.func(x))
     ad.lastsum += ad.data[end]
     push!(ad.avgs, avg(ad))

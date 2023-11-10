@@ -551,7 +551,7 @@ function getMBytes(x)
        return sizeof(x)/1000^2;
     else
       for fieldName in fieldNames
-         total += getBytes(getfield(x,fieldName));
+         total += getMBytes(getfield(x,fieldName));
       end
       return total;
     end

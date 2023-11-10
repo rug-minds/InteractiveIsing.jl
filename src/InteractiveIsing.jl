@@ -87,6 +87,7 @@ include("Interaction/Interaction.jl")
 include("Analysis/Analysis.jl")
 include("Makie/Makie.jl")
 include("GPlotting.jl")
+include("Barebones.jl")
 
 # include("Learning/IsingLearning.jl")
 
