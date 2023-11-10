@@ -29,7 +29,7 @@ function AvgData(T, func::Function = identity; windowsize::Int = 4, storagesize 
     windowavgs = T[]
     sizehint!(windowavgs, storagesize - windowsize + 1)
 
-    return AvgData(data, avgs, windowavgs, func, 0, windowsize, convergence, false, 0)
+    return AvgData(data, avgs, windowavgs, func, T(0), windowsize, T(convergence), false, 0)
 end
 
 function reset!(ad::AvgData{T}, sz = 128) where T
