@@ -1,14 +1,14 @@
 """
 Struct to gather averages of arbitrary functions and gauge convergence
 """
-mutable struct AvgData{Func<:Function}
-    const data::Vector{Float64}
-    const avgs::Vector{Float64}
-    const windowavgs::Vector{Float64}
+mutable struct AvgData{T, Func<:Function}
+    const data::Vector{T}
+    const avgs::Vector{T}
+    const windowavgs::Vector{T}
     const func::Func
-    lastsum::Float64
+    lastsum::T
     windowsize::Int
-    convergence::Float64
+    convergence::T
     converged::Bool
     convergence_step::Int
 end
@@ -21,23 +21,23 @@ convergence is the convergence threshold of the window average
 
 AvgData(func::Function = identity; windowsize::Int = 4, storagesize = 128, convergence = 1e-5) 
 """
-function AvgData(func::Function = identity; windowsize::Int = 4, storagesize = 128, convergence = 1e-5) 
-    data = Float64[]
-    avgs = Float64[]
+function AvgData(T, func::Function = identity; windowsize::Int = 4, storagesize = 128, convergence = 1e-5) where T 
+    data = T[]
+    avgs = T[]
     sizehint!(data, storagesize)
     sizehint!(avgs, storagesize)
-    windowavgs = Float64[]
+    windowavgs = T[]
     sizehint!(windowavgs, storagesize - windowsize + 1)
 
     return AvgData(data, avgs, windowavgs, func, 0, windowsize, convergence, false, 0)
 end
 
-function reset!(ad::AvgData, sz = 128)
-    ad.data = Float64[]
-    ad.avgs = Float64[]
+function reset!(ad::AvgData{T}, sz = 128) where T
+    ad.data = T[]
+    ad.avgs = T[]
     sizehint!(ad.data, sz)
     sizehint!(ad.avgs, sz)
-    ad.windowavgs = Float64[]
+    ad.windowavgs = T[]
     ad.lastsum = 0
     ad.converged = false
     ad.convergence_step = 0
