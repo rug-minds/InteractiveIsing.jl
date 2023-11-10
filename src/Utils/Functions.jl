@@ -543,3 +543,17 @@ macro justtry(ex)
         end
     end
 end
+
+function getMBytes(x)
+    total = 0;
+    fieldNames = fieldnames(typeof(x));
+    if isempty(fieldNames)
+       return sizeof(x)/1000^2;
+    else
+      for fieldName in fieldNames
+         total += getBytes(getfield(x,fieldName));
+      end
+      return total;
+    end
+end
+export getMBytes

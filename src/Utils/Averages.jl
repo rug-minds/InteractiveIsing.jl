@@ -18,6 +18,8 @@ Function is the function to average over
 windowsize is the size of the window to gauge convergence
 Storagesize is the initial storage size for faster pushing
 convergence is the convergence threshold of the window average 
+
+AvgData(func::Function = identity; windowsize::Int = 4, storagesize = 128, convergence = 1e-5) 
 """
 function AvgData(func::Function = identity; windowsize::Int = 4, storagesize = 128, convergence = 1e-5) 
     data = Float64[]

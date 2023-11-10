@@ -41,18 +41,6 @@ end
 #Initialize GraphDefects
 GraphDefects(g) = GraphDefects(g, false, Bool[], Int32[], Int32[], Int32[])
 
-"""
-Get a vector of the number defects in each layer
-"""
-# function layerdefects(gd::GraphDefects)
-#     # Init empty layer vector
-#     vec = Vector{LayerDefects}(undef, length(layers(g(gd))) )
-#     for (idx, layer) in enumerate(unshuffled( layers(g(gd))) )
-#         vec[idx] = defects(layer)
-#     end
-
-#     return vec
-# end
 
 # Zip elements from d_idxs into zipList and remove them from removeList using the set and get functions
 # Should be a fast way to add elements to an ordered list and remove them from another
@@ -107,23 +95,21 @@ function setindex!(gd::GraphDefects, val, idx::Int32)
 
 end
 setindex!(gd::GraphDefects, val, idx::Int64) = setindex!(gd, val, Int32(idx))
-setindex!(gd::GraphDefects, val, idxs::AbstractRange) = clamprange!(gd, val, collect(idxs))
-setindex!(gd::GraphDefects, val, idxs::AbstractVector) = clamprange!(gd, val, idxs)
+setindex!(gd::GraphDefects, val, idxs::AbstractRange) = setrange!(gd, val, collect(idxs))
+setindex!(gd::GraphDefects, val, idxs::AbstractVector) = setrange!(gd, val, idxs)
 """
 Set a range of spins as defect or not
     val = true -> set as defect
     val = false -> set as alive
 This function is faster than setting each spin individually
 """
-function clamprange!(gd::GraphDefects, val, idxs::Vector{Int32})::Int32
+function setrange!(gd::GraphDefects, val, idxs::AbstractVector)
     if !val
         return setaliverange!(gd, idxs)
     else
         return setdefectrange!(gd, idxs)
     end
 end
-
-clamprange!(gd::GraphDefects, val, idxs::Vector{Int64}) = clamprange!(gd, val, Int32.(idxs))
 
 function setlayerdefects(gd, graph, idxs, defect)
     idxs_startidx = 1

@@ -354,7 +354,7 @@ export aliveidxs
     export ndefect, nalive
     @inline hasDefects(layer::AbstractIsingLayer) = ndefect(layer) > 0
     @inline setdefect(layer::AbstractIsingLayer, val, idx) = defects(graph(layer))[idxLToG(idx, layer)] = val
-    @inline clamprange!(layer::AbstractIsingLayer, val, idxs) = clamprange!(defects(graph(layer)), val, idxLToG.(idxs, Ref(layer)))
+    @inline clamprange!(layer::AbstractIsingLayer, val, idxs) = setrange!(defects(graph(layer)), val, idxLToG.(idxs, Ref(layer)))
 ###
 
 ### RELOCATING

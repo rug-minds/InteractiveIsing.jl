@@ -155,7 +155,8 @@ Base.show(io::IO, graphtype::Type{IsingGraph}) = print(io, "IsingGraph")
 coords(g::IsingGraph) = VSI(layers(g), :coords)
 export coords
 
-@inline setrange!(g::AbstractIsingGraph, clamp, idxs) = setrange!(defects(g), clamp, idxs)
+@inline clamprange!(g::IsingGraph, clamp, idxs) = setrange!(defects(g), clamp, idxs)
+export clamprange!
 
 @setterGetter IsingGraph sp_adj
 @inline nStates(g) = length(state(g))
