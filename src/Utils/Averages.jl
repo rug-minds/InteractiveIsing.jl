@@ -33,11 +33,12 @@ function AvgData(T, func = identity; windowsize::Int = 4, storagesize = 128, con
 end
 
 function reset!(ad::AvgData{T}, sz = 128) where T
-    ad.data = T[]
-    ad.avgs = T[]
+    deleteat!(ad.data, 1:length(ad.data))
+    deleteat!(ad.avgs, 1:length(ad.avgs))
+    deleteat!(ad.windowavgs, 1:length(ad.windowavgs))
+
     sizehint!(ad.data, sz)
     sizehint!(ad.avgs, sz)
-    ad.windowavgs = T[]
     ad.lastsum = 0
     ad.converged = false
     ad.convergence_step = 0
