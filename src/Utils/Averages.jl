@@ -62,8 +62,8 @@ plot_avgs(ad) = pl.plot(ad.avgs, xlabel = "Step", ylabel = "Average", title = "A
 export plot_avgs
 
 # avg(vec) = sum(vec)/length(vec)
-avg(ad::AvgData) = ad.lastsum/length(ad.data)
-avg(sub::SubArray) = sum(sub)/length(sub)
+avg(ad::AvgData) = length(ad.data) != 0 ? ad.lastsum/length(ad.data) : 0
+avg(sub::SubArray) = length(sub) != 0 ? sum(sub)/length(sub) : 0
 
 function window_rmsd(ad::AvgData)
     avgs = ad.avgs
