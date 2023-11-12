@@ -97,3 +97,4 @@ function Base.push!(ad::AvgData{T}, x) where {T}
     end
     return ad
 end
+
