@@ -96,5 +96,5 @@ struct DynamicalIterator{GT}
 end
 
 function Base.rand(rng::MersenneTwister, it::DynamicalIterator)
-    return rand(rng, it.g.defects.adjlist)
+    return rand(rng, it.g.defects.aliveList)
 end
