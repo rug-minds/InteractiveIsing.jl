@@ -3,10 +3,15 @@
 export ml, midpanel, toppanel, bottompanel
 
 function baseFig(g; disp = true)
-    ml = mlref[]
+    ml = simulation[].ml[]
     if haskey(ml, "basefig_active") && ml["basefig_active"]
         cleanup(ml, baseFig)
     end
+
+    timedFunctions["upf"] = updatesPerFrame
+    timedFunctions["magnetization"] = magnetization
+    sim = simulation[]
+    sim.timers["makie"] = PTimer((timer) -> timerFuncs(sim) ,0., interval = 1/60)
 
 
     ml["basefig_active"] = true
@@ -42,6 +47,15 @@ function cleanup(ml, ::typeof(baseFig))
     if !isnothing(currentview)
         cleanup(ml, currentview)
     end
+
+    try 
+        close(simulation[].timers["makie"])
+        delete!(simulation[].timers, "makie")
+    catch
+    end
+    
+    delete!(timedFunctions, "upf")
+    delete!(timedFunctions, "magnetization")
 
     cleanup(ml, topPanel)
     cleanup(ml, midPanel)

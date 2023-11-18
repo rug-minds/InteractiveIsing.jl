@@ -55,6 +55,7 @@ include("Utils/Utils.jl")
 @ForwardDeclare IsingGraph "IsingGraphs"
 @ForwardDeclare IsingLayer "IsingGraphs/Layers"
 @ForwardDeclare IsingSim "Sim"
+@ForwardDeclare SimLayout "Makie"
 
 abstract type StateType end
 struct Discrete <: StateType end

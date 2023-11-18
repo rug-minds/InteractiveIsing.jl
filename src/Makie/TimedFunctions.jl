@@ -1,5 +1,7 @@
-struct TimedFunctions <: Function
-    calls::Vector{Function}
-end
+const timedFunctions = Dict{String, Function}()
 
-const timedFunctions = TimedFunctions(Vector{Function}())
+function timerFuncs(sim)
+    for func in values(timedFunctions)
+        func(sim)
+    end
+end

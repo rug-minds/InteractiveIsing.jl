@@ -43,8 +43,8 @@ end
 
 function simulate(filename::String; start = true, register_sim = true, kwargs...)
     createsimfunc = () -> IsingSim(filename; kwargs...)
-    _assign_or_createsim(createsimfunc, register_sim)
-    __simulate(_sim.gs[1]; start, gui, kwargs...)
+    restarted = _assign_or_createsim(createsimfunc, register_sim)
+    __simulate(_sim.gs[1]; start = restarted && start, gui = restarted && get(kwargs, :gui, true), kwargs...)
     return g
 end
 
@@ -61,12 +61,12 @@ function _assign_or_createsim(create_sim_func, noinput = true, register_sim = tr
             s = read(stdin, Char)
             println("Character entered: $s")
             if s == 'y'
-                reset!(simulation)
                 closeinterface()
+                reset!(simulation)
                 simulation[] = create_sim_func()
-                return
-            elseif s == 'n' 
-                return create_sim_func()
+                return true
+            elseif s == 'n'
+                return false
             else
                 println("Please enter y or n")
             end
@@ -77,9 +77,10 @@ end
 getgraph() = gs(simulation[])[1]
 
 function _simulate(g; start = true, gui = true, kwargs...)
-    run = searchkey(kwargs, :run; fallback = true)
     if start
-        createProcess(g; run)
+
+        quit.(processes(g))
+        createProcess(g; run = get(kwargs, :run, true))
     end
     if gui
         interface(g; kwargs...)

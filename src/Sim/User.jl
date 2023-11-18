@@ -21,11 +21,11 @@ function annealing(sim, Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = 
     reInit && reset!(sim)
 
     # Set temp and initial wait
-    Temp(sim)[] = Ti
+    temp(sim)[] = Ti
     sleep(initWait)
     
     for temp in T_it
-        Temp(sim)[] = temp
+        temp(sim)[] = temp
         sleep(stepWait)
         if saveImg
             save(File{format"PNG"}("Images/Annealing/Ising T$temp.PNG"), img[])

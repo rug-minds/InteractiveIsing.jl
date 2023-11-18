@@ -49,6 +49,8 @@ function midPanel(ml,g)
 
                 push!(obs_funcs, on(brushR(simulation)) do x
                     sizefield.placeholder[] = string(x)
+                    #Set circle
+                    circ(simulation, getOrdCirc(brushR(simulation)[]))
                 end)
 
             # SHOW BFIELD
@@ -101,7 +103,9 @@ function midPanel(ml,g)
 
             Box(rightpanel[1,1], width = 100, height = 50, visible = false)
             tempslider = mp["tempslider"] = tempslider = Slider(rightpanel[2,1], range = 0.0:0.02:20, value = 1.0, horizontal = false)
-            tempslider.value[] = temp(g)[]
+            
+            set_close_to!(tempslider, temp(g)[])
+            simulation.obs.temp = tempslider.value
             mp["temptext"] = lift(x -> "T: $x", tempslider.value)
 
             mp["templabel"] = Label(rightpanel[1,1], mp["temptext"], fontsize = 18)

@@ -1,3 +1,5 @@
+
+export overlayNoise!, resetstate!, activateone!
 # Setting elements
 
 """
@@ -82,6 +84,30 @@ resetstate!(g::IsingGraph) = state(g) .= initRandomState(g)
 resetstate!(l::IsingLayer) = state(l)[:] .= rand(l, length(state(l)))
 #TODO: This is a shitty implementation
 resetstate!(layers::IsingLayer...) = for l in layers; resetstate!(l); end
-activateone!(l::IsingLayer, idx, val = 1, allval = 0) = begin state(l) .= allval; state(l)[idx] = val end
-export overlayNoise!, resetstate!, activateone!
 
+"""
+For a layer, set all to zero and 1 to 1
+"""
+activateone!(l::IsingLayer, idx, val = 1, allval = 0) = begin state(l) .= allval; state(l)[idx] = val end
+"""
+Set the temperature and notify the simulation
+"""
+function settemp(g,val)
+    temp(g, val)
+    if !isnothing(sim(g))
+        temp(sim(g), val)
+    end
+end
+
+"""
+Linear annealing of a graph
+"""
+function anneal(g, total_time, Trange, steps)
+    prev_time = time()
+    time_per_step = total_time/steps
+    @async for T in LinRange(Trange[1], Trange[2], steps)
+        temp(g, T)
+        async_sleepy(time_per_step, prev_time)
+        prev_time = time()
+    end 
+end

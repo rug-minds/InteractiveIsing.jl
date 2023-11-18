@@ -98,3 +98,61 @@ function Base.push!(ad::AvgData{T}, x) where {T}
     return ad
 end
 
+
+mutable struct FunctionAverage{T,F}
+    data::Vector{T}
+    f::F
+    sum::T
+end
+
+function FunctionAverage(T, f::Function)
+    return FunctionAverage{T, typeof(f)}(T[], f, T(0))
+end
+
+function Base.push!(fa::FunctionAverage, x)
+    datum = fa.f(x)
+    push!(fa.data, datum)
+    fa.sum += datum
+    return fa
+end
+
+Base.length(fa::FunctionAverage) = length(fa.data)
+Base.size(fa::FunctionAverage) = size(fa.data)
+
+function reset!(fa::FunctionAverage)
+    deleteat!(fa.data, 1:length(fa.data))
+    fa.sum = 0
+    return fa
+end
+
+avg(fa::FunctionAverage) = fa.sum/length(fa.data)
+
+mutable struct STDev{T}
+    d::Vector{T}
+    sum::T
+    sumsq::T
+end
+
+function STDev(T)
+    return STDev{T}(T[], T(0), T(0))
+end
+export STDev
+
+Base.push!(sd::STDev, x) = begin
+    push!(sd.d, x)
+    sd.sum += x
+    sd.sumsq += x^2
+    return sd
+end
+
+Base.length(sd::STDev) = length(sd.d)
+Base.size(sd::STDev) = size(sd.d)
+Base.get(sd::STDev) = sd.sumsq/length(sd.d) - (sd.sum/length(sd.d))^2
+# getsd(sd::STDev) = sd.sumsq/length(sd.d) - (sd.sum/length(sd.d))^2
+Base.iterate(sd::STDev, state = 1) = iterate(sd.d, state)
+reset!(sd::STDev) = begin
+    deleteat!(sd.d, 1:length(sd.d))
+    sd.sum = 0
+    sd.sumsq = 0
+    return sd
+end

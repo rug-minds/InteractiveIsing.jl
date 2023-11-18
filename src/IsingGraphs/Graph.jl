@@ -34,7 +34,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
 
 
     # Default Initializer for IsingGraph
-    function IsingGraph(sim = nothing, glength = nothing, gwidth=nothing; periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
+    function IsingGraph(glength = nothing, gwidth=nothing; sim = nothing,  periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
         architecture = searchkey(kwargs, :architecture, fallback = nothing)
         @assert (!isnothing(glength) && !isnothing(gwidth)) || !isnothing(architecture) "Either give length and width or architecture"
     
@@ -71,7 +71,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
             #Temp            
             1f0,
             # Default algorithm
-            updateMetropolis,
+            layeredMetropolis,
             SType(:Weighted => weighted),
             #Layers
             ShuffleVec{IsingLayer}(relocate = relocate!),
@@ -199,6 +199,11 @@ layeridxs(g::IsingGraph) = UnitRange{Int32}[graphidxs(unshuffled(layers(g))[i]) 
 @inline Base.lastindex(g::IsingGraph) = length(g)
 Base.view(g::IsingGraph, idx) = view(g.layers, idx)
 
+function Base.convert(::Type{<:IsingLayer}, g::IsingGraph)
+    @assert length(g.layers) == 1 "Graph has more than one layer, ambiguous"
+    return g.layers[1]
+end 
+
 # Base.deleteat!(layervec::ShuffleVec{IsingLayer}, lidx::Integer) = deleteat!(layervec, lidx) do layer, newidx
 #     internal_idx(layer, newidx)
 #     start(layer, start(layer) - nstates_layer)
@@ -207,6 +212,9 @@ Base.view(g::IsingGraph, idx) = view(g.layers, idx)
 function processes(g::IsingGraph)
     return processes(sim(g))[map(process -> process.objectref === g, processes(sim(g)))]
 end
+
+processes(::Nothing) = nothing
+
 
 
 #TODO: Give new idx
@@ -231,10 +239,10 @@ end
 
 function reset!(g::IsingGraph)
     state(g) .= initRandomState(g)
-    currentlyWeighted = getSParam(stype(g), :Weighted)
-    stype(g,SType(:Weighted => currentlyWeighted))
-    reset!(defects(g))
-    reset!(d(g))
+    # currentlyWeighted = getSParam(stype(g), :Weighted)
+    # stype(g,SType(:Weighted => currentlyWeighted))
+    # reset!(defects(g))
+    # reset!(d(g))
     closetimers(g)
 end
  

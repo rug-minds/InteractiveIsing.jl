@@ -414,6 +414,7 @@ Go from graph idx to idx of layer
 @inline function idxGToL(idx::Integer, layer::IsingLayer)
     return Int32(idx + 1 - start(layer))
 end
+export idxLToG, idxGToL
 
 
 # Set the SType

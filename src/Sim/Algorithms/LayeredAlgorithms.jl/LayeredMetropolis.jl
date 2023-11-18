@@ -45,7 +45,7 @@ end
     ΔE = ΔEFunc(g, oldstate, newstate, gstate, gadj, idx, gstype, StateT)
     efac = exp(-β*ΔE)
     randnum = rand(rng, Float32)
-    if (ΔE < zero(T) || randnum < efac)
+    if (ΔE <= zero(T) || randnum < efac)
         @inbounds gstate[idx] = newstate 
     end
     return nothing

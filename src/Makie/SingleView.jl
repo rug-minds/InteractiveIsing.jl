@@ -1,6 +1,9 @@
 export singleView
 max_r_slider(simulation, slider) = slider.range[] = 1:(floor(Int64,min(size(currentLayer(simulation))...)/2))
-sim_max_r(simulation) = (floor(Int64,min(size(currentLayer(simulation))...)/2))
+function sim_max_r(simulation)
+    maxsize = (floor(Int64,min(size(currentLayer(simulation))...)/2))
+    return maxsize == 0 ? 1 : maxsize
+end
 
 # Maybe I can just make makie get the latest image always?
 function getSingleViewImg(g, ml)
@@ -12,6 +15,17 @@ function getSingleViewImg(g, ml)
         return state(currentLayer(simulation))
     end
 end
+
+function flip_y_axis()
+    @set_preferences!("makie_y_flip" => !(@load_preference("makie_y_flip", default = false)))
+    try
+        ml = mlref[]
+        midpanel(ml)["axis"].yreversed[] = @load_preference("makie_y_flip", default = false)
+    catch
+    end
+end
+
+export flip_y_axis
 """
 Create a view of the graph that shows a single layer at the time
 cycling through layers is possible with the < and > buttons
@@ -66,11 +80,14 @@ function singleView(ml, g)
 
     # ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), ypanlock = true, xpanlock = true, yzoomlock = true, xzoomlock = true)
     ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
+    # TODO: Set colorrange based on the type of layer
     im = image!(ax, img_ob, colormap = :thermal, fxaa = false, interpolate = false)
+    im.colorrange[] = (-1,1)
 
     # rowsize!(_grid, 1, Relative(1/20))
 
     mp["axis"] = ax
+    ax.yreversed[] = @load_preference("makie_y_flip", default = false)
     mp["image"] = im
     mp["obs"] = img_ob
 
@@ -102,9 +119,10 @@ function singleView(ml, g)
     if haskey(ml, "timedfunctions_timer")
         close(ml["timedfunctions_timer"])
     end
+    timedFunctions["screen"] = (sim) -> notify(img_ob)
     # ml["timedfunctions_timer"] = PTimer((timer) -> (notify(mp["obs"]); timedFunctions(simulation)) ,0., interval = 1/60)
-    ml["timedfunctions_timer"] = PTimer((timer) -> (notify(img_ob); timedFunctions(simulation)) ,0., interval = 1/60)
-    timers(simulation)["makie"] = ml["timedfunctions_timer"]
+    # ml["timedfunctions_timer"] = PTimer((timer) -> (notify(img_ob); timedFunctions(simulation)) ,0., interval = 1/60)
+    # timers(simulation)["makie"] = ml["timedfunctions_timer"]
 
     return
 end
@@ -143,7 +161,8 @@ function cleanup(ml, ::typeof(singleView))
     deleterow!(bp["mid_grid"], bp_midgrid_toprow)
 
     #Timer
-    close(ml["timedfunctions_timer"])
+    # close(ml["timedfunctions_timer"])
+    delete!(timedFunctions, "screen")
 
     delete!(etc(ml), "timedfunctions_timer")
     if !isnothing(simulation)

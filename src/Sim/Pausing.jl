@@ -68,6 +68,11 @@ end
 
 unpause(g::IsingGraph) = restart(g)
 
+pause(::Nothing) = nothing
+quit(::Nothing) = nothing
+unpause(::Nothing) = nothing
+
+
 export quitSim, quit, pause, unpause
 
 """

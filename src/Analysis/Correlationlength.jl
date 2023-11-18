@@ -15,15 +15,35 @@ struct Fourier <: SamplingAlgorithm end
 #= 
 Correlation length functions should collect the correlation of units from  i - i+1 in a bin, starting from 0.
 =#
+s_algo = Fourier 
+function correlationLength(layer, ::Type{Fourier})
+   @inline function bin(dist)
+      floor(Int32, dist)
+   end 
 
-@static if Sys.isapple()
-   using Metal
-   include("CorrelationMetal.jl")
-   s_algo = Mtl
+   avg_sq = (sum(state(layer))/nStates(layer))^2
 
-else
-   #Fallback
-   s_algo = CPU
+   _state = state(layer)
+   ft = fft(_state)
+   ft = abs2.(ft)
+   
+   corrs = real.(ifft(ft))
+   bins = zeros(Float32, floor(Int, maxdist(layer)))
+   counts = zeros(Float32, floor(Int, maxdist(layer)))
+
+   for j in 1:size(corrs,2)
+      for i in 1:size(corrs,2)
+         if i == 1 && j == 1
+            continue
+         end
+         _dist = dist(1,1, i, j, layer)
+         bins[bin(_dist)] += corrs[i,j]
+         counts[bin(_dist)] += 1
+      end
+   end
+
+   correlations = (bins ./ counts)./(nStates(layer)) .- avg_sq
+   return [1:length(correlations);], correlations
 end
 
 
@@ -122,32 +142,3 @@ function correlationLength(layer, ::Type{CPU})
    return [1:maxreach;], bins[1:maxreach]
 end
 
-function correlationLength(layer, ::Type{Fourier})
-   @inline function bin(dist)
-      floor(Int32, dist)
-   end 
-
-   avg_sq = (sum(state(layer))/nStates(layer))^2
-
-   _state = state(layer)
-   ft = fft(_state)
-   ft = abs2.(ft)
-   
-   corrs = real.(ifft(ft))
-   bins = zeros(Float32, floor(Int, maxdist(layer)))
-   counts = zeros(Float32, floor(Int, maxdist(layer)))
-
-   for j in 1:size(corrs,2)
-      for i in 1:size(corrs,2)
-         if i == 1 && j == 1
-            continue
-         end
-         _dist = dist(1,1, i, j, layer)
-         bins[bin(_dist)] += corrs[i,j]
-         counts[bin(_dist)] += 1
-      end
-   end
-
-   correlations = (bins ./ counts)./(nStates(layer)) .- avg_sq
-   return [1:length(correlations);], correlations
-end

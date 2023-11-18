@@ -38,7 +38,7 @@ function tempSweep(
     )
     
     println("Starting temperature sweep")
-    sTemp = Temp(sim)
+    sTemp = temp(sim)
     sM_array = M_array(sim)
     analysisObs = analysisRunning(sim)
     g = gs(sim)[1]

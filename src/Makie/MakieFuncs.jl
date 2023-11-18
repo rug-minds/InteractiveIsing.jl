@@ -8,12 +8,10 @@ function rslider_func(x, sim)
 end
 
 function setLayerSV(idx)
-    ml = mlref[]
+    ml = getml()
     mp = midpanel(ml)
-    # close(ml["timedfunctions_timer"])
-    # wait(ml["timedfunctions_timer"])
+
     sim = simulation[]
-    # setLayerIdx!(sim, idx)
     newR = round(min(size(currentLayer(sim))...) / 10)
 
     setCircR!(sim, newR)
@@ -26,14 +24,12 @@ function setLayerSV(idx)
     img_ob = mp["sv_img_ob"]
     mp["image"] = image!(mp["axis"], img_ob, colormap = :thermal, fxaa = false, interpolate = false)
 
-    # callback(ml["timedfunctions_timer"]) do timer; notify(img_ob); timedFunctions(sim, currentLayer(sim)) end
-    start(ml["timedfunctions_timer"])
     reset_limits!(mp["axis"])
 end
 
 # Drawing on the axis
 function MDrawCircle(ax, buttons, sim)
-    ml = mlref[]
+    ml = getml()
     if ispressed(ax.scene, Mouse.left)
         pos = mouseposition(ax.scene)
         drawCircle(currentLayer(sim), pos[1], pos[2], brush(sim)[]; clamp = midpanel(ml)["clamptoggle"].active[])
@@ -42,7 +38,7 @@ function MDrawCircle(ax, buttons, sim)
 end
 
 function MDrawCircle2(ax, sim)
-    ml = mlref[]
+    ml = getml()
     pos = mouseposition(ax.scene)
     @async drawCircle(currentLayer(sim), pos[1], pos[2], brush(sim)[]; clamp = midpanel(ml)["clamptoggle"].active[])
     return

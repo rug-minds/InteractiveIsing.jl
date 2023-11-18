@@ -195,10 +195,13 @@ Capitalization and naming has to be done like the above
 
     Also defines the same methods with an extra argument which are setters
 """
-macro forward(Outer, Inner, fieldname = lowercase(string(nameof(eval(Inner)))))
+macro forward(Outer, Inner, fieldname = lowercase(string(nameof(eval(Inner)))), deleted...)
     funcs = quote end
     fieldname = string(fieldname)
     for name in fieldnames(eval(Inner))
+        if (name ∈ deleted)
+            continue
+        end
         outername = string(nameof(eval(Outer)))
         outervarname = lowercase(string(nameof(eval(Outer))))
 
@@ -557,3 +560,34 @@ function getMBytes(x)
     end
 end
 export getMBytes
+
+function printnz(v)
+    for (val_idx, val) in enumerate(v)
+        if val != 0
+            println("[$val_idx] => $val")
+        end
+    end
+end
+export printnz
+
+"""
+Sleep with lower minimum sleeptime
+"""
+function sleepy(sleeptime, previous_time = time())
+    while time() - previous_time < sleeptime
+    end
+end
+
+"""
+Naive async sleep with low sleeptime
+"""
+function async_sleepy(sleeptime, previous_time = time())
+    while time() - previous_time < sleeptime
+        yield()
+    end
+end
+
+"""
+Given a range and a number, get the index of that item in the range, rounded down
+"""
+rangeidx(r,x) = round(Int,div(x - first(r), step(r))) + 1

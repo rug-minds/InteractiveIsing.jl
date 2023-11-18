@@ -32,6 +32,8 @@ mutable struct IsingSim
     # Observables
     obs::Obs
 
+    ml::UnRef{SimLayout}
+
 
     #= Initializer =#
     function IsingSim(
@@ -121,6 +123,7 @@ end
 function destructor(sim::IsingSim)
     quit.(sim.processes)
     close.(values(timers(sim)))
+    empty!(timedFunctions)
     destructor.(gs(sim))
     return nothing
 end
@@ -132,15 +135,17 @@ function initSim!(sim, g, len, wid, initbrushR, initTemp)
     nlayers(sim)[] = length(layers(g))
     g.sim = sim
     # Temperature Observable
-    Temp(sim)[] = temp(g)
+    temp(sim)[] = temp(g)
 
-    on(Temp(sim), weak = true) do val
+    on(temp(sim), weak = true) do val
         temp(g, val)
     end
 
     on(brushR(sim), weak = true) do val
         circ(sim, getOrdCirc(val))
     end
+
+    sim.ml = UnRef(SimLayout(Figure()))
 
     # finalizer(destructor, sim)
 end
@@ -169,29 +174,17 @@ function (sim::IsingSim)(start = true; async = true)
     return gs(sim)[1];
 end
 
-@forward IsingSim Obs
+@forward IsingSim Obs obs temp
 @forward IsingSim IsingParams params
 @setterGetter IsingSim img
-
-# @inline image(sim::IsingSim) = sim.img
-# export image
-
 getindex(sim::IsingSim, idx) = gs(sim)[idx]
+temp(sim::IsingSim, val) = sim.obs.temp[] = val
+temp(sim::IsingSim) = sim.obs.temp
 
-#get n-th layer, starting the counting from the first graph
-# function layer(sim, layeridx)
-#     graphindex = 1
-#     if layeridx > length(layers(sim[graphindex]))
-#         layeridx -= length(layers(sim[graphindex]))
-#         graphindex += 1
+starttimers(sim::IsingSim) = start.(values(timers(sim)))
+closetimers(sim::IsingSim) = close.(values(timers(sim)))
+export starttimers, closetimers
 
-#         if layeridx > length(layers(sim[graphindex]))
-#             error("Layer index out of bounds")
-#         end
-#     else
-#         return sim[graphindex][layeridx]
-#     end
-# end
 
 function layer(sim, layeridx)
     g = gs(sim)[1]
@@ -206,9 +199,9 @@ export graph
 
 function newGraph!(sim, len, wid; periodic = nothing, continuous = false, weighted = true, weights = nothing)
     g = IsingGraph(
-        sim,
         len,
         wid;
+        sim,
         periodic,
         continuous,
         weighted,
@@ -224,8 +217,6 @@ deleteGraph!(sim, graphidx) = deleteGraph!(gs(sim)[graphidx])
 
 function resetGraph!(sim, graphidx)
     cont = continuous(gs(sim)[graphidx]) == ContinuousState() ? true : false
-    
-
 end
 
 export currentLayer

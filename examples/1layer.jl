@@ -1,3 +1,13 @@
 using InteractiveIsing
-g = simulate(28, 28, type = Continuous, set = (-2f0, 1f0))
+g = IsingGraph(500,500, type = Discrete)
+
+simulate(g)
+
+wg = @WG "dr -> dr == 1 ? 1 : 0" NN=1
+wg5 = @WG "dr -> 1" NN = 5
+wg10 = @WG "dr -> 1" NN = 10
+genAdj!(g[1], wg)
+
+
+
 

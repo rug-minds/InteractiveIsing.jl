@@ -48,7 +48,7 @@ export createProcess
 
 registerLoopParams(sim, gidx = 1; rng = MersenneTwister()) = 
     let g = gs(sim)[gidx]
-        LoopParams(g, htype(g), ising_it(g, htype(g)), state(g), adj(g), sim.params, Temp(sim), rng, gidx)
+        LoopParams(g, htype(g), ising_it(g, htype(g)), state(g), adj(g), sim.params, temp(sim), rng, gidx)
     end
 
 export registerLoopParams
