@@ -43,13 +43,13 @@ function singleView(ml, g)
     img_ob[] = getSingleViewImg(g, ml)
     mp["axis_size"] = size(img_ob[])
     obs_funcs = etc(ml)["obs_funcs_singleView"] = ObserverFunction[]
-    coupled_obs = etc(ml)["coupled_obs_singleView"] = Observable[]
+    # coupled_obs = etc(ml)["coupled_obs_singleView"] = Observable[]
     
 
     # LAYER SELECTOR  BUTTONS
     toppanel(ml)["sb"] = selector_buttons = GridLayout(toppanel(ml)["mid_grid"][3,1], tellwidth = false)
-    toppanel(ml)["sll"] = selected_layer_label = liftcouple((x,y) -> "$x/$y", layerIdx(simulation), nlayers(simulation))
-    push!(coupled_obs, selected_layer_label)
+    toppanel(ml)["sll"] = selected_layer_label = lift((x,y) -> "$x/$y", layerIdx(simulation), nlayers(simulation))
+    push!(obs_funcs, selected_layer_label.inputs...)
 
     toppanel(ml)["sb_<"] = selector_buttons[1,1] = leftbutton = Button(f, label = "<", padding = (0,0,0,0), fontsize = 14, width = 40, height = 28)
     toppanel(ml)["sb_label"] = selector_buttons[1,2] = Label(f, selected_layer_label, fontsize = 18)
@@ -109,8 +109,8 @@ function singleView(ml, g)
     # end
 
     # Weightgenerator display
-    wg_label_obs = liftcouple(x-> "$(wg(g[x]))", layerIdx(simulation))
-    push!(coupled_obs, wg_label_obs)
+    wg_label_obs = lift(x-> "$(wg(g[x]))", layerIdx(simulation))
+    push!(obs_funcs, wg_label_obs.inputs...)
     bp = bottompanel(ml)
     bp_midgrid_toprow = 1+bp["mid_grid"].offsets[1]
     bottompanel(ml)["wf_label"] = Label(bp["mid_grid"][bp_midgrid_toprow - 1,1], wg_label_obs, fontsize = 12)
@@ -133,7 +133,7 @@ function cleanup(ml, ::typeof(singleView))
     # Observables
     off.(etc(ml)["obs_funcs_singleView"])
     delete!(ml, "obs_funcs_singleView")
-    decouple!.(ml["coupled_obs_singleView"])
+    # decouple!.(ml["coupled_obs_singleView"])
     delete!(ml, "coupled_obs_singleView")
 
 

@@ -1,9 +1,10 @@
 layer(l::IsingLayer) = l.l
 layer(g::IsingGraph) = convert(IsingLayer, g)
-function createAnalysisWindow(l, panels...)
-    AnalysisWindow(layer(l), panels...)
+function createAnalysisWindow(l, panels...;kwargs...)
+    AnalysisWindow(layer(l), panels...;kwargs...)
 end
 
+    
 
 export createAnalysisWindow
 
@@ -12,9 +13,11 @@ mutable struct AnalysisWindow <: AbstractWindow
     f::Figure
     screen::GLMakie.Screen
     other::Dict{String, Any}
-    shared_funcs::Dict{Function,Tuple}
+    shared_funcs::Dict{String,Tuple{Function,Function,Function, Any}} #update, reset, pause, data
+    obsfuncs::Vector{Any}
+    running::Observable{Bool}
     timer::PTimer
-    AnalysisWindow(a,b,c,d, t = EmptyPTimer()) = new(a,b,c,d,Dict(), t)
+    AnalysisWindow(a,b,c,d, t = EmptyPTimer()) = new(a,b,c,d,Dict(),[], Observable(true), t)
 end
 Base.getindex(aw::AnalysisWindow, i) = aw.other[i]
 Base.setindex!(aw::AnalysisWindow, v, i) = aw.other[i] = v
@@ -23,9 +26,28 @@ Base.get(aw::AnalysisWindow, i, default) = get(aw.other, i, default)
 Base.get!(aw::AnalysisWindow, i, default) = get!(aw.other, i, default)
 Base.delete!(aw::AnalysisWindow, i) = delete!(aw.other, i)
 
+function createfuncs(shared_funcs)
+    if isempty(shared_funcs)
+        return (), (), ()
+    end
+    updates = tuple([x[1] for x in values(shared_funcs)]...)
+    resets = tuple([x[2] for x in values(shared_funcs)]...)
+    pauses = tuple([x[3] for x in values(shared_funcs)]...)
+    return updates, resets, pauses
+end
+
+function broadcast_args(fs, args...)
+    # println("Broadcasting args")
+    # println("Resettting fs: $fs")
+    # println("With args: $args")
+    for f in fs
+        f(args...)
+    end
+end
+
 export AnalysisWindow
 # You can delete a plot object directly via delete!( ax, plotobj) . You can also remove all plots with empty!( ax) .
-function AnalysisWindow(l::IsingLayer, panel1, panel2 = correlation_panel)
+function AnalysisWindow(l::IsingLayer, panel1, panel2 = correlation_panel; shared_interval = 1/30)
     f, screen, isopen = empty_window()
 
     analysiswindow = AnalysisWindow(l, f, screen, Dict{String, Any}())
@@ -36,76 +58,94 @@ function AnalysisWindow(l::IsingLayer, panel1, panel2 = correlation_panel)
     # Create panel 2
     isactive2, reset2, pause2, axis2 = panel2(analysiswindow, axesgrid, (3,1), l)
     
+
+    resetfuncs = Function[]
     ####
     # AFTER PANELS ARE SET, RUN THE SHARED TimedFunctions
-    if isempty(analysiswindow.shared_funcs)
+    updates, resets, pauses = createfuncs(analysiswindow.shared_funcs)
+
+
+    if !isnothing(updates)
         analysiswindow.timer = PTimer((timer) -> begin
-        for func in keys(analysiswindow.shared_funcs)
-            func()
-        end
-        end, 0., interval = 1/30)
+            broadcast_args(updates)
+        end, 0., interval = shared_interval)
     end
     
 
 
     ## OTHER ELEMENTS
     buttongrid = GridLayout(axesgrid[1,1])
+        println("Resets: $resets")
+        ### RESET BUTTON
+        # Button with text "Reset"
+            b1 = Button(buttongrid[1,1], label = "Reset graph", tellwidth = false, tellheight = false)
+            on(b1.clicks) do x
+                reset1()
+                reset2()
+                broadcast_args(resets)
+            end
 
-    ### RESET BUTTON
-    # Button with text "Reset"
-    b1 = Button(buttongrid[1,1], label = "Reset graph", tellwidth = false, tellheight = false)
-    on(b1.clicks) do x
-        reset1()
-        reset2()
-    end
+        ### PAUSEBUTTON
+            running = analysiswindow.running
+            pausebuttonlabel = lift((x) -> x ? "Pause" : "Resume", running)
+            b2 = Button(buttongrid[1,2], label = pausebuttonlabel, tellwidth = false, tellheight = false)
+            on(b2.clicks) do x
+                running[] = !running[]
+            end
 
-    ### PauseButton
-    b2 = Button(buttongrid[1,2], label = "Pause", tellwidth = false, tellheight = false)
-    on(b2.clicks) do x
-        pause1()
-        pause2()
-    end
-    rowsize!(axesgrid, 1, 40)
+            on(running) do x
+                pause1(x)
+                pause2(x)
+                broadcast_args(pauses, x)
+                if !x
+                    close(analysiswindow.timer)
+                else 
+                    start(analysiswindow.timer)
+                end
+            end
+            rowsize!(axesgrid, 1, 40)
 
-    # RESET STATE BUTTON
-    # Button to set state to 1
-    b2 = Button(buttongrid[1,3], label = "Set state", tellwidth = false, tellheight = false)
-    on(b2.clicks) do x
-        state(l) .= 1
-    end
+        # RESET STATE BUTTON
+        # Button to set state to 1
+            b2 = Button(buttongrid[1,3], label = "Set state", tellwidth = false, tellheight = false)
+            on(b2.clicks) do x
+                state(l) .= 1
+            end
 
-    # Tempslider Permanent
-    templabel = lift((x) -> "T $x", temp(sim(graph(l))))
-    obsfunc = temp(sim(graph(l))).listeners[end]
-
-    slidergrid = GridLayout(axesgrid[2,2])
-    rowsize!(slidergrid, 1, 20)
-    sliderlabel = Label(slidergrid[1,1], templabel, tellwidth = false, tellheight = false)
-    tempslider = Slider(slidergrid[2,1], horizontal = false, range = 0:0.1:5)
-    tempslider.value[] = temp(graph(l))
-    on(tempslider.value) do x
-        settemp(graph(l), x)
-    end
+        #### TEMPERATURE SLIDER
+        # Tempslider Permanent
+            templabel = lift((x) -> "T $x", temp(sim(graph(l))))
+            push!(analysiswindow.obsfuncs, templabel.inputs[1])
+            slidergrid = GridLayout(axesgrid[2,2])
+            rowsize!(slidergrid, 1, 20)
+            sliderlabel = Label(slidergrid[1,1], templabel, tellwidth = false, tellheight = false)
+            tempslider = Slider(slidergrid[2,1], horizontal = false, range = 0:0.1:5)
+            tempslider.value[] = temp(graph(l))
+            
+            on(tempslider.value) do x
+                settemp(graph(l), x)
+            end
     
     # When window is closed
     on(window_open(f)) do _
         isactive1[] = false
         isactive2[] = false
-        off(obsfunc)
         cleanup(analysiswindow)
     end
 
     # ml["analysisWindow"] = analysiswindow
     push!(windowlist, analysiswindow)
 
-    return templabel
+    return analysiswindow
 
 end
 
 
 function cleanup(awindow::AnalysisWindow)
     close(awindow.timer)
-    # GLFW.SetWindowShouldClose(to_native(awindow.screen), true)
+    if !isempty(awindow.obsfuncs)
+        off.(awindow.obsfuncs)
+    end
     return nothing
 end
 
@@ -156,8 +196,8 @@ function MT_panel(window, axesgrid, pos, layer)
         end
     end
 
-    function pause()
-        if !ispaused(timer)
+    function pause(running)
+        if !running
             close(timer)
         else
             start(timer)
@@ -212,8 +252,8 @@ function MB_panel(window, axesgrid, pos, layer)
             close(timer)
         end
     end
-    function pause()
-        if !ispaused(timer)
+    function pause(running)
+        if !running
             close(timer)
         else
             start(timer)
@@ -227,16 +267,42 @@ end
 function Tξ_panel()
 
 end
-
+using Statistics
 ## SHARED DATA
 function shareddata_STDev(window)
-    layer = window.l
-    etype = eltype(layer)
-    data = STDev(etype)
-    function update()
-        push!(data, abs(sum(state(layer))))
+    identifier = "shareddata_STDev"
+    if haskey(window.shared_funcs, identifier)
+        return window.shared_funcs[identifier][4] #Return the data
     end
-    window.shared_funcs[update] = (data,)
+
+    #Else create the data and update func
+    layer = window.l
+
+    data = stddata(Int[round(Int,abs(sum(state(layer))))])
+
+    function update()
+        push!(data, round(Int,abs(sum(state(layer)))) )
+    end
+
+    function reset()
+        deleteat!(data, 2:length(data))
+        data[1] = round(Int,abs(sum(state(layer))))
+    end
+    function pause(running)
+        if running
+            reset()
+        end
+    end
+
+    obsfunc = on(temp(sim(graph(window.l)))) do _
+        window.running[] = false
+        # reset()
+    end
+
+    push!(window.obsfuncs, obsfunc)
+
+    window.shared_funcs[identifier] = (update,reset,pause,data)
+
     return data
 end
 
@@ -245,23 +311,29 @@ function Tχ_panel(window, axesgrid, pos, layer)
     axis = Axis(getindex(axesgrid,pos...), tellwidth = false, tellheight = false)
     etype = eltype(layer)
     data = shareddata_STDev(window)
-    trange = 0:0.5:5
-    tempvec = Observable([trange;])
-    χ = Observable(zeros(etype, length(tempvec[])))
+    window["data"] = data
+    trange = 1:0.1:5
+    # allts = [trange;]
+    ts = Observable([temp(graph(layer))])
 
-    obfunc = on(temp(sim(graph(layer)))) do x
-        reset!(data)
-    end
+
+    χdata = Observable(zeros(etype, 1))
+
+    scatter!(axis, ts, χdata, color = :blue, tellwidth = false)
+    reset_limits!(axis)
 
     function reset()
-        x[] .= 0
-        notify(χ)
+        χdata.val = [temp(graph(layer))]
+        ts.val = [temp(graph(layer))]
+        notify(χdata)
+        reset_limits!(axis)
     end
 
     function update(timer)
         t = temp(graph(layer))
-        χ[][rangeidx(trange, t)] = 1/t*get(data)
-        notify(χ)
+        χdata[][end] = 1/t*std(data)
+        notify(χdata)
+        reset_limits!(axis)
     end
 
     timer = PTimer(update, 0., interval = 1/4)
@@ -269,13 +341,15 @@ function Tχ_panel(window, axesgrid, pos, layer)
     on(isactive) do x
         if !x
             close(timer)
-            off(obfunc)
         end
     end
-    function pause()
-        if !ispaused(timer)
+    function pause(running)
+        if !running
             close(timer)
         else
+            push!(ts[], temp(graph(layer)))
+            push!(χdata[],0)
+            notify(χdata)
             start(timer)
         end
     end
@@ -288,19 +362,21 @@ end
 # Bar Plot
 export χₘ_panel
 function χₘ_panel(window, axesgrid, pos, layer)
-    β = 1/temp(graph(layer))
     etype = eltype(layer)
     data = shareddata_STDev(window)
     push!(data, abs(sum(state(layer))))
-    Mbars = Observable(data.d)
+    Mbars = Observable(data)
     
     # Label(box[2,1], st_dev; valign = :top, halign = :right, tellwidth = false, tellheight = false)
     axis = Axis(getindex(axesgrid,pos...), tellwidth = false, tellheight = false)
     histo = hist!(axis, Mbars,; bins = 100, color = :blue, tellwidth = false)
-    timer = PTimer((timer) -> begin push!(data, abs(sum(state(layer)))); notify(Mbars); reset_limits!(axis) end, 0., interval = 1/30)
+
+
+    timer = PTimer((timer) -> begin notify(Mbars); reset_limits!(axis) end, 0., interval = 1/10)
     isactive = Observable(true)
     
     window["Mbars"] = Mbars
+    
 
     on(isactive) do x
         if !x
@@ -310,14 +386,11 @@ function χₘ_panel(window, axesgrid, pos, layer)
     end
 
     function reset()
-        deleteat!(Mbars[], 1:length(Mbars[]))
-        push!(Mbars[], abs(sum(state(layer))))
         notify(Mbars)
     end
 
-    function pause()
-        println("Pause")
-        if !ispaused(timer)
+    function pause(running)
+        if !running
             close(timer)
         else
             start(timer)
@@ -369,9 +442,8 @@ function correlation_panel(window, axesgrid, pos, layer)
         corr[] = (correlationLength(layer))[2]
     end
 
-    function pause()
-        println("Pause")
-        if !ispaused(timer)
+    function pause(running)
+        if !running
             close(timer)
         else
             start(timer)
@@ -381,3 +453,25 @@ function correlation_panel(window, axesgrid, pos, layer)
     return isactive, reset, pause, axis
 end
 
+struct stddata{T} <: AbstractVector{T}
+    d::Vector{T}
+end
+
+Base.length(d::stddata) = length(d.d)
+Base.getindex(d::stddata, i) = d.d[i]
+Base.setindex!(d::stddata, v, i) = d.d[i] = v
+Base.push!(d::stddata, v) = push!(d.d, v)
+Base.eltype(d::stddata) = eltype(d.d)
+Base.iterate(d::stddata, state = 1) = iterate(d.d, state)
+Base.isempty(d::stddata) = isempty(d.d)
+Base.eachindex(d::stddata) = eachindex(d.d)
+Base.deleteat!(d::stddata, i) = deleteat!(d.d, i)
+Base.size(d::stddata) = size(d.d)
+
+function Statistics.std(d::stddata)
+    if isempty(d)
+        return 0.
+    end
+    return std(d.d)
+end
+    

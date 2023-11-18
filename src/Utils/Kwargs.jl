@@ -49,7 +49,7 @@ function replacekwargs(bottom, top)
     bottomkeys = collect(Any, keys(bottom))
     bottomvalues = collect(Any, values(bottom))
     for topkey in keys(top)
-        if (idx = findfirst(x -> x == topkey, bottomkeys)) != nothing
+        if (idx = findfirst(x -> x == topkey, bottomkeys)) !== nothing
             bottomvalues[idx] = top[topkey]
         else
             println("Unsupported key $topkey ignored")

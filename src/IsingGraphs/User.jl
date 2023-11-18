@@ -98,6 +98,7 @@ function settemp(g,val)
         temp(sim(g), val)
     end
 end
+export settemp
 
 """
 Linear annealing of a graph

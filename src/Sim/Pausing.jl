@@ -62,7 +62,7 @@ function quit(g)
     quit.(processes(g))
 end
 
-function pause(g)
+function pause(g::IsingGraph)
     pause.(processes(g))
 end
 

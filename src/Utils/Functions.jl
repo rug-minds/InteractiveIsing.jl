@@ -421,7 +421,7 @@ function getstruct(strctname, files)
         range = findfirst("struct $strctname", filestr)
 
         # if it's found break the loop
-        if range != nothing
+        if !isnothing(range)
             mutablerange = (range[1]- 8):(range[1]-2)
 
             if range[1] >= 9 && filestr[mutablerange] == "mutable"
@@ -590,4 +590,7 @@ end
 """
 Given a range and a number, get the index of that item in the range, rounded down
 """
-rangeidx(r,x) = round(Int,div(x - first(r), step(r))) + 1
+function rangeidx(range, value)
+    partialsortperm(abs.(range .- value), 1)[1]
+end
+export rangeidx

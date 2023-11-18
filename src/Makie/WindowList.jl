@@ -12,7 +12,9 @@ function Base.push!(wl::WindowList, item)
         if isempty(ws)
             push!(ws, item)
         else
-            closewindow(ws[1])
+            if !(ws[1].screen === item.screen)
+                closewindow(ws[1])
+            end
             ws[1] = item
         end
     else # _pushtype == :multiple

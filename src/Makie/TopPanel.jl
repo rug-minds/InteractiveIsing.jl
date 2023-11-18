@@ -23,8 +23,8 @@ function topPanel(ml, g)
         tp["resetbutton"] = resetbutton = Button(mid_grid[1,1], label = "Reset Graph", fontsize = 18, height = 30, halign = :center, tellwidth = false)
         
         # PAUSE BUTTON
-        tp["buttontext"] = buttontext = liftcouple(x -> x ? "Paused" : "Running", isPaused(simulation))
-        push!(coupled_obs, tp["buttontext"])
+        tp["buttontext"] = buttontext = lift(x -> x ? "Paused" : "Running", isPaused(simulation))
+        push!(obs_funcs, buttontext.inputs...)
 
         tp["pausebutton"] = pausebutton = Button(mid_grid[2,1], padding = (0,0,0,0), fontsize = 18, width = 100, height = 30, label = buttontext, halign = :center, tellwidth = false)
         
@@ -43,12 +43,12 @@ function topPanel(ml, g)
 
         tp["upsgrid"] = upsgrid = GridLayout(topgrid[1,1])
 
-        update_label_upf = liftcouple(x -> "Updates per frame: $x", upf(simulation))
-        push!(coupled_obs, update_label_upf)
+        update_label_upf = lift(x -> "Updates per frame: $x", upf(simulation))
+        push!(obs_funcs, update_label_upf.inputs...)
 
 
-        update_label_upfps = liftcouple(x -> "Updates per frame per spins: $x", upfps(simulation))
-        push!(coupled_obs, update_label_upfps)
+        update_label_upfps = lift(x -> "Updates per frame per spins: $x", upfps(simulation))
+        push!(obs_funcs, update_label_upfps.inputs...)
         
         tp["updates_label"] = upsgrid[1,1] = updates_label = Label(f, update_label_upf, padding = (0,0,0,0), fontsize = 18, halign = :left, valign = :top, tellheight = false, tellwidth = false)
         tp["updates_label_per_spin"] = upsgrid[2,1] = updates_label_per_spin = Label(f, update_label_upfps, fontsize = 18,  halign = :left, valign = :top, tellheight = false, tellwidth = false)
@@ -78,7 +78,7 @@ end
 function cleanup(ml, ::typeof(topPanel))
     @justtry off.(ml["obs_funcs_topPanel"])
     @justtry delete!(ml, "obs_funcs_topPanel")
-    @justtry decouple!.(ml["coupled_obs_topPanel"])
+    # @justtry decouple!.(ml["coupled_obs_topPanel"])
     @justtry delete!(ml, "coupled_obs_topPanel")
     
     @justtry toppanel(ml, LayoutPanel())

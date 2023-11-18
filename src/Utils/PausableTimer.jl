@@ -7,7 +7,7 @@ mutable struct PTimer
     interval::Float64
 end
 
-function PTimer(callback::Function, delay::Float64; interval::Float64 = 0)
+function PTimer(callback::Function, delay::Float64; interval::Float64 = 0.)
     return PTimer(callback, Timer(callback, delay; interval), delay, interval)
 end
 
