@@ -54,8 +54,8 @@ export gToImg
 function checkImgSize(sim, layer, glength, gwidth, qmllen, qmlwid)
     if glength != qmllen || gwidth != qmlwid
         image(sim)[] = gToImg(layer, colorscheme = colorscheme(sim))
-        qmllength(sim)[] = glength
-        qmlwidth(sim)[] = gwidth
+        # qmllength(sim)[] = glength
+        # qmlwidth(sim)[] = gwidth
     end
 end
 

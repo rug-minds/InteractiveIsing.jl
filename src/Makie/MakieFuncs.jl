@@ -23,6 +23,7 @@ function setLayerSV(idx)
     mp["sv_img_ob"][] = getSingleViewImg(g, ml)
     img_ob = mp["sv_img_ob"]
     mp["image"] = image!(mp["axis"], img_ob, colormap = :thermal, fxaa = false, interpolate = false)
+    mp["image"].colorrange = stateset(currentLayer(sim))
 
     reset_limits!(mp["axis"])
 end

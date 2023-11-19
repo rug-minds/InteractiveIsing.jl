@@ -32,8 +32,8 @@ function LayerAxis(gridposition, l; colormap = :thermal, kwargs...)
     return ax, im, img_ob
 end
 
-function empty_window()
-    f = Figure();
+function empty_window(;kwargs...)
+    f = Figure(;kwargs...);
     newscreen = GLMakie.Screen()
     display(newscreen, f)
     return f, newscreen, window_open(f)
@@ -49,6 +49,7 @@ function create_window_timer(update, isopen; interval = 1/60)
     end
     return timer
 end
+export create_window_timer
 
 function window_open(f::Figure)
     return events(f).window_open

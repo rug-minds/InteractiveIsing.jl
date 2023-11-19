@@ -39,12 +39,7 @@ mutable struct IsingSim
     function IsingSim(
             len::Integer = 500,
             wid::Integer = 500;
-            periodic = nothing,
-            type = Continuous,
-            weighted = true,
-            weights = nothing,
             initTemp = 1f0,
-            colorscheme = ColorSchemes.viridis,
             kwargs...
         );
         
@@ -68,13 +63,9 @@ mutable struct IsingSim
         sim.obs = Obs(len, wid, initbrushR, initTemp)
 
         g = IsingGraph(
-            sim,
             len,
             wid;
-            periodic,
-            type,
-            weighted,
-            weights,
+            sim,
             kwargs...
         )
 
@@ -137,7 +128,7 @@ function initSim!(sim, g, len, wid, initbrushR, initTemp)
     # Temperature Observable
     temp(sim)[] = temp(g)
 
-    on(temp(sim), weak = true) do val
+    on(temp(sim)) do val
         temp(g, val)
     end
 

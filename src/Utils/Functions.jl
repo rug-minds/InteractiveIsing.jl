@@ -594,3 +594,12 @@ function rangeidx(range, value)
     partialsortperm(abs.(range .- value), 1)[1]
 end
 export rangeidx
+
+function sumsimd(v::AbstractArray{T}) where T
+    cum = zero(T)
+    @turbo for idx in eachindex(v)
+        cum += v[idx]
+    end
+    return cum
+end
+export sumsimd

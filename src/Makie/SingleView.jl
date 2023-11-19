@@ -81,15 +81,16 @@ function singleView(ml, g)
     # ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), ypanlock = true, xpanlock = true, yzoomlock = true, xzoomlock = true)
     ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
     # TODO: Set colorrange based on the type of layer
-    im = image!(ax, img_ob, colormap = :thermal, fxaa = false, interpolate = false)
-    im.colorrange[] = (-1,1)
+    ima = image!(ax, img_ob, colormap = :thermal, fxaa = false, interpolate = false)
 
     # rowsize!(_grid, 1, Relative(1/20))
 
     mp["axis"] = ax
     ax.yreversed[] = @load_preference("makie_y_flip", default = false)
-    mp["image"] = im
+    mp["image"] = ima
     mp["obs"] = img_ob
+    ima.colorrange[] = (-1,1)
+
 
     push!(obs_funcs, on(events(ax.scene).mousebutton, weak = true) do buttons
         MDrawCircle(ax, buttons, simulation)
@@ -119,6 +120,7 @@ function singleView(ml, g)
     if haskey(ml, "timedfunctions_timer")
         close(ml["timedfunctions_timer"])
     end
+
     timedFunctions["screen"] = (sim) -> notify(img_ob)
     # ml["timedfunctions_timer"] = PTimer((timer) -> (notify(mp["obs"]); timedFunctions(simulation)) ,0., interval = 1/60)
     # ml["timedfunctions_timer"] = PTimer((timer) -> (notify(img_ob); timedFunctions(simulation)) ,0., interval = 1/60)

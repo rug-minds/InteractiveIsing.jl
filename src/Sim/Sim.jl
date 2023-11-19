@@ -36,14 +36,14 @@ end
 
 function simulate(g::IsingGraph{T}; start = true, gui = true, precision = T, initTemp = one(precision), colorscheme = ColorSchemes.viridis, register_sim = true, kwargs...) where T
     createsimfunc = () -> IsingSim(g; start, initTemp, colorscheme)
-    _assign_or_createsim(createsimfunc, register_sim)
+    _assign_or_createsim(createsimfunc, register_sim; kwargs...)
     _simulate(g; start, gui, kwargs...)
     return g
 end
 
 function simulate(filename::String; start = true, register_sim = true, kwargs...)
     createsimfunc = () -> IsingSim(filename; kwargs...)
-    restarted = _assign_or_createsim(createsimfunc, register_sim)
+    restarted = _assign_or_createsim(createsimfunc, register_sim; kwargs...)
     __simulate(_sim.gs[1]; start = restarted && start, gui = restarted && get(kwargs, :gui, true), kwargs...)
     return g
 end
@@ -52,13 +52,17 @@ end
 """
 Pass in the appropraite IsingSim constructor
 """
-function _assign_or_createsim(create_sim_func, noinput = true, register_sim = true)
+function _assign_or_createsim(create_sim_func, noinput = true, register_sim = true; overwrite = false, kwargs...)
     if isnothing(simulation) && noinput
         simulation[] = create_sim_func()
     elseif register_sim #If there is already a sim and we want to register a new one
         println("Simulation already active, create a new one and overwrite it? [y/n]")
         while true
-            s = read(stdin, Char)
+            if overwrite
+                s = 'y'
+            else
+                s = read(stdin, Char)
+            end
             println("Character entered: $s")
             if s == 'y'
                 closeinterface()
@@ -78,7 +82,6 @@ getgraph() = gs(simulation[])[1]
 
 function _simulate(g; start = true, gui = true, kwargs...)
     if start
-
         quit.(processes(g))
         createProcess(g; run = get(kwargs, :run, true))
     end

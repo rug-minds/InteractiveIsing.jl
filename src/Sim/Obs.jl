@@ -10,10 +10,6 @@ Base.@kwdef mutable struct Obs{T}
     layerName::Observable{String} = Observable("")
     #number of layers
     nlayers::Observable{Int32} = Observable(Int32(0))
-    # length/width of graph
-    qmllength::Observable{Int32} = Observable(Int32(0))
-    
-    qmlwidth::Observable{Int32} = Observable(Int32(0))
 
     # Temperature Observable
     temp::Observable{T} = Observable(1f0)
@@ -46,9 +42,27 @@ Base.@kwdef mutable struct Obs{T}
 
 end
 
-Obs(len, wid, brushR, initTemp) = Obs(
-    qmllength = Observable(Int32(len)),
-    qmlwidth = Observable(Int32(wid)),
-    brushR = Observable(Int32(brushR)),
-    temp = Observable(initTemp) 
-)
+# Obs(len, wid, brushR, initTemp) = Obs(
+#     qmllength = Observable(Int32(len)),
+#     qmlwidth = Observable(Int32(wid)),
+#     brushR = Observable(Int32(brushR)),
+#     temp = Observable(initTemp) 
+# )
+
+function Obs(len,wid,brushR,initTemp::T) where T
+    Obs(layerIdx = Observable(Int32(1)),
+        layerName = Observable(""),
+        nlayers = Observable(Int32(0)),
+        brushR = Observable(Int32(brushR)),
+        temp = Observable(initTemp),
+        brush = Observable(zero(T)),
+        M = Observable(zero(T)),
+        upf = Observable(zero(T)),
+        upfps = Observable(zero(T)),
+        imgSize = Observable((0,0)),
+        analysisRunning = Observable(false),
+        isPaused = Observable(false),
+        runTimedFunctions = Observable(true),
+        data = Dict{Symbol, Observable}()
+    )
+end

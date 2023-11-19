@@ -2,6 +2,15 @@ import GLMakie: Axis
 using GLMakie.GLFW
 using GLMakie: to_native
 
+set_window_config!(;
+        vsync = false,
+        framerate = 60.0,
+        pause_renderloop = false,
+        focus_on_show = true,
+        decorated = true,
+        title = "Interactive Ising Simulation"
+    )
+
 include("Windows/Windows.jl")
 include("WindowList.jl")
 include("SimLayout.jl")
@@ -81,4 +90,8 @@ end
 function cleanup(ml, ::Nothing)
 end
 
+function set_colorrange(l::IsingLayer)
+    midpanel(getml())["image"].colorrange[] = stateset(l)
+end
+export set_colorrange
 

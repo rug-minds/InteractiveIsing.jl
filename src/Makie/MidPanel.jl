@@ -104,16 +104,20 @@ function midPanel(ml,g)
             Box(rightpanel[1,1], width = 100, height = 50, visible = false)
             tempslider = mp["tempslider"] = tempslider = Slider(rightpanel[2,1], range = 0.0:0.02:20, value = 1.0, horizontal = false)
             
+            tempslider.value.ignore_equal_values = true
+
             set_close_to!(tempslider, temp(g)[])
-            simulation.obs.temp = tempslider.value
+            ob_pair = Observables.ObservablePair(tempslider.value, temp(simulation))
+            mp["ob_pair"] = ob_pair
+            on(tempslider.value) do x
+                set_close_to!(tempslider, x)
+            end
+
+            push!(obs_funcs, ob_pair.links...)
+
             mp["temptext"] = lift(x -> "T: $x", tempslider.value)
 
             mp["templabel"] = Label(rightpanel[1,1], mp["temptext"], fontsize = 18)
-
-            
-            push!(obs_funcs, on(tempslider.value) do value
-                temp(g, Float32(value))
-            end)
         
     # rowsize!(f.layout, 1, Auto())
     colsize!(mp[], 1, 200)

@@ -20,10 +20,8 @@ function LayerWindow(l::IsingLayer)
     push!(ml.windowlist, lw)
     lw.timer = timer
 
+    push!(windowlist, lw)
     return lw    
 end
 export LayerWindow
 
-function create(g, aw::AbstractWindow; kwargs)
-    simulation = sim(g)
-end

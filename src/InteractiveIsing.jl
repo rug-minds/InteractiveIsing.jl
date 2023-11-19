@@ -103,8 +103,9 @@ include("Barebones.jl")
 # PRECOMPILATION FUNCTION FOR FAST USAGE
 @setup_workload begin
     GC.enable(false)
-    cg = simulate(20,20, type = Continuous, start = false, run = false, disp = false, noinput = true)
-    quit(cg)
+
+    cg = IsingGraph(20, 20, type = Discrete)
+    simulate(cg, start = false)
     _sim = sim(cg)
 
     @compile_workload begin
@@ -130,8 +131,17 @@ include("Barebones.jl")
         close.(values(timers(_sim)))
         loadGraph(path)       
 
-
         closeinterface()
+
+        w = LayerWindow(cg[1])
+        closewindow(w)
+        w = createAnalysisWindow(cg[1], MT_panel, tstep = 0.01)
+        closewindow(w)
+        w = createAnalysisWindow(cg[1], MB_panel, tstep = 0.01)
+        closewindow(w)
+        w = createAnalysisWindow(cg, χₘ_panel, Tχ_panel, shared_interval = 1/500, tstep = 0.01);
+        closewindow(w)
+
         reset!(simulation)
         GC.enable(true)
     end

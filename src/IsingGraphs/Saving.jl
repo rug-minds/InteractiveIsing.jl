@@ -172,6 +172,9 @@ function loadparameters(g, path; ignorearchitecture = false)
     end
     sp_adj(g, adj)
     g.d = gdata
+    if !isempty(g.d.bfield)
+        setSType!(g, :Magfield => true)
+    end
     return g
 end
 

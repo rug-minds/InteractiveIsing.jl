@@ -65,6 +65,9 @@ cleanView(ml) = begin
     end
 end
 
+"""
+Create to be used with image!
+"""
 ImageAxis(layout; kwargs...) = 
     Axis(   layout,
             xgridvisible = false,
