@@ -135,12 +135,12 @@ include("Barebones.jl")
 
         w = LayerWindow(cg[1])
         closewindow(w)
-        w = createAnalysisWindow(cg[1], MT_panel, tstep = 0.01)
-        closewindow(w)
-        w = createAnalysisWindow(cg[1], MB_panel, tstep = 0.01)
-        closewindow(w)
-        w = createAnalysisWindow(cg, χₘ_panel, Tχ_panel, shared_interval = 1/500, tstep = 0.01);
-        closewindow(w)
+        # w = createAnalysisWindow(cg[1], MT_panel, tstep = 0.01)
+        # closewindow(w)
+        # w = createAnalysisWindow(cg[1], MB_panel, tstep = 0.01)
+        # closewindow(w)
+        # w = createAnalysisWindow(cg, χₘ_panel, Tχ_panel, shared_interval = 1/500, tstep = 0.01);
+        # closewindow(w)
 
         reset!(simulation)
         GC.enable(true)

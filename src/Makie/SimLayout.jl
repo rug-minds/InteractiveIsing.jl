@@ -33,9 +33,9 @@ end
 
 SimLayout(f::Figure) = SimLayout(f, LayoutPanel(), LayoutPanel(), LayoutPanel(), Dict{String, Any}(), Any[], Any[], WindowList())
 function deconstruct(ml::SimLayout)
-    cleanup(ml, baseFig)
-    cleanup.(Ref(ml), ml.cleanuplist)
-    GLFW.SetWindowShouldClose(to_native(ml["screen"]), true)
+    @justtry cleanup(ml, baseFig)
+    @justtry cleanup.(Ref(ml), ml.cleanuplist)
+    @justtry GLFW.SetWindowShouldClose(to_native(ml["screen"]), true)
     return nothing
 end
 
@@ -61,7 +61,7 @@ Base.getkey(ml::SimLayout, key::String, default) = getkey(ml.etc, key, default)
 
 cleanView(ml) = begin
     if haskey(etc(ml), "current_view")
-        cleanup(ml, etc(ml)["current_view"])
+        @justtry cleanup(ml, etc(ml)["current_view"])
     end
 end
 

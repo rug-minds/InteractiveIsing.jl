@@ -125,10 +125,12 @@ function midPanel(ml,g)
 end
 
 function cleanup(ml, ::typeof(midPanel))
-    off.(ml["obs_funcs_midPanel"])
-    delete!(ml, "obs_funcs_midPanel")
-    # decouple!.(ml["coupled_obs_midPanel"])
-    delete!(ml, "coupled_obs_midPanel")
+        @justtry if !isempty(ml["obs_funcs_midPanel"])
+            off.(ml["obs_funcs_midPanel"])
+        end
+        @justtry delete!(ml, "obs_funcs_midPanel")
+        # decouple!.(ml["coupled_obs_midPanel"])
+        @justtry delete!(ml, "coupled_obs_midPanel")
 
-    midpanel(ml, LayoutPanel())
+        midpanel(ml, LayoutPanel())
 end

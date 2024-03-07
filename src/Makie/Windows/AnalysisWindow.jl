@@ -215,7 +215,7 @@ function MT_panel(window, axesgrid, pos, layer)
     window["m_buffer"] = m_buffer
 
    
-    axis = Axis(getindex(axesgrid,pos...), tellwidth = false, tellheight = false, xlabel = "T", ylabel = "M")
+    axis = Axis(getindex(axesgrid,pos...), tellwidth = false, tellheight = false, xlabel = "T", ylabel = "M", title = "Magnetization vs Temperature", titlesize = 32, xlabelsize = 24, ylabelsize = 24)
     lns = lines!(axis, t_buffer, m_buffer, color = :blue)
     xlims!(axis, -0.1, 5)
     ylims!(axis, -0.1, 1.1)
@@ -278,7 +278,7 @@ function MB_panel(window, axesgrid, pos, layer)
         globalB!(layer, x)
     end
 
-    axis = Axis(mbgrid[1,1], tellwidth = false, tellheight = false, xlabel = "B", ylabel = "M")
+    axis = Axis(mbgrid[1,1], tellwidth = false, tellheight = false, xlabel = "B", ylabel = "M", title = "Magnetization vs Magnetic Field", titlesize = 32, xlabelsize = 24, ylabelsize = 24)
     xlims!(axis, x_left, x_right)
     ylims!(axis, -1.1, 1.1)
     lines = lines!(axis, b_buffer, m_buffer, color = :blue)
@@ -362,7 +362,7 @@ end
 
 export Tχ_panel
 function Tχ_panel(window, axesgrid, pos, layer)
-    axis = Axis(getindex(axesgrid,pos...), tellwidth = false, tellheight = false, xlabel = "T", ylabel = "χ", title = "Magnetic Susceptibility")
+    axis = Axis(getindex(axesgrid,pos...), tellwidth = false, tellheight = false, xlabel = "T", ylabel = "χ", title = "Magnetic Susceptibility", titlesize = 32, xlabelsize = 24, ylabelsize = 24)
     etype = eltype(layer)
     data = shareddata_STDev(window)
     window["data"] = data
@@ -437,7 +437,7 @@ function χₘ_panel(window, axesgrid, pos, layer)
     Mbars = Observable(data)
     
     # Label(box[2,1], st_dev; valign = :top, halign = :right, tellwidth = false, tellheight = false)
-    axis = Axis(getindex(axesgrid,pos...), tellwidth = false, tellheight = false, xlabel = "M", ylabel = "Counts", title = "Bar Plot of Sampled Magnetizations")
+    axis = Axis(getindex(axesgrid,pos...), tellwidth = false, tellheight = false, xlabel = "M", ylabel = "Counts", title = "Bar Plot of Sampled Magnetizations", titlesize = 32, xlabelsize = 24, ylabelsize = 24)
     histo = hist!(axis, Mbars,; bins = 100, color = :blue, tellwidth = false)
 
 
@@ -476,7 +476,7 @@ function correlation_panel(window, axesgrid, pos, layer)
     corr = Observable(corr_val)
     corr_avgs = [AverageCircular(etype, 10) for _ in 1:length(corr_val)]
 
-    axis = Axis(getindex(axesgrid,pos...), tellwidth = false)
+    axis = Axis(getindex(axesgrid,pos...), tellwidth = false, title = L"Two Point Correlation Function, $\langle s(x)s(x+r) \rangle - \langle s(x) \rangle ^2$", xlabel = "r", ylabel = "C(r)", titlesize = 32, xlabelsize = 24, ylabelsize = 24, titlefont = :bold)
     correlation = lines!(axis, corr_r, corr, color = :blue, tellwidth = false)
     xlims!(axis, 0, min((round.(Int,size(layer)./5))...))
     ylims!(axis, -0.2, 1)

@@ -43,11 +43,11 @@ function topPanel(ml, g)
 
         tp["upsgrid"] = upsgrid = GridLayout(topgrid[1,1])
 
-        update_label_upf = lift(x -> "Updates per frame: $x", upf(simulation))
+        update_label_upf = lift(x -> "Updates per frame: $(round(x, digits = 2))", upf(simulation))
         push!(obs_funcs, update_label_upf.inputs...)
 
 
-        update_label_upfps = lift(x -> "Updates per frame per spins: $x", upfps(simulation))
+        update_label_upfps = lift(x -> "Updates per frame per spins: $(round(x, digits = 4))", upfps(simulation))
         push!(obs_funcs, update_label_upfps.inputs...)
         
         tp["updates_label"] = upsgrid[1,1] = updates_label = Label(f, update_label_upf, padding = (0,0,0,0), fontsize = 18, halign = :left, valign = :top, tellheight = false, tellwidth = false)

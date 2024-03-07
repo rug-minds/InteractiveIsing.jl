@@ -1,5 +1,13 @@
 using GLMakie, InteractiveIsing
-
+set_window_config!(;
+        vsync = false,
+        framerate = 60.0,
+        pause_renderloop = false,
+        focus_on_show = true,
+        decorated = true,
+        title = "Monte Carlo"
+    )
+    
 function estimatePi()
     set_window_config!(;
         vsync = false,
@@ -16,6 +24,7 @@ function estimatePi()
     points_out = Observable(Point2f[])
     num_in = Observable(0)
     num_out = Observable(0)
+    pi_est = Observable(0.)
     
     labelgrid = GridLayout(grid[1,2])
 
@@ -27,7 +36,7 @@ function estimatePi()
     n_outlabel = Label(labelgrid[2,2], n_out_text, tellheight = false, fontsize = 36, halign = :left)
     # colsize!(grid,2, 100)
 
-    label_text = lift((n_in, n_out) -> "π ≈ $(round((4*n_in/(n_in+n_out)), digits = 7))", num_in, num_out)
+    label_text = lift((est) -> "π ≈ $(round(est, digits = 7))", pi_est)
     lab = Label(labelgrid[3,1], label_text, tellheight = false, fontsize = 36, halign = :left)
     run = Ref(true)
 
@@ -39,7 +48,6 @@ function estimatePi()
 
     function loop()
         @async while run[]
-            println("Loop")
             p = rand(Point2f)
             is_in = p[1]^2 + p[2]^2 < 1
             if is_in
@@ -55,6 +63,7 @@ function estimatePi()
     end
 
     function update()
+        pi_est[] = 4*num_in[]/(num_in[]+num_out[])
         notify(points_in)
         notify(points_out)
         notify(num_in)
@@ -71,4 +80,5 @@ function estimatePi()
     end
     loop()
     timer = create_window_timer(update, isopen)
+    return pi_est
 end
