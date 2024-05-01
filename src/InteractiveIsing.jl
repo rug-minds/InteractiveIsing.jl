@@ -75,10 +75,14 @@ Base.isless(::Type{<:StateType}, ::Type{<:StateType}) = false
     
 export Discrete, Continuous, Static
 
+# Global RNG for module
+const rng = MersenneTwister()
 
 include("WeightFuncs.jl")
 include("AdjList/AdjList.jl")
 
+include("MCAlgorithms/MCAlgorithms.jl")
+# using .MCAlgorithms
 
 include("Hamiltonians/Hamiltonians.jl")
 include("IsingGraphs/IsingGraphs.jl")

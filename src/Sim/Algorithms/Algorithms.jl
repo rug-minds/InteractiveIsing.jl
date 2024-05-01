@@ -11,7 +11,7 @@ export prepare
 """
 Fallback preparation for updateFunc
 """
-prepare(algorithm::Any, ::Any; kwargs...) = error("No prepare function defined for $(typeof(algorithm))")
+# _prepare(algorithm::Any, ::Any; kwargs...) = error("No prepare function defined for $(typeof(algorithm))")
 
 let times = Ref([])
     global function upDebug(g, params, lTemp, gstate::Vector, gadj, iterator, rng, gstype, dEFunc)
@@ -86,9 +86,9 @@ export getexpression
 @inline sample_from_stateset(::Type{Discrete}, rng::AbstractRNG, stateset::Tuple) = rand(rng, stateset)
 @inline sample_from_stateset(::Type{Continuous}, rng::AbstractRNG, stateset::Tuple) = uniform_rand(rng, stateset[1], stateset[2])
 
-sampleState(::Any, oldstate, rng, stateset) = rand(stateset)
-sampleState(::Type{Discrete}, oldstate, rng, stateset) = oldstate == stateset[1] ? stateset[2] : stateset[1]
-sampleState(::Type{Continuous}, oldstate, rng, stateset) = sample_from_stateset(Continuous, rng, stateset)
+@inline sampleState(::Any, oldstate, rng, stateset) = rand(stateset)
+@inline sampleState(::Type{Discrete}, oldstate, rng, stateset) = oldstate == stateset[1] ? stateset[2] : stateset[1]
+@inline sampleState(::Type{Continuous}, oldstate, rng, stateset) = sample_from_stateset(Continuous, rng, stateset)
 
 ## Iterator that changes without having to recompile the loop
 struct DynamicalIterator{GT}

@@ -14,3 +14,13 @@ end
     return (rand(T, num)).*(rangeend-rangebegin) .+ rangebegin
 end
 
+function reset_global_rng!(seed = nothing)
+    newrng = nothing
+    if isnothing(seed)
+        rng = MersenneTwister()
+    else
+        rng = MersenneTwister(seed)
+    end
+    copyfields!(rng, newrng)
+end
+

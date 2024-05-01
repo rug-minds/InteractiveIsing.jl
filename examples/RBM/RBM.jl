@@ -34,7 +34,7 @@ using JLD2, SparseArrays
 d = load("examples/RBM/rbm1.jld2")
 w = reshape(d["weights"], (28*28, 32*32))
 biases = [d["vbias"][:];d["hbias"][:]]
-sp_adj(g, weights_2_sparse(w))
+adj(g, weights_2_sparse(w))
 bfield(g) .= biases
 setSType!(g, :Magfield => true)
 w2 = LayerWindow(g[2])

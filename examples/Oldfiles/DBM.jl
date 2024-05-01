@@ -51,10 +51,10 @@ end
 using NPZ, SparseArrays
 w12= npzread("/Users/fabian/Downloads/bm_data/dbm_W1_finetuned.npy")
 w23 = npzread("/Users/fabian/Downloads/bm_data/dbm_W2_finetuned.npy")
-sp_adj(g, weights12_2_sparse(npzread("/Users/fabian/Downloads/bm_data/dbm_W1_finetuned.npy"), npzread("/Users/fabian/Downloads/bm_data/dbm_W2_finetuned.npy")))
+adj(g, weights12_2_sparse(npzread("/Users/fabian/Downloads/bm_data/dbm_W1_finetuned.npy"), npzread("/Users/fabian/Downloads/bm_data/dbm_W2_finetuned.npy")))
 
 using GLMakie, DataStructures
-# scene = Scene(resolution = (800, 800));
+# scene = Scene(size = (800, 800));
 f = Figure();
 ax = Axis(f[1, 1], aspect = 1)
 d = display(GLMakie.Screen(), f)

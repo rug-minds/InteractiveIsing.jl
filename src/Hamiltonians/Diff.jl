@@ -4,7 +4,7 @@ end
 
 const clampexpr = "+ clampparam(g)/T(2) * (newstate^2-oldstate^2 - T(2) * @inbounds clamps(g)[idx] * (newstate-oldstate))"
 
-function ΔEIsingClampExpr(stype::Type{ST}) where {ST <: SType}
+@inline function ΔEIsingClampExpr(stype::Type{ST}) where {ST <: SType}
     clamp = getSParam(stype, :Clamp)
 
     expr = "dE*(newstate-oldstate) $(clamp*clampexpr)"

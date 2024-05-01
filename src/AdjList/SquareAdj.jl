@@ -242,13 +242,13 @@ export clearAdj!
 export addWeight!
 export removeWeight!
 
-function sparse2tuples(sp_adj)
-    vec = Vector{Vector{Tuple{Int32,Float32}}}(undef, size(sp_adj,2))
+function sparse2tuples(adj)
+    vec = Vector{Vector{Tuple{Int32,Float32}}}(undef, size(adj,2))
 
     for vert_idx in eachindex(vec)
-        vec[vert_idx] = Vector{Tuple{Int32,Float32}}(undef, length(nzrange(sp_adj, vert_idx)))
-        for conn_idx in 1:length(nzrange(sp_adj, vert_idx))
-            vec[vert_idx][conn_idx] = (sp_adj.rowval[nzrange(sp_adj, vert_idx)[conn_idx]], sp_adj.nzval[nzrange(sp_adj, vert_idx)[conn_idx]])
+        vec[vert_idx] = Vector{Tuple{Int32,Float32}}(undef, length(nzrange(adj, vert_idx)))
+        for conn_idx in 1:length(nzrange(adj, vert_idx))
+            vec[vert_idx][conn_idx] = (adj.rowval[nzrange(adj, vert_idx)[conn_idx]], adj.nzval[nzrange(adj, vert_idx)[conn_idx]])
         end
     end
     return deepcopy(vec)

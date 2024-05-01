@@ -16,9 +16,9 @@ function baseFig(g; disp = true)
 
     ml["basefig_active"] = true
 
-    f = fig(ml, Figure(resolution = (1500, 1500)))
+    f = fig(ml, Figure(size = (1500, 1500)))
 
-    set_window_config!(;
+    GLMakie.activate!(;
         vsync = false,
         framerate = 60.0,
         pause_renderloop = false,

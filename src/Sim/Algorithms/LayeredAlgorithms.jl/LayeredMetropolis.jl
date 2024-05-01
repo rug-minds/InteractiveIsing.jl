@@ -12,7 +12,7 @@ function prepare(::typeof(layeredMetropolis), g, prt = false; kwargs...)::NamedT
     l_iterators = Val{tuple(layeridxs(g)...)}()
     def_kwargs = pairs((;g,
                         gstate = state(g),
-                        gadj = sp_adj(g),
+                        gadj = adj(g),
                         gparams = params(g),
                         iterator = ising_it(g, stype(g)),
                         rng = MersenneTwister(),
@@ -41,7 +41,9 @@ end
     β = one(T)/(temp(g))
     
     oldstate = @inbounds gstate[idx]
+    
     newstate = sampleState(StateT, oldstate, rng, StateSet)
+
     ΔE = ΔEFunc(g, oldstate, newstate, gstate, gadj, idx, gstype, StateT)
     efac = exp(-β*ΔE)
     randnum = rand(rng, Float32)

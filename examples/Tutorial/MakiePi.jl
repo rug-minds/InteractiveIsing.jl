@@ -1,5 +1,5 @@
 using GLMakie, InteractiveIsing
-set_window_config!(;
+GLMakie.activate!(;
         vsync = false,
         framerate = 60.0,
         pause_renderloop = false,
@@ -9,7 +9,7 @@ set_window_config!(;
     )
     
 function estimatePi()
-    set_window_config!(;
+    GLMakie.activate!(;
         vsync = false,
         framerate = 60.0,
         pause_renderloop = false,
@@ -18,7 +18,7 @@ function estimatePi()
         title = "Monte Carlo"
     )
 
-    f, screen, isopen = empty_window(resolution = (2000, 1000))
+    f, screen, isopen = empty_window(size = (2000, 1000))
     grid = GridLayout(f[1,1], halign = :left)
     points_in = Observable(Point2f[])
     points_out = Observable(Point2f[])

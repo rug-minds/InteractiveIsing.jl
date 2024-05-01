@@ -9,7 +9,7 @@ Base.@propagate_inbounds function genAdj(layer, wg)
     return row_idxs, col_idxs, weights
 end
 
-@inline genAdj!(layer::IsingLayer, wg) = set_sp_adj!(layer, wg, genAdj(layer, wg))
+@inline genAdj!(layer::IsingLayer, wg) = set_adj!(layer, wg, genAdj(layer, wg))
 export genAdj!
 
 
@@ -24,12 +24,12 @@ Base.@propagate_inbounds function genAdj(layer1, layer2, wg)
 
     return row_idxs, col_idxs, weights
 end
-@inline genAdj!(layer1::IsingLayer, layer2::IsingLayer, wg) = set_sp_adj!(layer1, layer2, wg, genAdj(layer1, layer2, wg))
+@inline genAdj!(layer1::IsingLayer, layer2::IsingLayer, wg) = set_adj!(layer1, layer2, wg, genAdj(layer1, layer2, wg))
 
-@inline removeConnections!(layer) = set_sp_adj!(graph(layer), removeConnections(layer))
-@inline removeConnections!(layer1, layer2) = set_sp_adj!(graph(layer1), removeConnections(layer1, layer2))
+@inline removeConnections!(layer) = set_adj!(graph(layer), removeConnections(layer))
+@inline removeConnections!(layer1, layer2) = set_adj!(graph(layer1), removeConnections(layer1, layer2))
 
-removeConnectionsAll!(layer) = set_sp_adj!(graph(layer), removeConnectionsAll(layer))
+removeConnectionsAll!(layer) = set_adj!(graph(layer), removeConnectionsAll(layer))
 
 export genAdj!, removeConnections!, removeConnectionsAll!
 
@@ -38,7 +38,7 @@ export genAdj!, removeConnections!, removeConnectionsAll!
 function viewConnections(layer1::IsingLayer, layer2::IsingLayer, idx)
     # g = graph(layer1)
     # g_idx = idxLToG(idx, layer)
-    connections = sp_adj(layer1)[:, idx]
+    connections = adj(layer1)[:, idx]
     idxs = findall(x -> x ∈ graphidxs(layer2), connections.nzind)
     return idxToCoord.(idxGToL.(connections.nzind[idxs], Ref(layer2)), Ref(layer2)), connections.nzval[idxs]
 end

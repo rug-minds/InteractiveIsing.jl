@@ -35,7 +35,7 @@ end
 
 using NPZ, SparseArrays
 w = npzread("/Users/fabian/Downloads/bm_data/rbm_W_finetuned.npy")
-sp_adj(g, weights_2_sparse(w))
+adj(g, weights_2_sparse(w))
 
 # createAvgWindow(g[1])
 # closeAvgWindow()

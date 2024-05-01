@@ -3,6 +3,12 @@ struct ContinuousState <: StateType end
 struct DiscreteState <: StateType end
 struct MixedState <: StateType end
 
+# TODO::FINISH
+struct Emitter
+    obs::Vector{Observable}
+end
+Observables.notify(emitter::Emitter) = notify.(emitter.obs)
+
 
 getIntType(::Float64) = Int64
 getFloatType(::Float64) = Float64
@@ -15,23 +21,28 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     sim::Union{Nothing, IsingSim}
     # Vertices and edges
     state::Vector{T}
-    sp_adj::SparseMatrixCSC{T,Int32}
+    # Adjacency Matrix
+    adj::SparseMatrixCSC{T,Int32}
+    
     temp::T
 
     default_algorithm::Function
+    hamiltonians::Tuple
     stype::SType
     
     layers::ShuffleVec{IsingLayer}
 
+    #TODO: Why is this here? Shouldn't this be in the layers?
+    # Or can it not be computed and used as a trait?
     continuous::StateType
     # Connection between layers, Could be useful to track for faster removing of layers
     layerconns::Dict{Set, Int32}
-    params::Tuple
-
+    params::NamedTuple
+    # For notifying simulations or other things
+    emitter::Emitter
 
     defects::GraphDefects
     d::GraphData{T}
-
 
     # Default Initializer for IsingGraph
     function IsingGraph(glength = nothing, gwidth=nothing; sim = nothing,  periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
@@ -72,13 +83,18 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
             1f0,
             # Default algorithm
             layeredMetropolis,
+            #Hamiltonians
+            (Ising,),
             SType(:Weighted => weighted),
             #Layers
             ShuffleVec{IsingLayer}(relocate = relocate!),
             #ContinuityType
             ContinuousState(),
             Dict{Pair, Int32}(),
-            ()
+            #Params
+            (;self = ParamVal(precision[], 0, "Self Connections", false)),
+            #Emitter
+            Emitter(Observable[])
         )
 
         g.defects = GraphDefects(g)
@@ -89,18 +105,20 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
         for (arc_idx,arc) in enumerate(architecture)
             _addLayer!(g, arc[1], arc[2]; weights, periodic, type = arc[3], set = sets[arc_idx], kwargs...)
         end
+        g
         return g
     end
     
     # Constructor for copying from other graph or savedata.
     function IsingGraph(
         state,
-        sp_adj,
+        adj,
         stype,
         layers,
         continuous,
         defects,
-        data
+        data,
+        Hamiltonians = (Ising,)
         )
         return new{eltype(state)}(
             # Sim
@@ -108,11 +126,13 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
             #state
             state,
             # Adjacency
-            sp_adj,
+            adj,            
             #Temp
             1f0,
             # Default algorithm
             updateMetropolis,
+            #Hamiltonians
+            Hamiltonians,
             # stype
             stype,
             # Layers
@@ -122,7 +142,9 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
             # Connections between layers
             Dict{Pair, Int32}(),
             #params
-            (),
+            (;self = ParamVal(zeros(eltype(state), length(state)), 0, "Self Connections", false)),
+            # For notifying simulations or other things
+            Emitter(Observable[]),
             # Defects
             defects,
             # Data
@@ -158,19 +180,21 @@ export coords
 @inline clamprange!(g::IsingGraph, clamp, idxs) = setrange!(defects(g), clamp, idxs)
 export clamprange!
 
-@setterGetter IsingGraph sp_adj
+@setterGetter IsingGraph adj params
+@inline params(g::IsingGraph) = g.params
+export params
 @inline nStates(g) = length(state(g))
-@inline sp_adj(g::IsingGraph) = g.sp_adj
-@inline function sp_adj(g::IsingGraph, sp_adj)
-    @assert sp_adj.m == sp_adj.n == length(state(g))
-    g.sp_adj = sp_adj
+@inline adj(g::IsingGraph) = g.adj
+@inline function adj(g::IsingGraph, adj)
+    @assert adj.m == adj.n == length(state(g))
+    g.adj = adj
     # Add callbacks field to graph, which is a Dict{typeof(<:Function), Vector{Function}}
     # And create a setterGetter macro that includes the callbacks
     restart(g)
-    return sp_adj
+    return adj
 end
-set_sp_adj!(g::IsingGraph, vecs::Tuple) = sp_adj(g, sparse(vecs..., nStates(g), nStates(g)))
-export sp_adj
+set_adj!(g::IsingGraph, vecs::Tuple) = adj(g, sparse(vecs..., nStates(g), nStates(g)))
+export adj
 
 @forward IsingGraph GraphData d
 @forward IsingGraph GraphDefects defects
@@ -210,7 +234,10 @@ end
 # end
 
 function processes(g::IsingGraph)
-    return processes(sim(g))[map(process -> process.objectref === g, processes(sim(g)))]
+    if !isnothing(processes(sim(g)))
+        return processes(sim(g))[map(process -> process.objectref === g, processes(sim(g)))]
+    end
+    return Process[]
 end
 
 processes(::Nothing) = nothing
@@ -322,12 +349,12 @@ function Base.resize!(g::IsingGraph{T}, newlength, startidx = length(state(g))) 
         randomstate = rand(T, sizediff)
         state(g)[oldlength+1:newlength] .= randomstate
         idxs_to_add = startidx:(startidx + sizediff - 1)
-        g.sp_adj = insertrowcol(sp_adj(g), idxs_to_add)
+        g.adj = insertrowcol(adj(g), idxs_to_add)
         resize!(d(g), newlength)
     else # if making smaller
         idxs_to_remove = startidx:(startidx + abs(sizediff) - 1)
         deleteat!(state(g), idxs_to_remove)
-        g.sp_adj = deleterowcol(sp_adj(g), idxs_to_remove)
+        g.adj = deleterowcol(adj(g), idxs_to_remove)
         
         # Resize data
         resize!(d(g), newlength, idxs_to_remove)
@@ -401,7 +428,7 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth; weights = nothing, period
 
         return IsingLayer(type, g, idx , _startidx, llength, lwidth; periodic, set)
     end
-    layertype =  IsingLayer{type, set, typeof(g)}
+    layertype =  IsingLayer{type, set}
     push!(layers(g), make_newlayer, layertype)
     newlayer = layers(g)[end]
 

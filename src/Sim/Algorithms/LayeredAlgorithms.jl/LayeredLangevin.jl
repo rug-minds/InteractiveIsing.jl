@@ -9,7 +9,7 @@ function prepare(::typeof(layeredLangevin), g; kwargs...)
     resize!(llangevin_prealloc, length(state(g)))
     def_kwargs = pairs((;g,
                         gstate = state(g),
-                        gadj = sp_adj(g),
+                        gadj = adj(g),
                         gparams = params(g),
                         params = g.params,
                         giterator = stateiterator(g),

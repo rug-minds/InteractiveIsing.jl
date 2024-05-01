@@ -52,7 +52,7 @@ end
 
 struct GraphSaveData{Version}
     state::Union{Nothing, Vector{Float32}}
-    sp_adj::SparseMatrixCSC{Float32,Int32}
+    adj::SparseMatrixCSC{Float32,Int32}
     stype::SType
     shuffle_idxs::Vector{Int}
     continuous::StateType
@@ -68,7 +68,7 @@ end
 
 function GraphSaveData(g::IsingGraph)
 
-    gsd = GraphSaveData{graph_version}(copy(state(g)), copy(sp_adj(g)), stype(g), copy(layers(g).idxs), continuous(g), defects(g), d(g))
+    gsd = GraphSaveData{graph_version}(copy(state(g)), copy(adj(g)), stype(g), copy(layers(g).idxs), continuous(g), defects(g), d(g))
 
     gsd.defects.g = nothing
   
@@ -80,7 +80,7 @@ function IsingGraph(sd::Dict{String, Any})
     # Initialize graph
     g = IsingGraph(
         gsd.state,
-        gsd.sp_adj,
+        gsd.adj,
         gsd.stype,
         ShuffleVec{IsingLayer}(),
         gsd.continuous,
@@ -130,22 +130,22 @@ export saveGraph, loadGraph
 function saveadj(g, filename = "adj-$(getnowtime())"; subfolder = false)
     subfolder_st = "/"*subfolder
     path = pwd() * "$subfolder_st/$filename.jld2"
-    adj = sp_adj(g)
+    _adj = adj(g)
     architecture = getarchitecture(g)
-    save(path, "adj", adj, "architecture", architecture)
+    save(path, "adj", _adj, "architecture", architecture)
     return path
 end
 
 function loadadj(g, path; ignorearchitecture = false)
     data = load(path)
-    adj = data["adj"]
+    _adj = data["adj"]
     dataarchitecture = data["architecture"]
     if !ignorearchitecture
         @assert compare_architecture_sizes(dataarchitecture, getarchitecture(g)) "Architecture sizes not the same"
     else
-        adj = sparse(findnz(adj)..., length(state(g)), length(state(g)))
+        _adj = sparse(findnz(_adj)..., length(state(g)), length(state(g)))
     end
-    sp_adj(g, adj)
+    adj(g, _adj)
     return g
 end
 
@@ -153,24 +153,24 @@ function saveparameters(g, filename = "parameters-$(getnowtime())"; subfolder = 
     subfolder_st = "/"*subfolder
     path = pwd() * "$subfolder_st/$filename.jld2"
     data = g.d
-    adj = sp_adj(g)
+    _adj = adj(g)
     architecture = getarchitecture(g)
-    save(path, "data", data, "adj", adj, "architecture", architecture)
+    save(path, "data", data, "adj", _adj, "architecture", architecture)
     return path
 end
 
 function loadparameters(g, path; ignorearchitecture = false)
     data = load(path)
-    adj = data["adj"]
+    _adj = data["adj"]
     gdata = data["data"]
     dataarchitecture = data["architecture"]
     if !ignorearchitecture
         @assert compare_architecture_sizes(dataarchitecture, getarchitecture(g)) "Architecture sizes not the same"
     else
-        adj = sparse(findnz(adj)..., length(state(g)), length(state(g)))
+        _adj = sparse(findnz(_adj)..., length(state(g)), length(state(g)))
         resize!(gdata, length(state(g)))
     end
-    sp_adj(g, adj)
+    adj(g, _adj)
     g.d = gdata
     if !isempty(g.d.bfield)
         setSType!(g, :Magfield => true)

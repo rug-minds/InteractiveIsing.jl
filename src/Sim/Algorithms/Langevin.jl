@@ -14,7 +14,7 @@ function prepare(::Union{typeof(updateLangevin), typeof(updateLangevinThreaded)}
     resize!(langevin_prealloc, length(state(g)))
     def_kwargs = pairs((;g,
                         gstate = state(g),
-                        gadj = sp_adj(g),
+                        gadj = adj(g),
                         gparams = params(g),
                         iterator = stateiterator(g),
                         rng = MersenneTwister(),

@@ -1,4 +1,4 @@
-initSPAdj!(g) = sp_adj(g, spzeros(nStates(g), nStates(g)))
+initSPAdj!(g) = adj(g, spzeros(nStates(g), nStates(g)))
 export initSPAdj!
 
 struct SparseConnections
@@ -122,7 +122,7 @@ Remove all connections within layer
 """
 # @inline removeConnections(layer::IsingLayer) = removeConnections(layer, View)
 function removeConnections(layer::IsingLayer)
-    old_rows, old_cols, old_weights  = findnz(sp_adj(graph(layer)))
+    old_rows, old_cols, old_weights  = findnz(adj(graph(layer)))
 
     filter = Vector{Bool}(undef , length(old_rows))
 
@@ -134,7 +134,7 @@ function removeConnections(layer::IsingLayer)
 end
 
 function removeConnections(layer1, layer2)
-    old_rows, old_cols, old_weights  = findnz(sp_adj(graph(layer1)))
+    old_rows, old_cols, old_weights  = findnz(adj(graph(layer1)))
 
     filter = Vector{Bool}(undef , length(old_rows))
 
@@ -150,7 +150,7 @@ end
 Remove all connections within layer and going in and out of layer
 """
 function removeConnectionsAll(layer::IsingLayer)
-    old_rows, old_cols, old_weights  = findnz(sp_adj(graph(layer)))
+    old_rows, old_cols, old_weights  = findnz(adj(graph(layer)))
 
     filter = Vector{Bool}(undef , length(old_rows))
 
@@ -162,14 +162,14 @@ function removeConnectionsAll(layer::IsingLayer)
 end
 export removeConnectionsAll
 
-function remConnection!(sp_adj, i, j)
-    deleteval!(sp_adj, i, j)
-    deleteval!(sp_adj, j, i)
-    return sp_adj
+function remConnection!(adj, i, j)
+    deleteval!(adj, i, j)
+    deleteval!(adj, j, i)
+    return adj
 end
 export remConnection!
 
-remConnectionDirected(sp_adj, i, j) = deleteval!(sp_adj, i, j)
+remConnectionDirected(adj, i, j) = deleteval!(adj, i, j)
 
 function connectLayersFull(layer1, layer2)
     n_conns = nStates(layer1)*nStates(layer2)
@@ -204,7 +204,7 @@ end
 export connectLayersFull
 
 function connectLayersFull!(layer1, layer2)
-    set_sp_adj!(graph(layer1), connectLayersFull(layer1, layer2))
+    set_adj!(graph(layer1), connectLayersFull(layer1, layer2))
     connections(layer1)[internal_idx(layer1) => internal_idx(layer2)] = :All
     connections(layer2)[internal_idx(layer2) => internal_idx(layer1)] = :All
 end

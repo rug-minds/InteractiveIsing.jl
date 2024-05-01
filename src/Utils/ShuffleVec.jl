@@ -33,13 +33,13 @@ isinternal(cb::ShuffleCallback) = cb.type == :Internal
 
 """
 Defines a vector like object that allows the shuffling of indexes without moving any internal data
-Or inserts data ordered by type, if grouped is chosen
+Or inserts data internally, ordered by type, if grouped mode is chosen
 The internal data is type stable for quick access
 
-ShuffleVec{T1} can be coupled with other vector{T2} like objects if those object have defined the following methods:
+ShuffleVec{T1} can be coupled with other Vector{T2} like objects if those object have defined the following methods:
 insert!(vec, idx, val)
 deleteat!(vec, idx)
-shuffle!(vec, oldidx, newidx)
+shuffle!(vec, oldidx, newidx) TODO: Explain these better
 swap!(vec, idx1, idx2)
 
 and define a field pushfuncs to define what object needs to be pushed

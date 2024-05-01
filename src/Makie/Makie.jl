@@ -2,7 +2,7 @@ import GLMakie: Axis
 using GLMakie.GLFW
 using GLMakie: to_native
 
-set_window_config!(;
+GLMakie.activate!(;
         vsync = false,
         framerate = 60.0,
         pause_renderloop = false,

@@ -3,7 +3,7 @@ function updateMetropolis end
 function prepare(::typeof(updateMetropolis), g; kwargs...)
     def_kwargs = pairs((;g,
                         gstate = state(g),
-                        gadj = sp_adj(g),
+                        gadj = adj(g),
                         gparams = params(g),
                         iterator = ising_it(g, stype(g)),
                         rng = MersenneTwister(),
@@ -30,7 +30,7 @@ export updateMetropolis
 
     oldstate = @inbounds gstate[idx]
     
-    ΔE = ΔEFunc(g, oldstate, 1, gstate, gadj, idx, gstype, Discrete)
+    ΔE = @inline ΔEFunc(g, oldstate, 1, gstate, gadj, idx, gstype, Discrete)
 
     if (ΔE <= 0f0 || rand(rng, Float32) < exp(-β*ΔE))
         @inbounds gstate[idx] *= -Int8(1)
@@ -47,8 +47,7 @@ end
 
     newstate = T(2)*(rand(rng, Float32)- T(0.5))
 
-    ΔE = ΔEFunc(g, oldstate, newstate, gstate, gadj, idx, gstype, Continuous)
-
+    ΔE = @inline ΔEFunc(g, oldstate, newstate, gstate, gadj, idx, gstype, Continuous)
     if (ΔE < zero(T) || rand(rng, Float32) < exp(-β*ΔE))
         @inbounds g.state[idx] = newstate 
     end

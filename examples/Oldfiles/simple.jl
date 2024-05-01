@@ -30,7 +30,7 @@ function weights2sparse(g, ws)
     return sparse(rowval, colval, nzval, n_units, n_units)
 end
 
-sp_adj(g, weights2sparse(g, npzread("/Users/fabian/Downloads/bm_data/rbm_W_finetuned.npy")))
+adj(g, weights2sparse(g, npzread("/Users/fabian/Downloads/bm_data/rbm_W_finetuned.npy")))
 
 resetstate(g) = state(g) .= rand(Float32, length(state(g)))
 

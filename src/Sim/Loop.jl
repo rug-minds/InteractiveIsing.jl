@@ -42,18 +42,20 @@ createProcesses(g::IsingGraph, num; kwargs...) =
 
 export createProcess, createProcesses
 
-function mainLoop(g::IsingGraph, process = processes(sim(g))[1], oldkwargs = pairs((;));
+function mainLoop(g::IsingGraph, 
+        process = processes(sim(g))[1], 
+        oldkwargs = pairs((;));
         algorithm = g.default_algorithm,
         kwargs...)
     
     args = prepare(algorithm, g; kwargs...)
+
     return mainLoop(process, algorithm, args; kwargs...)
-
 end
-
+using InteractiveUtils
 export mainLoop
 # g, gstate, gadj, iterator, rng, updateFunc, dEFunc, gstype::ST
-function mainLoop(process, @specialize(algorithm::Function), @specialize(args); kwargs...)
+function mainLoop(process, @specialize(algorithm), @specialize(args); kwargs...)
     while run(process)
         algorithm(args)
         inc(process)

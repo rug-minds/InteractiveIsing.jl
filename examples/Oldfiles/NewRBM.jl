@@ -51,7 +51,7 @@ function weights12_2_sparse(w1, w2)
     end
     return sparse(rowval, colval, nzval, nstates, nstates)
 end
-sp_adj(g, weights12_2_sparse(w_vh, w_hz))
+adj(g, weights12_2_sparse(w_vh, w_hz))
 setB!(g[1], v_bias)
 setB!(g[2], h_bias)
 setB!(g[3], z_bias)
@@ -62,7 +62,7 @@ using LoopVectorization, StatsBase, Random
 function InteractiveIsing.prepare(::typeof(updateRBM), g; kwargs...)
     def_kwargs = pairs((;g,
                         gstate = state(g),
-                        gadj = sp_adj(g),
+                        gadj = adj(g),
                         gparams = params(g),
                         iterator = stateiterator(g),
                         rng = MersenneTwister(),
@@ -115,7 +115,7 @@ end
 function updateRBM(@specialize(args))
     (;g, gstate, gadj, gparams, iterator, rng, gstype, its) = args
 
-    tempstate = sp_adj(g)*gstate
+    tempstate = adj(g)*gstate
     v = @view tempstate[graphidxs(g[1])]
     h = @view tempstate[graphidxs(g[2])]
     z = @view tempstate[graphidxs(g[3])]
@@ -136,7 +136,7 @@ createProcess(g, algorithm = updateRBM)
 
 
 using GLMakie, DataStructures
-# scene = Scene(resolution = (800, 800));
+# scene = Scene(size = (800, 800));
 f = Figure();
 ax = Axis(f[1, 1], aspect = 1)
 d = display(GLMakie.Screen(), f)

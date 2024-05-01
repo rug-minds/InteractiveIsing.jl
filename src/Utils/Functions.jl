@@ -603,3 +603,13 @@ function sumsimd(v::AbstractArray{T}) where T
     return cum
 end
 export sumsimd
+
+"""
+Deepcopy all the fields of one struct to another.
+"""
+function copyfields!(oldstruct::T, newsrtuct::T) where T
+    for fieldname in fieldnames(T)
+        setfield!(oldstruct, fieldname, deepcopy(getfield(newsrtuct, fieldname)))
+    end
+    oldstruct
+end
