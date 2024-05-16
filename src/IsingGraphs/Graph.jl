@@ -27,7 +27,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     temp::T
 
     default_algorithm::Function
-    hamiltonians::Tuple
+    hamiltonian::Type{<:Hamiltonian}
     stype::SType
     
     layers::ShuffleVec{IsingLayer}
@@ -84,7 +84,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
             # Default algorithm
             layeredMetropolis,
             #Hamiltonians
-            (Ising,),
+            Ising,
             SType(:Weighted => weighted),
             #Layers
             ShuffleVec{IsingLayer}(relocate = relocate!),
@@ -118,7 +118,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
         continuous,
         defects,
         data,
-        Hamiltonians = (Ising,)
+        Hamiltonians = Ising
         )
         return new{eltype(state)}(
             # Sim
@@ -303,18 +303,27 @@ end
 """ 
 Returns in iterator which can be used to choose a random index among alive spins
 """
-@generated function ising_it(g::IsingGraph, stype::SType = stype(g))
-    # Assumes :Defects will be found
-    defects = getSParam(stype, :Defects)
-
+function ising_it(g, nothing)
+    defects = hasDefects(g)
     if !defects
-        return Expr(:block, :(return UnitRange{Int32}(1:nStates(g)) ))
-        # return Expr(:block, :(return Base.OneTo(nStates(g)) ))
+        return UnitRange{Int32}(1:nStates(g))
     else
-        return Expr(:block, :(return aliveList(g)))
+        return aliveList(g)
     end
-
 end
+# OLD GENERATED FUNCTION FOR FASTER RUNTIME
+# @generated function ising_it(g::IsingGraph)
+#     # Assumes :Defects will be found
+#     defects = getSParam(stype, :Defects)
+
+#     if !defects
+#         return Expr(:block, :(return UnitRange{Int32}(1:nStates(g)) ))
+#         # return Expr(:block, :(return Base.OneTo(nStates(g)) ))
+#     else
+#         return Expr(:block, :(return aliveList(g)))
+#     end
+
+# end
 
 """
 Initialization of adjacency Vector for a given N

@@ -92,46 +92,7 @@ export IsingLayer
 Two IsingLayers are equivalent when
 """
 equiv(i1::Type{IsingLayer{A,B,C,D}}, i2::Type{IsingLayer{E,F,G,H}}) where {A,B,C,D,E,F,G,H} = A == E && B == F
-# TODO: Is this still needed?
-mutable struct IsingLayerCopy{T} <: AbstractIsingLayer{T}
-    const graph::AbstractIsingGraph
-    layeridx::Int32
-    state::Matrix{T}
-    adj::Matrix{Vector{Tuple{Int32, Float32}}}
-    start::Int32
-    const size::Tuple{Int32,Int32}
-    const nstates::Int32
-    coords::Coords{Tuple{Int32,Int32,Int32}}
-    # const d::LayerData
-    # defects::LayerDefects
-    top::LayerTopology
 
-    function IsingLayerCopy(layer::IsingLayer{A,B}) where {A,B}
-        
-        new{A}(
-            # Graph
-            layer.graph,
-            # Layer idx at the time of copying
-            layeridx(layer),
-            # State
-            copy(state(layer)),
-            # Adj
-            copy(adj(layer)),
-            # Start idx
-            layer.start,
-            # Size
-            layer.size,
-            # Number of states
-            layer.nstates,
-            # Coordinates
-            layer.coords,
-            # Layer data
-            # layer.d,
-            # layer.defects,
-            layer.top
-        )
-    end
-end
 
 function destructor(layer::IsingLayer)
     close.(timers(layer))
@@ -139,26 +100,25 @@ end
 
 
 @setterGetter IsingLayer coords size layeridx graph
-@setterGetter IsingLayerCopy coords size
 
-# # Extend show for IsingLayer, showing the layer idx, and the size of the layer
-# function Base.show(io::IO, layer::IsingLayer{A,B}) where {A,B}
-#     showstr = "$A IsingLayer $(layeridx(layer)) with size $(size(layer)) and stateset $B\n"
-#     if coords(layer) != nothing
-#         showstr *= " at coordinates $(coords(layer))"
-#     end
-#     print(io, showstr, "\n")
-#     println(io, " with connections:")
-#     for key in keys(connections(layer))
-#         println(io, "\tConnected to layer $(key[2]) using ")
-#         println("\t", (connections(layer)[key]))
-#     end
-#     print(io, " and $(ndefect(layer)) defects")
-#     return
-# end
+# Extend show for IsingLayer, showing the layer idx, and the size of the layer
+function Base.show(io::IO, layer::IsingLayer{A,B}) where {A,B}
+    showstr = "$A IsingLayer $(layeridx(layer)) with size $(size(layer)) and stateset $B\n"
+    if coords(layer) != nothing
+        showstr *= " at coordinates $(coords(layer))"
+    end
+    print(io, showstr, "\n")
+    println(io, " with connections:")
+    for key in keys(connections(layer))
+        println(io, "\tConnected to layer $(key[2]) using ")
+        println("\t", (connections(layer)[key]))
+    end
+    print(io, " and $(ndefect(layer)) defects")
+    return
+end
 
-# # SHOW THE TYPE
-# Base.show(io::IO, layertype::Type{IsingLayer{A,B}}) where {A,B} = print(io, "$A IsingLayer")
+# SHOW THE TYPE
+Base.show(io::IO, layertype::Type{IsingLayer{A,B}}) where {A,B} = print(io, "$A IsingLayer")
 
 
 ## ACCESSORS
@@ -226,31 +186,6 @@ export conns, conncoords
 
 @inline wg(layer::IsingLayer) = try connections(layer)[internal_idx(layer) => internal_idx(layer)]; catch; return ""; end
 @inline wg(layer1::IsingLayer, layer2::IsingLayer) = try connections(layer1)[internal_idx(layer1) => internal_idx(layer2)]; catch; return ""; end
-
-"""
-Resize a layer
-Is this used?
-"""
-function Base.resize!(layer::IsingLayer, len, wid)
-    g = graph(layer)
-    old_nstates = nStates(layer)
-    new_nstates = len*wid
-    extra_states = new_nstates - old_nstates
-    if extra_states == 0
-        return
-    end
-    _startidx = startidx(layer)
-    _endidx = endidx(layer)
-    if extra_states > 0
-        insert!(state(g), _endidx+1, rand(len*wid))
-        adj(g, insertrowcol(g, _endidx+1:(_endidx+1 + extra_states)))
-    else # extra_states < 0
-        notidxs = graphidxs(layer)[end+extra_states+1:end]
-        deleteat!(state(g), _startidx:_endidx)
-        adj(g, deleterowcol(g, notidxs))
-    end
-    return layer
-end
 
 """
 Get graph of layer
@@ -364,6 +299,32 @@ export aliveidxs
     @inline setdefect(layer::AbstractIsingLayer, val, idx) = defects(graph(layer))[idxLToG(idx, layer)] = val
     @inline clamprange!(layer::AbstractIsingLayer, val, idxs) = setrange!(defects(graph(layer)), val, idxLToG.(idxs, Ref(layer)))
 ###
+
+### RESIZING
+"""
+Resize a layer
+Is this used?
+"""
+function Base.resize!(layer::IsingLayer, len, wid)
+    g = graph(layer)
+    old_nstates = nStates(layer)
+    new_nstates = len*wid
+    extra_states = new_nstates - old_nstates
+    if extra_states == 0
+        return
+    end
+    _startidx = startidx(layer)
+    _endidx = endidx(layer)
+    if extra_states > 0
+        insert!(state(g), _endidx+1, rand(len*wid))
+        adj(g, insertrowcol(g, _endidx+1:(_endidx+1 + extra_states)))
+    else # extra_states < 0
+        notidxs = graphidxs(layer)[end+extra_states+1:end]
+        deleteat!(state(g), _startidx:_endidx)
+        adj(g, deleterowcol(g, notidxs))
+    end
+    return layer
+end
 
 ### RELOCATING
 ### Shift from placing 1 layer befor
@@ -499,3 +460,52 @@ export statetype, setstatetype
 @inline function initstate!(layer::IsingLayer)
     state(layer)[:] .= rand(layer, nStates(layer))
 end
+
+
+
+
+
+
+## COPY SHOULDN"T BE NEEDED
+# TODO: Is this still needed?
+mutable struct IsingLayerCopy{T} <: AbstractIsingLayer{T}
+    const graph::AbstractIsingGraph
+    layeridx::Int32
+    state::Matrix{T}
+    adj::Matrix{Vector{Tuple{Int32, Float32}}}
+    start::Int32
+    const size::Tuple{Int32,Int32}
+    const nstates::Int32
+    coords::Coords{Tuple{Int32,Int32,Int32}}
+    # const d::LayerData
+    # defects::LayerDefects
+    top::LayerTopology
+
+    function IsingLayerCopy(layer::IsingLayer{A,B}) where {A,B}
+        
+        new{A}(
+            # Graph
+            layer.graph,
+            # Layer idx at the time of copying
+            layeridx(layer),
+            # State
+            copy(state(layer)),
+            # Adj
+            copy(adj(layer)),
+            # Start idx
+            layer.start,
+            # Size
+            layer.size,
+            # Number of states
+            layer.nstates,
+            # Coordinates
+            layer.coords,
+            # Layer data
+            # layer.d,
+            # layer.defects,
+            layer.top
+        )
+    end
+end
+
+@setterGetter IsingLayerCopy coords size

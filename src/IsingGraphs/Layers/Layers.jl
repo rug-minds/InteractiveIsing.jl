@@ -3,3 +3,4 @@ include("LayerTopology.jl")
 
 include("IsingLayer.jl")
 include("LayerConnFunc.jl")
+include("Parameters.jl")

@@ -8,15 +8,15 @@ Set spins either to a value or clamp them
 #Clean this up
 # TODO: Shouldn't always refresh sim if the iterator didn't change
 function setSpins!(g::AbstractIsingGraph{T}, idxs::AbstractArray, brush, clamp = false, refresh = true) where T
-    # if T == Int8
-    #     clamp = brush == 0 ? true : clamp
-    # end
+    hasdefects_before = hasDefects(g)
 
     # Set the defects
     clamprange!(g, clamp, idxs)
-    
-    # Set the stype to wether it has defects or not
-    setSType!(graph(g), :Defects => hasDefects(graph(g)), force_refresh = refresh)
+
+    hasdefects_after = hasDefects(g)
+    if hasdefects_before != hasdefects_after
+        refresh(g)
+    end
 
     # Set the spins
     @inbounds state(g)[idxs] .= brush
@@ -25,20 +25,29 @@ end
 setSpins!(g::AbstractIsingGraph, coords::Vector{Tuple{Int16,Int16}}, brush, clamp = false) = setSpins!(g, coordToIdx.(coords, glength(g)), brush, clamp)
 
 function setSpins!(g::AbstractIsingGraph{T}, idx::Integer, brush, clamp = false, refresh = false) where T
-    # if T == Int8
-    #     clamp = brush == 0 ? true : clamp
-    # end
-
+    hasdefects_before = hasDefects(g)
+    
     setdefect(g, clamp, idx)
 
-    setSType!(graph(g), :Defects => hasDefects(graph(g)), force_refresh = refresh)
+    hasdefects_after = hasDefects(g)
+
+    if hasdefects_before != hasdefects_after
+        refresh(g)
+    end
 
     @inbounds state(g)[idx] = brush
 end
 
 function setDefects!(g, val, idxs)
+    hasdefects_before = hasDefects(g)
+    
     defects(g)[idxs] = val
-    setSType!(graph(g), :Defects => hasDefects(graph(g)))
+    
+    hasdefects_after = hasDefects(g)
+    
+    if hasdefects_before != hasdefects_after
+        refresh(g)
+    end
 
     return idxs
 end

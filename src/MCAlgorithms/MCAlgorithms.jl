@@ -21,7 +21,7 @@
 
     function prepare(::Type{Algo}, g; kwargs...) where {Algo <: MCAlgorithm}
         args_algo = (;_prepare(Algo, g; kwargs...)...)
-        
+
         return args_algo
     end
 

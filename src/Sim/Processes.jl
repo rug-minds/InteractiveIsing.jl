@@ -9,10 +9,11 @@ mutable struct Process
     objectref::Any
     retval::Any
     errorlog::Any
+    algorithm::Any #Ref to the algorithm being run
 end
 
 # Process() = Process(nothing, 0, Threads.SpinLock(), (true, :Nothing))
-Process() = Process(nothing, 0, Threads.SpinLock(), false, nothing, nothing, nothing)
+Process() = Process(nothing, 0, Threads.SpinLock(), false, nothing, nothing, nothing, nothing)
 @setterGetter Process lock run
 
 function Base.show(io::IO, p::Process)
@@ -31,6 +32,25 @@ function Base.show(io::IO, p::Process)
 
     return nothing
 end
+"""
+Chooses the right combination of arguments to use for a process
+    1. Algorithm prepares arguments
+    2. If the process was previously paused, also use earlier specified kwargs
+    3. If the user gives new args through kwargs, also use those
+"""
+function choose_args(p::Process, prepared_args, specified_args = nothing)
+    masked_args = prepared_args
+    if ispaused(p) # If paused, use the old kwargs
+        #TODO: Is the if here neccesary?
+        # Shouldn't it be decided by wether there is a retval
+        masked_args = replacekwargs(prepared_args, p.retval)
+    end
+    if !isnothing(specified_args)
+        masked_args = replacekwargs(prepared_args, specified_args)
+    end
+
+    return masked_args
+end
 
 
 status(p::Process) = isrunning(p) ? :Running : :Quit
@@ -42,11 +62,23 @@ isrunning(p::Process) = !isnothing(p.task) && !istaskdone(p.task)
 
 ispaused(p::Process) = !isnothing(p.task) && istaskdone(p.task)
 
-isdone(p::Process) = isnothing(p.task) && !isnothing(p.retval)
+isdone(p::Process) = isnothing(p.task)
 
-isidle(p::Process) = isnothing(p.task) || ispaused(p)
+isidle(p::Process) = isdone(p.task) || ispaused(p)
 
 neverstarted(p::Process) = isnothing(p.task) && isnothing(p.retval)
+
+"""
+Can be used for a new process
+"""
+isfree(p::Process) = neverstarted(p) || isdone(p)
+"""
+Is currently used for running,
+    can be paused
+"""
+isused(p::Process) = isrunning(p) || ispaused(p)
+
+
 
 function quit(p::Process)
     @atomic p.run = false
@@ -58,16 +90,31 @@ end
 
 function pause(p::Process)
     @atomic p.run = false
-    
     try 
         p.retval = fetch(p)
     catch e
         p.errorlog = e
     end
-
     return true
 end
+"""
+Takes a runnable task and then runs it with the process
+p is the process
+"""
+function runtask(p::Process, task::Task, objectref = nothing; run = true)
+    p.objectref = objectref
+    @atomic p.run = run
+    task.sticky = false
+    schedule(task)
+    p.task = task
+    p.retval = nothing
+    return task
+end
 
+"""
+Give a function and then creates a task that is run by the process
+The function needs to take an object as a reference
+"""
 function runtask(p, taskf::Function, objectref = nothing; run = true)
     p.objectref = objectref
     @atomic p.run = run
@@ -77,15 +124,7 @@ function runtask(p, taskf::Function, objectref = nothing; run = true)
     return t
 end
 
-function runtask(p, task::Task, objectref = nothing; run = true)
-    p.objectref = objectref
-    @atomic p.run = run
-    task.sticky = false
-    schedule(task)
-    p.task = task
-    p.retval = nothing
-    return task
-end
+
 
 (p::Process)(taskf::Function, objectref = nothing) = runtask(p, taskf, objectref)
 (p::Process)(task::Task, objectref = nothing) = runtask(p, task, objectref)
@@ -104,11 +143,6 @@ run(p::Process, val) = @atomic p.run = val
 
 @inline inc(p::Process) = p.updates += 1
 
-# @inline run(p::Process) = p.signal[1]
-# @inline message(p::Process) = p.signal[2]
-
-# @inline atomic_message(p::Process, val) = @atomic p.signal = (p.signal[1], val)
-
 """
 Access run atomically
 """
@@ -119,12 +153,7 @@ Access run atomically
     !ignore_lock && unlock(p)
     return ret
 end
-# @inline function atomic_message(p::Process; ignore_lock = false)
-#     !ignore_lock && lock(p)
-#     ret = (@atomic p.signal)[2]
-#     !ignore_lock && unlock(p)
-#     return ret
-# end
+
 @inline function atomic_run!(p::Process, val; ignore_lock = false)
     !ignore_lock && lock(p)
     # ret = @atomic p.signal = (val, p.signal[2])
@@ -132,19 +161,6 @@ end
     !ignore_lock && unlock(p)
     return ret
 end
-# @inline function message!(p::Process, val; ignore_lock = false)
-#     !ignore_lock && lock(p)
-#     ret = @atomic p.signal = (p.signal[1], val)
-#     !ignore_lock && unlock(p)
-#     return ret
-# end
-# @inline function signal!(p::Process, bool, symb; ignore_lock = false)
-#     !ignore_lock && lock(p)
-#     # ret = @atomic p.signal = (bool, symb)
-#     ret = @atomic p.signal = bool
-#     !ignore_lock && unlock(p)
-#     return ret
-# end
 
 @inline running(p::Process) = p.status == :Running
 
@@ -153,7 +169,7 @@ end
 # Base.isready(p::Process) = isready(p.refresh)
 # Base.isopen(p::Process) = isopen(p.refresh)
 # Base.close(p::Process) = close(p.refresh)
-@inline Base.isempty(p::Process) = isempty(p.refresh)
+# @inline Base.isempty(p::Process) = isempty(p.refresh)
 
 
 mutable struct Processes <: AbstractVector{Process}
@@ -164,22 +180,28 @@ lock(p::Processes) = lock.(p.procs)
 unlock(p::Processes) = unlock.(p.procs)
 
 Base.size(p::Processes) = (length(p.procs),)
-
-# Base.put!(p::Processes, idxs) = for idx in idxs; put!(p.procs[idx], true); end
-
 Processes(num::Integer) = Processes([Process() for _ in 1:num])
 
 getindex(processes::Processes, num) = processes.procs[num]
-
-export getindex
-
 setindex!(processes::Processes, val, idx) = setindex(processes.procs[num], val, idx)
 
 length(processes::Processes) = length(processes.procs)
-export length
 
 iterate(processes::Processes, s = 1) = iterate(processes.procs, s)
 
+function get_free_process(procs::Union{Processes, Vector{Process}})
+    for p in procs
+        if isfree(p)
+            return p
+        end
+    end
+    return nothing
+end
+
+"""
+For iterator
+Still used?
+"""
 struct ProcessStats <: AbstractVector{Symbol}
     processes::Processes
     type::Symbol
@@ -211,7 +233,6 @@ function setindex!(ps::ProcessStats, val, idx)
     end
 end
 getindex(ps::ProcessStats, num::Vector) = getindex.(Ref(ps), num)
-# setindex!(ps::ProcessStats, val, idx) = setfield!(ps.processes.procs[idx], ps.type, val)
 
 export iterate
 

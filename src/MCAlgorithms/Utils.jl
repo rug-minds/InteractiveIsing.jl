@@ -1,4 +1,11 @@
-
+# TODO: Use prefs
+debugmode = true
+@static if debugmode
+export strsplice, find_i_symb, symbol_without_index, match_indexed_symbol, 
+    before_underscore, i_to_vec_expr, symbwalk, _symbwalk, identify_unique_elements, 
+    unique_identifiers_old!, replace_reserved, substitute_zero, substitute_one, replace_indices, 
+    replace_idxs, remove_key, replace_inactive_symbs, symbol_without_index, find_symb, find_symbs, delete_tree
+end
 """
 Creates a bracketed string of the arguments from the args function for a hamiltonian
 """
@@ -18,7 +25,8 @@ function strsplice(original_string::AbstractString, start_index::Int, end_index:
 end
 
 """
-In a symbol, find the pattern _(combination of symbols)
+In a symbol, find the pattern _(combination of indexes)
+Returns the range of indexes and the symboles of the (i,j,k,l,m,n) found
 """
 function find_i_symb(symb)
     if !isa(symb, Symbol)
@@ -29,7 +37,7 @@ function find_i_symb(symb)
     found_underscore = findfirst(x -> x == '_', str)
     found_last_symb = found_underscore
     if !isnothing(found_underscore)
-        while (found_last_symb+1 <= length(str)) && (str[found_last_symb+1] in ['i','j','k','l','m','n'])
+        while (found_last_symb+1 <= lastindex(str)) && (str[found_last_symb+1] in ['i','j','k','l','m','n'])
             found_last_symb +=1
             push!(symbs, str[found_last_symb])
         end
@@ -42,6 +50,28 @@ function find_i_symb(symb)
 
     return nothing, nothing
 
+end
+
+"""
+Find all characters in a symbol before the underscore
+"""
+function before_underscore(symb)
+    sstring = String(symb)
+    if sstring[1] == '_'
+        return nothing, nothing
+    end
+    lastidx = nothing
+    for idx in eachindex(sstring)
+        if sstring[idx] == '_'
+            break
+        end
+        lastidx = idx
+    end
+    if isnothing(lastidx)
+        return nothing, nothing
+    end
+
+    return Symbol(sstring[1:lastidx]), 1:lastidx
 end
 
 """
@@ -161,38 +191,212 @@ function remove_key(nt::NamedTuple, key::Symbol)
     )
 end
 
+"""
+For a symbol in the form x_ijk return x
+"""
+function symbol_without_index(symb)
+    idxs, _ = find_i_symb(symb)
+    if isnothing(idxs)
+        return symb
+    end
+    newstr = String(symb)
+    str = newstr[1:first(idxs)-1]
+    return Symbol(str)
+end
+
+function match_indexed_symbol(symb1,symb2)
+    before_underscore(symb1)[1] == before_underscore(symb2)[1]
+end
+
+"""
+In an expression, find a symbol
+Will match with any symbol that is a prefix of the symbol, e.g. x matches x_ijk
+"""
 function find_symb(expr, symb, index...)
     if expr isa Expr
         for (argidx,arg) in enumerate(expr.args)
             found = find_symb(arg, symb, index..., argidx)
-            if found[1]
+            if !isnothing(found)
                 return found
             end
         end
     elseif expr isa Symbol
-        if expr == symb
-            return true, index
+        # if expr == symb
+        if match_indexed_symbol(symb, expr)
+            return index
         end
     end
-    return false, nothing
+    return nothing
 end
 
-function delete_tree(expr, indexs)
-    cexpr = deepcopy(expr)
-    previous_expr = cexpr
-    branch = cexpr
-    for i in indexs[1:end-2]
-        previous_expr = branch
-        branch = branch.args[i]
+"""
+In an expression find all positions of a symbol
+Will match with any symbol that is a prefix of the symbol, e.g. x matches x_ijk
+Returns a list of indices for the consecutive levels of the args of an expression
+"""
+function find_symbs(expr, symb, all_found = [], index...)
+    if expr isa Expr
+        for (argidx,arg) in enumerate(expr.args)
+            find_symbs(arg, symb, all_found, index..., argidx)
+        end
+    elseif expr isa Symbol
+        # if expr == symb
+        if match_indexed_symbol(symb, expr)
+            push!(all_found, index)
+            return all_found
+        end
     end
-    deleteat!(branch.args, indexs[end-1])
-    # If only one branch left, remove the operator
-    if length(branch.args) == 2 && branch.args[1] == :+
-        previous_expr.args = branch.args[2:2]
+    return all_found
+end
+
+# function delete_tree(expr, indexs)
+#     cexpr = deepcopy(expr)
+#     previous_expr = cexpr
+#     branch = cexpr
+#     for i in indexs[1:end-2]
+#         previous_expr = branch
+#         branch = branch.args[i]
+#     end
+#     deleteat!(branch.args, indexs[end-1])
+#     # If only one branch left, remove the operator
+#     if length(branch.args) == 2 && branch.args[1] == :+
+#         previous_expr.args = branch.args[2:2]
+#     end
+#     return cexpr
+# end
+
+enter_args(ex::Expr, t::Tuple) = enter_args(ex, t...)
+function enter_args(ex::Expr, idxs::Int...)
+    if length(idxs) == 0
+        return ex
+    else
+        return enter_args(ex.args[first(idxs)], idxs[2:end]...)
+    end
+end
+
+enter_args(ex::Symbol, idxs...) = ex
+
+function get_args(a::Expr,b...)
+    ex = enter_args(a,b...)
+    if ex isa Symbol
+        return ex
+    end
+
+    return ex.args
+end
+
+get_head(a,b...) = enter_args(a,b...).head
+delete_branch(ex::Expr, idxs::Int...) = deleteat!(enter_args(ex, idxs[1:end-1]...).args, idxs[end])
+delete_branch(a,b::Tuple) = delete_branch(a,b...)
+
+export enter_args, delete_branch, get_args, get_head
+
+"""
+In a mathematical expression subsitute a symbol with zero
+Indexes give the path to the symbol in the following way, expr.args[indexs[1]].args[indexs[2]]...args[indexs[end]]
+It will delete all the branches including the symbol that completely evaluate to zero
+"""
+function substitute_zero(expr, indexs)
+    cexpr = deepcopy(expr)
+
+    # Walk up the branch and fix the tree
+    for level in 1:length(indexs)-1
+        this_level = length(indexs)-level
+        level_indexs = indexs[1:this_level]
+        level_indexs = indexs[1:this_level]
+        previous_branch = indexs[this_level+1]
+
+        symbol = get_args(cexpr, level_indexs...)[1]
+
+        # If the whole branch evaluates to zero, go to the next
+            # if multiplication
+            if symbol == :*
+                continue
+            end
+
+            # If division and its the numerator
+            if symbol == :/ && level_indexs[end] == 2
+                continue
+            end
+
+            # If a power
+            if symbol == :^
+                continue
+            end
+
+        # Delete the zero
+        deleteat!(get_args(cexpr, level_indexs...), previous_branch)
+
+        # Fix the operator
+        if (symbol == :+ || symbol == :-)
+            if length(get_args(cexpr, level_indexs...)) <= 2
+                # replace branch with leftover branch
+
+                leftover = get_args(cexpr, level_indexs...)[2]
+                get_args(cexpr, indexs[1:this_level-1]...)[indexs[this_level]] = leftover
+            end
+        end
+        
+        # if symbol == :* || (symbol == :+ && length(get_args(cexpr, level_indexs...)) == 1)
+        #     continue # Carry the zero
+        # end
+
+        # # the expression is a division and the symbol is in the numerator
+        # if symbol == :/ && level_indexs[end] == 2
+        #     println("Continueing becasue of /")
+        #     continue # Carry the zero
+        # end
+
+        # if ( (symbol == :+ || symbol == :-) && length(get_args(cexpr, level_indexs...)) <= 3)
+        #     # replace branch with leftover branch
+        #     other_branch = indexs[this_level+1] == 2 ? 3 : 2
+        #     ex = get_args(cexpr, level_indexs...)[other_branch]
+
+        #     get_args(cexpr, level_indexs[1:this_level-1]...)[level_indexs[this_level]] = ex
+        # else
+        #     println("just deleting branch")
+        #     delete_branch(cexpr, level_indexs..., indexs[this_level+1])
+        # end
+
+        break
+    end
+  
+    return cexpr
+end
+
+function substitute_one(expr, indexs)
+    cexpr = deepcopy(expr)
+
+    # Walk up the branch and fix the tree
+    for level in 1:length(indexs)-1
+        this_level = length(indexs)-level
+        level_indexs = indexs[1:this_level]
+        previous_branch = indexs[this_level+1]
+
+        symbol = get_args(cexpr, level_indexs...)[1]
+        
+        # If a power of 1, means next branch also evaluates to 1
+        if symbol == :^
+            continue
+        end
+
+        deleteat!(get_args(cexpr, level_indexs...), previous_branch)
+
+        # Then fix the symbol by replacing the whole branch with the leftover
+        if (symbol == :* || symbol == :/)
+            if length(get_args(cexpr, level_indexs...)) == 2
+                leftover = get_args(cexpr, level_indexs...)[2]
+                get_args(cexpr, indexs[1:this_level-1]...)[indexs[this_level]] = leftover
+            end
+        end
+        break
     end
     return cexpr
 end
 
+"""
+Replace a symbol in an expression with a value
+"""
 function replace_symb(expr, val, indexs)
     cexpr = deepcopy(expr)
     branch = cexpr.args
@@ -208,17 +412,21 @@ Checks ParamVals for inactivity and removes all inactive symbol branches
 """
 function replace_inactive_symbs(params, expr::Expr)
     for (name,param) in zip(keys(params),params)
+        println("Replacing inactive symbols for: $name")
         if isinactive(param)
-            if name == :self
-                name = :self_i
-            end
-            found, indexs = find_symb(expr, name)
-            if found
-                if default(param) == 0
-                    expr = delete_tree(expr, indexs)
-                else
-                    expr = replace_symb(expr, default(param), indexs)
-                end
+            while (indexs = find_symb(expr, name); !isnothing(indexs))
+                    println(indexs)
+                    if default(param) == 0
+                        println("Substituting zero")
+                        expr = substitute_zero(expr, indexs)
+                    elseif default(param) == 1
+                        println("Substituting one")
+                        expr = substitute_one(expr, indexs)
+                    else
+                        println("Replacing symbol with: $(default(param))")
+                        expr = replace_symb(expr, default(param), indexs)
+                    end
+                    println(expr)
             end
         end
     end

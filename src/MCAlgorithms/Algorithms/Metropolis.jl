@@ -16,28 +16,30 @@ function _prepare(::Type{Metropolis}, g; kwargs...)
                         gparams = g.params,
                         iterator = ising_it(g, g.stype),
                         rng = MersenneTwister(),
-                        gstype = g.stype,
-                        layertype = typeof(g.layers[1]),
-                        H = Hamiltonian_Builder(Metropolis, g, g.hamiltonians...),
+                        lt = g[1],
+                        H = Hamiltonian_Builder(Metropolis, g, g.hamiltonian),
                     ))
+    println("Hamiltonian is ")
+    println(prepared_kwargs[:H])
     return prepared_kwargs
 end
 
-Base.@propagate_inbounds @inline function Metropolis(@specialize(args))
+@inline function Metropolis(@specialize(args))
     #Define vars
-    (;g, gstate, gadj, gparams, iterator, H, layertype) = args
+    (;g, gstate, gadj, gparams, iterator, H, lt) = args
     i = rand(rng, iterator)
-    Metropolis(i, g, gstate, gadj, gparams, H, layertype)
+    Metropolis(i, g, gstate, gadj, gparams, H, IsingLayer{Continuous, (-1.0, 1.0), 1:40000, Float64})
 end
 
-@inline function Metropolis(i, g, @specialize(gstate::Vector{T}), gadj, gparams, @specialize(ΔH), @specialize(layertype::Type{IsingLayer{StateType, StateSet, C, D}})) where {T, StateType, StateSet, C, D}
+@inline function Metropolis(i, g, gstate::Vector{T}, gadj, gparams, ΔH, lt) where {T}
     β = one(T)/(temp(g))
     
     oldstate = @inbounds gstate[i]
     
-    newstate = sampleState(StateType, oldstate, rng, StateSet)   
+    newstate = @inline sampleState(statetype(lt), oldstate, rng, stateset(lt))   
 
-    ΔE = @inline ΔH(i, gstate, newstate, oldstate, gadj, gparams, layertype)
+    ΔE = @inline ΔH(i, gstate, newstate, oldstate, gadj, gparams, lt)
+
     efac = exp(-β*ΔE)
     randnum = rand(rng, Float32)
 

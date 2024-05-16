@@ -11,21 +11,7 @@ export mainLoop
 function createProcess(g::IsingGraph, process = nothing, looptype = mainLoop; run = true, threaded = true, kwargs...)
     _sim = sim(g)
     if isnothing(process)
-        for p in processes(_sim)
-            if isidle(p)
-                process = p
-                break
-            end
-        end
-        if isnothing(process)
-            println("No available processes")
-            return
-        end
-    else # if specific process is chosen check if it is available
-        if !isidle(process)
-            println("Process is not idle")
-            return
-        end
+        process = get_free_process(processes(_sim))
     end
     
     if threaded
@@ -42,22 +28,28 @@ createProcesses(g::IsingGraph, num; kwargs...) =
 
 export createProcess, createProcesses
 
-function mainLoop(g::IsingGraph, 
-        process = processes(sim(g))[1], 
-        oldkwargs = pairs((;));
+function mainLoop(g::IsingGraph,
+        process = get_free_process(processes(sim(g)));
         algorithm = g.default_algorithm,
         kwargs...)
-    
-    args = prepare(algorithm, g; kwargs...)
 
-    return mainLoop(process, algorithm, args; kwargs...)
+    @assert !isnothing(process) "No free processes available"
+
+    process.algorithm = algorithm
+    
+    algo_args = prepare(algorithm, g; kwargs...)
+   
+    masked_args = choose_args(process, algo_args; kwargs...)
+
+    return _mainLoop(process, algorithm, masked_args; kwargs...)
 end
+
 using InteractiveUtils
 export mainLoop
 # g, gstate, gadj, iterator, rng, updateFunc, dEFunc, gstype::ST
-function mainLoop(process, @specialize(algorithm), @specialize(args); kwargs...)
+function _mainLoop(process, @specialize(algorithm), @specialize(algo_args); kwargs...)
     while run(process)
-        algorithm(args)
+        algorithm(algo_args)
         inc(process)
         GC.safepoint()
     end

@@ -5,5 +5,9 @@ set_preferences!(InteractiveIsing, "precompile_workload" => false; force=true)
 gr = IsingGraph(precision = Float64, architecture= [(200,200, Continuous),(32,32,Discrete)], sets = [(-1,1),(-1,1)])
 wg = @WG "dr -> dr == 1 ? 1 : 0" NN=1
 genAdj!(gr[1], wg)
+genAdj!(gr[1], gr[2], wg)
+setH!(gr, Ising)
 simulate(gr)
+restart(gr, algorithm = LayeredMetropolis)
 
+ 

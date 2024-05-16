@@ -3,6 +3,8 @@ struct Δi_H <: DerivedHamiltonian end
 
 args(::Type{Δi_H}) = (:i, :gstate, :newstate, :oldstate, :gadj, :gparams, :dtype)
 
+# prepare(::Type{Δi_H}) = nothing
+
 # TODO: Remove export
 export H_expr
 function H_expr(::Type{Δi_H}, graph, hamiltonians::Type{<:Hamiltonian}...)
@@ -35,6 +37,7 @@ function H_expr(::Type{Δi_H}, graph, hamiltonians::Type{<:Hamiltonian}...)
     # Main body with SIMD collect from the graph
     body = "function H(i, gstate::Vector{T}, newstate, oldstate, gadj, gparams, layertype) where T
             # Collect the initial energy
+
             $(collects_init...)
             @turbo check_empty = $(check_empty[]) for ptr in nzrange(gadj, i)
                 j = gadj.rowval[ptr]
@@ -46,7 +49,6 @@ function H_expr(::Type{Δi_H}, graph, hamiltonians::Type{<:Hamiltonian}...)
             return $(join(string.(subs_return_exprs), " + "))
         end"
 
-    body = replace_inactive_symbs(graph.params, Meta.parse(body))
-    body = replace_reserved(Metropolis, body)
+    
     return body
 end

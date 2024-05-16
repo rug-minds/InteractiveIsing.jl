@@ -1,7 +1,7 @@
 export LayeredMetropolis
 
 struct LayeredMetropolis <: MCAlgorithm end
-requires(::LayeredMetropolis) = Δi_H
+requires(::Type{LayeredMetropolis}) = Δi_H
 
 
 function reserved_symbols(::Type{LayeredMetropolis})
@@ -15,10 +15,11 @@ function _prepare(::Type{LayeredMetropolis}, g; kwargs...)
                         gparams = g.params,
                         iterator = ising_it(g, g.stype),
                         layers = unshuffled(g.layers),
-                        H = Hamiltonian_Builder(Metropolis, g, g.hamiltonians...),
+                        H = Hamiltonian_Builder(Metropolis, g, g.hamiltonian),
                     ))
     return prepared_kwargs
 end
+
 
 Base.@propagate_inbounds @inline function LayeredMetropolis(@specialize(args))
     #Define vars
@@ -27,7 +28,7 @@ Base.@propagate_inbounds @inline function LayeredMetropolis(@specialize(args))
     @inline layerswitch(LayeredMetropolis, i, layers, args)
 end
 
-@inline function LayeredMetropolis(i, @specialize(args), @specialize(layertype))
+@inline function LayeredMetropolis(i, args, layertype)
     (;g, gstate, gadj, gparams, H) = args
     @inline Metropolis(i, g, gstate, gadj, gparams, H, layertype)
 end
