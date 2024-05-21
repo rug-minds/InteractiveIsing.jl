@@ -1,3 +1,8 @@
+export genAdj!, removeConnections!, removeConnectionsAll!, viewConnections
+
+"""
+Generate the connections in a layer based on a weightgenerator
+"""
 Base.@propagate_inbounds function genAdj(layer, wg)
     row_idxs, col_idxs, weights = genLayerConnections(layer, wg)
     old_row_idxs, old_col_idxs, old_weights = removeConnections(layer)
@@ -8,9 +13,10 @@ Base.@propagate_inbounds function genAdj(layer, wg)
 
     return row_idxs, col_idxs, weights
 end
-
+"""
+Generate the connections in a layer based on a weightgenerator and set the connections in the layer
+"""
 @inline genAdj!(layer::IsingLayer, wg) = set_adj!(layer, wg, genAdj(layer, wg))
-export genAdj!
 
 
 Base.@propagate_inbounds function genAdj(layer1, layer2, wg)

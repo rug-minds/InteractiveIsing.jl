@@ -9,13 +9,14 @@ function reserved_symbols(::Type{LayeredMetropolis})
 end
 
 function _prepare(::Type{LayeredMetropolis}, g; kwargs...)
+    ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
     prepared_kwargs = pairs((;g,
                         gstate = g.state,
                         gadj = g.adj,
                         gparams = g.params,
                         iterator = ising_it(g, g.stype),
                         layers = unshuffled(g.layers),
-                        H = Hamiltonian_Builder(Metropolis, g, g.hamiltonian),
+                        ΔH
                     ))
     return prepared_kwargs
 end
@@ -29,6 +30,6 @@ Base.@propagate_inbounds @inline function LayeredMetropolis(@specialize(args))
 end
 
 @inline function LayeredMetropolis(i, args, layertype)
-    (;g, gstate, gadj, gparams, H) = args
-    @inline Metropolis(i, g, gstate, gadj, gparams, H, layertype)
+    (;g, gstate, gadj, gparams, ΔH) = args
+    @inline Metropolis(i, g, gstate, gadj, gparams, ΔH, layertype)
 end

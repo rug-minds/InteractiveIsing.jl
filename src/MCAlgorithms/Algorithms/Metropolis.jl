@@ -17,7 +17,7 @@ function _prepare(::Type{Metropolis}, g; kwargs...)
                         iterator = ising_it(g, g.stype),
                         rng = MersenneTwister(),
                         lt = g[1],
-                        H = Hamiltonian_Builder(Metropolis, g, g.hamiltonian),
+                        ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian),
                     ))
     println("Hamiltonian is ")
     println(prepared_kwargs[:H])
@@ -26,9 +26,9 @@ end
 
 @inline function Metropolis(@specialize(args))
     #Define vars
-    (;g, gstate, gadj, gparams, iterator, H, lt) = args
+    (;g, gstate, gadj, gparams, iterator, ΔH, lt) = args
     i = rand(rng, iterator)
-    Metropolis(i, g, gstate, gadj, gparams, H, IsingLayer{Continuous, (-1.0, 1.0), 1:40000, Float64})
+    Metropolis(i, g, gstate, gadj, gparams, ΔH, lt)
 end
 
 @inline function Metropolis(i, g, gstate::Vector{T}, gadj, gparams, ΔH, lt) where {T}

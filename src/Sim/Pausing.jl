@@ -104,12 +104,13 @@ Keep the keywords and recompile the processes
 function refresh(g; kwargs...)
     _processes = processes(g)
     for process in _processes
+        wasrunning = isrunning(process)
         # Is process being used? Otherwise nothing has to be started
         _isused = isused(process)
         pause(process)
         if _isused
             task = process -> errormonitor(Threads.@spawn mainLoop(g, process; kwargs...))
-            runtask(process, task, g, run = process.run)
+            runtask(process, task, g, run = wasrunning)
         end
     end
     return

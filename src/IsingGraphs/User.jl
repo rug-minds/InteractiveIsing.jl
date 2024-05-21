@@ -7,51 +7,64 @@ Set spins either to a value or clamp them
 """
 #Clean this up
 # TODO: Shouldn't always refresh sim if the iterator didn't change
-function setSpins!(g::AbstractIsingGraph{T}, idxs::AbstractArray, brush, clamp = false, refresh = true) where T
-    hasdefects_before = hasDefects(g)
+function setSpins!(g::AbstractIsingGraph{T}, idxs::Union{AbstractArray, <:UnitRange}, brush::Union{Vector,AbstractArray}, clamp = false) where T
+    hasdefects_before = hasDefects(graph(g))
 
     # Set the defects
     clamprange!(g, clamp, idxs)
 
-    hasdefects_after = hasDefects(g)
+    hasdefects_after = hasDefects(graph(g))
     if hasdefects_before != hasdefects_after
-        refresh(g)
+        refresh(graph(g))
     end
 
     # Set the spins
-    @inbounds state(g)[idxs] .= brush
+    @inbounds state(g)[idxs] .= @view brush[1:end]
 end
+
+setSpins!(g::AbstractIsingGraph, vals::AbstractArray, clamp::Bool = false) = setSpins!(g, graphidxs(g), vals, clamp)
 
 setSpins!(g::AbstractIsingGraph, coords::Vector{Tuple{Int16,Int16}}, brush, clamp = false) = setSpins!(g, coordToIdx.(coords, glength(g)), brush, clamp)
 
-function setSpins!(g::AbstractIsingGraph{T}, idx::Integer, brush, clamp = false, refresh = false) where T
-    hasdefects_before = hasDefects(g)
+function setSpins!(g::AbstractIsingGraph{T}, idx::Integer, brush, clamp = false) where T
+    hasdefects_before = hasDefects(graph(g))
     
     setdefect(g, clamp, idx)
 
-    hasdefects_after = hasDefects(g)
+    hasdefects_after = hasDefects(graph(g))
 
     if hasdefects_before != hasdefects_after
-        refresh(g)
+        refresh(graph(g))
     end
 
     @inbounds state(g)[idx] = brush
 end
 
 function setDefects!(g, val, idxs)
-    hasdefects_before = hasDefects(g)
+    hasdefects_before = hasDefects(graph(g))
     
     defects(g)[idxs] = val
     
-    hasdefects_after = hasDefects(g)
+    hasdefects_after = hasDefects(graph(g))
     
     if hasdefects_before != hasdefects_after
-        refresh(g)
+        refresh(graph(g))
     end
 
     return idxs
 end
-export setDefects!
+export setDefects!, resetDefects!
+
+function resetDefects!(g::AbstractIsingGraph)
+    g = graph(g)
+
+    hasdefects_before = hasDefects(g)
+    setDefects!(g, false, graphidxs(g))
+    hasdefects_after = hasDefects(g)
+    if hasdefects_before != hasdefects_after
+        refresh(g)
+    end
+end
 
 function clampImg!(layer::IsingLayer, imgfile)
     # Load the image

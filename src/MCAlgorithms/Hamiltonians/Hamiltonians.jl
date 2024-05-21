@@ -82,6 +82,9 @@ function Hamiltonian_Builder(::Type{Algo}, graph, hamiltonians::Type{<:Hamiltoni
     H_ex = replace_inactive_symbs(graph.params, Meta.parse(H_ex))
     # Replace the symbols that are reserved by the algorithm
     H_ex = replace_reserved(Metropolis, H_ex)
+    H_ex = replace_indices(H_ex)
+    H_ex = replace_params(graph.params, H_ex)
+
     @RuntimeGeneratedFunction(H_ex)
 end
 

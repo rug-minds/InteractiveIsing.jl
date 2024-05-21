@@ -26,8 +26,13 @@ function ParamVal(val::T, default, description, active = false) where T
     return ParamVal{T, default, active}(val, description)
 end
 
-function ParamVal(p::ParamVal, active = nothing)
+function ParamVal(p::ParamVal, active::Bool = nothing)
     return ParamVal(p.val, default(p), p.description, precedence_val(active, isactive(p)))
+end
+
+function ParamVal(p::ParamVal, default, active::Bool = nothing)
+    isnothing(active) && (active = isactive(p))
+    return ParamVal(p.val, default, p.description, active)
 end
 
 
@@ -42,9 +47,17 @@ toggle(p::ParamVal{T, Default, Active}) where {T, Default, Active} = ParamVal{T,
 @inline Base.setindex!(p::ParamVal{T}, val, idx) where T <: Real = (p.val = val)
 @inline Base.getindex(p::ParamVal{T}, idx) where T <: Vector = p.val[idx]
 @inline Base.setindex!(p::ParamVal{T}, val, idx) where T <: Vector = (p.val[idx] = val)
+@inline Base.lastindex(p::ParamVal{T}) where T <: Vector = lastindex(p.val)
+@inline Base.firstindex(p::ParamVal{T}) where T <: Vector = firstindex(p.val)
+Base.lastindex(p::ParamVal{T}, idx) where T = 1
+Base.firstindex(p::ParamVal{T}, idx) where T = 1
+Base.size(p::ParamVal{T}) where T = (1,)
+Base.size(p::ParamVal{T}) where T <: Vector = size(p.val)
+Base.length(p::ParamVal{T}) where T <: Vector = length(p.val)
+Base.length(p::ParamVal{T}) where T = 1
 
-@inline Base.size(::ParamVal{T}) where T <: Real = (1,)
-@inline Base.size(p::ParamVal{T}) where T <: Vector = size(p.val)
+Base.BroadcastStyle(::Type{ParamVal{T,A,B}}) where {T<:AbstractArray,A,B} = Broadcast.ArrayStyle{ParamVal}()
+Base.BroadcastStyle(::Type{ParamVal{T,A,B}}) where {T,A,B} = Broadcast.Style{ParamVal}()
 
 # @inline function setparam(p::NamedTuple, symbol, val, active = nothing)
 #     @assert haskey(p, symbol)
@@ -82,7 +95,7 @@ function addparams!(graph, hamiltonian_params)
         end
         push!(pairs, hamiltonian_params.names[index] => ParamVal(val, hamiltonian_params.defaultvals[index], hamiltonian_params.descriptions[index]))
     end
-    graph.params = (;graph.params..., pairs...)
+    graph.params = (;pairs...,graph.params...)
 end
 
 """

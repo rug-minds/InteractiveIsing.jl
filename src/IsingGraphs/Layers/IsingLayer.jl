@@ -188,16 +188,9 @@ export conns, conncoords
 @inline wg(layer1::IsingLayer, layer2::IsingLayer) = try connections(layer1)[internal_idx(layer1) => internal_idx(layer2)]; catch; return ""; end
 
 """
-Get graph of layer
-"""
-@inline function graph(layer::IsingLayer{A,B,C,T}) where {A,B,C,T}
-    g = layer.graph::IsingGraph{T}
-    return g
-end
-
-"""
 Set graph of layer
 """
+@inline graph(layer::IsingLayer) = layer.graph
 @inline graph(layer::IsingLayer, g::IsingGraph) = layer.graph = g 
 
 
@@ -387,13 +380,6 @@ end
 export idxLToG, idxGToL
 
 
-# Set the SType
-"""
-Set the simulation type through a layer
-"""
-setSType!(layer::AbstractIsingLayer, varargs...; refresh = true) = setSType!(graph(layer), varargs...; refresh = refresh)
-
-
 
 ### STATE SET
 function changeset(l::IsingLayer{SType}, set) where SType
@@ -411,7 +397,7 @@ function changeset!(l, set)
     _layers = layers(graph(l))
     _layeridx = layeridx(l)
     _layers[_layeridx] = changeset(l, set)
-    notify(l)
+    notify(graph(l))
     return _layers[_layeridx]
 end
 export changeset, changeset!

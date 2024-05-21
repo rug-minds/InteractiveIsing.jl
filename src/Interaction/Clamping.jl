@@ -2,13 +2,12 @@ function remClamp!(layer::IsingLayer)
     clamps(layer) .= 0
 
     # If there are no clamps, set Clamp to false
-    isnothing(findfirst(x -> x != 0, clamps(graph(layer) ))) && setSType!(layer, :Clamp => false)
+    isnothing(findfirst(x -> x != 0, clamps(graph(layer) )))
 end
 
 function remClamp!(g::IsingGraph)
     clamps(g) .= 0
     clampparam(g, 0)
-    setSType!(g, :Clamp => false)
     return
 end
 
@@ -16,8 +15,6 @@ function setClampIdxs!(g::IsingGraph, idxs, strenghts, cfac = 1)
     # println(strenghts)
     clamps(g)[idxs] .= strenghts
     clampparam(g, cfac)
-
-    setSType!(g, :Clamp => true)
     return
 end
 export setClampIdxs!

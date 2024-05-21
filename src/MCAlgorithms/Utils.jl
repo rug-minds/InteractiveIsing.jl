@@ -412,25 +412,31 @@ Checks ParamVals for inactivity and removes all inactive symbol branches
 """
 function replace_inactive_symbs(params, expr::Expr)
     for (name,param) in zip(keys(params),params)
-        println("Replacing inactive symbols for: $name")
         if isinactive(param)
             while (indexs = find_symb(expr, name); !isnothing(indexs))
-                    println(indexs)
                     if default(param) == 0
-                        println("Substituting zero")
                         expr = substitute_zero(expr, indexs)
                     elseif default(param) == 1
-                        println("Substituting one")
                         expr = substitute_one(expr, indexs)
                     else
-                        println("Replacing symbol with: $(default(param))")
                         expr = replace_symb(expr, default(param), indexs)
                     end
-                    println(expr)
             end
         end
     end
     return expr
+end
+"""
+Replace the parameters with g.params[param] in the expression
+"""
+function replace_params(params, expr::Expr) 
+    for symb in keys(params)
+        while (indexs = find_symb(expr, symb); !isnothing(indexs))
+            newsymb = :(gparams.$symb)
+            expr = replace_symb(expr, newsymb, indexs)
+        end
+    end
+    replace_inactive_symbs(params, expr)
 end
 
 """
@@ -444,6 +450,7 @@ function substitute_symbols(algorithm::Type{<:MCAlgorithm}, params, expr::Expr)
     
     # For the remaining, get them from gparams.param[indices...]
     subs_return_exprs = replace_indices(subs_return_exprs)
+
 end
 
 function group_idxs(layertypes)

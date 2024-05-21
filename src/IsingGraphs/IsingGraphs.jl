@@ -19,17 +19,19 @@ export reshapeView
 # TODO: Self weight with continuous graphs
 # TODO: Generation ranges of states
 
-include("AdjList.jl")
+# include("AdjList.jl")
 
 include("Data.jl")
 include("GraphDefects.jl")
 include("Graph.jl")
+include("Parameters.jl")
+
 
 include("Layers/Layers.jl")
 
 include("SetEls.jl")
 
-
 include("Saving.jl")
+
 
 include("User.jl")

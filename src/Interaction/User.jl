@@ -104,26 +104,21 @@ setClamp!(layer::AbstractIsingLayer, idxs::Vector, strengths::Vector) = setClamp
 function setClamp!(l::AbstractIsingLayer, idx::Integer, strength::Real)
     defects(l)[idx] = true
     state(l)[idx] = 1
-    setSType!(graph(l), :Defects => true)
     return state(l)
 end
 function setClamp!(l::AbstractIsingLayer, strength::Real)
     setdefectrange!(l, Int32[1:length(state(l));])
     state(l) .= strength
-    setSType!(graph(l), :Defects => true)
     return state(l)
 end
 #remClamp!
 
 function globalB!(g, strength)
     bfield(g) .= strength
-
-    setSType!(graph(g), :Magfield => true)
 end
 
 function setB!(g::IsingGraph, val::Real, idxs::AbstractVector)
     bfield(g)[idxs] .= val
-    setSType!(g, :Magfield => true)
 end
 
 setB!(l::IsingLayer, val) = setB!(graph(l), val, graphidxs(l))

@@ -1,3 +1,4 @@
+using InteractiveIsing
 using FileIO, DelimitedFiles, GLMakie
 
 gr = IsingGraph(precision = Float64, architecture= [(15,16, Continuous),(24,24,Discrete)], sets = [(0,1),(0,1)])
@@ -18,8 +19,24 @@ function plotnumber(data, num)
     return Fa
 end
 
+function normalize_numbers(numbers, layer::IsingLayer{Continuous, SS}) where SS
+    #Normalize
+    ss_dist = last(SS)-first(SS)
+    println(ss_dist)
+    numbers .*= ss_dist
+    numbers .+= first(SS)
+    return numbers
+
+end
+
 numbers = readnumbers("examples/Learning/numbers.txt")
+normalize_numbers(numbers, gr[1])
 
-plotnumber(numbers, 4)
 
-clampImg!(gr,)
+simulate(gr)
+
+function clampnum(layer::IsingLayer{Continuous,SS}, numbers, idx::Int) where SS
+    setSpins!(layer, getnumber(numbers,idx), true)
+end
+
+clampnum(gr[1], numbers, 6)

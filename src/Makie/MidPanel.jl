@@ -109,6 +109,8 @@ function midPanel(ml,g)
             set_close_to!(tempslider, temp(g)[])
             ob_pair = Observables.ObservablePair(tempslider.value, temp(simulation))
             mp["ob_pair"] = ob_pair
+
+            #Isn't this redundant?
             on(tempslider.value) do x
                 set_close_to!(tempslider, x)
             end

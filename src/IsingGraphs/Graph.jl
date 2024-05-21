@@ -8,14 +8,13 @@ struct Emitter
     obs::Vector{Observable}
 end
 Observables.notify(emitter::Emitter) = notify.(emitter.obs)
-
+Observables.notify(g::IsingGraph) = notify(g.emitter)
 
 getIntType(::Float64) = Int64
 getFloatType(::Float64) = Float64
 isarchitecturetype(::Any) = false
 isarchitecturetype(t::Tuple{A,B,C}) where {A,B,C} = (A<:Integer && B<:Integer && t[3]<:StateType)
 # Ising Graph Representation and functions
-# TODO: REMOVE SUPPORT FOR UNWEIGHTED GRAPHS
 mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     # Simulation
     sim::Union{Nothing, IsingSim}
@@ -26,7 +25,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     
     temp::T
 
-    default_algorithm::Function
+    default_algorithm::Type{<:MCAlgorithm}
     hamiltonian::Type{<:Hamiltonian}
     stype::SType
     
@@ -37,12 +36,14 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     continuous::StateType
     # Connection between layers, Could be useful to track for faster removing of layers
     layerconns::Dict{Set, Int32}
-    params::NamedTuple
+    params::NamedTuple #TODO: Make this a custom type?
+
     # For notifying simulations or other things
     emitter::Emitter
 
     defects::GraphDefects
-    d::GraphData{T}
+    d::GraphData{T} #Other stuff. Maybe just make this a dict?
+
 
     # Default Initializer for IsingGraph
     function IsingGraph(glength = nothing, gwidth=nothing; sim = nothing,  periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
@@ -82,7 +83,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
             #Temp            
             1f0,
             # Default algorithm
-            layeredMetropolis,
+            LayeredMetropolis,
             #Hamiltonians
             Ising,
             SType(:Weighted => weighted),
@@ -94,7 +95,8 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
             #Params
             (;self = ParamVal(precision[], 0, "Self Connections", false)),
             #Emitter
-            Emitter(Observable[])
+            Emitter(Observable[]),
+            #Processes
         )
 
         g.defects = GraphDefects(g)
@@ -148,7 +150,9 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
             # Defects
             defects,
             # Data
-            data
+            data,
+            # Processes
+            Vector{Process}()
         )
     end
 end
@@ -222,6 +226,7 @@ layeridxs(g::IsingGraph) = UnitRange{Int32}[graphidxs(unshuffled(layers(g))[i]) 
 @inline length(g::IsingGraph) = length(g.layers)
 @inline Base.lastindex(g::IsingGraph) = length(g)
 Base.view(g::IsingGraph, idx) = view(g.layers, idx)
+@inline graphidxs(g::IsingGraph) = Int32(1):Int32(nStates(g))
 
 function Base.convert(::Type{<:IsingLayer}, g::IsingGraph)
     @assert length(g.layers) == 1 "Graph has more than one layer, ambiguous"
@@ -252,9 +257,6 @@ export layerIdx!
 
 IsingGraph(g::IsingGraph) = deepcopy(g)
 
-# @inline layerdefects(g::IsingGraph) = layerdefects(defects(g))
-# export layerdefects
-
 @inline size(g::IsingGraph)::Tuple{Int32,Int32} = (nStates(g), 1)
 
 function closetimers(g::IsingGraph)
@@ -266,10 +268,6 @@ end
 
 function reset!(g::IsingGraph)
     state(g) .= initRandomState(g)
-    # currentlyWeighted = getSParam(stype(g), :Weighted)
-    # stype(g,SType(:Weighted => currentlyWeighted))
-    # reset!(defects(g))
-    # reset!(d(g))
     closetimers(g)
 end
  
@@ -279,8 +277,6 @@ export initRandomState
 """ 
 Initialize from a graph
 """
-# (initRandomState(g::IsingGraph{type})::Vector{type}) where type = initRandomState(type, glength(g), gwidth(g))
-# initRandomState(type, glength, gwidth)::Vector{type} = initRandomState(type, glength*gwidth)
 function initRandomState(g)
     _state = similar(state(g))
     for layer in unshuffled(layers(g))
@@ -412,8 +408,8 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth; weights = nothing, period
         type = default_ltype(g)
     end
 
-    set = searchkey(kwargs, :set, fallback = convert.(eltype(g),(-1,1)))
-    set = T.(set) # Safeness
+    # Look if a stateset is given, otherwise give the default and convert to the graph type  
+    set = T.(searchkey(kwargs, :set, fallback = convert.(eltype(g),(-1,1))))
    
     # Function that makes the new layer based on the insertidx
     # Found by the shufflevec
@@ -440,11 +436,6 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth; weights = nothing, period
     layertype =  IsingLayer{type, set}
     push!(layers(g), make_newlayer, layertype)
     newlayer = layers(g)[end]
-
-    # If layer of different type, change default algorithm to layered updateMetropolis
-    if hasmixedtypes(layers(g)) && g.default_algorithm == updateMetropolis
-        g.default_algorithm = layeredMetropolis
-    end
 
     # Generate the adjacency matrix from the weightfunc
     if !isnothing(weights)
@@ -509,41 +500,6 @@ function removeLayer!(g, idxs::Vector{Int})
     return layers(g)
 end
 removeLayer!(g::IsingGraph, layer::IsingLayer) = removeLayer!(g, layeridx(layer))
-
-# Set the SType
-"""
-Set the SType of the graph g
-Only changes the pairs that are given
-"""
-function setSType!(g::IsingGraph, pairs::Pair...; refresh::Bool = true, force_refresh = false)
-    oldstype = stype(g)
-    newstype = changeSParam(oldstype, pairs...)
-    if oldstype != newstype
-        stype(g, newstype)
-        if refresh && !force_refresh
-            restart(g)
-        end
-    end
-    
-    if force_refresh
-        restart(g)
-    end
-end
-"""
-Set the SType of the graph g to the given type
-"""
-function setSType!(g::IsingGraph, st::SType; refresh::Bool = true)
-    oldstype = stype(g)
-    if oldstype != st
-        stype(g, st)
-        if refresh
-            restart(g)
-        end
-    end
-end
-
-
-export setSType!
 
 ### ARCHITECTURE
 function getarchitecture(g)

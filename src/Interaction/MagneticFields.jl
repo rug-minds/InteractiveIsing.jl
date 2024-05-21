@@ -16,8 +16,6 @@ function setBIdxs!(layer, idxs::AbstractArray, strengths::AbstractArray)
     end
 
     bfield(layer)[idxs] .= (@view strengths[1:end])
-
-    setSType!(graph(layer), :Magfield => true)
 end
 setBIdxs!(layer, strengths) = setBIdxs!(layer, 1:length(strengths), strengths)
 
@@ -37,7 +35,6 @@ function setBFunc!(layer, func::Function)
             b_mat[x,y] = func(;x,y)
         end
     end
-    setSType!(graph(layer), :Magfield => true)
     return
 end
 export setBFunc!
@@ -119,7 +116,7 @@ Removes magnetic field
 function remB!(layer::IsingLayer)
     bfield(layer) .= Float32(0)
 
-    isnothing(findfirst(x -> x != 0, bfield(graph(layer)))) && setSType!(layer, :Magfield => false)
+    isnothing(findfirst(x -> x != 0, bfield(graph(layer))))
 end
 
 function remB!(g::IsingGraph)
@@ -128,7 +125,6 @@ function remB!(g::IsingGraph)
         deleteat!(timers(layer), 1:length(timers(layer)))
     end
     bfield(g) .= Float32(0)
-    setSType!(g, :Magfield => false)
 end
 export remB!
 

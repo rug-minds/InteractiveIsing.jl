@@ -204,17 +204,14 @@ end
 
 function setdefectrange!(g::IsingGraph, idxs)
     setdefectrange!(defects(g), idxs)
-    setSType!(g, :Defects => hasDefects(graph(l)))
 end
 function setdefectrange!(l::IsingLayer, idxs)
     d_idxs = setdefectrange!(defects(graph(l)), idxLToG.(idxs, Ref(l)))
     defects(graph(l)).layerdefects[internal_idx(l)] += d_idxs
-    setSType!(graph(l), :Defects => hasDefects(graph(l)))
 end
 function setaliverange!(l::IsingLayer, idxs)
     d_idxs = setaliverange!(defects(graph(l)), idxLToG.(idxs, Ref(l)))
     defects(graph(l)).layerdefects[internal_idx(l)] -= d_idxs
-    setSType!(graph(l), :Defects => hasDefects(graph(l)))
 end
 export setdefectrange!, setaliverange!
 
