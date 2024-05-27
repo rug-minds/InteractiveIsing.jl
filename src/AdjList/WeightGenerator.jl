@@ -34,8 +34,6 @@ end
 @setterGetter WeightGenerator
 export WeightGenerator
 
-
-
 function Base.show(io::IO, wg::WeightGenerator)
     println(io, "WeightGenerator with")
     println(io, "\t NN: \t\t\t\t", wg.NN)
@@ -51,33 +49,8 @@ function Base.show(io::IO, wg::WeightGenerator)
     end
 end
 
-"""
-Gets the argument names for a method
-"""
-function method_argnames(m::Method)
-    argnames = ccall(:jl_uncompress_argnames, Vector{Symbol}, (Any,), m.slot_syms)
-    isempty(argnames) && return argnames
-    return argnames[1:m.nargs]
-end
 
-"""
-Gets the keywords args for a macro
-"""
-function prunekwargs(args...)
-    @nospecialize
-    firstarg = first(args)
-    if isa(firstarg, Expr) && firstarg.head == :parameters
-        return prunekwargs(BenchmarkTools.drop(args, 1)..., firstarg.args...)
-    else
-        params = collect(args)
-        for ex in params
-            if isa(ex, Expr) && ex.head == :(=)
-                ex.head = :kw
-            end
-        end
-        return params
-    end
-end
+
 
 # Can this be turned into a function, sinze we're using string?
 # Don't think so due to world age.

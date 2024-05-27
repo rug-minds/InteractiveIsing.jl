@@ -39,4 +39,7 @@ function clampnum(layer::IsingLayer{Continuous,SS}, numbers, idx::Int) where SS
     setSpins!(layer, getnumber(numbers,idx), true)
 end
 
+genAdjFull!(gr[1], gr[2])
+
 clampnum(gr[1], numbers, 6)
+

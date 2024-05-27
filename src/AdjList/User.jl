@@ -1,7 +1,8 @@
-export genAdj!, removeConnections!, removeConnectionsAll!, viewConnections
+export genAdj!, remAdj!, genAdjFull!, remAdjAll!, viewConnections
 
 """
 Generate the connections in a layer based on a weightgenerator
+Returns sparse representation of the connections
 """
 Base.@propagate_inbounds function genAdj(layer, wg)
     row_idxs, col_idxs, weights = genLayerConnections(layer, wg)
@@ -15,10 +16,15 @@ Base.@propagate_inbounds function genAdj(layer, wg)
 end
 """
 Generate the connections in a layer based on a weightgenerator and set the connections in the layer
+Then put the connections directly in the graph
 """
 @inline genAdj!(layer::IsingLayer, wg) = set_adj!(layer, wg, genAdj(layer, wg))
 
-
+"""
+Give a weightgenerator and two layers.
+Return the connections between the two layers in sparse format
+i.e. the rows, columns and weights of the connections
+"""
 Base.@propagate_inbounds function genAdj(layer1, layer2, wg)
     @assert layer1 != layer2
     row_idxs, col_idxs, weights = genLayerConnections(layer1, layer2, wg)
@@ -30,17 +36,37 @@ Base.@propagate_inbounds function genAdj(layer1, layer2, wg)
 
     return row_idxs, col_idxs, weights
 end
+"""
+Fully connect two layers
+"""
+genAdjFull!(l1, l2) = connectLayersFull!(l1,l2)
+
+"""
+Generate the connections between two layers based on a weightgenerator and set the connections in the layers
+Then put the connections directly in the graph
+"""
 @inline genAdj!(layer1::IsingLayer, layer2::IsingLayer, wg) = set_adj!(layer1, layer2, wg, genAdj(layer1, layer2, wg))
 
-@inline removeConnections!(layer) = set_adj!(graph(layer), removeConnections(layer))
-@inline removeConnections!(layer1, layer2) = set_adj!(graph(layer1), removeConnections(layer1, layer2))
+"""
+Removes the connections within a layer
+"""
+@inline remAdj!(layer) = set_adj!(graph(layer), removeConnections(layer))
+"""
+Removes the connections between two specified layers
+"""
+@inline remAdj!(layer1, layer2) = set_adj!(graph(layer1), removeConnections(layer1, layer2))
 
-removeConnectionsAll!(layer) = set_adj!(graph(layer), removeConnectionsAll(layer))
+"""
+Removes all connections in a layer
+"""
+remAdjAll!(layer) = set_adj!(graph(layer), removeConnectionsAll(layer))
 
-export genAdj!, removeConnections!, removeConnectionsAll!
 
-# viewConnections(layer::IsingLayer, i,j) = viewConnections(layer, coordToIdx(i,j,layer))
-
+"""
+Give two layers and an index in the first layer
+Return the connections of the index in the first layer to the second layer
+    by returning the coordinates of the connections and the values of the connections
+"""
 function viewConnections(layer1::IsingLayer, layer2::IsingLayer, idx)
     # g = graph(layer1)
     # g_idx = idxLToG(idx, layer)
@@ -49,9 +75,16 @@ function viewConnections(layer1::IsingLayer, layer2::IsingLayer, idx)
     return idxToCoord.(idxGToL.(connections.nzind[idxs], Ref(layer2)), Ref(layer2)), connections.nzval[idxs]
 end
 
+"""
+Same as the other, but now provide the coordinates of the index in the first layer
+"""
 viewConnections(layer1::IsingLayer, layer2::IsingLayer, i, j) = viewConnections(layer1, layer2, coordToIdx(i,j,layer1))
 
-function idxs2rowscols(idxs)
+"""
+Give a list of indexes in the state of a layer
+Return the rows and columns of the indexes
+"""
+function idxs2rowscols(layer, idxs)
     rows = []
     cols = []
     sizehint!(rows, length(idxs))
@@ -65,4 +98,3 @@ function idxs2rowscols(idxs)
     return rows, cols
 end
 
-export viewConnections

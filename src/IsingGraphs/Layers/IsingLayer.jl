@@ -406,6 +406,7 @@ stateset(l::IsingLayer{<:Any, SS}) where SS = SS
 stateset(::Type{IsingLayer{A, SS, B, C}}) where {A, SS, B, C} = SS
 indexset(l::IsingLayer{A, B, IS, C}) where {A, B, IS, C} = IS
 indexset(::Type{IsingLayer{A, B, IS, C}}) where {A, B, IS, C} = IS
+
 function extremiseDiscrete!(l::IsingLayer{ST, SS}) where {ST,SS}
     if ST == Discrete
         a = SS[1]
@@ -418,6 +419,33 @@ function extremise!(l::IsingLayer{ST, SS}) where {ST,SS}
     a = SS[1]
     b = SS[2]
     map!(x -> x >= (a+b)/2f0 ? b : a, state(l), state(l))
+end
+
+mapToStateSet!(l::IsingLayer{ST, SS}, dest, source) where {ST,SS} = map!(x -> closestTo(l, x), dest, source)
+
+function closestTo(l::IsingLayer{ST, SS}, x) where {ST,SS}
+    if x < SS[1]
+        return SS[1]
+    elseif x > SS[2]
+        return SS[2]
+    end
+
+    if ST == Discrete
+        d1 = abs(x-SS[1])
+        idx = 1
+        for s in SS[2:end]
+            d = abs(x-s)
+            if d < d1
+                d1 = d
+                idx += 1
+            else
+                break
+            end
+        end
+        return SS[idx]
+    end
+
+    return x
 end
 
 export changeset!, stateset

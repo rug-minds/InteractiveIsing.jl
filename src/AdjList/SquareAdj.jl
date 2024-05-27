@@ -1,5 +1,5 @@
 #=
-Stuff for initialization of adjacency matrix
+OLD STUFF TO GENERATE ADJACENCY MATRIX
 =#
  
 export fillAdjList!, numEdges, adjToMatrix
