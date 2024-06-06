@@ -257,7 +257,7 @@ end
 # Panel for the magnetic field phase transition
 export MB_panel
 function MB_panel(window, axesgrid, pos, layer)
-    etype = eltype(layer)    
+    etype = eltype(state(layer))    
     mbgrid = GridLayout(getindex(axesgrid,pos...))
     
     b_buffer = Observable(CircularBuffer{etype}(2400))
@@ -288,7 +288,7 @@ function MB_panel(window, axesgrid, pos, layer)
         empty!(b_buffer[])
         empty!(m_buffer[])
     end
-
+ß
     function update(timer)
         push!(m_avg, sumsimd(state(layer))/nstates(layer))
         push!(b_buffer[], slider.value[])

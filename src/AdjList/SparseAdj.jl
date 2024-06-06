@@ -1,12 +1,21 @@
 initSPAdj!(g) = adj(g, spzeros(nStates(g), nStates(g)))
 export initSPAdj!
 
+"""
+Struct to hold the connections in sparce format
+    Not used?
+"""
 struct SparseConnections
     row_idxs::Vector{Int32}
     col_idxs::Vector{Int32}
     weights::Vector{Float32}
 end
 
+
+"""
+Give layer and WeightGenerator
+    returns the connections within the layer in row_idxs, col_idxs, and weights
+"""
 function genLayerConnections(layer, wg)
     row_idxs = Int32[]
     col_idxs = Int32[]
@@ -31,6 +40,10 @@ function genLayerConnections(layer, wg)
     return row_idxs, col_idxs, weights
 end
 
+"""
+Give layer and WeightGenerator
+    returns the connections within the layer in row_idxs, col_idxs, and weights
+"""
 function genLayerConnections(layer1, layer2, wg)
     row_idxs = Int32[]
     col_idxs = Int32[]
@@ -56,7 +69,10 @@ function genLayerConnections(layer1, layer2, wg)
 end
 export genLayerConnections
 
-# For connecting a layer internally
+"""
+Give preallocated vectors for row_idxs, col_idxs, and weights
+    fills them with the connections withing a layer
+"""
 function _fillSparseVecs(layer, row_idxs, col_idxs, weights, NN, topology, wg, pre_3tuple, selftype::ST) where ST
     for col_idx in 1:nStates(layer)
         vert_i, vert_j = idxToCoord(col_idx, glength(layer))
@@ -64,9 +80,13 @@ function _fillSparseVecs(layer, row_idxs, col_idxs, weights, NN, topology, wg, p
         for conn in pre_3tuple
             conn_i, conn_j = conn[1], conn[2]
             dr = dist(vert_i, vert_j, conn_i, conn_j, topology)
-            
+            # TODO: Overal coords?
+            _,_,z = coords(layer)
+            dx = abs(conn_i - vert_i)
+            dy = abs(conn_j - vert_j)
+            dz = 0
             # TODO: Self weight???
-            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2)
+            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2, z, dx, dy, dz)
             
             if weight == 0 || isnan(weight)
                 continue
@@ -84,7 +104,10 @@ function _fillSparseVecs(layer, row_idxs, col_idxs, weights, NN, topology, wg, p
     end
 end
 
-# For connecting layers 
+"""
+Give preallocated vectors for row_idxs, col_idxs, and weights
+    fills them with the connections withing between two layers
+"""
 function _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, NN, wg, pre_3tuple)
     for col_idx in 1:nStates(layer1)
         vert_i, vert_j = idxToCoord(col_idx, layer1)
@@ -92,9 +115,12 @@ function _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, NN, wg, pr
         for conn in pre_3tuple
             conn_i, conn_j = conn[1], conn[2]
             dr = dist(vert_i, vert_j, conn_i, conn_j, layer1, layer2)
-
+            _,_,z1 = coords(layer1)
+            _,_,z2 = coords(layer2)
+            dz = z2 - z1
+            z_conn = (z1+z2)/2
             conn_i_layer1, conn_j_layer1 = coordsl2tol1(conn_i, conn_j, layer1, layer2) 
-            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2, conn_i_layer1-vert_i, conn_j_layer1-vert_j)
+            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2, z_conn, conn_i_layer1-vert_i, conn_j_layer1-vert_j, dz)
 
             if weight == 0 || isnan(weight)
                 continue

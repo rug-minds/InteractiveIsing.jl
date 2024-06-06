@@ -22,7 +22,6 @@ end
 function normalize_numbers(numbers, layer::IsingLayer{Continuous, SS}) where SS
     #Normalize
     ss_dist = last(SS)-first(SS)
-    println(ss_dist)
     numbers .*= ss_dist
     numbers .+= first(SS)
     return numbers

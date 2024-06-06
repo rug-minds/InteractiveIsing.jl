@@ -1,4 +1,7 @@
 
+"""
+Struct to generate weights for ising graphidxs
+"""
 struct WeightGenerator{Func <: Function , SelfFunc <: Union{Nothing, Function}, AddFunc <: Union{Nothing, Function}, MultFunc <: Union{Nothing, Function}}
     NN::Int16
     func::Func
@@ -12,10 +15,16 @@ struct WeightGenerator{Func <: Function , SelfFunc <: Union{Nothing, Function}, 
 
     # function 
 
+    """
+    Create a WeightGenerator
+    """
     function WeightGenerator(NN, func, selfWeight = nothing, addDist = nothing, multDist = nothing, funcstr = "", selfstr = "", addstr = "", multstr = "")
         new{typeof(func), typeof(selfWeight), typeof(addDist), typeof(multDist)}(NN, func, selfWeight, addDist, multDist, funcstr, selfstr, addstr, multstr)
     end
 
+    """
+    Copy and change
+    """
     function WeightGenerator(wg::WeightGenerator; NN = nothing, func = nothing, selfWeight = nothing, addDist = nothing, multDist = nothing, funcstr = nothing, selfstr = nothing, addstr = nothing, multstr = nothing)
         isnothing(NN) && (NN = wg.NN)
         isnothing(func) && (func = wg.func)
@@ -59,9 +68,13 @@ Create a WeightGenerator
 Accepted keywords are: NN, selfWeight, addDist, multDist, weightFunc
 Either: Either give a string with a function or
 give a previous weightfunc and supply keyword args to modify
+
+Done with a macro so that the function code can be recalled
+And the function itself doesn't have to be runtime generated
+    TODO:Switch to runtime generated functions?
 """
-const allowedargs_func = [:dr, :x, :y, :dx, :dy]
-const allowedargs_self = [:x, :y]
+const allowedargs_func = [:dr, :x, :y, :z, :dx, :dy, :dz]
+const allowedargs_self = [:x, :y, :dz]
 function args_to_str(args)
     return join(string.(args), ",")
 end
@@ -126,7 +139,7 @@ macro WeightGenerator(wg_or_func, kwargs...)
 
         # Get function body
         funcbody = funcexpr.args[2]
-        func = quote @inline (;dr,x,y,dx,dy) -> Float32($funcbody) end
+        func = quote @inline (;dr,x,y,z,dx,dy,dz) -> Float32($funcbody) end
     end
     
     # SELF WEIGHT
@@ -189,11 +202,11 @@ var"@WG" = var"@WeightGenerator"
 var"@WG!" = var"@WeightGenerator!"
 export @WeightGenerator, @WeightGenerator!, @WG, @WG!
 
-@generated function getWeight(wg::WeightGenerator{Func, SelfFunc, AddFunc, MultFunc}, dr, x, y, dx = 0, dy = 0) where {Func, SelfFunc, AddFunc, MultFunc}
+@generated function getWeight(wg::WeightGenerator{Func, SelfFunc, AddFunc, MultFunc}, dr, x, y, z, dx = 0, dy = 0, dz = 0) where {Func, SelfFunc, AddFunc, MultFunc}
     return Meta.parse("wg.func(;$(args_to_str(allowedargs_func)))"*(!isa(MultFunc, Type{Nothing})*"*wg.multDist()" * (!isa(AddFunc, Type{Nothing})*" + wg.addDist()")))
 end
 
-@generated function getSelfWeight(wg::WeightGenerator{Func, SelfFunc, AddFunc, MultFunc}, x, y) where {Func, SelfFunc, AddFunc, MultFunc}
+@generated function getSelfWeight(wg::WeightGenerator{Func, SelfFunc, AddFunc, MultFunc}, x, y, z) where {Func, SelfFunc, AddFunc, MultFunc}
     return Meta.parse("wg.selfWeight(;$(args_to_str(allowedargs_self)))"*(!isa(MultFunc, Type{Nothing})*"*wg.multDist()" * (!isa(AddFunc, Type{Nothing})*" + wg.addDist()")))
 end
 export getWeight, getSelfWeight
@@ -218,39 +231,5 @@ export SelfType
 
 
 # TODO: Shouldn't be here probably?
-"""
-Get all indices of a vertex with idx vert_idx and coordinates vert_i, vert_j
-that are larger than vert_idx
-Works in layer indices
-"""
-function getConnIdxs!(::NoSelf, vert_idx, vert_i, vert_j, len, wid, NN, pre_3tuple)
-    for j in -NN:NN
-        for i in -NN:NN
-            (i == 0 && j == 0) && continue
-            conn_i, conn_j = latmod(vert_i + i, vert_j + j, len, wid)
-            conn_idx = coordToIdx(conn_i, conn_j, len)
 
-            conn_idx < vert_idx && continue
-
-            push!(pre_3tuple, (conn_i, conn_j, conn_idx))
-        end
-    end
-end
-
-"""
-Get all indices of a vertex with idx vert_idx and coordinates vert_i, vert_j
-that are larger than vert_idx and include self connection
-"""
-function getConnIdxs!(::Self, vert_idx, vert_i, vert_j, len, wid, NN, pre_3tuple)
-    for j in -NN:NN
-        for i in -NN:NN
-            conn_i, conn_j = latmod(vert_i + i, vert_j + j, len, wid)
-            conn_idx = coordToIdx(conn_i, conn_j, len)
-
-            conn_idx < vert_idx && continue
-
-            push!(pre_3tuple, (conn_i, conn_j, conn_idx))
-        end
-    end
-end
 const wg_isingdefault = @WeightGenerator "(dr) -> dr == 1" NN = 1

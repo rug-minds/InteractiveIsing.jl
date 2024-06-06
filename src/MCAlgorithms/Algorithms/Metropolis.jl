@@ -51,7 +51,6 @@ end
 end
 
 
-
 # @inline function updateMetropolis(g, gstate::Vector{T}, gadj, gparams, ΔH)
 #     β = 1f0/(temp(g))
 

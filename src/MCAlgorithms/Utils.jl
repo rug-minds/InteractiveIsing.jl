@@ -453,19 +453,19 @@ function substitute_symbols(algorithm::Type{<:MCAlgorithm}, params, expr::Expr)
 
 end
 
-function group_idxs(layertypes)
-    grouped = []
-    idxs = [1]
-    lts = layertypes.parameters
-    lasttype = lts[1]
-    for (lt_idx,lt) in enumerate(lts)
-        if equiv(lt, lasttype)
-            continue
-        end
-        push!(grouped, first(indexset(lasttype)):last(indexset(lts[lt_idx-1])))
-        push!(idxs, lt_idx)
-        lasttype = lt
-    end
-    push!(grouped, first(indexset(lasttype)):last(indexset(lts[end])))
-    return grouped, idxs
-end
+# function group_idxs(layertypes)
+#     grouped = []
+#     idxs = [1]
+#     lts = layertypes.parameters
+#     lasttype = lts[1]
+#     for (lt_idx,lt) in enumerate(lts)
+#         if equiv(lt, lasttype)
+#             continue
+#         end
+#         push!(grouped, first(indexset(lasttype)):last(indexset(lts[lt_idx-1])))
+#         push!(idxs, lt_idx)
+#         lasttype = lt
+#     end
+#     push!(grouped, first(indexset(lasttype)):last(indexset(lts[end])))
+#     return grouped, idxs
+# end

@@ -31,8 +31,32 @@
     # Only dispatches on the type of tyhe layer.
     # Add dispatch on the layertrait if necessary
     @generated function layerswitch(@specialize(func), i, layers::LayerTuple, @specialize(args)) where LayerTuple
+        grouped = []
+        idxs = [1]
+        lts = layers.parameters
+        lasttype = lts[1]
+        for (lt_idx,lt) in enumerate(lts)
+            # if equiv(lt, lasttype)
+            #     continue
+            # end
+            if lt.parameters[1] == lasttype.parameters[1]
+                continue
+            end
+            firstindex = first(lasttype.parameters[3])
+            lastindex = last(lts[lt_idx-1].parameters[3])
+            push!(grouped, firstindex:lastindex)
+            push!(idxs, lt_idx)
+            lasttype = lt
+        end
+        firstindex = first(lasttype.parameters[3])
+        lastindex = last(lts[end].parameters[3])
+        push!(grouped, firstindex:lastindex)
+        # return grouped, idxs
+        grouped_idxs = grouped
+        layer_idxs = idxs
+
         code = Expr(:block)
-        grouped_idxs, layer_idxs = group_idxs(layers)
+        # grouped_idxs, layer_idxs = group_idxs(layers)
   
         for group_idx in eachindex(grouped_idxs)
             upperbound_idx = last(grouped_idxs[group_idx])

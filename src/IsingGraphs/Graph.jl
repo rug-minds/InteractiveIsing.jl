@@ -48,31 +48,34 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     # Default Initializer for IsingGraph
     function IsingGraph(glength = nothing, gwidth=nothing; sim = nothing,  periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
         architecture = searchkey(kwargs, :architecture, fallback = nothing)
-        @assert (!isnothing(glength) && !isnothing(gwidth)) || !isnothing(architecture) "Either give length and width or architecture"
+        @assert (isnothing(glength) && isnothing(gwidth) && isnothing(architecture)) || (!isnothing(glength) && !isnothing(gwidth)) || !isnothing(architecture) "Either give length and width or architecture"
     
 
         # Create the architecture
-        if isnothing(architecture)
+        if isnothing(architecture) && !isnothing(glength) && !isnothing(gwidth)
             architecture = [(glength, gwidth, type)]
         end
-        for idx in eachindex(architecture)
-            if !isarchitecturetype(architecture[idx])
-                architecture[idx] = (architecture[idx][1], architecture[idx][2], Continuous)
-            end
-        end
-
-        # Create the sets for each layer
-        if isnothing(sets) # Just make some sets
-            sets = repeat([convert.(precision,(-1,1))], length(architecture))
-        else # Correct the given sets
-            sets = map(x->convert.(precision, x), sets)
-            if length(sets) < length(architecture)
-                lengthdiff = length(architecture) - length(sets)
-                for _ in 1:lengthdiff
-                    push!(sets, convert(precision,(-1,1)))
+        if !isnothing(architecture)
+            for idx in eachindex(architecture)
+                if !isarchitecturetype(architecture[idx])
+                    architecture[idx] = (architecture[idx][1], architecture[idx][2], Continuous)
                 end
-            else
-                sets = sets[1:length(architecture)]
+            end
+        
+
+            # Create the sets for each layer
+            if isnothing(sets) # Just make some sets
+                sets = repeat([convert.(precision,(-1,1))], length(architecture))
+            else # Correct the given sets
+                sets = map(x->convert.(precision, x), sets)
+                if length(sets) < length(architecture)
+                    lengthdiff = length(architecture) - length(sets)
+                    for _ in 1:lengthdiff
+                        push!(sets, convert(precision,(-1,1)))
+                    end
+                else
+                    sets = sets[1:length(architecture)]
+                end
             end
         end
 
@@ -104,10 +107,12 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
         internalcouple!(g.layers, g.defects, (layer) -> Int32(0), push = addLayer!, insert = (obj, idx, item) -> addLayer!(obj, item), deleteat = removeLayer!)
 
         g.d = GraphData(precision, g)
-        for (arc_idx,arc) in enumerate(architecture)
-            _addLayer!(g, arc[1], arc[2]; weights, periodic, type = arc[3], set = sets[arc_idx], kwargs...)
+        println(architecture)
+        if !isnothing(architecture)
+            for (arc_idx,arc) in enumerate(architecture)
+                _addLayer!(g, arc[1], arc[2]; weights, periodic, type = arc[3], set = sets[arc_idx], kwargs...)
+            end
         end
-        g
         return g
     end
     
@@ -372,14 +377,15 @@ end
 export resize!
 
 export addLayer!
-
+nlayers(::Nothing) = Observable(0)
 function addLayer!(g::IsingGraph, llength, lwidth; weights = nothing, periodic = true, type = default_ltype(g), set = convert.(eltype(g),(-1,1)), rangebegin = set[1], rangeend = set[2], kwargs...)
+    newlayer = nothing
     @tryLockPause sim(g) begin 
-        _addLayer!(g, llength, lwidth; set, weights, periodic, type, kwargs...)
+        newlayer = _addLayer!(g, llength, lwidth; set, weights, periodic, type, kwargs...)
         # Update the layer idxs
         nlayers(sim(g))[] += 1
     end
-    return layers(g)
+    return newlayer
 end
 
 addLayer!(g::IsingGraph, llength, lwidth, wg; kwargs...) = addLayer!(g, llength, lwidth; weights = wg, kwargs...)
@@ -451,7 +457,7 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth; weights = nothing, period
     # Init the state
     initstate!(newlayer)
 
-    return layers(g)
+    return newlayer
 end
 
 function _removeLayer!(g::IsingGraph, lidx::Integer)
