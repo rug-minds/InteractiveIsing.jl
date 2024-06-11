@@ -262,6 +262,8 @@ function MB_panel(window, axesgrid, pos, layer)
     
     b_buffer = Observable(CircularBuffer{etype}(2400))
     m_buffer = Observable(CircularBuffer{etype}(2400))
+    b_buffer[] .= 0
+    m_buffer[] .= 0
     m_avg = AverageCircular(etype,10)
 
     x_left = -4
@@ -275,7 +277,7 @@ function MB_panel(window, axesgrid, pos, layer)
     sliderlabel = Label(slidergrid[1,1], label, tellwidth = false, tellheight = false, fontsize = 20)
     rowsize!(slidergrid, 1, 40)
     on(slider.value) do x
-        globalB!(layer, x)
+        setParam!(layer, :b, x, true)
     end
 
     axis = Axis(mbgrid[1,1], tellwidth = false, tellheight = false, xlabel = "B", ylabel = "M", title = "Magnetization vs Magnetic Field", titlesize = 32, xlabelsize = 24, ylabelsize = 24)
@@ -288,7 +290,7 @@ function MB_panel(window, axesgrid, pos, layer)
         empty!(b_buffer[])
         empty!(m_buffer[])
     end
-ß
+
     function update(timer)
         push!(m_avg, sumsimd(state(layer))/nstates(layer))
         push!(b_buffer[], slider.value[])
@@ -375,7 +377,7 @@ function Tχ_panel(window, axesgrid, pos, layer)
 
     χdata = Observable(zeros(etype, 1))
 
-    scatterlines!(axis, ts, χdata, color = :blue, tellwidth = false)
+    scatterlines!(axis, ts, χdata, color = :blue)
     xlims!(axis, 1.8, 3)
     reset_limits!(axis)
 
@@ -438,7 +440,7 @@ function χₘ_panel(window, axesgrid, pos, layer)
     
     # Label(box[2,1], st_dev; valign = :top, halign = :right, tellwidth = false, tellheight = false)
     axis = Axis(getindex(axesgrid,pos...), tellwidth = false, tellheight = false, xlabel = "M", ylabel = "Counts", title = "Bar Plot of Sampled Magnetizations", titlesize = 32, xlabelsize = 24, ylabelsize = 24)
-    histo = hist!(axis, Mbars,; bins = 100, color = :blue, tellwidth = false)
+    histo = hist!(axis, Mbars,; bins = 100, color = :blue)
 
 
     timer = PTimer((timer) -> begin notify(Mbars); reset_limits!(axis) end, 0., interval = 1/10)
@@ -477,7 +479,7 @@ function correlation_panel(window, axesgrid, pos, layer)
     corr_avgs = [AverageCircular(etype, 10) for _ in 1:length(corr_val)]
 
     axis = Axis(getindex(axesgrid,pos...), tellwidth = false, title = L"Two Point Correlation Function, $\langle s(x)s(x+r) \rangle - \langle s(x) \rangle ^2$", xlabel = "r", ylabel = "C(r)", titlesize = 32, xlabelsize = 24, ylabelsize = 24, titlefont = :bold)
-    correlation = lines!(axis, corr_r, corr, color = :blue, tellwidth = false)
+    correlation = lines!(axis, corr_r, corr, color = :blue)
     xlims!(axis, 0, min((round.(Int,size(layer)./5))...))
     ylims!(axis, -0.2, 1)
     isactive = Observable(true)
