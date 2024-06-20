@@ -14,14 +14,14 @@ Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val),
 
 export Coords
 # TODO: Make the topology part of the layertype
-mutable struct IsingLayer{StateType, StateSet, IndexSet ,T} <: AbstractIsingLayer{StateType}
+mutable struct IsingLayer{StateType, StateSet, IndexSet, DIMS, T} <: AbstractIsingLayer{StateType,DIMS}
     # Reference to the graph holding it    
     graph::Union{Nothing, IsingGraph{T}}
     name::String
     # Internal idx of layer in shufflevec of graph
     internal_idx::Int32
     start::Int32
-    size::Tuple{Int32,Int32}
+    size::NTuple{DIMS, Int32}
     nstates::Int32
     traits::NamedTuple
 
@@ -36,8 +36,9 @@ mutable struct IsingLayer{StateType, StateSet, IndexSet ,T} <: AbstractIsingLaye
     top::LayerTopology
 
     # DEFAULT INIT
-    function IsingLayer{ST, SS, IS, T}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top) where {ST, SS, IS, T}
-        return new{ST, SS, IS, T}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top)
+    function IsingLayer{ST, SS, IS, DIMS, T}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top) where {ST, SS, IS, DIMS, T}
+        @assert typeof(DIMS) == Int
+        return new{ST, SS, IS, DIMS, T}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top)
     end
 
 
@@ -47,19 +48,33 @@ mutable struct IsingLayer{StateType, StateSet, IndexSet ,T} <: AbstractIsingLaye
             idx, 
             start, 
             length, 
-            width; 
+            width,
+            height = nothing; 
+            lsize = nothing,
             set = convert.(eltype(g),(-1,1)), 
             name = "$(length)x$(width) Layer", 
             traits = (;StateType = StateType, StateSet = set, Indices = (start:(start+length*width-1)), Hamiltonians = (Ising,)),
             coords = Coords(nothing), 
             connections = Dict{Pair{Int32,Int32}, 
             WeightGenerator}(), 
-            periodic::Union{Nothing,Bool} = true
+            periodic::Union{Nothing,Bool} = true,
         ) where GraphType <: IsingGraph
-            
-        lsize = tuple(Int32(length), Int32(width))
+        dims = 2
+        if !isnothing(height)
+            dims = 3
+        end
+
+        if isnothing(lsize)
+            if dims == 2
+                lsize = tuple(Int32(length), Int32(width))
+            else
+                lsize = tuple(Int32(length), Int32(width), Int32(height))
+            end
+        end
+        
+        graphidxs = isnothing(height) ? (start:(start+length*width-1)) : (start:(start+length*width*height-1))
         set = convert.(eltype(g), set)
-        layer = new{StateType, set, (start:(start+length*width-1)), eltype(g)}(
+        layer = new{StateType, set, graphidxs, dims, eltype(g)}(
             # Graph
             g,
             # Name
@@ -71,7 +86,7 @@ mutable struct IsingLayer{StateType, StateSet, IndexSet ,T} <: AbstractIsingLaye
             # Size
             lsize,
             # Number of states
-            Int32(lsize[1]*lsize[2]),
+            Int32(reduce(*, lsize)),
             # Traits
             traits,
             #Coordinates
@@ -81,6 +96,7 @@ mutable struct IsingLayer{StateType, StateSet, IndexSet ,T} <: AbstractIsingLaye
             # PTimers
             Vector{PTimer}(),
         )
+        # TODO: Topology should support 3d
         layer.top = LayerTopology(layer, [1,0], [0,1]; periodic)
         finalizer(destructor, layer)
         return layer
@@ -91,7 +107,7 @@ export IsingLayer
 """
 Two IsingLayers are equivalent when
 """
-equiv(i1::Type{IsingLayer{A,B,C,D}}, i2::Type{IsingLayer{E,F,G,H}}) where {A,B,C,D,E,F,G,H} = A == E && B == F
+equiv(i1::Type{IsingLayer{A,B,C,D,T1}}, i2::Type{IsingLayer{E,F,G,H,T2}}) where {A,B,C,D,E,F,G,H,T1,T2} = A == E && B == F
 
 
 function destructor(layer::IsingLayer)
@@ -122,20 +138,20 @@ Base.show(io::IO, layertype::Type{IsingLayer{A,B}}) where {A,B} = print(io, "$A 
 
 
 ## ACCESSORS
-@inline state(l::IsingLayer) = reshape((@view state(graph(l))[graphidxs(l)]), size(l,1), size(l,2))
+@inline state(l::IsingLayer) = reshape((@view state(graph(l))[graphidxs(l)]), size(l)...)
 
 
 # @inline adj(l::IsingLayer) = reshape((@view adj(graph(l))[graphidxs(l)]), glength(l), gwidth(l))
 @inline adj(l::IsingLayer) = @view adj(graph(l))[:, graphidxs(l)] 
 
-@inline function set_adj!(layer, wg, rcw)
+@inline function set_adj!(layer::IsingLayer, wg::WeightGenerator, rcw)
     connections(layer)[internal_idx(layer) => internal_idx(layer)] = wg
     set_adj!(graph(layer), rcw)
     notify(layer)
     return adj(graph(layer))
 end
 
-@inline function set_adj!(layer1, layer2, wg, rcw)
+@inline function set_adj!(layer1::IsingLayer, layer2::IsingLayer, wg::WeightGenerator, rcw)
     connections(layer1)[internal_idx(layer1) => internal_idx(layer2)] = wg
     set_adj!(graph(layer1), rcw)
     notify(layer1)
@@ -201,8 +217,9 @@ Set graph of layer
 ### COORDINATES OF LAYERS
 @inline coords(layer::AbstractIsingLayer) = layer.coords.cs
 # Move to user folder
-@inline setcoords!(layer::AbstractIsingLayer; x = 0, y = 0, z = 0) = (layer.coords.cs = Int32.((y,x,z)))
-@inline setcoords!(layer::AbstractIsingLayer, val) = (layer.coords.cs = Int32.((val,val,val)))
+@inline setcoords!(layer::AbstractIsingLayer{T}; x = 0, y = 0, z = 0) where T = (layer.coords.cs = Int32.((y,x,z)))
+@inline setcoords!(layer::AbstractIsingLayer{T}, val) where T = (layer.coords.cs = Int32.((val,val,val)))
+
 export setcoords!
 
 """
@@ -212,10 +229,13 @@ Get adjacency of layer in layer coordinates
 
 # Setters and getters
 # @forward IsingLayer IsingGraph g
-@inline size(layer::AbstractIsingLayer)::Tuple{Int32,Int32} = layer.size
+@inline size(layer::AbstractIsingLayer{T,DIMS}) where {T,DIMS} = (layer.size)::NTuple{DIMS,Int32}
 @inline size(layer::AbstractIsingLayer, i) = layer.size[i]
-@inline glength(layer::AbstractIsingLayer)::Int32 = (size(layer)::Tuple{Int32,Int32})[1]::Int32
-@inline gwidth(layer::AbstractIsingLayer)::Int32 = (size(layer)::Tuple{Int32,Int32})[2]::Int32
+@inline glength(layer::AbstractIsingLayer) = size(layer,1)
+@inline gwidth(layer::AbstractIsingLayer) = size(layer,2)
+@inline gheight(layer::AbstractIsingLayer{T,3}) where T = size(layer,3)
+@inline dims(layer::AbstractIsingLayer) = length(size(layer))
+
 @inline maxdist(layer::AbstractIsingLayer) = maxdist(layer, periodic(layer))
 @inline maxdist(layer::AbstractIsingLayer, ::Type) = max(size(layer)...)
 @inline function maxdist(layer::AbstractIsingLayer, ::Type{Periodic})
@@ -403,9 +423,9 @@ end
 export changeset, changeset!
 
 stateset(l::IsingLayer{<:Any, SS}) where SS = SS
-stateset(::Type{IsingLayer{A, SS, B, C}}) where {A, SS, B, C} = SS
+stateset(::Type{IsingLayer{A, SS, B, C, T1}}) where {A, SS, B, C, T1} = SS
 indexset(l::IsingLayer{A, B, IS, C}) where {A, B, IS, C} = IS
-indexset(::Type{IsingLayer{A, B, IS, C}}) where {A, B, IS, C} = IS
+indexset(::Type{IsingLayer{A, B, IS, C, T1}}) where {A, B, IS, C, T1} = IS
 
 function extremiseDiscrete!(l::IsingLayer{ST, SS}) where {ST,SS}
     if ST == Discrete
@@ -454,14 +474,16 @@ export changeset!, stateset
 ## DEFAULT NEW LAYER TYPE BASED ON GRAPH
 default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous 
 @inline statetype(layer::IsingLayer{ST}) where {ST} = ST
-@inline statetype(::Type{IsingLayer{ST,A,B,C}}) where {ST,A,B,C} = ST
+@inline statetype(::Type{IsingLayer{ST,A,B,C,T1}}) where {ST,A,B,C,T1} = ST
 setstatetype(l::IsingLayer{ST,SET}, stype) where {ST,SET} = IsingLayer{stype,SET}(l.graph, l.name, l.internal_idx, l.start, l.size, l.nstates, l.coords, l.connections, l.timers, l.top)
 
-Base.eltype(l::IsingLayer{T}) where T = T
+Base.eltype(l::IsingLayer) = eltype(graph(l))
 
 # ORDER LAYER TYPES BASED ON STATETYPE
-Base.isless(::Type{IsingLayer{A,B,C,D}}, ::Type{IsingLayer{E,F,G,H}}) where {A,B,C,D,E,F,G,H} = isless(A,D)
-Base.isless(::Type{IsingLayer{A,B}}, ::Type{IsingLayer{E,F,G,H}}) where {A,B,E,F,G,H} = isless(A,E)
+# TODO: HACKY
+# Make empty layers
+Base.isless(::Type{IsingLayer{A,B,C,D,T1}}, ::Type{IsingLayer{E,F,G,H,T2}}) where {A,B,C,D,E,F,G,H,T1,T2} = isless(A,D)
+Base.isless(::Type{IsingLayer{A,B}}, ::Type{IsingLayer{E,F,G,H,T}}) where {A,B,E,F,G,H,T} = isless(A,E)
 
 
 export statetype, setstatetype
@@ -482,44 +504,45 @@ end
 
 ## COPY SHOULDN"T BE NEEDED
 # TODO: Is this still needed?
-mutable struct IsingLayerCopy{T} <: AbstractIsingLayer{T}
-    const graph::AbstractIsingGraph
-    layeridx::Int32
-    state::Matrix{T}
-    adj::Matrix{Vector{Tuple{Int32, Float32}}}
-    start::Int32
-    const size::Tuple{Int32,Int32}
-    const nstates::Int32
-    coords::Coords{Tuple{Int32,Int32,Int32}}
-    # const d::LayerData
-    # defects::LayerDefects
-    top::LayerTopology
+# mutable struct IsingLayerCopy{T} <: AbstractIsingLayer{T}
+#     const graph::AbstractIsingGraph
+#     layeridx::Int32
+#     state::Matrix{T}
+#     adj::Matrix{Vector{Tuple{Int32, Float32}}}
+#     start::Int32
+#     const size::Tuple{Int32,Int32}
+#     const nstates::Int32
+#     coords::Coords{Tuple{Int32,Int32,Int32}}
+#     # const d::LayerData
+#     # defects::LayerDefects
+#     top::LayerTopology
 
-    function IsingLayerCopy(layer::IsingLayer{A,B}) where {A,B}
+#     function IsingLayerCopy(layer::IsingLayer{A,B}) where {A,B}
         
-        new{A}(
-            # Graph
-            layer.graph,
-            # Layer idx at the time of copying
-            layeridx(layer),
-            # State
-            copy(state(layer)),
-            # Adj
-            copy(adj(layer)),
-            # Start idx
-            layer.start,
-            # Size
-            layer.size,
-            # Number of states
-            layer.nstates,
-            # Coordinates
-            layer.coords,
-            # Layer data
-            # layer.d,
-            # layer.defects,
-            layer.top
-        )
-    end
-end
+#         new{A}(
+#             # Graph
+#             layer.graph,
+#             # Layer idx at the time of copying
+#             layeridx(layer),
+#             # State
+#             copy(state(layer)),
+#             # Adj
+#             copy(adj(layer)),
+#             # Start idx
+#             layer.start,
+#             # Size
+#             layer.size,
+#             # Number of states
+#             layer.nstates,
+#             # Coordinates
+#             layer.coords,
+#             # Layer data
+#             # layer.d,
+#             # layer.defects,
+#             layer.top
+#         )
+#     end
+# end
 
-@setterGetter IsingLayerCopy coords size
+# @setterGetter IsingLayerCopy coords size
+

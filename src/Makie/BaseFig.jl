@@ -2,7 +2,7 @@
 # DEV:
 export ml, midpanel, toppanel, bottompanel
 
-function baseFig(g; disp = true)
+function baseFig(g; disp = true, interval = 1/60)
     ml = simulation[].ml[]
     if haskey(ml, "basefig_active") && ml["basefig_active"]
         cleanup(ml, baseFig)
@@ -11,7 +11,7 @@ function baseFig(g; disp = true)
     timedFunctions["upf"] = updatesPerFrame
     timedFunctions["magnetization"] = magnetization
     sim = simulation[]
-    sim.timers["makie"] = PTimer((timer) -> timerFuncs(sim) ,0., interval = 1/60)
+    sim.timers["makie"] = PTimer((timer) -> timerFuncs(sim) ,0., interval = interval)
 
 
     ml["basefig_active"] = true

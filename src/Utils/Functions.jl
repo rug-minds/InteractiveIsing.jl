@@ -613,3 +613,12 @@ function copyfields!(oldstruct::T, newsrtuct::T) where T
     end
     oldstruct
 end
+
+function idx2coords(size::NTuple{3,T}, idx) where {T}
+    idx = T(idx)
+    ((T(idx)-T(1)) % size[1] + T(1), (floor(T, (idx-T(1))/size[1])) % size[2] + T(1), floor(T, (idx-T(1))/(size[1]*size[2])) + T(1))
+end
+
+idx2ycoord(size::NTuple{3,T}, idx) where {T} = (T(idx)-T(1)) % size[1] + T(1)
+idx2xcoord(size::NTuple{3,T}, idx) where {T} = (floor(T, (idx-T(1))/size[1])) % size[2] + T(1)
+idx2zcoord(size::NTuple{3,T}, idx) where {T} = floor(T, (idx-T(1))/(size[1]*size[2])) + T(1)

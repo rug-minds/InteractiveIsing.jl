@@ -7,8 +7,8 @@ end
 function changeActivation!(g, param, activate)
     if !isnothing(activate) && isactive(g.params[param]) != activate
         newparam = ParamVal(g.params[param], activate)
-        println("Newparam, ", newparam)
-        println("Newparams: ", (;g.params..., param => newparam))
+        # println("Newparam, ", newparam)
+        # println("Newparams: ", (;g.params..., param => newparam))
         g.params = (;g.params..., param => newparam)
         refresh(g)
     end 
@@ -26,6 +26,7 @@ function setGlobal!(g::IsingGraph, param, val)
     return g.params[param]
 end
 
+# TODO: Standard behavior should be to turn it on?
 """
 Get a graph and a symbol, then set the value of the parameter to the given value
 """

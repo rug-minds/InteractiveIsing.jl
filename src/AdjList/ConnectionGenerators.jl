@@ -1,19 +1,19 @@
-abstract type SelfType end
-struct Self <: SelfType end
-struct NoSelf <: SelfType end
+# abstract type SelfType end
+# struct Self <: SelfType end
+# struct NoSelf <: SelfType end
 
-function SelfType(wg::WeightGenerator{A,SelfFunc,B,C}) where {A,SelfFunc,B,C}
-    if isa(SelfFunc, Type{Nothing})
-        return NoSelf()
-    else
-        return Self()
-    end
-end
-export SelfType
+# function SelfType(wg::WeightGenerator{A,SelfFunc,B,C}) where {A,SelfFunc,B,C}
+#     if isa(SelfFunc, Type{Nothing})
+#         return NoSelf()
+#     else
+#         return Self()
+#     end
+# end
+# export SelfType
 
-abstract type Alignment end
-struct None <: Alignment end
-struct Center <: Alignment end
+# abstract type Alignment end
+# struct None <: Alignment end
+# struct Center <: Alignment end
 
 # Alignment modes
 # 1: :none - no alignment (default)

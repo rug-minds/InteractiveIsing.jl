@@ -5,6 +5,16 @@ function sim_max_r(simulation)
     return maxsize == 0 ? 1 : maxsize
 end
 
+# Function to create an unsafe vector from the view
+function create_unsafe_vector(view_array)
+    # Get the pointer to the view array
+    ptr = pointer(view_array)
+    # Wrap the pointer into a Julia array without copying
+    unsafe_vector = unsafe_wrap(Vector{eltype(view_array)}, ptr, length(view_array))
+    return unsafe_vector
+end
+
+
 # Maybe I can just make makie get the latest image always?
 function getSingleViewImg(g, ml)
     simulation = sim(g)
@@ -40,7 +50,7 @@ function singleView(ml, g)
     # ISING IMAGE
     
     mp["sv_img_ob"] = img_ob = Observable{Base.ReshapedArray}(state(currentLayer(simulation)))
-    img_ob[] = getSingleViewImg(g, ml)
+    img_ob[] = getSingleViewImg(g, ml) #Bfield or state
     mp["axis_size"] = size(img_ob[])
     obs_funcs = etc(ml)["obs_funcs_singleView"] = ObserverFunction[]
     # coupled_obs = etc(ml)["coupled_obs_singleView"] = Observable[]
@@ -76,12 +86,28 @@ function singleView(ml, g)
         setLayerSV(val)
     end)
 
-    
-
-    # ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), ypanlock = true, xpanlock = true, yzoomlock = true, xzoomlock = true)
-    ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
-    # TODO: Set colorrange based on the type of layer
-    ima = image!(ax, img_ob, colormap = :thermal, fxaa = false, interpolate = false)
+    ax = nothing
+    im = nothing
+    cur_layer = currentLayer(simulation)
+    layerdim = dims(cur_layer)
+    if dims == 2
+        # ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), ypanlock = true, xpanlock = true, yzoomlock = true, xzoomlock = true)
+        ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
+        # TODO: Set colorrange based on the type of layer
+        ima = image!(ax, img_ob, colormap = :thermal, fxaa = false, interpolate = false)
+    else
+        # ax = Axis3(mp[][1,2], tellheight = true)
+        sz = size(cur_layer)
+        ax = Axis3(mp[][1,2], tellheight = true)
+        allidxs = [1:length(state(cur_layer));]
+        xs = idx2xcoord.(Ref(sz), allidxs)
+        ys = idx2ycoord.(Ref(sz), allidxs)
+        zs = idx2zcoord.(Ref(sz), allidxs)
+        # coords = idx2coords.(Ref(sz), allidxs)
+        unsafe_view = create_unsafe_vector(@view state(g)[graphidxs(cur_layer)])
+        img_ob = Observable(unsafe_view)
+        ima = meshscatter!(ax, xs, ys, zs, markersize = 0.2, color = img_ob, colormap = :thermal)
+    end
 
     # rowsize!(_grid, 1, Relative(1/20))
 

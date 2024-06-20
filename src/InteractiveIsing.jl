@@ -35,7 +35,7 @@ import Base: getindex, setindex!, length, iterate, isless, push!, resize!, size
 
 export AbstractIsingGraph
 abstract type AbstractIsingGraph{T} end
-abstract type AbstractIsingLayer{T} <: AbstractIsingGraph{T} end
+abstract type AbstractIsingLayer{T,DIMS} <: AbstractIsingGraph{T} end
 
 abstract type PeriodicityType end
 struct Periodic <: PeriodicityType end

@@ -378,17 +378,17 @@ export resize!
 
 export addLayer!
 nlayers(::Nothing) = Observable(0)
-function addLayer!(g::IsingGraph, llength, lwidth; weights = nothing, periodic = true, type = default_ltype(g), set = convert.(eltype(g),(-1,1)), rangebegin = set[1], rangeend = set[2], kwargs...)
+function addLayer!(g::IsingGraph, llength, lwidth, lheight; weights = nothing, periodic = true, type = default_ltype(g), set = convert.(eltype(g),(-1,1)), rangebegin = set[1], rangeend = set[2], kwargs...)
     newlayer = nothing
     @tryLockPause sim(g) begin 
-        newlayer = _addLayer!(g, llength, lwidth; set, weights, periodic, type, kwargs...)
+        newlayer = _addLayer!(g, llength, lwidth, lheight; set, weights, periodic, type, kwargs...)
         # Update the layer idxs
         nlayers(sim(g))[] += 1
     end
     return newlayer
 end
 
-addLayer!(g::IsingGraph, llength, lwidth, wg; kwargs...) = addLayer!(g, llength, lwidth; weights = wg, kwargs...)
+# addLayer!(g::IsingGraph, llength, lwidth, wg; kwargs...) = addLayer!(g, llength, lwidth; weights = wg, kwargs...)
 
 function addLayer!(g, dims::Vector, wgs...; kwargs...)
     for (dimidx,dim) in enumerate(dims)
@@ -409,7 +409,7 @@ This is handled by the relocate! function automatically in the shufflevec
 Because the shufflevec knows then internal data is being pushed around
 Not sure if this is the most transparent way to do it since resizing is not done within the shufflevec
 """
-function _addLayer!(g::IsingGraph{T}, llength, lwidth; weights = nothing, periodic = true, type = nothing, kwargs...) where T
+function _addLayer!(g::IsingGraph{T}, llength, lwidth, lheight = nothing; weights = nothing, periodic = true, type = nothing, kwargs...) where T
     if isnothing(type)
         type = default_ltype(g)
     end
@@ -419,11 +419,14 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth; weights = nothing, period
    
     # Function that makes the new layer based on the insertidx
     # Found by the shufflevec
-    # Maybe I should make an insert function for the layers?
+    # TODO: Maybe I should make an insert function for the layers?
     make_newlayer(idx) = begin
         _layers = unshuffled(layers(g))
 
         extra_states = llength*lwidth
+        if !isnothing(lheight)
+            extra_states *= lheight
+        end
         # Resize the old state
 
         # Find the startidx of the new layer
@@ -437,7 +440,7 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth; weights = nothing, period
         resize!(g, nStates(g) + extra_states, _startidx)
 
 
-        return IsingLayer(type, g, idx , _startidx, llength, lwidth; periodic, set)
+        return IsingLayer(type, g, idx , _startidx, llength, lwidth, lheight; periodic, set)
     end
     layertype =  IsingLayer{type, set}
     push!(layers(g), make_newlayer, layertype)
@@ -458,6 +461,10 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth; weights = nothing, period
     initstate!(newlayer)
 
     return newlayer
+end
+
+function _addLayer3d(g::IsingGraph, llength, lwidth, lheight; weights = nothing, periodic = true, type = nothing, kwargs...)
+
 end
 
 function _removeLayer!(g::IsingGraph, lidx::Integer)

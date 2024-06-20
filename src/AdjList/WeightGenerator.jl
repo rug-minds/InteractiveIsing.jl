@@ -59,6 +59,19 @@ function Base.show(io::IO, wg::WeightGenerator)
 end
 
 
+abstract type SelfType end
+struct Self <: SelfType end
+struct NoSelf <: SelfType end
+
+function SelfType(wg::WeightGenerator{A,SelfFunc,B,C}) where {A,SelfFunc,B,C}
+    if isa(SelfFunc, Type{Nothing})
+        return NoSelf()
+    else
+        return Self()
+    end
+end
+export SelfType
+
 
 
 # Can this be turned into a function, sinze we're using string?
@@ -215,18 +228,7 @@ export getWeight, getSelfWeight
 Base.zero(::Type{NTuple{N,T}}) where {N,T} = NTuple{N,T}(Base.zero(T) for i in 1:N)
 Base.zero(::Type{Tuple{T1,T2}}) where {T1,T2} = (Base.zero(T1), Base.zero(T2))
 
-abstract type SelfType end
-struct Self <: SelfType end
-struct NoSelf <: SelfType end
 
-function SelfType(wg::WeightGenerator{A,SelfFunc,B,C}) where {A,SelfFunc,B,C}
-    if isa(SelfFunc, Type{Nothing})
-        return NoSelf()
-    else
-        return Self()
-    end
-end
-export SelfType
 
 
 

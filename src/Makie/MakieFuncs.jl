@@ -11,6 +11,8 @@ function setLayerSV(idx)
     ml = getml()
     mp = midpanel(ml)
 
+    dim = llength(currentLayer(simulation))
+
     sim = simulation[]
     newR = round(min(size(currentLayer(sim))...) / 10)
 
