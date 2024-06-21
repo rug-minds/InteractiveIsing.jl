@@ -46,7 +46,7 @@ function correlationLength(layer::AbstractIsingLayer{T,2}, ::Type{Fourier}) wher
    return [1:length(correlations);], correlations
 end
 
-function correlationLength(layer::AbstractIsingLayer{T,3}, ::Type{Fourier}) where T
+function correlationLength(layer::IsingLayer{A,B,C,3}, ::Type{Fourier}) where {A,B,C}
    @inline function bin(dist)
       floor(Int32, dist)
    end 
@@ -58,8 +58,11 @@ function correlationLength(layer::AbstractIsingLayer{T,3}, ::Type{Fourier}) wher
    ft = abs2.(ft)
    
    corrs = real.(ifft(ft))
-   bins = zeros(Float32, floor(Int, maxdist(layer)))
-   counts = zeros(Float32, floor(Int, maxdist(layer)))
+
+   reducep(x) = reduce(+,x)
+
+   bins = zeros(Float32, floor(Int, map(x -> x^2 , size(layer)) |> reducep |> sqrt))
+   counts = zeros(Float32, floor(Int, map(x -> x^2 , size(layer)) |> reducep |> sqrt))
    for k in 1:size(corrs,3)
       for j in 1:size(corrs,2)
          for i in 1:size(corrs,1)

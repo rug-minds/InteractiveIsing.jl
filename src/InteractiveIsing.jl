@@ -105,51 +105,51 @@ include("Barebones.jl")
 # end
 
 # PRECOMPILATION FUNCTION FOR FAST USAGE
-@setup_workload begin
-    GC.enable(false)
+# @setup_workload begin
+#     GC.enable(false)
 
-    cg = IsingGraph(20, 20, type = Discrete)
-    simulate(cg, start = false)
-    _sim = sim(cg)
+#     cg = IsingGraph(20, 20, type = Discrete)
+#     simulate(cg, start = false)
+#     _sim = sim(cg)
 
-    @compile_workload begin
+#     @compile_workload begin
 
-        addLayer!(cg, 20, 20, type = Discrete)
+#         addLayer!(cg, 20, 20, type = Discrete)
 
-        setcoords!(cg[1])
-        setcoords!(cg[2], z = 1)
-        cwg = @WG "(dr) -> 1" NN=1
+#         setcoords!(cg[1])
+#         setcoords!(cg[2], z = 1)
+#         cwg = @WG "(dr) -> 1" NN=1
 
-        genAdj!(cg[1], cwg)
-        genAdj!(cg[1],cg[2], cwg)
+#         genAdj!(cg[1], cwg)
+#         genAdj!(cg[1],cg[2], cwg)
 
-        #Plotting correlation length and GPU kernel
-        plotCorr(cg[2], dodisplay = false, save = false)
+#         #Plotting correlation length and GPU kernel
+#         plotCorr(cg[2], dodisplay = false, save = false)
 
-        setSpins!(cg[1], 1, 1, true, false)
+#         setSpins!(cg[1], 1, 1, true, false)
 
-        drawCircle(cg[1], 1, 1, 1, clamp = true)
+#         drawCircle(cg[1], 1, 1, 1, clamp = true)
 
-        path = saveGraph(cg, savepref = false)
+#         path = saveGraph(cg, savepref = false)
 
-        close.(values(timers(_sim)))
-        loadGraph(path)       
+#         close.(values(timers(_sim)))
+#         loadGraph(path)       
 
-        closeinterface()
+#         closeinterface()
 
-        w = LayerWindow(cg[1])
-        closewindow(w)
-        # w = createAnalysisWindow(cg[1], MT_panel, tstep = 0.01)
-        # closewindow(w)
-        # w = createAnalysisWindow(cg[1], MB_panel, tstep = 0.01)
-        # closewindow(w)
-        # w = createAnalysisWindow(cg, χₘ_panel, Tχ_panel, shared_interval = 1/500, tstep = 0.01);
-        # closewindow(w)
+#         w = LayerWindow(cg[1])
+#         closewindow(w)
+#         # w = createAnalysisWindow(cg[1], MT_panel, tstep = 0.01)
+#         # closewindow(w)
+#         # w = createAnalysisWindow(cg[1], MB_panel, tstep = 0.01)
+#         # closewindow(w)
+#         # w = createAnalysisWindow(cg, χₘ_panel, Tχ_panel, shared_interval = 1/500, tstep = 0.01);
+#         # closewindow(w)
 
-        reset!(simulation)
-        GC.enable(true)
-    end
-end
+#         reset!(simulation)
+#         GC.enable(true)
+#     end
+# end
 
 
 
