@@ -124,6 +124,15 @@ function dist(i1, j1, i2, j2, top::LayerTopology{PT,LT, LayerT}) where {PT, LT, 
     return sqrt(dist2(i1, j1, i2, j2, PT, LT, pvecs = pvecs_val, l = l, w = w))
 end
 
+function dist(i1, j1, k1, i2, j2, k2, top::LayerTopology{PT,LT, LayerT}) where {PT, LT, LayerT}
+    pvecs_val = pvecs(top)
+    l::Int32 = glength(layer(top))
+    w::Int32 = gwidth(layer(top))
+    h::Int32 = size(layer(top),3)
+
+    return sqrt(dist2(i1, j1, i2, j2, PT, LT, pvecs = pvecs_val, l = l, w = w) + dist2(0,0,k1,k2, PT, LT, pvecs = pvecs_val, l = l, w = w))
+end
+
 dist(idx1::Integer,idx2::Integer, top::LayerTopology) = dist(idxToCoord(idx1, glength(layer(top)))..., idxToCoord(idx2, glength(layer(top)))..., top)
 
 export dist2, dist

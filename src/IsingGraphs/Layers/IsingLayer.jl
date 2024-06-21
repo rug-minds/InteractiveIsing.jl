@@ -363,6 +363,7 @@ iterator(g::IsingGraph) = 1:(nStates(g))
 @inline setPeriodic!(layer::AbstractIsingLayer, periodic) = top!(layer, LayerTopology(top(layer); periodic))
 @inline dist(idx1::Integer, idx2::Integer, layer::AbstractIsingLayer) = dist(idxToCoord(idx1, glength(layer))..., idxToCoord(idx2, size(layer,1))..., top(layer))
 @inline dist(i1::Integer, j1::Integer, i2::Integer, j2::Integer, layer::AbstractIsingLayer) = dist(i1, j1, i2, j2, top(layer))
+@inline dist(i1::Integer, j1::Integer, i2::Integer, j2::Integer, k1, k2, layer::AbstractIsingLayer{T,3}) where T = sqrt((i1-i2)^2 + (j1-j2)^2 + (k1-k2)^2)
 @inline idxToCoord(idx::Integer, layer::AbstractIsingLayer) = idxToCoord(idx, size(layer,1))
 
 # Notify a change in the simulation
