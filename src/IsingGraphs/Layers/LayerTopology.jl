@@ -3,6 +3,7 @@ using LinearAlgebra
 # TwoVec = SVector{2,Float32}
 TwoVec = Point2f
 
+
 abstract type LatticeType end
 struct Square <: LatticeType end
 struct Rectangular <: LatticeType end
@@ -43,6 +44,39 @@ mutable struct LayerTopology{T <: PeriodicityType, U <: LatticeType, LayerType <
         return new{ptype, lattice_type, typeof(layer)}(layer, (vec1, vec2), (cov1, cov2))
     end
 end
+
+# mutable struct LayerTopology{dims, T <: PeriodicityType, U <: LatticeType, LayerType <: IsingLayer}
+#     layer::Union{Nothing, LayerType}
+#     pvecs::NTuple{dims,Point{dims, Float32}}
+#     covecs::NTuple{dims,Point{dims, Float32}}
+    
+#     function LayerTopology(layer, vec1::AbstractArray, vec2::AbstractArray; periodic::Union{Nothing, Bool} = nothing)
+#         #calculation of covectors
+#         y1 = 1/(vec1[1]-(vec1[2]*vec2[1]/vec2[2]))
+#         x1 = 1/(vec1[2]-(vec1[1]*vec2[2]/vec2[1]))
+#         y2 = 1/(vec2[1]-(vec2[2]*vec1[1]/vec1[2]))
+#         x2 = 1/(vec2[2]-(vec2[1]*vec1[2]/vec1[1]))
+        
+#         cov1 = TwoVec(y1, x1)
+#         cov2 = TwoVec(y2, x2)
+        
+#         if !isnothing(periodic)
+#             ptype = periodic ? Periodic : NonPeriodic
+#         else
+#             ptype = Periodic
+#         end
+
+#         lattice_type = AnyLattice
+
+#         if vec1 == [1,0] && vec2 == [0,1]
+#             lattice_type = Square
+#         end
+            
+    
+#         return new{ptype, lattice_type, typeof(layer)}(layer, (vec1, vec2), (cov1, cov2))
+#     end
+# end
+
 
 LayerTopology(tp::LayerTopology; periodic::Bool) = LayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2]; periodic)
 LayerTopology(tp::LayerTopology, pt::Type{<:PeriodicityType}) = LayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2], periodic = pt == Periodic ? true : false)

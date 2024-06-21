@@ -16,7 +16,7 @@ struct Fourier <: SamplingAlgorithm end
 Correlation length functions should collect the correlation of units from  i - i+1 in a bin, starting from 0.
 =#
 s_algo = Fourier 
-function correlationLength(layer, ::Type{Fourier})
+function correlationLength(layer::AbstractIsingLayer{T,2}, ::Type{Fourier}) where T
    @inline function bin(dist)
       floor(Int32, dist)
    end 
@@ -32,13 +32,45 @@ function correlationLength(layer, ::Type{Fourier})
    counts = zeros(Float32, floor(Int, maxdist(layer)))
 
    for j in 1:size(corrs,2)
-      for i in 1:size(corrs,2)
+      for i in 1:size(corrs,1)
          if i == 1 && j == 1
             continue
          end
          _dist = dist(1,1, i, j, layer)
          bins[bin(_dist)] += corrs[i,j]
          counts[bin(_dist)] += 1
+      end
+   end
+
+   correlations = (bins ./ counts)./(nStates(layer)) .- avg_sq
+   return [1:length(correlations);], correlations
+end
+
+function correlationLength(layer::AbstractIsingLayer{T,3}, ::Type{Fourier}) where T
+   @inline function bin(dist)
+      floor(Int32, dist)
+   end 
+
+   avg_sq = (sum(state(layer))/nStates(layer))^2
+
+   _state = state(layer)
+   ft = fft(_state)
+   ft = abs2.(ft)
+   
+   corrs = real.(ifft(ft))
+   bins = zeros(Float32, floor(Int, maxdist(layer)))
+   counts = zeros(Float32, floor(Int, maxdist(layer)))
+   for k in 1:size(corrs,3)
+      for j in 1:size(corrs,2)
+         for i in 1:size(corrs,1)
+         
+            if i == 1 && j == 1 && k == 1
+               continue
+            end
+            _dist = dist(1,1,1, i, j, k, layer)
+            bins[bin(_dist)] += corrs[i,j,k]
+            counts[bin(_dist)] += 1
+         end
       end
    end
 
