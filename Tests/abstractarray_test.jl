@@ -11,10 +11,3 @@ struct Foo
 end
 
 struct WIntArray <: AbstractArray end
-
-function Base.iterate(wi::WI)
-
-
-#make iterate function for WIntArray
-
-

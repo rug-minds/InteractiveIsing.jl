@@ -17,9 +17,5 @@ function Base.hash(a::UndirectedPair)
     return UInt((2 << a.x) + (2 << a.y))
 end
 
-function (<=>)(i1, i2)
-    return UPair(i1, i2)
-end
-
 ⇔(i1, i2) = UPair(i1, i2)
 export ⇔
