@@ -48,7 +48,7 @@ end
 
 function correlationLength(layer::IsingLayer{A,B,C,3}, ::Type{Fourier}) where {A,B,C}
    @inline function bin(dist)
-      floor(Int32, dist)
+      max(floor(Int32, dist),1)
    end 
 
    avg_sq = (sum(state(layer))/nStates(layer))^2

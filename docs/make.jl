@@ -1,5 +1,5 @@
 push!(LOAD_PATH,"../src/")
 
-using Documenter, Example
+using Documenter
 
 makedocs(sitename="InteractiveIsing Documentation")

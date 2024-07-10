@@ -40,6 +40,8 @@ function drawCircle(layer, x_in, y_in, val, r = nothing; periodic = true, clamp 
     return
 end
 
+
+# TODO: Notify sim
 """
 Randomly make p percent of states in layer defect
 """
