@@ -85,8 +85,11 @@ function _fillSparseVecs(layer, row_idxs, col_idxs, weights, NN, topology, wg, p
             dx = abs(conn_i - vert_i)
             dy = abs(conn_j - vert_j)
             dz = 0
+            x = (vert_i+conn_i)/2
+            y = (vert_j+conn_j)/2
+
             # TODO: Self weight???
-            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2, z, dx, dy, dz)
+            weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
             
             if weight == 0 || isnan(weight)
                 continue
@@ -117,10 +120,21 @@ function _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, NN, wg, pr
             dr = dist(vert_i, vert_j, conn_i, conn_j, layer1, layer2)
             _,_,z1 = coords(layer1)
             _,_,z2 = coords(layer2)
+
+            # Project the spin onto layer 1
+            conn_i_layer1, conn_j_layer1 = coordsl2tol1(conn_i, conn_j, layer1, layer2)
+
+            #Relative distances between spins
+            dx = conn_i_layer1-vert_i
+            dy = conn_j_layer1-vert_j
             dz = z2 - z1
-            z_conn = (z1+z2)/2
-            conn_i_layer1, conn_j_layer1 = coordsl2tol1(conn_i, conn_j, layer1, layer2) 
-            weight = getWeight(wg, dr, (vert_i+conn_i)/2, (vert_j+conn_j)/2, z_conn, conn_i_layer1-vert_i, conn_j_layer1-vert_j, dz)
+
+            # x,y,z of the connection
+            x = (vert_i+conn_i)/2
+            y = (vert_j+conn_j)/2
+            z = (z1+z2)/2
+
+            weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
 
             if weight == 0 || isnan(weight)
                 continue

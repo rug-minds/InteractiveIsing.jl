@@ -21,6 +21,7 @@ struct WeightGenerator{Func <: Function , SelfFunc <: Union{Nothing, Function}, 
     function WeightGenerator(NN, func, selfWeight = nothing, addDist = nothing, multDist = nothing, funcstr = "", selfstr = "", addstr = "", multstr = "")
         new{typeof(func), typeof(selfWeight), typeof(addDist), typeof(multDist)}(NN, func, selfWeight, addDist, multDist, funcstr, selfstr, addstr, multstr)
     end
+    
 
     """
     Copy and change
@@ -215,11 +216,11 @@ var"@WG" = var"@WeightGenerator"
 var"@WG!" = var"@WeightGenerator!"
 export @WeightGenerator, @WeightGenerator!, @WG, @WG!
 
-@generated function getWeight(wg::WeightGenerator{Func, SelfFunc, AddFunc, MultFunc}, dr, x, y, z, dx = 0, dy = 0, dz = 0) where {Func, SelfFunc, AddFunc, MultFunc}
+@generated function getWeight(wg::WeightGenerator{Func, SelfFunc, AddFunc, MultFunc}; dr = 0, dx = 0, dy = 0, dz = 0, x = 0, y = 0, z = 0) where {Func, SelfFunc, AddFunc, MultFunc}
     return Meta.parse("wg.func(;$(args_to_str(allowedargs_func)))"*(!isa(MultFunc, Type{Nothing})*"*wg.multDist()" * (!isa(AddFunc, Type{Nothing})*" + wg.addDist()")))
 end
 
-@generated function getSelfWeight(wg::WeightGenerator{Func, SelfFunc, AddFunc, MultFunc}, x, y, z) where {Func, SelfFunc, AddFunc, MultFunc}
+@generated function getSelfWeight(wg::WeightGenerator{Func, SelfFunc, AddFunc, MultFunc}; x, y, z) where {Func, SelfFunc, AddFunc, MultFunc}
     return Meta.parse("wg.selfWeight(;$(args_to_str(allowedargs_self)))"*(!isa(MultFunc, Type{Nothing})*"*wg.multDist()" * (!isa(AddFunc, Type{Nothing})*" + wg.addDist()")))
 end
 export getWeight, getSelfWeight

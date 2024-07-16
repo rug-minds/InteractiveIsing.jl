@@ -1,5 +1,10 @@
 export Clamping
+"""
+Clamping Hamiltonian for Equilibrium Propagation
+H = β/2 *(s_i - y_i)^2
 
+Where y_i is the target value for the i-th node
+"""
 struct Clamping <: Hamiltonian end
 params(::Type{Clamping}, GraphType) = GatherHamiltonianParams((:β, GraphType, GraphType(0), "Clamping Factor"), (:y, Vector{GraphType}, GraphType(0), "Targets"))
 

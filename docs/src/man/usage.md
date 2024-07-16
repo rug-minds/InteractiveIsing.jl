@@ -20,15 +20,15 @@ In this guide we will add everything step by step, but there are additional cons
 
 We can add layers one by one in the following way
 ```
-#addLayer!(len, width, [height]; set, type)
+#addLayer!(len, width, height = nothing; set, type)
 #Add a 2D layer
 addLayer!(g, 250,250, set = (-1,1), type = Continuous)
 ...
 ```
 The exlamation mark denotes that this function is altering data in the struct it is being passed (in this case the graph g), as per general convention.
-The keyword argument in square brackets '[]' is optional. The arguments behind the semicolon ';' are keyword arguments that have to be explicitly given by writing the name followed by an equals sign '='.
+The argument height is optional, and if not the function produces a 2D layer. The arguments behind the semicolon ';' are keyword arguments that have to be explicitly given by writing the name followed by an equals sign like shown.
 
-By default, these layers have no connections internally, or to other layers.
+By default, these layers have no connections internally or to other layers.
 
 ## Accessing the layers
 
@@ -45,13 +45,16 @@ Most functions that work on an IsingGraph also work on an IsingLayer directly. H
 ## Indexing the spins
 The final state that is updated is held in a long vector stored in the IsingGraph. The layers, then, hold references to a part of this long vector and are interpreted as 2D or 3D structures. As an example we can have a 3, 2D layer IsingGraph
 
-$g $\equiv$ [$s_1,...,s_{N_1},s_{N_1 + 1}, ..., s_{N_2}, ... $]$
+$g \equiv [s_1,...,s_{N_1},s_{N_1 + 1}, ..., s_{N_2}, ... ]$
 
-The spins $s_{N_1 + 1}, ..., s_{N_2}$ correspond to all the spins in the second layer. This second layer has a 2D dimension of $L_2*W_2 = N_2 - (N_1 + 1)$ where we define the length $L$ to be the vertical dimension and the width $W$ the horizontal dimension. Thus we may interpret this part of the vector in the graph, indexed by a single index, as a 2D matrix in the layer, which we can access by giving two coordinates i,j. The coordinates correspond the the index in the following way (known in CS as column-major order): $index = (((i-1) mod L) + 1 + L*j). In other words, every integer value for j
+The spins $s_{N_1 + 1}, ..., s_{N_2}$ correspond to all the spins in the second layer. This second layer has a 2D dimension of $L_2*W_2 = N_2 - (N_1 + 1)$ where we define the length $L$ to be the vertical dimension and the width $W$ the horizontal dimension. Thus we may interpret this part of the vector in the graph, indexed by a single index, as a 2D matrix in the layer, which we can access by giving two coordinates i,j. The coordinates correspond the the index in the following way (known in CS as column-major order): $index = \left( ( (i-1) mod L) + 1 + L*j \right). In words, when we iterate through values of $i$, we cycle through numbers $1$ to $50$, and for every value of $j$ we add $50$ to that to get the index.
+
+See [Indexing](@ref) for supporting functions.
 
 ## Generating the weights
 
-The connections can be generated using a [WeightGenerator](@ref). A weightgenerator must be constructed using the macro `@WG`. A weightgenerator is a struct that can be used to get a weight based on an arbitrary function of any combination of the following arguments: [:dr, :x, :y, :z, :dx, :dy, :dz], where dr is the relative distance between two spins, x, y and z are the midpoints between two spins that a weight is connecting (counted from the left top) and dx dy and dz are the separate one dimensional, relative distances between two spins. A weight generator expects a string containing a julia anonymous function in the following way
+The connections can be generated using a [WeightGenerator](@ref). A weightgenerator must be constructed using the macro `@WG`. A weightgenerator is a struct that can be used to get a weight based on an arbitrary function of any combination of the following arguments: `[:dr, :x, :y, :z, :dx, :dy, :dz]`, where dr is the relative distance between two spins, x, y and z are the midpoints between two spins that a weight is connecting (counted from the left top) and dx dy and dz are the separate one dimensional, relative distances between two spins. A weight generator expects a string containing a julia anonymous function in the following way
+
 ```
 # Create the weightgenerator
 wg = @WG "(dr) -> 1/dr^2"
@@ -114,11 +117,11 @@ after which it can be resumed with
 unpause(g)
 ```
 
-<!-- We can also completely quit the simulation though this is generally not rec
+We can also completely quit the simulation though this is generally not recommended
 
 ```
 quit(g)
-``` -->
+``` 
 
 ## Interacting with parameters
 
@@ -154,6 +157,45 @@ To immediately get the parameter of corresponding to a symbol, we can use
 getParam(g::AbstractIsingGraph, param::Symbol)
 ```
 
+## Algorithms and Hamiltonians
+
+Hamiltonians in this package are an abstract description of an energy function in terms of Julia symbols. They don't have any inherent code, and are only meant to symbolize the existense of that Hamiltonian in this package. The reason for this is the following: we want to support many different algorithms. These algorithms may require different quantities/functions derived from the Hamiltonian (such as a difference when changing the state of one unit or a derivative). Hardcoding the code for a Hamiltonian would not be efficient, and automating rewriting, or deriving quantities would still not give optimal performance, apart from being nigh impossible to implement for every algorithm.
+
+Instead we have a system where the writer of an algorithm needs to implement a custom piece of code that implements the Hamiltonian for the specific algorithm. It is thus up to the writer of an algorithm to implement Hamiltonians.
+
+For the user, different algorithms and Hamiltonians can be chosen. Moreover, algorithms can also implement composite Hamiltonians ($H_{tot} = H_1 + H_2 + ...$). 
+
+We can set a default algorithm to run when a new simulation is started (which can be manually overwritten when starting the simulation as well)
+
+```
+default_algorithm(g, LayeredMetropolis)
+```
+
+A new Hamiltonian can be set the following way
+
+```
+hamiltonian(g,Ising)
+```
+
+A composite Hamiltonian can be constructed from
+
+```
+CompositeHamiltonian(Ising,Clamping)
+```
+### Algorithms
+The following algorithms are currently Implemented
+* `Metropolis`: The normal metropolis algorithm. This algorithm treats every layer to be of the same type as layer 1.
+* `LayeredMetropolis`: An algorithm that implements a different algorithm for every layer based on the layer type. Due to metaprogramming it just reduces to the normal metropolis when all layers are of a single type.
+*  Soon: `Langevin`
+
+### Hamiltonians
+Currently the following Hamiltonians are implemented
+
+* `Ising`: The Ising Hamiltonian $H = -\Sum_{ij}\sigma_i\sigma_j -\Sum_i b_i \sigma_i$
+    where $b$ is the magnetic field at every spin
+* `Clamping`: A Clamping Hamiltonian for Equilibrium Propagation $H = β/2 *(s_i - y_i)^2$
+    where $y_i$ is a target value for the n-th spin
+* `GaussianBernoulli`: The Gaussian Bernoulli Hamiltonian often used with RBM's 
 
 
 
