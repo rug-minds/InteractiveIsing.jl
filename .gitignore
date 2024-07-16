@@ -1,24 +1,8 @@
 /Data
-test1.jl
-test2.jl
-test3.jl
-test4.jl
-test5.jl
 
-.vscode
+docs/build/
+
 LocalPreferences.toml
-/docs/build
-ManifestOld.toml
-ProjectOld.toml
-DataIsing Corrplot L0 0 T0 d0.png
-examples/bin/p.py
-examples/bin/train_b_h.csv
-examples/bin/train_b_x.csv
-examples/bin/train_b_z.csv
-examples/bin/train_W_xh.csv
-examples/bin/train_W_zh.csv
 Manifest.toml
-adj-2023-11-08T23.55.jld2
-RBM.jld2
-examples/RBMWeird.jld2
-Adj2.jld2
+
+/docs/build
