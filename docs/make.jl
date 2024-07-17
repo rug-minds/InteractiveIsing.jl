@@ -5,20 +5,20 @@ using Documenter
 makedocs(sitename="InteractiveIsing Documentation",
         pages = [ 
             # "Index" => "index.md",
-            "General Usage" => "usage.md",
+            "General Usage" => "man/usage.md",
             "Details" => [
-                "IsingGraphs" => "IsingGraphs.md",
-                "Indexing" => "Indexing.md",
-                "WeightGenerators" => "WeightGenerator.md",
-                "Generating Adjacency Lists" => "GeneratingAdj.md",
-                "Defects" => "Defects.md",
-                "Loops" => "Loops.md",
-                "Parameters" => "Parameters.md",
-                "Algorithms" => "Algorithms.md",
-                "Hamiltonians" => "Hamiltonians.md",
-                "Analysis" => "Analysis.md",
-                "Processes" => "Processes.md",
-                "Topology" => "Topology.md",
+                "IsingGraphs" => "man/IsingGraphs.md",
+                "Indexing" => "man/Indexing.md",
+                "WeightGenerators" => "man/WeightGenerator.md",
+                "Generating Adjacency Lists" => "man/GeneratingAdj.md",
+                "Defects" => "man/Defects.md",
+                "Loops" => "man/Loops.md",
+                "Parameters" => "man/Parameters.md",
+                "Algorithms" => "man/Algorithms.md",
+                "Hamiltonians" => "man/Hamiltonians.md",
+                "Analysis" => "man/Analysis.md",
+                "Processes" => "man/Processes.md",
+                "Topology" => "man/Topology.md",
             ]
 
         ]
