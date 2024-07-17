@@ -84,6 +84,8 @@ We may directly set spins to a value and set them to be defect or conversely upd
 setSpins!(g::AbstractIsingGraph, idx::Integer, brush::Real, clamp::Bool = false)
 ```
 
+For more information see [Defects](@ref)
+
 ## Starting the simulation
 
 When the graph is updated using the built in simulation, it refers to a simulation struct that's held in the module. A user typically doesn't need to interact with this struct directly. It holds data for the windows that are open, the multiple threads being used for simulation loops on a single graph or multiple different ones, etc.
@@ -156,6 +158,7 @@ To immediately get the parameter of corresponding to a symbol, we can use
 ```
 getParam(g::AbstractIsingGraph, param::Symbol)
 ```
+See [Parameters](@ref) for more information.
 
 ## Algorithms and Hamiltonians
 
