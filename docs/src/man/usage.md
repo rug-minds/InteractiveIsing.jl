@@ -194,7 +194,7 @@ The following algorithms are currently Implemented
 ### Hamiltonians
 Currently the following Hamiltonians are implemented
 
-* `Ising`: The Ising Hamiltonian $H = -\Sum_{ij}\sigma_i\sigma_j -\Sum_i b_i \sigma_i$
+* `Ising`: The Ising Hamiltonian $H = - \sum_{ij} \sigma_i \sigma_j -\sum_i b_i \sigma_i$
     where $b$ is the magnetic field at every spin
 * `Clamping`: A Clamping Hamiltonian for Equilibrium Propagation $H = β/2 *(s_i - y_i)^2$
     where $y_i$ is a target value for the n-th spin
