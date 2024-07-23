@@ -34,6 +34,7 @@ length(pre::AbstractPreAlloc) = pre.used
 push!(pre::AbstractPreAlloc, tup) = (pre.vec[pre.used+1] = tup; pre.used += 1)
 reset!(pre::AbstractPreAlloc) = (pre.used = 0; return)
 size(pre::AbstractPreAlloc) = tuple(pre.used)
+Base.eachindex(pre::AbstractPreAlloc) = Base.OneTo(pre.used)
 
 export Prealloc
 

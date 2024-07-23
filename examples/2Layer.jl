@@ -1,19 +1,12 @@
-using InteractiveIsing
+using InteractiveIsing, BenchmarkTools
+import InteractiveIsing as II
 
-weight_generator = @WG "(dr) -> dr == 1 ? 1 : 0" NN = 1
+wg = @WG "(dr) -> 1/dr" NN = 5
 
-layer_connections = @WG "(dr, dx, dy) -> 1" NN = 1
+layer_connections = @WG "(dr, dx, dy) -> 1" NN = 3
 
-g = simulate(500,500, type = Continuous)
-genAdj!(g[1], weight_generator)
+g = IsingGraph(500, 500)
 
-
-addLayer!(g, 250, 250, type = Continuous, set = (-1f0, 1f0))
-genAdj!(g[1], weight_generator)
-
-genAdj!(g[2], weight_generator)
-
-genAdj!(g[1], g[2], layer_connections)
-
-g.d.bfield .= rand(Float32, length(g.d.bfield))
-setSType!(g, :Magfield => true)
+# @benchmark II.genLayerConnections(g[1],wg)
+# @benchmark II.genLayerConnectionsOLD(g[1],wg)
+# @benchmark II.genLayerConnectionsNEW(g[1],wg)

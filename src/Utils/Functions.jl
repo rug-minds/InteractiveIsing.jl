@@ -5,6 +5,10 @@
     return Int32(i + (j - 1) * length)
 end
 
+@inline function coordToIdx(i,j,k, len, wid)
+    return Int32(i + (j - 1) * len + (k - 1) * len * wid)
+end
+
 # Insert coordinates as tuple
 coordToIdx((i, j), length) = coordToIdx(i, j, length)
 
@@ -17,22 +21,26 @@ end
 Put a lattice index (i or j) back onto lattice by looping in a direction
 First argument is index, second is length in that direction
 """
-# @inline function latmod(idx::T, L::T) where T
-#     return mod((idx - T(1)), L) + T(1)
-# end
-@inline function latmod(idx, L) 
-    return mod((idx - (1)), L) + (1)
+@inline function latmod(idx::T, L::T) where T
+    return mod((idx - T(1)), L) + T(1)
 end
+# @inline function latmod(idx, L) 
+#     return mod((idx - (1)), L) + (1)
+# end
 
-@inline function latmod(i,j,layer)
+@inline function latmod(i::T,j::T,layer) where T
     len = glength(layer)
     wid = gwidth(layer)
 
     return latmod(i,len), latmod(j,wid)
 end 
 
-@inline function latmod(i,j,len,wid)
+@inline function latmod(i::T,j::T,len::T,wid::T) where T
     return latmod(i,len), latmod(j,wid)
+end
+
+@inline function latmod(i::T,j::T,k::T,len::T,wid::T,hei::T) where T
+    return latmod(i,len), latmod(j,wid), latmod(k,hei)
 end
 export latmod
 

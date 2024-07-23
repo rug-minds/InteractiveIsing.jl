@@ -1,4 +1,30 @@
+# Before Using
+
+This package aims to offer interactive simulations that run at the maximal speed Julia has to offer. Due to the nature of interactive simulations, we need multithreading. Therefore, starting up julia as normal (which defaults to 1 thread), will cause freezing when trying to use this package.
+
+To start julia up, either start it from a terminal with multiple threads (at least 8 should be supported on many modern CPU's)
+```
+julia --threads 8
+```
+
+or add an environment variable (this depends on the operating system)
+```
+JULIA_NUM_THREADS=8
+```
+
+When using through VSCode, add the following setting:
+
+```
+"julia.NumThreads" : "8"
+```
+
+If you experience hanging still on certain operations, start with
+```
+"julia.NumThreads" : "7,1"
+```
+
 # General Usage
+
 
 This package can be used to simulate 2-, 2.5- and 3D Ising models (any model with 1D state and where the couplings are at most linear.) with different algorithms and energy functions.
 The simulations are segmented in different layers which can be 2D or 3D (at this moment there's only support for rectangular and cuboid layers).

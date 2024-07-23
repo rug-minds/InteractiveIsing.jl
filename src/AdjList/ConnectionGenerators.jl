@@ -56,9 +56,13 @@ export coordsl1tol2, coordsl2tol1
 # put x in between min and max
 minmax(lower, x, upper) = max(min(x, upper), lower)
 
-# Snaps a coordinate to the nearest edge of a layer
+"""
+Snaps a coordinate to the nearest edge/corner of a layer
+"""
 snaptolayer(x, layer) = minmax(1, x, glength(layer))
 
+
+# TODO: This implementation should only work for 2D layers
 # Returns the nearest neighbor of (i1, j1) in layer2's coordinates
 # Works by translating the coordinate of layer one to one of layer2, and then snapping
 # it to the nearest edge of the layer
@@ -72,7 +76,10 @@ function nearest(i1, j1, layer1, layer2, alignment = :center)
 end
 export nearest
 
-function isin(i, j, layer)
+"""
+Check wether a coordinate is in the layer
+"""
+function isin(i, j, layer::IsingLayer)
     if (1 <= i <= glength(layer)) && (1 <= j <= gwidth(layer))
         return true
     end
@@ -80,7 +87,18 @@ function isin(i, j, layer)
     return false
 end
 
-isin((i, j), layer) = isin(i, j, layer)
+isin((i, j)::NTuple{2,T}, layer) where T = isin(i, j, layer)
+
+function isin(i,j,k,layer)
+    _size = size(layer)
+    if (1 <= i <= _size[1]) && (1 <= j <= _size[2]) && (1 <= k <= _size[3])
+        return true
+    end
+
+    return false
+end
+
+isin((i, j, k)::NTuple{3,T}, layer) where T = isin(i, j, k, layer)
 
 function dist2(i1, j1, i2, j2, layer1, layer2, alignment::Symbol = :center)
     _, _, dlz = dlayer(layer1, layer2)
@@ -140,7 +158,7 @@ Get all indices of a vertex with idx vert_idx and coordinates vert_i, vert_j
 that are larger than vert_idx
 Works in layer indices
 """
-function getConnIdxs!(::NoSelf, vert_idx, vert_i, vert_j, len, wid, NN, pre_3tuple)
+function getConnIdxs!(vert_idx, vert_i, vert_j, len, wid, NN, conn_is, conn_js, conn_idxs)
     for j in -NN:NN
         for i in -NN:NN
             (i == 0 && j == 0) && continue
@@ -149,24 +167,61 @@ function getConnIdxs!(::NoSelf, vert_idx, vert_i, vert_j, len, wid, NN, pre_3tup
 
             conn_idx < vert_idx && continue
 
-            push!(pre_3tuple, (conn_i, conn_j, conn_idx))
+            push!(conn_is, conn_i)
+            push!(conn_js, conn_j)
+            push!(conn_idxs, conn_idx)
+        end
+    end
+end
+
+function getConnIdxs!(vert_idx, vert_i, vert_j, vert_k, len, wid, hei, NNi, NNj, NNk, conn_is, conn_js, conn_ks, conn_idxs)
+    for k in -NNk:NNk
+        for j in -NNj:NNj
+            for i in -NNi:NNi
+                (i == 0 && j == 0) && continue
+                conn_i, conn_j, conn_k = latmod(vert_i + i, vert_j + j, vert_k + k, len, wid, hei)
+                conn_idx = coordToIdx(conn_i, conn_j, conn_k, len, wid)
+
+                conn_idx < vert_idx && continue
+
+                push!(conn_is, conn_i)
+                push!(conn_js, conn_j)
+                push!(conn_ks, conn_k)
+                push!(conn_idxs, conn_idx)
+            end
         end
     end
 end
 
 """
 Get all indices of a vertex with idx vert_idx and coordinates vert_i, vert_j
-that are larger than vert_idx and include self connection
 """
-function getConnIdxs!(::Self, vert_idx, vert_i, vert_j, len, wid, NN, pre_3tuple)
-    for j in -NN:NN
-        for i in -NN:NN
-            conn_i, conn_j = latmod(vert_i + i, vert_j + j, len, wid)
-            conn_idx = coordToIdx(conn_i, conn_j, len)
-
-            conn_idx < vert_idx && continue
-
-            push!(pre_3tuple, (conn_i, conn_j, conn_idx))
-        end
-    end
+@inline function getConnIdxsGen(vert_idx, vert_i, vert_j, len, wid, NN)
+    return (if (i == 0 && j == 0)
+                nothing
+            else
+                let (conn_i, conn_j) = latmod(vert_i + i, vert_j + j, len, wid), conn_idx = coordToIdx(conn_i, conn_j, len);
+                    if conn_idx < vert_idx
+                        nothing
+                    else
+                        (conn_i, conn_j, conn_idx)
+                    end
+                end
+            end
+            for j in -NN:NN for i in -NN:NN)
 end
+
+# @inline function getConnIdxsGen(vert_idx, vert_i, vert_j, vert_k, len, wid, hei, NN)
+#     return (if (i == 0 && j == 0)
+#                 nothing
+#             else
+#                 let (conn_i, conn_j) = latmod(vert_i + i, vert_j + j, len, wid), conn_idx = coordToIdx(conn_i, conn_j, len);
+#                     if conn_idx >= vert_idx
+#                         (conn_i, conn_j, conn_idx)
+#                     else
+#                         nothing
+#                     end
+#                 end
+#             end
+#             for j in -NN:NN for i in -NN:NN)
+# end
