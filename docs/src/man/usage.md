@@ -73,7 +73,7 @@ The final state that is updated is held in a long vector stored in the IsingGrap
 
 $g \equiv [s_1,...,s_{N_1},s_{N_1 + 1}, ..., s_{N_2}, ... ]$
 
-where, for example, spins $s_{N_1 + 1}, ..., s_{N_2}$ would all belong to the second layer. This second layer has a 2D dimension of $L_2*W_2 = N_2 - (N_1 + 1)$ where we define the length $L$ to be the vertical dimension and the width $W$ the horizontal dimension. Thus we may interpret this part of the vector in the graph, indexed by a single index, as a 2D matrix in the layer, which we can access by giving two coordinates i,j. The coordinates correspond the the index in the following way (known in CS as column-major order): $index = \left( ( (i-1) mod L) + 1 + L*j \right). In words, when we iterate through values of $i$, we cycle through numbers $1$ to $50$, and for every value of $j$ we add $50$ to that to get the index.
+where, for example, spins $s_{N_1 + 1}, ..., s_{N_2}$ would all belong to the second layer. This second layer has a 2D dimension of $L_2*W_2 = N_2 - (N_1 + 1)$ where we define the length $L$ to be the vertical dimension and the width $W$ the horizontal dimension. Thus we may interpret this part of the vector in the graph, indexed by a single index, as a 2D matrix in the layer, which we can access by giving two coordinates i,j. The coordinates correspond the the index in the following way (known in CS as column-major order): $index = \left( ( (i-1) mod L) + 1 + L*j \right)$. In words, when we iterate through values of $i$, we cycle through numbers $1$ to $50$, and for every value of $j$ we add $50$ to that to get the index.
 
 See [Indexing](@ref) for supporting functions.
 
