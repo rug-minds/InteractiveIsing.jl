@@ -71,11 +71,14 @@ end
 
 simulate(g)
 
-wginner = @WG "(dx,dy)->-2/(((2dy)^2+(2dx)^2))" NN = 1
-# wgouter = @WG "(dx,dy,dz)->1/((dy^2+(2dx)^2+dz^2))" NN = 1
-wgouter = @WG "(dx,dy,dz) -> (dx != 0 || dy != 0) ? 0 : 1/(dz^2)" NN = 3
+# wginner = @WG "(dx,dy)->-2/(((2dy)^2+(2dx)^2))" NN = 1
+# # wgouter = @WG "(dx,dy,dz)->1/((dy^2+(2dx)^2+dz^2))" NN = 1
+# wgouter = @WG "(dx,dy,dz) -> (dx != 0 || dy != 0) ? 0 : 1/(dz^2)" NN = 3
 
-set3DAdj!(g[1], wginner, wgouter)
+wg = @WG "(dx,dy,dz) -> 1/(dx^2+dy^2+dz^2)" NN = (2,2,5)
+genAdj!(g[1], wg)
+
+# set3DAdj!(g[1], wginner, wgouter)
 
 setParam!(g[1], :b, 2, true)
 # setParam!(g[1][1], :b , 3, true)
@@ -101,4 +104,4 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000)
 
 end
 
-Threads.@spawn TrianglePulseB(g, 10, 5)
+# Threads.@spawn TrianglePulseB(g, 10, 5)

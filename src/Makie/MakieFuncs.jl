@@ -11,21 +11,26 @@ function setLayerSV(idx)
     ml = getml()
     mp = midpanel(ml)
 
-    dim = llength(currentLayer(simulation))
+    # dim = glength(currentLayer(simulation[]))
 
     sim = simulation[]
+    cur_layer = currentLayer(sim)
+
     newR = round(min(size(currentLayer(sim))...) / 10)
 
     setCircR!(sim, newR)
-    layerName(sim)[] = name(currentLayer(sim))
+    layerName(sim)[] = name(cur_layer)
 
     g = gs(sim)[1]
 
     delete!(mp["axis"], mp["image"])
-    mp["sv_img_ob"][] = getSingleViewImg(g, ml)
-    img_ob = mp["sv_img_ob"]
-    mp["image"] = image!(mp["axis"], img_ob, colormap = :thermal, fxaa = false, interpolate = false)
-    mp["image"].colorrange = stateset(currentLayer(sim))
+    mp["sv_img_ob"][] = img_ob = getSingleViewImg(g, ml)
+    # img_ob = mp["sv_img_ob"]
+
+    cur_layer = cur_layer
+    # create_layer_axis(cur_layer, mp)
+    new_img!(g, cur_layer, mp)
+    mp["image"].colorrange = stateset(cur_layer)
 
     reset_limits!(mp["axis"])
 end

@@ -3,7 +3,7 @@
 Struct to generate weights for ising graphidxs
 """
 struct WeightGenerator{Func <: Function , SelfFunc <: Union{Nothing, Function}, AddFunc <: Union{Nothing, Function}, MultFunc <: Union{Nothing, Function}}
-    NN::Int16
+    NN::Union{Int32, NTuple{2,Int32}, NTuple{3,Int32}}
     func::Func
     selfWeight::SelfFunc
     addDist::AddFunc
@@ -19,7 +19,7 @@ struct WeightGenerator{Func <: Function , SelfFunc <: Union{Nothing, Function}, 
     Create a WeightGenerator
     """
     function WeightGenerator(NN, func, selfWeight = nothing, addDist = nothing, multDist = nothing, funcstr = "", selfstr = "", addstr = "", multstr = "")
-        new{typeof(func), typeof(selfWeight), typeof(addDist), typeof(multDist)}(NN, func, selfWeight, addDist, multDist, funcstr, selfstr, addstr, multstr)
+        new{typeof(func), typeof(selfWeight), typeof(addDist), typeof(multDist)}(Int32.(NN), func, selfWeight, addDist, multDist, funcstr, selfstr, addstr, multstr)
     end
     
 
@@ -37,7 +37,7 @@ struct WeightGenerator{Func <: Function , SelfFunc <: Union{Nothing, Function}, 
         isnothing(addstr) && (addstr = wg.addstr)
         isnothing(multstr) && (multstr = wg.multstr)
 
-        new{typeof(func), typeof(selfWeight), typeof(addDist), typeof(multDist)}(NN, func, selfWeight, addDist, multDist, funcstr, selfstr, addstr, multstr)
+        new{typeof(func), typeof(selfWeight), typeof(addDist), typeof(multDist)}(Int32.(NN), func, selfWeight, addDist, multDist, funcstr, selfstr, addstr, multstr)
     end
 end
 

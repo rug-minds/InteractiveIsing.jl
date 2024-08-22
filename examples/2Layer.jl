@@ -7,6 +7,8 @@ layer_connections = @WG "(dr, dx, dy) -> 1" NN = 3
 
 g = IsingGraph(500, 500)
 
+simulate(g)
+
 # @benchmark II.genLayerConnections(g[1],wg)
 # @benchmark II.genLayerConnectionsOLD(g[1],wg)
 # @benchmark II.genLayerConnectionsNEW(g[1],wg)

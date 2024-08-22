@@ -16,7 +16,7 @@ end
 Give layer and WeightGenerator
     returns the connections within the layer in row_idxs, col_idxs, and weights
 """
-function genLayerConnections(layer, wg)
+function genLayerConnections(layer::AbstractIsingLayer{T,D}, wg) where {T,D}
     row_idxs = Int32[]
     col_idxs = Int32[]
     weights = Float32[]
@@ -24,7 +24,17 @@ function genLayerConnections(layer, wg)
     g = graph(layer)
 
     _NN = wg.NN
-    blocksize = (2*_NN+1)^2 - 1
+    
+    # Either global NN is given, or a tuple of NN for each dimension
+    @assert if !(_NN isa Int32); length(_NN) == D; else true; end
+    
+    blocksize = Int32(0)
+    if _NN isa Int32
+        blocksize = (2*_NN+1)^D - 1
+    else
+        blocksize = prod(2 .* _NN .+ 1) - 1
+    end
+
     n_conns = nStates(g)*blocksize
     sizehint!(col_idxs, 2*n_conns)
     sizehint!(row_idxs, 2*n_conns)
@@ -32,9 +42,18 @@ function genLayerConnections(layer, wg)
 
     conn_is = Prealloc(Int32, blocksize)
     conn_js = Prealloc(Int32, blocksize)
+
+    if D == 3
+        conn_ks = Prealloc(Int32, blocksize)
+    end
+
     conn_idxs = Prealloc(Int32, blocksize)
 
-    _fillSparseVecs(layer, row_idxs, col_idxs, weights, _NN, top(layer), wg, conn_is, conn_js, conn_idxs, SelfType(wg))
+    if D == 2
+        _fillSparseVecs(layer, row_idxs, col_idxs, weights, top(layer), wg, conn_idxs, conn_is, conn_js)
+    elseif D == 3
+        _fillSparseVecs(layer, row_idxs, col_idxs, weights, top(layer), wg, conn_idxs, conn_is, conn_js, conn_ks)
+    end 
 
     append!(row_idxs, col_idxs)
     append!(col_idxs, @view(row_idxs[1:end÷2]))
@@ -48,22 +67,36 @@ end
 """
 From a generator that returns (i, j, idx) for the connections
     fill the row_idxs, col_idxs, and weights
-"""
-function _fillSparseVecs(layer, row_idxs, col_idxs, weights, NN, topology, wg, conn_is, conn_js, conn_idxs, selftype::ST) where ST
+""" 
+function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs, col_idxs, weights, topology, @specialize(wg), conns...) where {T}
+    NN = wg.NN
+    @assert (NN isa Int32 || length(NN) == 2)
+
+
+    conn_idxs, conn_is, conn_js = conns
+
+    NNi = Int32(0)
+    NNj = Int32(0)
+    if NN isa Int32
+        NNi = NN
+        NNj = NN
+    else
+        NNi, NNj = NN
+    end
+
     for col_idx in Int32(1):nstates(layer)
         vert_i, vert_j = idxToCoord(col_idx, glength(layer))
-        getConnIdxs!(col_idx, vert_i, vert_j, glength(layer) , gwidth(layer), NN, conn_is, conn_js, conn_idxs)
+        getConnIdxs!(col_idx, vert_i, vert_j, glength(layer) , gwidth(layer), NNi, NNj, conn_idxs, conn_is, conn_js)
         
-        @simd for conn_num in eachindex(conn_is)
+        @fastmath for conn_num in eachindex(conn_is)
             conn_i = conn_is[conn_num]
             conn_j = conn_js[conn_num]
             conn_idx = conn_idxs[conn_num]
 
-            dr = dist(vert_i, vert_j, conn_i, conn_j, topology)
+            dr = dist(topology, vert_i, vert_j, conn_i, conn_j)
             # TODO: Overal coords?
             _,_,z = coords(layer)
-            dx = abs(conn_i - vert_i)
-            dy = abs(conn_j - vert_j)
+            dx, dy = dxdy(topology, (vert_i, vert_j), (conn_i, conn_j))
             dz = 0
             x = (vert_i+conn_i)/2
             y = (vert_j+conn_j)/2
@@ -78,13 +111,13 @@ function _fillSparseVecs(layer, row_idxs, col_idxs, weights, NN, topology, wg, c
                 push!(col_idxs, g_col_idx)
                 push!(weights, weight)
             end
-
+            reset!(conn_is)
+            reset!(conn_js)
+            reset!(conn_idxs)
         end
-        reset!(conn_is)
-        reset!(conn_js)
-        reset!(conn_idxs)
+        
 
-        if ST == Self
+        if SelfType(wg) == Self()
             weight = getSelfWeight(wg, y = vert_i, x = vert_j;z)
             push!(row_idxs, col_idx)
             push!(col_idxs, col_idx)
@@ -93,11 +126,77 @@ function _fillSparseVecs(layer, row_idxs, col_idxs, weights, NN, topology, wg, c
     end
 end
 
+function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, weights, topology, @specialize(wg), conns...) where {T}
+    NN = wg.NN
+
+    @assert (NN isa Int32 || length(NN) == 3)
+
+    conn_idxs, conn_is, conn_js, conn_ks = conns
+    
+    NNi = Int32(0)
+    NNj = Int32(0)
+    NNk = Int32(0)
+
+    if NN isa Int32
+        NNi = NNj = NNk = NN
+    else
+        NNi, NNj, NNk = NN
+    end
+
+    for col_idx in Int32(1):nstates(layer)
+        coords_vert = idxToCoord(col_idx, size(layer))
+        getConnIdxs!(col_idx, coords_vert, size(layer), NNi, NNj, NNk, conn_idxs, conn_is, conn_js, conn_ks)
+        
+        @fastmath for conn_num in eachindex(conn_is)
+            conn_i = conn_is[conn_num]
+            conn_j = conn_js[conn_num]
+            conn_k = conn_ks[conn_num]
+            conn_idx = conn_idxs[conn_num]
+
+            dr = dist(topology, coords_vert, (conn_i, conn_j, conn_k))
+            # TODO: Overal coords?
+            # _,_,z = coords(layer)
+            dx, dy, dz = dxdydz(topology, coords_vert, (conn_i, conn_j, conn_k))
+
+            vert_i, vert_j, vert_k = coords_vert
+            # This doesn't make sense for periodic?
+            x = (vert_i+conn_i)/2
+            y = (vert_j+conn_j)/2
+            z = (vert_k+conn_k)/2
+
+            weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
+            
+            if !(weight == 0 || isnan(weight))
+                g_col_idx     = idxLToG(col_idx, layer)
+                g_conn_idx    = idxLToG(conn_idx, layer)
+
+                push!(row_idxs, g_conn_idx)
+                push!(col_idxs, g_col_idx)
+                push!(weights, weight)
+            end
+
+            reset!(conn_is)
+            reset!(conn_js)
+            reset!(conn_ks)
+            reset!(conn_idxs)
+        end
+        
+
+        if SelfType(wg) == Self()
+            weight = getSelfWeight(wg, y = vert_i, x = vert_j;z)
+            push!(row_idxs, col_idx)
+            push!(col_idxs, col_idx)
+            push!(weights, weight)
+        end
+    end
+end
+
+
 """
 Give layer and WeightGenerator
     returns the connections within the layer in row_idxs, col_idxs, and weights
 """
-function genLayerConnections(layer1, layer2, wg)
+function genLayerConnections(layer1::AbstractIsingLayer{T,2}, layer2::AbstractIsingLayer{T,2}, wg) where T
     row_idxs = Int32[]
     col_idxs = Int32[]
     weights = Float32[]
@@ -105,6 +204,7 @@ function genLayerConnections(layer1, layer2, wg)
     g = graph(layer1)
 
     _NN = wg.NN
+
     blocksize = (2*_NN+1)^2
     n_conns = nStates(g)*blocksize
     sizehint!(col_idxs, 2*n_conns)
@@ -127,18 +227,31 @@ export genLayerConnections
 Give preallocated vectors for row_idxs, col_idxs, and weights
     fills them with the connections withing between two layers
 """
-function _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, NN, wg, pre_3tuple)
+function _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, wg, pre_3tuple)
+    NN = wg.NN
+
+    local NNi = NN
+    local NNj = NN
+    if NN isa Tuple
+        NNi, NNj = NN
+    else
+        NNi = NN
+        NNj = NN
+    end
+
     for col_idx in 1:nStates(layer1)
         vert_i, vert_j = idxToCoord(col_idx, layer1)
-        lattice2_iterator(layer1, layer2, vert_i, vert_j, NN, pre_3tuple)
+        lattice2_iterator(layer1, layer2, vert_i, vert_j, NNi, NNj, pre_3tuple)
         for conn in pre_3tuple
             conn_i, conn_j = conn[1], conn[2]
-            dr = dist(vert_i, vert_j, conn_i, conn_j, layer1, layer2)
+
+            dr = dist(layer1, layer2, vert_i, vert_j, conn_i, conn_j)
+
             _,_,z1 = coords(layer1)
             _,_,z2 = coords(layer2)
 
             # Project the spin onto layer 1
-            conn_i_layer1, conn_j_layer1 = coordsl2tol1(conn_i, conn_j, layer1, layer2)
+            conn_i_layer1, conn_j_layer1 = coordsl2tol1(layer1, layer2, conn_i, conn_j)
 
             #Relative distances between spins
             dx = conn_i_layer1-vert_i

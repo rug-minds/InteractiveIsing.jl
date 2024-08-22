@@ -1,3 +1,5 @@
+using MacroTools
+
 #=Grid lattice functions=#
 
 # Matrix Coordinates to vector Coordinates
@@ -9,19 +11,39 @@ end
     return Int32(i + (j - 1) * len + (k - 1) * len * wid)
 end
 
+@inline function coordToIdx(coords::NTuple{N,Int32}, size::NTuple{N,Int32}) where N
+    idx = 0
+    for i in 1:N
+        idx += (coords[i] - 1) * prod(size[1:i-1])
+    end
+    return idx
+end
+
 # Insert coordinates as tuple
-coordToIdx((i, j), length) = coordToIdx(i, j, length)
+coordToIdx((i, j), length::Integer) = coordToIdx(i, j, length)
 
 # Go from idx to lattice coordinates, for rectangular grids
-@inline function idxToCoord(idx::T, length::Integer)::Tuple{T, T} where T <: Integer
-    return (Int32((idx - 1) % length + 1), Int32((idx - 1) ÷ length + 1))
+@inline function idxToCoord(idx::T, length::Integer) where T <: Integer
+    return (T((idx - 1) % length + 1), T((idx - 1) ÷ length + 1))
+end
+
+
+#TODO Check this one
+@inline function idxToCoord(idx::T, size::NTuple{DIMS,T}) where {DIMS,T}
+    if DIMS == 2
+        r(T((idx - 1) % length + 1), T((idx - 1) ÷ length + 1))
+    elseif DIMS == 3
+        len = size[1]
+        wid = size[2]
+        return (T((idx - 1) % len + 1), T(((idx - 1) ÷ len) % wid + 1), T((idx - 1) ÷ (len * wid) + 1))
+    end
 end
 
 """
 Put a lattice index (i or j) back onto lattice by looping in a direction
 First argument is index, second is length in that direction
 """
-@inline function latmod(idx::T, L::T) where T
+@inline function latmod(idx::T, L::T) where T <: Integer
     return mod((idx - T(1)), L) + T(1)
 end
 # @inline function latmod(idx, L) 
@@ -41,6 +63,14 @@ end
 
 @inline function latmod(i::T,j::T,k::T,len::T,wid::T,hei::T) where T
     return latmod(i,len), latmod(j,wid), latmod(k,hei)
+end
+
+@inline function latmod(coords::NTuple{N,T}, size::NTuple{N,T}) where {N,T}
+    if N == 2
+        return latmod(coords[1], coords[2], size[1], size[2])
+    elseif N == 3
+        return latmod(coords[1], coords[2], coords[3], size[1], size[2], size[3])
+    end
 end
 export latmod
 
@@ -468,8 +498,7 @@ function getstruct(strctname, files)
     endrange = stream.ptr - 1
     str = file[range[1]:endrange[end]]
     return str
-
-end 
+end
 
 #macro defines a struct with the given name in a try catch block
 # with a field that has a type that's gona make it fail
@@ -630,3 +659,40 @@ end
 idx2ycoord(size::NTuple{3,T}, idx) where {T} = (T(idx)-T(1)) % size[1] + T(1)
 idx2xcoord(size::NTuple{3,T}, idx) where {T} = (floor(T, (idx-T(1))/size[1])) % size[2] + T(1)
 idx2zcoord(size::NTuple{3,T}, idx) where {T} = floor(T, (idx-T(1))/(size[1]*size[2])) + T(1)
+
+
+
+##### WRITE A FUNCTION THAT WORKS AUTOMATICALLY FOR THE TYPE AND TYPE SELECTOR
+
+"""
+Give a module subfolder and a structname, find the struct in the files in the subfolder
+"""
+find_struct_in(structname, subfolder) = getstruct(string(structname), readdir(joinpath(modulefolder, subfolder)))
+
+function parameternames(structstr)
+    c1 = @capture(Meta.parse(structstr), struct T_ fieldnames__ end)
+    if c1
+        return T.args[1].args[2:end]
+    else
+        c2 = @capture(Meta.parse(structstr), mutable struct T_ fieldnames__ end)
+        if c2
+            return T.args[1].args[2:end]
+        end
+    end
+    return nothing
+end
+
+function functionargs(ex)
+    @capture(ex2, function f_(xs__) where {T_}  body_ end)
+    xs
+end
+
+# macro parameterfunc(structname, func_ex)
+#     total_ex = quote end
+#     # push original func exp
+#     push!(total_ex.args, func_ex)
+#     # get the struct Parameters
+#     p_names = parameternames(find_struct_in(structname, @__DIR__))
+#     type_func_ex = deepcopy(func_ex)
+#     args = functionargs(type_func_ex)
+# end

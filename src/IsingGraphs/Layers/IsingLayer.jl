@@ -14,7 +14,7 @@ Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val),
 
 export Coords
 # TODO: Make the topology part of the layertype
-mutable struct IsingLayer{StateType, StateSet, IndexSet, DIMS, T} <: AbstractIsingLayer{StateType,DIMS}
+mutable struct IsingLayer{StateType, StateSet, IndexSet, DIMS, T, Top} <: AbstractIsingLayer{StateType,DIMS}
     # Reference to the graph holding it    
     graph::Union{Nothing, IsingGraph{T}}
     name::String
@@ -33,12 +33,12 @@ mutable struct IsingLayer{StateType, StateSet, IndexSet, DIMS, T} <: AbstractIsi
     timers::Vector{PTimer}
 
     # defects::LayerDefects
-    top::LayerTopology
+    top::Top
 
     # DEFAULT INIT
-    function IsingLayer{ST, SS, IS, DIMS, T}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top) where {ST, SS, IS, DIMS, T}
+    function IsingLayer{ST, SS, IS, DIMS, T, Topology}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top) where {ST, SS, IS, DIMS, T, Topology}
         @assert typeof(DIMS) == Int
-        return new{ST, SS, IS, DIMS, T}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top)
+        return new{ST, SS, IS, DIMS, T, Topology}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top)
     end
 
 
@@ -52,7 +52,7 @@ mutable struct IsingLayer{StateType, StateSet, IndexSet, DIMS, T} <: AbstractIsi
             height = nothing; 
             lsize = nothing,
             set = convert.(eltype(g),(-1,1)), 
-            name = "$(length)x$(width) Layer", 
+            name = "$(length)ex$(width) Layer", 
             traits = (;StateType = StateType, StateSet = set, Indices = (start:(start+length*width-1)), Hamiltonians = (Ising,)),
             coords = Coords(nothing), 
             connections = Dict{Pair{Int32,Int32}, 
@@ -71,10 +71,10 @@ mutable struct IsingLayer{StateType, StateSet, IndexSet, DIMS, T} <: AbstractIsi
                 lsize = tuple(Int32(length), Int32(width), Int32(height))
             end
         end
-        
+        top = SquareTopology(lsize; periodic)
         graphidxs = isnothing(height) ? (start:(start+length*width-1)) : (start:(start+length*width*height-1))
         set = convert.(eltype(g), set)
-        layer = new{StateType, set, graphidxs, dims, eltype(g)}(
+        layer = new{StateType, set, graphidxs, dims, eltype(g), typeof(top)}(
             # Graph
             g,
             # Name
@@ -95,9 +95,10 @@ mutable struct IsingLayer{StateType, StateSet, IndexSet, DIMS, T} <: AbstractIsi
             connections,
             # PTimers
             Vector{PTimer}(),
+            # Topology
+            top
         )
         # TODO: Topology should support 3d
-        layer.top = LayerTopology(layer, [1,0], [0,1]; periodic)
         finalizer(destructor, layer)
         return layer
     end
@@ -107,7 +108,7 @@ export IsingLayer
 """
 Two IsingLayers are equivalent when
 """
-equiv(i1::Type{IsingLayer{A,B,C,D,T1}}, i2::Type{IsingLayer{E,F,G,H,T2}}) where {A,B,C,D,E,F,G,H,T1,T2} = A == E && B == F
+equiv(i1::Type{IsingLayer{A,B,C,D,T1,Top1}}, i2::Type{IsingLayer{E,F,G,H,T2,Top2}}) where {A,B,C,D,E,F,G,H,T1,T2,Top1,Top2} = A == E && B == F
 
 
 function destructor(layer::IsingLayer)
@@ -234,13 +235,14 @@ Get adjacency of layer in layer coordinates
 @inline glength(layer::AbstractIsingLayer) = size(layer,1)
 @inline gwidth(layer::AbstractIsingLayer) = size(layer,2)
 @inline gheight(layer::AbstractIsingLayer{T,3}) where T = size(layer,3)
-@inline dims(layer::AbstractIsingLayer) = length(size(layer))
+# @inline dims(layer::AbstractIsingLayer) = length(size(layer))
+DIMS(layer::AbstractIsingLayer{T,DIMS}) where {T,DIMS} = DIMS
 
 @inline maxdist(layer::AbstractIsingLayer) = maxdist(layer, periodic(layer))
 @inline maxdist(layer::AbstractIsingLayer, ::Type) = max(size(layer)...)
 @inline function maxdist(layer::AbstractIsingLayer, ::Type{Periodic})
     l, w = size(layer)
-    maxdist = dist(1,1, 1 + l÷2, 1 + w÷2, top(layer))
+    maxdist = dist(top(layer), 1,1, 1 + l÷2, 1 + w÷2)
     return maxdist
 end
 export maxdist
@@ -361,10 +363,11 @@ iterator(g::IsingGraph) = 1:(nStates(g))
 # LayerTopology
 @inline periodic(layer::AbstractIsingLayer) = periodic(top(layer))
 @inline setPeriodic!(layer::AbstractIsingLayer, periodic) = top!(layer, LayerTopology(top(layer); periodic))
-@inline dist(idx1::Integer, idx2::Integer, layer::AbstractIsingLayer) = dist(idxToCoord(idx1, glength(layer))..., idxToCoord(idx2, size(layer,1))..., top(layer))
-@inline dist(i1::Integer, j1::Integer, i2::Integer, j2::Integer, layer::AbstractIsingLayer) = dist(i1, j1, i2, j2, top(layer))
-@inline dist(i1::Integer, j1::Integer, i2::Integer, j2::Integer, k1, k2, layer::AbstractIsingLayer{T,3}) where T = sqrt((i1-i2)^2 + (j1-j2)^2 + (k1-k2)^2)
-@inline idxToCoord(idx::Integer, layer::AbstractIsingLayer) = idxToCoord(idx, size(layer,1))
+
+# TODO: Change this
+@inline dist(layer::AbstractIsingLayer, coords...) = dist(top(layer), coords...)
+# @inline dist(i1::Integer, j1::Integer, i2::Integer, j2::Integer, k1, k2, layer::AbstractIsingLayer{T,3}) where T = sqrt((i1-i2)^2 + (j1-j2)^2 + (k1-k2)^2)
+@inline idxToCoord(idx::Integer, layer::AbstractIsingLayer) = idxToCoord(idx, size(layer))
 
 # Notify a change in the simulation
 # TODO: Make this an observable in the graph that can be coupled with the one in the simulation
@@ -424,9 +427,9 @@ end
 export changeset, changeset!
 
 stateset(l::IsingLayer{<:Any, SS}) where SS = SS
-stateset(::Type{IsingLayer{A, SS, B, C, T1}}) where {A, SS, B, C, T1} = SS
+stateset(::Type{IsingLayer{A, SS, B, C, T1,Top1}}) where {A, SS, B, C, T1, Top1} = SS
 indexset(l::IsingLayer{A, B, IS, C}) where {A, B, IS, C} = IS
-indexset(::Type{IsingLayer{A, B, IS, C, T1}}) where {A, B, IS, C, T1} = IS
+indexset(::Type{IsingLayer{A, B, IS, C, T1,Top2}}) where {A, B, IS, C, T1, Top2} = IS
 
 function extremiseDiscrete!(l::IsingLayer{ST, SS}) where {ST,SS}
     if ST == Discrete
@@ -475,7 +478,7 @@ export changeset!, stateset
 ## DEFAULT NEW LAYER TYPE BASED ON GRAPH
 default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous 
 @inline statetype(layer::IsingLayer{ST}) where {ST} = ST
-@inline statetype(::Type{IsingLayer{ST,A,B,C,T1}}) where {ST,A,B,C,T1} = ST
+@inline statetype(::Type{IsingLayer{ST,A,B,C,T1,Top}}) where {ST,A,B,C,T1,Top} = ST
 setstatetype(l::IsingLayer{ST,SET}, stype) where {ST,SET} = IsingLayer{stype,SET}(l.graph, l.name, l.internal_idx, l.start, l.size, l.nstates, l.coords, l.connections, l.timers, l.top)
 
 Base.eltype(l::IsingLayer) = eltype(graph(l))

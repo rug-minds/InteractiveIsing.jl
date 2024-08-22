@@ -70,7 +70,7 @@ function correlationLength(layer::IsingLayer{A,B,C,3}, ::Type{Fourier}) where {A
             if i == 1 && j == 1 && k == 1
                continue
             end
-            _dist = dist(1,1,1, i, j, k, layer)
+            _dist = dist(layer, 1,1,1, i, j, k)
             bins[bin(_dist)] += corrs[i,j,k]
             counts[bin(_dist)] += 1
          end
@@ -157,7 +157,7 @@ function correlationLength(layer, ::Type{CPU})
 
    for s1 in eachindex(_state)
       for s2 in (s1+1):length(_state)
-         _dist = dist(s1, s2, layer)
+         _dist = dist(layer, s1, s2)
          bins[bin(_dist)] += _state[s1] * _state[s2]
          counts[bin(_dist)] += 1
 

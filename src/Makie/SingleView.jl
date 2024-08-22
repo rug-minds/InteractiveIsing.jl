@@ -35,6 +35,54 @@ function flip_y_axis()
     end
 end
 
+function create_layer_axis!(layer, mp)
+    layerdim = length(size((layer)))
+    g = graph(layer)
+    if layerdim == 2
+        # mp["obs"] = getSingleViewImg(g, ml)
+        # ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), ypanlock = true, xpanlock = true, yzoomlock = true, xzoomlock = true)
+        mp["axis"] = ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
+        # TODO: Set colorrange based on the type of layer
+        # mp["image"] = image!(ax, mp["obs"], colormap = :thermal, fxaa = false, interpolate = false)
+    else
+        # ax = Axis3(mp[][1,2], tellheight = true)
+        # sz = size(layer)
+        mp["axis"] = ax = Axis3(mp[][1,2], tellheight = true)
+        # allidxs = [1:length(state(layer));]
+        # xs = idx2xcoord.(Ref(sz), allidxs)
+        # ys = idx2ycoord.(Ref(sz), allidxs)
+        # zs = idx2zcoord.(Ref(sz), allidxs)
+        # # coords = idx2coords.(Ref(sz), allidxs)
+        # unsafe_view = create_unsafe_vector(@view state(graph(layer))[graphidxs(layer)])
+        # # TODO ADD OPTION FOR BFIELD
+        # mp["obs"] = Observable(unsafe_view)
+        # mp["image"] = meshscatter!(ax, xs, ys, zs, markersize = 0.2, color = mp["obs"], colormap = :thermal)
+        # mp["image"] = meshscatter!(ax, xs, ys, zs)
+    end
+
+    new_img!(g, layer, mp)
+end
+
+# Get image either for 2d or 3d
+function new_img!(g, layer, mp)
+    dims = length(size(layer))
+    ax = mp["axis"]
+
+    if dims == 2
+        mp["obs"] = getSingleViewImg(g, ml)
+        mp["image"] = image!(ax, mp["obs"], colormap = :thermal, fxaa = false, interpolate = false)
+    elseif dims == 3
+        unsafe_view = create_unsafe_vector(@view state(g)[graphidxs(layer)])
+        sz = size(layer)
+        allidxs = [1:length(state(layer));]
+        xs = idx2xcoord.(Ref(sz), allidxs)
+        ys = idx2ycoord.(Ref(sz), allidxs)
+        zs = idx2zcoord.(Ref(sz), allidxs)
+        mp["obs"] = Observable(unsafe_view)
+        mp["image"] = meshscatter!(ax, xs, ys, zs, markersize = 0.2, color = mp["obs"], colormap = :thermal)
+    end
+end
+
 export flip_y_axis
 """
 Create a view of the graph that shows a single layer at the time
@@ -87,36 +135,16 @@ function singleView(ml, g)
     end)
 
     ax = nothing
-    im = nothing
+    ima = nothing
     cur_layer = currentLayer(simulation)
-    layerdim = dims(cur_layer)
-    if dims == 2
-        # ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), ypanlock = true, xpanlock = true, yzoomlock = true, xzoomlock = true)
-        ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
-        # TODO: Set colorrange based on the type of layer
-        ima = image!(ax, img_ob, colormap = :thermal, fxaa = false, interpolate = false)
-    else
-        # ax = Axis3(mp[][1,2], tellheight = true)
-        sz = size(cur_layer)
-        ax = Axis3(mp[][1,2], tellheight = true)
-        allidxs = [1:length(state(cur_layer));]
-        xs = idx2xcoord.(Ref(sz), allidxs)
-        ys = idx2ycoord.(Ref(sz), allidxs)
-        zs = idx2zcoord.(Ref(sz), allidxs)
-        # coords = idx2coords.(Ref(sz), allidxs)
-        unsafe_view = create_unsafe_vector(@view state(g)[graphidxs(cur_layer)])
-        img_ob = Observable(unsafe_view)
-        ima = meshscatter!(ax, xs, ys, zs, markersize = 0.2, color = img_ob, colormap = :thermal)
-    end
 
-    # rowsize!(_grid, 1, Relative(1/20))
+    # Create the axis for the layer type
+    create_layer_axis!(cur_layer, mp)
 
-    mp["axis"] = ax
-    ax.yreversed[] = @load_preference("makie_y_flip", default = false)
-    mp["image"] = ima
-    mp["obs"] = img_ob
-    ima.colorrange[] = (-1,1)
+    ax = mp["axis"]
+    mp["axis"].yreversed[] = @load_preference("makie_y_flip", default = false)
 
+    mp["image"].colorrange[] = (-1,1)
 
     push!(obs_funcs, on(events(ax.scene).mousebutton, weak = true) do buttons
         MDrawCircle(ax, buttons, simulation)
@@ -147,7 +175,7 @@ function singleView(ml, g)
         close(ml["timedfunctions_timer"])
     end
 
-    timedFunctions["screen"] = (sim) -> notify(img_ob)
+    timedFunctions["screen"] = (sim) -> notify(mp["obs"])
     # ml["timedfunctions_timer"] = PTimer((timer) -> (notify(mp["obs"]); timedFunctions(simulation)) ,0., interval = 1/60)
     # ml["timedfunctions_timer"] = PTimer((timer) -> (notify(img_ob); timedFunctions(simulation)) ,0., interval = 1/60)
     # timers(simulation)["makie"] = ml["timedfunctions_timer"]

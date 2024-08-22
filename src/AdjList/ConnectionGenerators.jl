@@ -46,11 +46,11 @@ end
 export dcoords
 
 # Interprets a coordinate of layer 1 as on of layer 2 given the relative position
-coordsl1tol2(i1, j1, layer1, layer2, alignment = :center)::Tuple{Int32,Int32} = let dyxz = dcoords(layer1, layer2, alignment); floor.(Int32,(i1, j1) .- dyxz[1:2]) end
-coordsl1tol2((i1, j1)::Tuple, layer1, layer2, alignment = :center) = coordsl1tol2(i1, j1, layer1, layer2, alignment)
+coordsl1tol2(layer1, layer2,  i1, j1, alignment = :center)::Tuple{Int32,Int32} = let dyxz = dcoords(layer1, layer2, alignment); floor.(Int32,(i1, j1) .- dyxz[1:2]) end
+coordsl1tol2(layer1, layer2, (i1, j1)::Tuple, alignment = :center) = coordsl1tol2(layer1, layer2, i1, j1, alignment)
 # Interprets a coordinate of layer 2 as on of layer 1 given the relative position
-coordsl2tol1(i2, j2, layer1, layer2, alignment = :center)::Tuple{Int32,Int32} = let dyxz = dcoords(layer1, layer2, alignment); floor.(Int32, (i2, j2) .+ dyxz[1:2]) end
-coordsl2tol1((i2, j2)::Tuple, layer1, layer2, alignment = :center) = coordsl2tol1(i2, j2, layer1, layer2, alignment)
+coordsl2tol1(layer1, layer2, i2, j2, alignment = :center)::Tuple{Int32,Int32} = let dyxz = dcoords(layer1, layer2, alignment); floor.(Int32, (i2, j2) .+ dyxz[1:2]) end
+coordsl2tol1(layer1, layer2, (i2, j2)::Tuple, alignment = :center) = coordsl2tol1(layer1, layer2, i2, j2, alignment)
 export coordsl1tol2, coordsl2tol1
 
 # put x in between min and max
@@ -67,7 +67,7 @@ snaptolayer(x, layer) = minmax(1, x, glength(layer))
 # Works by translating the coordinate of layer one to one of layer2, and then snapping
 # it to the nearest edge of the layer
 function nearest(i1, j1, layer1, layer2, alignment = :center)
-    i1to2, j1to2 = coordsl1tol2(i1, j1, layer1, layer2, alignment)
+    i1to2, j1to2 = coordsl1tol2(layer1, layer2, i1, j1, alignment)
 
     nny = minmax(1, i1to2, glength(layer2))
     nnx = minmax(1, j1to2, gwidth(layer2))
@@ -89,7 +89,7 @@ end
 
 isin((i, j)::NTuple{2,T}, layer) where T = isin(i, j, layer)
 
-function isin(i,j,k,layer)
+function isin(i,j,k,layer::IsingLayer)
     _size = size(layer)
     if (1 <= i <= _size[1]) && (1 <= j <= _size[2]) && (1 <= k <= _size[3])
         return true
@@ -100,22 +100,22 @@ end
 
 isin((i, j, k)::NTuple{3,T}, layer) where T = isin(i, j, k, layer)
 
-function dist2(i1, j1, i2, j2, layer1, layer2, alignment::Symbol = :center)
+function dist2(layer1::IsingLayer, layer2::IsingLayer, i1, j1, i2, j2, alignment::Symbol = :center)
     _, _, dlz = dlayer(layer1, layer2)
-    i21, j21 = coordsl2tol1(i2, j2, layer1, layer2, alignment)
+    i21, j21 = coordsl2tol1(layer1, layer2, i2, j2, alignment)
     return (i1 - i21)^2 + (j1 - j21)^2 + dlz^2
 end
 
-function dist2(idx1, idx2, layer1::IsingLayer, layer2::IsingLayer, alignment::Symbol = :center) 
+function dist2(layer1::IsingLayer, layer2::IsingLayer, idx1, idx2, alignment::Symbol = :center) 
     i1, j1 = idxToCoord(idx1, glength(layer1))
     i2 ,j2 = idxToCoord(idx2, glength(layer2))
 
-    return dist2(i1, j1, i2, j2, layer1, layer2, alignment)
+    return @inline dist2(layer1, layer2, i1, j1, i2, j2, alignment)
 end
 
-dist(i1, j1, i2, j2, layer1, layer2, alignment::Symbol = :center) = sqrt(dist2(i1, j1, i2, j2, layer1, layer2, alignment))
+dist(layer1, layer2, i1, j1, i2, j2, alignment::Symbol = :center) = sqrt(dist2(layer1, layer2, i1, j1, i2, j2, alignment))
 
-function lattice2_iterator(i1, j1, layer1, layer2, NN, alignment = :center)
+function lattice2_iterator(layer1::IsingLayer, layer2::IsingLayer, i1, j1, NN, alignment = :center)
     # Get a square around the coordinate
     coordsl1 = [(i1+i,j1+j) for i in (-(NN)):(NN), j in (-(NN)):(NN)]
     # Given the relative positions of the layers
@@ -133,10 +133,10 @@ Give two layers and a coordinate in the first one
 Return the connections of the coordinate in the first layer to the second layer
     by returning the coordinates of the connections and the values of the connections
 """
-function lattice2_iterator(layer1, layer2, i1, j1, NN, prealloc::AbstractPreAlloc, alignment = :center)
-    it = (-(NN)):(NN)
-    for j in it
-        for i in it
+function lattice2_iterator(layer1::IsingLayer, layer2::IsingLayer, i1, j1, NNi, NNj, prealloc::AbstractPreAlloc, alignment = :center)
+    # it = (-(NN)):(NN)
+    for j in -NNj:NNj
+        for i in -NNi:NNi
             i2, j2 = coordsl1tol2(i1+i, j1+j, layer1, layer2, alignment)
             if isin(i2, j2, layer2)
                 push!(prealloc, (i2, j2, coordToIdx(i2, j2, glength(layer2))))
@@ -158,9 +158,9 @@ Get all indices of a vertex with idx vert_idx and coordinates vert_i, vert_j
 that are larger than vert_idx
 Works in layer indices
 """
-function getConnIdxs!(vert_idx, vert_i, vert_j, len, wid, NN, conn_is, conn_js, conn_idxs)
-    for j in -NN:NN
-        for i in -NN:NN
+function getConnIdxs!(vert_idx, vert_i, vert_j, len, wid, NNi, NNj, conn_idxs, conn_is, conn_js)
+    for j in -NNj:NNj
+        for i in -NNi:NNi
             (i == 0 && j == 0) && continue
             conn_i, conn_j = latmod(vert_i + i, vert_j + j, len, wid)
             conn_idx = coordToIdx(conn_i, conn_j, len)
@@ -174,13 +174,15 @@ function getConnIdxs!(vert_idx, vert_i, vert_j, len, wid, NN, conn_is, conn_js, 
     end
 end
 
-function getConnIdxs!(vert_idx, vert_i, vert_j, vert_k, len, wid, hei, NNi, NNj, NNk, conn_is, conn_js, conn_ks, conn_idxs)
+function getConnIdxs!(vert_idx, coord_vert::NTuple{3,Int32}, size::NTuple{3,Int32}, NNi, NNj, NNk, conn_idxs, conn_is, conn_js, conn_ks)
     for k in -NNk:NNk
         for j in -NNj:NNj
             for i in -NNi:NNi
-                (i == 0 && j == 0) && continue
-                conn_i, conn_j, conn_k = latmod(vert_i + i, vert_j + j, vert_k + k, len, wid, hei)
-                conn_idx = coordToIdx(conn_i, conn_j, conn_k, len, wid)
+                
+                (i == 0 && j == 0 && k == 0) && continue
+                vert_i, vert_j, vert_k = coord_vert
+                conn_i, conn_j, conn_k = latmod((vert_i + i, vert_j + j, vert_k + k), size)
+                conn_idx = coordToIdx((conn_i, conn_j, conn_k), size)
 
                 conn_idx < vert_idx && continue
 
