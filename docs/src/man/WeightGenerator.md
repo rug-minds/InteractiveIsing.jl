@@ -20,7 +20,9 @@ A `WeightGenerator` holds descriptions of the following things:
 * A description of a distribution from which a number is sampled which is **multiplied with** the generated weight.
     I.e. using `[-1,1]`, a random sign can be will be sampled with equal probability which is mulitplied with the weight.
 
-* The amount of nearest neighbors for which a weight needs to be generated. This number, let's call it `NN` will cause the algorithm to generate weights for a `NN*NN` or `NN*NN*NN` square block (in matrix coordinates, not real distance).
+* The amount of nearest neighbors for which a weight needs to be generated. This may be given as a single integer or a tuple of integers. A tuple must be given to have at least the amount of dimensions of the layer the generator will be applied to. The numbers in the tuple will represent the amount of nearest neighbors that will be taken into account when generating connections, let's call the entries $(N_x, N_y, N_z)$, where the numbers correspond to the $x,y$ and $z$ axis respectively. This means that in the $x$ direction, only spins with a relative $x$ distance of maximally $N_x$ will be considered when generating weights, and so on for $y$ and $z$.
+
+!!! note
     At first sight this might seem redundant, because we can program a distance cutoff in the generating function that we supply, i.e. `(dr) -> dr < 3 ? somefunc(dr) : 0` which ensures that all weights for distances greater than 3 are zero. However, julia code cannot know beforehand wether some arbitrary function causes a distance cutoff. Thus, all combinations of spins would need to be checked to see if they produce a zero weight. This is computationally prohibitive because of combinatorial explosion. Thus the computation time of generating an adjacency list is very roughly on the order of $N_spins^d * NN^d$ instead of $(N_spins^d)^2$, where typically $NN^d << N_spins^d$.
 
 ## Why Metaprogramming?

@@ -8,5 +8,5 @@ struct Linear <: Hamiltonian
 params(::Type{Linear}) = nothing
 
 function Δi_H(::Type{Linear})
-    return 
+    return nothing
 end

@@ -79,15 +79,21 @@ See [Indexing](@ref) for supporting functions.
 
 ## Generating the weights
 
-The connections can be generated using a [WeightGenerator](@ref). A weightgenerator must be constructed using the macro `@WG`. A weightgenerator is a struct that can be used to get a weight based on an arbitrary function of any combination of the following arguments: `[:dr, :x, :y, :z, :dx, :dy, :dz]`, where dr is the relative distance between two spins, x, y and z are the midpoints between two spins that a weight is connecting (counted from the left top) and dx dy and dz are the separate one dimensional, relative distances between two spins. A weight generator expects a string containing a julia anonymous function in the following way
+The connections for a layer and between layers can be generated using a [WeightGenerator](@ref). A weightgenerator must be constructed using the macro `@WG`. A weightgenerator is a struct that can be used to get a weight based on an arbitrary function of any combination of the following arguments: `[:dr, :x, :y, :z, :dx, :dy, :dz]`, where dr is the relative distance between two spins, x, y and z are the midpoints between two spins that a weight is connecting (counted from the left top) and dx dy and dz are the separate one dimensional, relative distances between two spins. A weight generator expects a string containing a julia anonymous function in the following way
 
 ```
 # Create the weightgenerator
-wg = @WG "(dr) -> 1/dr^2"
+wg_Ising = @WG "dr == 1 ? 1 : 0" NN = 1 # Ising Connections, taking into account only connections 1 spin apart in any direction
+
+wg = @WG "(dr) -> 1/dr^2" NN = (2,3) #Arbitrary function with two nearest neighbors in x direction, 3 in y
 ```
 
-A weightgenerator can also include additive or multiplicative noise based on arbitrary distributions. See the [WeightGenerator](@ref) page for more information.
+A weightgenerator can also include additive or multiplicative noise based on arbitrary distributions. See the [WeightGenerator](@ref) page for more information on the usage.
 
+To now generate and set the connections within layer `i` we use the function
+```
+genAdj!(g[i], wg)
+```
 ## Setting Defects
 
 When the simulation is started, the simulation loop is aware at the start which spins may be updated. Generally this will include every spin, but we can let the simulation know it should only loop over a collection of spins, effectively freezing the others. This will cause a small performance hit, because choosing a spin from a continuous range is less expensive than choosing one from a list, but generally the effect should be small and mostly independent on the size of the list.
