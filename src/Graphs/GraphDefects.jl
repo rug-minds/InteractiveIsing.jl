@@ -1,6 +1,3 @@
-#temp for testing
-Vert = Int32
-
 mutable struct GraphDefects
     g::Union{Nothing, IsingGraph}
     hasDefects::Bool

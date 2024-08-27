@@ -14,6 +14,8 @@ getIntType(::Float64) = Int64
 getFloatType(::Float64) = Float64
 isarchitecturetype(::Any) = false
 isarchitecturetype(t::Tuple{A,B,C}) where {A,B,C} = (A<:Integer && B<:Integer && t[3]<:StateType)
+isarchitecturetype(t::Tuple{A,B,C,D}) where {A,B,C,D} = (A<:Integer && B<:Integer && D<:Integer && t[4]<:StateType)
+
 # Ising Graph Representation and functions
 mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     # Simulation
@@ -31,9 +33,6 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     
     layers::ShuffleVec{IsingLayer}
 
-    #TODO: Why is this here? Shouldn't this be in the layers?
-    # Or can it not be computed and used as a trait?
-    continuous::StateType
     # Connection between layers, Could be useful to track for faster removing of layers
     layerconns::Dict{Set, Int32}
     params::NamedTuple #TODO: Make this a custom type?
@@ -42,124 +41,141 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     emitter::Emitter
 
     defects::GraphDefects
-    d::GraphData{T} #Other stuff. Maybe just make this a dict?
+    # d::GraphData{T} #Other stuff. Maybe just make this a dict?
+end
+
+# Default Initializer for IsingGraph
+function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim = nothing,  periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
+    architecture = searchkey(kwargs, :architecture, fallback = nothing)
+    @assert (isnothing(glength) && isnothing(gwidth) && isnothing(architecture)) || (!isnothing(glength) && !isnothing(gwidth)) || !isnothing(architecture) "Either give length and width or architecture"
 
 
-    # Default Initializer for IsingGraph
-    function IsingGraph(glength = nothing, gwidth=nothing; sim = nothing,  periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
-        architecture = searchkey(kwargs, :architecture, fallback = nothing)
-        @assert (isnothing(glength) && isnothing(gwidth) && isnothing(architecture)) || (!isnothing(glength) && !isnothing(gwidth)) || !isnothing(architecture) "Either give length and width or architecture"
-    
-
-        # Create the architecture
-        if isnothing(architecture) && !isnothing(glength) && !isnothing(gwidth)
-            architecture = [(glength, gwidth, type)]
-        end
-        if !isnothing(architecture)
-            for idx in eachindex(architecture)
-                if !isarchitecturetype(architecture[idx])
-                    architecture[idx] = (architecture[idx][1], architecture[idx][2], Continuous)
-                end
-            end
-        
-
-            # Create the sets for each layer
-            if isnothing(sets) # Just make some sets
-                sets = repeat([convert.(precision,(-1,1))], length(architecture))
-            else # Correct the given sets
-                sets = map(x->convert.(precision, x), sets)
-                if length(sets) < length(architecture)
-                    lengthdiff = length(architecture) - length(sets)
-                    for _ in 1:lengthdiff
-                        push!(sets, convert(precision,(-1,1)))
-                    end
-                else
-                    sets = sets[1:length(architecture)]
-                end
-            end
-        end
-
-        g = new{precision}(
-            sim,
-            precision[],
-            SparseMatrixCSC{precision,Int32}(undef,0,0),
-            #Temp            
-            1f0,
-            # Default algorithm
-            LayeredMetropolis,
-            #Hamiltonians
-            Ising,
-            SType(:Weighted => weighted),
-            #Layers
-            ShuffleVec{IsingLayer}(relocate = relocate!),
-            #ContinuityType
-            ContinuousState(),
-            Dict{Pair, Int32}(),
-            #Params
-            (;self = ParamVal(precision[], 0, "Self Connections", false)),
-            #Emitter
-            Emitter(Observable[]),
-            #Processes
-        )
-
-        g.defects = GraphDefects(g)
-        # Couple the shufflevec and the defects
-        internalcouple!(g.layers, g.defects, (layer) -> Int32(0), push = addLayer!, insert = (obj, idx, item) -> addLayer!(obj, item), deleteat = removeLayer!)
-
-        g.d = GraphData(precision, g)
-        println(architecture)
-        if !isnothing(architecture)
-            for (arc_idx,arc) in enumerate(architecture)
-                _addLayer!(g, arc[1], arc[2]; weights, periodic, type = arc[3], set = sets[arc_idx], kwargs...)
-            end
-        end
-        return g
+    # Create the architecture
+    if isnothing(architecture) && !isnothing(glength) && !isnothing(gwidth)
+        architecture = [(glength, gwidth, gheight, type)]
+    else
+        architecture = decode_architecture(architecture)
     end
-    
-    # Constructor for copying from other graph or savedata.
-    function IsingGraph(
+
+    sets = decode_statesets(sets, length(architecture), precision)
+
+    g = IsingGraph{precision}(
+        sim,
+        precision[],
+        SparseMatrixCSC{precision,Int32}(undef,0,0),
+        #Temp            
+        1f0,
+        # Default algorithm
+        LayeredMetropolis,
+        #Hamiltonians
+        Ising,
+        SType(:Weighted => weighted),
+        #Layers
+        ShuffleVec{IsingLayer}(relocate = relocate!),
+        Dict{Pair, Int32}(),
+        #Params
+        (;self = ParamVal(precision[], 0, "Self Connections", false)),
+        #Emitter
+        Emitter(Observable[]),
+        #Defects
+        GraphDefects(nothing)
+    )
+
+    g.defects.g = g
+
+    # Couple the shufflevec and the defects
+    internalcouple!(g.layers, g.defects, (layer) -> Int32(0), push = addLayer!, insert = (obj, idx, item) -> addLayer!(obj, item), deleteat = removeLayer!)
+
+    if !isnothing(architecture)
+        for (arc_idx,arc) in enumerate(architecture)
+            _addLayer!(g, arc[1], arc[2], arc[3]; weights, periodic, type = arc[end], set = sets[arc_idx], kwargs...)
+        end
+    end
+    return g
+end
+
+function decode_architecture(arcs)
+    num_layers = length(arcs)
+    architecture = []
+    for layer in arcs
+        # If last is a state type, just push
+        if typeof(layer[end]) <: StateType
+            if length(layer) == 3
+                push!(architecture, (layer[1:2]..., nothing, layer[3]))
+            else
+                push!(architecture, (layer..., Continuous))
+            end
+            push!(architecture, layer)
+        else # add default state type
+            if length(layer) == 2
+                push!(architecture, (layer..., nothing, Continuous))
+            else
+                push!(architecture, (layer..., Continuous))
+            end
+        end
+    end
+
+    return architecture
+end
+
+function decode_statesets(sets, numlayers, precision)
+     # Create the sets for each layer
+    if isnothing(sets) # Just make some sets
+        sets = repeat([convert.(precision,(-1,1))], numlayers)
+    else # Correct the given sets
+        sets = map(x->convert.(precision, x), sets)
+        if length(sets) < numlayers
+            lengthdiff = numlayers - length(sets)
+            for _ in 1:lengthdiff # If less sets than layers, add default set
+                push!(sets, convert(precision,(-1,1)))
+            end
+        else
+            sets = sets[1:length(architecture)]
+        end
+    end
+    return sets
+end
+
+# Constructor for copying from other graph or savedata.
+function IsingGraph(
+                        state,
+                        adj,
+                        stype,
+                        layers,
+                        defects,
+                        data,
+                        Hamiltonians = Ising
+                        )
+    return IsingGraph(
+        # Sim
+        nothing,
+        #state
         state,
-        adj,
+        # Adjacency
+        adj,            
+        #Temp
+        1f0,
+        # Default algorithm
+        updateMetropolis,
+        #Hamiltonians
+        Hamiltonians,
+        # stype
         stype,
+        # Layers
         layers,
-        continuous,
+        # Connections between layers
+        Dict{Pair, Int32}(),
+        #params
+        (;self = ParamVal(zeros(eltype(state), length(state)), 0, "Self Connections", false)),
+        # For notifying simulations or other things
+        Emitter(Observable[]),
+        # Defects
         defects,
+        # Data
         data,
-        Hamiltonians = Ising
-        )
-        return new{eltype(state)}(
-            # Sim
-            nothing,
-            #state
-            state,
-            # Adjacency
-            adj,            
-            #Temp
-            1f0,
-            # Default algorithm
-            updateMetropolis,
-            #Hamiltonians
-            Hamiltonians,
-            # stype
-            stype,
-            # Layers
-            layers,
-            # Continuous
-            continuous,
-            # Connections between layers
-            Dict{Pair, Int32}(),
-            #params
-            (;self = ParamVal(zeros(eltype(state), length(state)), 0, "Self Connections", false)),
-            # For notifying simulations or other things
-            Emitter(Observable[]),
-            # Defects
-            defects,
-            # Data
-            data,
-            # Processes
-            Vector{Process}()
-        )
-    end
+        # Processes
+        Vector{Process}()
+    )
 end
 
 Base.eltype(::IsingGraph{T}) where T = T
@@ -167,8 +183,6 @@ Base.eltype(::Type{IsingGraph{T}}) where T = T
 
 #extend show to print out the graph, showing the length of the state, and the layers
 function Base.show(io::IO, g::IsingGraph)
-    println(io, "IsingGraph with $(nStates(g)) states")
-    println(io, "Layers:")
     for (idx, layer) in enumerate(g.layers)
         Base.show(io, layer)
         if idx != length(g.layers)
@@ -205,7 +219,7 @@ end
 set_adj!(g::IsingGraph, vecs::Tuple) = adj(g, sparse(vecs..., nStates(g), nStates(g)))
 export adj
 
-@forward IsingGraph GraphData d
+# @forward IsingGraph GraphData d
 @forward IsingGraph GraphDefects defects
 
 @inline glength(g::IsingGraph)::Int32 = size(g)[1]
@@ -354,27 +368,31 @@ function Base.resize!(g::IsingGraph{T}, newlength, startidx = length(state(g))) 
     oldlength = nStates(g)
     sizediff = newlength - oldlength
 
+    #TODO RESIZE GPARAMS
+
+
+
     if sizediff > 0
         resize!(state(g), newlength)
         randomstate = rand(T, sizediff)
         state(g)[oldlength+1:newlength] .= randomstate
         idxs_to_add = startidx:(startidx + sizediff - 1)
         g.adj = insertrowcol(adj(g), idxs_to_add)
-        resize!(d(g), newlength)
+        # resize!(d(g), newlength)
     else # if making smaller
         idxs_to_remove = startidx:(startidx + abs(sizediff) - 1)
         deleteat!(state(g), idxs_to_remove)
         g.adj = deleterowcol(adj(g), idxs_to_remove)
         
         # Resize data
-        resize!(d(g), newlength, idxs_to_remove)
+        # resize!(d(g), newlength, idxs_to_remove)
 
     end
     
     return g
 end
 
-export resize!
+#export resize!
 
 export addLayer!
 nlayers(::Nothing) = Observable(0)
@@ -414,6 +432,8 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth, lheight = nothing; weight
         type = default_ltype(g)
     end
 
+    println("Height is $lheight")
+
     # Look if a stateset is given, otherwise give the default and convert to the graph type  
     set = T.(searchkey(kwargs, :set, fallback = convert.(eltype(g),(-1,1))))
    
@@ -442,6 +462,8 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth, lheight = nothing; weight
 
         return IsingLayer(type, g, idx , _startidx, llength, lwidth, lheight; periodic, set)
     end
+    #print type
+    println("Type is $type")
     layertype =  IsingLayer{type, set}
     push!(layers(g), make_newlayer, layertype)
     newlayer = layers(g)[end]
@@ -461,10 +483,6 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth, lheight = nothing; weight
     initstate!(newlayer)
 
     return newlayer
-end
-
-function _addLayer3d(g::IsingGraph, llength, lwidth, lheight; weights = nothing, periodic = true, type = nothing, kwargs...)
-
 end
 
 function _removeLayer!(g::IsingGraph, lidx::Integer)
@@ -579,7 +597,7 @@ export tuples2sparse
 """
 Get index of connection
 """
-@inline function connIdx(conn::Conn)::Vert
+@inline function connIdx(conn::Conn)::Int32
     conn[1]
 end
 

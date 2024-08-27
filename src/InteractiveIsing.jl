@@ -52,8 +52,8 @@ include("Utils/Utils.jl")
 
 
 ### DECLARED TYPES
-@ForwardDeclare IsingGraph "IsingGraphs"
-@ForwardDeclare IsingLayer "IsingGraphs/Layers"
+@ForwardDeclare IsingGraph "Graphs"
+@ForwardDeclare IsingLayer "Graphs/Layers"
 @ForwardDeclare IsingSim "Sim"
 @ForwardDeclare SimLayout "Makie"
 
@@ -85,7 +85,7 @@ include("MCAlgorithms/MCAlgorithms.jl")
 # using .MCAlgorithms
 
 include("Hamiltonians/Hamiltonians.jl")
-include("IsingGraphs/IsingGraphs.jl")
+include("Graphs/Graphs.jl")
 
 include("Sim/Sim.jl")
 include("Interaction/Interaction.jl")

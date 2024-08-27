@@ -71,6 +71,7 @@ mutable struct IsingLayer{StateType, StateSet, IndexSet, DIMS, T, Top} <: Abstra
                 lsize = tuple(Int32(length), Int32(width), Int32(height))
             end
         end
+        isnothing(periodic) && (periodic = true)
         top = SquareTopology(lsize; periodic)
         graphidxs = isnothing(height) ? (start:(start+length*width-1)) : (start:(start+length*width*height-1))
         set = convert.(eltype(g), set)

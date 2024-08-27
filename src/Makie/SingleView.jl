@@ -29,7 +29,7 @@ end
 function flip_y_axis()
     @set_preferences!("makie_y_flip" => !(@load_preference("makie_y_flip", default = false)))
     try
-        ml = mlref[]
+        ml = getml()
         midpanel(ml)["axis"].yreversed[] = @load_preference("makie_y_flip", default = false)
     catch
     end
@@ -39,25 +39,11 @@ function create_layer_axis!(layer, mp)
     layerdim = length(size((layer)))
     g = graph(layer)
     if layerdim == 2
-        # mp["obs"] = getSingleViewImg(g, ml)
-        # ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), ypanlock = true, xpanlock = true, yzoomlock = true, xzoomlock = true)
         mp["axis"] = ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
         # TODO: Set colorrange based on the type of layer
-        # mp["image"] = image!(ax, mp["obs"], colormap = :thermal, fxaa = false, interpolate = false)
     else
-        # ax = Axis3(mp[][1,2], tellheight = true)
-        # sz = size(layer)
         mp["axis"] = ax = Axis3(mp[][1,2], tellheight = true)
-        # allidxs = [1:length(state(layer));]
-        # xs = idx2xcoord.(Ref(sz), allidxs)
-        # ys = idx2ycoord.(Ref(sz), allidxs)
-        # zs = idx2zcoord.(Ref(sz), allidxs)
-        # # coords = idx2coords.(Ref(sz), allidxs)
-        # unsafe_view = create_unsafe_vector(@view state(graph(layer))[graphidxs(layer)])
-        # # TODO ADD OPTION FOR BFIELD
-        # mp["obs"] = Observable(unsafe_view)
-        # mp["image"] = meshscatter!(ax, xs, ys, zs, markersize = 0.2, color = mp["obs"], colormap = :thermal)
-        # mp["image"] = meshscatter!(ax, xs, ys, zs)
+        # TODO: 3D BField
     end
 
     new_img!(g, layer, mp)
@@ -69,7 +55,7 @@ function new_img!(g, layer, mp)
     ax = mp["axis"]
 
     if dims == 2
-        mp["obs"] = getSingleViewImg(g, ml)
+        mp["obs"] = Observable(getSingleViewImg(g, getml()))
         mp["image"] = image!(ax, mp["obs"], colormap = :thermal, fxaa = false, interpolate = false)
     elseif dims == 3
         unsafe_view = create_unsafe_vector(@view state(g)[graphidxs(layer)])
@@ -176,9 +162,6 @@ function singleView(ml, g)
     end
 
     timedFunctions["screen"] = (sim) -> notify(mp["obs"])
-    # ml["timedfunctions_timer"] = PTimer((timer) -> (notify(mp["obs"]); timedFunctions(simulation)) ,0., interval = 1/60)
-    # ml["timedfunctions_timer"] = PTimer((timer) -> (notify(img_ob); timedFunctions(simulation)) ,0., interval = 1/60)
-    # timers(simulation)["makie"] = ml["timedfunctions_timer"]
 
     return
 end

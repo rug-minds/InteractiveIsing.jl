@@ -57,7 +57,7 @@ struct GraphSaveData{Version}
     shuffle_idxs::Vector{Int}
     continuous::StateType
     defects::GraphDefects
-    gdata::GraphData
+    # gdata::GraphData
 end
 
 
@@ -68,7 +68,7 @@ end
 
 function GraphSaveData(g::IsingGraph)
 
-    gsd = GraphSaveData{graph_version}(copy(state(g)), copy(adj(g)), stype(g), copy(layers(g).idxs), continuous(g), defects(g), d(g))
+    gsd = GraphSaveData{graph_version}(copy(state(g)), copy(adj(g)), stype(g), copy(layers(g).idxs), continuous(g), defects(g))
 
     gsd.defects.g = nothing
   
@@ -85,7 +85,7 @@ function IsingGraph(sd::Dict{String, Any})
         ShuffleVec{IsingLayer}(),
         gsd.continuous,
         gsd.defects,
-        gsd.gdata
+        # gsd.gdata
     )
 
     # Reconstruct layer from layer save data
@@ -152,7 +152,7 @@ end
 function saveparameters(g, filename = "parameters-$(getnowtime())"; subfolder = false)
     subfolder_st = "/"*subfolder
     path = pwd() * "$subfolder_st/$filename.jld2"
-    data = g.d
+    # data = g.d
     _adj = adj(g)
     architecture = getarchitecture(g)
     save(path, "data", data, "adj", _adj, "architecture", architecture)
@@ -162,7 +162,7 @@ end
 function loadparameters(g, path; ignorearchitecture = false)
     data = load(path)
     _adj = data["adj"]
-    gdata = data["data"]
+    # gdata = data["data"]
     dataarchitecture = data["architecture"]
     if !ignorearchitecture
         @assert compare_architecture_sizes(dataarchitecture, getarchitecture(g)) "Architecture sizes not the same"
@@ -171,7 +171,7 @@ function loadparameters(g, path; ignorearchitecture = false)
         resize!(gdata, length(state(g)))
     end
     adj(g, _adj)
-    g.d = gdata
+    # g.d = gdata
     return g
 end
 
