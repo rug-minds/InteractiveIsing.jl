@@ -1,18 +1,5 @@
 # InteractiveIsing.jl
-WIP
+[![Docs](https://img.shields.io/badge/docs-stable-blue.svg)]([https://your-documentation-url.com](https://rug-minds.github.io/InteractiveIsing.jl/dev/man/usage/
+))
 
-An interactive Spin Ising simulation using Julia and QML
-
-Using the user interface requires multithreading. Either set up multithreading directly in VSCODE, Pluto, etc. or when running through the REPL, make sure the environment variable `JULIA_NUM_THREADS`
-is set.
-
-This can be done by running 
-```
-touch ~/.zshrc; open ~/.zshrc
-```
-and then writing
-```
-export JULIA_NUM_THREADS=X
-```
-where X is the number of threads you want to use (should be at least 4) and saving. The terminal will now start with the environment variable set correctly.
-
+This package provides a flexible platform for 2D and 3D, multilayer simulations of Ising models.
