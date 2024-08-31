@@ -12,7 +12,7 @@ end
 end
 
 @inline function coordToIdx(coords::NTuple{N,Int32}, size::NTuple{N,Int32}) where N
-    idx = 0
+    idx = 1
     for i in 1:N
         idx += (coords[i] - 1) * prod(size[1:i-1])
     end
@@ -29,13 +29,15 @@ end
 
 
 #TODO Check this one
-@inline function idxToCoord(idx::T, size::NTuple{DIMS,T}) where {DIMS,T}
+@inline function idxToCoord(idx::Integer, size::NTuple{DIMS,T}) where {DIMS,T}
+    idx = convert(T, idx)
     if DIMS == 2
         r(T((idx - 1) % length + 1), T((idx - 1) ÷ length + 1))
     elseif DIMS == 3
         len = size[1]
         wid = size[2]
-        return (T((idx - 1) % len + 1), T(((idx - 1) ÷ len) % wid + 1), T((idx - 1) ÷ (len * wid) + 1))
+        #(i,j,k)
+        return (T((idx - 1) % len + 1), T((idx - 1) ÷ len % wid + 1), T((idx - 1) ÷ (len * wid) + 1))
     end
 end
 
@@ -233,7 +235,7 @@ Capitalization and naming has to be done like the above
 
     Also defines the same methods with an extra argument which are setters
 """
-macro forward(Outer, Inner, fieldname = lowercase(string(nameof(eval(Inner)))), deleted...)
+macro forwardfields(Outer, Inner, fieldname = lowercase(string(nameof(eval(Inner)))), deleted...)
     funcs = quote end
     fieldname = string(fieldname)
     for name in fieldnames(eval(Inner))
