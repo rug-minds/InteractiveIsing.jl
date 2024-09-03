@@ -1,25 +1,68 @@
-export getParam, setParam!, _setparam!
-@inline function getParam(g::IsingGraph, param::Symbol)
+export getparam, setparam!, _setparam!
+
+struct IsingParameters{NT<:NamedTuple}
+    nt::NT
+end
+IsingParameters(; kwargs...) = IsingParameters(NamedTuple(kwargs))
+
+#Forward methods for namedtuple to IsingParameters
+Base.getindex(p::IsingParameters, k::Symbol) = p.nt[k]
+Base.setindex!(p::IsingParameters, v, k::Symbol) = p.nt[k] = v
+Base.get!(p::IsingParameters, k::Symbol, default) = get(p.nt, k, default)
+Base.get(p::IsingParameters, k::Symbol) = get(p.nt, k)
+Base.get(p::IsingParameters, k::Symbol, default) = get(p.nt, k, default)
+Base.length(p::IsingParameters) = length(p.nt)
+Base.keys(p::IsingParameters) = keys(p.nt)
+Base.values(p::IsingParameters) = values(p.nt)
+Base.iterate(p::IsingParameters, state = 1) = iterate(p.nt, state)
+Base.haskey(p::IsingParameters, k::Symbol) = haskey(p.nt, k)
+# Implement iteration correctly
+Base.iterate(p::IsingParameters) = iterate(p.nt)
+Base.iterate(p::IsingParameters, state) = iterate(p.nt, state)
+
+# Implement pairs for correct splatting behavior
+Base.pairs(p::IsingParameters) = pairs(p.nt)
+
+# If you need mutability, implement setindex! and setproperty!
+# Note: This will only work if the underlying NamedTuple is mutable
+Base.setindex!(p::IsingParameters, v, k::Symbol) = setindex!(p.nt, v, k)
+Base.setproperty!(p::IsingParameters, s::Symbol, v) = setproperty!(p.nt, s, v)
+
+# To make it behave more like a NamedTuple in other contexts
+Base.:(==)(a::IsingParameters, b::IsingParameters) = a.nt == b.nt
+Base.hash(p::IsingParameters, h::UInt) = hash(p.nt, h)
+
+# For pretty printing
+Base.show(io::IO, p::IsingParameters) = print(io, "IsingParameters", p.nt)
+
+# To allow splatting directly
+Base.splat(p::IsingParameters) = splat(p.nt)
+
+
+
+
+
+@inline function getparam(g::IsingGraph, param::Symbol)
     @assert haskey(g.params, param) "Parameter $param not found in graph"
     return g.params[param]
 end
 
-function changeActivation!(g, param, activate)
+function changeactivation!(g, param, activate)
     if !isnothing(activate) && isactive(g.params[param]) != activate
         newparam = ParamVal(g.params[param], activate)
         # println("Newparam, ", newparam)
         # println("Newparams: ", (;g.params..., param => newparam))
-        g.params = (;g.params..., param => newparam)
+        g.params = IsingParameters(param = newparam; g.params.nt...)
         refresh(g)
     end 
 end
 
-activate!(g::IsingGraph, param) = changeActivation!(g, param, true)
-deactivate!(g::IsingGraph, param) = changeActivation!(g, param, false)
-function setGlobal!(g::IsingGraph, param, val)
+activate!(g::IsingGraph, param) = changeactivation!(g, param, true)
+deactivate!(g::IsingGraph, param) = changeactivation!(g, param, false)
+function setglobal!(g::IsingGraph, param, val)
     pval = getparam(g, param)
     old_default = default(pval)
-    g.params = (;g.params..., param => ParamVal(pval, val, false))
+    g.params = IsingParameters(param = ParamVal(pval, val, false); g.params.nt...)
     if old_default != val
         refresh(g)
     end
@@ -30,12 +73,12 @@ end
 """
 Get a graph and a symbol, then set the value of the parameter to the given value
 """
-function setParam!(g::IsingGraph, param::Symbol, val, active = nothing, si = nothing, ei = nothing)
+function setparam!(g::IsingGraph, param::Symbol, val, active = nothing, si = nothing, ei = nothing)
     @assert haskey(g.params, param) "Parameter $param not found in graph"
     pval = g.params[param]
     _setparam!(pval, param, val, si, ei)
 
-    changeActivation!(g, param, active)
+    changeactivation!(g, param, active)
     return g.params[param]
 end
 

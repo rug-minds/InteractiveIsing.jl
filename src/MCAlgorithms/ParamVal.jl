@@ -80,6 +80,7 @@ function Base.show(io::IO, p::ParamVal{T}) where {T <: Vector}
     display(p.val)
 end
 
+#TODO: Put in parameters
 """
 Adds the paramvals to g.params, overwrites the old ones
 """
@@ -95,7 +96,8 @@ function addparams!(graph, hamiltonian_params)
         end
         push!(pairs, hamiltonian_params.names[index] => ParamVal(val, hamiltonian_params.defaultvals[index], hamiltonian_params.descriptions[index]))
     end
-    graph.params = (;pairs...,graph.params...)
+    #TODO HACKY
+    graph.params = IsingParameters(;pairs...,graph.params.nt...)
 end
 
 """

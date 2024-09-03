@@ -35,7 +35,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
 
     # Connection between layers, Could be useful to track for faster removing of layers
     layerconns::Dict{Set, Int32}
-    params::NamedTuple #TODO: Make this a custom type?
+    params::IsingParameters #TODO: Make this a custom type?
 
     # For notifying simulations or other things
     emitter::Emitter
@@ -74,7 +74,7 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
         ShuffleVec{IsingLayer}(relocate = relocate!),
         Dict{Pair, Int32}(),
         #Params
-        (;self = ParamVal(precision[], 0, "Self Connections", false)),
+        IsingParameters(self = ParamVal(precision[], 0, "Self Connections", false)),
         #Emitter
         Emitter(Observable[]),
         #Defects
@@ -207,6 +207,8 @@ export clamprange!
 @inline params(g::IsingGraph) = g.params
 export params
 @inline nStates(g) = length(state(g))
+
+@inline nstates(g) = length(state(g))
 @inline adj(g::IsingGraph) = g.adj
 @inline function adj(g::IsingGraph, adj)
     @assert adj.m == adj.n == length(state(g))
@@ -219,8 +221,8 @@ end
 set_adj!(g::IsingGraph, vecs::Tuple) = adj(g, sparse(vecs..., nStates(g), nStates(g)))
 export adj
 
-# @forward IsingGraph GraphData d
-@forward IsingGraph GraphDefects defects
+# @forwardfields IsingGraph GraphData d
+@forwardfields IsingGraph GraphDefects defects
 
 @inline glength(g::IsingGraph)::Int32 = size(g)[1]
 @inline gwidth(g::IsingGraph)::Int32 = size(g)[2]
@@ -370,33 +372,31 @@ function Base.resize!(g::IsingGraph{T}, newlength, startidx = length(state(g))) 
 
     #TODO RESIZE GPARAMS
 
-
-
     if sizediff > 0
-        resize!(state(g), newlength)
         randomstate = rand(T, sizediff)
-        state(g)[oldlength+1:newlength] .= randomstate
+
+        # resize!(state(g), newlength)        
+        # state(g)[oldlength+1:newlength] .= randomstate
         idxs_to_add = startidx:(startidx + sizediff - 1)
+
+        splice!(state(g), startidx:startidx-1, randomstate)
         g.adj = insertrowcol(adj(g), idxs_to_add)
-        # resize!(d(g), newlength)
     else # if making smaller
         idxs_to_remove = startidx:(startidx + abs(sizediff) - 1)
         deleteat!(state(g), idxs_to_remove)
         g.adj = deleterowcol(adj(g), idxs_to_remove)
-        
-        # Resize data
-        # resize!(d(g), newlength, idxs_to_remove)
-
     end
     
     return g
 end
 
+
+
 #export resize!
 
 export addLayer!
 nlayers(::Nothing) = Observable(0)
-function addLayer!(g::IsingGraph, llength, lwidth, lheight; weights = nothing, periodic = true, type = default_ltype(g), set = convert.(eltype(g),(-1,1)), rangebegin = set[1], rangeend = set[2], kwargs...)
+function addLayer!(g::IsingGraph, llength, lwidth, lheight = nothing; weights = nothing, periodic = true, type = default_ltype(g), set = convert.(eltype(g),(-1,1)), rangebegin = set[1], rangeend = set[2], kwargs...)
     newlayer = nothing
     @tryLockPause sim(g) begin 
         newlayer = _addLayer!(g, llength, lwidth, lheight; set, weights, periodic, type, kwargs...)
@@ -431,9 +431,6 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth, lheight = nothing; weight
     if isnothing(type)
         type = default_ltype(g)
     end
-
-    println("Height is $lheight")
-
     # Look if a stateset is given, otherwise give the default and convert to the graph type  
     set = T.(searchkey(kwargs, :set, fallback = convert.(eltype(g),(-1,1))))
    
@@ -462,8 +459,7 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth, lheight = nothing; weight
 
         return IsingLayer(type, g, idx , _startidx, llength, lwidth, lheight; periodic, set)
     end
-    #print type
-    println("Type is $type")
+    
     layertype =  IsingLayer{type, set}
     push!(layers(g), make_newlayer, layertype)
     newlayer = layers(g)[end]

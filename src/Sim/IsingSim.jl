@@ -165,8 +165,8 @@ function (sim::IsingSim)(start = true; async = true)
     return gs(sim)[1];
 end
 
-@forward IsingSim Obs obs temp
-@forward IsingSim IsingParams params
+@forwardfields IsingSim Obs obs temp
+@forwardfields IsingSim IsingParams params
 @setterGetter IsingSim img
 getindex(sim::IsingSim, idx) = gs(sim)[idx]
 temp(sim::IsingSim, val) = sim.obs.temp[] = val

@@ -277,7 +277,7 @@ function MB_panel(window, axesgrid, pos, layer)
     sliderlabel = Label(slidergrid[1,1], label, tellwidth = false, tellheight = false, fontsize = 20)
     rowsize!(slidergrid, 1, 40)
     on(slider.value) do x
-        setParam!(layer, :b, x, true)
+        setparam!(layer, :b, x, true)
     end
 
     axis = Axis(mbgrid[1,1], tellwidth = false, tellheight = false, xlabel = "B", ylabel = "M", title = "Magnetization vs Magnetic Field", titlesize = 32, xlabelsize = 24, ylabelsize = 24)

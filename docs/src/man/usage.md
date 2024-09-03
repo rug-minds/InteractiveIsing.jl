@@ -175,10 +175,10 @@ Using Julias metaprogramming capabilities simulation loops may substitute the gl
 
 ### Setting and getting parameters
 
-Since the parameters contain information in their types for the simulation to use, which requires recompilation of the loop if changed, it is generally not advised to directly change the data in the parameters itself. Instead we provide the function `setParam!`, which automatically handles recompilation of running loops.
+Since the parameters contain information in their types for the simulation to use, which requires recompilation of the loop if changed, it is generally not advised to directly change the data in the parameters itself. Instead we provide the function `setparam!`, which automatically handles recompilation of running loops.
 
 ```
-setParam!(g::AbstractIsingGraph, param::Symbol, val::T, active::Bool = nothing)
+setparam!(g::AbstractIsingGraph, param::Symbol, val::T, active::Bool = nothing)
 ```
 
 where `T` either is either of the same type of the value of the parameter itself, or in the case that the `ParamVal` holds a vector value, it may be of the element type of that vector, in which case the whole vector is globally set to the same value. In the latter case the user may also opt to deactivate the param and set a global value. This is only advised if the value is not changed often, since every change then causes recompilation of the loop. `param` here is a julia symbol that refers to the parameter that the user wants to change. `g` can be a graph or a layer, which only matters for vector values. In the layer case, we may give a scalar, a vector or a matrix as val. If a scalar is given it sets a every value corresponding to a spin in that layer to the same value when a scalar is given. For a vector, the function expects a vector with length equal to the number of spins in the layer. Lastly, for the matrix, it must be of the same size of the layer.
@@ -188,7 +188,7 @@ Finally if the optional argument `active` is given it will change wether value o
 To immediately get the parameter of corresponding to a symbol, we can use
 
 ```
-getParam(g::AbstractIsingGraph, param::Symbol)
+getparam(g::AbstractIsingGraph, param::Symbol)
 ```
 See [Parameters](@ref) for more information.
 

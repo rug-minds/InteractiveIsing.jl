@@ -5,70 +5,6 @@ function sim_max_r(simulation)
     return maxsize == 0 ? 1 : maxsize
 end
 
-# Function to create an unsafe vector from the view
-function create_unsafe_vector(view_array)
-    # Get the pointer to the view array
-    ptr = pointer(view_array)
-    # Wrap the pointer into a Julia array without copying
-    unsafe_vector = unsafe_wrap(Vector{eltype(view_array)}, ptr, length(view_array))
-    return unsafe_vector
-end
-
-
-# Maybe I can just make makie get the latest image always?
-function getSingleViewImg(g, ml)
-    simulation = sim(g)
-    mp = midpanel(ml)
-    if midpanel(ml)["showbfield"].active[]
-        return bfield(currentLayer(simulation))
-    else
-        return state(currentLayer(simulation))
-    end
-end
-
-function flip_y_axis()
-    @set_preferences!("makie_y_flip" => !(@load_preference("makie_y_flip", default = false)))
-    try
-        ml = getml()
-        midpanel(ml)["axis"].yreversed[] = @load_preference("makie_y_flip", default = false)
-    catch
-    end
-end
-
-function create_layer_axis!(layer, mp)
-    layerdim = length(size((layer)))
-    g = graph(layer)
-    if layerdim == 2
-        mp["axis"] = ax = Axis(mp[][1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
-        # TODO: Set colorrange based on the type of layer
-    else
-        mp["axis"] = ax = Axis3(mp[][1,2], tellheight = true)
-        # TODO: 3D BField
-    end
-
-    new_img!(g, layer, mp)
-end
-
-# Get image either for 2d or 3d
-function new_img!(g, layer, mp)
-    dims = length(size(layer))
-    ax = mp["axis"]
-
-    if dims == 2
-        mp["obs"] = Observable(getSingleViewImg(g, getml()))
-        mp["image"] = image!(ax, mp["obs"], colormap = :thermal, fxaa = false, interpolate = false)
-    elseif dims == 3
-        unsafe_view = create_unsafe_vector(@view state(g)[graphidxs(layer)])
-        sz = size(layer)
-        allidxs = [1:length(state(layer));]
-        xs = idx2xcoord.(Ref(sz), allidxs)
-        ys = idx2ycoord.(Ref(sz), allidxs)
-        zs = idx2zcoord.(Ref(sz), allidxs)
-        mp["obs"] = Observable(unsafe_view)
-        mp["image"] = meshscatter!(ax, xs, ys, zs, markersize = 0.2, color = mp["obs"], colormap = :thermal)
-    end
-end
-
 export flip_y_axis
 """
 Create a view of the graph that shows a single layer at the time
@@ -125,7 +61,7 @@ function singleView(ml, g)
     cur_layer = currentLayer(simulation)
 
     # Create the axis for the layer type
-    create_layer_axis!(cur_layer, mp)
+    create_layer_axis!(cur_layer, mp, pos = (1,2))
 
     ax = mp["axis"]
     mp["axis"].yreversed[] = @load_preference("makie_y_flip", default = false)

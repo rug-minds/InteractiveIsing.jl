@@ -111,6 +111,21 @@ Two IsingLayers are equivalent when
 """
 equiv(i1::Type{IsingLayer{A,B,C,D,T1,Top1}}, i2::Type{IsingLayer{E,F,G,H,T2,Top2}}) where {A,B,C,D,E,F,G,H,T1,T2,Top1,Top2} = A == E && B == F
 
+function layerparams(lt::Type{<:IsingLayer}, ::Val{S}) where S
+    if S == :StateType
+        return parameters(lt)[1]
+    elseif S == :StateSet
+        return parameters(lt)[2]
+    elseif S == :IndexSet
+        return parameters(lt)[3]
+    elseif S == :DIMS
+        return parameters(lt)[4]
+    elseif S == :T
+        return parameters(lt)[5]
+    elseif S == :Top
+        return parameters(lt)[6]
+    end
+end
 
 function destructor(layer::IsingLayer)
     close.(timers(layer))
@@ -230,7 +245,7 @@ Get adjacency of layer in layer coordinates
 @inline reladj(layer::AbstractIsingLayer) = adjGToL(layer.adj, layer)
 
 # Setters and getters
-# @forward IsingLayer IsingGraph g
+# @forwardfields IsingLayer IsingGraph g
 @inline size(layer::AbstractIsingLayer{T,DIMS}) where {T,DIMS} = (layer.size)::NTuple{DIMS,Int32}
 @inline size(layer::AbstractIsingLayer, i) = layer.size[i]
 @inline glength(layer::AbstractIsingLayer) = size(layer,1)
@@ -486,9 +501,10 @@ Base.eltype(l::IsingLayer) = eltype(graph(l))
 
 # ORDER LAYER TYPES BASED ON STATETYPE
 # TODO: HACKY
-# Make empty layers
-Base.isless(::Type{IsingLayer{A,B,C,D,T1}}, ::Type{IsingLayer{E,F,G,H,T2}}) where {A,B,C,D,E,F,G,H,T1,T2} = isless(A,D)
-Base.isless(::Type{IsingLayer{A,B}}, ::Type{IsingLayer{E,F,G,H,T}}) where {A,B,E,F,G,H,T} = isless(A,E)
+# # Make empty layers
+# Base.isless(::Type{IsingLayer{A,B,C,D,T1}}, ::Type{IsingLayer{E,F,G,H,T2}}) where {A,B,C,D,E,F,G,H,T1,T2} = isless(A,D)
+# Base.isless(::Type{IsingLayer{A,B}}, ::Type{IsingLayer{E,F,G,H,T}}) where {A,B,E,F,G,H,T} = isless(A,E)
+Base.isless(t1::Type{<:IsingLayer}, t2::Type{<:IsingLayer}) = isless(layerparams(t1, Val(:StateType)), layerparams(t2, Val(:StateType)))
 
 
 export statetype, setstatetype

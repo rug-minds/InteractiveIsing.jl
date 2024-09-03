@@ -19,7 +19,7 @@ const modulefolder = @__DIR__
 # using QML
 # export QML
 using FileIO, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, LinearAlgebra,
-    StatsBase, LaTeXStrings, DataStructures, Preferences, GLMakie, SparseArrays, FFTW
+    StatsBase, LaTeXStrings, DataStructures, Preferences, GLMakie, SparseArrays, FFTW, ExprTools
 using Images
 using PrecompileTools
 
@@ -54,6 +54,7 @@ include("Utils/Utils.jl")
 ### DECLARED TYPES
 @ForwardDeclare IsingGraph "Graphs"
 @ForwardDeclare IsingLayer "Graphs/Layers"
+@ForwardDeclare IsingParameters "Graphs"
 @ForwardDeclare IsingSim "Sim"
 @ForwardDeclare SimLayout "Makie"
 
@@ -94,62 +95,52 @@ include("Makie/Makie.jl")
 include("GPlotting.jl")
 include("Barebones.jl")
 
-# include("Learning/IsingLearning.jl")
-
-# Probably doesn't need to be exported
-# export showlatest_cfunction
-# Needs to be in init for pointer to img in IsingSim.jl to work
-# function __init__()
-#     global showlatest_cfunction = CxxWrap.@safe_cfunction(showlatest, Cvoid, 
-#                                                (Array{UInt32,1}, Int32, Int32))
-# end
-
 # PRECOMPILATION FUNCTION FOR FAST USAGE
-# @setup_workload begin
-#     GC.enable(false)
+@setup_workload begin
+    GC.enable(false)
 
-#     cg = IsingGraph(20, 20, type = Discrete)
-#     simulate(cg, start = false)
-#     _sim = sim(cg)
+    cg = IsingGraph(20, 20, type = Discrete)
+    simulate(cg, start = false)
+    _sim = sim(cg)
 
-#     @compile_workload begin
+    @compile_workload begin
 
-#         addLayer!(cg, 20, 20, type = Discrete)
+        # addLayer!(cg, 20, 20)
 
-#         setcoords!(cg[1])
-#         setcoords!(cg[2], z = 1)
-#         cwg = @WG "(dr) -> 1" NN=1
+        # setcoords!(cg[1])
+        # setcoords!(cg[2], z = 1)
+        cwg = @WG "(dr) -> 1" NN=1
 
-#         genAdj!(cg[1], cwg)
-#         genAdj!(cg[1],cg[2], cwg)
+        genAdj!(cg[1], cwg)
+        # genAdj!(cg[1],cg[2], cwg)
 
-#         #Plotting correlation length and GPU kernel
-#         plotCorr(cg[2], dodisplay = false, save = false)
+        # #Plotting correlation length and GPU kernel
+        # plotCorr(cg[2], dodisplay = false, save = false)
 
-#         setSpins!(cg[1], 1, 1, true, false)
+        # setSpins!(cg[1], 1:3, 1, true, false)
 
-#         drawCircle(cg[1], 1, 1, 1, clamp = true)
+        # drawCircle(cg[1], 1, 1, 1, clamp = true)
 
-#         path = saveGraph(cg, savepref = false)
+        # path = saveGraph(cg, savepref = false)
 
-#         close.(values(timers(_sim)))
-#         loadGraph(path)       
+        close.(values(timers(_sim)))
+        # loadGraph(path)       
 
-#         closeinterface()
+        closeinterface()
 
-#         w = LayerWindow(cg[1])
-#         closewindow(w)
-#         # w = createAnalysisWindow(cg[1], MT_panel, tstep = 0.01)
-#         # closewindow(w)
-#         # w = createAnalysisWindow(cg[1], MB_panel, tstep = 0.01)
-#         # closewindow(w)
-#         # w = createAnalysisWindow(cg, χₘ_panel, Tχ_panel, shared_interval = 1/500, tstep = 0.01);
-#         # closewindow(w)
+        # w = LayerWindow(cg[1])
+        # closewindow(w)
+        # w = createAnalysisWindow(cg[1], MT_panel, tstep = 0.01)
+        # closewindow(w)
+        # w = createAnalysisWindow(cg[1], MB_panel, tstep = 0.01)
+        # closewindow(w)
+        # w = createAnalysisWindow(cg, χₘ_panel, Tχ_panel, shared_interval = 1/500, tstep = 0.01);
+        # closewindow(w)
 
-#         reset!(simulation)
-#         GC.enable(true)
-#     end
-# end
+        reset!(simulation)
+        GC.enable(true)
+    end
+end
 
 
 

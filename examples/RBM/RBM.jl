@@ -35,7 +35,7 @@ d = load("examples/RBM/rbm1.jld2")
 w = reshape(d["weights"], (28 * 28, 32 * 32))
 biases = [d["vbias"][:]; d["hbias"][:]]
 adj(g, weights_2_sparse(w))
-setParam!(g, :b, biases, true)
+setparam!(g, :b, biases, true)
 # bfield(g) .= biases
 #TODO:MOVE THIS TO PARAMS
 # setSType!(g, :Magfield => true)

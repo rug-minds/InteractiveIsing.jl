@@ -158,7 +158,7 @@ Get all indices of a vertex with idx vert_idx and coordinates vert_i, vert_j
 that are larger than vert_idx
 Works in layer indices
 """
-function getConnIdxs!(vert_idx, vert_i, vert_j, len, wid, NNi, NNj, conn_idxs, conn_is, conn_js)
+function getConnIdxs!(vert_idx, vert_i, vert_j, (len, wid), NNi, NNj, conn_idxs, conn_is, conn_js)
     for j in -NNj:NNj
         for i in -NNi:NNi
             (i == 0 && j == 0) && continue
@@ -182,6 +182,8 @@ function getConnIdxs!(vert_idx, coord_vert::NTuple{3,Int32}, size::NTuple{3,Int3
                 (i == 0 && j == 0 && k == 0) && continue
                 vert_i, vert_j, vert_k = coord_vert
                 conn_i, conn_j, conn_k = latmod((vert_i + i, vert_j + j, vert_k + k), size)
+                
+                #print all conns
                 conn_idx = coordToIdx((conn_i, conn_j, conn_k), size)
 
                 conn_idx < vert_idx && continue
