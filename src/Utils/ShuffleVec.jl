@@ -66,9 +66,9 @@ mutable struct ShuffleVec{T, Mode, OrderMode} <: AbstractVector{T}
     end
 end
 
-SparseArrays.deleteat(t::Tuple, idx) = (t[1:idx-1]..., t[idx+1:end]...)
-SparseArrays.push(t::Tuple, vals...) = (t..., vals...)
-SparseArrays.insert(t::Tuple, idx, val) = (t[1:idx-1]..., val, t[idx:end]...)
+StaticArrays.deleteat(t::Tuple, idx) = (t[1:idx-1]..., t[idx+1:end]...)
+StaticArrays.push(t::Tuple, vals...) = (t..., vals...)
+StaticArrays.insert(t::Tuple, idx, val) = (t[1:idx-1]..., val, t[idx:end]...)
 # insert(shufflevec::ShuffleVec, idx, val) = begin
 #     shufflevec.data = insert(shufflevec.data, idx, val)
 #     shufflevec.idxs = insert(shufflevec.idxs, idx, length(shufflevec.data))
