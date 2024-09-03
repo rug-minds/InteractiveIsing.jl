@@ -86,7 +86,7 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs, col_idxs, wei
 
     for col_idx in Int32(1):nstates(layer)
         vert_i, vert_j = idxToCoord(col_idx, glength(layer))
-        getConnIdxs!(col_idx, vert_i, vert_j, glength(layer) , gwidth(layer), NNi, NNj, conn_idxs, conn_is, conn_js)
+        getConnIdxs!(col_idx, vert_i, vert_j, size(layer), NNi, NNj, conn_idxs, conn_is, conn_js)
         
         @fastmath for conn_num in eachindex(conn_is)
             conn_i = conn_is[conn_num]

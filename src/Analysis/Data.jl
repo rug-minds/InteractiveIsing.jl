@@ -11,7 +11,7 @@ end
 
 DataPoint() = DataPoint(0.0, Float32[], Float32[])
 
-function getindex(d::DataPoint, key::Symbol)
+function Base.getindex(d::DataPoint, key::Symbol)
     if key == :M
         return d.M
     elseif key == :bins
@@ -23,7 +23,7 @@ function getindex(d::DataPoint, key::Symbol)
     end
 end
 
-function setindex!(d::DataPoint, value, key::Symbol)
+function Base.setindex!(d::DataPoint, value, key::Symbol)
     if key == :M
         return d.M = value
     elseif key == :bins
@@ -70,10 +70,10 @@ Base.display(tdp::TempDataPoints) = show(tdp)
 
 TempDataPoints(ndatapoints::Integer, temp::Real) = TempDataPoints(DataPoint[DataPoint() for _ in 1:ndatapoints], Float32(temp))
 
-size(tdp::TempDataPoints) = size(tdp.data)
-getindex(tdp::TempDataPoints, idx::Integer) = tdp.data[idx]
-getindex(tdp::TempDataPoints, idxs::Integer...) = tdp.data[idxs...]
-setindex!(tdp::TempDataPoints, value, idx::Integer) = tdp.data[idx] = value
+Base.size(tdp::TempDataPoints) = size(tdp.data)
+Base.getindex(tdp::TempDataPoints, idx::Integer) = tdp.data[idx]
+Base.getindex(tdp::TempDataPoints, idxs::Integer...) = tdp.data[idxs...]
+Base.setindex!(tdp::TempDataPoints, value, idx::Integer) = tdp.data[idx] = value
 
 magnetization(tempdata::TempDataPoints) = sum([point.M for point in tempdata])/length(tempdata)
 
@@ -96,10 +96,10 @@ Base.display(ldp::LayerDataPoints) = show(ldp)
 
 LayerDataPoints(temps, ndatapoints, lidx) = LayerDataPoints(TempDataPoints[TempDataPoints(ndatapoints, temp) for temp in temps], Int32(lidx))
 
-size(ldp::LayerDataPoints) = size(ldp.data)
-getindex(ldp::LayerDataPoints, idx::Integer) = ldp.data[idx]
-getindex(ldp::LayerDataPoints, idxs::Integer...) = ldp.data[idxs...]
-setindex!(ldp::LayerDataPoints, value, idx::Integer) = ldp.data[idx] = value
+Base.size(ldp::LayerDataPoints) = size(ldp.data)
+Base.getindex(ldp::LayerDataPoints, idx::Integer) = ldp.data[idx]
+Base.getindex(ldp::LayerDataPoints, idxs::Integer...) = ldp.data[idxs...]
+Base.setindex!(ldp::LayerDataPoints, value, idx::Integer) = ldp.data[idx] = value
 
 struct TempSweepData <: AbstractDict{String, LayerDataPoints}
     # Entry for each layer
@@ -109,9 +109,9 @@ struct TempSweepData <: AbstractDict{String, LayerDataPoints}
 end
 TempSweepData() = TempSweepData(Dict{String, LayerDataPoints}())
 
-getindex(tsd::TempSweepData, key::String) = getindex(tsd.layers, key)
-getindex(tsd::TempSweepData, key::Integer) = getindex(tsd.layers, string(key))
-setindex!(tsd::TempSweepData, value, key::String) = setindex!(tsd.layers, value, key)
+Base.getindex(tsd::TempSweepData, key::String) = getindex(tsd.layers, key)
+Base.getindex(tsd::TempSweepData, key::Integer) = getindex(tsd.layers, string(key))
+Base.setindex!(tsd::TempSweepData, value, key::String) = setindex!(tsd.layers, value, key)
 Base.keys(tsd::TempSweepData) = keys(tsd.layers)
 Base.values(tsd::TempSweepData) = values(tsd.layers)
 Base.iterate(tsd::TempSweepData, state = 1) = iterate(tsd.layers, state)

@@ -7,7 +7,6 @@ IsingParameters(; kwargs...) = IsingParameters(NamedTuple(kwargs))
 
 #Forward methods for namedtuple to IsingParameters
 Base.getindex(p::IsingParameters, k::Symbol) = p.nt[k]
-Base.setindex!(p::IsingParameters, v, k::Symbol) = p.nt[k] = v
 Base.get!(p::IsingParameters, k::Symbol, default) = get(p.nt, k, default)
 Base.get(p::IsingParameters, k::Symbol) = get(p.nt, k)
 Base.get(p::IsingParameters, k::Symbol, default) = get(p.nt, k, default)
@@ -16,9 +15,6 @@ Base.keys(p::IsingParameters) = keys(p.nt)
 Base.values(p::IsingParameters) = values(p.nt)
 Base.iterate(p::IsingParameters, state = 1) = iterate(p.nt, state)
 Base.haskey(p::IsingParameters, k::Symbol) = haskey(p.nt, k)
-# Implement iteration correctly
-Base.iterate(p::IsingParameters) = iterate(p.nt)
-Base.iterate(p::IsingParameters, state) = iterate(p.nt, state)
 
 # Implement pairs for correct splatting behavior
 Base.pairs(p::IsingParameters) = pairs(p.nt)

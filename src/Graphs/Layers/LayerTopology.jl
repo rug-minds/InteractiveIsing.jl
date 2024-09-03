@@ -144,8 +144,8 @@ periodic(top::LayerTopology{T,U}) where {T,U} = T
 latticetype(top::LayerTopology{T,U}) where {T,U} = U
 export periodic, latticetype
 @setterGetter LatticeTopology size
-size(top::LayerTopology) = top.size
-size(top, i) = top.size[i]
+Base.size(top::LayerTopology) = top.size
+Base.size(top, i) = top.size[i]
 
 function pos(i,j, pvecs)
     return i*pvecs[1] + j*pvecs[2]

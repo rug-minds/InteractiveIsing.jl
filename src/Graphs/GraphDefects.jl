@@ -48,8 +48,8 @@ function zipAndRemove!(gd, zipListGetSet, removeListGetSet, d_idxs)
     removeListGetSet(gd, newRemoveList)
 end
 
-import Base: setindex!, getindex
-getindex(gd::GraphDefects, idx) = gd.isDefect[idx]
+# import Base: setindex!, getindex
+Base.getindex(gd::GraphDefects, idx) = gd.isDefect[idx]
 
 # TODO: Alivelist only matters when starting a loop (?)
 # Maybe it's easier to only have the vector with bools
@@ -58,7 +58,7 @@ getindex(gd::GraphDefects, idx) = gd.isDefect[idx]
 
 
 #Set a spin as defect or not
-function setindex!(gd::GraphDefects, val, idx::Int32)
+function Base.setindex!(gd::GraphDefects, val, idx::Int32)
     # setting to alive
     if !val
         # If already alive, do nothing
@@ -91,9 +91,9 @@ function setindex!(gd::GraphDefects, val, idx::Int32)
     return isDefect(gd)[idx] = val
 
 end
-setindex!(gd::GraphDefects, val, idx::Int64) = setindex!(gd, val, Int32(idx))
-setindex!(gd::GraphDefects, val, idxs::AbstractRange) = setrange!(gd, val, collect(idxs))
-setindex!(gd::GraphDefects, val, idxs::AbstractVector) = setrange!(gd, val, idxs)
+Base.setindex!(gd::GraphDefects, val, idx::Int64) = setindex!(gd, val, Int32(idx))
+Base.setindex!(gd::GraphDefects, val, idxs::AbstractRange) = setrange!(gd, val, collect(idxs))
+Base.setindex!(gd::GraphDefects, val, idxs::AbstractVector) = setrange!(gd, val, idxs)
 """
 Set a range of spins as defect or not
     val = true -> set as defect

@@ -246,8 +246,8 @@ Get adjacency of layer in layer coordinates
 
 # Setters and getters
 # @forwardfields IsingLayer IsingGraph g
-@inline size(layer::AbstractIsingLayer{T,DIMS}) where {T,DIMS} = (layer.size)::NTuple{DIMS,Int32}
-@inline size(layer::AbstractIsingLayer, i) = layer.size[i]
+@inline Base.size(layer::AbstractIsingLayer{T,DIMS}) where {T,DIMS} = (layer.size)::NTuple{DIMS,Int32}
+@inline Base.size(layer::AbstractIsingLayer, i) = layer.size[i]
 @inline glength(layer::AbstractIsingLayer) = size(layer,1)
 @inline gwidth(layer::AbstractIsingLayer) = size(layer,2)
 @inline gheight(layer::AbstractIsingLayer{T,3}) where T = size(layer,3)
@@ -271,10 +271,10 @@ export maxdist
 @inline startidx(layer::AbstractIsingLayer) = start(layer)
 @inline endidx(layer::AbstractIsingLayer) = start(layer) + prod(size(layer)) - 1
 
-@inline getindex(layer::AbstractIsingLayer, idx) = state(layer)[idx]
-@inline getindex(layer::AbstractIsingLayer, i, j) = state(layer)[i,j]
-@inline setindex!(layer::AbstractIsingLayer, val, idx) = state(layer)[idx] = val
-@inline setindex!(layer::AbstractIsingLayer, val, i, j) = state(layer)[i,j] = val
+@inline Base.getindex(layer::AbstractIsingLayer, idx) = state(layer)[idx]
+@inline Base.getindex(layer::AbstractIsingLayer, i, j) = state(layer)[i,j]
+@inline Base.setindex!(layer::AbstractIsingLayer, val, idx) = state(layer)[idx] = val
+@inline Base.setindex!(layer::AbstractIsingLayer, val, i, j) = state(layer)[i,j] = val
 
 @inline Base.in(idx::Integer, layer::IsingLayer) = idx ∈ graphidxs(layer)
 

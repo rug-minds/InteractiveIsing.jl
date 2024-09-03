@@ -244,7 +244,7 @@ layeridxs(g::IsingGraph) = UnitRange{Int32}[graphidxs(unshuffled(layers(g))[i]) 
 @inline layer(g::IsingGraph, idx) = g.layers[idx]
 @inline Base.getindex(g::IsingGraph, idx) = g.layers[idx]
 @inline Base.getindex(g::IsingGraph) = g.layers[1]
-@inline length(g::IsingGraph) = length(g.layers)
+@inline Base.length(g::IsingGraph) = length(g.layers)
 @inline Base.lastindex(g::IsingGraph) = length(g)
 Base.view(g::IsingGraph, idx) = view(g.layers, idx)
 @inline graphidxs(g::IsingGraph) = Int32(1):Int32(nStates(g))
@@ -278,7 +278,7 @@ export layerIdx!
 
 IsingGraph(g::IsingGraph) = deepcopy(g)
 
-@inline size(g::IsingGraph)::Tuple{Int32,Int32} = (nStates(g), 1)
+@inline Base.size(g::IsingGraph)::Tuple{Int32,Int32} = (nStates(g), 1)
 
 function closetimers(g::IsingGraph)
     for layer in layers(g)

@@ -7,10 +7,10 @@ struct VecStructIterator{T} <: AbstractVector{T}
     fieldname::Symbol
 end
 
-getindex(vsi::VecStructIterator, idx) = getfield(vsi.vec[idx], vsi.fieldname)
-setindex!(vsi::VecStructIterator, val, idx) = setfield!(vsi.vec[idx], vsi.fieldname, val)
-iterate(vsi::VecStructIterator, state = 1) = state > length(vsi.vec) ? nothing : (getfield(vsi.vec[state], vsi.fieldname), state + 1)
-size(vsi::VecStructIterator) = size(vsi.vec)
+Base.getindex(vsi::VecStructIterator, idx) = getfield(vsi.vec[idx], vsi.fieldname)
+Base.setindex!(vsi::VecStructIterator, val, idx) = setfield!(vsi.vec[idx], vsi.fieldname, val)
+Base.iterate(vsi::VecStructIterator, state = 1) = state > length(vsi.vec) ? nothing : (getfield(vsi.vec[state], vsi.fieldname), state + 1)
+Base.size(vsi::VecStructIterator) = size(vsi.vec)
 
 function VSI(vec::Vector{T}, fieldname) where T
    return VecStructIterator{T}(vec, fieldname)
@@ -25,10 +25,10 @@ struct VecStructIteratorAccessor{T} <: AbstractVector{T}
     accessor::Function
 end
 
-getindex(vsia::VecStructIteratorAccessor, idx) = vsi.accessor(vsi.vec[idx])
-setindex!(vsia::VecStructIteratorAccessor, val, idx) = vsi.accessor(vsi.vec[idx], val)
-iterate(vsia::VecStructIteratorAccessor, state = 1) = state > length(vsia.vec) ? nothing : (vsia.accessor(vsia.vec[state]), state + 1)
-size(vsia::VecStructIteratorAccessor) = size(vsia.vec)
+Base.getindex(vsia::VecStructIteratorAccessor, idx) = vsi.accessor(vsi.vec[idx])
+Base.setindex!(vsia::VecStructIteratorAccessor, val, idx) = vsi.accessor(vsi.vec[idx], val)
+Base.iterate(vsia::VecStructIteratorAccessor, state = 1) = state > length(vsia.vec) ? nothing : (vsia.accessor(vsia.vec[state]), state + 1)
+Base.size(vsia::VecStructIteratorAccessor) = size(vsia.vec)
 
 """
 If a struct has a vec of some structs with some accessor function to a value,

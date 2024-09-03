@@ -182,12 +182,12 @@ unlock(p::Processes) = unlock.(p.procs)
 Base.size(p::Processes) = (length(p.procs),)
 Processes(num::Integer) = Processes([Process() for _ in 1:num])
 
-getindex(processes::Processes, num) = processes.procs[num]
-setindex!(processes::Processes, val, idx) = setindex(processes.procs[num], val, idx)
+Base.getindex(processes::Processes, num) = processes.procs[num]
+Base.setindex!(processes::Processes, val, idx) = setindex(processes.procs[num], val, idx)
 
-length(processes::Processes) = length(processes.procs)
+Base.length(processes::Processes) = length(processes.procs)
 
-iterate(processes::Processes, s = 1) = iterate(processes.procs, s)
+Base.iterate(processes::Processes, s = 1) = iterate(processes.procs, s)
 
 function get_free_process(procs::Union{Processes, Vector{Process}})
     for p in procs
@@ -207,7 +207,7 @@ struct ProcessStats <: AbstractVector{Symbol}
     type::Symbol
 end
 
-size(ps::ProcessStats) = (length(ps.processes),)
+Base.size(ps::ProcessStats) = (length(ps.processes),)
 
 messages(procs::Processes) = ProcessStats(procs, :message)
 messages(sim) = messages(sim.processes)
@@ -216,24 +216,21 @@ status(sim) = status(sim.processes)
 export messages
 export status
 
-iterate(ps::ProcessStats, state = 1) = state > length(ps.processes.procs) ? nothing : (getfield(ps.processes.procs[state], ps.type), state + 1)
+Base.iterate(ps::ProcessStats, state = 1) = state > length(ps.processes.procs) ? nothing : (getfield(ps.processes.procs[state], ps.type), state + 1)
 
-function getindex(ps::ProcessStats, num::Integer)
+function Base.getindex(ps::ProcessStats, num::Integer)
     if ps.type == :message
         return message(ps.processes[num])
     else 
         return status(ps.processes[num])
     end
 end
-function setindex!(ps::ProcessStats, val, idx)
+function Base.setindex!(ps::ProcessStats, val, idx)
     if ps.type == :message
         return run(ps.processes[idx], val)
     else 
         error("Cannot set status")
     end
 end
-getindex(ps::ProcessStats, num::Vector) = getindex.(Ref(ps), num)
-
-export iterate
-
+Base.getindex(ps::ProcessStats, num::Vector) = getindex.(Ref(ps), num)
 

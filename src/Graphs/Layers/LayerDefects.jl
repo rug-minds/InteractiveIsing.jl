@@ -23,11 +23,11 @@ graphdefects(df::LayerDefects) = defects(df.g)
 
 reset!(defects::LayerDefects) = ndefect(defects,0)
 
-function getindex(d::LayerDefects, idx)
+function Base.getindex(d::LayerDefects, idx)
     defects(d.g)[idxLToG(idx, d.l)]
 end
 
-function setindex!(d::LayerDefects, val, idx)
+function Base.setindex!(d::LayerDefects, val, idx)
     graphdefects(d)[idxLToG(idx, d.l)] = val
     return val
 end

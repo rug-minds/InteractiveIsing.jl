@@ -31,7 +31,7 @@ import Plots as pl
 #Temps
 using SparseArrays, LoopVectorization
 
-import Base: getindex, setindex!, length, iterate, isless, push!, resize!, size
+# import Base: getindex, setindex!, length, iterate, isless, push!, resize!, size
 
 export AbstractIsingGraph
 abstract type AbstractIsingGraph{T} end
@@ -54,7 +54,7 @@ include("Utils/Utils.jl")
 ### DECLARED TYPES
 @ForwardDeclare IsingGraph "Graphs"
 @ForwardDeclare IsingLayer "Graphs/Layers"
-@ForwardDeclare IsingParameters "Graphs"
+# @ForwardDeclare IsingParameters "Graphs"
 @ForwardDeclare IsingSim "Sim"
 @ForwardDeclare SimLayout "Makie"
 

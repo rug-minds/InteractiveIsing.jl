@@ -23,8 +23,8 @@ function Base.getindex(ac::AverageCircular{T}, idx::Integer) where T
 end
 
 avg(ac::AverageCircular) = ac.sum/ac.len
-length(ac::AverageCircular) = ac.len
-size(ac::AverageCircular) = (ac.len,)
+Base.length(ac::AverageCircular) = ac.len
+Base.size(ac::AverageCircular) = (ac.len,)
 function Base.show(io::IO, ac::AverageCircular)
     print(io, "AverageCircular with $(length(ac)) elements")
 end
