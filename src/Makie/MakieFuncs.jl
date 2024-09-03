@@ -92,30 +92,30 @@ end
 getgrid(lp::LayoutPanel) = lp.panel
 getgrid(window::MakieWindow) = window["gridlayout"]
 
-function create_layer_axis!(layer, panel_or_window; color = nothing, pos = (1,1), colormap = :thermal)
+function create_layer_axis!(layer, panel_or_window; kwargs...)
     layerdim = length(size((layer)))
     g = graph(layer)
     grid = getgrid(panel_or_window)
     if layerdim == 2
-        panel_or_window["axis"] = ax = Axis(grid[pos[1],pos[2]], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
+        panel_or_window["axis"] = ax = Axis(grid[1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
         # TODO: Set colorrange based on the type of layer
     else
-        panel_or_window["axis"] = ax = Axis3(grid[pos[1],pos[2]], tellheight = true)
+        panel_or_window["axis"] = ax = Axis3(grid[1,2], tellheight = true)
         # TODO: 3D BField
     end
     panel_or_window["axis"].yreversed = @load_preference("makie_y_flip", default = false)
 
-    new_img!(g, layer, panel_or_window; color, colormap)
+    new_img!(g, layer, panel_or_window)
 end
 
 # Get image either for 2d or 3d
-function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
+function new_img!(g, layer, mp)
     dims = length(size(layer))
     ax = mp["axis"]
 
     if dims == 2
-        color = isnothing(color) ? (mp["obs"] = Observable(getSingleViewImg(g, getml()))) : color
-        mp["image"] = image!(ax, color, colormap = colormap, fxaa = false, interpolate = false)
+        mp["obs"] = Observable(getSingleViewImg(g, getml()))
+        mp["image"] = image!(ax, mp["obs"], colormap = :thermal, fxaa = false, interpolate = false)
     elseif dims == 3
         unsafe_view = create_unsafe_vector(@view state(g)[graphidxs(layer)])
         sz = size(layer)
@@ -123,9 +123,56 @@ function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
         xs = idx2xcoord.(Ref(sz), allidxs)
         ys = idx2ycoord.(Ref(sz), allidxs)
         zs = idx2zcoord.(Ref(sz), allidxs)
-        color = isnothing(color) ? (mp["obs"] = Observable(unsafe_view)) : color
-        mp["image"] = meshscatter!(ax, xs, ys, zs, markersize = 0.2, color = color, colormap = colormap)
+        obs = mp["obs"] = Observable(unsafe_view)
+        mp["image"] = meshscatter!(ax, xs, ys, zs, markersize = 0.2, color = obs, colormap = :thermal)
     end
 
     mp["image"].colorrange[] = stateset(layer)
 end
+
+# function create_layer_axis!(layer, panel_or_window; color = nothing, pos = (1,1), colormap = :thermal)
+#     layerdim = length(size((layer)))
+#     g = graph(layer)
+#     grid = getgrid(panel_or_window)
+#     if layerdim == 2
+#         panel_or_window["axis"] = ax = Axis(grid[pos[1],pos[2]], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
+#         # TODO: Set colorrange based on the type of layer
+#     else
+#         panel_or_window["axis"] = ax = Axis3(grid[pos[1],pos[2]], tellheight = true)
+#         # TODO: 3D BField
+#     end
+#     panel_or_window["axis"].yreversed = @load_preference("makie_y_flip", default = false)
+
+#     new_img!(g, layer, panel_or_window; color, colormap)
+# end
+
+# # Get image either for 2d or 3d
+# function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
+#     dims = length(size(layer))
+#     ax = mp["axis"]
+
+#     if dims == 2
+#         color = isnothing(color) ? (mp["obs"] = Observable(getSingleViewImg(g, getml()))) : color
+#         mp["image"] = image!(ax, color, colormap = colormap, fxaa = false, interpolate = false)
+#     elseif dims == 3
+#         if isnothing(color)
+#             color = Observable(getSingleViewImg(g, getml()))
+#             mp["obs"] = color
+#         else
+#             unsafe_view = create_unsafe_vector(@view state(g)[graphidxs(layer)])
+#             mp["obs"] = Observable(unsafe_view)
+#         end
+
+       
+#         sz = size(layer)
+#         allidxs = [1:length(state(layer));]
+#         xs = idx2xcoord.(Ref(sz), allidxs)
+#         ys = idx2ycoord.(Ref(sz), allidxs)
+#         zs = idx2zcoord.(Ref(sz), allidxs)
+        
+#         println("Color", color)
+#         mp["image"] = meshscatter!(ax, xs, ys, zs, markersize = 0.2, color = mp["obs"], colormap = colormap)
+#     end
+
+#     mp["image"].colorrange[] = stateset(layer)
+# end
