@@ -5,7 +5,7 @@ Plot and save correlation data from a vec with sampled lengths and vec with corr
 the other arguments are for the file names 
 """
 function plotCorr(lVec, corrVec; save = true, dodisplay = true, foldername = "Data", lidx = 0, tidx = 0, point = 0, T = 0)
-    corrPlot = pl.plot(lVec,corrVec, xlabel = "Length", label = L"C(L)")
+    # corrPlot = pl.plot(lVec,corrVec, xlabel = "Length", label = L"C(L)")
     
     if dodisplay
         display(corrPlot)
@@ -13,7 +13,7 @@ function plotCorr(lVec, corrVec; save = true, dodisplay = true, foldername = "Da
 
     if save
         Tstring = replace("$T", '.' => ',')
-        pl.savefig(corrPlot,"$(foldername)Ising Corrplot L$lidx $tidx T$Tstring d$point")
+        # pl.savefig(corrPlot,"$(foldername)Ising Corrplot L$lidx $tidx T$Tstring d$point")
     end
 end
 

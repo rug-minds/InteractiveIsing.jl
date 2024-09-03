@@ -56,9 +56,9 @@ Base.sizehint!(ad::AvgData, n::Int) = begin
     return ad
 end
 Base.getindex(ad::AvgData) = ad.avgs[end]
-plot_conv(ad) = pl.plot(ad.windowavgs, xlabel = "Step", ylabel = "Window RMSD", title = "Convergence")
+# plot_conv(ad) = pl.plot(ad.windowavgs, xlabel = "Step", ylabel = "Window RMSD", title = "Convergence")
 export plot_conv
-plot_avgs(ad) = pl.plot(ad.avgs, xlabel = "Step", ylabel = "Average", title = "Averages")
+# plot_avgs(ad) = pl.plot(ad.avgs, xlabel = "Step", ylabel = "Average", title = "Averages")
 export plot_avgs
 
 # avg(vec) = sum(vec)/length(vec)
