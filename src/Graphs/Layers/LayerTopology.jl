@@ -1,4 +1,4 @@
-using LinearAlgebra, StaticArrays
+using LinearAlgebra
 
 # TwoVec = SVector{2,Float32}
 # TwoVec = Point2f

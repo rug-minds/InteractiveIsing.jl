@@ -29,7 +29,7 @@ using Revise
 # import Plots as pl
 
 #Temps
-using SparseArrays, LoopVectorization
+using SparseArrays, StaticArrays, LoopVectorization
 
 # import Base: getindex, setindex!, length, iterate, isless, push!, resize!, size
 
