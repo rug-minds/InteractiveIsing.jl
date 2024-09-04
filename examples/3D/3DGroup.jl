@@ -6,7 +6,7 @@ simulate(g)
 function weightfunc(dx,dy,dz)
     prefac = 1
     dr2 = (2*dx)^2+(2*dy)^2+dz^2
-    if dy > 0 || dx > 0
+    if dy != 0 || dx != 0
         prefac *= -1
     end
     return prefac/dr2

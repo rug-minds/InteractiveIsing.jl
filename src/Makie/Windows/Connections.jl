@@ -11,6 +11,9 @@ function visualize_connections(g, i)
     window["ax"] = create_layer_axis!(g, window, color = colorvec)
 end
 
+visualize_connections(g, i, j) = visualize_connections(g, coordToIdx(Int32.((i, j)), size(g)))
+visualize_connections(g, i, j, k) = visualize_connections(g, coordToIdx(Int32.((i, j, k)), size(g)) )
+
 function weight_colors(weights)
     max_weight = maximum(weights)
     min_weight = minimum(weights)
@@ -19,6 +22,5 @@ function weight_colors(weights)
         #linear interpolation from purple to yellow
         colorvec[w_idx] = RGBAf(0.5, 0.0, 0.5 + 0.5*(weights[w_idx] - min_weight)/(max_weight - min_weight), 0.1 + 0.9*(weights[w_idx] - min_weight)/(max_weight - min_weight))
     end
-    println(weights)
     return colorvec
 end
