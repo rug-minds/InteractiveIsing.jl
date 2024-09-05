@@ -48,7 +48,7 @@ function changeactivation!(g, param, activate)
         newparam = ParamVal(g.params[param], activate)
         # println("Newparam, ", newparam)
         # println("Newparams: ", (;g.params..., param => newparam))
-        g.params = IsingParameters(param = newparam; g.params.nt...)
+        g.params = IsingParameters((;g.params.nt..., param => newparam))
         refresh(g)
     end 
 end

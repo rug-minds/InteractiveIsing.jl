@@ -488,12 +488,12 @@ function replace_inactive_symbs(params, expr::Expr)
     return expr
 end
 """
-Replace the parameters with g.params[param] in the expression
+Replace the parameters with g.params.nt[param] in the expression
 """
 function replace_params(params, expr::Expr) 
     for symb in keys(params)
         while (indexs = find_symb(expr, symb); !isnothing(indexs))
-            newsymb = :(gparams.$symb)
+            newsymb = :(gparams.nt.$symb)
             expr = replace_symb(expr, newsymb, indexs)
         end
     end

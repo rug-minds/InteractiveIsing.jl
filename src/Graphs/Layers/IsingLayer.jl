@@ -271,10 +271,10 @@ export maxdist
 @inline startidx(layer::AbstractIsingLayer) = start(layer)
 @inline endidx(layer::AbstractIsingLayer) = start(layer) + prod(size(layer)) - 1
 
-@inline Base.getindex(layer::AbstractIsingLayer, idx) = state(layer)[idx]
-@inline Base.getindex(layer::AbstractIsingLayer, i, j) = state(layer)[i,j]
-@inline Base.setindex!(layer::AbstractIsingLayer, val, idx) = state(layer)[idx] = val
-@inline Base.setindex!(layer::AbstractIsingLayer, val, i, j) = state(layer)[i,j] = val
+@inline Base.getindex(layer::AbstractIsingLayer{T, 2}, idx) where T = state(layer)[idx]
+@inline Base.getindex(layer::AbstractIsingLayer{T, 2}, i, j) where T = state(layer)[i,j]
+@inline Base.setindex!(layer::AbstractIsingLayer{T, 2}, val, idx) where T = state(layer)[idx] = val
+@inline Base.setindex!(layer::AbstractIsingLayer{T, 2}, val, i, j) where T = state(layer)[i,j] = val
 
 @inline Base.in(idx::Integer, layer::IsingLayer) = idx ∈ graphidxs(layer)
 

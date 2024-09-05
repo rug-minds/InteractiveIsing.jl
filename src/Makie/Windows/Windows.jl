@@ -72,7 +72,12 @@ function new_window(;kwargs...)
     register_window(w, u1)
     return w
 end
-export new_window
+
+function new_axis(;kwargs...)
+    w = new_window()
+    return Axis(w.f[1,1]; kwargs...)
+end
+export new_window, new_axis
 
 function register_window(w::AbstractWindow, u::UUID)
     windows[u] = w

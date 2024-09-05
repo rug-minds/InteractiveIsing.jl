@@ -1,4 +1,6 @@
-function getindex(l::IsingLayer{A,B,C,D,T}, idx) where {A,B,C,D,T}
+# TODO: Add range indexing
+function Base.getindex(l::AbstractIsingLayer{T, 3}, idx) where T
+
     coords_3d = coords(l)
 
     if !isnothing(coords_3d)
