@@ -8,6 +8,8 @@ mutable struct LayerWindow <: AbstractWindow
 end
 
 pushtype(::LayerWindow) = :multiple
+closetimers(w::LayerWindow) = close(w.timer)
+
 
 function LayerWindow(l::IsingLayer)
     ml = getml()

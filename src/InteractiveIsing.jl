@@ -19,7 +19,7 @@ const modulefolder = @__DIR__
 # using QML
 # export QML
 using FileIO, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, LinearAlgebra,
-    StatsBase, LaTeXStrings, DataStructures, Preferences, GLMakie, SparseArrays, FFTW, ExprTools
+    StatsBase, LaTeXStrings, DataStructures, Preferences, GLMakie, SparseArrays, FFTW, ExprTools, UUIDs
 using Images
 using PrecompileTools
 

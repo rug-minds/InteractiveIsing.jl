@@ -22,8 +22,8 @@ end
 # Track number of updates per frame
 let avgWindow = 60, updateWindow = AverageCircular(Int64,avgWindow) , frames = 1
     global function updatesPerFrame(sim::IsingSim, statelength = length(aliveList(gs(sim)[1])))
-        _updates = sum(updates.(processes(sim)))
-        updates.(processes(sim), 0)
+        _updates = sum(loopidx.(processes(sim)))
+        loopidx.(processes(sim), 0)
         push!(updateWindow,_updates)
         if frames > avgWindow
             sm_avgw = avg(updateWindow)

@@ -1,7 +1,8 @@
 include("IsingParams.jl")
 include("Obs.jl")
-include("Processes.jl")
+# include("Processes.jl")
 include("Pausing.jl")
+include("ProcessList.jl")
 include("IsingSim.jl")
 
 include("Algorithms/Algorithms.jl")

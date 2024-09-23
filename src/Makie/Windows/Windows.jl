@@ -1,17 +1,23 @@
-using UUIDs
 abstract type AbstractWindow end
 const windows = Dict{UUID,AbstractWindow}()
-struct MakieWindow <: AbstractWindow
+mutable struct MakieWindow <: AbstractWindow
     uuid::UUID
     f::Figure
     screen::GLMakie.Screen
     timers::Vector{PTimer}
-    other::Dict{String, Any}
+    other::Dict{Symbol, Any}
 end
 
 # Dict accessing
 Base.getindex(w::MakieWindow, key) = w.other[key]
 Base.setindex!(w::MakieWindow, val, key) = setindex!(w.other, val, key)
+function pushtimer!(w::MakieWindow, t::PTimer)
+    if w[:paused][]
+        pause(t)
+    end
+    push!(w.timers, t)
+end
+window_open(w::MakieWindow) = w.other[:window_open]
 
 # Is this type of window unique?
 pushtype(::W) where W<:AbstractWindow = pushtype(W) 
@@ -21,8 +27,11 @@ end
 function window_isopen(w::AbstractWindow)
     return events(w.f).window_open
 end
+
+closetimers(w::MakieWindow) = close.(w.timers)
+
 function cleanup(w::AbstractWindow)
-    close(w.timer)
+    closetimers(w)
     # closewindow(w)
     # delete!(getml().windowlist, w)
     delete!(getwindows(), w)
@@ -35,6 +44,7 @@ include("AnalysisWindow.jl")
 include("AvgWindow.jl")
 include("LayerWindow.jl")
 include("Connections.jl")
+
 
 
 
@@ -59,32 +69,143 @@ function empty_window(;kwargs...)
 end
 export empty_window
 
+"""
+Creates a new Makie window with a figure and a screen
+It also registers the window in the windows dictionary
+"""
 function new_window(;kwargs...)
     f, screen, window_open = empty_window(;kwargs...)
     u1 = uuid1()
-    w = MakieWindow(u1, f, screen, [], Dict("window_open" => window_open))
+    w = MakieWindow(u1, f, screen, [], Dict(:window_open => window_open))
+    w[:paused] = Observable(false)
     on(window_open) do x
         if !x
-            close.(w.timers)
+            closetimers(w)
             delete!(windows, w)
         end
     end
+
+    # CMD + W to close
+    on(events(f.scene).keyboardbutton) do events
+        hotkey = (Keyboard.left_super, Keyboard.w)
+        if ispressed(f, hotkey)
+            closewindow(w)
+        end
+    end
+
     register_window(w, u1)
     return w
 end
 
-function new_axis(;kwargs...)
-    w = new_window()
-    return Axis(w.f[1,1]; kwargs...)
+function axis_window(;pausebutton = true, kwargs...)
+    w = new_window(;kwargs...)
+    ax = w[:ax] = Axis(w.f[1,1]; kwargs...)
+
+    # Create a pausebutton
+    if pausebutton
+        pausebutton!(w)
+    end
+
+    return w
 end
-export new_window, new_axis
+
+function pausebutton!(w, gridpos = (0,1); kwargs...)
+    pausetext = lift((p) -> p ? "Paused" : "Running", w[:paused])
+    w[:pausebutton] = Button(w.f[gridpos[1], gridpos[2]][1,1], label = pausetext, tellwidth = false, height = 28)
+    
+    on(w[:pausebutton].clicks) do _
+        w[:paused][] = !w[:paused][]
+        if w[:paused][]
+            close.(w.timers)
+        else
+            start.(w.timers)
+        end
+    end
+    return w
+end
+
+"""
+Create a new Makie window with a lines plot for the observables x and y
+    Kwarg:
+        fps: frames per second
+"""
+function lines_window(x::Observable, y::Observable; fps = 30, process::Process = nothing, kwargs...)
+    w = axis_window(;kwargs...)
+    lines = lines!(w[:ax], x, y)
+    w[:lines] = lines
+    w[:x] = x
+    w[:y] = y
+    
+    pushtimer!(w,PTimer((timer) -> begin notify(x); autolimits!(w[:ax]); end, 0., interval = 1/fps))
+
+    reset() = begin
+        deleteat!(x[], 1:(length(x[])-1))
+        deleteat!(y[], 1:(length(y[])-1))
+    end
+    # Reset Button
+    resetbutton = Button(w.f[0,1][1,2], label = "Reset", tellwidth = false, height = 28)
+    on(resetbutton.clicks) do _
+        reset()
+    end
+
+    #Rerun Button
+    rerunbutton = Button(w.f[0,1][1,3], label = "Rerun", tellwidth = false, height = 28)
+    on(rerunbutton.clicks) do _
+        restart(process)
+    end
+
+    on(events(w.f.scene).keyboardbutton) do event
+        if event.action == Keyboard.press
+            if event.key == Keyboard.space
+                reset()
+            end
+        end
+    end
+
+    # If a process is given, add the process controls
+    if !isnothing(process)
+        w[:proc] = process
+        on(window_open(w)) do x
+            if !x
+                quit(process)
+            end
+        end
+        # on(resetbutton.clicks) do _
+        #     restart(process)
+        # end
+        on(w[:pausebutton].clicks) do _
+            if w[:paused][]
+                pause(process)
+            else
+                unpause(process)
+            end
+        end
+    end
+
+    return w
+end
+
+"""
+Create a pauseable timer that notifies an observable
+"""
+notifytimer(o::Observable; fps = 60) = PTimer((timer) -> notify(o), 0., interval = 1/fps)
+
+lines_window(x::AbstractVector, y::AbstractVector; kwargs...) = lines_window(Observable(x), Observable(y); kwargs...)
+
+export new_window, axis_window, lines_window
 
 function register_window(w::AbstractWindow, u::UUID)
     windows[u] = w
+    on(window_open(w)) do x
+        if !x
+            delete!(windows, u)
+        end
+    end
 end
 
-function create_window_timer(update, isopen; interval = 1/60)
-    timer = PTimer((timer) -> update(), 0., interval = interval)
+
+function create_window_timer(update, isopen; fps = 60)
+    timer = PTimer((timer) -> (@inline update()), 0., interval = 1/fps)
     on(isopen) do x
         if !x
             close(timer)

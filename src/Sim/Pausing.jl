@@ -55,14 +55,17 @@ Quit sim and block until all processes are terminated
 """
 function quit(sim::IsingSim)
     quit.(processes(sim))
+    deleteat!(processes(sim), 1:length(processes(sim)))
 end
 
 function pause(sim::IsingSim)
     pause.(processes(sim))
 end
 
-function quit(g) 
+function quit(g::IsingGraph)
     quit.(processes(g))
+    gidx = get_gidx(g)
+    deleteat!(processes(sim(g)), processes(sim(g)).graphidx .== gidx)
 end
 
 function pause(g::IsingGraph)
@@ -86,12 +89,14 @@ Starts up all processes that are paused
 """
 function restart(g; kwargs...)
     _processes = processes(g)
+    
     for process in _processes
         # Is process being used? Otherwise nothing has to be started
         _isused = isused(process)
         pause(process)
         if _isused
             task = process -> errormonitor(Threads.@spawn mainLoop(g, process; kwargs...))
+            @atomic process.run = true
             runtask(process, task, g)
         end
     end
@@ -111,6 +116,7 @@ function refresh(g; kwargs...)
         pause(process)
         if _isused
             task = process -> errormonitor(Threads.@spawn mainLoop(g, process; kwargs...))
+            @atomic process.run = true
             runtask(process, task, g, run = wasrunning)
         end
     end

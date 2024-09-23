@@ -259,13 +259,21 @@ end
 #     start(layer, start(layer) - nstates_layer)
 # end
 
-function processes(g::IsingGraph)
-    if !isnothing(processes(sim(g)))
-        return processes(sim(g))[map(process -> process.objectref === g, processes(sim(g)))]
-    end
-    return Process[]
-end
+# function processes(g::IsingGraph)
+#     if !isnothing(processes(sim(g)))
+#         return processes(sim(g))[map(process -> process.objectref === g, processes(sim(g)))]
+#     end
+#     return Process[]
+# end
 
+function processes(g::IsingGraph)
+    if isempty(processes(sim(g)))
+        return Process[]
+    end
+    gidx = get_gidx(g)
+    filter = processes(sim(g)).graphidx .== gidx
+    processes(sim(g))[filter]
+end
 processes(::Nothing) = nothing
 
 

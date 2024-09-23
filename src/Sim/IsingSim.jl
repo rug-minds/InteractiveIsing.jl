@@ -21,7 +21,7 @@ mutable struct IsingSim
     const updatingImg::Ref{Bool}
 
     # Process being used
-    processes::Processes
+    processes::ProcessList
     # Timers
     timers::Dict{String,PTimer}
     # Simulation Parameters
@@ -53,7 +53,7 @@ mutable struct IsingSim
             Ref(false),
             Ref(false),
             Ref(false),
-            Processes(4),
+            ProcessList(4),
             Dict{String,Timer}(),
             IsingParams(;initbrushR, colorscheme),
             # memory
@@ -95,7 +95,7 @@ mutable struct IsingSim
             Ref(false),
             Ref(false),
             Ref(false),
-            Processes(4),
+            ProcessList(4),
             Dict{String,Timer}(),
             IsingParams(;initbrushR, colorscheme),
             # memory
@@ -163,6 +163,15 @@ function (sim::IsingSim)(start = true; async = true)
         end
     end
     return gs(sim)[1];
+end
+
+function get_gidx(g::IsingGraph)
+    for (idx,graph) in enumerate(gs(sim(g)))
+        if graph === g
+            return idx
+        end
+    end
+    return nothing
 end
 
 @forwardfields IsingSim Obs obs temp

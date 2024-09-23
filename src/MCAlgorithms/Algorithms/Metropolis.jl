@@ -24,6 +24,22 @@ function _prepare(::Type{Metropolis}, g; kwargs...)
     return prepared_kwargs
 end
 
+function _prepareNEW(::Type{Metropolis}, @specialize(args))
+    (;g) = args
+    prepared_kwargs = pairs((;g,
+                        gstate = g.state,
+                        gadj = g.adj,
+                        gparams = g.params,
+                        iterator = ising_it(g, g.stype),
+                        rng = MersenneTwister(),
+                        lt = g[1],
+                        ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian),
+                    ))
+    println("Hamiltonian is ")
+    println(prepared_kwargs[:H])
+    return prepared_kwargs
+end
+
 @inline function Metropolis(@specialize(args))
     #Define vars
     (;g, gstate, gadj, gparams, iterator, ΔH, lt) = args

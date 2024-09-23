@@ -51,11 +51,13 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1, M = nothing, Pu
     tstep = t/steps
 
     t_i = time()
-    for idx in 1:steps
+
+    return newprocess(length(pulse)) do p, _
         while time() - t_i < tstep
             
         end
-        setparam!(g[1], :b, pulse[idx], true)
+
+        setparam!(g[1], :b, pulse[loopidx(p)], true)
         # setparam!(g[1][2], :b, pulse[idx], true)
         # setparam!(g[1][max_z], :b, pulse[idx], true)
         # setparam!(g[1][max_z-1], :b, pulse[idx], true)
@@ -67,23 +69,20 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1, M = nothing, Pu
         end
 
         if !isnothing(PulseAmp)
-            push!(PulseAmp[], pulse[idx])
-            notify(PulseAmp)
+            push!(PulseAmp[], pulse[loopidx(p)])
         end
 
         if !isnothing(ax)
             autolimits!(ax)
         end
-        println("Pulse step: ", idx, " of ", steps)
+        # println("Pulse step: ", loopidx(p), " of ", steps)
     end
 
-    println("Done")
 
 end
 
-Marray = Observable([0.])
-Pulsearray = Observable([0.])
-# B VS M
-ax = new_axis()
-lines!(ax, Pulsearray, Marray)
-@async TrianglePulseB(g, 20, 2, 2000, npulse = 2, M = Marray, PulseAmp = Pulsearray, ax = ax)
+# Marray = Observable([0.])
+# Pulsearray = Observable([0.])
+# w = lines_window(Pulsearray, Marray, process = TrianglePulseB(g, 2, 2, 1000, npulse = 2, M = Marray, PulseAmp = Pulsearray))
+
+

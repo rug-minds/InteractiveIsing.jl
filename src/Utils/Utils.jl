@@ -11,3 +11,5 @@ include("Kwargs.jl")
 include("Rand.jl")
 include("AverageCircular.jl")
 include("Averages.jl")
+#TODO: Make module
+include("Processes.jl")

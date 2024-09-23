@@ -21,6 +21,20 @@ function _prepare(::Type{LayeredMetropolis}, g; kwargs...)
     return prepared_kwargs
 end
 
+function _prepareNEW(::Type{LayeredMetropolis}, @specialize(args))
+    (;g) = args
+    ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
+    prepared_args = pairs((;g,
+                        gstate = g.state,
+                        gadj = g.adj,
+                        gparams = g.params,
+                        iterator = ising_it(g, g.stype),
+                        layers = unshuffled(g.layers),
+                        ΔH
+                    ))
+    return prepared_args
+end
+
 
 Base.@propagate_inbounds @inline function LayeredMetropolis(@specialize(args))
     #Define vars
