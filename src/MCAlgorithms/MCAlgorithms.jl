@@ -28,15 +28,14 @@
         return args_algo
     end
 
-    function prepareNEW(@specialize(oldargs), @specialize(newargs)) where {Algo <: MCAlgorithm}
-        # Merga, keeping the new ones
-        # Choose algorithm
-        args = (;oldargs..., newargs...)
-        (;g) = args
-        algorithm =  haskey(args, :algorithm) ? args[:algorithm] : g.default_algorithm
-        args_algo = (;_prepareNEW(algorithm, args)...)
+    function prepare(::Type{Algo} ,@specialize(oldargs), @specialize(newargs)) where {Algo <: MCAlgorithm}
 
-        return args_algo
+        (;g) = newargs
+        args_algo = (;_prepareNEW(Algo, g)...)
+        final_args = (;args_algo..., newargs...)
+
+
+        return final_args
     end
 
   

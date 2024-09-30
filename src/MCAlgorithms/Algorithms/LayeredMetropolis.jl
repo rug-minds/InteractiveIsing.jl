@@ -21,8 +21,7 @@ function _prepare(::Type{LayeredMetropolis}, g; kwargs...)
     return prepared_kwargs
 end
 
-function _prepareNEW(::Type{LayeredMetropolis}, @specialize(args))
-    (;g) = args
+function _prepareNEW(::Type{LayeredMetropolis}, @specialize(g))
     ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
     prepared_args = pairs((;g,
                         gstate = g.state,

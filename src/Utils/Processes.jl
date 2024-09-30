@@ -1,5 +1,7 @@
 # Probably add a ref to the graph it's working on
 import Base: Threads.SpinLock, lock, unlock
+const wait_timeout = .5
+
 abstract type Runtime end
 struct Indefinite <: Runtime end
 struct Repeat{Num} <: Runtime 
@@ -12,23 +14,26 @@ end
 repeats(r::Repeat{N}) where N = N
 struct TaskFunc
     func::Any
+    prepare::Any
     args::Any
     kwargs::Any
     runtime::Runtime
 end
 
-TaskFunc(func::Function) = TaskFunc(func, (), (), Indefinite())
+TaskFunc(func::Function) = TaskFunc(func, (func, args) -> args, (), (), Indefinite())
 # TaskFunc(n::Nothing, args::Any, rt::Any = nothing) = nothing
 
 mutable struct Process
     id::UUID
     taskfunc::Union{Nothing,TaskFunc}
     task::Union{Nothing, Task}
-    loopidx::Int   
+    loopidx::UInt   
     # To make sure other processes don't interfere
     lock::SpinLock 
     @atomic run::Bool
     @atomic paused::Bool
+    starttime ::Union{Nothing, Float64}
+    endtime::Union{Nothing, Float64}
     objectref::Any
     retval::Any
     errorlog::Any
@@ -44,6 +49,12 @@ function Base.finalizer(p::Process)
     delete!(processlist, p.id)
 end
 
+function runtime(p::Process)
+    @assert !isnothing(p.starttime) "Process has not started"
+    return isnothing(p.endtime) ? time() - p.starttime : p.endtime - p.starttime
+end
+export runtime
+
 
 # Process() = Process(nothing, 0, Threads.SpinLock(), (true, :Nothing))
 function Process(func = nothing, repeats::Int = 0, args...) 
@@ -52,7 +63,7 @@ function Process(func = nothing, repeats::Int = 0, args...)
 end
 
 function Process(func = nothing, rt::Runtime = Indefinite(), args...)
-    p = Process(uuid1(), TaskFunc(func, tuple(args...), (), rt), nothing, 1, Threads.SpinLock(), false, false, nothing, nothing, nothing, nothing)
+    p = Process(uuid1(), TaskFunc(func, (func, oldargs, newargs) -> newargs, tuple(args...), (), rt), nothing, 1, Threads.SpinLock(), false, false, nothing, nothing, nothing, nothing, nothing, nothing)
     register_process!(p)
     return p
 end
@@ -135,21 +146,29 @@ Is currently used for running,
 """
 isused(p::Process) = isrunning(p) || ispaused(p)
 
-export start, restart, quit, pause
+export start, restart, quit, pause, close
 function start(p::Process, sticky = false)
-    @assert isfree(p) "Process is already in use"
+    # @assert isfree(p) "Process is already in use"
     @assert !isnothing(p.taskfunc) "No task to run"
 
     createtask!(p)
-    runtask!(p, sticky)
+    runtask!(p)
     return true
 end   
 
-function quit(p::Process)
+function Base.close(p::Process)
     @atomic p.run = false
+    p.endtime = time()
     @atomic p.paused = false
     @sync p.task
+    println("Task closed", p.task)
     p.loopidx = 1
+    return true
+end
+
+function quit(p::Process)
+    close(p)
+    delete!(processlist, p.id)
     return true
 end
 
@@ -182,171 +201,96 @@ end
 
 function restart(p::Process, sticky = false)
     @assert !isnothing(p.taskfunc) "No task to run"
-    quit(p)
-    createtask!(p)
-    runtask!(p, sticky)
+    #Acquire spinlock so that process can not be started twice
+    lock(p.lock) do 
+        close(p)
+        
+        wait(p.task)
+        createtask!(p)
+        runtask!(p)
+    end    
     return true
 end
 
-# function createtask(p::Process, @specialize(func), @specialize(args), runtime::RT; kwargs...) where RT <: Runtime
-#     # task = nothing
+function makeprocess(@specialize(func), runtime::RT = Indefinite(); prepare = (func, oldargs, newargs) -> (newargs), @specialize(kwargs...)) where RT <: Runtime
+    newp = Process(func, runtime, kwargs...)
+    register_process!(newp)
+    kwargs = (;proc = newp, kwargs...)
+    createtask!(newp, func; runtime, prepare, kwargs...)
+    runtask!(newp)
+    return newp
+end
+
+makeprocess(func, repeats::Int = 0; kwargs...) = let rt = repeats == 0 ? Indefinite() : Repeat{repeats}(); makeprocess(func, rt; kwargs...); end
+export makeprocess
+
+newprocess(func, repeats::Int = 0; kwargs...) = let rt = repeats == 0 ? Indefinite() : Repeat{repeats}(); newprocess(func, rt; kwargs...); end
+
+export newprocess
+
+createtask!(p::Process) = p.task = @task @inline processloop(p, p.taskfunc.func, p.taskfunc.args, p.taskfunc.runtime)
+
+function createtask!(process, @specialize(func); runtime = Indefinite(), prepare = (func, oldargs, newargs) -> (newargs), @specialize(kwargs...))
+    println("Creating task")
+
+    # Get the runtime or set it to indefinite
     
-#     println("HERE")
-#     # task = Threads.@spawn begin 
-#         (;g) = args
-#         algo_args = prepare(func, g; kwargs...)
+    # Add the process to the arguments
+    newargs = (;proc = process, kwargs...)
+    # Get the old arguments
+    oldargs = process.taskfunc.args
 
-#         masked_args = choose_args(p, algo_args; kwargs...)
-        
-#         @inline indefiniteloop(p, func, masked_args)
-#         return kwargs
-#     # end
-#     # println(args)
-#     # if runtime isa Indefinite
-#     #     task = Threads.@spawn begin 
-#     #         (;g) = args
-#     #         algo_args = prepare(func, g; kwargs...)
+    # Prepare the arguments for the algorithm
+    algo_args = prepare(func, oldargs, newargs)
+    
+    # Create new taskfunc
+    process.taskfunc = TaskFunc(func, prepare, algo_args, kwargs, runtime)
 
-#     #         masked_args = choose_argsNEW(p, algo_args; kwargs...)
-#     #         @inline indefiniteloop(p, func, masked_args)
-#     #         return kwargs
-#     #     end
-#     # elseif runtime isa Repeat
-#     #     task = @task @inline begin 
-#     #         repeatloop(p, func, args, repeats(runtime))
-#     #         return kwargs
-#     #     end
-#     # end
-#     # return task
-# end
-# createtask!(p::Process, func, args, runtime) = p.task = createtask(p, func, args, runtime)
+    # Make the task
+    process.task = @task @inline processloop(process, process.taskfunc.func, process.taskfunc.args, process.taskfunc.runtime)
+end
 
-# function indefiniteloop(@specialize(p), @specialize(func), @specialize(args))
-#     println("In indefiniteloop")
-#     println("Running on thread $(Threads.threadid())")
-#     while run(p) 
-#         @inline func(args)
-#         inc(p) 
-#         GC.safepoint() 
-#     end
-# end
+function runtask!(p::Process) 
+    @atomic p.run = true
+    @atomic p.paused = false
 
-function repeatloop(p, func, args, repeats)
+    p.task.sticky = false
+    Threads._spawn_set_thrpool(p.task, :default)
+    p.starttime = time()
+    schedule(p.task)
+
+    return args
+end
+
+function processloop(@specialize(p), @specialize(func), @specialize(args), ::Indefinite)
+    println("Running indefinitely on thread $(Threads.threadid())")
+    while run(p) 
+        @inline func(args)
+        inc(p) 
+        GC.safepoint()
+    end
+end
+
+function processloop(p, func, args, ::Repeat{repeats}) where repeats
+    println("Running for $repeats loops on thread $(Threads.threadid())")
     for _ in loopidx(p):repeats
         if !run(p)
             break
         end
-        @inline func(p, args)
+        @inline func(args)
         inc(p)
         GC.safepoint()
     end
 end
 
 
-
-"""
-Create a task from the taskfunction
-"""
-createtask(p::Process) = createtask(p, p.taskfunc.func, p.taskfunc.args, p.taskfunc.runtime)
-
-"""
-Create a task and assign it to the process
-"""
-createtask!(p::Process) = p.task = createtask(p)
-
-
-function newprocess(@specialize(func), @specialize(args::Tuple) = () , runtime::RT = Indefinite()) where RT <: Runtime
-    newp = Process(func, runtime, args...)
-    register_process!(newp)
-    # createtask!(newp, func, args, runtime)
-    # createtask!(newp, func, args, runtime)
-    # runtask!(newp)
-    start(newp)
-    return newp
-end
-
-newprocess(func, repeats::Int = 0, args...) = let rt = repeats == 0 ? Indefinite() : Repeat{repeats}(); newprocess(func, args, rt); end
-
-export newprocess
-
-# function maketask!(@specialize(g), @specialize(func), @specialize(p), @specialize(args) = (;) , runtime::RT = Indefinite()) where RT <: Runtime
-#     # p.taskfunc = TaskFunc(func, args, runtime)
-#     # @atomic p.run = true
-#     println("NOW")
-#     createtaskNEW(g, p, func, args, runtime)
-#     # start(p)
-#     return p
-# end
-
-# function createtaskNEW(g, p::Process, @specialize(func), @specialize(args), runtime::RT; kwargs...) where RT <: Runtime
-#     # task = nothing
-    
-#     println("HERE")
-#     # task = Threads.@spawn begin 
-#         algo_args = prepare(func, g; kwargs...)
-
-#         masked_args = choose_argsNEW(p, algo_args; kwargs...)
-        
-#         indefiniteloop(p, func, masked_args)
-#         return kwargs
-#     # end
-#     # println(args)
-#     # if runtime isa Indefinite
-#     #     task = Threads.@spawn begin 
-#     #         (;g) = args
-#     #         algo_args = prepare(func, g; kwargs...)
-
-#     #         masked_args = choose_argsNEW(p, algo_args; kwargs...)
-#     #         @inline indefiniteloop(p, func, masked_args)
-#     #         return kwargs
-#     #     end
-#     # elseif runtime isa Repeat
-#     #     task = @task @inline begin 
-#     #         repeatloop(p, func, args, repeats(runtime))
-#     #         return kwargs
-#     #     end
-#     # end
-#     # return task
-# end
-
-"""
-Takes the task prepared in p and then runs it
-p is the process
-"""
-function runtask!(p::Process, sticky = false)
-    @assert !isnothing(p.task) "No task to run, create a task first"
-    @assert !isrunning(p) "Task is already running"
-    @assert !isdone(p) "Task is already done"
-
-    @atomic p.run = true
-    @atomic p.paused = false
-
-    p.task.sticky = sticky
-    Threads._spawn_set_thrpool(p.task, :default)
-    schedule(p.task)
-    return true
-end
-
-function runtask(p::Process, task::Task, objectref = nothing; run = true, sticky = false)
-    # Maybe this is not needed
-    p.objectref = objectref
-    
-    @atomic p.run = run
-
-    task.sticky = sticky
-    # p.taskref = task
-    p.task = task
-    p.retval = nothing
-    schedule(p.task)
-    return p.task
-end
-
 # TODO: Does this make sense?
 """
 Give a function and then creates a task that is run by the process
 The function needs to take an object as a reference
 """
-function runtask(p, taskf::Function, repeats = 0; objectref = nothing, run = true)
+function runtaskOLD(p, taskf::Function, repeats = 0; objectref = nothing, run = true)
+    p.starttime = time()
     p.objectref = objectref
     @atomic p.run = run
     @atomic p.paused = !run

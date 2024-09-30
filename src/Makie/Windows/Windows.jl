@@ -129,18 +129,29 @@ Create a new Makie window with a lines plot for the observables x and y
     Kwarg:
         fps: frames per second
 """
-function lines_window(x::Observable, y::Observable; fps = 30, process::Process = nothing, kwargs...)
+function lines_window(x::AbstractArray, y::AbstractArray; fps = 30, process::Process = nothing, kwargs...)
     w = axis_window(;kwargs...)
-    lines = lines!(w[:ax], x, y)
+    w[:x] = Observable(@view x[1:end])
+    w[:y] = Observable(@view y[1:end])
+    lines = lines!(w[:ax], w[:x], w[:y])
     w[:lines] = lines
-    w[:x] = x
-    w[:y] = y
-    
-    pushtimer!(w,PTimer((timer) -> begin notify(x); autolimits!(w[:ax]); end, 0., interval = 1/fps))
 
+
+
+    function timerfunc(timer)
+        firstlength = length(y)
+        w[:x].val = @view x[1:firstlength]
+        w[:y].val = @view y[1:firstlength]
+        notify(w[:y])
+        autolimits!(w[:ax])
+    end
+    
+    # pushtimer!(w,PTimer((timer) -> begin notify(x); autolimits!(w[:ax]); end, 0., interval = 1/fps))
+    pushtimer!(w, PTimer(timerfunc, 0., interval = 1/fps))
+    
     reset() = begin
-        deleteat!(x[], 1:(length(x[])-1))
-        deleteat!(y[], 1:(length(y[])-1))
+        deleteat!(x, 1:(length(x)-1))
+        deleteat!(y, 1:(length(y)-1))
     end
     # Reset Button
     resetbutton = Button(w.f[0,1][1,2], label = "Reset", tellwidth = false, height = 28)
@@ -190,7 +201,7 @@ Create a pauseable timer that notifies an observable
 """
 notifytimer(o::Observable; fps = 60) = PTimer((timer) -> notify(o), 0., interval = 1/fps)
 
-lines_window(x::AbstractVector, y::AbstractVector; kwargs...) = lines_window(Observable(x), Observable(y); kwargs...)
+# lines_window(x::AbstractVector, y::AbstractVector; kwargs...) = lines_window(Observable(x), Observable(y); kwargs...)
 
 export new_window, axis_window, lines_window
 

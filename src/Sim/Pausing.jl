@@ -97,7 +97,7 @@ function restart(g; kwargs...)
         if _isused
             task = process -> errormonitor(Threads.@spawn mainLoop(g, process; kwargs...))
             @atomic process.run = true
-            runtask(process, task, g)
+            runtaskOLD(process, task, g)
         end
     end
     return
@@ -117,7 +117,7 @@ function refresh(g; kwargs...)
         if _isused
             task = process -> errormonitor(Threads.@spawn mainLoop(g, process; kwargs...))
             @atomic process.run = true
-            runtask(process, task, g, run = wasrunning)
+            runtaskOLD(process, task, g, run = wasrunning)
         end
     end
     return

@@ -32,10 +32,12 @@ using GLMakie
 
 function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1, M = nothing, PulseAmp = nothing, ax = nothing)
     if !isnothing(M)
-        M[] = [sum(state(g))]
+        deleteat!(M, 2:length(M))
+        M[1] = sum(state(g))
     end
     if !isnothing(PulseAmp)
-        PulseAmp[] = [0.]
+        deleteat!(PulseAmp, 2:length(PulseAmp))
+        PulseAmp[1] = 0
     end
 
     max_z = size(g[1], 3)
@@ -45,6 +47,7 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1, M = nothing, Pu
     third = LinRange(0, -amp, floor(Int,steps/(4*npulse)))
     fourth = LinRange(-amp, 0, floor(Int,steps/(4*npulse)))
     pulse = vcat(first, second, third, fourth)
+
     pulse = repeat(pulse, npulse)
 
 
@@ -52,37 +55,55 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1, M = nothing, Pu
 
     t_i = time()
 
-    return newprocess(length(pulse)) do p, _
+    # println("Pulse length: ", length(pulse))
+
+    process = makeprocess(length(pulse)) do args
+        # println("Working on thread ", Threads.threadid())
+        (;proc) = args
+
+        # Waits so that the pulse is applied every tstep time
         while time() - t_i < tstep
             
         end
 
-        setparam!(g[1], :b, pulse[loopidx(p)], true)
+        # Sets the bfield
+        setparam!(g[1], :b, pulse[loopidx(proc)], true)
+
+        # println("Pulse step: ", loopidx(proc), " of ", steps)
+
         # setparam!(g[1][2], :b, pulse[idx], true)
         # setparam!(g[1][max_z], :b, pulse[idx], true)
         # setparam!(g[1][max_z-1], :b, pulse[idx], true)
 
+        # note down the time
         t_i = time()
         
-        if !isnothing(M)
-            push!(M[], sum(state(g)))
-        end
+        # Send the total magnetization to the observable
+        # if !isnothing(M)
+            push!(M, sum(state(g)))
+            println("Magnetization: ", sum(state(g)))
+            println("Length of M: ", length(M))
+        # end
 
-        if !isnothing(PulseAmp)
-            push!(PulseAmp[], pulse[loopidx(p)])
-        end
+        # Send the pulse amplitude to the observable
+        # if !isnothing(PulseAmp)
+            push!(PulseAmp, pulse[loopidx(proc)])
+            println("Pulse amplitude: ", pulse[loopidx(proc)])
+            println("Length of PulseAmp: ", length(PulseAmp))
+        # end
 
+        # Update plot axis
         if !isnothing(ax)
             autolimits!(ax)
         end
         # println("Pulse step: ", loopidx(p), " of ", steps)
     end
 
+    return process
+
 
 end
 
-# Marray = Observable([0.])
-# Pulsearray = Observable([0.])
-# w = lines_window(Pulsearray, Marray, process = TrianglePulseB(g, 2, 2, 1000, npulse = 2, M = Marray, PulseAmp = Pulsearray))
-
-
+const y = [0.]
+const x = [0.]
+w = lines_window(x, y, process = TrianglePulseB(g, 2, 2, 50, npulse = 2, M = y, PulseAmp = x))

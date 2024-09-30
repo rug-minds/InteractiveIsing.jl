@@ -18,7 +18,7 @@ function createProcess(g::IsingGraph, process = nothing, looptype = mainLoop; ru
     
     if threaded
         task = process -> errormonitor(Threads.@spawn looptype(g, process; kwargs...))
-        runtask(process, task, g; run)
+        runtaskOLD(process, task, g; run)
     else
         looptype(g, process; kwargs...)
     end
@@ -50,7 +50,7 @@ using InteractiveUtils
 export mainLoop
 # g, gstate, gadj, iterator, rng, updateFunc, dEFunc, gstype::ST
 function _mainLoop(process, @specialize(algorithm), @specialize(algo_args); kwargs...)
-    println("Running on thread: ", Threads.threadid())
+    println("_mainLoop Running on thread: ", Threads.threadid())
     while run(process)
         @inline algorithm(algo_args)
         inc(process)
@@ -96,58 +96,12 @@ function createProcessNew(g::IsingGraph, process = nothing, looptype = mainLoop;
 
     # algo_args = prepare(g.default_algorithm, g; g)
 
+    algorithm = get(kwargs, :algorithm, g.default_algorithm)
 
-    ct(process, g.default_algorithm; prepare, g)
-    
-    # mainLoopNew(g, process; kwargs...)
+    createtask!(process, algorithm; prepare, g)
+    runtask!(process)
 
     return
 end
 
-function ct(process, @specialize(func); prepare = (a,b) -> (), @specialize(kwargs...))
-    println("CT")
-    @atomic process.run = true
-    args = (;proc = process, kwargs...)
-    algo_args = prepareNEW(args, kwargs)
-    # masked_args = choose_argsNEW(process, algo_args; kwargs...)
-
-    createtaskNEW(process, func, algo_args, process.taskfunc.runtime)
-end
-
-
-function createtaskNEW(p::Process, @specialize(func), @specialize(args), runtime::RT) where RT <: Runtime
-    # task = nothing
-    
-    println("HERE")
-    # algo_args = prepare(func, g; kwargs...)
-
-    # masked_args = choose_argsNEW(p, algo_args; kwargs...)
-        
-    # p.task = @task indefiniteloop(p, func, masked_args)
-    p.task = @task loopchoice(p, func, args, p.taskfunc.runtime)
-    p.task.sticky = false
-    Threads._spawn_set_thrpool(p.task, :default)
-    schedule(p.task)
-
-    return kwargs
-end
-
-function loopchoice(@specialize(p), @specialize(func), @specialize(args), runtime)
-    println("Choosing loop")
-    if runtime isa Indefinite
-        return indefiniteloop(p, func, args)
-    else
-        return repeatloop(p, func, args, runtime)
-    end
-end
-
-function indefiniteloop(@specialize(p), @specialize(func), @specialize(args))
-    println("In indefiniteloop")
-    println("Running on thread $(Threads.threadid())")
-    while run(p) 
-        @inline func(args)
-        inc(p) 
-        GC.safepoint() 
-    end
-end
 export createProcessNew, mainLoopNew
