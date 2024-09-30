@@ -69,7 +69,6 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1, M = nothing, Pu
         # Sets the bfield
         setparam!(g[1], :b, pulse[loopidx(proc)], true)
 
-        # println("Pulse step: ", loopidx(proc), " of ", steps)
 
         # setparam!(g[1][2], :b, pulse[idx], true)
         # setparam!(g[1][max_z], :b, pulse[idx], true)
@@ -78,19 +77,10 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1, M = nothing, Pu
         # note down the time
         t_i = time()
         
-        # Send the total magnetization to the observable
-        # if !isnothing(M)
-            push!(M, sum(state(g)))
-            println("Magnetization: ", sum(state(g)))
-            println("Length of M: ", length(M))
-        # end
+        push!(M, sum(state(g)))
 
         # Send the pulse amplitude to the observable
-        # if !isnothing(PulseAmp)
-            push!(PulseAmp, pulse[loopidx(proc)])
-            println("Pulse amplitude: ", pulse[loopidx(proc)])
-            println("Length of PulseAmp: ", length(PulseAmp))
-        # end
+        push!(PulseAmp, pulse[loopidx(proc)])
 
         # Update plot axis
         if !isnothing(ax)
@@ -104,6 +94,4 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1, M = nothing, Pu
 
 end
 
-const y = [0.]
-const x = [0.]
-w = lines_window(x, y, process = TrianglePulseB(g, 2, 2, 50, npulse = 2, M = y, PulseAmp = x))
+w = lines_window(getprocess = (x, y) -> TrianglePulseB(g, 10, 2, 1000, npulse = 2, M = y, PulseAmp = x))

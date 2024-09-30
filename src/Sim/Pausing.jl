@@ -135,7 +135,7 @@ function reset(g; kwargs...)
         quit(process)
         if _isused
             task = process -> errormonitor(Threads.@spawn mainLoop(g, process; kwargs...))
-            runtask(process, task, g)
+            runtaskOLD(process, task, g)
         end
     end
     return
@@ -149,7 +149,7 @@ function togglePause(g)
             if ispaused(process)
                 args = fetch(process)
                 task = process -> Threads.@spawn mainLoop(g, process; args...)
-                errormonitor(runtask(process, task, g))
+                errormonitor(runtaskOLD(process, task, g))
             end
         end
     end    

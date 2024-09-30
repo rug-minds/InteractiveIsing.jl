@@ -129,20 +129,33 @@ Create a new Makie window with a lines plot for the observables x and y
     Kwarg:
         fps: frames per second
 """
-function lines_window(x::AbstractArray, y::AbstractArray; fps = 30, process::Process = nothing, kwargs...)
+function lines_window(xtype::Type = Float64, ytype::Type = Float64; fps = 30, getprocess::Function, kwargs...)
+    x = zeros(xtype, 1)
+    y = zeros(ytype, 1)
+    proc = getprocess(x, y)
+    lines_window(x, y, fps = fps, process = proc; getprocess, kwargs...)
+end
+
+function lines_window(x,y; fps = 30, process::Process = nothing, getprocess = nothing, kwargs...)
     w = axis_window(;kwargs...)
-    w[:x] = Observable(@view x[1:end])
-    w[:y] = Observable(@view y[1:end])
-    lines = lines!(w[:ax], w[:x], w[:y])
+
+    w[:xs] = [x]
+    w[:ys] = [y]
+
+    xob = Observable(@view x[1:end])
+    yob = Observable(@view y[1:end])
+
+    refobx = Ref(xob)
+    refoby = Ref(yob)
+
+    lines = lines!(w[:ax], xob, yob)
     w[:lines] = lines
 
-
-
     function timerfunc(timer)
-        firstlength = length(y)
-        w[:x].val = @view x[1:firstlength]
-        w[:y].val = @view y[1:firstlength]
-        notify(w[:y])
+        minlength = min(length(refobx[][]),length(refoby[][]))
+        refobx[].val = @view x[1:minlength]
+        refoby[].val = @view y[1:minlength]
+        notify(refobx[])
         autolimits!(w[:ax])
     end
     
@@ -162,6 +175,23 @@ function lines_window(x::AbstractArray, y::AbstractArray; fps = 30, process::Pro
     #Rerun Button
     rerunbutton = Button(w.f[0,1][1,3], label = "Rerun", tellwidth = false, height = 28)
     on(rerunbutton.clicks) do _
+        if !isnothing(getprocess)
+            x = zeros(eltype(x), 1)
+            y = zeros(eltype(y), 1)
+            xob = Observable(@view x[1:end])
+            yob = Observable(@view y[1:end])
+            refobx[] = xob
+            refoby[] = yob
+            push!(w[:xs], x)
+            push!(w[:ys], y)
+
+            process = getprocess(x, y)
+            
+            xob.val = @view x[1:end]
+            yob.val = @view y[1:end]
+            lines!(w[:ax], xob, yob)
+        end
+       
         restart(process)
     end
 
@@ -193,6 +223,7 @@ function lines_window(x::AbstractArray, y::AbstractArray; fps = 30, process::Pro
         end
     end
 
+    runtask!(process)
     return w
 end
 

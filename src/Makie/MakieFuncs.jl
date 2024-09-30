@@ -134,6 +134,7 @@ function create_layer_axis!(layer, panel_or_window; color = nothing, pos = (1,1)
     layerdim = length(size((layer)))
     g = graph(layer)
     grid = getgrid(panel_or_window)
+    println(typeof(panel_or_window))
     if layerdim == 2
         panel_or_window["axis"] = ax = Axis(grid[pos[1],pos[2]], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
         # TODO: Set colorrange based on the type of layer
@@ -141,7 +142,7 @@ function create_layer_axis!(layer, panel_or_window; color = nothing, pos = (1,1)
         panel_or_window["axis"] = ax = Axis3(grid[pos[1],pos[2]], tellheight = true)
         # TODO: 3D BField
     end
-    panel_or_window["axis"].yreversed = @load_preference("makie_y_flip", default = false)
+    # panel_or_window["axis"].yreversed = @load_preference("makie_y_flip", default = false)
 
     new_img!(g, layer, panel_or_window; color, colormap)
 end
@@ -158,7 +159,8 @@ function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
 
         if isnothing(color) #If no color given, take the state
             unsafe_view = create_unsafe_vector(@view state(g)[graphidxs(layer)])
-            mp["obs"] = Observable(unsafe_view)
+            mp["obs"] = Observable(CastVec(Float64, unsafe_view))
+            # mp["obs"] = Observable(@view state(g)[graphidxs(layer)])
         else
             mp["obs"] = color
         end

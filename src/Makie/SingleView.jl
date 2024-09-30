@@ -20,7 +20,7 @@ function singleView(ml, g)
     # ISING IMAGE
     
     mp["sv_img_ob"] = img_ob = Observable{Base.ReshapedArray}(state(currentLayer(simulation)))
-    img_ob[] = getSingleViewImg(g, ml) #Bfield or state
+    # img_ob[] = getSingleViewImg(g, ml) #Bfield or state
     mp["axis_size"] = size(img_ob[])
     obs_funcs = etc(ml)["obs_funcs_singleView"] = ObserverFunction[]
     # coupled_obs = etc(ml)["coupled_obs_singleView"] = Observable[]
@@ -56,17 +56,16 @@ function singleView(ml, g)
         setLayerSV(val)
     end)
 
-    ax = nothing
-    ima = nothing
+
     cur_layer = currentLayer(simulation)
 
     # Create the axis for the layer type
     create_layer_axis!(cur_layer, mp, pos = (1,2))
 
     ax = mp["axis"]
-    mp["axis"].yreversed[] = @load_preference("makie_y_flip", default = false)
-
-    mp["image"].colorrange[] = (-1,1)
+    
+    # mp["axis"].yreversed[] = @load_preference("makie_y_flip", default = false)
+    # mp["image"].colorrange[] = (-1,1)
 
     push!(obs_funcs, on(events(ax.scene).mousebutton, weak = true) do buttons
         MDrawCircle(ax, buttons, simulation)

@@ -217,7 +217,7 @@ function makeprocess(@specialize(func), runtime::RT = Indefinite(); prepare = (f
     register_process!(newp)
     kwargs = (;proc = newp, kwargs...)
     createtask!(newp, func; runtime, prepare, kwargs...)
-    runtask!(newp)
+    
     return newp
 end
 
