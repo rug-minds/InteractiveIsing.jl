@@ -18,9 +18,10 @@ struct TaskFunc
     args::Any
     kwargs::Any
     runtime::Runtime
+    timeout::Float64
 end
 
-TaskFunc(func::Function) = TaskFunc(func, (func, args) -> args, (), (), Indefinite())
+TaskFunc(func::Function) = TaskFunc(func, (func, args) -> args, (), (), Indefinite(), 1.0)
 # TaskFunc(n::Nothing, args::Any, rt::Any = nothing) = nothing
 
 mutable struct Process
@@ -29,7 +30,7 @@ mutable struct Process
     task::Union{Nothing, Task}
     loopidx::UInt   
     # To make sure other processes don't interfere
-    lock::SpinLock 
+    lock::ReentrantLock 
     @atomic run::Bool
     @atomic paused::Bool
     starttime ::Union{Nothing, Float64}
@@ -39,6 +40,8 @@ mutable struct Process
     errorlog::Any
     algorithm::Any #Ref to the algorithm being run
 end
+
+getargs(p::Process) = p.taskfunc.args
 
 # List of processes in use
 const processlist = Dict{UUID, WeakRef}()
@@ -53,6 +56,12 @@ function runtime(p::Process)
     @assert !isnothing(p.starttime) "Process has not started"
     return isnothing(p.endtime) ? time() - p.starttime : p.endtime - p.starttime
 end
+
+function createfrom!(p1::Process, p2::Process)
+    p1.taskfunc = p2.taskfunc
+    createtask!(p1)
+end
+
 export runtime
 
 
@@ -63,7 +72,7 @@ function Process(func = nothing, repeats::Int = 0, args...)
 end
 
 function Process(func = nothing, rt::Runtime = Indefinite(), args...)
-    p = Process(uuid1(), TaskFunc(func, (func, oldargs, newargs) -> newargs, tuple(args...), (), rt), nothing, 1, Threads.SpinLock(), false, false, nothing, nothing, nothing, nothing, nothing, nothing)
+    p = Process(uuid1(), TaskFunc(func, (func, oldargs, newargs) -> newargs, tuple(args...), (), rt, 1.), nothing, 1, Threads.ReentrantLock(), false, false, nothing, nothing, nothing, nothing, nothing, nothing)
     register_process!(p)
     return p
 end
@@ -122,6 +131,15 @@ function choose_argsNEW(p::Process, prepared_args, specified_args = nothing)
     return masked_args
 end
 
+function timedwait(p, timeout = wait_timeout)
+    t = time()
+    
+    while !isdone(p) && time() - t < timeout
+    end
+
+    return isdone(p)
+end
+
 
 status(p::Process) = isrunning(p) ? :Running : :Quit
 message(p::Process) = run(p) ? :Run : :Quit
@@ -160,10 +178,13 @@ function Base.close(p::Process)
     @atomic p.run = false
     p.endtime = time()
     @atomic p.paused = false
-    @sync p.task
-    println("Task closed", p.task)
     p.loopidx = 1
     return true
+end
+
+function syncclose(p::Process)
+    close(p)
+    timedwait(p)
 end
 
 function quit(p::Process)
@@ -202,14 +223,18 @@ end
 function restart(p::Process, sticky = false)
     @assert !isnothing(p.taskfunc) "No task to run"
     #Acquire spinlock so that process can not be started twice
-    lock(p.lock) do 
+    return lock(p.lock) do 
         close(p)
         
-        wait(p.task)
-        createtask!(p)
-        runtask!(p)
+        if timedwait(p, p.taskfunc.timeout)
+            createtask!(p)
+            runtask!(p)
+            return true
+        else
+            println("Task timed out")
+            return false
+        end
     end    
-    return true
 end
 
 function makeprocess(@specialize(func), runtime::RT = Indefinite(); prepare = (func, oldargs, newargs) -> (newargs), @specialize(kwargs...)) where RT <: Runtime
@@ -228,10 +253,12 @@ newprocess(func, repeats::Int = 0; kwargs...) = let rt = repeats == 0 ? Indefini
 
 export newprocess
 
-createtask!(p::Process) = p.task = @task @inline processloop(p, p.taskfunc.func, p.taskfunc.args, p.taskfunc.runtime)
+createtask!(p::Process) = createtask!(p, p.taskfunc.func; runtime = p.taskfunc.runtime, prepare = p.taskfunc.prepare, p.taskfunc.kwargs...)
 
 function createtask!(process, @specialize(func); runtime = Indefinite(), prepare = (func, oldargs, newargs) -> (newargs), @specialize(kwargs...))
     println("Creating task")
+
+    timeouttime = get(kwargs, :timeout, 1.0)
 
     # Get the runtime or set it to indefinite
     
@@ -242,9 +269,11 @@ function createtask!(process, @specialize(func); runtime = Indefinite(), prepare
 
     # Prepare the arguments for the algorithm
     algo_args = prepare(func, oldargs, newargs)
+    # Again add process if user didn't specify
+    algo_args = (;proc = process, algo_args...)
     
     # Create new taskfunc
-    process.taskfunc = TaskFunc(func, prepare, algo_args, kwargs, runtime)
+    process.taskfunc = TaskFunc(func, prepare, algo_args, kwargs, runtime, timeouttime)
 
     # Make the task
     process.task = @task @inline processloop(process, process.taskfunc.func, process.taskfunc.args, process.taskfunc.runtime)
@@ -259,7 +288,7 @@ function runtask!(p::Process)
     p.starttime = time()
     schedule(p.task)
 
-    return args
+    return p
 end
 
 function processloop(@specialize(p), @specialize(func), @specialize(args), ::Indefinite)
@@ -272,7 +301,8 @@ function processloop(@specialize(p), @specialize(func), @specialize(args), ::Ind
 end
 
 function processloop(p, func, args, ::Repeat{repeats}) where repeats
-    println("Running for $repeats loops on thread $(Threads.threadid())")
+    println("Running from $(loopidx(p)) to $repeats on thread $(Threads.threadid())")
+    println("Run is $(run(p))")
     for _ in loopidx(p):repeats
         if !run(p)
             break

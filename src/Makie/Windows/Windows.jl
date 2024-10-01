@@ -124,38 +124,40 @@ function pausebutton!(w, gridpos = (0,1); kwargs...)
     return w
 end
 
+function linesprocess(func, nrepeats, xtype = Float64, ytype = Float64)
+    prepare = (proc, oldargs, newargs) -> (x = xtype[NaN] , y = ytype[NaN])
+    return  makeprocess(func, nrepeats; prepare)
+end
+export linesprocess
+
 """
 Create a new Makie window with a lines plot for the observables x and y
     Kwarg:
         fps: frames per second
 """
-function lines_window(xtype::Type = Float64, ytype::Type = Float64; fps = 30, getprocess::Function, kwargs...)
-    x = zeros(xtype, 1)
-    y = zeros(ytype, 1)
-    proc = getprocess(x, y)
-    lines_window(x, y, fps = fps, process = proc; getprocess, kwargs...)
-end
-
-function lines_window(x,y; fps = 30, process::Process = nothing, getprocess = nothing, kwargs...)
+function lines_window(linesp; fps = 30, kwargs...)
+    (;proc, x, y) = getargs(linesp)
+    xref = Ref(x)
+    yref = Ref(y)
     w = axis_window(;kwargs...)
-
+    x = xref[]
+    y = yref[]
+    
+    first = true
     w[:xs] = [x]
     w[:ys] = [y]
 
     xob = Observable(@view x[1:end])
     yob = Observable(@view y[1:end])
 
-    refobx = Ref(xob)
-    refoby = Ref(yob)
-
     lines = lines!(w[:ax], xob, yob)
-    w[:lines] = lines
+    w[:lines] = [lines]
 
     function timerfunc(timer)
-        minlength = min(length(refobx[][]),length(refoby[][]))
-        refobx[].val = @view x[1:minlength]
-        refoby[].val = @view y[1:minlength]
-        notify(refobx[])
+        minlength = min(length(xref[]),length(yref[]))
+        xob.val = @view xref[][1:minlength]
+        yob.val = @view yref[][1:minlength]
+        notify(xob)
         autolimits!(w[:ax])
     end
     
@@ -163,8 +165,14 @@ function lines_window(x,y; fps = 30, process::Process = nothing, getprocess = no
     pushtimer!(w, PTimer(timerfunc, 0., interval = 1/fps))
     
     reset() = begin
-        deleteat!(x, 1:(length(x)-1))
-        deleteat!(y, 1:(length(y)-1))
+        syncclose(proc)
+        for line in w[:lines]
+            delete!(w[:ax], line)
+        end
+        deleteat!(w[:lines], 1:length(w[:lines]))
+        deleteat!(w[:xs], 1:length(w[:xs]))
+        deleteat!(w[:ys], 1:length(w[:ys]))
+        first = true
     end
     # Reset Button
     resetbutton = Button(w.f[0,1][1,2], label = "Reset", tellwidth = false, height = 28)
@@ -172,29 +180,40 @@ function lines_window(x,y; fps = 30, process::Process = nothing, getprocess = no
         reset()
     end
 
+    function newlines!()
+        syncclose(proc)
+        xob = Observable(@view xref[][1:end-1])
+        yob = Observable(@view yref[][1:end-1])
+        createtask!(proc)
+        (;x, y) = getargs(linesp)
+        xref[] = x
+        yref[] = y
+        xob = Observable(@view xref[][1:end])
+        yob = Observable(@view yref[][1:end])
+        
+        
+        runtask!(proc)
+        push!(w[:lines], lines!(w[:ax], xob, yob))
+    end
     #Rerun Button
     rerunbutton = Button(w.f[0,1][1,3], label = "Rerun", tellwidth = false, height = 28)
     on(rerunbutton.clicks) do _
-        if !isnothing(getprocess)
-            x = zeros(eltype(x), 1)
-            y = zeros(eltype(y), 1)
-            xob = Observable(@view x[1:end])
-            yob = Observable(@view y[1:end])
-            refobx[] = xob
-            refoby[] = yob
-            push!(w[:xs], x)
-            push!(w[:ys], y)
+            if !first
+                push!(w[:xs], xref[])
+                push!(w[:ys], yref[])
+            else
+                first = false
+            end
 
-            process = getprocess(x, y)
-            
-            xob.val = @view x[1:end]
-            yob.val = @view y[1:end]
-            lines!(w[:ax], xob, yob)
-        end
-       
-        restart(process)
+            start.(w.timers)
+            w[:paused][] = false
+            newlines!()
+            unpause(proc)
+
+        
     end
 
+    # Space to reset
     on(events(w.f.scene).keyboardbutton) do event
         if event.action == Keyboard.press
             if event.key == Keyboard.space
@@ -203,27 +222,25 @@ function lines_window(x,y; fps = 30, process::Process = nothing, getprocess = no
         end
     end
 
-    # If a process is given, add the process controls
-    if !isnothing(process)
-        w[:proc] = process
+    # If a proc is given, add the proc controls
+    if !isnothing(proc)
+        w[:proc] = proc
         on(window_open(w)) do x
             if !x
-                quit(process)
+                quit(proc)
             end
         end
-        # on(resetbutton.clicks) do _
-        #     restart(process)
-        # end
+
         on(w[:pausebutton].clicks) do _
             if w[:paused][]
-                pause(process)
+                pause(proc)
             else
-                unpause(process)
+                unpause(proc)
             end
         end
     end
 
-    runtask!(process)
+    runtask!(proc) 
     return w
 end
 

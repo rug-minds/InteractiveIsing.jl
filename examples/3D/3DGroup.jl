@@ -30,16 +30,8 @@ end
 
 using GLMakie
 
-function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1, M = nothing, PulseAmp = nothing, ax = nothing)
-    if !isnothing(M)
-        deleteat!(M, 2:length(M))
-        M[1] = sum(state(g))
-    end
-    if !isnothing(PulseAmp)
-        deleteat!(PulseAmp, 2:length(PulseAmp))
-        PulseAmp[1] = 0
-    end
-
+function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1)
+ 
     max_z = size(g[1], 3)
 
     first = LinRange(0, amp, floor(Int,steps/(4*npulse)))
@@ -57,9 +49,9 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1, M = nothing, Pu
 
     # println("Pulse length: ", length(pulse))
 
-    process = makeprocess(length(pulse)) do args
+    process = linesprocess(length(pulse)) do args
         # println("Working on thread ", Threads.threadid())
-        (;proc) = args
+        (;proc, x, y) = args
 
         # Waits so that the pulse is applied every tstep time
         while time() - t_i < tstep
@@ -77,16 +69,11 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1, M = nothing, Pu
         # note down the time
         t_i = time()
         
-        push!(M, sum(state(g)))
+        push!(y, sum(state(g)))
 
         # Send the pulse amplitude to the observable
-        push!(PulseAmp, pulse[loopidx(proc)])
+        push!(x, pulse[loopidx(proc)])
 
-        # Update plot axis
-        if !isnothing(ax)
-            autolimits!(ax)
-        end
-        # println("Pulse step: ", loopidx(p), " of ", steps)
     end
 
     return process
@@ -94,4 +81,4 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1, M = nothing, Pu
 
 end
 
-w = lines_window(getprocess = (x, y) -> TrianglePulseB(g, 10, 2, 1000, npulse = 2, M = y, PulseAmp = x))
+w = lines_window(TrianglePulseB(g, 10, 1, 2000, npulse = 2))
