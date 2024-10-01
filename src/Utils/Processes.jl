@@ -302,7 +302,6 @@ end
 
 function processloop(p, func, args, ::Repeat{repeats}) where repeats
     println("Running from $(loopidx(p)) to $repeats on thread $(Threads.threadid())")
-    println("Run is $(run(p))")
     for _ in loopidx(p):repeats
         if !run(p)
             break
