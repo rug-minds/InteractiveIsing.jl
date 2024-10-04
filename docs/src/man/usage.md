@@ -233,13 +233,38 @@ Currently the following Hamiltonians are implemented
 * `GaussianBernoulli`: The Gaussian Bernoulli Hamiltonian often used with RBM's 
 
 
+## Processes
 
+At the heart of the software are threaded loops that run at full speed (i.e. no runtime-dispatch within the loop). This is difficult with dynamic programs where parameters values, types or even algorithms themselves may be changed by the user during runtime. Moreover, pausing these loops, restarting them and making sure that no two loops are overlapping without the user meaning to, can also pose a challenge, and normally requires a lot of extra programming.
 
+All loops in this package are managed by a Process struct. The manages functions that are looped over in a threaded loop, and handles pausing, restarting, type stability, loop iterations, etc. Loops may run indefinitely (i.e. untill stopped by the user), or for a fixed number of iterations. They hold arbitrary functions with arbitrary arguments. 
 
+A function held by the loop is a description of what happens in one single iteration of the loop, typically where some arguments are mutated. They can then be accesses through the process itself (or just from an external reference if they are passed from outside),
+The arguments are internally passed as a tuple for easier type stability, but this requires some care from the user when writing functions. Full details are given in [Processes](@ref).
 
+We provide a factory function to create processes
 
+```
+process = makeprocess(func, repeats::Int = 0; prepare = preparefunc, kwargs...)
+```
 
+The argument `func` is any function like object that accepts a namedtuple holding all the arguments. It can be defined inline using the do syntax of Julia in the following way
 
+```
+process = makeprocess(repeats; prepare, a = Int[], b = 2, c = SomeStruct()) do args
+    (;proc, a, b, c) =  args
+    # Update the args
+end
+```
 
+The arguments are passed as keyword arguments, so that they are accessible through named tuple unpacking within the function. The argument `proc` is included as a standard argument, mainly so that the function can be aware of the iteration number it's currently in. The iteration number can be accessed through
 
+```
+loopidx(proc)
+```
 
+## Windows
+
+The interactive parts of the simulation are based on an abstraction on top of GLMakie in terms of windows. Windows manage their own updating, and their perhaps their own process. Windows are tracked inside a module, and when a window is closed, it will take care of the process running in the background to make sure everything is closed properly.
+
+At the moment the only window facility offered is `lines_window(process)`, which expects a process that adds data to two vectors called `x` and `y`, which intuitively correspond to coordinates for the `x` and `y` coordinates for a datapoint. A process can be obtained from the function `linesprocess(func, number_of_repeats)`, which get an integer for the number of iterations a process goes through, where it will run indefinitely if `0` is given. The `linesprocess` just returns a normal process, but where the `x` and `y` coordinates are automatically produced in the `args` upon creation of the process.

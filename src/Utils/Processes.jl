@@ -1,4 +1,7 @@
 # Probably add a ref to the graph it's working on
+export getargs
+
+
 import Base: Threads.SpinLock, lock, unlock
 const wait_timeout = .5
 
