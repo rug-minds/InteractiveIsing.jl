@@ -34,7 +34,7 @@ on(wo) do
 end
 ```
 
-which can be listened to using the usual syntax from [Observables.jl](@extref https://juliagizmos.github.io/Observables.jl/stable/)
+which can be listened to using the usual syntax from [Observables.jl](https://juliagizmos.github.io/Observables.jl/stable/)
 
 
 ## Lines Window
