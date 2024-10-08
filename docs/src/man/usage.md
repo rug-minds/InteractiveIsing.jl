@@ -233,7 +233,7 @@ Currently the following Hamiltonians are implemented
 * `GaussianBernoulli`: The Gaussian Bernoulli Hamiltonian often used with RBM's 
 
 
-## Processes
+## Intro to Processes
 
 At the heart of the software are threaded loops that run at full speed (i.e. no runtime-dispatch within the loop). This is difficult with dynamic programs where parameters values, types or even algorithms themselves may be changed by the user during runtime. Moreover, pausing these loops, restarting them and making sure that no two loops are overlapping without the user meaning to, can also pose a challenge, and normally requires a lot of extra programming.
 
