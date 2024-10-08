@@ -20,7 +20,7 @@ makedocs(sitename="InteractiveIsing Documentation",
                 "Processes" => "man/Processes.md",
                 "Topology" => "man/Topology.md",
             ]
-
+ 
         ]
         )
 
