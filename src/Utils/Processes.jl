@@ -303,6 +303,9 @@ function processloop(@specialize(p), @specialize(func), @specialize(args), ::Ind
     end
 end
 
+"""
+Run a function in a loop for a given number of times
+"""
 function processloop(p, func, args, ::Repeat{repeats}) where repeats
     println("Running from $(loopidx(p)) to $repeats on thread $(Threads.threadid())")
     for _ in loopidx(p):repeats
@@ -315,8 +318,6 @@ function processloop(p, func, args, ::Repeat{repeats}) where repeats
     end
 end
 
-
-# TODO: Does this make sense?
 """
 Give a function and then creates a task that is run by the process
 The function needs to take an object as a reference
@@ -345,42 +346,29 @@ end
 
 reset!(p::Process) = (p.loopidx = 1; p.retval = nothing; p.task = nothing; @atomic p.run = false; p.objectref = nothing)
 
+"""
+Get value of run of a process, denoting wether it should run or not
+"""
 run(p::Process) = p.run
+"""
+Set value of run of a process, denoting wether it should run or not
+"""
 run(p::Process, val) = @atomic p.run = val
 
+"""
+Wait for a process to finish
+"""
 @inline Base.wait(p::Process) = if !isnothing(p.task) wait(p.task) else nothing end
+
+"""
+Fetch the return value of a process
+"""
 @inline Base.fetch(p::Process) = if !isnothing(p.task) fetch(p.task) else nothing end
 
+"""
+Increments the loop index of a process
+"""
 @inline inc(p::Process) = p.loopidx += 1
-
-"""
-Access run atomically
-"""
-@inline function atomic_run(p::Process; ignore_lock = false)
-    !ignore_lock && lock(p)
-    # ret = (@atomic p.signal)[1]
-    ret = @atomic p.run
-    !ignore_lock && unlock(p)
-    return ret
-end
-
-@inline function atomic_run!(p::Process, val; ignore_lock = false)
-    !ignore_lock && lock(p)
-    # ret = @atomic p.signal = (val, p.signal[2])
-    ret = @atomic p.run = val
-    !ignore_lock && unlock(p)
-    return ret
-end
-
-@inline running(p::Process) = p.status == :Running
-
-# Base.put!(p::Process, val) = put!(p.refresh, val)
-# Base.take!(p::Process) = take!(p.refresh)
-# Base.isready(p::Process) = isready(p.refresh)
-# Base.isopen(p::Process) = isopen(p.refresh)
-# Base.close(p::Process) = close(p.refresh)
-# @inline Base.isempty(p::Process) = isempty(p.refresh)
-
 
 mutable struct Processes <: AbstractVector{Process}
     procs::Vector{Process}
