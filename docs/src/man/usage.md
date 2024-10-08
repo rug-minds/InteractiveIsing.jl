@@ -269,4 +269,4 @@ The interactive parts of the simulation are based on an abstraction on top of GL
 
 At the moment the only window facility offered is `lines_window(process)`, which expects a process that adds data to two vectors called `x` and `y`, which intuitively correspond to coordinates for the `x` and `y` coordinates for a datapoint. A process can be obtained from the function `linesprocess(func, number_of_repeats)`, which get an integer for the number of iterations a process goes through, where it will run indefinitely if `0` is given. The `linesprocess` just returns a normal process, but where the `x` and `y` coordinates are automatically produced in the `args` upon creation of the process.
 
-For more information see [Winodws](@ref)
+For more information see [Windows](@ref)
