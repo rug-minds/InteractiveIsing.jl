@@ -18,6 +18,7 @@ makedocs(sitename="InteractiveIsing Documentation",
                 "Hamiltonians" => "man/Hamiltonians.md",
                 "Analysis" => "man/Analysis.md",
                 "Processes" => "man/Processes.md",
+                "Windows" => "man/Windows.md",
                 "Topology" => "man/Topology.md",
             ]
  
