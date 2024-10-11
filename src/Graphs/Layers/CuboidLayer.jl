@@ -23,4 +23,4 @@ function Base.getindex(l::AbstractIsingLayer{T, 3}, idx) where T
                         coords = Coords(y = coords_3d[1], x = coords_3d[2], z = coords_3d[3] + idx -1))
 end
 
-Base.eachindex(l::AbstractIsingLayer{T,3}) where T = Base.OneTo(size(l,3))
+Base.eachindex(l::AbstractIsingLayer{T,3}) where T = Base.OneTo(prod(size(l)))

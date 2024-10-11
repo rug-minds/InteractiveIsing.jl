@@ -398,14 +398,14 @@ export setPeriodic!
 """
 Go from a local idx of layer to idx of the underlying graph
 """
-@inline function idxLToG(idx::Integer, layer::IsingLayer)::Int32
+@inline function idxLToG(idx::Integer, layer::IsingLayer)
     return Int32(start(layer) + idx - 1)
 end
 
 """
 Go from a local matrix indexing of layer to idx of the underlying graph
 """
-@inline function idxLToG(i::Integer, j::Integer, layer::IsingLayer)::Int32
+@inline function idxLToG(i::Integer, j::Integer, layer::IsingLayer)
     return Int32(start(layer) + coordToIdx(i,j, glength(layer)) - 1)
 end
 

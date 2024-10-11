@@ -81,4 +81,4 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1)
 
 end
 
-w = lines_window(TrianglePulseB(g, 0.01, 50, 2000, npulse = 2))
+# w = lines_window(TrianglePulseB(g, 0.01, 50, 2000, npulse = 2));

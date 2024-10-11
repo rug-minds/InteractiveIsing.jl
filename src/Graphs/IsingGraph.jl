@@ -42,6 +42,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
 
     defects::GraphDefects
     # d::GraphData{T} #Other stuff. Maybe just make this a dict?
+    addons::Dict{Symbol, Any}
 end
 
 # Default Initializer for IsingGraph
@@ -78,7 +79,8 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
         #Emitter
         Emitter(Observable[]),
         #Defects
-        GraphDefects(nothing)
+        GraphDefects(nothing),
+        Dict{Symbol, Any}()
     )
 
     g.defects.g = g
