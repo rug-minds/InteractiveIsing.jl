@@ -87,7 +87,7 @@ export quitSim, quit, pause, unpause
 Restart processes of the graph with given kwargs
 Starts up all processes that are paused
 """
-function restart(g; kwargs...)
+function restartOLD(g; kwargs...)
     _processes = processes(g)
     
     for process in _processes
@@ -102,6 +102,14 @@ function restart(g; kwargs...)
     end
     return
 end 
+# TODO: Make this work with the new process system KWARGS
+function restart(g; kwargs...)
+    _processes = processes(g)
+    for process in _processes
+        # Is process being used? Otherwise nothing has to be started
+        restart(process)
+    end
+end
 export restart
 
 """
