@@ -81,10 +81,10 @@ end
 
 getgraph() = gs(simulation[])[1]
 
-function _simulate(g; start = true, gui = true, kwargs...)
+function _simulate(g; run = true, start = true, gui = true, kwargs...)
     if start
         quit.(processes(g))
-        createProcess(g; run = get(kwargs, :run, true))
+        createProcess(g; run)
     end
     if gui
         interface(g; kwargs...)

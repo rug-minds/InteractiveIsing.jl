@@ -1,4 +1,4 @@
-function createProcess(g::IsingGraph, process = nothing, looptype = mainLoop; run = true, threaded = true, kwargs...)
+function createProcess(g::IsingGraph, process = nothing; run = true, threaded = true, kwargs...)
     _sim = sim(g)
     if isnothing(process)
         process = Process()
