@@ -29,7 +29,7 @@ Then, this function itself makes a new branch where getE is defined again.
 export mainLoop
 """
 
-function createProcessOLD(g::IsingGraph, process = nothing, looptype = mainLoop; run = true, threaded = true, kwargs...)
+function createProcessOLD(g::IsingGraph, process = nothing, looptype = mainLoopOLD; run = true, threaded = true, kwargs...)
     _sim = sim(g)
     if isnothing(process)
         # process = get_free_process(processes(_sim))

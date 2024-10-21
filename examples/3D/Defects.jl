@@ -43,7 +43,10 @@ Base.@propagate_inbounds function Accessors(sp::SparseMatrixCSC)
     return Accessors{eltype(g)}(accessors)
 end
 
-setaccessors!(g) = g.addons[:accessors] = Accessors(g.adj)
+function setaccessors!(g)
+    println("Setting")
+    g.addons[:accessors] = Accessors(g.adj)
+end
 
 Base.getindex(a::Accessors, i::Integer) = a.data[i]
 Base.length(a::Accessors) = length(a.data)
@@ -56,29 +59,37 @@ function get_ptrs(as::Accessors, idx,jdx)
 end
 
 setaccessors!(g, a::Accessors) = g.addons[:accessors] = a
-getaccessors(g) = g.addons[:accessors]::Accessors
+function getaccessors(g::IsingGraph{T}) where T
+    if !haskey(g.addons, :accessors)
+        return setaccessors!(g)
+    end
+    return g.addons[:accessors]::Accessors{T}
+end
 
-function scale!(as::Accessors{etype}, idx, scale) where etype
+function scale!(g, as::Accessors{etype}, idx, scale) where etype
     scale = convert(etype, scale)
     idx = Int32(idx)
     accessor = as[idx]
     outptrs = accessor.outptr
     inptrs = accessor.inptr
+    adj_m = g.adj
+
     @turbo for idx in eachindex(outptrs)
+    # for idx in eachindex(outptrs)
         ptr = outptrs[idx]
-        g.adj.nzval[ptr] *= scale
+        adj_m.nzval[ptr] *= scale
     end
     @turbo for idx in eachindex(inptrs)
+    # for idx in eachindex(inptrs)
         ptr = inptrs[idx]
-        g.adj.nzval[ptr] *= scale
+        adj_m.nzval[ptr] *= scale
     end
 end
+
 
 scale!(g::IsingGraph, idx, scale) = scale!(getaccessors(g), idx, scale)
 scale!(l::IsingLayer, idx, scale) = scale!(graph(l), idxLToG(idx, l), scale)
 
-
-    
 
 function set!(as::Accessors, in, out, val)
     in = Int32(in)
