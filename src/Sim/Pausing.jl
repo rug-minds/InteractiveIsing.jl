@@ -123,9 +123,10 @@ function refresh(g; kwargs...)
         _isused = isused(process)
         pause(process)
         if _isused
-            task = process -> errormonitor(Threads.@spawn mainLoop(g, process; kwargs...))
-            @atomic process.run = true
-            runtaskOLD(process, task, g, run = wasrunning)
+            # task = process -> errormonitor(Threads.@spawn mainLoop(g, process; kwargs...))
+            # @atomic process.run = true
+            # runtaskOLD(process, task, g, run = wasrunning)
+            refresh(process)
         end
     end
     return
@@ -155,9 +156,10 @@ function togglePause(g)
     else
         for process in processes(sim(g))
             if ispaused(process)
-                args = fetch(process)
-                task = process -> Threads.@spawn mainLoop(g, process; args...)
-                errormonitor(runtaskOLD(process, task, g))
+                # args = fetch(process)
+                # task = process -> Threads.@spawn mainLoop(g, process; args...)
+                # errormonitor(runtaskOLD(process, task, g))
+                unpause(process)
             end
         end
     end    
