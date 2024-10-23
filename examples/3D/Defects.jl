@@ -87,7 +87,7 @@ function scale!(g, as::Accessors{etype}, idx, scale) where etype
 end
 
 
-scale!(g::IsingGraph, idx, scale) = scale!(getaccessors(g), idx, scale)
+scale!(g::IsingGraph, idx, scale) = scale!(g, getaccessors(g), idx, scale)
 scale!(l::IsingLayer, idx, scale) = scale!(graph(l), idxLToG(idx, l), scale)
 
 
