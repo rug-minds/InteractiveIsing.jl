@@ -120,19 +120,6 @@ layer(sd::SDefect) = sd.layer
 
 get_coords(sd::SDefect) = idxGToL(sd.idx, sd.layer)
 
-function add_sdefect!(l::IsingLayer, _scale, idx)
-    g = graph(l)
-    T = eltype(g)
-    get!(g.addons, :sdefects, SDefects(Int32, T))::SDefects{Int32,T}
-    get!(g.addons, :accessors, Accessors(g.adj))
-    gidx = idxLToG(idx, l)
-    
-    push!(g.addons[:sdefects], SDefect(l, Int32(idx), T(_scale)))
-    scale!(g, gidx, _scale)
-end
-
-add_sdefect!(l::IsingLayer, scale, x, y, z) = add_sdefect!(l, scale, coordToIdx(Int32.((x,y,z)), size(l)))
-
 function scale!(sd::SDefect, scale)
     g = graph(sd.layer)
     sd.scaling = scale
@@ -171,12 +158,46 @@ Base.iterate(d::SDefects, i::Int=1) = i > length(d.data) ? nothing : (d.data[i],
 Base.size(d::SDefects) = length(d.data)
 Base.push!(d::SDefects, sd::SDefect) = push!(d.data, sd)
 
+function add_sdefects!(l::IsingLayer, _scale, idxs::Integer...)
+    idxs = Int32.(idxs)
+    _scale = convert(eltype(graph(l)), _scale)
+    for idx in idxs
+        add_sdefect!(l, _scale, idx)
+    end
+end
 
+function add_sdefect!(l::IsingLayer, _scale, idx::Integer)
+    g = graph(l)
+    T = eltype(l)
+    sdefects = get_sdefects(l)
+    gidx = idxLToG(idx, l)
+    
+    push!(sdefects, SDefect(l, Int32(idx), T(_scale)))
+    scale!(g, gidx, _scale)
+end
+
+
+
+add_sdefect!(l::IsingLayer, scale, x, y, z) = add_sdefect!(l, scale, coordToIdx(Int32.((x,y,z)), size(l)))
+
+"""
+Coordinate indexing
+"""
 function add_sdefects!(l::IsingLayer, scale, coords::Tuple...)
+    scale = convert(eltype(graph(l)), scale)
     for coord in coords
         idx = coordToIdx(Int32.(coord), size(l))
         add_sdefect!(l, idx, scale)
     end
 end
 
-get_sdefects(g) = g.addons[:sdefects]::SDefects{Int32,eltype(g)} 
+function get_sdefects(g)
+    ad = addons(g)
+    if haskey(ad, :sdefects)
+        return ad[:sdefects]::SDefects{Int32,eltype(g)}
+    else
+        sd = SDefects(Int32, eltype(g))
+        ad[:sdefects] = sd
+        return sd
+    end
+end

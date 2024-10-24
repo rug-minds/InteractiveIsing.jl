@@ -225,7 +225,8 @@ Set graph of layer
 """
 @inline graph(layer::IsingLayer) = layer.graph
 @inline graph(layer::IsingLayer, g::IsingGraph) = layer.graph = g 
-
+addons(layer::IsingLayer) = graph(layer).addons
+export addons
 
 # Get current layeridx through graph
 @inline layeridx(layer::IsingLayer) = externalidx(layers(graph(layer)), layer.internal_idx)
@@ -497,7 +498,7 @@ default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous
 @inline statetype(::Type{IsingLayer{ST,A,B,C,T1,Top}}) where {ST,A,B,C,T1,Top} = ST
 setstatetype(l::IsingLayer{ST,SET}, stype) where {ST,SET} = IsingLayer{stype,SET}(l.graph, l.name, l.internal_idx, l.start, l.size, l.nstates, l.coords, l.connections, l.timers, l.top)
 
-Base.eltype(l::IsingLayer) = eltype(graph(l))
+Base.eltype(l::IsingLayer{A,B,C,D,T}) where {A,B,C,D,T} = T
 
 # ORDER LAYER TYPES BASED ON STATETYPE
 # TODO: HACKY
