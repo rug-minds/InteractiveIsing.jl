@@ -7,11 +7,9 @@
     # struct Hamiltonian 
     #     description::Any
     # end
-    abstract type DerivedHamiltonian end
+    abstract type ConcreteHamiltonian end
 
     const defined_derived = Dict{Type, Type}()
-
-    include("ParamVal.jl")
 
 
     """
@@ -31,7 +29,7 @@
     function prepare(::Type{Algo} ,@specialize(oldargs), @specialize(newargs)) where {Algo <: MCAlgorithm}
 
         (;g) = newargs
-        args_algo = (;_prepareNEW(Algo, g)...)
+        args_algo = (;_prepare(Algo, g)...)
         final_args = (;args_algo..., newargs...)
 
 

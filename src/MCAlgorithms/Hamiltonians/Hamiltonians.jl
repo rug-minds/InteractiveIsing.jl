@@ -50,8 +50,11 @@ function GatherHamiltonianParams(tups::Tuple{Symbol, DataType, <:Real, String}..
     return HamiltonianParams(symbs, types, defaultvals, descriptions)
 end
 
-params(::Type{T}, g::IsingGraph) where T <: Hamiltonian = params(T, eltype(g))
+# params(::Type{T}, g::IsingGraph) where T <: Hamiltonian = params(T, eltype(g))
 params(c::Type{<:CompositeHamiltonian}, graph::IsingGraph) = merge(params.(hamiltonians(c), eltype(graph))...)
+params(h::Type{H}, graph::IsingGraph) where H <: Hamiltonian = params(H(), eltype(graph))
+
+args(::Type{H}) where H <: Hamiltonian = args(H())
 
 function merge(params::HamiltonianParams...) 
     emptyparams = HamiltonianParams(Symbol[], DataType[], Real[], String[])
@@ -72,18 +75,32 @@ HamiltonianExprs(pairs::Pair{Vector{Symbol},Expr}...) = HamiltonianExprs(Dict(pa
 HamiltonianExprs(pair::Pair{Symbol,Expr}...) = HamiltonianExprs(Dict(map(pair->[first(pair)]=>last(pair),ps)...))
 
 """
+Adds the paramvals to g.params, overwrites the old ones
+"""
+function addHparams!(graph, hamiltonian_params)
+    pairs = Pair{Symbol, ParamVal}[]
+    for index in eachindex(hamiltonian_params.names)
+        type  = hamiltonian_params.types[index]
+        val = nothing
+        if type <: Vector
+            val = zeros(eltype(type), length(graph.state))
+        else
+            val = zero(type)
+        end
+        push!(pairs, hamiltonian_params.names[index] => ParamVal(val, hamiltonian_params.defaultvals[index], hamiltonian_params.descriptions[index]))
+    end
+    graph.params = Parameters(;pairs...,get_nt(graph.params)...)
+end
+"""
 Doesn't work if vector param is written as v_i
 """
 function Hamiltonian_Builder(::Type{Algo}, graph, hamiltonians::Type{<:Hamiltonian}) where {Algo <: MCAlgorithm}
-    addparams!(graph, params(hamiltonians, graph))
+    addHparams!(graph, params(hamiltonians, graph))
     required_H = requires(Algo)
+
     H_ex = H_expr(required_H, graph, hamiltonians...)
-    # Replace the symbols that are inactive by their default values
-    H_ex = replace_inactive_symbs(graph.params, Meta.parse(H_ex))
-    # Replace the symbols that are reserved by the algorithm
-    H_ex = replace_reserved(Metropolis, H_ex)
-    H_ex = replace_indices(H_ex)
-    H_ex = replace_params(graph.params, H_ex)
+ 
+    H_ex = param_function(Meta.parse(H_ex), Algo, graph.params)
 
     @RuntimeGeneratedFunction(H_ex)
 end

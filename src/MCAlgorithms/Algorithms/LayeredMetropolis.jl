@@ -8,7 +8,7 @@ function reserved_symbols(::Type{LayeredMetropolis})
     return [:w_ij => :wij, :sn_i => :newstate, :s_i => :oldstate, :s_j => :(gstate[j])]
 end
 
-function _prepare(::Type{LayeredMetropolis}, g; kwargs...)
+function _prepareOLD(::Type{LayeredMetropolis}, g; kwargs...)
     ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
     prepared_kwargs = pairs((;g,
                         gstate = g.state,
@@ -21,7 +21,7 @@ function _prepare(::Type{LayeredMetropolis}, g; kwargs...)
     return prepared_kwargs
 end
 
-function _prepareNEW(::Type{LayeredMetropolis}, @specialize(g))
+function _prepare(::Type{LayeredMetropolis}, @specialize(g))
     ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
     prepared_args = pairs((;g,
                         gstate = g.state,

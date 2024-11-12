@@ -17,7 +17,7 @@ end
 struct ThreadedPrealloc{PreallocT}
     vec::Vector{PreallocT}
 end
-@inline getindex(pre::ThreadedPrealloc, i) = pre.vec[i]
+@inline Base.getindex(pre::ThreadedPrealloc, i) = pre.vec[i]
 
 function ThreadedPrealloc(type::Type, N, nthreads)
     PreallocT = typeof(Prealloc(type, N))

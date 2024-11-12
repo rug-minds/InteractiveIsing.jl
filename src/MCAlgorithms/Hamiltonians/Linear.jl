@@ -5,8 +5,8 @@ The linear part of the Ising Hamiltonian
 """
 struct Linear <: Hamiltonian 
 
-params(::Type{Linear}) = nothing
+params(::Linear) = nothing
 
-function Δi_H(::Type{Linear})
+function Δi_H(::Linear)
     return 0
 end

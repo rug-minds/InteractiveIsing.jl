@@ -9,7 +9,7 @@ function reserved_symbols(::Type{Metropolis})
 end
 
 
-function _prepare(::Type{Metropolis}, g; kwargs...)
+function _prepareOLD(::Type{Metropolis}, g; kwargs...)
     prepared_kwargs = pairs((;g,
                         gstate = g.state,
                         gadj = g.adj,
@@ -24,7 +24,7 @@ function _prepare(::Type{Metropolis}, g; kwargs...)
     return prepared_kwargs
 end
 
-function _prepareNEW(::Type{Metropolis}, @specialize(args))
+function _prepare(::Type{Metropolis}, @specialize(args))
     (;g) = args
     prepared_kwargs = pairs((;g,
                         gstate = g.state,
