@@ -129,13 +129,14 @@ end
 # Dispatch barrier
 jump!(sd::SDefect, x, y, z) = _jump!(layer(sd), sd, x, y, z)
 
-function _jump!(l::IsingLayer, sd::SDefect, x, y, z)
+function _jump!(l::IsingLayer, sd::SDefect, x, y, z = 0)
     #unscale
     old_scale = getscale(sd)
     scale!(sd, 1/sd.scaling)
     (i,j,k) = idxToCoord(sd.idx, size(l))
+    
     # Primed coordinates
-    (xp, yp, zp) = coordwalk(InteractiveIsing.top(l), y+i, x+j, z+k)
+    (xp, yp, zp) = coordwalk(InteractiveIsing.top(l), x+i, y+j, z+k)
     new_idx = coordToIdx(Int32.((xp, yp, zp)), size(l))
     setidx!(sd, new_idx)
     scale!(sd, old_scale)
@@ -150,8 +151,9 @@ SDefects(I,F) = SDefects{I,F}(SDefect{I,F}[])
 
 function Base.show(io::IO, sd::SDefect)
     coords = idxToCoord(sd.idx, size(sd.layer))
-    println("Scaling defect at x,y,z = $((coords[2],coords[1],coords[3])) with scaling factor $(sd.scaling)")
+    println("Scaling defect at x,y,z = $((coords...,)) with scaling factor $(sd.scaling)")
 end
+
 Base.getindex(d::SDefects, i) = d.data[i]
 Base.length(d::SDefects) = length(d.data)
 Base.iterate(d::SDefects, i::Int=1) = i > length(d.data) ? nothing : (d.data[i], i+1)
@@ -176,8 +178,6 @@ function add_sdefect!(l::IsingLayer, _scale, idx::Integer)
     scale!(g, gidx, _scale)
 end
 
-
-
 add_sdefect!(l::IsingLayer, scale, x, y, z) = add_sdefect!(l, scale, coordToIdx(Int32.((x,y,z)), size(l)))
 
 """
@@ -187,8 +187,9 @@ function add_sdefects!(l::IsingLayer, scale, coords::Tuple...)
     scale = convert(eltype(graph(l)), scale)
     for coord in coords
         idx = coordToIdx(Int32.(coord), size(l))
-        add_sdefect!(l, idx, scale)
+        add_sdefect!(l, scale, idx)
     end
+    return get_sdefects(l)
 end
 
 function get_sdefects(g)
@@ -201,3 +202,5 @@ function get_sdefects(g)
         return sd
     end
 end
+
+get_sdefects(g, idx) = get_sdefects(graph(g))[idx]
