@@ -177,7 +177,7 @@ end
 @forwardfields IsingSim Obs obs temp
 @forwardfields IsingSim IsingParams params
 @setterGetter IsingSim img
-getindex(sim::IsingSim, idx) = gs(sim)[idx]
+Base.getindex(sim::IsingSim, idx) = gs(sim)[idx]
 temp(sim::IsingSim, val) = sim.obs.temp[] = val
 temp(sim::IsingSim) = sim.obs.temp
 
