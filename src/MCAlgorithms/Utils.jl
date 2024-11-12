@@ -2,7 +2,7 @@
 debugmode = true
 @static if debugmode
 export strsplice, find_i_symb, symbol_without_index, match_indexed_symbol, 
-    before_underscore, i_to_vec_expr, symbwalk, _symbwalk, identify_unique_elements, 
+    before_underscore, i_to_vec_expr, symbwalk!, _symbwalk!, identify_unique_elements, 
     unique_identifiers_old!, replace_reserved, substitute_zero, substitute_one, replace_indices, 
     replace_idxs, remove_key, replace_inactive_symbs, symbol_without_index, find_symb, find_symbs, delete_tree
 end
@@ -149,22 +149,29 @@ function i_to_vec_expr(symb)
     return Meta.parse(str)
 end
 
-
-
 """
-Walk through all symbols in an expression and replace them by the function func
+In an expression containing some struct and fields, like s.field1, s.field2, s.field3
+    find all the idxs where the struct is and the name of the field being acessed
 """
-symbwalk(func, expr::Expr) = _symbwalk(func, deepcopy(expr))
-function _symbwalk(func, expr::Expr)
-    for arg_idx in eachindex(expr.args)
-        if expr.args[arg_idx] isa Expr
-            _symbwalk(func, expr.args[arg_idx])
-        else
-            expr.args[arg_idx] = func(expr.args[arg_idx])
+function find_struct_field_access(expr, structname)
+    idxss = find_symbs(expr, structname)
+    hits = []
+    for idxs in idxss
+        if get_head(expr, idxs[1:end-1]...) == :.
+            fieldname = enter_args(expr, idxs[1:end-1]...,2)
+            push!(hits, (idxs, fieldname))            
         end
     end
-    return expr
+    if isempty(hits)
+        return nothing
+    end
+    return hits
 end
+export find_struct_field_access
+
+
+
+
 
 """
 From a vector of the collect expressions for the hamiltonians
@@ -194,24 +201,15 @@ function identify_unique_elements(els)
     return unique_els, element_identifier, unique_idxs  
 end
 
-
-function unique_identifiers_old!(exprs, terms)
-    unique_idents = length(exprs)
-    delete_idxs = []
-    for i in eachindex(exprs)
-        for j in i+1:length(exprs)
-            if exprs[i] == exprs[j]
-                if !isempty(terms[i])
-                    push!(terms[i], j)
-                    terms[j] = []
-                    unique_idents -= 1
-                    push!(delete_idxs, j)
-                end
-            end
-        end
+"""
+Take the symbols that are reserved by thing and replace them in the expression
+"""
+function replace_reserved!(exp::Expr, thing)
+    symbols = reserved_symbols(thing)
+    for (old, new) in symbols
+        exp = symbwalk!(x -> x == old ? new : x, exp)
     end
-    deleteat!(terms, sort!(delete_idxs))
-    return unique_idents
+    return exp
 end
 
 """
@@ -221,7 +219,7 @@ Gotten from the reserved_symbols function of the algorithm
 function replace_reserved(algo::Type{<:MCAlgorithm}, expr::Expr)
     _reserved_symbols = reserved_symbols(algo)
     for (old, new) in _reserved_symbols
-        expr = symbwalk(x -> x == old ? new : x, expr)
+        expr = symbwalk!(x -> x == old ? new : x, expr)
     end
     return expr
 end
@@ -231,7 +229,7 @@ In an expression with symbols of the form x_i, x_j, x_k, replace them with x[i],
 """
 function replace_indices(expr)
     replacefunc = x -> (replaced = i_to_vec_expr(x); !isnothing(replaced) ? replaced : x)
-    symbwalk(replacefunc, expr)
+    symbwalk!(replacefunc, expr)
 end
 
 """
@@ -239,7 +237,7 @@ Replace all the i's in an expression with idx
 WHY?
 """
 function replace_idxs(expr::Expr)
-    symbwalk(x -> x == :i ? :idx : x, expr)
+    symbwalk!(x -> x == :i ? :idx : x, expr)
 end
 
 
@@ -310,24 +308,8 @@ function find_symbs(expr, symb, all_found = [], index...)
     return all_found
 end
 
-# function delete_tree(expr, indexs)
-#     cexpr = deepcopy(expr)
-#     previous_expr = cexpr
-#     branch = cexpr
-#     for i in indexs[1:end-2]
-#         previous_expr = branch
-#         branch = branch.args[i]
-#     end
-#     deleteat!(branch.args, indexs[end-1])
-#     # If only one branch left, remove the operator
-#     if length(branch.args) == 2 && branch.args[1] == :+
-#         previous_expr.args = branch.args[2:2]
-#     end
-#     return cexpr
-# end
-
 enter_args(ex::Expr, t::Tuple) = enter_args(ex, t...)
-function enter_args(ex::Expr, idxs::Int...)
+function enter_args(ex::Union{Expr,QuoteNode}, idxs::Int...)
     if length(idxs) == 0
         return ex
     else
@@ -335,7 +317,20 @@ function enter_args(ex::Expr, idxs::Int...)
     end
 end
 
-enter_args(ex::Symbol, idxs...) = ex
+function enter_args(ex::Symbol, idxs...)
+    if length(idxs) == 0
+        return ex
+    else
+        throw(ArgumentError("type Symbol has no field args"))
+    end
+end
+function enter_args(ex::LineNumberNode, idxs...)
+    if length(idxs) == 0
+        return ex
+    else
+        throw(ArgumentError("type LineNumberNode has no field args"))
+    end
+end
 
 function get_args(a::Expr,b...)
     ex = enter_args(a,b...)
@@ -359,9 +354,14 @@ It will delete all the branches including the symbol that completely evaluate to
 """
 function substitute_zero(expr, indexs)
     cexpr = deepcopy(expr)
+    if indexs isa Integer || length(indexs) == 1
+        cexpr = Expr(:block, cexpr)
+        indexs = (1, indexs...)
+    end
 
     # Walk up the branch and fix the tree
-    for level in 1:length(indexs)-1
+    for level in 1:length(indexs)
+    # for level in 1:length(indexs)
         this_level = length(indexs)-level
         level_indexs = indexs[1:this_level]
         level_indexs = indexs[1:this_level]
@@ -397,31 +397,10 @@ function substitute_zero(expr, indexs)
                 get_args(cexpr, indexs[1:this_level-1]...)[indexs[this_level]] = leftover
             end
         end
-        
-        # if symbol == :* || (symbol == :+ && length(get_args(cexpr, level_indexs...)) == 1)
-        #     continue # Carry the zero
-        # end
-
-        # # the expression is a division and the symbol is in the numerator
-        # if symbol == :/ && level_indexs[end] == 2
-        #     println("Continueing becasue of /")
-        #     continue # Carry the zero
-        # end
-
-        # if ( (symbol == :+ || symbol == :-) && length(get_args(cexpr, level_indexs...)) <= 3)
-        #     # replace branch with leftover branch
-        #     other_branch = indexs[this_level+1] == 2 ? 3 : 2
-        #     ex = get_args(cexpr, level_indexs...)[other_branch]
-
-        #     get_args(cexpr, level_indexs[1:this_level-1]...)[level_indexs[this_level]] = ex
-        # else
-        #     println("just deleting branch")
-        #     delete_branch(cexpr, level_indexs..., indexs[this_level+1])
-        # end
-
+    
         break
     end
-  
+
     return cexpr
 end
 
@@ -460,6 +439,14 @@ Replace a symbol in an expression with a value
 """
 function replace_symb(expr, val, indexs)
     cexpr = deepcopy(expr)
+    if indexs isa Integer || length(indexs) == 1
+        if !(indexs isa Integer)
+            indexs = indexs[1]
+        end
+
+        cexpr.args[indexs] = val
+        return cexpr
+    end
     branch = cexpr.args
     for i in indexs[1:end-1]
         branch = branch[i].args
@@ -467,6 +454,18 @@ function replace_symb(expr, val, indexs)
     branch[indexs[end]] = val
     return cexpr
 end
+export replace_symb
+
+function substitute_math(expr, val, indexs)
+    if val == 0
+        return substitute_zero(expr, indexs)
+    elseif val == 1
+        return substitute_one(expr, indexs)
+    else
+        return replace_symb(expr, val, indexs)
+    end
+end
+export substitute_math
 
 """
 Checks ParamVals for inactivity and removes all inactive symbol branches
@@ -488,12 +487,12 @@ function replace_inactive_symbs(params, expr::Expr)
     return expr
 end
 """
-Replace the parameters with g.params.nt[param] in the expression
+Replace the parameters with g.params._nt[param] in the expression
 """
 function replace_params(params, expr::Expr) 
     for symb in keys(params)
         while (indexs = find_symb(expr, symb); !isnothing(indexs))
-            newsymb = :(gparams.nt.$symb)
+            newsymb = :(gparams.$symb)
             expr = replace_symb(expr, newsymb, indexs)
         end
     end
@@ -501,32 +500,32 @@ function replace_params(params, expr::Expr)
 end
 
 """
-
+For a function that uses ParamVals, replace the symbols that are inactive by their default values
+    als point them to the gparams.param[indices...]
 """
 function substitute_symbols(algorithm::Type{<:MCAlgorithm}, params, expr::Expr)
     #Replace inactive symbols
 
     # Replace the reserved symbols
-    subs_return_exprs = replace_reserved(Metropolis, Meta.parse(body))
+    subs_return_exprs = replace_reserved(MCAlgorithm, Meta.parse(body))
     
     # For the remaining, get them from gparams.param[indices...]
     subs_return_exprs = replace_indices(subs_return_exprs)
 
 end
 
-# function group_idxs(layertypes)
-#     grouped = []
-#     idxs = [1]
-#     lts = layertypes.parameters
-#     lasttype = lts[1]
-#     for (lt_idx,lt) in enumerate(lts)
-#         if equiv(lt, lasttype)
-#             continue
-#         end
-#         push!(grouped, first(indexset(lasttype)):last(indexset(lts[lt_idx-1])))
-#         push!(idxs, lt_idx)
-#         lasttype = lt
-#     end
-#     push!(grouped, first(indexset(lasttype)):last(indexset(lts[end])))
-#     return grouped, idxs
-# end
+
+"""
+For a function that uses ParamVals, replace the symbols that are inactive by their default values
+"""
+function param_function(func_expr, Algo, params)
+    # Replace the symbols that are inactive by their default values
+    H_ex = replace_inactive_symbs(params, func_expr)
+    # Replace the symbols that are reserved by the algorithm
+    H_ex = replace_reserved(Algo, H_ex)
+    # Replace the symbols that are indexed by their vector form
+    H_ex = replace_indices(H_ex)
+    # Replace the symbols that are parameters by gparams.param
+    H_ex = replace_params(params, H_ex)
+    return H_ex
+end

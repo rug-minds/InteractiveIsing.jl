@@ -1,64 +1,28 @@
-export getparam, setparam!, _setparam!
+export param, params
 
-struct IsingParameters{NT<:NamedTuple}
-    nt::NT
+param(g::IsingGraph, param::Symbol) = getparam(g, param)
+params(g::IsingGraph) = g.params
+
+function changeactivation!(g, param, activate)
+    g.params = changeactivation(g.params, param, activate)
+    refresh(g)
+    return g.params
 end
-IsingParameters(; kwargs...) = IsingParameters(NamedTuple(kwargs))
-
-#Forward methods for namedtuple to IsingParameters
-Base.getindex(p::IsingParameters, k::Symbol) = p.nt[k]
-Base.get!(p::IsingParameters, k::Symbol, default) = get(p.nt, k, default)
-Base.get(p::IsingParameters, k::Symbol) = get(p.nt, k)
-Base.get(p::IsingParameters, k::Symbol, default) = get(p.nt, k, default)
-Base.length(p::IsingParameters) = length(p.nt)
-Base.keys(p::IsingParameters) = keys(p.nt)
-Base.values(p::IsingParameters) = values(p.nt)
-Base.iterate(p::IsingParameters, state = 1) = iterate(p.nt, state)
-Base.haskey(p::IsingParameters, k::Symbol) = haskey(p.nt, k)
-
-# Implement pairs for correct splatting behavior
-Base.pairs(p::IsingParameters) = pairs(p.nt)
-
-# If you need mutability, implement setindex! and setproperty!
-# Note: This will only work if the underlying NamedTuple is mutable
-Base.setindex!(p::IsingParameters, v, k::Symbol) = setindex!(p.nt, v, k)
-Base.setproperty!(p::IsingParameters, s::Symbol, v) = setproperty!(p.nt, s, v)
-
-# To make it behave more like a NamedTuple in other contexts
-Base.:(==)(a::IsingParameters, b::IsingParameters) = a.nt == b.nt
-Base.hash(p::IsingParameters, h::UInt) = hash(p.nt, h)
-
-# For pretty printing
-Base.show(io::IO, p::IsingParameters) = print(io, "IsingParameters", p.nt)
-
-# To allow splatting directly
-Base.splat(p::IsingParameters) = splat(p.nt)
-
-
 
 
 
 @inline function getparam(g::IsingGraph, param::Symbol)
-    @assert haskey(g.params, param) "Parameter $param not found in graph"
-    return g.params[param]
+    getproperty(g.params, param)
 end
 
-function changeactivation!(g, param, activate)
-    if !isnothing(activate) && isactive(g.params[param]) != activate
-        newparam = ParamVal(g.params[param], activate)
-        # println("Newparam, ", newparam)
-        # println("Newparams: ", (;g.params..., param => newparam))
-        g.params = IsingParameters((;g.params.nt..., param => newparam))
-        refresh(g)
-    end 
-end
+
 
 activate!(g::IsingGraph, param) = changeactivation!(g, param, true)
 deactivate!(g::IsingGraph, param) = changeactivation!(g, param, false)
 function setglobal!(g::IsingGraph, param, val)
     pval = getparam(g, param)
     old_default = default(pval)
-    g.params = IsingParameters(param = ParamVal(pval, val, false); g.params.nt...)
+    g.params = Parameters(param = ParamVal(pval, val, false); get_nt(g.params)...)
     if old_default != val
         refresh(g)
     end

@@ -11,7 +11,11 @@ end
     return Int32(i + (j - 1) * len + (k - 1) * len * wid)
 end
 
-@inline function coordToIdx(coords::NTuple{N,Int32}, size::NTuple{N,Int32}) where N
+@inline function coordToIdx(coords::NTuple{N,<:Integer}, size::NTuple{N,<:Integer}) where N
+    # Convert
+    coords = Int32.(coords)
+    size = Int32.(size)
+    
     idx = 1
     for i in 1:N
         idx += (coords[i] - 1) * prod(size[1:i-1])

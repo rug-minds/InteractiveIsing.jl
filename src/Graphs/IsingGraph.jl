@@ -35,7 +35,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
 
     # Connection between layers, Could be useful to track for faster removing of layers
     layerconns::Dict{Set, Int32}
-    params::IsingParameters #TODO: Make this a custom type?
+    params::Parameters #TODO: Make this a custom type?
 
     # For notifying simulations or other things
     emitter::Emitter
@@ -75,7 +75,7 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
         ShuffleVec{IsingLayer}(relocate = relocate!),
         Dict{Pair, Int32}(),
         #Params
-        IsingParameters(self = ParamVal(precision[], 0, "Self Connections", false)),
+        Parameters(self = ParamVal(precision[], 0, "Self Connections", false)),
         #Emitter
         Emitter(Observable[]),
         #Defects

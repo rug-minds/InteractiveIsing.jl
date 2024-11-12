@@ -9,12 +9,12 @@ It also stores wether it's active and if not a fallback value
     the whole vector can be set to a constant value, so that
     memory does not need to be accessed.
 """
-mutable struct ParamVal{T, Default, Active}
+mutable struct ParamVal{T, Default, Active} <: DenseArray{T, 1}
     val::T
     description::String
 end
 
-function ParamVal(val::T, default, description, active = false) where T
+function ParamVal(val::T, default, description = "", active = false) where T
     # If val is vector type, default value must be eltype, 
     # otherwise it must be the same type
     if T <: Vector 
@@ -38,23 +38,52 @@ end
 
 isinactive(::ParamVal{A,B,C}) where {A,B,C}= !C
 isactive(::ParamVal{A,B,C}) where {A,B,C} = C
+isactive(::Type{ParamVal{A,B,C}}) where {A,B,C} = C
+isinactive(::Type{ParamVal{A,B,C}}) where {A,B,C} = !C
+default(::Type{ParamVal{T, Default, Active}}) where {T, Default, Active} = Default
+description(p::ParamVal) = p.description
+export isactive, isinactive
+
 toggle(p::ParamVal{T, Default, Active}) where {T, Default, Active} = ParamVal{T, Default, !Active}(p.val)
 @inline default(::ParamVal{T, Default}) where {T, Default} = Default
 @inline Base.eltype(::ParamVal{T}) where T = T
-@inline Base.getindex(p::ParamVal) = p.val
+@inline function Base.getindex(p::ParamVal, i = nothing)
+    @assert isnothing(i) || i == 1
+    return p.val
+end
 @inline Base.setindex!(p::ParamVal, val) = (p.val = val)
-@inline Base.getindex(p::ParamVal{T}, idx) where T <: Real = p.val
+@inline Base.getindex(p::ParamVal{T}) where T = p.val
 @inline Base.setindex!(p::ParamVal{T}, val, idx) where T <: Real = (p.val = val)
-@inline Base.getindex(p::ParamVal{T}, idx) where T <: Vector = p.val[idx]
+@inline Base.getindex(p::ParamVal{T}, idx) where T <: Vector = getindex(p.val, idx)::eltype(T)
 @inline Base.setindex!(p::ParamVal{T}, val, idx) where T <: Vector = (p.val[idx] = val)
 @inline Base.lastindex(p::ParamVal{T}) where T <: Vector = lastindex(p.val)
 @inline Base.firstindex(p::ParamVal{T}) where T <: Vector = firstindex(p.val)
+@inline Base.eachindex(p::ParamVal{T}) where T = Base.OneTo(1)
+@inline Base.eachindex(p::ParamVal{T}) where T <: Vector = eachindex(p.val)
+
+LoopVectorization.check_args(p::ParamVal{T}) where T <: Vector = true
+@inline Base.pointer(p::ParamVal{T}) where T = pointer(p.val)
+
+
 Base.lastindex(p::ParamVal{T}, idx) where T = 1
 Base.firstindex(p::ParamVal{T}, idx) where T = 1
 Base.size(p::ParamVal{T}) where T = (1,)
 Base.size(p::ParamVal{T}) where T <: Vector = size(p.val)
 Base.length(p::ParamVal{T}) where T <: Vector = length(p.val)
 Base.length(p::ParamVal{T}) where T = 1
+Base.push!(p::ParamVal{T}, val) where T <: Vector = push!(p.val, val)
+Base.eltype(p::ParamVal{T}) where T = T
+Base.eltype(p::ParamVal{Vector{T}}) where T = T
+
+"""
+Gives the zero value of the type of the parameter
+Or just zero of the number type if it's a number
+This works with inlining of default values.
+"""
+paramzero(val::Any) = typeof(val)(0)
+paramzero(::ParamVal{T}) where T = zero(T)
+export paramzero
+
 
 Base.BroadcastStyle(::Type{ParamVal{T,A,B}}) where {T<:AbstractArray,A,B} = Broadcast.ArrayStyle{ParamVal}()
 Base.BroadcastStyle(::Type{ParamVal{T,A,B}}) where {T,A,B} = Broadcast.Style{ParamVal}()
@@ -78,26 +107,6 @@ function Base.show(io::IO, p::ParamVal{T}) where {T <: Vector}
     println(io, "$(p.description) with vector value.")
     println(io, "Defaulting to: $(default(p))")
     display(p.val)
-end
-
-#TODO: Put in parameters
-"""
-Adds the paramvals to g.params, overwrites the old ones
-"""
-function addparams!(graph, hamiltonian_params)
-    pairs = Pair{Symbol, ParamVal}[]
-    for index in eachindex(hamiltonian_params.names)
-        type  = hamiltonian_params.types[index]
-        val = nothing
-        if type <: Vector
-            val = zeros(eltype(type), length(graph.state))
-        else
-            val = zero(type)
-        end
-        push!(pairs, hamiltonian_params.names[index] => ParamVal(val, hamiltonian_params.defaultvals[index], hamiltonian_params.descriptions[index]))
-    end
-    #TODO HACKY
-    graph.params = IsingParameters(;pairs...,graph.params.nt...)
 end
 
 """
