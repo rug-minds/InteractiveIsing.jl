@@ -6,8 +6,9 @@
         wij = gadj.nzval[ptr]
 
         @collect
-    end
     
+    end
+
     return @collectsum
 end
 
@@ -26,6 +27,10 @@ q = quote
     end
 end
 
-InteractiveIsing.replace_H_macros!(InteractiveIsing.Δi_H(), q; hamiltonians = g.hamiltonian())
+InteractiveIsing.replace_H_macros!(InteractiveIsing.Δi_H(), q; hamiltonians = g.hamiltonian)
 
-Δi_H_exp(1, g.state, 1, 0, g.adj, g.params, g.hamiltonian, g[1])
+println("New q: ", q)
+
+printexp(Δi_H_exp(1, g.state, 1, 0, g.adj, g.params, g.hamiltonian, g[1]))
+
+

@@ -2,7 +2,7 @@
 debugmode = true
 @static if debugmode
 export strsplice, find_i_symb, symbol_without_index, match_indexed_symbol, 
-    before_underscore, i_to_vec_expr, symbwalk!, _symbwalk!, identify_unique_elements, 
+    before_underscore, i_to_vec_expr, symbwalk, _symbwalk, identify_unique_elements, 
     unique_identifiers_old!, replace_reserved, substitute_zero, substitute_one, replace_indices, 
     replace_idxs, remove_key, replace_inactive_symbs, symbol_without_index, find_symb, find_symbs, delete_tree
 end
@@ -207,7 +207,7 @@ Take the symbols that are reserved by thing and replace them in the expression
 function replace_reserved!(exp::Expr, thing)
     symbols = reserved_symbols(thing)
     for (old, new) in symbols
-        exp = symbwalk!(x -> x == old ? new : x, exp)
+        exp = symbwalk(x -> x == old ? new : x, exp)
     end
     return exp
 end
@@ -219,7 +219,7 @@ Gotten from the reserved_symbols function of the algorithm
 function replace_reserved(algo::Type{<:MCAlgorithm}, expr::Expr)
     _reserved_symbols = reserved_symbols(algo)
     for (old, new) in _reserved_symbols
-        expr = symbwalk!(x -> x == old ? new : x, expr)
+        expr = symbwalk(x -> x == old ? new : x, expr)
     end
     return expr
 end
@@ -229,7 +229,7 @@ In an expression with symbols of the form x_i, x_j, x_k, replace them with x[i],
 """
 function replace_indices(expr)
     replacefunc = x -> (replaced = i_to_vec_expr(x); !isnothing(replaced) ? replaced : x)
-    symbwalk!(replacefunc, expr)
+    symbwalk(replacefunc, expr)
 end
 
 """
@@ -237,7 +237,7 @@ Replace all the i's in an expression with idx
 WHY?
 """
 function replace_idxs(expr::Expr)
-    symbwalk!(x -> x == :i ? :idx : x, expr)
+    symbwalk(x -> x == :i ? :idx : x, expr)
 end
 
 

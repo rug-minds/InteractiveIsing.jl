@@ -9,6 +9,23 @@ export CompositeHamiltonian
 Type for a composition of Hamiltonians
 """
 struct CompositeHamiltonian{T} <: Hamiltonian end
+
+Base.length(h::Hamiltonian) = 1
+Base.length(c::CompositeHamiltonian) = length(c.parameters)
+Base.length(h::Type{<:Hamiltonian}) = 1
+Base.length(c::Type{<:CompositeHamiltonian}) = length(c.parameters)
+Base.iterate(h::Hamiltonian, state = 1) = state == 1 ? (h, 2) : nothing
+Base.iterate(c::CompositeHamiltonian, state = 1) = state <= length(c.parameters) ? c.parameters[state]() : nothing
+Base.iterate(ht::Type{H}, state = 1) where H <: Hamiltonian = iterate(H(), state)
+Base.iterate(c::Type{CH}, state = 1) where CH <: CompositeHamiltonian = iterate(CH(), state) 
+function Base.getindex(h::Hamiltonian, i::Int)
+    @assert i == 1
+    return h
+end
+Base.getindex(c::CompositeHamiltonian, i::Int) = c.parameters[i]
+
+
+
 CompositeHamiltonian(hamiltonians::Type{<:Hamiltonian}...) = CompositeHamiltonian{Tuple{hamiltonians...}}
 function Base.iterate(c::Type{<:Hamiltonian}, state = 1)
     if state == 1
@@ -53,6 +70,7 @@ end
 # params(::Type{T}, g::IsingGraph) where T <: Hamiltonian = params(T, eltype(g))
 params(c::Type{<:CompositeHamiltonian}, graph::IsingGraph) = merge(params.(hamiltonians(c), eltype(graph))...)
 params(h::Type{H}, graph::IsingGraph) where H <: Hamiltonian = params(H(), eltype(graph))
+params(h::Hamiltonian, g::IsingGraph) = params(h, eltype(g))
 
 args(::Type{H}) where H <: Hamiltonian = args(H())
 
@@ -94,13 +112,13 @@ end
 """
 Doesn't work if vector param is written as v_i
 """
-function Hamiltonian_Builder(::Type{Algo}, graph, hamiltonians::Type{<:Hamiltonian}) where {Algo <: MCAlgorithm}
+function Hamiltonian_Builder(::Type{algo}, graph, hamiltonians::Hamiltonian) where {algo <: MCAlgorithm}
     addHparams!(graph, params(hamiltonians, graph))
-    required_H = requires(Algo)
+    required_H = requires(algo)
 
     H_ex = H_expr(required_H, graph, hamiltonians...)
  
-    H_ex = param_function(Meta.parse(H_ex), Algo, graph.params)
+    H_ex = param_function(Meta.parse(H_ex), algo, graph.params)
 
     @RuntimeGeneratedFunction(H_ex)
 end

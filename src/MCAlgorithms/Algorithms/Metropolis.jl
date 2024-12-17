@@ -1,7 +1,7 @@
 export Metropolis
 
 struct Metropolis <: MCAlgorithm end
-requires(::Type{Metropolis}) = Δi_H
+requires(::Type{Metropolis}) = Δi_H()
 
 
 function reserved_symbols(::Type{Metropolis})

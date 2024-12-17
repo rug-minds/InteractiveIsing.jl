@@ -1,7 +1,7 @@
 export LayeredMetropolis
 
 struct LayeredMetropolis <: MCAlgorithm end
-requires(::Type{LayeredMetropolis}) = Δi_H
+requires(::Type{LayeredMetropolis}) = Δi_H()
 
 
 function reserved_symbols(::Type{LayeredMetropolis})
@@ -21,7 +21,8 @@ function _prepareOLD(::Type{LayeredMetropolis}, g; kwargs...)
     return prepared_kwargs
 end
 
-function _prepare(::Type{LayeredMetropolis}, @specialize(g))
+function _prepare(::Type{LayeredMetropolis}, @specialize(args))
+    (;g) = args
     ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
     prepared_args = pairs((;g,
                         gstate = g.state,

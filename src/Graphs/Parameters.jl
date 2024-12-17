@@ -4,8 +4,11 @@ param(g::IsingGraph, param::Symbol) = getparam(g, param)
 params(g::IsingGraph) = g.params
 
 function changeactivation!(g, param, activate)
+    old_active = isactive(getparam(g, param))
     g.params = changeactivation(g.params, param, activate)
-    refresh(g)
+    if old_active != activate
+        refresh(g)
+    end
     return g.params
 end
 

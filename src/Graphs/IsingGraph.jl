@@ -28,7 +28,7 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
     temp::T
 
     default_algorithm::Type{<:MCAlgorithm}
-    hamiltonian::Type{<:Hamiltonian}
+    hamiltonian::Hamiltonian
     stype::SType
     
     layers::ShuffleVec{IsingLayer}
@@ -69,7 +69,7 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
         # Default algorithm
         LayeredMetropolis,
         #Hamiltonians
-        Ising,
+        Ising(),
         SType(:Weighted => weighted),
         #Layers
         ShuffleVec{IsingLayer}(relocate = relocate!),
@@ -146,7 +146,7 @@ function IsingGraph(
                         layers,
                         defects,
                         data,
-                        Hamiltonians = Ising
+                        Hamiltonians = Ising()
                         )
     return IsingGraph(
         # Sim

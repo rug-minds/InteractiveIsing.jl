@@ -117,7 +117,7 @@ function replace_struct_access(exp, symb, replace)
 end
 
 function structname_fieldname(struct_access_exp)
-    found = (expwalk(struct_access_exp) do head, args
+    found = (expmatch(struct_access_exp) do head, args
         if head == :.
             return true
         end

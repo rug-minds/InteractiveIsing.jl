@@ -1,5 +1,5 @@
 include("ParamVal.jl")
-export getparam, setparam!, _setparam!
+export Parameters, getparam, setparam!, _setparam!
 
 struct Parameters{_NT<:NamedTuple}
     _nt::_NT

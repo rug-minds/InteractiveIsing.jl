@@ -1,5 +1,6 @@
 # dtype := dispatchtype
 struct Δi_H <: ConcreteHamiltonian end
+export Δi_H
 Δi_H(::Type{H}) where H <: Hamiltonian  = Δi_H(H())
 
 function reserved_symbols(::Δi_H)
@@ -12,7 +13,7 @@ args(::Δi_H) = (:i, :gstate, :newstate, :oldstate, :gadj, :gparams, :dtype)
 
 # TODO: Remove export
 export H_expr
-function H_expr(::Type{Δi_H}, graph, hamiltonians::Type{<:Hamiltonian}...)
+function H_expr(::Δi_H, graph, hamiltonians::Hamiltonian...)
     hexprs = Δi_H.(hamiltonians)
     collect_exprs = getfield.(hexprs, :collect_expr)
 
@@ -35,7 +36,7 @@ function H_expr(::Type{Δi_H}, graph, hamiltonians::Type{<:Hamiltonian}...)
 
     # Substitute in exprs
     subs_return_exprs = map(
-        (expr, i) -> symbwalk!(x -> x == :collect_expr ? Symbol("collect_",i) : x, expr),
+        (expr, i) -> symbwalk(x -> x == :collect_expr ? Symbol("collect_",i) : x, expr),
         return_exprs, element_identifier    
     )
     
@@ -69,47 +70,70 @@ function replace_macrosymb(expr, symb, replace...)
 end
 export replace_macrosymb
 
-function H_Macros(::Δi_H, symbol, hamiltonians::Hamiltonian)
-    if symbol == Symbol("@initialize")
-        exp = Expr(:block)
-        for hidx in 1:length(hamiltonians)
-            push!(exp.args, :(collect_$hidx = zero(eltype(gstate))))
+# H_Macros(a,b, t::Type{H}) where H = H_Macros(a,b, H())
+
+#Register H_Macros
+H_Macros(Δi_H(),
+    Symbol("@initialize") => (hams) -> quote
+        collect_1 = zero(eltype(gstate))
+        for hidx in 2:length(hams)
+            $(Symbol("collect_$hidx")) = zero(eltype(gstate))
         end
-        return exp
-    elseif symbol == Symbol("@collect")
-        exp = Expr(:block)
-        for h in hamiltonians
-            c_exp = Δi_H(h).collect_expr
-            push!(exp.args, c_exp)
-        end
-    elseif symbol == Symbol("@collectsum")
-        exp = Expr(:block)
-        for h in hamiltonians
-            c_exp = Δi_H(h).return_expr
-            push!(exp.args, c_exp)
+    end,
+    Symbol("collect") => (hams) -> quote
+    end
+    
+)
+
+# function H_Macros(::Δi_H, symbol, hamiltonians::Hamiltonian)
+#     exp = nothing
+#     if symbol == Symbol("@initialize")
+#         exp = quote 
+#             collect_1 = zero(eltype(gstate))
+#         end
+
+#         for hidx in 2:length(hamiltonians)
+#             push!(exp.args, :(collect_$hidx = zero(eltype(gstate))))
+#         end
+
+#     elseif symbol == Symbol("@collect")
+#         exp = quote
+#             collect_1 += $(Δi_H(hamiltonians).collect_expr)
+#         end
+        
+#     elseif symbol == Symbol("@collectsum")
+#         for h in hamiltonians
+#             c_exp = Δi_H(h).return_expr
+#             push!(exp.args, c_exp)
+#         end
+#     end
+#     return exp
+# end
+
+function hasoverlap(col1, col2)
+    for c1 in col1
+        for c2 in col2
+            if c1 == c2
+                return true
+            end
         end
     end
+    return false
 end
 
-function replace_H_macros!(::Δi_H, exp; hamiltonians)
-    symbols = [Symbol("@initialize"), Symbol("@collect"), Symbol("@collectsum")]
-    symbwalk!(x -> x in symbols ? H_Macros(Δi_H(), x, hamiltonians...) : x, exp)
+function replace_H_macros!(::Δi_H, ex; hamiltonians)
+    expwalk!(ex -> is_registered_HMacro(Δi_H, ex) ? H_Macros(Δi_H(), ex.args[1], hamiltonians...) : ex, exp)
 end
 
 macro ConcreteHamiltonian(expr)
-    @capture(expr, function fname_(a__) body_ end)
-    if isnothing(body)
-        @capture(expr, function fname_(a__) where T_ body_ end)
-        if isnothing(body)
-            @capture(expr, function fname_(a__) where {T__} body_ end)
-        end
-    end
+    fname, a, _ = InteractiveIsing.matchfunction(expr)
+
     paramname = find_type_in_args(a, :Parameters)
     c_exp = replace_reserved!(expr, (@eval $(fname)()))
     # Replace the symbols that are indexed by their vector form
     c_exp = replace_indices(c_exp)
-    f_exp = GeneratedParametersExp(fname, c_exp, paramname, a, (exp, parmname; hamiltonians) -> replace_H_macros!(Δi_H(), expr; hamiltonians))
-    f_gen = GeneratedParametersGen(fname, a)
+    f_exp = GeneratedParametersExp(fname, c_exp, paramname, a, (exp, parmname; hamiltonians, kwargs...) -> InteractiveIsing.replace_H_macros!(Δi_H(), exp; hamiltonians))
+    f_gen = GeneratedParametersGen(fname, expr, a)
 
     return esc(quote
         $f_exp
@@ -117,6 +141,7 @@ macro ConcreteHamiltonian(expr)
     end)
 
 end
+export @ConcreteHamiltonian
 
 # @ConcreteHamiltonian function Δi_H(i, gstate::Vector{T}, newstate, oldstate, gadj, gparams, layertype) where T
 #             # Collect the initial energy

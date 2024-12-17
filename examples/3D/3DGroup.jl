@@ -6,15 +6,18 @@ simulate(g)
 
 function weightfunc(dx,dy,dz)
     prefac = 1
-    dr2 = (2*dx)^2+(2*dy)^2+dz^2
+    dr2 = (dx)^2+(dy)^2+dz^2
     if abs(dy) > 0 || abs(dx) > 0
-        prefac *= -1
+        prefac *= 1
     end
-    return prefac/dr2
+    if dr2 != 1
+        return 0
+    end
+    return prefac
 end
 
 
-wg = @WG "(dx,dy,dz) -> weightfunc(dx,dy,dz)" NN = (1,1,2)
+wg = @WG "(dx,dy,dz) -> weightfunc(dx,dy,dz)" NN = (1,1,1)
 
 genAdj!(g[1], wg)
 
@@ -57,9 +60,9 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1)
         while time() - t_i < tstep
             
         end
-
         # Sets the bfield
         setparam!(g[1], :b, pulse[loopidx(proc)], true)
+
 
 
         # setparam!(g[1][2], :b, pulse[idx], true)
@@ -70,13 +73,12 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1)
         t_i = time()
         
         push!(y, sum(state(g)))
-
+            
         # Send the pulse amplitude to the observable
         push!(x, pulse[loopidx(proc)])
-
     end
 
     return process
 end
 
-# w = lines_window(TrianglePulseB(g, 0.01, 50, 2000, npulse = 2));
+w = lines_window(TrianglePulseB(g, 0.01, 50, 2000, npulse = 2));

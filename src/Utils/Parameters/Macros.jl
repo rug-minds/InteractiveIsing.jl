@@ -115,7 +115,7 @@ function replace_struct_access(exp, symb, replace)
 end
 
 function structname_fieldname(struct_access_exp)
-    found = (expwalk(struct_access_exp) do head, args
+    found = (expmatch(struct_access_exp) do head, args
         if head == :.
             return true
         end
@@ -174,11 +174,27 @@ macro Parameters(func)
     return esc(func)
 end
 
+function matchfunction(funcexp)
+    InteractiveIsing.MacroTools.@capture(funcexp, function fname_(a__) body_ end)
+    if isnothing(body)
+        InteractiveIsing.MacroTools.@capture(funcexp, function fname_(a__) where T_ body_ end)
+        if isnothing(body)
+            InteractiveIsing.MacroTools.@capture(funcexp, function fname_(a__) where {T__} body_ end)
+        end
+    end
+    println("Matched function $fname")
+    println("With args $a")
+    println("With body $body")
+    return fname, a, body
+end
+
 function GeneratedParametersExp(fname, body, paramname, args, replacements!::Function... = (rawbody, paramname; args...) -> rawbody)
+    # wrappedbody = Expr(:quote, InteractiveIsing.remove_line_number_nodes!(body))
     wrappedbody = Expr(:quote, body)
     wrappedparamname = Expr(:quote, paramname)
+    println("Wrapped body is: ")
+    println(wrappedbody)
     args2pass = InteractiveIsing.arguments_to_pass(args...)
-    println("Wrapped body: ", wrappedbody)
     expfunc = 
         quote 
             # Create the expression function for the generated function
@@ -188,72 +204,37 @@ function GeneratedParametersExp(fname, body, paramname, args, replacements!::Fun
 
                 # Inline the default values
                 InteractiveIsing.replace_struct_access(rawbody, paramname, (exp) -> InteractiveIsing.inline_default(exp, $(paramname), InteractiveIsing.structname_fieldname(exp)[2]))
+                
                 for replacement! in $(replacements!)
+                    println("Replacing with $replacement!")
                     replacement!(rawbody, paramname; $(args2pass...))
                 end
                 return rawbody
             end
         end
+    println("Expression for $fname is: ")
+    printexp(expfunc)
     return expfunc
 end
 
-function GeneratedParametersGen(fname, args)
+function GeneratedParametersGen(fname, body, args)
     args2pass = InteractiveIsing.arguments_to_pass(args...)
-    realfunc =
-        quote
-            @generated function $fname($(args...))
-                # Return the expression function
-                return $(Symbol(:($fname), :_exp))($(args2pass...))
-            end
-        end
-    return realfunc
+    func = Expr(:function, get_function_line(body))
+    body = quote $(Symbol(:($fname), :_exp))($(args2pass...)) end
+    push!(func.args, body)
+    finalexp = quote @generated $func end
+    # println("Generated function for $fname is: ")
+    # println(finalexp)
+    return finalexp
 end
 
 macro GeneratedParameters(func)
-    InteractiveIsing.MacroTools.@capture(func, function fname_(a__) body_ end)
-    if isnothing(body)
-        InteractiveIsing.MacroTools.@capture(expr, function fname_(a__) where T_ body_ end)
-        if isnothing(body)
-            InteractiveIsing.MacroTools.@capture(expr, function fname_(a__) where {T__} body_ end)
-        end
-    end
+    fname, a, body = InteractiveIsing.matchfunction(func)
+    
     paramname = InteractiveIsing.find_type_in_args(a, :Parameters)
 
-    # find_struct_accesses = find_struct_field_access(func, paramname)
-    # include_or_not = []
-    # include_names = []
-    # for access in find_struct_accesses
-    #     idxs = access[1]
-    #     fieldname = access[2]
-    #     includename = Symbol(:include_, :($fieldname))
-    #     push!(include_names, includename)
-    #     push!(include_or_not, quote $includename = isactive($paramname, $fieldname) ? true : false end)
-    # end
-
-    # wrappedbody = Expr(:quote, body)
-    # wrappedparamname = Expr(:quote, paramname)
-    # args2pass = arguments_to_pass(a...)
-    # expfunc = 
-    #     quote 
-    #         # Create the expression function for the generated function
-    #         function $(Symbol(:($fname), :_exp))($(args2pass...))
-    #             rawbody = $wrappedbody
-    #             paramname = $wrappedparamname
-
-    #             # Inline the default values
-    #             replace_struct_access(rawbody, paramname, (exp) -> inline_default(exp, $(paramname),structname_fieldname(exp)[2]))
-    #             return rawbody
-    #         end
-    #     end
-    # realfunc =
-    #     quote
-    #         @generated function $fname($(a...))
-    #             # Return the expression function
-    #             return $(Symbol(:($fname), :_exp))($(args2pass...))
-    #         end
-    #     end
     expfunc = InteractiveIsing.GeneratedParametersExp(fname, body, paramname, a)
-    realfunc = InteractiveIsing.GeneratedParametersGen(fname, a)
+    realfunc = InteractiveIsing.GeneratedParametersGen(fname, body, a)
 
     returnexp = quote
         $expfunc

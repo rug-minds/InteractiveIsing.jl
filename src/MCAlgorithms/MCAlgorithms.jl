@@ -2,7 +2,8 @@
     using LoopVectorization, SparseArrays, MacroTools, RuntimeGeneratedFunctions
     export build_H
 
-    abstract type MCAlgorithm <: Function end
+    abstract type Algorithm <: Function end
+    abstract type MCAlgorithm <: Algorithm end
     abstract type Hamiltonian end
     # struct Hamiltonian 
     #     description::Any
@@ -20,20 +21,14 @@
         throw(ArgumentError("This algorithm did not define a required derived Hamiltonian."))
     end
 
-    function prepare(::Type{Algo}, g; kwargs...) where {Algo <: MCAlgorithm}
-        args_algo = (;_prepare(Algo, g; kwargs...)...)
+    # function prepare(::Type{Algo}, g; kwargs...) where {Algo <: MCAlgorithm}
+    #     args_algo = (;_prepare(Algo, g; kwargs...)...)
 
-        return args_algo
-    end
+    #     return args_algo
+    # end
 
-    function prepare(::Type{Algo} ,@specialize(oldargs), @specialize(newargs)) where {Algo <: MCAlgorithm}
-
-        (;g) = newargs
-        args_algo = (;_prepare(Algo, g)...)
-        final_args = (;args_algo..., newargs...)
-
-
-        return final_args
+    function prepare(::Type{Algo}, @specialize(args)) where {Algo <: MCAlgorithm}
+        return (;_prepare(Algo, args)...)
     end
 
   

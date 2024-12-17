@@ -1,31 +1,12 @@
 # Probably add a ref to the graph it's working on
 export getargs
 
-
 import Base: Threads.SpinLock, lock, unlock
 const wait_timeout = .5
 
-abstract type Runtime end
-struct Indefinite <: Runtime end
-struct Repeat{Num} <: Runtime 
-    function Repeat{Num}() where Num 
-        @assert Num isa Real "Repeats must be an integer" 
-        new{Num}()
-    end
-end
-
-repeats(r::Repeat{N}) where N = N
-struct TaskFunc
-    func::Any
-    prepare::Any
-    args::Any
-    kwargs::Any
-    runtime::Runtime
-    timeout::Float64
-end
-
-TaskFunc(func::Function) = TaskFunc(func, (func, args) -> args, (), (), Indefinite(), 1.0)
-# TaskFunc(n::Nothing, args::Any, rt::Any = nothing) = nothing
+@ForwardDeclare Process "Utils/Processes"
+include("CompositeAlgorithm.jl")
+include("TaskFuncs.jl")
 
 mutable struct Process
     id::UUID
@@ -41,7 +22,7 @@ mutable struct Process
     objectref::Any
     retval::Any
     errorlog::Any
-    algorithm::Any #Ref to the algorithm being run
+    algorithm::Any #Ref to the algorithm being run TODO:: Remove this one?
 end
 
 getargs(p::Process) = p.taskfunc.args
@@ -69,13 +50,14 @@ export runtime
 
 
 # Process() = Process(nothing, 0, Threads.SpinLock(), (true, :Nothing))
-function Process(func = nothing, repeats::Int = 0, args...) 
+function Process(func = nothing, repeats::Int = 0, args...; overrides...) 
     rt = repeats == 0 ? Indefinite() : Repeat{repeats}()
-    return Process(func, rt, args...)
+    return Process(func, rt, args...; overrides...)
 end
 
-function Process(func = nothing, rt::Runtime = Indefinite(), args...)
-    p = Process(uuid1(), TaskFunc(func, (func, oldargs, newargs) -> newargs, tuple(args...), (), rt, 1.), nothing, 1, Threads.ReentrantLock(), false, false, nothing, nothing, nothing, nothing, nothing, nothing)
+function Process(func = nothing, rt::Runtime = Indefinite(), args = (;); overrides...)
+    tf = TaskFunc(func, (func, args) -> args, (func, args) -> nothing, args, (), rt, 1.)
+    p = Process(uuid1(), tf, nothing, 1, Threads.ReentrantLock(), false, false, nothing, nothing, nothing, nothing, nothing, nothing)
     register_process!(p)
     return p
 end
@@ -240,47 +222,22 @@ function restart(p::Process, sticky = false)
     end    
 end
 
-function makeprocess(@specialize(func), runtime::RT = Indefinite(); prepare = (func, oldargs, newargs) -> (newargs), @specialize(kwargs...)) where RT <: Runtime
-    newp = Process(func, runtime, kwargs...)
+function makeprocess(@specialize(func), runtime::RT = Indefinite(), args = (;); @specialize(overrides...)) where RT <: Runtime
+    println("Making a new process with runtime $runtime")
+    newp = Process(func, runtime, args)
     register_process!(newp)
-    kwargs = (;proc = newp, kwargs...)
-    createtask!(newp, func; runtime, prepare, kwargs...)
+    args = (;proc = newp, args...)
+    createtask!(newp, func, args; runtime, overrides...)
     
     return newp
 end
 
-makeprocess(func, repeats::Int = 0; kwargs...) = let rt = repeats == 0 ? Indefinite() : Repeat{repeats}(); makeprocess(func, rt; kwargs...); end
+makeprocess(func, repeats::Int = 0; overrides...) = let rt = repeats == 0 ? Indefinite() : Repeat{repeats}(); makeprocess(func, rt; overrides...); end
 export makeprocess
 
-newprocess(func, repeats::Int = 0; kwargs...) = let rt = repeats == 0 ? Indefinite() : Repeat{repeats}(); newprocess(func, rt; kwargs...); end
+newprocess(func, repeats::Int = 0; overrides...) = let rt = repeats == 0 ? Indefinite() : Repeat{repeats}(); newprocess(func, rt; overrides...); end
 
 export newprocess
-
-createtask!(p::Process) = createtask!(p, p.taskfunc.func; runtime = p.taskfunc.runtime, prepare = p.taskfunc.prepare, p.taskfunc.kwargs...)
-
-function createtask!(process, @specialize(func); runtime = Indefinite(), prepare = (func, oldargs, newargs) -> (newargs), @specialize(kwargs...))
-    println("Creating task")
-
-    timeouttime = get(kwargs, :timeout, 1.0)
-
-    # Get the runtime or set it to indefinite
-    
-    # Add the process to the arguments
-    newargs = (;proc = process, kwargs...)
-    # Get the old arguments
-    oldargs = process.taskfunc.args
-
-    # Prepare the arguments for the algorithm
-    algo_args = prepare(func, oldargs, newargs)
-    # Again add process if user didn't specify
-    algo_args = (;proc = process, algo_args...)
-    
-    # Create new taskfunc
-    process.taskfunc = TaskFunc(func, prepare, algo_args, kwargs, runtime, timeouttime)
-
-    # Make the task
-    process.task = @task @inline processloop(process, process.taskfunc.func, process.taskfunc.args, process.taskfunc.runtime)
-end
 
 function runtask!(p::Process) 
     @atomic p.run = true
@@ -293,30 +250,9 @@ function runtask!(p::Process)
 
     return p
 end
+export runtask!
 
-function processloop(@specialize(p), @specialize(func), @specialize(args), ::Indefinite)
-    println("Running indefinitely on thread $(Threads.threadid())")
-    while run(p) 
-        @inline func(args)
-        inc(p) 
-        GC.safepoint()
-    end
-end
 
-"""
-Run a function in a loop for a given number of times
-"""
-function processloop(p, func, args, ::Repeat{repeats}) where repeats
-    println("Running from $(loopidx(p)) to $repeats on thread $(Threads.threadid())")
-    for _ in loopidx(p):repeats
-        if !run(p)
-            break
-        end
-        @inline func(args)
-        inc(p)
-        GC.safepoint()
-    end
-end
 
 """
 Give a function and then creates a task that is run by the process
@@ -334,6 +270,12 @@ function runtaskOLD(p, taskf::Function, repeats = 0; objectref = nothing, run = 
     p.retval = nothing
     return t
 end
+
+####
+# Dispatch Loops
+include("Loops.jl")
+#####
+
 
 
 
@@ -400,37 +342,37 @@ end
 For iterator
 Still used?
 """
-struct ProcessStats <: AbstractVector{Symbol}
-    processes::Processes
-    type::Symbol
-end
+# struct ProcessStats <: AbstractVector{Symbol}
+#     processes::Processes
+#     type::Symbol
+# end
 
-Base.size(ps::ProcessStats) = (length(ps.processes),)
+# Base.size(ps::ProcessStats) = (length(ps.processes),)
 
-messages(procs::Processes) = ProcessStats(procs, :message)
-messages(sim) = messages(sim.processes)
-status(procs::Processes) = ProcessStats(procs, :status)
-status(sim) = status(sim.processes)
-export messages
-export status
+# messages(procs::Processes) = ProcessStats(procs, :message)
+# messages(sim) = messages(sim.processes)
+# status(procs::Processes) = ProcessStats(procs, :status)
+# status(sim) = status(sim.processes)
+# export messages
+# export status
 
-Base.iterate(ps::ProcessStats, state = 1) = state > length(ps.processes.procs) ? nothing : (getfield(ps.processes.procs[state], ps.type), state + 1)
+# Base.iterate(ps::ProcessStats, state = 1) = state > length(ps.processes.procs) ? nothing : (getfield(ps.processes.procs[state], ps.type), state + 1)
 
-function Base.getindex(ps::ProcessStats, num::Integer)
-    if ps.type == :message
-        return message(ps.processes[num])
-    else 
-        return status(ps.processes[num])
-    end
-end
-function Base.setindex!(ps::ProcessStats, val, idx)
-    if ps.type == :message
-        return run(ps.processes[idx], val)
-    else 
-        error("Cannot set status")
-    end
-end
-Base.getindex(ps::ProcessStats, num::Vector) = getindex.(Ref(ps), num)
+# function Base.getindex(ps::ProcessStats, num::Integer)
+#     if ps.type == :message
+#         return message(ps.processes[num])
+#     else 
+#         return status(ps.processes[num])
+#     end
+# end
+# function Base.setindex!(ps::ProcessStats, val, idx)
+#     if ps.type == :message
+#         return run(ps.processes[idx], val)
+#     else 
+#         error("Cannot set status")
+#     end
+# end
+# Base.getindex(ps::ProcessStats, num::Vector) = getindex.(Ref(ps), num)
 
 
 

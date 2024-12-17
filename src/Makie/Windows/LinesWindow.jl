@@ -1,5 +1,5 @@
 function linesprocess(func, nrepeats, xtype = Float64, ytype = Float64)
-    prepare = (proc, oldargs, newargs) -> (x = xtype[NaN] , y = ytype[NaN])
+    prepare = (proc, args) -> (x = xtype[NaN] , y = ytype[NaN])
     return  makeprocess(func, nrepeats; prepare)
 end
 export linesprocess
@@ -13,7 +13,7 @@ function lines_window(linesp; fps = 30, kwargs...)
     (;proc, x, y) = getargs(linesp)
     xref = Ref(x)
     yref = Ref(y)
-    w = axis_window(window_type = :Lines;kwargs...)
+    w = axis_window(window_type = :Lines; kwargs...)
     x = xref[]
     y = yref[]
     
