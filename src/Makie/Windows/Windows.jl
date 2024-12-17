@@ -101,7 +101,8 @@ function new_window(;window_type = :Any, kwargs...)
 end
 
 function axis_window(;pausebutton = true, kwargs...)
-    w = new_window(;kwargs...)
+    window_type, kwargs = popkwarg(kwargs, :window_type, :Any)
+    w = new_window(;window_type, kwargs...)
     ax = w[:ax] = Axis(w.f[1,1]; kwargs...)
 
     # Create a pausebutton

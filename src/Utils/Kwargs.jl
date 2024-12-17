@@ -58,3 +58,7 @@ function replacekwargs(bottom, top)
     return pairs((;(bottomkeys .=> bottomvalues)...))
 end
 export mergekwargs, replacekwargs
+
+function popkwarg(ps, key, default = nothing)
+    return (get(ps, key, default), deletekey(ps, key))
+end
