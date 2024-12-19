@@ -10,6 +10,6 @@ function getparam(l, param::Symbol)
     end
 end
 
-function setparam!(l::IsingLayer, param::Symbol, val, active = nothing) 
+function setparam!(l::IsingLayer, param::Symbol, val, active = true) 
     return setparam!(graph(l), param, val, active, startidx(l), endidx(l))
 end

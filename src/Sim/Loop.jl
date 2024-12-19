@@ -9,7 +9,7 @@ function createProcess(g::IsingGraph, process = nothing; run = true, threaded = 
 
     algorithm = get(kwargs, :algorithm, g.default_algorithm)
 
-    createtask!(process, algorithm, (;g); prepare)
+    createtask!(process, algorithm; prepare, g)
     runtask!(process)
 
     return

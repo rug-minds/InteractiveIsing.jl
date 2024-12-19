@@ -20,33 +20,41 @@ struct TaskFunc
     func::Any
     prepare::Any # Appropriate function to prepare the arguments
     cleanup::Any
-    args::NamedTuple
+    args::Union{NamedTuple, Base.Pairs}
     overrides::Any # Given as kwargs
     runtime::Runtime
     timeout::Float64 # Timeout in seconds
 end
 
-TaskFunc(func::Function; prepare = (func, args) -> args, cleanup = (func, args) -> nothing, overrides...) = 
-    TaskFunc(func, prepare, cleanup, (), overrides, Indefinite(), 1.0)
+TaskFunc(func::Function; prepare = (func, args) -> args, cleanup = (func, args) -> nothing, overrides::NamedTuple = (;), args...) = 
+    TaskFunc(func, prepare, cleanup, args, overrides, Indefinite(), 1.0)
 
-struct TaskFuncs{N}
-    funcs::NTuple{N,Any}
-    prepares::NTuple{N,Any}
-    cleanups::NTuple{N,Any}
-    intervals::NTuple{N,Val}
-    args::Any
-    overrides::Any # Given as kwargs
-    runtime::Runtime
-    timeout::Float64
-end
+getfunc(p::Process) = p.taskfunc.func
+getprepare(p::Process) = p.taskfunc.prepare
+getcleanup(p::Process) = p.taskfunc.cleanup
+args(p::Process) = p.taskfunc.args
+overrides(p::Process) = p.taskfunc.overrides
+runtime(p::Process) = p.taskfunc.runtime
+timeout(p::Process) = p.taskfunc.timeout
 
-TaskFuncs(funcs::Tuple; prepares = fill((func, args) -> args, length(funcs)), cleanups = fill((func, args) -> nothing, length(funcs)), 
-    intervals = fill(Val{1}(), length(funcs)), args = (), kwargs = (), runtime = Indefinite(), timeout = 1.0) = 
-    TaskFuncs(funcs, prepares, cleanups, intervals, args, kwargs, runtime, timeout)
+# struct TaskFuncs{N}
+#     funcs::NTuple{N,Any}
+#     prepares::NTuple{N,Any}
+#     cleanups::NTuple{N,Any}
+#     intervals::NTuple{N,Val}
+#     args::Any
+#     overrides::Any # Given as kwargs
+#     runtime::Runtime
+#     timeout::Float64
+# end
 
-createtask!(p::Process) = createtask!(p, p.taskfunc.func, p.taskfunc.args; runtime = p.taskfunc.runtime, prepare = p.taskfunc.prepare, p.taskfunc.overrides...)
+# TaskFuncs(funcs::Tuple; prepares = fill((func, args) -> args, length(funcs)), cleanups = fill((func, args) -> nothing, length(funcs)), 
+#     intervals = fill(Val{1}(), length(funcs)), args = (), kwargs = (), runtime = Indefinite(), timeout = 1.0) = 
+#     TaskFuncs(funcs, prepares, cleanups, intervals, args, kwargs, runtime, timeout)
 
-function createtask!(process, @specialize(func), args::NamedTuple; runtime = Indefinite(), prepare = (func, oldargs, newargs) -> (newargs), cleanup = (func, args) -> nothing, @specialize(overrides...))    
+createtask!(p::Process) = createtask!(p, p.taskfunc.func; runtime = runtime(p), prepare = p.taskfunc.prepare, overrides = overrides(p), args(p)...)
+
+function createtask!(process, @specialize(func); runtime = Indefinite(), prepare = (func, oldargs, newargs) -> (newargs), cleanup = (func, args) -> nothing, overrides = (;), args...)   
     timeouttime = get(overrides, :timeout, 1.0)
 
     # Get the runtime or set it to indefinite

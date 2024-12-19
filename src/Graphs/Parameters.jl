@@ -36,7 +36,7 @@ end
 """
 Get a graph and a symbol, then set the value of the parameter to the given value
 """
-function setparam!(g::IsingGraph, param::Symbol, val, active = nothing, si = nothing, ei = nothing)
+function setparam!(g::IsingGraph, param::Symbol, val, active = true, si = nothing, ei = nothing)
     @assert haskey(g.params, param) "Parameter $param not found in graph"
     pval = g.params[param]
     _setparam!(pval, param, val, si, ei)

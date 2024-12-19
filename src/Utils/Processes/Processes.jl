@@ -222,12 +222,12 @@ function restart(p::Process, sticky = false)
     end    
 end
 
-function makeprocess(@specialize(func), runtime::RT = Indefinite(), args = (;); @specialize(overrides...)) where RT <: Runtime
+function makeprocess(@specialize(func), runtime::RT = Indefinite(); overrides = (;), args...) where RT <: Runtime
     println("Making a new process with runtime $runtime")
     newp = Process(func, runtime, args)
     register_process!(newp)
     args = (;proc = newp, args...)
-    createtask!(newp, func, args; runtime, overrides...)
+    createtask!(newp, func; runtime, overrides, args...)
     
     return newp
 end

@@ -61,7 +61,7 @@ function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1)
             
         end
         # Sets the bfield
-        setparam!(g[1], :b, pulse[loopidx(proc)], true)
+        setparam!(g[1], :b, pulse[loopidx(proc)])
 
 
 
