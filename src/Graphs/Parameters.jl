@@ -12,13 +12,9 @@ function changeactivation!(g, param, activate)
     return g.params
 end
 
-
-
 @inline function getparam(g::IsingGraph, param::Symbol)
     getproperty(g.params, param)
 end
-
-
 
 activate!(g::IsingGraph, param) = changeactivation!(g, param, true)
 deactivate!(g::IsingGraph, param) = changeactivation!(g, param, false)

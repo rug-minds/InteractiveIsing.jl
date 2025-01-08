@@ -1,0 +1,1 @@
+IsingAndMag = CompositeAlgorithm( [Ising, Magnetization] )

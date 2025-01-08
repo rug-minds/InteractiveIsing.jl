@@ -4,18 +4,21 @@ Run a single function in a loop indefinitely
 """
 function processloop(@specialize(p), @specialize(func), @specialize(args), ::Indefinite)
     println("Running indefinitely on thread $(Threads.threadid())")
+    set_starttime!(p)
     while run(p) 
         @inline func(args)
         inc(p) 
         GC.safepoint()
     end
+    set_endtime!(p)
 end
 
 """
 Run a single function in a loop for a given number of times
 """
-function processloop(@specialize(p), func, args, ::Repeat{repeats}) where repeats
+function processloop(@specialize(p), @specialize(func), args, ::Repeat{repeats}) where repeats
     println("Running from $(loopidx(p)) to $repeats on thread $(Threads.threadid())")
+    set_starttime!(p)
     for _ in loopidx(p):repeats
         if !run(p)
             break
@@ -24,6 +27,7 @@ function processloop(@specialize(p), func, args, ::Repeat{repeats}) where repeat
         inc(p)
         GC.safepoint()
     end
+    set_endtime!(p)
 end
 
 # @inline function voidfuncmap(@specialize(args), @specialize(funcs), triggers)

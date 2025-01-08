@@ -26,15 +26,15 @@ Base.getindex(c::CompositeHamiltonian, i::Int) = c.parameters[i]
 
 
 
-CompositeHamiltonian(hamiltonians::Type{<:Hamiltonian}...) = CompositeHamiltonian{Tuple{hamiltonians...}}
-function Base.iterate(c::Type{<:Hamiltonian}, state = 1)
-    if state == 1
-        return c, 2
-    else
-        return nothing
-    end
-end
-Base.iterate(c::Type{<:CompositeHamiltonian}, state = 1) = iterate(c.parameters[1].parameters, state)
+# CompositeHamiltonian(hamiltonians::Type{<:Hamiltonian}...) = CompositeHamiltonian{Tuple{hamiltonians...}}
+# function Base.iterate(c::Type{<:Hamiltonian}, state = 1)
+#     if state == 1
+#         return c, 2
+#     else
+#         return nothing
+#     end
+# end
+# Base.iterate(c::Type{<:CompositeHamiltonian}, state = 1) = iterate(c.parameters[1].parameters, state)
 hamiltonians(c::Type{<:CompositeHamiltonian}) = (c.parameters[1].parameters...,)
 
 

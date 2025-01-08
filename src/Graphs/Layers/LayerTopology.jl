@@ -9,7 +9,10 @@ struct Oblique <: LatticeType end
 struct Hexagonal <: LatticeType end
 struct Rhombic <: LatticeType end
 struct AnyLattice <: LatticeType end
+
 export LatticeType, Square, Rectangular, Oblique, Hexagonal, Rhombic, AnyLattice
+
+struct GenericTopology{U} <: LayerTopology{U,0} end
 
 struct SquareTopology{U,DIMS} <: LayerTopology{U, DIMS}
     size::NTuple{DIMS,Int32}
@@ -257,3 +260,27 @@ dxdy(lt::SquareTopology{P,2}, coords1::Tuple, coords2::Tuple) where P = (dx(lt, 
 dxdydz(lt::SquareTopology{P,3}, coords1::Tuple, coords2::Tuple) where P = (dx(lt, coords1, coords2), dy(lt, coords1, coords2), dz(lt, coords1, coords2))
 
 export dy, dx, dxdy
+
+function lat_mod_or_in(::P, coord::Integer, coordsize::Integer) where P <: PeriodicityType
+    if P == Periodic
+        return latmod(coord, coordsize)
+    elseif P == NonPeriodic
+        return inlat(coord, coordsize)
+    end
+end
+
+function lat_mod_or_in(top::LayerTopology{P,N}, coord::NTuple{N,Int32}, size::NTuple{N,Int32}) where {P<:PeriodicityType,N}
+    return ((lat_mod_or_in(coordperiodicity(top, coord_symbs[i]), coord[i], size[i]) for i in 1:N)...,)
+end
+
+function coordperiodicity(top::LayerTopology{Periodic}, symb)
+    return Periodic()
+end
+
+function coordperiodicity(top::LayerTopology{NonPeriodic}, symb)
+    return NonPeriodic()
+end
+
+function coordperiodicity(top::LayerTopology{PartPeriodic{Parts}}, symb) where {Parts}
+    return symb in Parts ? Periodic() : NonPeriodic()
+end

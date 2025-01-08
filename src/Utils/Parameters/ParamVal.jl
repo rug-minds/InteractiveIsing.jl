@@ -46,11 +46,10 @@ export isactive, isinactive
 
 toggle(p::ParamVal{T, Default, Active}) where {T, Default, Active} = ParamVal{T, Default, !Active}(p.val)
 @inline default(::ParamVal{T, Default}) where {T, Default} = Default
-@inline Base.eltype(::ParamVal{T}) where T = T
-@inline function Base.getindex(p::ParamVal, i = nothing)
-    @assert isnothing(i) || i == 1
-    return p.val
-end
+# @inline function Base.getindex(p::ParamVal, i = nothing)
+#     @assert isnothing(i) || i == 1
+#     return p.val
+# end
 @inline Base.setindex!(p::ParamVal, val) = (p.val = val)
 @inline Base.getindex(p::ParamVal{T}) where T = p.val
 @inline Base.setindex!(p::ParamVal{T}, val, idx) where T <: Real = (p.val = val)
@@ -65,15 +64,13 @@ LoopVectorization.check_args(p::ParamVal{T}) where T <: Vector = true
 @inline Base.pointer(p::ParamVal{T}) where T = pointer(p.val)
 
 
-Base.lastindex(p::ParamVal{T}, idx) where T = 1
-Base.firstindex(p::ParamVal{T}, idx) where T = 1
 Base.size(p::ParamVal{T}) where T = (1,)
 Base.size(p::ParamVal{T}) where T <: Vector = size(p.val)
 Base.length(p::ParamVal{T}) where T <: Vector = length(p.val)
 Base.length(p::ParamVal{T}) where T = 1
 Base.push!(p::ParamVal{T}, val) where T <: Vector = push!(p.val, val)
-Base.eltype(p::ParamVal{T}) where T = T
-Base.eltype(p::ParamVal{Vector{T}}) where T = T
+@inline Base.eltype(p::ParamVal{T}) where T = T
+@inline Base.eltype(p::ParamVal{Vector{T}}) where T = T
 
 """
 Gives the zero value of the type of the parameter

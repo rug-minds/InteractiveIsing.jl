@@ -5,8 +5,9 @@ import Base: Threads.SpinLock, lock, unlock
 const wait_timeout = .5
 
 @ForwardDeclare Process "Utils/Processes"
-include("CompositeAlgorithm.jl")
 include("TaskFuncs.jl")
+include("CompositeAlgorithms.jl")
+
 
 mutable struct Process
     id::UUID
@@ -26,6 +27,8 @@ mutable struct Process
 end
 
 getargs(p::Process) = p.taskfunc.args
+set_starttime!(p::Process) = p.starttime = time()
+set_endtime!(p::Process) = p.endtime = time()
 
 # List of processes in use
 const processlist = Dict{UUID, WeakRef}()
@@ -50,13 +53,14 @@ export runtime
 
 
 # Process() = Process(nothing, 0, Threads.SpinLock(), (true, :Nothing))
-function Process(func = nothing, repeats::Int = 0, args...; overrides...) 
+function Process(func, repeats::Int, args = (;); overrides...) 
     rt = repeats == 0 ? Indefinite() : Repeat{repeats}()
     return Process(func, rt, args...; overrides...)
 end
 
 function Process(func = nothing, rt::Runtime = Indefinite(), args = (;); overrides...)
-    tf = TaskFunc(func, (func, args) -> args, (func, args) -> nothing, args, (), rt, 1.)
+    # tf = TaskFunc(func, (func, args) -> args, (func, args) -> nothing, args, (;), (), rt, 1.)
+    tf = TaskFunc(func; args, runtime = rt, overrides...)
     p = Process(uuid1(), tf, nothing, 1, Threads.ReentrantLock(), false, false, nothing, nothing, nothing, nothing, nothing, nothing)
     register_process!(p)
     return p
@@ -161,7 +165,7 @@ end
 
 function Base.close(p::Process)
     @atomic p.run = false
-    p.endtime = time()
+    # p.endtime = time()
     @atomic p.paused = false
     p.loopidx = 1
     return true
@@ -232,7 +236,7 @@ function makeprocess(@specialize(func), runtime::RT = Indefinite(); overrides = 
     return newp
 end
 
-makeprocess(func, repeats::Int = 0; overrides...) = let rt = repeats == 0 ? Indefinite() : Repeat{repeats}(); makeprocess(func, rt; overrides...); end
+makeprocess(func, repeats::Int; overrides...) = let rt = repeats == 0 ? Indefinite() : Repeat{repeats}(); makeprocess(func, rt; overrides...); end
 export makeprocess
 
 newprocess(func, repeats::Int = 0; overrides...) = let rt = repeats == 0 ? Indefinite() : Repeat{repeats}(); newprocess(func, rt; overrides...); end
@@ -245,7 +249,7 @@ function runtask!(p::Process)
 
     p.task.sticky = false
     Threads._spawn_set_thrpool(p.task, :default)
-    p.starttime = time()
+    # p.starttime = time()
     schedule(p.task)
 
     return p
@@ -259,7 +263,7 @@ Give a function and then creates a task that is run by the process
 The function needs to take an object as a reference
 """
 function runtaskOLD(p, taskf::Function, repeats = 0; objectref = nothing, run = true)
-    p.starttime = time()
+    # p.starttime = time()
     p.objectref = objectref
     @atomic p.run = run
     @atomic p.paused = !run

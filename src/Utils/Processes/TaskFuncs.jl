@@ -21,20 +21,21 @@ struct TaskFunc
     prepare::Any # Appropriate function to prepare the arguments
     cleanup::Any
     args::Union{NamedTuple, Base.Pairs}
+    prepared_args::Union{NamedTuple, Base.Pairs}
     overrides::Any # Given as kwargs
     runtime::Runtime
     timeout::Float64 # Timeout in seconds
 end
 
-TaskFunc(func::Function; prepare = (func, args) -> args, cleanup = (func, args) -> nothing, overrides::NamedTuple = (;), args...) = 
-    TaskFunc(func, prepare, cleanup, args, overrides, Indefinite(), 1.0)
+TaskFunc(func;prepare = (func, args) -> args, cleanup = (func, args) -> nothing, overrides::NamedTuple = (;), runtime = Indefinite(), args...) = 
+    TaskFunc(func, prepare, cleanup, args, (;), overrides, runtime, 1.0)
 
 getfunc(p::Process) = p.taskfunc.func
 getprepare(p::Process) = p.taskfunc.prepare
 getcleanup(p::Process) = p.taskfunc.cleanup
 args(p::Process) = p.taskfunc.args
 overrides(p::Process) = p.taskfunc.overrides
-runtime(p::Process) = p.taskfunc.runtime
+taskruntime(p::Process) = p.taskfunc.runtime
 timeout(p::Process) = p.taskfunc.timeout
 
 # struct TaskFuncs{N}
@@ -52,28 +53,26 @@ timeout(p::Process) = p.taskfunc.timeout
 #     intervals = fill(Val{1}(), length(funcs)), args = (), kwargs = (), runtime = Indefinite(), timeout = 1.0) = 
 #     TaskFuncs(funcs, prepares, cleanups, intervals, args, kwargs, runtime, timeout)
 
-createtask!(p::Process) = createtask!(p, p.taskfunc.func; runtime = runtime(p), prepare = p.taskfunc.prepare, overrides = overrides(p), args(p)...)
+createtask!(p::Process) = createtask!(p, p.taskfunc.func; runtime = taskruntime(p), prepare = p.taskfunc.prepare, overrides = overrides(p), args(p)...)
 
-function createtask!(process, @specialize(func); runtime = Indefinite(), prepare = (func, oldargs, newargs) -> (newargs), cleanup = (func, args) -> nothing, overrides = (;), args...)   
+function createtask!(process, @specialize(func); runtime = Indefinite(), prepare = (func, args) -> (;args), cleanup = (func, args) -> nothing, overrides = (;), skip_prepare = false, args...)   
     timeouttime = get(overrides, :timeout, 1.0)
 
-    # Get the runtime or set it to indefinite
-    
-    # Add the process to the arguments
-    newargs = (;proc = process, runtime, args...)
-    # Get the old arguments
-    oldargs = process.taskfunc.args
 
-    args = (;oldargs..., newargs...)
-
-    # Prepare the arguments for the algorithm
-    algo_args = prepare(func, args)
+    # If prepare is skipped, then the prepared arguments are already stored in the process
+    prepared_args = nothing
+    if skip_prepare
+        prepared_args = process.taskfunc.prepared_args
+    else
+        # Prepare always has access to process and runtime
+        prepared_args = prepare(func, (;proc = process, runtime, args...))
+    end
 
     # Again add process and runtime if user didn't specify it in the prepare function
-    algo_args = (;proc = process, runtime, algo_args...)
+    algo_args = (;proc = process, runtime, prepared_args...)
 
     # Create new taskfunc
-    process.taskfunc = TaskFunc(func, prepare, cleanup, algo_args, overrides, runtime, timeouttime)
+    process.taskfunc = TaskFunc(func, prepare, cleanup, args, prepared_args, overrides, runtime, timeouttime)
 
     # Add the overrides
     # They are not stored in the args of the taskfunc but separately

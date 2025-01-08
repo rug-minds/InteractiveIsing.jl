@@ -52,9 +52,6 @@ First argument is index, second is length in that direction
 @inline function latmod(idx::T, L::T) where T <: Integer
     return mod((idx - T(1)), L) + T(1)
 end
-# @inline function latmod(idx, L) 
-#     return mod((idx - (1)), L) + (1)
-# end
 
 @inline function latmod(i::T,j::T,layer) where T
     len = glength(layer)
@@ -78,7 +75,17 @@ end
         return latmod(coords[1], coords[2], coords[3], size[1], size[2], size[3])
     end
 end
+
 export latmod
+
+@inline function inlat(idx::T, L::T) where T <: Integer
+    if idx <= L && idx > 0
+        return idx
+    else
+        return 0
+    end
+end
+
 
 # Array functions
 

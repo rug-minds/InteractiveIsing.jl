@@ -206,7 +206,7 @@ export coords
 export clamprange!
 
 @setterGetter IsingGraph adj params
-@inline params(g::IsingGraph) = g.params
+# @inline params(g::IsingGraph) = g.params
 export params
 @inline nStates(g) = length(state(g))
 

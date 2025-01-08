@@ -7,7 +7,7 @@ Set spins either to a value or clamp them
 """
 #Clean this up
 # TODO: Shouldn't always refresh sim if the iterator didn't change
-function setSpins!(g::AbstractIsingGraph{T}, idxs::Union{AbstractArray, <:UnitRange}, brush, clamp::Bool = false) where T
+function setSpins!(g::AbstractIsingGraph{T}, idxs::Union{AbstractArray{Int}, AbstractArray{Int32}, <:UnitRange}, val, clamp::Bool = false) where T
     hasdefects_before = hasDefects(graph(g))
 
     # Set the defects
@@ -19,22 +19,22 @@ function setSpins!(g::AbstractIsingGraph{T}, idxs::Union{AbstractArray, <:UnitRa
     end
 
     # Set the spins
-    copystate(g, idxs, brush)
+    copystate(g, idxs, val)
 end
 
-copystate(g::AbstractIsingGraph, idxs, brush::Real) = @inbounds state(g)[idxs] .= closestTo(g, brush)
+copystate(g::AbstractIsingGraph, idxs, val::Real) = @inbounds state(g)[idxs] .= closestTo(g, val)
 
-copystate(g::AbstractIsingGraph, idxs, brush::AbstractArray) = @inbounds state(g)[idxs] .= brush[1:end]
+copystate(g::AbstractIsingGraph, idxs, val::AbstractArray) = @inbounds state(g)[idxs] .= val[1:end]
 
-copystate(g::IsingLayer, idxs, brush::AbstractArray) = mapToStateSet!(g, (@view state(g)[idxs]), brush)
+copystate(g::IsingLayer, idxs, val::AbstractArray) = mapToStateSet!(g, (@view state(g)[idxs]), val)
 
 
 
 setSpins!(g::AbstractIsingGraph, vals::AbstractArray, clamp::Bool = false) = setSpins!(g, graphidxs(g), vals, clamp)
 
-setSpins!(g::AbstractIsingGraph, coords::Vector{Tuple}, brush::Real, clamp::Bool = false) = setSpins!(g, coordToIdx.(coords, size(g)), brush, clamp)
+setSpins!(g::AbstractIsingGraph, coords::Union{Vector{NTuple{3,Int}}, Vector{NTuple{2,Int}}}, val::Real, clamp::Bool = false) = setSpins!(g, coordToIdx.(coords, size(g)), val, clamp)
 
-function setSpins!(g::AbstractIsingGraph{T}, idx::Integer, brush::Real, clamp::Bool = false) where T
+function setSpins!(g::AbstractIsingGraph{T}, idx::Integer, val::Real, clamp::Bool = false) where T
     hasdefects_before = hasDefects(graph(g))
     
     setdefect(g, clamp, idx)
@@ -45,7 +45,7 @@ function setSpins!(g::AbstractIsingGraph{T}, idx::Integer, brush::Real, clamp::B
         refresh(graph(g))
     end
 
-    @inbounds state(g)[idx] = brush
+    @inbounds state(g)[idx] = val
 end
 
 function setDefects!(g, val, idxs)

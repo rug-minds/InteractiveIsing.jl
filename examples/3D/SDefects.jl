@@ -143,8 +143,21 @@ function _jump!(l::IsingLayer, sd::SDefect, x, y, z = 0)
     return sd
 end
 
-struct SDefects{I,F}
+"""
+Vector type that holds scaling defects
+"""
+struct SDefects{I,F} <: AbstractVector{SDefect{I,F}}
     data::Vector{SDefect{I,F}}
+end
+
+function Base.show(io::IO, sd::SDefects)
+    println(io, sd.data)
+end
+
+struct SDefectsView{I,F}
+    layer::IsingLayer
+    data::SDefects{I,F}
+    view::Matrix{Vector{Ref{SDefect{I,F}}}}
 end
 
 SDefects(I,F) = SDefects{I,F}(SDefect{I,F}[])
@@ -182,6 +195,7 @@ add_sdefect!(l::IsingLayer, scale, x, y, z) = add_sdefect!(l, scale, coordToIdx(
 
 """
 Coordinate indexing
+TODO: What is going on here???
 """
 function add_sdefects!(l::IsingLayer, scale, coords::Tuple...)
     scale = convert(eltype(graph(l)), scale)
@@ -204,3 +218,5 @@ function get_sdefects(g)
 end
 
 get_sdefects(g, idx) = get_sdefects(graph(g))[idx]
+
+
