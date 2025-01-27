@@ -32,7 +32,9 @@ copystate(g::IsingLayer, idxs, val::AbstractArray) = mapToStateSet!(g, (@view st
 
 setSpins!(g::AbstractIsingGraph, vals::AbstractArray, clamp::Bool = false) = setSpins!(g, graphidxs(g), vals, clamp)
 
-setSpins!(g::AbstractIsingGraph, coords::Union{Vector{NTuple{3,Int}}, Vector{NTuple{2,Int}}}, val::Real, clamp::Bool = false) = setSpins!(g, coordToIdx.(coords, size(g)), val, clamp)
+function setSpins!(g::AbstractIsingGraph, coords::Union{Vector{NTuple{3,Int}}, Vector{NTuple{2,Int}}}, val::Real, clamp::Bool = false)
+    setSpins!(g, coordToIdx.(coords, Ref(size(g))), val, clamp)
+end
 
 function setSpins!(g::AbstractIsingGraph{T}, idx::Integer, val::Real, clamp::Bool = false) where T
     hasdefects_before = hasDefects(graph(g))

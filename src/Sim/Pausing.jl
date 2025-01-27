@@ -53,57 +53,37 @@ export unlockPause
 """
 Quit sim and block until all processes are terminated
 """
-function quit(sim::IsingSim)
+function Processes.quit(sim::IsingSim)
     quit.(processes(sim))
     deleteat!(processes(sim), 1:length(processes(sim)))
 end
 
-function pause(sim::IsingSim)
+function Processes.pause(sim::IsingSim)
     pause.(processes(sim))
 end
 
-function quit(g::IsingGraph)
+function Processes.quit(g::IsingGraph)
     quit.(processes(g))
     gidx = get_gidx(g)
     deleteat!(processes(sim(g)), processes(sim(g)).graphidx .== gidx)
 end
 
-function pause(g::IsingGraph)
+function Processes.pause(g::IsingGraph)
     pause.(processes(g))
 end
 
-unpause(g::IsingGraph) = restart(g)
+Processes.unpause(g::IsingGraph) = restart(g)
 
 # For broadcasting
-pause(::Nothing) = nothing
-quit(::Nothing) = nothing
-unpause(::Nothing) = nothing
+Processes.pause(::Nothing) = nothing
+Processes.quit(::Nothing) = nothing
+Processes.unpause(::Nothing) = nothing
 
 
 export quitSim, quit, pause, unpause
 
-# Todo: make this skip prep if not needed.
-"""
-Restart processes of the graph with given kwargs
-Starts up all processes that are paused
-"""
-function restartOLD(g; kwargs...)
-    _processes = processes(g)
-    
-    for process in _processes
-        # Is process being used? Otherwise nothing has to be started
-        _isused = isused(process)
-        pause(process)
-        if _isused
-            task = process -> errormonitor(Threads.@spawn mainLoop(g, process; kwargs...))
-            @atomic process.run = true
-            runtaskOLD(process, task, g)
-        end
-    end
-    return
-end 
 # TODO: Make this work with the new process system KWARGS
-function restart(g; kwargs...)
+function Processes.restart(g::IsingGraph; kwargs...)
     _processes = processes(g)
     for process in _processes
         # Is process being used? Otherwise nothing has to be started
@@ -115,7 +95,7 @@ export restart
 """
 Keep the keywords and recompile the processes
 """
-function refresh(g; kwargs...)
+function Processes.refresh(g::IsingGraph; kwargs...)
     _processes = processes(g)
     for process in _processes
         wasrunning = isrunning(process)
@@ -123,20 +103,18 @@ function refresh(g; kwargs...)
         _isused = isused(process)
         pause(process)
         if _isused
-            # task = process -> errormonitor(Threads.@spawn mainLoop(g, process; kwargs...))
-            # @atomic process.run = true
-            # runtaskOLD(process, task, g, run = wasrunning)
             refresh(process)
         end
     end
     return
 end
+export refresh
 
 """
 Reset the keywords to the standard values, and restart the processes
 
 """
-function reset(g; kwargs...)
+function Processes.reset(g::IsingGraph; kwargs...)
     _processes = processes(g)
     for process in _processes
         # Is process being used? Otherwise nothing has to be started
@@ -150,16 +128,16 @@ function reset(g; kwargs...)
     return
 end
 
-function togglePause(g)
+function togglePause(g::IsingGraph)
     if any(isrunning.(processes(sim(g))))
         pause.(processes(sim(g)))
     else
         for process in processes(sim(g))
-            if ispaused(process)
+            if Processes.ispaused(process)
                 # args = fetch(process)
                 # task = process -> Threads.@spawn mainLoop(g, process; args...)
                 # errormonitor(runtaskOLD(process, task, g))
-                unpause(process)
+                Processes.start(process)
             end
         end
     end    

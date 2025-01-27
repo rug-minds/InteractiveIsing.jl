@@ -11,10 +11,10 @@ Base.push!(ac::AverageCircular{T}, val::OT) where {T, OT >: T} = push!(ac, conve
 
 
 function Base.push!(ac::AverageCircular{T}, val::T) where T
-    currentval = ac.data[ac.ptr]
     ac.data[ac.ptr] = val
-    ac.sum += val - currentval
     ac.ptr = mod1(ac.ptr + 1, ac.len)
+    currentval = ac.data[ac.ptr]
+    ac.sum += val - currentval
     return ac
 end
 

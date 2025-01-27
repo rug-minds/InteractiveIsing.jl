@@ -14,8 +14,8 @@ function drawCircle(layer, x_in, y_in, val, r = nothing; periodic = true, clamp 
     # If img is size of underlying graph, use rounded coordinate, otherwise scale
     # i = glength(layer) == imgsize[1]    ? Int16(round(x_in)) : Int16(round(x_in/imgsize[1]*glength(layer)))
     # j = gwidth(layer) == imgsize[2]     ? Int16(round(y_in)) : Int16(round(y_in/imgsize[2]*gwidth(layer)))
-    i = Int16(round(x_in))
-    j = Int16(round(y_in))
+    i = round(Int, x_in)
+    j = round(Int, y_in)
 
     circle = isnothing(r) ? circ(fsim) : getOrdCirc(r)
 

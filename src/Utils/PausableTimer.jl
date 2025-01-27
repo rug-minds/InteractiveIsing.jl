@@ -15,8 +15,8 @@ function EmptyPTimer()
     PTimer(identity, nothing, 0.,0.)
 end
 
-ispaused(pt::PTimer) = isnothing(pt.timer)
+Processes.ispaused(pt::PTimer) = isnothing(pt.timer)
 Base.wait(pt::PTimer) = if !isnothing(pt.timer); wait(pt.timer); end
 Base.close(pt::PTimer) = if !isnothing(pt.timer) ; close(pt.timer); pt.timer = nothing end
-start(pt::PTimer) = begin if !isnothing(pt.timer); close(pt.timer) end ; pt.timer = Timer(pt.callback, pt.delay, interval = pt.interval); end
+Processes.start(pt::PTimer) = begin if !isnothing(pt.timer); close(pt.timer) end ; pt.timer = Timer(pt.callback, pt.delay, interval = pt.interval); end
 callback(func, pt::PTimer) = pt.callback = func

@@ -19,7 +19,7 @@ function singleView(ml, g)
 
     # ISING IMAGE
     
-    mp["sv_img_ob"] = img_ob = Observable{Base.ReshapedArray}(state(currentLayer(simulation)))
+    mp["sv_img_ob"] = img_ob = Observable(getSingleViewImg(g, ml))
     # img_ob[] = getSingleViewImg(g, ml) #Bfield or state
     mp["axis_size"] = size(img_ob[])
     obs_funcs = etc(ml)["obs_funcs_singleView"] = ObserverFunction[]

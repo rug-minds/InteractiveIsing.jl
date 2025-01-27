@@ -50,7 +50,8 @@ Put a lattice index (i or j) back onto lattice by looping in a direction
 First argument is index, second is length in that direction
 """
 @inline function latmod(idx::T, L::T) where T <: Integer
-    return mod((idx - T(1)), L) + T(1)
+    # return mod((idx - T(1)), L) + T(1)
+    return mod1(idx, L)
 end
 
 @inline function latmod(i::T,j::T,layer) where T

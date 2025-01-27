@@ -60,7 +60,7 @@ function mainLoopOLD(g::IsingGraph,
 
     process.algorithm = algorithm
     
-    algo_args = prepare(algorithm, g; kwargs...)
+    algo_args = prepare(algorithm, (;g))
    
     masked_args = choose_args(process, algo_args; kwargs...)
 
@@ -71,10 +71,10 @@ using InteractiveUtils
 export mainLoop
 # g, gstate, gadj, iterator, rng, updateFunc, dEFunc, gstype::ST
 function _mainLoopOLD(process, @specialize(algorithm), @specialize(algo_args); kwargs...)
-    println("_mainLoop Running on thread: ", Threads.threadid())
+    # println("_mainLoop Running on thread: ", Threads.threadid())
     while run(process)
         @inline algorithm(algo_args)
-        inc(process)
+        inc!(process)
         GC.safepoint()
     end
 
@@ -101,7 +101,7 @@ function mainLoopIteratedOLD(process, @specialize(algorithm::Function), @special
 
     while process.loopidx < iterations + 1
         @inline algorithm(args)
-        inc(process)
+        inc!(process)
         GC.safepoint()
     end
 

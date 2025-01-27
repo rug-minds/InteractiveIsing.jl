@@ -68,16 +68,28 @@ function create_unsafe_vector(view_array)
     return unsafe_vector
 end
 
+getSingleViewImg(g, ml) = getSingleViewImg(g, ml, size(currentLayer(sim(g))))
 
 # Maybe I can just make makie get the latest image always?
-function getSingleViewImg(g, ml)
+function getSingleViewImg(g, ml, size::Tuple{Integer,Integer})
     simulation = sim(g)
-    mp = midpanel(ml)
+    this_layer = currentLayer(simulation)
     if midpanel(ml)["showbfield"].active[]
-        return bfield(currentLayer(simulation))
+        return CastViewMatrix(Float64, g.params[:b].val , graphidxs(this_layer), size(this_layer)...)
     else
-        return state(currentLayer(simulation))
+        return CastViewMatrix(Float64, state(g), graphidxs(this_layer), size(this_layer)...)
     end
+end
+
+function getSingleViewImg(g, ml, size::NTuple{3,Integer})
+    if midpanel(ml)["showbfield"].active[]
+        unsafe = create_unsafe_vector(@view g.params[:b].val[graphidxs(currentLayer(sim(g)))])
+        return CastVec(Float64, unsafe)
+    else
+        unsafe = create_unsafe_vector(@view state(g)[graphidxs(currentLayer(sim(g)))])
+        return CastVec(Float64, unsafe)
+    end
+    
 end
 
 function flip_y_axis()
@@ -92,50 +104,13 @@ end
 getgrid(lp::LayoutPanel) = lp.panel
 getgrid(window::MakieWindow) = window["gridlayout"]
 
-# function create_layer_axis!(layer, panel_or_window; kwargs...)
-#     layerdim = length(size((layer)))
-#     g = graph(layer)
-#     grid = getgrid(panel_or_window)
-#     if layerdim == 2
-#         panel_or_window["axis"] = ax = Axis(grid[1,2], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
-#         # TODO: Set colorrange based on the type of layer
-#     else
-#         panel_or_window["axis"] = ax = Axis3(grid[1,2], tellheight = true)
-#         # TODO: 3D BField
-#     end
-#     panel_or_window["axis"].yreversed = @load_preference("makie_y_flip", default = false)
-
-#     new_img!(g, layer, panel_or_window)
-# end
-
-# # Get image either for 2d or 3d
-# function new_img!(g, layer, mp)
-#     dims = length(size(layer))
-#     ax = mp["axis"]
-
-#     if dims == 2
-#         mp["obs"] = Observable(getSingleViewImg(g, getml()))
-#         mp["image"] = image!(ax, mp["obs"], colormap = :thermal, fxaa = false, interpolate = false)
-#     elseif dims == 3
-#         unsafe_view = create_unsafe_vector(@view state(g)[graphidxs(layer)])
-#         sz = size(layer)
-#         allidxs = [1:length(state(layer));]
-#         xs = idx2xcoord.(Ref(sz), allidxs)
-#         ys = idx2ycoord.(Ref(sz), allidxs)
-#         zs = idx2zcoord.(Ref(sz), allidxs)
-#         obs = mp["obs"] = Observable(unsafe_view)
-#         mp["image"] = meshscatter!(ax, xs, ys, zs, markersize = 0.2, color = obs, colormap = :thermal)
-#     end
-
-#     mp["image"].colorrange[] = stateset(layer)
-# end
-
 function create_layer_axis!(layer, panel_or_window; color = nothing, pos = (1,1), colormap = :thermal)
     layerdim = length(size((layer)))
     g = graph(layer)
     grid = getgrid(panel_or_window)
     println(typeof(panel_or_window))
     if layerdim == 2
+        println("Layerdim 2")
         panel_or_window["axis"] = ax = Axis(grid[pos[1],pos[2]], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
         # TODO: Set colorrange based on the type of layer
     else
@@ -153,13 +128,14 @@ function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
     ax = mp["axis"]
 
     if dims == 2
-        color = isnothing(color) ? (mp["obs"] = Observable(getSingleViewImg(g, getml()))) : color
-        mp["image"] = image!(ax, color, colormap = colormap, fxaa = false, interpolate = false)
+        ob = isnothing(color) ? (mp["obs"] = Observable(getSingleViewImg(g, getml()))) : color
+        # cvm = CastViewMatrix(Float64, state(g), graphidxs(layer), size(layer)...)
+        # ob = mp["obs"] = Observable(cvm)
+        mp["image"] = image!(ax, ob, colormap = colormap, fxaa = false, interpolate = false)
     elseif dims == 3
 
         if isnothing(color) #If no color given, take the state
-            unsafe_view = create_unsafe_vector(@view state(g)[graphidxs(layer)])
-            mp["obs"] = Observable(CastVec(Float64, unsafe_view))
+            mp["obs"] = Observable(getSingleViewImg(g, getml()))
             # mp["obs"] = Observable(@view state(g)[graphidxs(layer)])
         else
             mp["obs"] = color
@@ -171,8 +147,8 @@ function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
         ys = idx2ycoord.(Ref(sz), allidxs)
         zs = idx2zcoord.(Ref(sz), allidxs)
         
-        mp["image"] = meshscatter!(ax, xs, ys, zs, markersize = 0.2, color = mp["obs"], colormap = colormap)
+        mp["image"] = meshscatter!(ax, xs, ys, zs, markersize = 0.01, color = mp["obs"], colormap = colormap)
     end
 
-    mp["image"].colorrange[] = stateset(layer)
+#     mp["image"].colorrange[] = stateset(layer)
 end

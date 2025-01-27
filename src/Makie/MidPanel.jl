@@ -58,11 +58,7 @@ function midPanel(ml,g)
             mp["showbfieldlabel"] = Label(leftpanel[3,1], "Show BField", fontsize = 18)
 
             push!(obs_funcs, on(showbfield.active) do x
-                if x
-                    midpanel(ml)["sv_img_ob"][] = bfield(currentLayer(simulation))
-                else
-                    midpanel(ml)["sv_img_ob"][] = state(currentLayer(simulation))
-                end
+                mp["obs"][] = getSingleViewImg(g, ml)
             end)
         
 

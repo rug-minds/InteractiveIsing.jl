@@ -1,7 +1,8 @@
 struct CastVec{In,Out} <: AbstractVector{Out}
     data::Vector{In}
 end
-Base.getindex(v::CastVec{In,Out}, i) where {In,Out} = Out(v.data[i])
+Base.getindex(v::CastVec{In,Out}, i::Integer) where {In,Out} = Out(v.data[i])
+Base.getindex(v::CastVec{In,Out}, range::AbstractRange) where {In,Out} = Out.(v.data[range])
 Base.setindex!(v::CastVec{In,Out}, val, i) where {In,Out} = v.data[i] = In(val)
 Base.length(v::CastVec) = length(v.data)
 Base.size(v::CastVec) = size(v.data)

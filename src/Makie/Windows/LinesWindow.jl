@@ -1,5 +1,5 @@
 function linesprocess(func, nrepeats, xtype = Float64, ytype = Float64)
-    prepare = (proc, args) -> (x = xtype[NaN] , y = ytype[NaN])
+    prepare = (func, args) -> (x = xtype[NaN] , y = ytype[NaN])
     return  makeprocess(func, nrepeats; prepare)
 end
 export linesprocess

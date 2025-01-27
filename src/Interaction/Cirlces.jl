@@ -19,7 +19,7 @@ export getOrdCirc
 
 # Offset a circle so that center is at i,j
 function offCirc(points,i,j)
-    circPoints = Vector{Tuple{Int16, Int16}}(undef,length(points))
+    circPoints = Vector{Tuple{Int, Int}}(undef,length(points))
     p_idx = 1
 
     for point in points
@@ -40,7 +40,7 @@ function cutCirc(circ, length, width)
         end
     end
 
-    circPoints = Vector{Tuple{Int16, Int16}}(undef,length(circ) - negPoints)
+    circPoints = Vector{Tuple{Int, Int}}(undef,length(circ) - negPoints)
     p_idx = 1
     for point in circ
         if pointIsOut(point, length, width)
@@ -55,7 +55,7 @@ function loopCirc(circ, length, width)
     circPoints = copy(circ)
     for (pidx, point) in enumerate(circ)
         if pointIsOut(point, length, width)
-            circPoints[pidx] = (latmod(point[1],length),latmod(point[2],width))
+            circPoints[pidx] = (latmod(point[1],Int(length)),latmod(point[2],Int(width)))
         end
     end
     return circPoints
