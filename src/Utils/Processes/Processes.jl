@@ -7,6 +7,8 @@ const wait_timeout = .5
 @ForwardDeclare Process "Utils/Processes"
 include("TaskFuncs.jl")
 include("CompositeAlgorithms.jl")
+include("Benchmark.jl")
+include("Debugging.jl")
 
 
 mutable struct Process
@@ -18,17 +20,22 @@ mutable struct Process
     lock::ReentrantLock 
     @atomic run::Bool
     @atomic paused::Bool
-    starttime ::Union{Nothing, Float64}
-    endtime::Union{Nothing, Float64}
+    starttime ::Union{Nothing, Float64, UInt64}
+    endtime::Union{Nothing, Float64, UInt64}
     objectref::Any
     retval::Any
     errorlog::Any
     algorithm::Any #Ref to the algorithm being run TODO:: Remove this one?
 end
 
-getargs(p::Process) = p.taskfunc.args
-set_starttime!(p::Process) = p.starttime = time()
-set_endtime!(p::Process) = p.endtime = time()
+getinputargs(p::Process) = p.taskfunc.args
+getargs(p::Process) = p.taskfunc.prepared_args
+getargs(p::Process, args) = p.taskfunc.prepared_args[args]
+getruntime(p::Process) = p.taskfunc.runtime
+
+set_starttime!(p::Process) = p.starttime = time_ns()
+set_endtime!(p::Process) = p.endtime = time_ns()
+reset_times!(p::Process) = (p.starttime = nothing; p.endtime = nothing)
 
 # List of processes in use
 const processlist = Dict{UUID, WeakRef}()
@@ -41,7 +48,9 @@ end
 
 function runtime(p::Process)
     @assert !isnothing(p.starttime) "Process has not started"
-    return isnothing(p.endtime) ? time() - p.starttime : p.endtime - p.starttime
+    timens = isnothing(p.endtime) ? time() - p.starttime : p.endtime - p.starttime
+    times = timens / 1e9
+    return times
 end
 
 function createfrom!(p1::Process, p2::Process)
@@ -53,14 +62,17 @@ export runtime
 
 
 # Process() = Process(nothing, 0, Threads.SpinLock(), (true, :Nothing))
-function Process(func, repeats::Int, args = (;); overrides...) 
-    rt = repeats == 0 ? Indefinite() : Repeat{repeats}()
-    return Process(func, rt, args...; overrides...)
+function Process(func, repeats::Int; overrides = (;), args...) 
+    runtime = repeats == 0 ? Indefinite() : Repeat{repeats}()
+    return Process(func; runtime, overrides, args...)
 end
 
-function Process(func = nothing, rt::Runtime = Indefinite(), args = (;); overrides...)
+function Process(func = nothing; runtime = Indefinite(), overrides = (;), args...)
+    if runtime isa Integer
+        runtime = Repeat{runtime}()
+    end
     # tf = TaskFunc(func, (func, args) -> args, (func, args) -> nothing, args, (;), (), rt, 1.)
-    tf = TaskFunc(func; args, runtime = rt, overrides...)
+    tf = TaskFunc(func; args, runtime, overrides...)
     p = Process(uuid1(), tf, nothing, 1, Threads.ReentrantLock(), false, false, nothing, nothing, nothing, nothing, nothing, nothing)
     register_process!(p)
     return p
@@ -158,6 +170,8 @@ function start(p::Process, sticky = false)
     # @assert isfree(p) "Process is already in use"
     @assert !isnothing(p.taskfunc) "No task to run"
 
+    reset_times!(p)
+
     createtask!(p)
     runtask!(p)
     return true
@@ -226,12 +240,12 @@ function restart(p::Process, sticky = false)
     end    
 end
 
-function makeprocess(@specialize(func), runtime::RT = Indefinite(); overrides = (;), args...) where RT <: Runtime
+function makeprocess(@specialize(func), runtime::RT = Indefinite(); prepare = nothing, overrides = (;), args...) where RT <: Runtime
     println("Making a new process with runtime $runtime")
-    newp = Process(func, runtime, args)
+    newp = Process(func; runtime, args...)
     register_process!(newp)
     args = (;proc = newp, args...)
-    createtask!(newp, func; runtime, overrides, args...)
+    createtask!(newp, func; runtime, prepare, overrides, args...)
     
     return newp
 end
@@ -314,7 +328,7 @@ Fetch the return value of a process
 """
 Increments the loop index of a process
 """
-@inline inc(p::Process) = p.loopidx += 1
+@inline inc!(p::Process) = p.loopidx += 1
 
 mutable struct Processes <: AbstractVector{Process}
     procs::Vector{Process}

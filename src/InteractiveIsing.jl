@@ -21,6 +21,10 @@ const modulefolder = @__DIR__
 using FileIO, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, LinearAlgebra,
     StatsBase, LaTeXStrings, DataStructures, Preferences, GLMakie, SparseArrays, FFTW, ExprTools, UUIDs, DataStructures
 using Images
+
+using Processes
+import Processes: prepare
+
 using PrecompileTools
 
 #TEMP
@@ -31,7 +35,6 @@ using Revise
 #Temps
 using SparseArrays, StaticArrays, LoopVectorization
 
-# import Base: getindex, setindex!, length, iterate, isless, push!, resize!, size
 
 export AbstractIsingGraph
 abstract type AbstractIsingGraph{T} end
