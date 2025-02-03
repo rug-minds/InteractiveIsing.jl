@@ -230,13 +230,13 @@ Add a layer to the graph defects
 """
 function addLayer!(gd::GraphDefects, layer)
     layer_idx =  internal_idx(layer)
-    startidx = start(layer)
+    _startidx = startidx(layer)
     #set new isdefect vector 
-    splice!(gd.isDefect, startidx:startidx-1, [false for x in 1:nStates(layer)])
+    splice!(gd.isDefect, _startidx:_startidx-1, [false for x in 1:nStates(layer)])
     # gd.isDefect = vcat(gd.isDefect, [false for x in 1:nStates(layer)])
 
     #set new alive list
-    splice!(gd.aliveList, startidx:startidx-1, Int32[start(layer):(start(layer)+nStates(layer)-1);])
+    splice!(gd.aliveList, _startidx:_startidx-1, Int32[startidx(layer):(startidx(layer)+nStates(layer)-1);])
     # gd.aliveList = vcat(gd.aliveList, Int32[start(layer):(start(layer)+nStates(layer)-1);])
 
     insert!(layerdefects(gd), layer_idx, 0)
@@ -255,7 +255,7 @@ function removeLayer!(gd::GraphDefects, lidx)
     l_ndefect = layerdefects(gd)[lidx]
     nstates_layer = length(gd.isDefect) - sum(nStates.(_layers)) 
     lidx = min(lidx, length(_layers))
-    start_idx = start(_layers[lidx])
+    start_idx = startidx(_layers[lidx])
 
     # TODO: Make lazy
     # Get the number of defects and alives in the preceding layers

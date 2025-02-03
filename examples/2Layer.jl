@@ -1,14 +1,18 @@
 using InteractiveIsing, BenchmarkTools
 import InteractiveIsing as II
 
-wg = @WG "(dr) -> 1/dr" NN = 5
+wg1 = @WG "(dr) -> dr == 1 ? 1 : 0" NN = 1
+wg2 = @WG "(dr) -> 1/dr" NN = 1
 
 layer_connections = @WG "(dr, dx, dy) -> 1" NN = 3
 
-g = IsingGraph(500, 500)
-
+g = IsingGraph(500, 500, type = Discrete)
 simulate(g)
 
-# @benchmark II.genLayerConnections(g[1],wg)
-# @benchmark II.genLayerConnectionsOLD(g[1],wg)
-# @benchmark II.genLayerConnectionsNEW(g[1],wg)
+# addLayer!(g, 250, 250)
+
+# simulate(g)
+
+genAdj!(g[1], wg1)
+# genAdj!(g[2], wg2)
+# genAdj!(g[1], g[2], layer_connections)

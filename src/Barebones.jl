@@ -9,7 +9,7 @@ mutable struct BareGraph{T}
     updates::Int
 end
 stop(g::BareGraph) = g.shouldrun = false
-start(g::BareGraph) = g.shouldrun = true
+Processes.start(g::BareGraph) = g.shouldrun = true
 
 
 function BareGraph(T, layers, adj, bias)

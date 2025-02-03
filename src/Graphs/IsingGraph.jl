@@ -250,6 +250,10 @@ layeridxs(g::IsingGraph) = UnitRange{Int32}[graphidxs(unshuffled(layers(g))[i]) 
 @inline Base.lastindex(g::IsingGraph) = length(g)
 Base.view(g::IsingGraph, idx) = view(g.layers, idx)
 @inline graphidxs(g::IsingGraph) = Int32(1):Int32(nStates(g))
+Base.get!(g::IsingGraph, s, d) = get!(g.addons, s, d)
+Base.get(g::IsingGraph, s) = get(g.addons, s)
+Base.get(g::IsingGraph, s, d) = get(g.addons, s, d)
+
 
 function Base.convert(::Type{<:IsingLayer}, g::IsingGraph)
     @assert length(g.layers) == 1 "Graph has more than one layer, ambiguous"
@@ -268,16 +272,21 @@ end
 #     return Process[]
 # end
 
+# function processes(g::IsingGraph)
+#     if isempty(processes(sim(g)))
+#         return Process[]
+#     end
+#     gidx = get_gidx(g)
+#     filter = processes(sim(g)).graphidx .== gidx
+#     processes(sim(g))[filter]
+# end
 function processes(g::IsingGraph)
-    if isempty(processes(sim(g)))
-        return Process[]
-    end
-    gidx = get_gidx(g)
-    filter = processes(sim(g)).graphidx .== gidx
-    processes(sim(g))[filter]
+    get!(g, :processes, [])
 end
 processes(::Nothing) = nothing
-
+# Get the first process
+process(g::IsingGraph) = get!(g, :processes, nothing)[end]
+export process
 
 
 #TODO: Give new idx
@@ -408,7 +417,7 @@ export addLayer!
 nlayers(::Nothing) = Observable(0)
 function addLayer!(g::IsingGraph, llength, lwidth, lheight = nothing; weights = nothing, periodic = true, type = default_ltype(g), set = convert.(eltype(g),(-1,1)), rangebegin = set[1], rangeend = set[2], kwargs...)
     newlayer = nothing
-    @tryLockPause sim(g) begin 
+    Processes.@tryLockPause sim(g) begin 
         newlayer = _addLayer!(g, llength, lwidth, lheight; set, weights, periodic, type, kwargs...)
         # Update the layer idxs
         nlayers(sim(g))[] += 1
@@ -458,7 +467,7 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth, lheight = nothing; weight
 
         # Find the startidx of the new layer
         # Based on the insertidx found by the shufflevec
-        if !isempty(_layers)
+        if !isempty(_layers) && idx > 1
             _startidx = endidx(_layers[idx-1]) + 1
         else
             _startidx = 1
@@ -473,6 +482,7 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth, lheight = nothing; weight
     layertype =  IsingLayer{type, set}
     push!(layers(g), make_newlayer, layertype)
     newlayer = layers(g)[end]
+    g.layers.data = remake_type.(g.layers.data)
 
     # Generate the adjacency matrix from the weightfunc
     if !isnothing(weights)

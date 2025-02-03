@@ -5,10 +5,11 @@ mutable struct MakieWindow{type} <: AbstractWindow
     f::Figure
     screen::GLMakie.Screen
     timers::Vector{PTimer}
+    funcs::NamedTuple
     other::Dict{Symbol, Any}
 end
 
-MakieWindo(u,f,s,t,o) = MakieWindow{:Any}(u,f,s,t,o)
+MakieWindow(u,f,s,t,fs,o) = MakieWindow{:Any}(u,f,s,t,fs,o)
 
 # Dict accessing
 Base.getindex(w::MakieWindow, key) = w.other[key]
@@ -79,7 +80,7 @@ It also registers the window in the windows dictionary
 function new_window(;window_type = :Any, kwargs...)
     f, screen, window_open = empty_window(;kwargs...)
     u1 = uuid1()
-    w = MakieWindow{window_type}(u1, f, screen, [], Dict(:window_open => window_open))
+    w = MakieWindow{window_type}(u1, f, screen, [], (;), Dict(:window_open => window_open))
     w[:paused] = Observable(false)
     on(window_open) do x
         if !x

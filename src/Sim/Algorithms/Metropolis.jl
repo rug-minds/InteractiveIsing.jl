@@ -1,6 +1,6 @@
 function updateMetropolis end
 
-function prepare(::typeof(updateMetropolis), g; kwargs...)
+function Processes.prepare(::typeof(updateMetropolis), g; kwargs...)
     def_kwargs = pairs((;g,
                         gstate = state(g),
                         gadj = adj(g),

@@ -53,19 +53,18 @@ export unlockPause
 """
 Quit sim and block until all processes are terminated
 """
-function Processes.quit(sim::IsingSim)
-    quit.(processes(sim))
-    deleteat!(processes(sim), 1:length(processes(sim)))
-end
+# function Processes.quit(sim::IsingSim)
+    # quit.(processes(sim))
+    # deleteat!(processes(sim), 1:length(processes(sim)))
+# end
 
-function Processes.pause(sim::IsingSim)
-    pause.(processes(sim))
-end
+# function Processes.pause(sim::IsingSim)
+#     pause.(processes(sim))
+# end
 
 function Processes.quit(g::IsingGraph)
     quit.(processes(g))
-    gidx = get_gidx(g)
-    deleteat!(processes(sim(g)), processes(sim(g)).graphidx .== gidx)
+    deleteat!(processes(g), 1:length(processes(g)))
 end
 
 function Processes.pause(g::IsingGraph)
@@ -98,11 +97,7 @@ Keep the keywords and recompile the processes
 function Processes.refresh(g::IsingGraph; kwargs...)
     _processes = processes(g)
     for process in _processes
-        wasrunning = isrunning(process)
-        # Is process being used? Otherwise nothing has to be started
-        _isused = isused(process)
-        pause(process)
-        if _isused
+        if isrunning(process)
             refresh(process)
         end
     end
@@ -110,34 +105,31 @@ function Processes.refresh(g::IsingGraph; kwargs...)
 end
 export refresh
 
-"""
-Reset the keywords to the standard values, and restart the processes
+# """
+# Reset the keywords to the standard values, and restart the processes
 
-"""
-function Processes.reset(g::IsingGraph; kwargs...)
-    _processes = processes(g)
-    for process in _processes
-        # Is process being used? Otherwise nothing has to be started
-        _isused = isused(process)
-        quit(process)
-        if _isused
-            task = process -> errormonitor(Threads.@spawn mainLoop(g, process; kwargs...))
-            runtaskOLD(process, task, g)
-        end
-    end
-    return
-end
+# """
+# function Processes.reset(g::IsingGraph; kwargs...)
+#     _processes = processes(g)
+#     for process in _processes
+#         # Is process being used? Otherwise nothing has to be started
+#         _isused = isused(process)
+#         quit(process)
+#         if _isused
+#             task = process -> errormonitor(Threads.@spawn mainLoop(g, process; kwargs...))
+#             runtaskOLD(process, task, g)
+#         end
+#     end
+#     return
+# end
 
 function togglePause(g::IsingGraph)
-    if any(isrunning.(processes(sim(g))))
-        pause.(processes(sim(g)))
+    if any(isrunning.(processes(g)))
+        pause.(processes(g))
     else
-        for process in processes(sim(g))
+        for process in processes(g)
             if Processes.ispaused(process)
-                # args = fetch(process)
-                # task = process -> Threads.@spawn mainLoop(g, process; args...)
-                # errormonitor(runtaskOLD(process, task, g))
-                Processes.start(process)
+                start(process)
             end
         end
     end    

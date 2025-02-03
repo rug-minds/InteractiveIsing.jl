@@ -6,6 +6,42 @@ export strsplice, find_i_symb, symbol_without_index, match_indexed_symbol,
     unique_identifiers_old!, replace_reserved, substitute_zero, substitute_one, replace_indices, 
     replace_idxs, remove_key, replace_inactive_symbs, symbol_without_index, find_symb, find_symbs, delete_tree
 end
+
+function same_dispatch(layertype1, layertype2)
+    if layertype1.parameters[1] == layertype2.parameters[1] && layertype1.parameters[2] == layertype2.parameters[2]
+        return true
+    end
+    return false
+end
+
+function grouped_idxs(unshuffled_layers_type)
+    layertypes = unshuffled_layers_type.parameters
+    grouped_idxs = []
+    for layer_idx in eachindex(layertypes)
+        idxset = layerparams(layertypes[layer_idx], Val(:IndexSet))
+        if layer_idx == 1
+            push!(grouped_idxs, idxset[1])
+            push!(grouped_idxs, idxset[end])
+            continue
+        end
+        
+        if same_dispatch(layertypes[layer_idx], layertypes[layer_idx-1])
+            idxset[end] = last(grouped_idxs[end])
+        else
+            push!(grouped_idxs, idxset[1])
+            push!(grouped_idxs, idxset[end])
+        end
+
+    end
+    # Make ranges
+    ranges = []
+    for i_idx in 1:2:length(grouped_idxs)
+        push!(ranges, grouped_idxs[i_idx]:grouped_idxs[i_idx+1])
+    end
+    return ranges
+end
+
+
 """
 A switch to avoid runtime dispatch on the layertype
 Groups layeridxs based on type and then creates a fixed switch statement
@@ -63,7 +99,7 @@ end
 
         push!(code.args, codeline)
     end
-    push!(code.args, :(throw(BoundsError(structs, i))))
+    push!(code.args, :(throw(BoundsError(state(args.g), i))))
     return code
 end
 

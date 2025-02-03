@@ -50,7 +50,7 @@ Start the interface for the simulation displaying the graph genAdj
 Or if the interface is already running, update the current view
 Pass the generaating function for a particular view as the second argument
 """
-function interface(g, createview = singleView; kwargs...)
+function _interface(g, createview = singleView; kwargs...)
     ml = simulation[].ml[]
 
     # If interface is not running, create a new basefig

@@ -137,60 +137,62 @@ function dist(top::LayerTopology, coords::T...) where T
     @inline sqrt(dist2(top, coords...))
 end
 
-function dist(top::SquareTopology{P, 2}, i1, j1, i2, j2) where P
-    if P == Periodic 
-        i1 = i1 > size(top,1) ? i1 - size(top,1) : i1
-        i2 = i2 > size(top,1) ? i2 - size(top,1) : i2
-        j1 = j1 > size(top,2) ? j1 - size(top,2) : j1
-        j2 = j2 > size(top,2) ? j2 - size(top,2) : j2
-    end
-
-    return abs(i1 - i2) + abs(j1 - j2)
-end
+# function dist(top::SquareTopology{P, 2}, i1, j1, i2, j2) where P
+   
+# end
 
 function dist2(top::SquareTopology{P, 2}, i1, j1, i2, j2) where P
+    di = abs(i1 - i2)
+    dj = abs(j1 - j2)
     if P == Periodic 
-        i1 = i1 > size(top,1) ? i1 - size(top,1) : i1
-        i2 = i2 > size(top,1) ? i2 - size(top,1) : i2
-        j1 = j1 > size(top,2) ? j1 - size(top,2) : j1
-        j2 = j2 > size(top,2) ? j2 - size(top,2) : j2
+        if di > size(top,1)/2
+            di -= size(top,1)
+        end
+        if dj > size(top,2)/2
+            dj -= size(top,2)
+        end
     end
 
-    return (i1 - i2)^2 + (j1 - j2)^2
+    return di^2 + dj^2
 end
 
 
 function dist2(top::SquareTopology{P,3}, (i1,j1,k1)::Tuple,(i2,j2,k2)::Tuple) where P
+    di = abs(i1 - i2)
+    dj = abs(j1 - j2)
+    dk = abs(k1 - k2)
     if P == Periodic
-        i1 = i1 > size(top,1) ? i1 - size(top,1) : i1
-        j1 = j1 > size(top,2) ? j1 - size(top,2) : j1
-        k1 = k1 > size(top,3) ? k1 - size(top,3) : k1
-
-        i2 = i2 > size(top,1) ? i2 - size(top,1) : i2
-        j2 = j2 > size(top,2) ? j2 - size(top,2) : j2
-        k2 = k2 > size(top,3) ? k2 - size(top,3) : k2
+        if di > size(top,1)/2
+            di -= size(top,1)
+        end
+        if dj > size(top,2)/2
+            dj -= size(top,2)
+        end
+        if dk > size(top,3)/2
+            dk -= size(top,3)
+        end
     end
 
-    return (i1 - i2)^2 + (j1 - j2)^2 + (k1 - k2)^2
+    return di^2 + dj^2 + dk^2
 end
 
 # If only two given must be indexes of the same layer (or in 1D case idx = i)
-function dist2(top::LatticeTopology, idx1::Integer, idx2::Integer)
+function dist2(top::LayerTopology, idx1::Integer, idx2::Integer)
     coords1 = idxToCoord(Int32(idx1), size(top))
     coords2 = idxToCoord(Int32(idx2), size(top))
 
     return @inline dist2(top, coords1..., coords2...)
 end
 
-function dist2(top::LatticeTopology, coords1::Tuple, coords2::Tuple)
+function dist2(top::LayerTopology, coords1::Tuple, coords2::Tuple)
     return @inline dist2(top, coords1..., coords2...)
 end
 
-function dist(top::LatticeTopology, idx1::Integer, idx2::Integer)
+function dist(top::LayerTopology, idx1::Integer, idx2::Integer)
     return sqrt(dist2(top, idx1, idx2))
 end
 
-function dist(top::LatticeTopology, coords1::Tuple, coords2::Tuple)
+function dist(top::LayerTopology, coords1::Tuple, coords2::Tuple)
     return sqrt(dist2(top, coords1, coords2))
 end
 

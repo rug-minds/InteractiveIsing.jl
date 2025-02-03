@@ -1,6 +1,6 @@
-using InteractiveIsing, LoopVectorization, SparseArrays
+using InteractiveIsing, LoopVectorization, Processes
 
-g = IsingGraph(40,40,40)
+g = IsingGraph(40,40,40, type = Discrete)
  
 simulate(g)
 
@@ -17,7 +17,7 @@ function weightfunc(dx,dy,dz)
 end
 
 
-wg = @WG "(dx,dy,dz) -> weightfunc(dx,dy,dz)" NN = (1,1,1)
+wg = @WG "(dx,dy,dz) -> weightfunc(dx,dy,dz)" NN = (1,1,3)
 
 genAdj!(g[1], wg)
 
@@ -33,52 +33,37 @@ end
 
 using GLMakie
 
-function TrianglePulseB(g, t, amp = 1, steps = 1000; npulse = 1)
- 
+struct TrianglePulseB end
+
+function Processes.prepare(::TrianglePulseB, args)
+    (;lifetime, amp, numpulses) = args
     max_z = size(g[1], 3)
 
-    first = LinRange(0, amp, floor(Int,steps/(4*npulse)))
-    second = LinRange(amp, 0, floor(Int,steps/(4*npulse)))
-    third = LinRange(0, -amp, floor(Int,steps/(4*npulse)))
-    fourth = LinRange(-amp, 0, floor(Int,steps/(4*npulse)))
+    steps = Processes.repeats(lifetime)
+    first = LinRange(0, amp, floor(Int,steps/(4*numpulses)))
+    second = LinRange(amp, 0, floor(Int,steps/(4*numpulses)))
+    third = LinRange(0, -amp, floor(Int,steps/(4*numpulses)))
+    fourth = LinRange(-amp, 0, floor(Int,steps/(4*numpulses)))
     pulse = vcat(first, second, third, fourth)
 
-    pulse = repeat(pulse, npulse)
+    pulse = repeat(pulse, numpulses)
 
- 
-    tstep = t/steps
-
-    t_i = time()
-
-    # println("Pulse length: ", length(pulse))
-
-    process = linesprocess(length(pulse)) do args
-        # println("Working on thread ", Threads.threadid())
-        (;proc, x, y) = args
-
-        # Waits so that the pulse is applied every tstep time
-        while time() - t_i < tstep
-            
-        end
-        # Sets the bfield
-        setparam!(g[1], :b, pulse[loopidx(proc)])
-
-
-
-        # setparam!(g[1][2], :b, pulse[idx], true)
-        # setparam!(g[1][max_z], :b, pulse[idx], true)
-        # setparam!(g[1][max_z-1], :b, pulse[idx], true)
-
-        # note down the time
-        t_i = time()
-        
-        push!(y, sum(state(g)))
-            
-        # Send the pulse amplitude to the observable
-        push!(x, pulse[loopidx(proc)])
-    end
-
-    return process
+    x = Float64[]
+    y = Float64[]
+   return (;pulse, x, y, tstep = args.tstep) |> add_timetracker
 end
 
-w = lines_window(TrianglePulseB(g, 0.01, 50, 2000, npulse = 2));
+function TrianglePulseB(args)
+    (;proc, pulse, tstep, x, y) = args
+    wait(args, tstep)
+
+    processsizehint!(args, x)
+    processsizehint!(args, y)
+    setparam!(g[1], :b, pulse[loopidx(proc)])
+
+    push!(y, sum(state(g)))            
+    push!(x, pulse[loopidx(proc)])
+end
+
+w = lines_window(TrianglePulseB, lifetime = 1000, amp = 0.5, numpulses = 2, tstep = 0.001);
+# InteractiveIsing.change_args!(w, tstep = 0.001, amp = 2)

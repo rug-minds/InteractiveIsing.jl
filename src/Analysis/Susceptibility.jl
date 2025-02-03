@@ -7,12 +7,22 @@ function gatherSusceptibility(g, maxsteps = 100)
         push!(avg, M)
         push!(avg_sq, M)
         step += 1
-        sleep(1/1000)
-        # println("Step $step")
-        # println(step > maxsteps)
-        # println(converged(avg))
-        # println(converged(avg_sq))
+
     end
-    return Temp(sim(g))[]*(avg_sq[] - (avg[])^2), avg, avg_sq
+    return Temp(g)[]*(avg_sq[] - (avg[])^2), avg, avg_sq
 end
 export gatherSusceptibility
+
+
+struct Susceptibility end
+
+function Processes.prepare(::Susceptibility, args)
+    magnetizations = []
+    processsizehint!(args, magnetizations)
+    return (;magnetizations)
+end
+
+function Susceptibility(args)
+    (;M, magnetizations) = args
+    push!(magnetizations, M)
+end

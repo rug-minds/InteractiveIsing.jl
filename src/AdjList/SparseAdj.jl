@@ -68,7 +68,7 @@ end
 From a generator that returns (i, j, idx) for the connections
     fill the row_idxs, col_idxs, and weights
 """ 
-function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs, col_idxs, weights, topology, @specialize(wg), conns...) where {T}
+function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_idxs, weights, topology, @specialize(wg), conns...) where {T}
     NN = wg.NN
     @assert (NN isa Int32 || length(NN) == 2)
 
@@ -95,7 +95,9 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs, col_idxs, wei
 
             dr = dist(topology, vert_i, vert_j, conn_i, conn_j)
             # TODO: Overal coords?
-            _,_,z = coords(layer)
+            # _,_,z = coords(layer)
+            z = 1
+
             dx, dy = dxdy(topology, (vert_i, vert_j), (conn_i, conn_j))
             dz = 0
             x = (vert_i+conn_i)/2
@@ -111,6 +113,7 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs, col_idxs, wei
                 push!(col_idxs, g_col_idx)
                 push!(weights, weight)
             end
+
             reset!(conn_is)
             reset!(conn_js)
             reset!(conn_idxs)
@@ -196,7 +199,7 @@ end
 Give layer and WeightGenerator
     returns the connections within the layer in row_idxs, col_idxs, and weights
 """
-function genLayerConnections(layer1::AbstractIsingLayer{T,2}, layer2::AbstractIsingLayer{T,2}, wg) where T
+function genLayerConnections(layer1::AbstractIsingLayer{T1,2}, layer2::AbstractIsingLayer{T2,2}, wg) where {T1,T2}
     row_idxs = Int32[]
     col_idxs = Int32[]
     weights = Float32[]
@@ -212,7 +215,7 @@ function genLayerConnections(layer1::AbstractIsingLayer{T,2}, layer2::AbstractIs
     sizehint!(weights, 2*n_conns)
 
     pre_3tuple = Prealloc(NTuple{3, Int32}, blocksize)
-    _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, _NN, wg, pre_3tuple)
+    _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, wg, pre_3tuple)
 
     append!(row_idxs, col_idxs)
     append!(col_idxs, @view(row_idxs[1:end÷2]))
@@ -227,7 +230,7 @@ export genLayerConnections
 Give preallocated vectors for row_idxs, col_idxs, and weights
     fills them with the connections withing between two layers
 """
-function _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, wg, pre_3tuple)
+function _fillSparseVecs(layer1::IsingLayer, layer2::IsingLayer, row_idxs, col_idxs, weights, wg, pre_3tuple)
     NN = wg.NN
 
     local NNi = NN

@@ -50,27 +50,44 @@ toggle(p::ParamVal{T, Default, Active}) where {T, Default, Active} = ParamVal{T,
 #     @assert isnothing(i) || i == 1
 #     return p.val
 # end
+
+#General
+
+#Values
 @inline Base.setindex!(p::ParamVal, val) = (p.val = val)
 @inline Base.getindex(p::ParamVal{T}) where T = p.val
 @inline Base.setindex!(p::ParamVal{T}, val, idx) where T <: Real = (p.val = val)
-@inline Base.getindex(p::ParamVal{T}, idx) where T <: Vector = getindex(p.val, idx)::eltype(T)
-@inline Base.setindex!(p::ParamVal{T}, val, idx) where T <: Vector = (p.val[idx] = val)
-@inline Base.lastindex(p::ParamVal{T}) where T <: Vector = lastindex(p.val)
-@inline Base.firstindex(p::ParamVal{T}) where T <: Vector = firstindex(p.val)
 @inline Base.eachindex(p::ParamVal{T}) where T = Base.OneTo(1)
-@inline Base.eachindex(p::ParamVal{T}) where T <: Vector = eachindex(p.val)
+Base.size(p::ParamVal{T}) where T = (1,)
+Base.length(p::ParamVal{T}) where T = 1
+@inline Base.eltype(p::ParamVal{T}) where T = T
 
-LoopVectorization.check_args(p::ParamVal{T}) where T <: Vector = true
+
+
+#Vectors
+@inline Base.getindex(p::ParamVal{T}, idx) where T <: AbstractVector = getindex(p.val, idx)::eltype(T)
+@inline Base.setindex!(p::ParamVal{T}, val, idx) where T <: AbstractVector = (p.val[idx] = val)
+@inline Base.lastindex(p::ParamVal{T}) where T <: AbstractVector = lastindex(p.val)
+@inline Base.firstindex(p::ParamVal{T}) where T <: AbstractVector = firstindex(p.val)
+@inline Base.eachindex(p::ParamVal{T}) where T <: AbstractVector = eachindex(p.val)
+Base.size(p::ParamVal{T}) where T <: AbstractVector = size(p.val)
+Base.length(p::ParamVal{T}) where T <: AbstractVector = length(p.val)
+@inline Base.eltype(p::ParamVal{AbstractVector{T}}) where T = T
+
+Base.push!(p::ParamVal{T}, val) where T <: AbstractVector = push!(p.val, val)
+LoopVectorization.check_args(p::ParamVal{T}) where T <: AbstractVector = true
 @inline Base.pointer(p::ParamVal{T}) where T = pointer(p.val)
 
 
-Base.size(p::ParamVal{T}) where T = (1,)
-Base.size(p::ParamVal{T}) where T <: Vector = size(p.val)
-Base.length(p::ParamVal{T}) where T <: Vector = length(p.val)
-Base.length(p::ParamVal{T}) where T = 1
-Base.push!(p::ParamVal{T}, val) where T <: Vector = push!(p.val, val)
-@inline Base.eltype(p::ParamVal{T}) where T = T
-@inline Base.eltype(p::ParamVal{Vector{T}}) where T = T
+#Ref
+@inline Base.getindex(p::ParamVal{T}) where T <: Ref = p.val[]
+@inline Base.setindex!(p::ParamVal{T}, val) where T <: Ref = (p.val[] = val)
+@inline Base.lastindex(p::ParamVal{T}) where T <: Ref = 1
+@inline Base.eachindex(p::ParamVal{T}) where T <: Ref = Base.OneTo(1)
+
+
+
+
 
 """
 Gives the zero value of the type of the parameter
@@ -85,12 +102,6 @@ export paramzero
 Base.BroadcastStyle(::Type{ParamVal{T,A,B}}) where {T<:AbstractArray,A,B} = Broadcast.ArrayStyle{ParamVal}()
 Base.BroadcastStyle(::Type{ParamVal{T,A,B}}) where {T,A,B} = Broadcast.Style{ParamVal}()
 
-# @inline function setparam(p::NamedTuple, symbol, val, active = nothing)
-#     @assert haskey(p, symbol)
-#     # newval = 
-#     # return (;p...， symbol => ParamVal(p[symbol], val, active))
-# end
-
 
 function Base.show(io::IO, p::ParamVal{T}) where T
     print(io, (isactive(p) ? "Active " : "Inactive "))
@@ -99,7 +110,7 @@ function Base.show(io::IO, p::ParamVal{T}) where T
     print(io, "Defaulting to: $(default(p))")
 end
 
-function Base.show(io::IO, p::ParamVal{T}) where {T <: Vector}
+function Base.show(io::IO, p::ParamVal{T}) where {T <: AbstractVector}
     print(io, (isactive(p) ? "Active " : "Inactive "))
     println(io, "$(p.description) with vector value.")
     println(io, "Defaulting to: $(default(p))")

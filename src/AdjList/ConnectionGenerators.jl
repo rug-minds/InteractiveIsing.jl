@@ -3,7 +3,7 @@
 const coord_symbs = (:i, :j, :k, :l, :m, :n)
 
 # Gives a vector of the relative lattice positions
-function dlayer(layer1, layer2)::NTuple{3,Int32}
+function dlayer(layer1::IsingLayer, layer2)::NTuple{3,Int32}
     if coords(layer1) != nothing && coords(layer2) != nothing
         return rel_coords = coords(layer2) .- coords(layer1)
     else
@@ -96,7 +96,7 @@ function dist2(layer1::IsingLayer, layer2::IsingLayer, idx1, idx2, alignment::Sy
     return @inline dist2(layer1, layer2, i1, j1, i2, j2, alignment)
 end
 
-dist(layer1, layer2, i1, j1, i2, j2, alignment::Symbol = :center) = sqrt(dist2(layer1, layer2, i1, j1, i2, j2, alignment))
+dist(layer1::IsingLayer, layer2::IsingLayer, i1, j1, i2, j2, alignment::Symbol = :center) = sqrt(dist2(layer1, layer2, i1, j1, i2, j2, alignment))
 
 function lattice2_iterator(layer1::IsingLayer, layer2::IsingLayer, i1, j1, NN, alignment = :center)
     # Get a square around the coordinate
@@ -120,7 +120,7 @@ function lattice2_iterator(layer1::IsingLayer, layer2::IsingLayer, i1, j1, NNi, 
     # it = (-(NN)):(NN)
     for j in -NNj:NNj
         for i in -NNi:NNi
-            i2, j2 = coordsl1tol2(i1+i, j1+j, layer1, layer2, alignment)
+            i2, j2 = coordsl1tol2(layer1, layer2, i1+i, j1+j, alignment)
             if isin(i2, j2, layer2)
                 push!(prealloc, (i2, j2, coordToIdx(i2, j2, glength(layer2))))
             end
@@ -145,13 +145,14 @@ function getConnIdxs!(top, vert_idx, vert_i, vert_j, (len, wid)::NTuple{2,Int32}
     for j in -NNj:NNj
         for i in -NNi:NNi
             (i == 0 && j == 0) && continue
+            
             conn_i, conn_j = latmod(vert_i + i, vert_j + j, len, wid)
 
             if conn_i == 0 || conn_j == 0
                 continue
             end
 
-            conn_idx = coordToIdx(conn_i, conn_j, len,)
+            conn_idx = coordToIdx(conn_i, conn_j, len)
 
             conn_idx < vert_idx && continue
 

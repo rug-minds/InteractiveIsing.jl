@@ -20,7 +20,7 @@ mutable struct IsingLayer{StateType, StateSet, IndexSet, DIMS, T, Top} <: Abstra
     name::String
     # Internal idx of layer in shufflevec of graph
     internal_idx::Int32
-    start::Int32
+    startidx::Int32
     size::NTuple{DIMS, Int32}
     nstates::Int32
     traits::NamedTuple
@@ -36,9 +36,9 @@ mutable struct IsingLayer{StateType, StateSet, IndexSet, DIMS, T, Top} <: Abstra
     top::Top
 
     # DEFAULT INIT
-    function IsingLayer{ST, SS, IS, DIMS, T, Topology}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top) where {ST, SS, IS, DIMS, T, Topology}
+    function IsingLayer{ST, SS, IS, DIMS, T, Topology}(g, name, internal_idx, start, size, nstates, traits, coords, connections, timers, top) where {ST, SS, IS, DIMS, T, Topology}
         @assert typeof(DIMS) == Int
-        return new{ST, SS, IS, DIMS, T, Topology}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top)
+        return new{ST, SS, IS, DIMS, T, Topology}(g, name, internal_idx, start, size, nstates, traits, coords, connections, timers, top)
     end
 
 
@@ -269,8 +269,9 @@ export maxdist
 @inline c2i(i, j, layer::AbstractIsingLayer) = coordToIdx(i, j, layer)
 @inline i2c(i, layer::AbstractIsingLayer) = idxToCoord(i, layer)
 
-@inline startidx(layer::AbstractIsingLayer) = start(layer)
-@inline endidx(layer::AbstractIsingLayer) = start(layer) + prod(size(layer)) - 1
+# @inline startidx(layer::AbstractIsingLayer) = start(layer)
+@inline endidx(layer::AbstractIsingLayer) = startidx(layer) + prod(size(layer)) - 1
+export endidx
 
 @inline Base.getindex(layer::AbstractIsingLayer{T, 2}, idx) where T = state(layer)[idx]
 @inline Base.getindex(layer::AbstractIsingLayer{T, 2}, i, j) where T = state(layer)[i,j]
@@ -283,7 +284,7 @@ export maxdist
 """
 Range of idx of layer for underlying graph
 """
-@inline graphidxs(layer::AbstractIsingLayer) = UnitRange{Int32}(start(layer):endidx(layer))
+@inline graphidxs(layer::AbstractIsingLayer) = UnitRange{Int32}(startidx(layer):endidx(layer))
 export graphidxs
 
 bfield(layer::AbstractIsingLayer) = reshape((@view bfield(graph(layer))[graphidxs(layer)]), size(layer,1), size(layer,2))
@@ -366,15 +367,26 @@ Copy over the state to the right position, except the adjacency matrix
 """
 function relocate!(movable_layer::IsingLayer, causing_layer::IsingLayer, shift, copy::Bool = true)
     oldstate_view = state(movable_layer)
-    movable_layer.start += shift*nStates(causing_layer)
+    movable_layer.startidx += shift*nStates(causing_layer)
     movable_layer.internal_idx += shift*1
     if copy  
         state(movable_layer) .= oldstate_view
     end
 end
 
+#TODO: This is a patchwork fix, fix this better
+# This is used to update the stateset in the type
+function remake_type(layer::IsingLayer)
+    pars =  typeof(layer).parameters
+    new_idxset = graphidxs(layer)
+    # use this one:
+    #function IsingLayer{ST, SS, IS, DIMS, T, Topology}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top) where {ST, SS, IS, DIMS, T, Topology}
+    # return new{ST, SS, IS, DIMS, T, Topology}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top)
+    return IsingLayer{pars[1], pars[2], new_idxset, pars[4], pars[5], pars[6]}(graph(layer), name(layer), internal_idx(layer), startidx(layer), size(layer), nstates(layer), layer.traits, layer.coords, connections(layer), timers(layer), top(layer))
+end
+
 ### GET INDEXES
-iterator(layer::AbstractIsingLayer) = start(layer):endidx(layer)
+iterator(layer::AbstractIsingLayer) = startidx(layer):endidx(layer)
 iterator(g::IsingGraph) = 1:(nStates(g))
 
 # LayerTopology
@@ -400,14 +412,14 @@ export setPeriodic!
 Go from a local idx of layer to idx of the underlying graph
 """
 @inline function idxLToG(idx::Integer, layer::IsingLayer)
-    return Int32(start(layer) + idx - 1)
+    return Int32(startidx(layer) + idx - 1)
 end
 
 """
 Go from a local matrix indexing of layer to idx of the underlying graph
 """
 @inline function idxLToG(i::Integer, j::Integer, layer::IsingLayer)
-    return Int32(start(layer) + coordToIdx(i,j, glength(layer)) - 1)
+    return Int32(startidx(layer) + coordToIdx(i,j, glength(layer)) - 1)
 end
 
 idxLToG(tup::Tuple, layer) = idxLToG(tup[1], tup[2], layer)
@@ -416,7 +428,7 @@ idxLToG(tup::Tuple, layer) = idxLToG(tup[1], tup[2], layer)
 Go from graph idx to idx of layer
 """
 @inline function idxGToL(idx::Integer, layer::IsingLayer)
-    return Int32(idx + 1 - start(layer))
+    return Int32(idx + 1 - startidx(layer))
 end
 export idxLToG, idxGToL
 
@@ -428,7 +440,7 @@ function changeset(l::IsingLayer{SType}, set) where SType
     newset = convert.(_eltype, set)
     g = graph(l)
     # newlayer = IsingLayer(SType, l.graph, l.internal_idx, l.start, l.size[1], l.size[2], name = l.name, coords = l.coords, connections = l.connections, rangebegin = set[1], rangeend = set[2])
-    newlayer = IsingLayer{SType, newset}(g, l.name, l.internal_idx, l.start, l.size, l.nstates,  l.coords, l.connections, l.timers, l.top)
+    newlayer = IsingLayer{SType, newset}(g, l.name, l.internal_idx, l.startidx, l.size, l.nstates,  l.coords, l.connections, l.timers, l.top)
     newlayer.timers = l.timers
 
     return newlayer
@@ -496,7 +508,7 @@ export changeset!, stateset
 default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous 
 @inline statetype(layer::IsingLayer{ST}) where {ST} = ST
 @inline statetype(::Type{IsingLayer{ST,A,B,C,T1,Top}}) where {ST,A,B,C,T1,Top} = ST
-setstatetype(l::IsingLayer{ST,SET}, stype) where {ST,SET} = IsingLayer{stype,SET}(l.graph, l.name, l.internal_idx, l.start, l.size, l.nstates, l.coords, l.connections, l.timers, l.top)
+setstatetype(l::IsingLayer{ST,SET}, stype) where {ST,SET} = IsingLayer{stype,SET}(l.graph, l.name, l.internal_idx, l.startidx, l.size, l.nstates, l.coords, l.connections, l.timers, l.top)
 
 Base.eltype(l::IsingLayer{A,B,C,D,T}) where {A,B,C,D,T} = T
 

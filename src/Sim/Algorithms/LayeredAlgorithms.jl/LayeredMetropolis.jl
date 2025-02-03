@@ -8,7 +8,7 @@ end
 """
 Should take in kwargs and return a namedtuple that has all variables the algorithm needs
 """
-function prepare(::typeof(layeredMetropolis), g, prt = false; kwargs...)::NamedTuple
+function Processes.prepare(::typeof(layeredMetropolis), g, prt = false; kwargs...)::NamedTuple
     l_iterators = Val{tuple(layeridxs(g)...)}()
     def_kwargs = pairs((;g,
                         gstate = state(g),

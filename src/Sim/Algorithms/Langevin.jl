@@ -10,7 +10,7 @@ setstepsize(val) = stepsize[] = val
 export setstepsize
 
 
-function prepare(::Union{typeof(updateLangevin), typeof(updateLangevinThreaded)}, g; kwargs...)
+function Processes.prepare(::Union{typeof(updateLangevin), typeof(updateLangevinThreaded)}, g; kwargs...)
     resize!(langevin_prealloc, length(state(g)))
     def_kwargs = pairs((;g,
                         gstate = state(g),

@@ -1,12 +1,7 @@
-"""
-Create a new Makie window with a lines plot for the observables x and y
-    Kwarg:
-        fps: frames per second
-"""
-function lines_window(func; fps = 30, lifetime, kwargs...)
+function BarWindow(func; fps = 30, lifetime, kwargs...)
 
     proc = Process(func; lifetime , kwargs...)
-    Processes.preparedata!(proc)
+    preparedata!(proc)
     (;x, y) = getargs(proc)
     # xref = Ref(x)
     # yref = Ref(y)
@@ -75,7 +70,7 @@ function lines_window(func; fps = 30, lifetime, kwargs...)
         newest_obs[1] = xob
         newest_obs[2] = yob
          
-        Processes.spawntask!(proc)
+        spawntask!(proc)
         start.(w.timers)
         push!(w[:lines], lines!(w[:ax], xob, yob))
     end
@@ -115,19 +110,6 @@ function lines_window(func; fps = 30, lifetime, kwargs...)
         end
     end
 
-    Processes.spawntask!(proc) 
+    spawntask!(proc) 
     return w
 end
-
-function get_data(w::MakieWindow{:Lines})
-    return (x = w[:xs], y = w[:ys])
-end
-export get_data
-
-function get_plot(w::MakieWindow{:Lines})
-    display(w.f)
-end
-export get_plot
-
-change_args!(w::MakieWindow{:Lines}; args...) = changeargs!(w[:proc]; args...)
-

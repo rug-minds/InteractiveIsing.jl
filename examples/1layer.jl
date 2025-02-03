@@ -4,4 +4,8 @@ g = IsingGraph(400,400, type = Discrete)
 simulate(g)
 
 wg = @WG "dr -> dr == 1 ? 1 : 0" NN=1
+wg = @WG "dr -> 1/dr" NN=1
+
 genAdj!(g[1], wg)
+
+

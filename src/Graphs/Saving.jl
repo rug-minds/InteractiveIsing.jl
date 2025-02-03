@@ -11,7 +11,7 @@ function LayerSavaData(layer::IsingLayer{T,GT}) where {T,GT}
     dict["T"] = T
     dict["name"] = name(layer)
     dict["internal_idx"] = internal_idx(layer)
-    dict["start"] = start(layer)
+    dict["start"] = startidx(layer)
     dict["size"] = size(layer)
     dict["nstates"] = nstates(layer)
     dict["coords"] = coords(layer)

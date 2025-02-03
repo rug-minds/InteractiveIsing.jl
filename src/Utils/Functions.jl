@@ -36,7 +36,8 @@ end
 @inline function idxToCoord(idx::Integer, size::NTuple{DIMS,T}) where {DIMS,T}
     idx = convert(T, idx)
     if DIMS == 2
-        r(T((idx - 1) % length + 1), T((idx - 1) ÷ length + 1))
+        len = size[1]
+        return (T((idx - 1) % len + 1), T((idx - 1) ÷ len + 1))
     elseif DIMS == 3
         len = size[1]
         wid = size[2]
@@ -562,15 +563,6 @@ end
 export @enumeratelayers
 
 changesize(sp::SparseMatrixCSC, rows, cols) = sparse(findnz(sp)..., rows, cols)
-
-macro tryLockPause(sim, expr, blockpause = false, blockunpause = false)
-    fexp = quote end
-    push!(fexp.args, :(lockPause($sim, block = $blockpause)))
-    push!(fexp.args, :(try $expr ;finally unlockPause($sim, block = $blockunpause) end))
-
-    return esc(fexp)
-end
-export @tryLockPause
 
 """
 Insert a vector into another vector

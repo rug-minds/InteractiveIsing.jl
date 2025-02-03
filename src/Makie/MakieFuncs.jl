@@ -71,7 +71,7 @@ end
 getSingleViewImg(g, ml) = getSingleViewImg(g, ml, size(currentLayer(sim(g))))
 
 # Maybe I can just make makie get the latest image always?
-function getSingleViewImg(g, ml, size::Tuple{Integer,Integer})
+function getSingleViewImg(g, ml, _size::Tuple{Integer,Integer})
     simulation = sim(g)
     this_layer = currentLayer(simulation)
     if midpanel(ml)["showbfield"].active[]

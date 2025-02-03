@@ -5,8 +5,8 @@ include("Pausing.jl")
 include("ProcessList.jl")
 include("IsingSim.jl")
 
-include("Algorithms/Algorithms.jl")
-include("Loop.jl")
+# include("Algorithms/Algorithms.jl")
+include("Process.jl")
 include("timedFunctions.jl")
 include("User.jl")
 
@@ -87,11 +87,13 @@ function _simulate(g; run = true, start = true, gui = true, kwargs...)
         createProcess(g; run)
     end
     if gui
-        interface(g; kwargs...)
+        _interface(g; kwargs...)
     end
 end
 
-export simulate, getgraph
+interface(g) = simulate(g; start = false, gui = true)
+
+export simulate, getgraph, interface
 
 
 

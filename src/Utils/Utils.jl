@@ -11,6 +11,7 @@ include("Kwargs.jl")
 include("Rand.jl")
 include("AverageCircular.jl")
 include("Averages.jl")
+include("SimpleAverage.jl")
 include("CastVec.jl")
 include("CastViewMatrix.jl")
 #TODO: Make module

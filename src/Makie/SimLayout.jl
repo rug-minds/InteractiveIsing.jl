@@ -51,6 +51,7 @@ etc(ml::SimLayout) = ml.etc
 Base.getindex(ml::SimLayout, idx) = try ml.etc[idx]; catch; return nothing; end
 Base.setindex!(ml::SimLayout, val, idx) = setindex!(ml.etc, val, idx)
 Base.iterate(ml::SimLayout, state = 1) = iterate(ml.etc, state)
+Base.iterate(::Nothing) = nothing # For Broadcasting
 Base.length(ml::SimLayout) = length(ml.etc)
 Base.haskey(ml::SimLayout, key::String) = haskey(ml.etc, key)
 Base.keys(ml::SimLayout) = keys(ml.etc)
