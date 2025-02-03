@@ -19,43 +19,23 @@ function example_ising(i, gstate, newstate, oldstate, gadj, gparams, lt)
 end
 
 function Processes.prepare(::Metropolis, @specialize(args))
-    # (;g) = args
-    # return (;g,
-    #         gstate = g.state,
-    #         gadj = g.adj,
-    #         gparams = g.params,
-    #         iterator = ising_it(g, g.stype),
-    #         rng = MersenneTwister(),
-    #         lt = g[1],
-    #         ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian),
-    #         )
     (;g) = args
-    gstate = g.state
-    # println("Got state")
-    gadj = g.adj
-    # println("Got adj")
-    # gparams = g.params
-    # println("Got params")
-    iterator = ising_it(g, g.stype)
-    # println("Got iterator")
-    rng = MersenneTwister()
-    # println("Got rng")
-    lt = g[1]
-    # println("Got lt")
-    ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
-    # ΔH = example_ising
-
-    # return (;g, gstate, gadj, gparams, iterator, rng, lt, ΔH)
-    return (;g, gstate, gadj, iterator, rng, ΔH, lt)
+    return (;g,
+            gstate = g.state,
+            gadj = g.adj,
+            gparams = g.params,
+            iterator = ising_it(g, g.stype),
+            rng = MersenneTwister(),
+            lt = g[1],
+            ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian),
+            )
 end
 
 @inline function Metropolis(@specialize(args))
     #Define vars
-    # (;g, gstate, gadj, gparams, iterator, ΔH, lt, rng) = args
-    (;g, gstate, gadj, iterator, ΔH, lt, rng) = args
+    (;g, gstate, gadj, gparams, iterator, ΔH, lt, rng) = args
     i = rand(rng, iterator)
-    # Metropolis(i, g, gstate, gadj, gparams, ΔH, lt)
-    Metropolis(i, g, gstate, gadj, 1, ΔH, lt)
+    Metropolis(i, g, gstate, gadj, gparams, ΔH, lt)
 end
 
 @inline function Metropolis(i, g, gstate::Vector{T}, gadj, gparams, ΔH, lt) where {T}
