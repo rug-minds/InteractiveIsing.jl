@@ -20,23 +20,15 @@ end
 
 function Processes.prepare(::Metropolis, @specialize(args))
     (;g) = args
-    # println("Preparing Metropolis")
     gstate = g.state
-    # println("Prepared state")
     gadj = g.adj
-    # println("Prepared adj")
     gparams = g.params
-    # println("Prepared params")
     iterator = ising_it(g, g.stype)
-    # println("Prepared iterator")
-    rng = MersenneTwister()
-    # println("Prepared rng")
+    # rng = MersenneTwister()
+    rng = Random.GLOBAL_RNG
     ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
-    # println("Prepared ΔH")
     M = Ref(sum(g.state))
-    # println("Prepared M")
     lmeta = LayerMetaData(g[1])
-    # println("Prepared lmeta")
     return (;g, gstate, gadj, gparams, iterator, ΔH, lmeta, rng, M)
 end
 

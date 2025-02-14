@@ -122,7 +122,6 @@ function SimpleMakieWindow(g::SimpleGraph{ST, Dim}) where {ST, Dim}
     grid[1,1] = Label(fig, text, halign = :right, tellwidth = false)
 
     last_steps = 0
-
     frame = 1
     function updates_per_frame()
         this_steps = g.steps

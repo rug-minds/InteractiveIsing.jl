@@ -71,7 +71,12 @@ Quit sim and block until all processes are terminated
 # end
 
 function Processes.quit(g::IsingGraph)
-    quit.(processes(g))
+    for process in processes(g)
+        try
+            quit(process)
+        catch
+        end
+    end
     deleteat!(processes(g), 1:length(processes(g)))
 end
 

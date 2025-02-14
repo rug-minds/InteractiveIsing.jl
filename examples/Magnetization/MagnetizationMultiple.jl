@@ -1,6 +1,3 @@
-
-
-
 using InteractiveIsing, Processes
 # using InteractiveIsing.Processes
 
@@ -24,30 +21,33 @@ function Processes.cleanup(::CalcSusceptibility, args)
     σ2 = sum(x -> (x - avg)^2, M2s)/length(M2s)
     return (;avg, σ2)
 end
-interface(g)
-N = 500
-g = IsingGraph(N,N, type = Discrete)
-wg = @WG "dr -> dr == 1 ? 1 : 0" NN=1
-genAdj!(g[1], wg)
 
+graphs = IsingGraph[]
 
-eqsteps = 1e4
-temp(g, 2.27)
-sweeps = 1e5
+Ns = [20,50,100,200,500]
+for N in Ns
+    g = IsingGraph(N,N, type = Discrete)
+    wg = @WG "dr -> dr == 1 ? 1 : 0" NN=1
+    genAdj!(g[1], wg)
+    push!(graphs, g)
 
-sweepsteps = N^2
+    eqsteps = 1e4
+    temp(g, 2.27)
+    sweeps = 1e5
 
-Equilibration = CheckeredSweepMetropolis
-SweepSusceptibility = CompositeAlgorithm( (CheckeredSweepMetropolis, CalcSusceptibility), (1, sweepsteps))
+    sweepsteps = N^2
 
-routine = Routine((Equilibration, SweepSusceptibility), floor.(Int,(eqsteps*sweepsteps, sweeps*sweepsteps)))
+    Equilibration = CheckeredSweepMetropolis
+    SweepSusceptibility = CompositeAlgorithm( (CheckeredSweepMetropolis, CalcSusceptibility), (1, sweepsteps))
 
-createProcess(g, routine)
-
+    routine = Routine((Equilibration, SweepSusceptibility), floor.(Int,(eqsteps*sweepsteps, sweeps*sweepsteps)))
+    
+    createProcess(g, routine)
+end
 
 
 function incs_per_sec(p::Process)
     loopidx(p) / runtime(p)
 end
 
-createProcess(g, CheckeredSweepMetropolis)
+createProcess(g, Metropolis)

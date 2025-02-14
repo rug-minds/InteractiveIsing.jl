@@ -2,30 +2,28 @@ struct SweepMetropolis <: MCAlgorithm end
 export SweepMetropolis
 
 function Processes.prepare(::SweepMetropolis, @specialize(args))
-    (;g) = args
-    return (;g,
-            gstate = g.state,
-            gadj = g.adj,
-            gparams = g.params,
-            rng = MersenneTwister(),
-            lt = g[1],
-            ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian),
-            latidx = Ref(1),
-            M = Ref(sum(g.state)),
-            lmeta = LayerMetaData(g[1])
-            )
+    return (;latidx = Ref(1), prepare(Metropolis(), args)...)
 end
 
 @inline function (::SweepMetropolis)(@specialize(args))
     #Define vars
     (;g, gstate, gadj, gparams, ΔH, lmeta, latidx, M) = args
     latidx[] = mod1(latidx[]+1, length(gstate))
-    @inline MetropolisMag(latidx[], g, gstate, gadj, gparams, M, ΔH, lmeta)
+    @inline Metropolis(latidx[], g, gstate, gadj, gparams, M, ΔH, lmeta)
 end
 
 
 struct CheckeredSweepMetropolis <: MCAlgorithm end
 export CheckeredSweepMetropolis
+
+function ΔH_1(i, gstate, newstate, oldstate, gadj, gparams, lmeta)
+    cum = zero(eltype(gstate))
+    for ptr in nzrange(gadj, i)
+        j = gadj.rowval[ptr]
+        cum += gstate[j] 
+    end
+    return (oldstate-newstate) * cum
+end
 
 function Processes.prepare(::CheckeredSweepMetropolis, @specialize(args))
     # Prepare two checkerboards
@@ -35,7 +33,7 @@ function Processes.prepare(::CheckeredSweepMetropolis, @specialize(args))
     # vcat
     checkerboards = vcat(first, second)
 
-    (;checkerboards, prepare(SweepMetropolis(), args)...)
+    (;checkerboards, prepare(SweepMetropolis(), args)..., ΔH = ΔH_1)
 end
 
 function (::CheckeredSweepMetropolis)(@specialize(args))
