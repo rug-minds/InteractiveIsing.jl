@@ -260,26 +260,6 @@ function Base.convert(::Type{<:IsingLayer}, g::IsingGraph)
     return g.layers[1]
 end 
 
-# Base.deleteat!(layervec::ShuffleVec{IsingLayer}, lidx::Integer) = deleteat!(layervec, lidx) do layer, newidx
-#     internal_idx(layer, newidx)
-#     start(layer, start(layer) - nstates_layer)
-# end
-
-# function processes(g::IsingGraph)
-#     if !isnothing(processes(sim(g)))
-#         return processes(sim(g))[map(process -> process.objectref === g, processes(sim(g)))]
-#     end
-#     return Process[]
-# end
-
-# function processes(g::IsingGraph)
-#     if isempty(processes(sim(g)))
-#         return Process[]
-#     end
-#     gidx = get_gidx(g)
-#     filter = processes(sim(g)).graphidx .== gidx
-#     processes(sim(g))[filter]
-# end
 function processes(g::IsingGraph)
     get!(g, :processes, [])
 end
@@ -347,19 +327,6 @@ function ising_it(g, nothing)
         return aliveList(g)
     end
 end
-# OLD GENERATED FUNCTION FOR FASTER RUNTIME
-# @generated function ising_it(g::IsingGraph)
-#     # Assumes :Defects will be found
-#     defects = getSParam(stype, :Defects)
-
-#     if !defects
-#         return Expr(:block, :(return UnitRange{Int32}(1:nStates(g)) ))
-#         # return Expr(:block, :(return Base.OneTo(nStates(g)) ))
-#     else
-#         return Expr(:block, :(return aliveList(g)))
-#     end
-
-# end
 
 """
 Initialization of adjacency Vector for a given N
@@ -417,7 +384,7 @@ export addLayer!
 nlayers(::Nothing) = Observable(0)
 function addLayer!(g::IsingGraph, llength, lwidth, lheight = nothing; weights = nothing, periodic = true, type = default_ltype(g), set = convert.(eltype(g),(-1,1)), rangebegin = set[1], rangeend = set[2], kwargs...)
     newlayer = nothing
-    Processes.@tryLockPause sim(g) begin 
+    Processes.@tryLockPause g begin 
         newlayer = _addLayer!(g, llength, lwidth, lheight; set, weights, periodic, type, kwargs...)
         # Update the layer idxs
         nlayers(sim(g))[] += 1
@@ -482,7 +449,7 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth, lheight = nothing; weight
     layertype =  IsingLayer{type, set}
     push!(layers(g), make_newlayer, layertype)
     newlayer = layers(g)[end]
-    g.layers.data = remake_type.(g.layers.data)
+    # g.layers.data = remake_type.(g.layers.data)
 
     # Generate the adjacency matrix from the weightfunc
     if !isnothing(weights)

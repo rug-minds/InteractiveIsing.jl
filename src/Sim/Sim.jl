@@ -26,26 +26,26 @@ function simulate(
     colorscheme = ColorSchemes.viridis,
     #for precompilation, should otherwise be set to true always
     register_sim = true,
-    kwargs...
+    args...
     )
-    createsimfunc = () -> IsingSim(len, wid; precision, periodic, type, weighted, weights, initTemp, colorscheme, kwargs...)
+    createsimfunc = () -> IsingSim(len, wid; precision, periodic, type, weighted, weights, initTemp, colorscheme, args...)
     _assign_or_createsim(createsimfunc, register_sim)
     g = simulation[].gs[1]
-    _simulate(g; start, gui, kwargs...)
+    _simulate(g; start, gui, args...)
     return g
 end
 
-function simulate(g::IsingGraph{T}; start = true, gui = true, precision = T, initTemp = one(precision), colorscheme = ColorSchemes.viridis, register_sim = true, kwargs...) where T
+function simulate(g::IsingGraph{T}; start = true, gui = true, precision = T, initTemp = one(precision), colorscheme = ColorSchemes.viridis, register_sim = true, args...) where T
     createsimfunc = () -> IsingSim(g; start, initTemp, colorscheme)
-    _assign_or_createsim(createsimfunc, register_sim; kwargs...)
-    _simulate(g; start, gui, kwargs...)
+    _assign_or_createsim(createsimfunc, register_sim; args...)
+    _simulate(g; start, gui, args...)
     return g
 end
 
-function simulate(filename::String; start = true, register_sim = true, kwargs...)
-    createsimfunc = () -> IsingSim(filename; kwargs...)
-    restarted = _assign_or_createsim(createsimfunc, register_sim; kwargs...)
-    __simulate(_sim.gs[1]; start = restarted && start, gui = restarted && get(kwargs, :gui, true), kwargs...)
+function simulate(filename::String; start = true, register_sim = true, args...)
+    createsimfunc = () -> IsingSim(filename; args...)
+    restarted = _assign_or_createsim(createsimfunc, register_sim; args...)
+    __simulate(_sim.gs[1]; start = restarted && start, gui = restarted && get(args, :gui, true), args...)
     return g
 end
 
@@ -53,7 +53,7 @@ end
 """
 Pass in the appropraite IsingSim constructor
 """
-function _assign_or_createsim(create_sim_func, noinput = true, register_sim = true; overwrite = false, kwargs...)
+function _assign_or_createsim(create_sim_func, noinput = true, register_sim = true; overwrite = false, args...)
     if isnothing(simulation) && noinput
         simulation[] = create_sim_func()
     elseif register_sim #If there is already a sim and we want to register a new one
@@ -81,17 +81,17 @@ end
 
 getgraph() = gs(simulation[])[1]
 
-function _simulate(g; run = true, start = true, gui = true, kwargs...)
+function _simulate(g; run = true, start = true, gui = true, args...)
     if start
         quit.(processes(g))
         createProcess(g; run)
     end
     if gui
-        _interface(g; kwargs...)
+        _interface(g; args...)
     end
 end
 
-interface(g) = simulate(g; start = false, gui = true)
+interface(g; overwrite = true) = simulate(g; start = false, gui = true, overwrite)
 
 export simulate, getgraph, interface
 

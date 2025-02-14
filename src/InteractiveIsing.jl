@@ -23,6 +23,7 @@ using FileIO, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, Lin
 using Images
 
 using Processes
+export Processes
 import Processes: prepare
 
 using PrecompileTools
@@ -85,6 +86,8 @@ const rng = MersenneTwister()
 include("WeightFuncs.jl")
 include("AdjList/AdjList.jl")
 
+# @ForwardDeclare LayerMetaData "Graphs/Layers"
+# @ForwardDeclare LayerArchitecture "Graphs/Layers"
 include("MCAlgorithms/MCAlgorithms.jl")
 # using .MCAlgorithms
 

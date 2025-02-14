@@ -20,38 +20,48 @@ end
 
 function Processes.prepare(::Metropolis, @specialize(args))
     (;g) = args
-    return (;g,
-            gstate = g.state,
-            gadj = g.adj,
-            gparams = g.params,
-            iterator = ising_it(g, g.stype),
-            rng = MersenneTwister(),
-            lt = g[1],
-            ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian),
-            )
+    # println("Preparing Metropolis")
+    gstate = g.state
+    # println("Prepared state")
+    gadj = g.adj
+    # println("Prepared adj")
+    gparams = g.params
+    # println("Prepared params")
+    iterator = ising_it(g, g.stype)
+    # println("Prepared iterator")
+    rng = MersenneTwister()
+    # println("Prepared rng")
+    ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
+    # println("Prepared ΔH")
+    M = Ref(sum(g.state))
+    # println("Prepared M")
+    lmeta = LayerMetaData(g[1])
+    # println("Prepared lmeta")
+    return (;g, gstate, gadj, gparams, iterator, ΔH, lmeta, rng, M)
 end
 
 @inline function Metropolis(@specialize(args))
     #Define vars
-    (;g, gstate, gadj, gparams, iterator, ΔH, lt, rng) = args
+    (;g, gstate, gadj, gparams, iterator, ΔH, lmeta, rng, M) = args
     i = rand(rng, iterator)
-    Metropolis(i, g, gstate, gadj, gparams, ΔH, lt)
+    Metropolis(i, g, gstate, gadj, gparams, M, ΔH, lmeta)
 end
 
-@inline function Metropolis(i, g, gstate::Vector{T}, gadj, gparams, ΔH, lt) where {T}
+@inline function Metropolis(i, g, gstate::Vector{T}, gadj, gparams, M, ΔH, lmeta) where {T}
     β = one(T)/(temp(g))
     
     oldstate = @inbounds gstate[i]
     
-    newstate = @inline sampleState(statetype(lt), oldstate, rng, stateset(lt))   
+    newstate = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))   
 
-    ΔE = @inline ΔH(i, gstate, newstate, oldstate, gadj, gparams, lt)
+    ΔE = @inline ΔH(i, gstate, newstate, oldstate, gadj, gparams, lmeta)
 
     efac = exp(-β*ΔE)
     randnum = rand(rng, Float32)
 
     if (ΔE <= zero(T) || randnum < efac)
         @inbounds gstate[i] = newstate 
+        M[] += (newstate - oldstate)
     end
     
     return nothing

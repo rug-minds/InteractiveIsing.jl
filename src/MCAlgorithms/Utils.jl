@@ -41,67 +41,41 @@ function grouped_idxs(unshuffled_layers_type)
     return ranges
 end
 
-
 """
-A switch to avoid runtime dispatch on the layertype
-Groups layeridxs based on type and then creates a fixed switch statement
-Only dispatches on the type of tyhe layer.
-Add dispatch on the layertrait if necessary
+Switches algorithm based on layertype
+Inlined so no runtime dispatch
+"""
+# function layerswitch(@specialize(func), i, layers::LayerTuple, @specialize(args)) where LayerTuple
+#     idxsets = tuple_type_property(indexset, layers)
+#     @inline _layerswitch(func, i , 1, gethead(layers), gethead(idxsets), gettail(layers), gettail(idxsets), args)
+# end
 
-Basically compiles the following code
-given func
+# function _layerswitch(func, i, layeridx, thislayer, thisidxset, layerstail, setstail, args)
+#     if i in thisidxset
+#         return @inline func(i, args, layeridx, thislayer)
+#     end
+#     return @inline _layerswitch(func, i, layeridx+1, gethead(layerstail), gethead(setstail), gettail(layerstail), gettail(setstail), args)
+# end
 
-if i < last(graphidxs(first_layer_group))
-    return func(i, args, first_layer_type)
-elseif i < last(graphidxs(second_layer_group))
-    return func(i, args, second_layer_type)
-...
-else 
-    throw(BoundsError(structs, i))
+# function _layerswitch(::Any, ::Any, ::Any, ::Nothing, ::Any, ::Any, ::Any, ::Any)
+#     throw(BoundsError("Index out of bounds"))
+# end
+function layerswitch(@specialize(func), i, layers::LA, @specialize(args)) where LA
+    idxsets = @inline tuple_type_property(indexset, layers.metadatas)
+    @inline _layerswitch(func, i , 1, gethead(layers.metadatas), gethead(idxsets), gettail(layers.metadatas), gettail(idxsets), args)
 end
 
-
-"""
-@generated function layerswitch(@specialize(func), i, layers::LayerTuple, @specialize(args)) where LayerTuple
-    grouped = []
-    idxs = [1]
-    lts = layers.parameters
-    lasttype = lts[1]
-    for (lt_idx,lt) in enumerate(lts)
-        # if equiv(lt, lasttype)
-        #     continue
-        # end
-        if lt.parameters[1] == lasttype.parameters[1]
-            continue
-        end
-        firstindex = first(lasttype.parameters[3])
-        lastindex = last(lts[lt_idx-1].parameters[3])
-        push!(grouped, firstindex:lastindex)
-        push!(idxs, lt_idx)
-        lasttype = lt
+function _layerswitch(func, i, layeridx, thislayermd, thisidxset, layersmd_tail, sets_tail, args)
+    if i in thisidxset
+        return @inline func(i, args, layeridx, thislayermd)
     end
-    firstindex = first(lasttype.parameters[3])
-    lastindex = last(lts[end].parameters[3])
-    push!(grouped, firstindex:lastindex)
-    # return grouped, idxs
-    grouped_idxs = grouped
-    layer_idxs = idxs
-
-    code = Expr(:block)
-    # grouped_idxs, layer_idxs = group_idxs(layers)
-
-    for group_idx in eachindex(grouped_idxs)
-        upperbound_idx = last(grouped_idxs[group_idx])
-
-        layertype = layers.parameters[layer_idxs[group_idx]]
-
-        codeline = :(if i <= $upperbound_idx; return func(i, args, $layertype); end)
-
-        push!(code.args, codeline)
-    end
-    push!(code.args, :(throw(BoundsError(state(args.g), i))))
-    return code
+    return @inline _layerswitch(func, i, layeridx+1, gethead(layersmd_tail), gethead(sets_tail), gettail(layersmd_tail), gettail(sets_tail), args)
 end
+
+function _layerswitch(::Any, ::Any, ::Any, ::Nothing, ::Any, ::Any, ::Any, ::Any)
+    throw(BoundsError("Index out of bounds"))
+end
+
 
 """
 Creates a bracketed string of the arguments from the args function for a hamiltonian

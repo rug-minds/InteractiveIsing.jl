@@ -19,19 +19,21 @@ function Processes.prepare(::LayeredMetropolis, @specialize(args))
             iterator = ising_it(g, g.stype),
             layers = unshuffled(g.layers),
             ΔH,
-            rng = MersenneTwister()
+            rng = MersenneTwister(),
+            layerarch = GetArchitecture(unshuffled(g.layers)...),
+            Ms = [Ref(sum(state(g[i]))) for i in 1:length(g.layers)]
         )
 end
 
 
 Base.@propagate_inbounds @inline function LayeredMetropolis(@specialize(args))
     #Define vars
-    (;layers, iterator, rng) = args
+    (;iterator, rng, layerarch) = args
     i = rand(rng, iterator)
-    @inline layerswitch(LayeredMetropolis, i, layers, args)
+    @inline layerswitch(LayeredMetropolis, i, layerarch, args)
 end
 
-@inline function LayeredMetropolis(i, args, layertype)
-    (;g, gstate, gadj, gparams, ΔH) = args
-    @inline Metropolis(i, g, gstate, gadj, gparams, ΔH, layertype)
+@inline function LayeredMetropolis(i, args, layeridx, lmeta)
+    (;g, gstate, gadj, gparams, ΔH, Ms) = args
+    @inline Metropolis(i, g, gstate, gadj, gparams, Ms[layeridx], ΔH, lmeta)
 end

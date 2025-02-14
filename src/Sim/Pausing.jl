@@ -14,15 +14,13 @@ end
 
 export pauseSim
 
-function unpauseSim(sim; block = false, ignore_lock = false, print = true)
+function unpauseSim(g; block = false, ignore_lock = false, print = true)
     if print
         println("Unpausing sim")
     end
     # Find running processes
-    for g in gs(sim)
-        unpause(g)
-    end
-    isPaused(sim)[] = false
+    unpause.(processes(g))
+    isPaused(sim(g))[] = false
     return
 end
 export unpauseSim
@@ -30,11 +28,16 @@ export unpauseSim
 """
 Pause sim and lock pausing until it's unlocked
 This garantuees that the sim cannot be unpaused by a user
+Does this still work?
 """
-function lockPause(sim; block = true)
-    lock(processes(sim))
-    close.(values(timers(sim)))
-    pauseSim(sim, ignore_lock = true, print = false; block)
+function lockPause(g; block = true)
+    lock.(processes(g))
+    try
+        close.(values(timers(sim(g))))
+    catch
+    end
+    # pauseSim(sim, ignore_lock = true, print = false; block)
+    pause.(processes(g))
 end
 lockPause(::Nothing; kwargs...) = nothing
 export lockPause
@@ -42,10 +45,15 @@ export lockPause
 """
 Unlock and unpause the sim
 """
-function unlockPause(sim; block = true)
-    unpauseSim(sim, ignore_lock = true, print = false; block)
-    start.(values(timers(sim)))
-    unlock(processes(sim))
+function unlockPause(g; block = true)
+    # unpauseSim(sim, ignore_lock = true, print = false; block)
+    # start.(values(timers(sim)))
+    # unlock(processes(sim))
+    try
+        start.(values(timers(sim(g))))
+    catch
+    end
+    unlock.(processes(g))
 end
 unlockPause(::Nothing; kwargs...) = nothing
 export unlockPause

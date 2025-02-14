@@ -1,7 +1,5 @@
 using InteractiveIsing, Processes
-g = IsingGraph(500,500, type = Discrete)
-wg = @WG "dr -> dr == 1 ? 1 : 0" NN=1
-genAdj!(g[1], wg)
+# using InteractiveIsing.Processes
 
 struct CalcSusceptibility <: ProcessAlgorithm end
 
@@ -12,7 +10,7 @@ function Processes.prepare(::CalcSusceptibility, args)
 end
 
 function CalcSusceptibility(args)
-    (;M, M2s) = args
+    (;g, gstate, M, M2s) = args
     push!(M2s, M[]^2)
     return
 end
@@ -24,8 +22,19 @@ function Processes.cleanup(::CalcSusceptibility, args)
     return (;avg, σ2)
 end
 
+N = 500
+g = IsingGraph(N,N, type = Discrete)
+wg = @WG "dr -> dr == 1 ? 1 : 0" NN=1
+genAdj!(g[1], wg)
+
 temp(g, 2.27)
-interface(g)
-SweepSusceptibility = CompositeAlgorithm( (CheckeredSweepMetropolis, CalcSusceptibility), (1, 500^2))
-createProcess(g, lifetime = 500^2*1000)
-createProcess(g, algorithm = SweepSusceptibility, lifetime = 500^2 * 100)
+# interface(g)
+
+const sweepsteps = N^2
+
+Equilibration = SubRoutine(Metropolis, 1e6*sweepsteps)
+SweepSusceptibility = CompositeAlgorithm( (CheckeredSweepMetropolis, CalcSusceptibility), (1, sweepsteps))
+SweepRoutine = SubRoutine(SweepSusceptibility, 1e6*sweepsteps)
+routine = Routine(Equilibration, SweepRoutine)
+
+createProcess(g, routine)
