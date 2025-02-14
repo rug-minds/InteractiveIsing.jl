@@ -40,7 +40,7 @@ function Processes.prepare(::Metropolis, @specialize(args))
     return (;g, gstate, gadj, gparams, iterator, ΔH, lmeta, rng, M)
 end
 
-@inline function Metropolis(@specialize(args))
+@inline function (::Metropolis)(@specialize(args))
     #Define vars
     (;g, gstate, gadj, gparams, iterator, ΔH, lmeta, rng, M) = args
     i = rand(rng, iterator)

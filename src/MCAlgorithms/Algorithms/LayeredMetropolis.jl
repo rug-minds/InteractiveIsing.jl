@@ -26,7 +26,7 @@ function Processes.prepare(::LayeredMetropolis, @specialize(args))
 end
 
 
-Base.@propagate_inbounds @inline function LayeredMetropolis(@specialize(args))
+Base.@propagate_inbounds @inline function (::LayeredMetropolis)(@specialize(args))
     #Define vars
     (;iterator, rng, layerarch) = args
     i = rand(rng, iterator)

@@ -16,7 +16,7 @@ function Processes.prepare(::SweepMetropolis, @specialize(args))
             )
 end
 
-@inline function SweepMetropolis(@specialize(args))
+@inline function (::SweepMetropolis)(@specialize(args))
     #Define vars
     (;g, gstate, gadj, gparams, ΔH, lmeta, latidx, M) = args
     latidx[] = mod1(latidx[]+1, length(gstate))
@@ -38,7 +38,7 @@ function Processes.prepare(::CheckeredSweepMetropolis, @specialize(args))
     (;checkerboards, prepare(SweepMetropolis(), args)...)
 end
 
-function CheckeredSweepMetropolis(@specialize(args))
+function (::CheckeredSweepMetropolis)(@specialize(args))
     (;g, gstate, gadj, gparams, ΔH, lmeta, latidx, M, checkerboards) = args
 
     i = checkerboards[latidx[]]
