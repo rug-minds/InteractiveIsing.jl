@@ -1,24 +1,22 @@
-export Metropolis
+export MetropolisGB
 
-struct Metropolis <: MCAlgorithm end
-requires(::Type{Metropolis}) = Δi_H()
+struct MetropolisGB <: MCAlgorithm end
+requires(::Type{MetropolisGB}) = Δi_H()
 
 
-function reserved_symbols(::Type{Metropolis})
-    return [:w_ij => :wij, :sn_i => :newstate, :s_i => :oldstate, :s_j => :(gstate[j])]
-end
 
-function example_ising(i, gstate, newstate, oldstate, gadj, gparams, lt)
+
+function GlobalBH(i, gstate, newstate, oldstate, gadj, B)
     cumsum = zero(eltype(gstate))
     @turbo for ptr in nzrange(gadj, i)
         j = gadj.rowval[ptr]
         wij = gadj.nzval[ptr]
-        cumsum += wij * gstate[j]
+        cumsum += wij * gstate[j] 
     end
-    return (oldstate-newstate) * cumsum
+    return (oldstate-newstate) * (cumsum + B[])
 end
 
-function Processes.prepare(::Metropolis, @specialize(args))
+function Processes.prepare(::MetropolisGB, @specialize(args))
     (;g) = args
     gstate = g.state
     gadj = g.adj
@@ -29,24 +27,25 @@ function Processes.prepare(::Metropolis, @specialize(args))
     ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
     M = Ref(sum(g.state))
     lmeta = LayerMetaData(g[1])
-    return (;g, gstate, gadj, gparams, iterator, ΔH, lmeta, rng, M)
+    B = Ref(0f0)
+    return (;g, gstate, gadj, gparams, iterator, ΔH, lmeta, rng, M, B)
 end
 
-@inline function (::Metropolis)(@specialize(args))
+@inline function (::MetropolisGB)(@specialize(args))
     #Define vars
-    (;g, gstate, gadj, gparams, iterator, ΔH, lmeta, rng, M) = args
+    (;g, gstate, gadj, gparams, iterator, lmeta, rng, M, B) = args
     i = rand(rng, iterator)
-    Metropolis(i, g, gstate, gadj, gparams, M, ΔH, rng, lmeta)
+    MetropolisGB(i, g, gstate, gadj, gparams, M, B, rng, lmeta)
 end
 
-@inline function Metropolis(i, g, gstate::Vector{T}, gadj, gparams, M, ΔH, rng, lmeta) where {T}
+@inline function MetropolisGB(i, g, gstate::Vector{T}, gadj, gparams, M, B, rng, lmeta) where {T}
     β = one(T)/(temp(g))
     
     oldstate = @inbounds gstate[i]
     
     newstate = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))   
 
-    ΔE = @inline ΔH(i, gstate, newstate, oldstate, gadj, gparams, lmeta)
+    ΔE = @inline GlobalBH(i, gstate, newstate, oldstate, gadj, B)
 
     efac = exp(-β*ΔE)
     randnum = rand(rng, T)

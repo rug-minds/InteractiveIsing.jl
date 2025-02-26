@@ -7,9 +7,9 @@ end
 
 @inline function (::SweepMetropolis)(@specialize(args))
     #Define vars
-    (;g, gstate, gadj, gparams, ΔH, lmeta, latidx, M) = args
+    (;g, gstate, gadj, gparams, ΔH, lmeta, rng, latidx, M) = args
     latidx[] = mod1(latidx[]+1, length(gstate))
-    @inline Metropolis(latidx[], g, gstate, gadj, gparams, M, ΔH, lmeta)
+    @inline Metropolis(latidx[], g, gstate, gadj, gparams, M, ΔH, rng, lmeta)
 end
 
 
@@ -37,12 +37,12 @@ function Processes.prepare(::CheckeredSweepMetropolis, @specialize(args))
 end
 
 function (::CheckeredSweepMetropolis)(@specialize(args))
-    (;g, gstate, gadj, gparams, ΔH, lmeta, latidx, M, checkerboards) = args
+    (;g, gstate, gadj, gparams, ΔH, lmeta, latidx, M, rng, checkerboards) = args
 
     i = checkerboards[latidx[]]
     latidx[] = mod1(latidx[]+1, length(checkerboards))
 
-    @inline Metropolis(i, g, gstate, gadj, gparams, M, ΔH, lmeta)
+    @inline Metropolis(i, g, gstate, gadj, gparams, M, ΔH, rng, lmeta)
 end
 
 @inline function checkerboard_lat(i, size, flip = false)

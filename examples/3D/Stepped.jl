@@ -1,8 +1,12 @@
 using InteractiveIsing, LoopVectorization, Processes
 
-g = IsingGraph(40,40,40, type = Discrete)
- 
+N = 40
+g = IsingGraph(N, N, N, type = Discrete)
+
+# createProcess(g)
+# interface(g)
 simulate(g)
+quit(g)
 
 function weightfunc(dx,dy,dz)
     prefac = 1
@@ -23,23 +27,14 @@ genAdj!(g[1], wg)
 
 setparam!(g[1], :b, 0, true)
 
-#TODO Optimize this
-function scaleWeights(g::IsingGraph{T}, idx, scale::T) where T
-    gadj = adj(g)
-    @turbo for ptr in nzrange(gadj, idx)
-        gadj.nzval[ptr] *= scale
-    end
-end
-
-using GLMakie
 
 struct TrianglePulseB end
 
 function Processes.prepare(::TrianglePulseB, args)
-    (;lifetime, amp, numpulses) = args
-    max_z = size(g[1], 3)
+    (;amp, numpulses) = args
 
-    steps = Processes.repeats(lifetime)
+    steps = num_calls(args)
+
     first = LinRange(0, amp, floor(Int,steps/(4*numpulses)))
     second = LinRange(amp, 0, floor(Int,steps/(4*numpulses)))
     third = LinRange(0, -amp, floor(Int,steps/(4*numpulses)))
@@ -48,23 +43,34 @@ function Processes.prepare(::TrianglePulseB, args)
 
     pulse = repeat(pulse, numpulses)
 
-    x = Float64[]
-    y = Float64[]
+    x = Float32[]
+    y = Float32[]
+
     processsizehint!(args, x)
     processsizehint!(args, y)
-   return (;pulse, x, y, tstep = args.tstep) |> add_timetracker
+    
+
+    return (;pulse, x, y)
 end
 
-function TrianglePulseB(args)
-    (;proc, pulse, tstep, x, y) = args
-    wait(args, tstep)
+function (::TrianglePulseB)(args)
+    (;pulse, M, x, y, B) = args
+    pulse_val = pulse[algo_loopidx(args)]
 
+    # setparam!(g[1], :b, pulse_val)
 
-    setparam!(g[1], :b, pulse[loopidx(proc)])
+    B[] = pulse_val
 
-    push!(y, sum(state(g)))            
-    push!(x, pulse[loopidx(proc)])
+    push!(x, pulse_val)
+    push!(y, M[])
+    
 end
 
-w = lines_window(TrianglePulseB, lifetime = 1000, amp = 0.5, numpulses = 2, tstep = 0.001);
-# InteractiveIsing.change_args!(w, tstep = 0.001, amp = 2)
+fullsweep = N^3
+compalgo = CompositeAlgorithm((MetropolisGB, TrianglePulseB), (1, 2))
+
+createProcess(g, compalgo, lifetime = 10000*fullsweep, amp = 2, numpulses = 1)
+
+
+
+

@@ -14,8 +14,10 @@
 @inline sampleState(::Type{Discrete}, oldstate, rng, stateset) = oldstate == stateset[1] ? stateset[2] : stateset[1]
 @inline sampleState(::Type{Continuous}, oldstate, rng, stateset) = sample_from_stateset(Continuous, rng, stateset)
 
+
 include("Required/Required.jl")
 include("Metropolis.jl")
 include("LayeredMetropolis.jl")
 include("SweepMetropolis.jl")
+include("MetropolisGlobalB.jl")
 

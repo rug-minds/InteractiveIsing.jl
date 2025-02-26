@@ -50,4 +50,3 @@ function incs_per_sec(p::Process)
     loopidx(p) / runtime(p)
 end
 
-createProcess(g, Metropolis)
