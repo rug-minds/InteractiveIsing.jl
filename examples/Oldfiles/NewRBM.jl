@@ -66,7 +66,6 @@ function InteractiveIsing.prepare(::typeof(updateRBM), g; kwargs...)
                         gparams = params(g),
                         iterator = stateiterator(g),
                         rng = MersenneTwister(),
-                        gstype = stype(g),
                         its = aliveidxs.(layers(g))
                         # ΔEFunc = ΔEIsing,
                     ))

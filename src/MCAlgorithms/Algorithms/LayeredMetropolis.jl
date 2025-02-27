@@ -16,7 +16,7 @@ function Processes.prepare(::LayeredMetropolis, @specialize(args))
             gstate = g.state,
             gadj = g.adj,
             gparams = g.params,
-            iterator = ising_it(g, g.stype),
+            iterator = ising_it(g),
             layers = unshuffled(g.layers),
             ΔH,
             rng = MersenneTwister(),

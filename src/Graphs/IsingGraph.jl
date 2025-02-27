@@ -29,7 +29,6 @@ mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
 
     default_algorithm::Type{<:MCAlgorithm}
     hamiltonian::Hamiltonian
-    stype::SType
     
     layers::ShuffleVec{IsingLayer}
 
@@ -70,7 +69,6 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
         LayeredMetropolis,
         #Hamiltonians
         Ising(),
-        SType(:Weighted => weighted),
         #Layers
         ShuffleVec{IsingLayer}(relocate = relocate!),
         Dict{Pair, Int32}(),
@@ -142,7 +140,6 @@ end
 function IsingGraph(
                         state,
                         adj,
-                        stype,
                         layers,
                         defects,
                         data,
@@ -161,8 +158,6 @@ function IsingGraph(
         updateMetropolis,
         #Hamiltonians
         Hamiltonians,
-        # stype
-        stype,
         # Layers
         layers,
         # Connections between layers
@@ -319,7 +314,7 @@ end
 """ 
 Returns in iterator which can be used to choose a random index among alive spins
 """
-function ising_it(g, nothing)
+function ising_it(g)
     defects = hasDefects(g)
     if !defects
         return UnitRange{Int32}(1:nStates(g))

@@ -53,7 +53,6 @@ end
 struct GraphSaveData{Version}
     state::Union{Nothing, Vector{Float32}}
     adj::SparseMatrixCSC{Float32,Int32}
-    stype::SType
     shuffle_idxs::Vector{Int}
     continuous::StateType
     defects::GraphDefects
@@ -68,7 +67,7 @@ end
 
 function GraphSaveData(g::IsingGraph)
 
-    gsd = GraphSaveData{graph_version}(copy(state(g)), copy(adj(g)), stype(g), copy(layers(g).idxs), continuous(g), defects(g))
+    gsd = GraphSaveData{graph_version}(copy(state(g)), copy(adj(g)), copy(layers(g).idxs), continuous(g), defects(g))
 
     gsd.defects.g = nothing
   
@@ -81,7 +80,6 @@ function IsingGraph(sd::Dict{String, Any})
     g = IsingGraph(
         gsd.state,
         gsd.adj,
-        gsd.stype,
         ShuffleVec{IsingLayer}(),
         gsd.continuous,
         gsd.defects,

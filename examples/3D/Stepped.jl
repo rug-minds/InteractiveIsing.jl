@@ -45,31 +45,33 @@ function Processes.prepare(::TrianglePulseB, args)
 
     x = Float32[]
     y = Float32[]
+    all_Es = Float32[]
 
     processsizehint!(args, x)
     processsizehint!(args, y)
+    processsizehint!(args, all_Es)
     
 
-    return (;pulse, x, y)
+    return (;pulse, x, y, all_Es)
 end
 
 function (::TrianglePulseB)(args)
-    (;pulse, M, x, y, B) = args
+    (;pulse, M, x, y, B, all_Es, total_E) = args
     pulse_val = pulse[algo_loopidx(args)]
-
     # setparam!(g[1], :b, pulse_val)
 
     B[] = pulse_val
 
     push!(x, pulse_val)
     push!(y, M[])
+    push!(all_Es, total_E[])
     
 end
 
 fullsweep = N^3
-compalgo = CompositeAlgorithm((MetropolisGB, TrianglePulseB), (1, 2))
+compalgo = CompositeAlgorithm((MetropolisGB, TrianglePulseB), (1, 50))
 
-createProcess(g, compalgo, lifetime = 10000*fullsweep, amp = 2, numpulses = 1)
+createProcess(g, compalgo, lifetime = 10000*fullsweep, amp = 3, numpulses = 2)
 
 
 

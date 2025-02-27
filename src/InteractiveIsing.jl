@@ -91,7 +91,6 @@ include("AdjList/AdjList.jl")
 include("MCAlgorithms/MCAlgorithms.jl")
 # using .MCAlgorithms
 
-include("Hamiltonians/Hamiltonians.jl")
 include("Graphs/Graphs.jl")
 
 include("Sim/Sim.jl")

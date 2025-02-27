@@ -9,6 +9,8 @@ end
 
 args(::Δi_H) = (:i, :gstate, :newstate, :oldstate, :gadj, :gparams, :dtype)
 
+const check_empty = Ref(false)
+
 # prepare(::Type{Δi_H}) = nothing
 
 # TODO: Remove export

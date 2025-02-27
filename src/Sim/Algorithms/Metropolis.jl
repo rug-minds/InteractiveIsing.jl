@@ -5,7 +5,7 @@ function Processes.prepare(::typeof(updateMetropolis), g; kwargs...)
                         gstate = state(g),
                         gadj = adj(g),
                         gparams = params(g),
-                        iterator = ising_it(g, stype(g)),
+                        iterator = ising_it(g),
                         rng = MersenneTwister(),
                         gstype = stype(g),
                         ΔEFunc = ΔEIsing,
