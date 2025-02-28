@@ -3,7 +3,7 @@ H = Σ_ij J_ij s_i s_j
 
 The linear part of the Ising Hamiltonian
 """
-struct Linear <: Hamiltonian 
+struct Linear <: Hamiltonian end
 
 params(::Linear) = nothing
 

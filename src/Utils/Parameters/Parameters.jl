@@ -6,6 +6,7 @@ struct Parameters{_NT<:NamedTuple}
 end
 
 include("Macros.jl")
+include("ParameterRef.jl")
 
 Parameters(; kwargs...) = Parameters(NamedTuple(kwargs))
 

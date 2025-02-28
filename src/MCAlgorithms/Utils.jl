@@ -97,7 +97,7 @@ end
 
 """
 In a symbol, find the pattern _(combination of indexes)
-Returns the range of indexes and the symboles of the (i,j,k,l,m,n) found
+Returns the range of indexes and the symbols of the (i,j,k,l,m,n) found
 """
 function find_i_symb(symb)
     if !isa(symb, Symbol)
@@ -414,6 +414,11 @@ function substitute_zero(expr, indexs)
     return cexpr
 end
 
+"""
+In a mathematical expression subsitute a symbol with one
+Indexes give the path to the symbol in the following way, expr.args[indexs[1]].args[indexs[2]]...args[indexs[end]]
+It will delete all the branches including the symbol that completely evaluate to one
+"""
 function substitute_one(expr, indexs)
     cexpr = deepcopy(expr)
 
@@ -466,6 +471,11 @@ function replace_symb(expr, val, indexs)
 end
 export replace_symb
 
+"""
+Replace a symbol in an expression with a value
+    If the value is 0, it will delete the branch
+    If the value is 1, it will delete the branch if it is a multiplication or division
+"""
 function substitute_math(expr, val, indexs)
     if val == 0
         return substitute_zero(expr, indexs)
