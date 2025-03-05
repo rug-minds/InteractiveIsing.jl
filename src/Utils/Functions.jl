@@ -693,12 +693,10 @@ function functionargs(ex)
     xs
 end
 
-# macro parameterfunc(structname, func_ex)
-#     total_ex = quote end
-#     # push original func exp
-#     push!(total_ex.args, func_ex)
-#     # get the struct Parameters
-#     p_names = parameternames(find_struct_in(structname, @__DIR__))
-#     type_func_ex = deepcopy(func_ex)
-#     args = functionargs(type_func_ex)
-# end
+
+### For tuple recursion
+@inline gethead(t::Tuple) = Base.first(t)
+@inline gethead(::Tuple{}) = nothing
+
+@inline gettail(t::Tuple) = Base.tail(t)
+@inline gettail(::Tuple{}) = nothing

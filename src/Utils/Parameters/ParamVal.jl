@@ -72,11 +72,15 @@ Base.length(p::ParamVal{T}) where T = 1
 @inline Base.eachindex(p::ParamVal{T}) where T <: AbstractVector = eachindex(p.val)
 Base.size(p::ParamVal{T}) where T <: AbstractVector = size(p.val)
 Base.length(p::ParamVal{T}) where T <: AbstractVector = length(p.val)
-@inline Base.eltype(p::ParamVal{AbstractVector{T}}) where T = T
+@inline Base.eltype(p::ParamVal{<:AbstractVector{T}}) where T = T
 
 Base.push!(p::ParamVal{T}, val) where T <: AbstractVector = push!(p.val, val)
 LoopVectorization.check_args(p::ParamVal{T}) where T <: AbstractVector = true
 @inline Base.pointer(p::ParamVal{T}) where T = pointer(p.val)
+"""
+For vector like objects, find the promote type of the eltypes
+"""
+promote_eltype(vector_types...) = promote_type(eltype.(vector_types)...)
 
 
 #Ref

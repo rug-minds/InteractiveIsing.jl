@@ -6,7 +6,6 @@ g = IsingGraph(N, N, N, type = Discrete)
 # createProcess(g)
 # interface(g)
 simulate(g)
-quit(g)
 
 function weightfunc(dx,dy,dz)
     prefac = 1
@@ -71,7 +70,7 @@ end
 fullsweep = N^3
 compalgo = CompositeAlgorithm((MetropolisGB, TrianglePulseB), (1, 50))
 
-createProcess(g, compalgo, lifetime = 10000*fullsweep, amp = 3, numpulses = 2)
+# createProcess(g, compalgo, lifetime = 10000*fullsweep, amp = 3, numpulses = 2)
 
 
 

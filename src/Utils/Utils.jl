@@ -17,5 +17,6 @@ include("CastViewMatrix.jl")
 #TODO: Make module
 # include("Processes/Processes.jl")
 include("ExpressionTools/ExpressionTools.jl")
+include("MCAlgorithmUtils.jl")
 include("Parameters/Parameters.jl")
 include("TupleTypes.jl")

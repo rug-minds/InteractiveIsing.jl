@@ -15,7 +15,8 @@ Parameters(; kwargs...) = Parameters(NamedTuple(kwargs))
 @inline get_nt(::Type{NT}) where NT <: NamedTuple = NT
 export get_nt
 #Forward methods for namedtuple to Parameters
-Base.getindex(p::Parameters, k::Symbol) = get_nt(p)[k]
+# Base.getindex(p::Parameters, k::Symbol) = get_nt(p)[k]
+Base.getindex(p::Parameters, val) = get_nt(p)[val]
 Base.get!(p::Parameters, k::Symbol, default) = get(get_nt(p), k, default)
 Base.get(p::Parameters, k::Symbol) = get(get_nt(p), k)
 Base.get(p::Parameters, k::Symbol, default) = get(get_nt(p), k, default)
