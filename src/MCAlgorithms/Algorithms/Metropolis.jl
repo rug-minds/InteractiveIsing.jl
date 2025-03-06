@@ -23,7 +23,7 @@ function Processes.prepare(::Metropolis, @specialize(args))
     gstate = g.state
     gadj = g.adj
     gparams = g.params
-    iterator = ising_it(g, g.stype)
+    iterator = ising_it(g)
     # rng = MersenneTwister()
     rng = Random.GLOBAL_RNG
     ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)

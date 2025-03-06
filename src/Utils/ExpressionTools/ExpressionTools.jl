@@ -160,12 +160,57 @@ function remove_line_number_nodes(exp)
     return expr
 end
 
+# """
+# Remove all LineNumberNodes from the expression
+# """
+# function remove_line_number_nodes!(exp)
+#     f = (x) -> x isa LineNumberNode
+#     remove_args!(f, exp)
+#     return exp
+# end
 """
 Remove all LineNumberNodes from the expression
 """
 function remove_line_number_nodes!(exp)
-    f = (x) -> x isa LineNumberNode
-    remove_args!(f, exp)
+    if !(exp isa Expr)
+        return exp
+    end
+    
+    # Special handling for @turbo macro
+    if exp.head == :macrocall && exp.args[1] == Symbol("@turbo")
+        turbo_args = exp.args[3]  # Save the for loop
+        return Expr(:macrocall, Symbol("@turbo"), nothing, remove_line_number_nodes!(turbo_args))
+    end
+    
+    # Handle regular block expressions
+    if exp.head == :block
+        new_args = filter(arg -> begin
+            if arg isa LineNumberNode
+                return false
+            elseif arg isa Expr
+                return true
+            else
+                return true
+            end
+        end, exp.args)
+        
+        # Process nested expressions
+        for (i, arg) in enumerate(new_args)
+            if arg isa Expr
+                new_args[i] = remove_line_number_nodes!(arg)
+            end
+        end
+        
+        exp.args = new_args
+    else
+        # Handle other expression types
+        for (i, arg) in enumerate(exp.args)
+            if arg isa Expr
+                exp.args[i] = remove_line_number_nodes!(arg)
+            end
+        end
+    end
+    
     return exp
 end
 

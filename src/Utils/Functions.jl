@@ -692,11 +692,3 @@ function functionargs(ex)
     @capture(ex2, function f_(xs__) where {T_}  body_ end)
     xs
 end
-
-
-### For tuple recursion
-@inline gethead(t::Tuple) = Base.first(t)
-@inline gethead(::Tuple{}) = nothing
-
-@inline gettail(t::Tuple) = Base.tail(t)
-@inline gettail(::Tuple{}) = nothing

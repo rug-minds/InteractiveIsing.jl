@@ -1,7 +1,12 @@
-export param, params
+export getparams
+
+getparams(g::IsingGraph) = params(g)
+getparams(g::IsingGraph, param::Symbol) = getparam(g, param)
 
 param(g::IsingGraph, param::Symbol) = getparam(g, param)
 params(g::IsingGraph) = g.params
+
+
 
 function changeactivation!(g, param, activate)
     old_active = isactive(getparam(g, param))
@@ -49,7 +54,7 @@ end
 function _setparam!(pval::ParamVal{T}, param::Symbol, val, startidx = nothing, endidx = nothing) where T<:Vector
     isnothing(startidx) && (startidx = 1)
     isnothing(endidx)   && (endidx = length(pval[]))
-    @assert length(pval[]) >= endidx - startidx + 1
+    @assert length(pval) >= endidx - startidx + 1
     pval.val[startidx:endidx] .= val
     return nothing
 end

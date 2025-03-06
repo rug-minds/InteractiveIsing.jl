@@ -1,6 +1,6 @@
-function gettype(nt::Type{<:NamedTuple}, symb::Symbol)
-    idx = findfirst(x -> x == symb, fieldnames(nt))
-    return nt.types[idx]
+@generated function gettype(::Type{NT}, ::Val{field}) where {NT<:NamedTuple, field}
+    idx = findfirst(==(field), fieldnames(NT))
+    return :($(NT.types[idx]))
 end
 
 function gettype(nt::Type{<:NamedTuple}, idx::Integer)

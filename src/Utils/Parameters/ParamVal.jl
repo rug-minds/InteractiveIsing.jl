@@ -9,21 +9,29 @@ It also stores wether it's active and if not a fallback value
     the whole vector can be set to a constant value, so that
     memory does not need to be accessed.
 """
-mutable struct ParamVal{T, Default, Active} <: DenseArray{T, 1}
+struct ParamVal{T, Default, Active, RD} <: DenseArray{T, 1}
     val::T
+    runtimeglobal::RD
     description::String
 end
 
-function ParamVal(val::T, default, description = "", active = false) where T
+function ParamVal(val::T, default, description = "", active = false; runtimeglobal = false) where T
     # If val is vector type, default value must be eltype, 
     # otherwise it must be the same type
     if T <: Vector 
+        et = eltype(T)
         default = convert(eltype(T), default)
+        if runtimeglobal
+            return ParamVal{T, default, active, Ref{et}}(val, Ref(default), description)
+        else
+            return ParamVal{T, default, active, Nothing}(val, nothing, description)
+        end
     else
         default = convert(T, default)
+        return ParamVal{T, default, active, Nothing}(Ref(val), nothing, description, )
     end
     
-    return ParamVal{T, default, active}(val, description)
+    
 end
 
 function ParamVal(p::ParamVal, active::Bool = nothing)
@@ -38,11 +46,12 @@ end
 
 isinactive(::ParamVal{A,B,C}) where {A,B,C}= !C
 isactive(::ParamVal{A,B,C}) where {A,B,C} = C
-isactive(::Type{ParamVal{A,B,C}}) where {A,B,C} = C
-isinactive(::Type{ParamVal{A,B,C}}) where {A,B,C} = !C
-default(::Type{ParamVal{T, Default, Active}}) where {T, Default, Active} = Default
+isactive(::Type{ParamVal{A,B,C,D}}) where {A,B,C,D} = C
+isinactive(::Type{ParamVal{A,B,C,D}}) where {A,B,C,D} = !C
+default(::Type{ParamVal{T, Default, Active, D}}) where {T, Default, Active, D} = Default
 description(p::ParamVal) = p.description
-export isactive, isinactive
+runtimeglobal(p::ParamVal{T, Default, Active, RD}) where {T, Default, Active, RD} = RD != Nothing
+runtimeglobal(::Type{ParamVal{T, Default, Active, RD}}) where {T, Default, Active, RD} = RD != Nothing
 
 toggle(p::ParamVal{T, Default, Active}) where {T, Default, Active} = ParamVal{T, Default, !Active}(p.val)
 @inline default(::ParamVal{T, Default}) where {T, Default} = Default
@@ -54,10 +63,21 @@ toggle(p::ParamVal{T, Default, Active}) where {T, Default, Active} = ParamVal{T,
 #General
 
 #Values
-@inline Base.setindex!(p::ParamVal, val) = (p.val = val)
-@inline Base.getindex(p::ParamVal{T}) where T = p.val
-@inline Base.setindex!(p::ParamVal{T}, val, idx) where T <: Real = (p.val = val)
-@inline Base.eachindex(p::ParamVal{T}) where T = Base.OneTo(1)
+# @inline Base.setindex!(p::ParamVal, val) = (p.val = val)
+# @inline function Base.getindex(p::ParamVal{T}) where T
+#     if isactive(p)
+#         return p.val
+#     else
+#         return default(p)
+#     end
+# end
+# @inline Base.setindex!(p::ParamVal{T}, val, idx) where T <: Real = (p.val = val)
+# @inline Base.eachindex(p::ParamVal{T}) where T = Base.OneTo(1)
+#Ref
+@inline Base.getindex(p::ParamVal{T}) where T <: Ref =p.val[]
+@inline Base.setindex!(p::ParamVal{T}, val) where T <: Ref = (p.val[] = val)
+@inline Base.lastindex(p::ParamVal{T}) where T <: Ref = 1
+@inline Base.eachindex(p::ParamVal{T}) where T <: Ref = Base.OneTo(1)
 Base.size(p::ParamVal{T}) where T = (1,)
 Base.length(p::ParamVal{T}) where T = 1
 @inline Base.eltype(p::ParamVal{T}) where T = T
@@ -65,8 +85,25 @@ Base.length(p::ParamVal{T}) where T = 1
 
 
 #Vectors
-@inline Base.getindex(p::ParamVal{T}, idx) where T <: AbstractVector = getindex(p.val, idx)::eltype(T)
-@inline Base.setindex!(p::ParamVal{T}, val, idx) where T <: AbstractVector = (p.val[idx] = val)
+@inline function Base.getindex(p::ParamVal{T}, idx) where T <: AbstractVector
+    if isactive(p)
+        getindex(p.val, idx)::eltype(T)
+    else
+        if runtimeglobal(p)
+            return p.runtimeglobal[]
+        else
+            return default(p)
+        end
+    end
+end
+@inline function Base.setindex!(p::ParamVal{T}, val, idx) where T <: AbstractVector
+    if idx isa Real
+        if !isactive(p) && runtimeglobal(p)
+            return p.runtimeglobal[] = val
+        end
+    end
+    return p.val[idx] = val
+end
 @inline Base.lastindex(p::ParamVal{T}) where T <: AbstractVector = lastindex(p.val)
 @inline Base.firstindex(p::ParamVal{T}) where T <: AbstractVector = firstindex(p.val)
 @inline Base.eachindex(p::ParamVal{T}) where T <: AbstractVector = eachindex(p.val)
@@ -83,11 +120,7 @@ For vector like objects, find the promote type of the eltypes
 promote_eltype(vector_types...) = promote_type(eltype.(vector_types)...)
 
 
-#Ref
-@inline Base.getindex(p::ParamVal{T}) where T <: Ref = p.val[]
-@inline Base.setindex!(p::ParamVal{T}, val) where T <: Ref = (p.val[] = val)
-@inline Base.lastindex(p::ParamVal{T}) where T <: Ref = 1
-@inline Base.eachindex(p::ParamVal{T}) where T <: Ref = Base.OneTo(1)
+
 
 
 
