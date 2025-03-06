@@ -67,7 +67,7 @@ end
     if (ΔE <= zero(T) || randnum < efac)
         @inbounds gstate[i] = newstate 
         M[] += (newstate - oldstate)
-        total_E[] += ΔE - B[]
+        total_E[] += ΔE - (oldstate-newstate)*B[]
     end
     
     return nothing
