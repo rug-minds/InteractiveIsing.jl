@@ -212,7 +212,7 @@ export params
     g.adj = adj
     # Add callbacks field to graph, which is a Dict{typeof(<:Function), Vector{Function}}
     # And create a setterGetter macro that includes the callbacks
-    restart(g)
+    refresh(g)
     return adj
 end
 set_adj!(g::IsingGraph, vecs::Tuple) = adj(g, sparse(vecs..., nStates(g), nStates(g)))
