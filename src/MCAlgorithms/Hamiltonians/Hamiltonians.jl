@@ -137,7 +137,11 @@ end
 
 export Hamiltonian_Builder, getH, rawH, setH!
 
-# function hamiltonian_ij_expr(graph, exprs...)
-    
-# end
 
+
+### NEW SYSTEM
+
+function dh(h::Hamiltonian, args; j)
+    (;contractions, multiplications) = get_terms(h)
+    return (args.newstate - args.gstate[j]) * contractions(args) + multiplications(args)
+end

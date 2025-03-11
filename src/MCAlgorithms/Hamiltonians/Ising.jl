@@ -15,3 +15,9 @@ end
 #     multiplications = :((s_i^2-sn_i^2)*self_i+(s_i-sn_i)*(b_i+collect_expr))
 #     return (;contractions, multiplications)
 # end
+
+@ParameterRefs function get_terms(::Ising)
+    contractions = (s_i*w_ij)
+    multiplications = (s_j^2-sn_j^2)*self_j+(s_j-sn_j)*(b_j)
+    return (;contractions, multiplications)
+end

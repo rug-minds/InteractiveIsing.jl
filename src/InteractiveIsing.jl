@@ -41,12 +41,7 @@ export AbstractIsingGraph
 abstract type AbstractIsingGraph{T} end
 abstract type AbstractIsingLayer{T,DIMS} <: AbstractIsingGraph{T} end
 
-abstract type PeriodicityType end
-struct Periodic <: PeriodicityType end
-struct PartPeriodic{T} <: PeriodicityType end
-struct NonPeriodic <: PeriodicityType end
 
-export PeriodicityType, Periodic, NonPeriodic, PartPeriodic
 
 # Restart MCMC loop to define new Hamiltonian function
 # Is needed for fast execution if part of hamiltonian doesn't need to be checked

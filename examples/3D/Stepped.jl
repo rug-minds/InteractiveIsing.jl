@@ -1,4 +1,5 @@
 using InteractiveIsing, LoopVectorization, Processes
+Processes.debug_mode(false)
 
 N = 40
 g = IsingGraph(N, N, N, type = Discrete)
@@ -70,7 +71,9 @@ end
 fullsweep = N^3
 compalgo = CompositeAlgorithm((MetropolisGB, TrianglePulseB), (1, 50))
 
-# createProcess(g, compalgo, lifetime = 10000*fullsweep, amp = 3, numpulses = 2)
+createProcess(g, compalgo, lifetime = 10000*fullsweep, amp = 3, numpulses = 2)
+
+# createProcess(g, compalgo, amp = 1)
 
 
 

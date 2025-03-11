@@ -53,7 +53,7 @@ end
 
 function _setparam!(pval::ParamVal{T}, param::Symbol, val, startidx = nothing, endidx = nothing) where T<:Vector
     isnothing(startidx) && (startidx = 1)
-    isnothing(endidx)   && (endidx = length(pval[]))
+    isnothing(endidx)   && (endidx = length(pval))
     @assert length(pval) >= endidx - startidx + 1
     pval.val[startidx:endidx] .= val
     return nothing

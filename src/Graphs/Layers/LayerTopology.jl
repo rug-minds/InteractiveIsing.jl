@@ -1,7 +1,29 @@
 using LinearAlgebra
 
+export PeriodicityType, Periodic, NonPeriodic, PartPeriodic
+abstract type PeriodicityType end
+struct Periodic <: PeriodicityType end
+struct PartPeriodic{T} <: PeriodicityType end
+struct NonPeriodic <: PeriodicityType end
+
+function PartPeriodic(args...) 
+    # assert only has a combination of x y and z
+    @assert all(x -> x in (:x, :y, :z), args)
+    return PartPeriodic{args}()
+end
+
+periodic(p::PeriodicityType, symb::Symbol) = periodic(p, Val(symb))
+@generated function periodic(P::PartPeriodic{Parts}, ::Val{symb}) where {Parts,symb}
+    found = findfirst(x -> x == symb, Parts)
+    return :($(!isnothing(found)))
+end
+
+periodic(P::Periodic, ::Val{symb}) where symb = true
+periodic(P::NonPeriodic, ::Val{symb}) where symb = false
+
+
 abstract type LatticeType end
-abstract type LayerTopology{U <: PeriodicityType, Dim} end
+abstract type LayerTopology{U, Dim} end
 
 struct Square <: LatticeType end
 struct Rectangular <: LatticeType end
@@ -14,23 +36,30 @@ export LatticeType, Square, Rectangular, Oblique, Hexagonal, Rhombic, AnyLattice
 
 struct GenericTopology{U} <: LayerTopology{U,0} end
 
+@inline periodic(lt::LayerTopology{U}, symb) where U = periodic(U, symb)
 struct SquareTopology{U,DIMS} <: LayerTopology{U, DIMS}
     size::NTuple{DIMS,Int32}
-    function SquareTopology(size; periodic::Bool = true)
-        U = periodic ? Periodic : NonPeriodic
+    function SquareTopology(size; periodic::Union{Bool, <:Tuple} = true)
+        U = nothing
+        if periodic isa Bool
+            U = periodic ? Periodic() : NonPeriodic()
+        else
+            U = PartPeriodic(periodic...) 
+        end
         DIMS = length(size)
         new{U, DIMS}(size)
     end
 end
-mutable struct LatticeTopology{T <: LatticeType, U <: PeriodicityType, Dim} <: LayerTopology{U, Dim} 
+mutable struct LatticeTopology{T <: LatticeType, U, Dim} <: LayerTopology{U, Dim} 
     # layer::Union{Nothing, AbstractIsingGraph}
     pvecs::NTuple{Dim, SVector{Dim, Float32}}
     covecs::NTuple{Dim, SVector{Dim, Float32}}
     size::NTuple{Dim, Int32}
 
-    function LatticeTopology(_size::Tuple, vec1::Union{Nothing,AbstractArray} = nothing, vec2::Union{Nothing,AbstractArray} = nothing, vec3::Union{Nothing,AbstractArray} = nothing; periodic::Union{Nothing, Bool} = nothing)
+    function LatticeTopology(_size::Tuple, vec1::Union{Nothing,AbstractArray} = nothing, vec2::Union{Nothing,AbstractArray} = nothing, vec3::Union{Nothing,AbstractArray} = nothing; periodic::Union{Nothing, Bool, Tuple} = nothing)
         D = DIMS(layer)
         
+        ##### Calculate the covectors
         if D == 2 
             # Assert either none given or both
             @assert (isnothing(vec1) && isnothing(vec2)) || (!isnothing(vec1) && !isnothing(vec2))
@@ -53,9 +82,13 @@ mutable struct LatticeTopology{T <: LatticeType, U <: PeriodicityType, Dim} <: L
             cov2 = SVector(y2, x2)
             
             if !isnothing(periodic)
-                ptype = periodic ? Periodic : NonPeriodic
+                if periodic isa Bool
+                    ptype = periodic ? Periodic() : NonPeriodic()
+                elseif periodic isa Tuple
+                    ptype = PartPeriodic(periodic...)
+                end
             else
-                ptype = Periodic
+                ptype = Periodic()
             end
 
             if vec1 == [1,0] && vec2 == [0,1]
@@ -221,11 +254,11 @@ function latToPoint(layer, i::Integer, j::Integer)
 end
 export latToPoint
 
-function dx(lt::SquareTopology{NonPeriodic,DIMS}, coords1::Tuple, coords2::Tuple) where DIMS
+function dx(lt, per::Val{false}, coords1::Tuple, coords2::Tuple)
     return abs(coords2[1] - coords1[1])
 end
 
-function dx(lt::SquareTopology{Periodic,DIMS}, coords1::Tuple, coords2::Tuple) where DIMS
+function dx(lt, per::Val{true}, coords1::Tuple, coords2::Tuple)
     di = coords2[1] - coords1[1]
     if di > size(lt,1)/2
         di -= size(lt,1)
@@ -233,11 +266,11 @@ function dx(lt::SquareTopology{Periodic,DIMS}, coords1::Tuple, coords2::Tuple) w
     return di
 end
 
-function dy(lt::SquareTopology{NonPeriodic,DIMS}, coords1::Tuple, coords2::Tuple) where DIMS
+function dy(lt, per::Val{false}, coords1::Tuple, coords2::Tuple)
     return abs(coords2[1] - coords1[1])
 end
 
-function dy(lt::SquareTopology{Periodic,DIMS}, coords1::Tuple, coords2::Tuple) where DIMS
+function dy(lt, per::Val{true}, coords1::Tuple, coords2::Tuple)
     dj = coords2[2] - coords1[2]
     if dj > size(lt,2)/2
         dj -= size(lt,2)
@@ -245,11 +278,11 @@ function dy(lt::SquareTopology{Periodic,DIMS}, coords1::Tuple, coords2::Tuple) w
     return dj
 end
 
-function dz(lt::SquareTopology{NonPeriodic,3}, coords1::Tuple, coords2::Tuple)
+function dz(lt, per::Val{false}, coords1::Tuple, coords2::Tuple)
     return abs(coords2[3] - coords1[3])
 end
 
-function dz(lt::SquareTopology{Periodic,3}, coords1::Tuple, coords2::Tuple)
+function dz(lt, per::Val{true}, coords1::Tuple, coords2::Tuple)
     dk = coords2[3] - coords1[3]
     if dk > size(lt,3)/2
         dk -= size(lt,3)
@@ -257,9 +290,9 @@ function dz(lt::SquareTopology{Periodic,3}, coords1::Tuple, coords2::Tuple)
     return dk
 end
 
-dxdy(lt::SquareTopology{P,2}, coords1::Tuple, coords2::Tuple) where P = (dx(lt, coords1, coords2), dy(lt, coords1, coords2))
+dxdy(lt::SquareTopology{P,2}, coords1::Tuple, coords2::Tuple) where P = (dx(lt, Val(periodic(lt,:x)), coords1, coords2), dy(lt, Val(periodic(lt,:y)), coords1, coords2))
 
-dxdydz(lt::SquareTopology{P,3}, coords1::Tuple, coords2::Tuple) where P = (dx(lt, coords1, coords2), dy(lt, coords1, coords2), dz(lt, coords1, coords2))
+dxdydz(lt::SquareTopology{P,3}, coords1::Tuple, coords2::Tuple) where P = (dx(lt, Val(periodic(lt,:x)), coords1, coords2), dy(lt, Val(periodic(lt,:y)), coords1, coords2), dz(lt, Val(periodic(lt,:z)), coords1, coords2))
 
 export dy, dx, dxdy
 

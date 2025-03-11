@@ -59,7 +59,7 @@ mutable struct IsingLayer{StateType, DIMS, T, Top} <: AbstractIsingLayer{StateTy
             coords = Coords(nothing), 
             connections = Dict{Pair{Int32,Int32}, 
             WeightGenerator}(), 
-            periodic::Union{Nothing,Bool} = true,
+            periodic::Union{Nothing,Bool,Tuple} = true,
         ) where GraphType <: IsingGraph
         dims = 2
         if !isnothing(height)

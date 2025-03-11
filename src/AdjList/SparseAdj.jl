@@ -43,17 +43,16 @@ function genLayerConnections(layer::AbstractIsingLayer{T,D}, wg) where {T,D}
     conn_is = Prealloc(Int32, blocksize)
     conn_js = Prealloc(Int32, blocksize)
 
+    conns = (conn_is, conn_js)
     if D == 3
         conn_ks = Prealloc(Int32, blocksize)
+        conns = (conns..., conn_ks)
     end
 
     conn_idxs = Prealloc(Int32, blocksize)
 
-    if D == 2
-        _fillSparseVecs(layer, row_idxs, col_idxs, weights, top(layer), wg, conn_idxs, conn_is, conn_js)
-    elseif D == 3
-        _fillSparseVecs(layer, row_idxs, col_idxs, weights, top(layer), wg, conn_idxs, conn_is, conn_js, conn_ks)
-    end 
+    _fillSparseVecs(layer, row_idxs, col_idxs, weights, top(layer), wg, conn_idxs, conns...)
+
 
     append!(row_idxs, col_idxs)
     append!(col_idxs, @view(row_idxs[1:end÷2]))
@@ -147,7 +146,7 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, wei
     end
 
     for col_idx in Int32(1):nstates(layer)
-        coords_vert = idxToCoord(col_idx, size(layer))
+        coords_vert = idxToCoord(col_idx, size(layer)) # Coords of the spin
         getConnIdxs!(topology, col_idx, coords_vert, size(layer), NNi, NNj, NNk, conn_idxs, conn_is, conn_js, conn_ks)
         
         @fastmath for conn_num in eachindex(conn_is)
