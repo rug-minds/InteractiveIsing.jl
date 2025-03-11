@@ -145,8 +145,15 @@ function getConnIdxs!(top, vert_idx, vert_i, vert_j, (len, wid)::NTuple{2,Int32}
     for j in -NNj:NNj
         for i in -NNi:NNi
             (i == 0 && j == 0) && continue
+
+            if (!periodic(top, :x) && (vert_i + i < 1 || vert_i + i > len)) || 
+                (!periodic(top, :y) && (vert_j + j < 1 || vert_j + j > wid))
+                continue
+            end
             
             conn_i, conn_j = latmod(vert_i + i, vert_j + j, len, wid)
+
+           
 
             if conn_i == 0 || conn_j == 0
                 continue
@@ -170,6 +177,12 @@ function getConnIdxs!(topology, vert_idx, coord_vert::NTuple{3,Int32}, size::NTu
                 
                 (i == 0 && j == 0 && k == 0) && continue
                 vert_i, vert_j, vert_k = coord_vert
+                
+                if (!periodic(topology, :x) && (vert_i + i < 1 || vert_i + i > size[1])) || 
+                    (!periodic(topology, :y) && (vert_j + j < 1 || vert_j + j > size[2])) ||
+                    (!periodic(topology, :z) && (vert_k + k < 1 || vert_k + k > size[3]))
+                    continue
+                end
 
                 #Apply the periodicity
                 conn_i, conn_j, conn_k = latmod((vert_i + i, vert_j + j, vert_k + k), size)
@@ -193,23 +206,23 @@ function getConnIdxs!(topology, vert_idx, coord_vert::NTuple{3,Int32}, size::NTu
     end
 end
 
-"""
-Get all indices of a vertex with idx vert_idx and coordinates vert_i, vert_j
-"""
-@inline function getConnIdxsGen(vert_idx, vert_i, vert_j, len, wid, NN)
-    return (if (i == 0 && j == 0)
-                nothing
-            else
-                let (conn_i, conn_j) = latmod(vert_i + i, vert_j + j, len, wid), conn_idx = coordToIdx(conn_i, conn_j, len);
-                    if conn_idx < vert_idx
-                        nothing
-                    else
-                        (conn_i, conn_j, conn_idx)
-                    end
-                end
-            end
-            for j in -NN:NN for i in -NN:NN)
-end
+# """
+# Get all indices of a vertex with idx vert_idx and coordinates vert_i, vert_j
+# """
+# @inline function getConnIdxsGen(vert_idx, vert_i, vert_j, len, wid, NN)
+#     return (if (i == 0 && j == 0)
+#                 nothing
+#             else
+#                 let (conn_i, conn_j) = latmod(vert_i + i, vert_j + j, len, wid), conn_idx = coordToIdx(conn_i, conn_j, len);
+#                     if conn_idx < vert_idx
+#                         nothing
+#                     else
+#                         (conn_i, conn_j, conn_idx)
+#                     end
+#                 end
+#             end
+#             for j in -NN:NN for i in -NN:NN)
+# end
 
 
 
