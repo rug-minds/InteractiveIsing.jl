@@ -12,8 +12,7 @@ function Processes.prepare(::LayeredMetropolis, @specialize(args))
     (;g) = args
     ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
 
-    return (;g,
-            gstate = g.state,
+    return (; gstate = g.state,
             gadj = g.adj,
             gparams = g.params,
             iterator = ising_it(g),

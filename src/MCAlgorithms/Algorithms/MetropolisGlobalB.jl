@@ -42,7 +42,7 @@ function Processes.prepare(::MetropolisGB, @specialize(args))
     lmeta = LayerMetaData(g[1])
     B = Ref(0f0)
     total_E = Ref(Total_H(gstate, gadj, B))
-    return (;g, gstate, gadj, gparams, iterator, ΔH, lmeta, rng, M, B, total_E)
+    return (;gstate, gadj, gparams, iterator, ΔH, lmeta, rng, M, B, total_E)
 end
 
 @inline function (::MetropolisGB)(@specialize(args))
