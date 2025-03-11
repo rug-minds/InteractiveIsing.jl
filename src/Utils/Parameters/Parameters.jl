@@ -8,6 +8,9 @@ end
 include("Macros.jl")
 include("ParameterRef.jl")
 
+Base.fieldnames(ps::Type{<:Parameters}) = fieldnames(ps.parameters[1])
+Base.fieldtypes(ps::Type{<:Parameters}) = fieldtypes(ps.parameters[1])
+
 Parameters(; kwargs...) = Parameters(NamedTuple(kwargs))
 
 @inline get_nt(@specialize(p::Parameters{NT})) where NT = getfield(p, :_nt)

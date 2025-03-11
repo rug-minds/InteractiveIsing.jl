@@ -12,21 +12,48 @@ expand_exp ?
 
 abstract type AbstractParameterRef end
 
+
+
 type_apply(f, apr::Type{<:AbstractParameterRef}) = f(apr())
 
 ### PARAMTER REF
-struct ParameterRef{Symb, indices, F, deref_type} <: AbstractParameterRef end
+struct ParameterRef{Symb, indices, F} <: AbstractParameterRef end
+
+function Base.getindex(pr::AbstractParameterRef, idx)
+    if pr isa ParameterRef
+        error("Cannot index a ParameterRef")
+    end
+    get_prefs(pr)[idx]
+end
 
 function ParameterRef(symb, indices...; func = nothing, sparse = nothing)
     F = isnothing(func) ? () : func
-    deref_type = isnothing(sparse) && length(indices) == 2 ? AbstractSparseMatrix : Nothing
-    return ParameterRef{Symbol(symb), (indices...,), F, deref_type}()
+    # deref_type = isnothing(sparse) && length(indices) == 2 ? AbstractSparseMatrix : Nothing
+    return ParameterRef{Symbol(symb), (indices...,), F}()
+end
+
+
+function refmap(::Val{:w})
+    return (:gadj,)
+end
+
+function refmap(::Val{:s})
+    return (:gstate,)
+end
+
+function refmap(::Val{:sn})
+    return (:newstate,)
+end
+
+function refmap(::Val{A}) where A
+    return (:params,:($A))
 end
 
 """
 Map of symbols to structs in the args
 """
-const symbolmap = (;w = :(args.gadj), s = :(args.gstate), rest = :(args.params))
+const symbolmap = (;w = :(args.gadj), s = :(args.gstate), sn = :(args.newstate), rest = :(args.params))
+const symbolcypher = (; w = :gadj, s = :gstate, sn = :newstate)
 
 """
 Get the reference to the struct in either args or params
@@ -50,14 +77,31 @@ end
 
 struct_ref_exp(::Type{PR}) where PR<:AbstractParameterRef = struct_ref_exp(PR())
 
+build_getpropert_chain(symbs::Tuple) = build_getfield_chain(first(symbs), Base.tail(symbs))
+function build_getpropert_chain(base_expr, symbols::Tuple)
+    if isempty(symbols)
+        return base_expr
+    end
+    return build_getpropert_chain(:(getproperty($base_expr, $(QuoteNode(first(symbols))))), Base.tail(symbols))
+end
 
 """
 Go from parameter ref to the struct it wants to reference
 """
-@generated function get_ref(p::ParameterRef, args)
-    return type_apply(struct_ref_exp, p)
+# @generated function get_ref(p::ParameterRef, args)
+#     return type_apply(struct_ref_exp, p)
+# end
+get_ref_exp = nothing
+@generated function get_ref(p, args::Union{<:NamedTuple, <:Base.Pairs})
+    symb = type_apply(ref_symb, p)
+    refs = refmap(Val(symb))
+    global get_ref_exp = :($(build_getpropert_chain(:args, refs)))
+    return get_ref_exp
 end
 
+@generated function get_ref(p, args::DataType)
+    return :(args.$(ref_symb(p)))
+end
 
 """
 Get the indices to be filled in as expression e.g. "[i]"
@@ -69,7 +113,7 @@ end
 """
 Is ref pointing to sparse structure
 """
-issparse(::ParameterRef{S, idxs, f, deref_type}) where {S, idxs, f, deref_type} = deref_type <: AbstractSparseArray
+issparse(p::ParameterRef{S, idxs, f}, args) where {S, idxs, f} = dereftype(p, args) <: AbstractSparseArray
 
 @inline function return_type(pr::ParameterRef, args)
     return eltype(get_ref(pr, args))
@@ -91,29 +135,41 @@ function expand_exp(pref::ParameterRef{S, idxs, f}) where {S, idxs, f}
     return Expr(:ref, struct_ref_exp(pref), free_symb(pref)...)
 end
 
-@inline function intersect_indices(pr::ParameterRef, idxs)
+@inline function intersect_indices(pr::AbstractParameterRef, idxs)
     idxs[free_symb(pr)]
 end
 
 ### Reduce
 
 struct RefReduce{Refs, reduce_fs} <: AbstractParameterRef end
-RefReduce(refs::Tuple, reduce_fs) where N = RefReduce{refs, reduce_fs}()
+RefReduce(refs::Tuple, reduce_fs) = RefReduce{refs, reduce_fs}()
+# free_symb(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = tuple(union(free_symb.(Refs)...)...)
 free_symb(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = tuple(union(free_symb.(Refs)...)...)
 
 get_reduce_fs(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = reduce_fs
 
-Base.:+(p1::ParameterRef, p2::ParameterRef) = RefReduce((p1, p2), (+,))
-Base.:-(p1::ParameterRef, p2::ParameterRef) = RefReduce((p1, p2), (-,))
-Base.:+(p1::ParameterRef, p2::RefReduce) = RefReduce((p1, get_prefs(p2)...), (+, get_reduce_fs(p2)...))
-Base.:-(p1::ParameterRef, p2::RefReduce) = RefReduce((p1, get_prefs(p2)...), (-, get_reduce_fs(p2)...))
-Base.:+(p1::RefReduce, p2::ParameterRef) = RefReduce((get_prefs(p1)..., p2), (get_reduce_fs(p1)...,+))
-Base.:-(p1::RefReduce, p2::ParameterRef) = RefReduce((get_prefs(p1)..., p2), (get_reduce_fs(p1)...,-))
+Base.:+(p1::AbstractParameterRef, p2::AbstractParameterRef) = RefReduce((p1, p2), (+,))
+Base.:-(p1::AbstractParameterRef, p2::AbstractParameterRef) = RefReduce((p1, p2), (-,))
+Base.:+(p1::AbstractParameterRef, p2::RefReduce) = RefReduce((p1, get_prefs(p2)...), (+, get_reduce_fs(p2)...))
+Base.:-(p1::AbstractParameterRef, p2::RefReduce) = RefReduce((p1, get_prefs(p2)...), (-, get_reduce_fs(p2)...))
+Base.:+(p1::RefReduce, p2::AbstractParameterRef) = RefReduce((get_prefs(p1)..., p2), (get_reduce_fs(p1)...,+))
+Base.:-(p1::RefReduce, p2::AbstractParameterRef) = RefReduce((get_prefs(p1)..., p2), (get_reduce_fs(p1)...,-))
 
 issparse(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = all(issparse.(Refs))
 
 function expand_exp(rr::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs}
-    return :($(Meta.parse(join(expand_exp.(Refs), string(reduce_fs)))))
+    refs = collect(Refs)  # Convert tuple to array for easier manipulation
+    ops = collect(reduce_fs)
+    
+    # Start with the first expression
+    expr = expand_exp(refs[1])
+    
+    # Build the expression by applying operators in sequence
+    for i in 1:length(ops)
+        expr = Expr(:call, ops[i], expr, expand_exp(refs[i+1]))
+    end
+    
+    return expr
 end
 
 @inline function (rr::RefReduce)(@specialize(args); idxs...)
@@ -124,11 +180,11 @@ end
 end
 
 @inline function _unroll_refreduce(refshead, refstail, reduce_fshead, reduce_fstail, args, idxs)
-    leftover_idxs = @inline intersect_indices(refshead, idxs)
+    # leftover_idxs = @inline intersect_indices(refshead, idxs)
     if isnothing(reduce_fshead)
-        return @inline refshead(args; leftover_idxs...)
+        return @inline refshead(args; idxs...)
     end
-    return reduce_fshead(refshead(args; leftover_idxs...), _unroll_refreduce(gethead(refstail), gettail(refstail), gethead(reduce_fstail), gettail(reduce_fstail), args, idxs))
+    return reduce_fshead(refshead(args; idxs...), _unroll_refreduce(gethead(refstail), gettail(refstail), gethead(reduce_fstail), gettail(reduce_fstail), args, idxs))
 end
 
 
@@ -152,6 +208,10 @@ Base.iterate(rc::RefContraction, state = 1) = iterate(get_prefs(rc), state)
 
 # Does this one matter?
 issparse(::RefContraction{Refs, idxs}) where {Refs, idxs} = all(issparse.(Refs))
+
+function expand_exp(rc::RefContraction{Refs, idxs}) where {Refs, idxs}
+    return Expr(:call, :*, expand_exp.(get_prefs(rc))...)
+end
 
 # abstract type ContractionType end
 # struct SparseAdj <: ContractionType end
@@ -183,6 +243,7 @@ get_prefs(p::RefContraction{Refs}) where Refs = Refs
 get_prefs(rr::RefReduce{Refs}) where Refs = (Refs)
 
 ref_symb(::ParameterRef{S}) where S = S
+ref_symb(::Type{PR}) where PR<:AbstractParameterRef = ref_symb(PR())
 ref_symbs(::RefContraction{Refs}) where Refs = tuple(ref_symb.(Refs)...)
 
 ref_indices(::ParameterRef{S, idxs}) where {S, idxs} = idxs
@@ -201,22 +262,17 @@ contract_symb(rc::RefContraction{Rs, idxs}) where {Rs, idxs}  = idxs
     @inline typeof(get_ref(pr, args))
 end
 
-@inline function dereftype(pr::Union{Type{ParameterRef}, ParameterRef}, args::DataType)
-    if pr isa Type
-        pr = pr()
-    end
-    if !isnothing(substruct(pr))
-        args = gettype(args, substruct(pr))
-    end
-    type = gettype(get_symb(pr), args)
-    return type
+@inline function dereftype(pr, args::DataType)
+    struct_refs = refmap(Val(ref_symb(pr)))
+    return gettype(args, struct_refs)
 end
 
 
 """
 Get the ref type for a parameter ref
 """
-function reftype(pr::AbstractParameterRef, args)
+function reftype(pr, args)
+    dtype = dereftype(pr, args)
     if length(ref_indices(pr)) == 2
         if pr isa ParameterRef && dereftype(pr, args) <: AbstractSparseMatrix
             return SparseMatrixRef()
@@ -232,42 +288,26 @@ function reftype(pr::AbstractParameterRef, args)
     end
 end
 
-function reftype(pr::Union{Type{ParameterRef}, ParameterRef}, args::Type)
-    if pr isa Type
-        pr = pr()
-    end
-    _dereftype = dereftype(pr, args)
+# function reftype(pr::Union{Type{ParameterRef}, ParameterRef}, args::Type)
+#     if pr isa Type
+#         pr = pr()
+#     end
+#     _dereftype = dereftype(pr, args)
 
-    if length(type_apply(ref_indices,pr)) == 2
-        if pr isa ParameterRef && _dereftype <: AbstractSparseMatrix
-            return SparseMatrixRef()
-        else
-            return MatrixRef()
-        end
-    else
-        if pr isa ParameterRef && _dereftype <: AbstractSparseVector
-            return SparseVecRef()
-        else
-            return VecRef()
-        end
-    end
-end
-# function reftype(pr::AbstractParameterRef, args = nothing)
 #     if length(ref_indices(pr)) == 2
-#         if issparse(pr)
-#             return SparseMatrixRef
+#         if pr isa ParameterRef && _dereftype <: AbstractSparseMatrix
+#             return SparseMatrixRef()
 #         else
-#             return MatrixRef
+#             return MatrixRef()
 #         end
 #     else
-#         if issparse(pr)
-#             return SparseVecRef
+#         if pr isa ParameterRef && _dereftype <: AbstractSparseVector
+#             return SparseVecRef()
 #         else
-#             return VecRef
+#             return VecRef()
 #         end
 #     end
 # end
-
 
 ### CONTRACTIONS
 
@@ -275,7 +315,10 @@ end
 Get a reference to a matrix in a contraction
     Returns nothing if it's not found
 """
-function matrix_ref(rc::RefContraction, args)
+function matrix_ref(rc::Union{Type{<:RefContraction}, RefContraction}, args)
+    if rc isa Type
+        rc = rc()
+    end
     for ref in rc
         if reftype(ref, args) isa MatrixLike
             return ref
@@ -288,7 +331,10 @@ end
 """
 Get all vector like refs
 """
-function vec_refs(rc::RefContraction, args)
+function vec_refs(rc::Union{Type{<:RefContraction}, RefContraction}, args)
+    if rc isa Type
+        rc = rc()
+    end
     refs = get_prefs(rc)
     return tuple(_vec_refs(args, gethead(refs), gettail(refs))...)
 end
@@ -450,12 +496,7 @@ macro ParameterRefs(ex)
     end 
 end
 
-export d_ex, @ParameterRefs
-ev =  @ParameterRefs function ΔiH(::Int)
-    contractions = :((s_i)*w_ij)
-    multiplications = :((s_i^2-sn_i^2)*self_i+(s_i-sn_i)*(b_i))
-    return (;contractions, multiplications)
-end
+export @ParameterRefs
 
 ## Reductions
 
@@ -467,15 +508,29 @@ end
 
 @generated function reduce_contraction(rc::RefContraction, idxs, args, ::VecLike, ::SparseMatrixRef)
     global reduce_contraction_exp = quote
-        (;j) = idxs
+        @inline j = idxs[:j]
         cumsum = zero(promote_eltype($(struct_ref_exp.(vec_refs(rc, args))...)))
-        sp_adj = $(struct_ref_exp(type_apply(matrix_ref, rc)))
+        sp_adj = $(struct_ref_exp(type_apply(r -> matrix_ref(rc, args), rc)))
         @turbo for ptr in nzrange(sp_adj, j)
             i = sp_adj.rowval[ptr]
             wij = sp_adj.nzval[ptr]
             cumsum += wij * $(type_apply(expand_left, rc)) # Expand the left side of the contraction
                                                         # E.g. access all the refs on the left side
         end
+        return cumsum
+    end
+    return reduce_contraction_exp
+end
+
+@generated function reduce_contraction(rc::RefContraction, idxs, args, ::VecLike, ::VecLike)
+    global reduce_contraction_exp = quote
+        j = idxs[:j]
+        cumsum = zero(promote_eltype($(struct_ref_exp.(vec_refs(rc(), args))...)))
+        cumsum += $(expand_exp(rc()))
+        # @turbo for i in eachindex($(struct_ref_exp(vec_refs(rc, args))))
+        #     #expand vecs like vec1[j] +/- vec2[j] ...
+        #     cumsum += $(expand_exp(rc))
+        # end
         return cumsum
     end
     return reduce_contraction_exp

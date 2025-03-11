@@ -1,6 +1,6 @@
 using InteractiveIsing, Processes, LoopVectorization, BenchmarkTools, SparseArrays
 import InteractiveIsing as II
-g = IsingGraph(30,30)
+g = IsingGraph(30,30,30, type = Discrete, periodic = (:z, :y))
 createProcess(g)
 w = @WG "dr -> 1/dr" NN=4
 genAdj!(g[1], w)
@@ -8,23 +8,41 @@ genAdj!(g[1], w)
 resize!(getparams(g, :self).val, 900)
 getparams(g,:self).val .= rand(Float32, 900)
 getparams(g, :b ).val .= rand(Float32, 900)
+setparam!(g, :self, rand(Float32, 900), true)
+setparam!(g, :b, rand(Float32, 900), true)
 
-as = (getargs(process(g))..., j = 1, params = getparams(g))
+function testrc(as; j = 1)
+    adj = as.gadj
+    cumsum = zero(eltype(as.gstate))
+    @turbo for ptr in nzrange(adj, j)
+        i = adj.rowval[ptr]
+        wij = adj.nzval[ptr]
+        cumsum += wij * as.gstate[i] 
+    end
+    return cumsum
+end
 
-rc = @ParameterRefs (s_i+b_i)*w_ij 
+struct NewState
+    Val
+end
+Base.getindex(n::NewState, i) = n.Val
+as = (getargs(process(g))..., j = 1, params = getparams(g), newstate = NewState(1))
+
+
+
+rc = @ParameterRefs (s_i)*w_ij 
 si = @ParameterRefs s_i
 wij = @ParameterRefs w_ij
 
 red = @ParameterRefs s_i+b_i-self_i
 red(as; i = 1) 
 
-@benchmark rc(as; i = 1)
-rc(as; i = 1)
+@benchmark $rc($as; j = 1)
 
 
-# II.reduce_contraction(rc, 1, as, II.VecRef(), II.SparseMatrixRef())
+
+rc(as; j = 1)
 
 
-# @benchmark II.reduce_contraction(rc, 1, as, II.VecRef(), II.SparseMatrixRef())
-
-# sum_p_coll(pc)
+ms = @ParameterRefs (s_j^2-sn_j^2)*self_j+(s_j-sn_j)*(b_j)
+ms1 = @ParameterRefs (s_j-sn_j)*(b_j)

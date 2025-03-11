@@ -1,7 +1,22 @@
-@generated function gettype(::Type{NT}, ::Val{field}) where {NT<:NamedTuple, field}
-    idx = findfirst(==(field), fieldnames(NT))
-    return :($(NT.types[idx]))
+@inline @generated function gettype(::Type{NT}, ::Val{field}) where {NT, field}
+    idx = findfirst(x -> x == field, fieldnames(NT))
+    if idx === nothing
+        error("Field $field not found in type $NT, with fields $(fieldnames(NT))")
+    end
+    return :($(fieldtypes(NT)[idx]))
 end
+
+@inline gettype(nt, field::Symbol) = @inline gettype(nt, Val(field))
+
+@inline function gettype(::Type{NT}, fields::Tuple) where NT
+    if isempty(fields)
+        return NT
+    end
+    
+    return gettype(gettype(NT, first(fields)), Base.tail(fields))
+end
+
+# gettype(nt::Type, s::Val{s}) where s = gettype(nt, Val(s))
 
 function gettype(nt::Type{<:NamedTuple}, idx::Integer)
     return nt.types[idx]
