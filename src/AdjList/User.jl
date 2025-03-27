@@ -1,4 +1,4 @@
-export genAdj!, remAdj!, genAdjFull!, remAdjAll!, viewConnections
+export genAdj!, genAdj, remAdj!, genAdjFull!, remAdjAll!, viewConnections
 
 """
 Generate the connections in a layer based on a weightgenerator

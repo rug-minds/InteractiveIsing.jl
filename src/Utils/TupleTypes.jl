@@ -41,3 +41,7 @@ end
 
 @inline gettail(t::Tuple) = Base.tail(t)
 @inline gettail(::Tuple{}) = nothing
+
+
+getval(::Val{V}) where V = V
+getval(::Type{Val{V}}) where V = V

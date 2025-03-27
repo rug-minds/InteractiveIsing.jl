@@ -28,3 +28,6 @@ Fetch last output
 """
 Base.fetch(g::IsingGraph) = fetch(process(g))
 export wait, fetch
+
+Processes.getargs(g::IsingGraph) = getargs(process(g))
+export getargs

@@ -1,7 +1,8 @@
 export LayeredMetropolis
 
 struct LayeredMetropolis <: MCAlgorithm end
-requires(::Type{LayeredMetropolis}) = Δi_H()
+# requires(::Type{LayeredMetropolis}) = Δi_H()
+requires(::LayeredMetropolis) = deltH()
 
 
 function reserved_symbols(::Type{LayeredMetropolis})
@@ -35,5 +36,5 @@ end
 
 @inline function LayeredMetropolis(i, args, layeridx, lmeta)
     (;g, gstate, gadj, gparams, ΔH, rng, Ms) = args
-    @inline Metropolis(i, g, gstate, gadj, gparams, Ms[layeridx], ΔH, rng, lmeta)
+    @inline Metropolis(args, i, g, gstate, gadj, gparams, Ms[layeridx], ΔH, rng, lmeta)
 end

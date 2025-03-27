@@ -6,8 +6,6 @@ getparams(g::IsingGraph, param::Symbol) = getparam(g, param)
 param(g::IsingGraph, param::Symbol) = getparam(g, param)
 params(g::IsingGraph) = g.params
 
-
-
 function changeactivation!(g, param, activate)
     old_active = isactive(getparam(g, param))
     g.params = changeactivation(g.params, param, activate)

@@ -1,4 +1,4 @@
-export ParamVal, isinactive, isactive, toggle, default
+export ParamVal, isinactive, isactive, toggle, default, getvalfield, setvalfield!, runtimeglobal, description
 """
 A value for the parameters of a Hamiltonian
 It holds a description and a value of type t
@@ -9,26 +9,49 @@ It also stores wether it's active and if not a fallback value
     the whole vector can be set to a constant value, so that
     memory does not need to be accessed.
 """
-struct ParamVal{T, Default, Active, RD} <: DenseArray{T, 1}
+struct ParamVal{T, Default, Active, RD, N} <: AbstractArray{T, N}
     val::T
-    runtimeglobal::RD
+    runtimeglobal::RD # For vector valued parameters, a global value that can be changed at runtime
     description::String
+end
+
+
+ParamVal{T, Default, Active, RD}(description::String = "") where {T, Default, Active, RD} = ParamVal{T, Default, Active, RD, (val isa AbstractArray ? length(size(val)) : 1)}(nothing, nothing, description)
+function ParamVal{T, Default, Active, RD, N}(description::String = "") where {T, Default, Active, RD, N}
+    val = nothing
+    rtglobal = nothing
+    if T <: AbstractArray
+        val = T[]
+    elseif T <: Number
+        val = T(0)
+    end
+    if !(RD <: Nothing)
+        rtglobal = Ref(Default)
+    end
+    ParamVal{T, Default, Active, RD, N}(val, nothing, description)
 end
 
 function ParamVal(val::T, default, description = "", active = false; runtimeglobal = false) where T
     # If val is vector type, default value must be eltype, 
     # otherwise it must be the same type
+    DIMS = nothing
+    if val isa AbstractArray
+       DIMS = length(size(val))
+    else
+        DIMS = 1
+    end    
+    
     if T <: Vector 
         et = eltype(T)
         default = convert(eltype(T), default)
         if runtimeglobal
-            return ParamVal{T, default, active, Ref{et}}(val, Ref(default), description)
+            return ParamVal{T, default, active, Ref{et}, DIMS}(val, Ref(default), description)
         else
-            return ParamVal{T, default, active, Nothing}(val, nothing, description)
+            return ParamVal{T, default, active, Nothing, DIMS}(val, nothing, description)
         end
     else
         default = convert(T, default)
-        return ParamVal{T, default, active, Nothing}(Ref(val), nothing, description, )
+        return ParamVal{T, default, active, Nothing, DIMS}(Ref(val), nothing, description, )
     end
     
     
@@ -53,27 +76,11 @@ description(p::ParamVal) = p.description
 runtimeglobal(p::ParamVal{T, Default, Active, RD}) where {T, Default, Active, RD} = RD != Nothing
 runtimeglobal(::Type{ParamVal{T, Default, Active, RD}}) where {T, Default, Active, RD} = RD != Nothing
 
+
 toggle(p::ParamVal{T, Default, Active}) where {T, Default, Active} = ParamVal{T, Default, !Active}(p.val)
 @inline default(::ParamVal{T, Default}) where {T, Default} = Default
-# @inline function Base.getindex(p::ParamVal, i = nothing)
-#     @assert isnothing(i) || i == 1
-#     return p.val
-# end
 
-#General
-
-#Values
-# @inline Base.setindex!(p::ParamVal, val) = (p.val = val)
-# @inline function Base.getindex(p::ParamVal{T}) where T
-#     if isactive(p)
-#         return p.val
-#     else
-#         return default(p)
-#     end
-# end
-# @inline Base.setindex!(p::ParamVal{T}, val, idx) where T <: Real = (p.val = val)
-# @inline Base.eachindex(p::ParamVal{T}) where T = Base.OneTo(1)
-#Ref
+# Single value Params
 @inline Base.getindex(p::ParamVal{T}) where T <: Ref =p.val[]
 @inline Base.setindex!(p::ParamVal{T}, val) where T <: Ref = (p.val[] = val)
 @inline Base.lastindex(p::ParamVal{T}) where T <: Ref = 1
@@ -82,12 +89,18 @@ Base.size(p::ParamVal{T}) where T = (1,)
 Base.length(p::ParamVal{T}) where T = 1
 @inline Base.eltype(p::ParamVal{T}) where T = T
 
+"""
+For getting and setting fields of the value of a ParamVal
+"""
+getvalfield(p::ParamVal, field) = getfield(p.val, field)
+setvalfield!(p::ParamVal, field, val) = setfield!(p.val, field, val)
 
 
-#Vectors
-@inline function Base.getindex(p::ParamVal{T}, idx) where T <: AbstractVector
+
+#Vector Like ParamVals
+@inline function Base.getindex(p::ParamVal{T}, idx...) where T <: AbstractArray
     if isactive(p)
-        getindex(p.val, idx)::eltype(T)
+        getindex(p.val, idx...)::eltype(T)
     else
         if runtimeglobal(p)
             return p.runtimeglobal[]
@@ -96,23 +109,26 @@ Base.length(p::ParamVal{T}) where T = 1
         end
     end
 end
-@inline function Base.setindex!(p::ParamVal{T}, val, idx) where T <: AbstractVector
+@inline function Base.setindex!(p::ParamVal{T}, val, idx...) where T <: AbstractArray
     if idx isa Real
         if !isactive(p) && runtimeglobal(p)
             return p.runtimeglobal[] = val
         end
     end
-    return p.val[idx] = val
+    return p.val[idx...] = val
 end
-@inline Base.lastindex(p::ParamVal{T}) where T <: AbstractVector = lastindex(p.val)
-@inline Base.firstindex(p::ParamVal{T}) where T <: AbstractVector = firstindex(p.val)
-@inline Base.eachindex(p::ParamVal{T}) where T <: AbstractVector = eachindex(p.val)
-Base.size(p::ParamVal{T}) where T <: AbstractVector = size(p.val)
-Base.length(p::ParamVal{T}) where T <: AbstractVector = length(p.val)
-@inline Base.eltype(p::ParamVal{<:AbstractVector{T}}) where T = T
+@inline Base.lastindex(p::ParamVal{T}) where T <: AbstractArray = lastindex(p.val)
+@inline Base.firstindex(p::ParamVal{T}) where T <: AbstractArray = firstindex(p.val)
+@inline Base.eachindex(p::ParamVal{T}) where T <: AbstractArray = eachindex(p.val)
+Base.size(p::ParamVal{T}) where T <: AbstractArray = size(p.val)
+Base.length(p::ParamVal{T}) where T <: AbstractArray = length(p.val)
+@inline Base.eltype(p::ParamVal{<:AbstractArray{T}}) where T = T
+Base.splice!(p::ParamVal{T}, idx...) where T <: AbstractArray = splice!(p.val, idx...)
 
-Base.push!(p::ParamVal{T}, val) where T <: AbstractVector = push!(p.val, val)
-LoopVectorization.check_args(p::ParamVal{T}) where T <: AbstractVector = true
+Base.push!(p::ParamVal{T}, val) where T <: AbstractArray = push!(p.val, val)
+
+# Loopvectorization stuff
+LoopVectorization.check_args(p::ParamVal{T}) where T <: AbstractArray = true
 @inline Base.pointer(p::ParamVal{T}) where T = pointer(p.val)
 """
 For vector like objects, find the promote type of the eltypes

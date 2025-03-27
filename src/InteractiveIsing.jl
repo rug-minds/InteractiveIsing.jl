@@ -95,50 +95,47 @@ include("Makie/Makie.jl")
 include("GPlotting.jl")
 include("Barebones.jl")
 
+
+const ca = CompositeAlgorithm((LayeredMetropolis, Metropolis), (1,2))
+
 # PRECOMPILATION FUNCTION FOR FAST USAGE
 # @setup_workload begin
-#     GC.enable(false)
+#     # GC.enable(false)
 
-#     cg = IsingGraph(20, 20, type = Discrete)
-#     simulate(cg, start = false)
-#     _sim = sim(cg)
+#     println("HERE")
+#     cg1 = IsingGraph(20, 20, type = Discrete)
+#     println("HERE2")
+#     cg3d = IsingGraph(20, 20, 20, type = Continuous)
 
 #     @compile_workload begin
+#         println("Compiling")
+#         simulate(cg1)
+#         println("Simulated")
+#         quit(cg1)
+#         println("Quitted")
+#         closeinterface()
+#         println("Closed")
 
-#         # addLayer!(cg, 20, 20)
-
-#         # setcoords!(cg[1])
-#         # setcoords!(cg[2], z = 1)
+#         simulate(cg3d)
+#         println("Simulated")
+#         quit(cg3d)
+#         println("Quitted")
+#         closeinterface()
+#         println("Closed")
+   
 #         cwg = @WG "(dr) -> 1" NN=1
-
+#         println("HERE3")
 #         genAdj!(cg[1], cwg)
-#         # genAdj!(cg[1],cg[2], cwg)
+#         println("HERE4")
+#         setparam!(cg[1], :b, 0, true)
+#         println("HERE5")
 
-#         # #Plotting correlation length and GPU kernel
-#         # plotCorr(cg[2], dodisplay = false, save = false)
-
-#         # setSpins!(cg[1], 1:3, 1, true, false)
-
-#         # drawCircle(cg[1], 1, 1, 1, clamp = true)
-
-#         # path = saveGraph(cg, savepref = false)
-
-#         close.(values(timers(_sim)))
-#         # loadGraph(path)       
-
-#         # closeinterface()
-
-#         # w = LayerWindow(cg[1])
-#         # closewindow(w)
-#         # w = createAnalysisWindow(cg[1], MT_panel, tstep = 0.01)
-#         # closewindow(w)
-#         # w = createAnalysisWindow(cg[1], MB_panel, tstep = 0.01)
-#         # closewindow(w)
-#         # w = createAnalysisWindow(cg, χₘ_panel, Tχ_panel, shared_interval = 1/500, tstep = 0.01);
-#         # closewindow(w)
-
-#         reset!(simulation)
-#         GC.enable(true)
+#         createProcess(g, ca, lifetime = 10)
+#         println("HERE6")
+#         fetch(process(g))
+#         println("HERE7")
+        
+#         # GC.enable(true)
 #     end
 # end
 

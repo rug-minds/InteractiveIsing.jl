@@ -6,10 +6,19 @@ struct Parameters{_NT<:NamedTuple}
 end
 
 include("Macros.jl")
-include("ParameterRef.jl")
+include("ParameterRefs/ParameterRefs.jl")
 
+Base.fieldnames(ps::Parameters) = fieldnames(ps._nt)
 Base.fieldnames(ps::Type{<:Parameters}) = fieldnames(ps.parameters[1])
 Base.fieldtypes(ps::Type{<:Parameters}) = fieldtypes(ps.parameters[1])
+@inline @generated function gettype(p::Type{<:Parameters}, ::Val{field}) where {field}
+    NT = p.parameters[1]
+    idx = findfirst(x -> x == field, fieldnames(NT))
+    if idx === nothing
+        error("Field $field not found in type $NT, with fields $(fieldnames(NT))")
+    end
+    return :($(fieldtypes(NT)[idx]))
+end
 
 Parameters(; kwargs...) = Parameters(NamedTuple(kwargs))
 

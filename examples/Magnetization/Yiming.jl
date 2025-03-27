@@ -60,8 +60,35 @@ SweepSusceptibility = CompositeAlgorithm( (CheckeredSweepMetropolis, CalcSuscept
 routine = Routine((Equilibration, SweepSusceptibility), (eqsteps*onesweep, sweeps*onesweep))
 
 
-createProcess(g, routine; N, sweeps, T)  
 
-final_arguments = getargs(process(g))
+
+# final_arguments = getargs(process(g))
 total_chi = final_arguments.total_chi # Access calculated chi
 println("Total Susceptibility: ", total_chi)
+using Random
+mutable struct SimpleRNG{T} <: Random.AbstractRNG
+    state::T
+    const stepsize::T
+    const lowval::T
+    const highval::T
+end
+
+Base.length(rng::SimpleRNG) = rng.highval - rng.lowval
+
+function Random.rand(rng::SimpleRNG{T}, ::Type{T} = T) where T
+    rng.state = mod(rng.state + rng.stepsize + rng.lowval, rng.highval) - rng.lowval
+    return rng.state
+end
+
+rng = SimpleRNG(0.2f0, 10*Float32(pi), 0f0, 1f0)
+
+createProcess(g, SweepMetroplis, overrides = (;rng))
+# function Random.rand(rng::SimpleRNG{T}, ar::AbstractRange) where Task
+#     rangel = length(ar)
+#     #remap idx onto the range of the range
+#     idx = 
+# end
+
+# createProcess(g, routine; N, sweeps, T, overrides = (;rng)) 
+
+

@@ -4,9 +4,21 @@
 
     abstract type MCAlgorithm <: ProcessAlgorithm end
     abstract type Hamiltonian end
-    # struct Hamiltonian 
-    #     description::Any
-    # end
+
+    """
+    For a Hamiltonian, return all fieldnames that are a ParamVal
+    """
+    @generated function paramnames(h::Hamiltonian)
+        _fieldnames = fieldnames(h)
+        _fieldtypes = fieldtypes(h)
+        paramval_params = tuple((fieldnames[i] for i in eachindex(fieldnames) if fieldtypes[i] <: ParamVal)...)
+        return (:($paramval_params))
+    end
+
+    function update!(::Hamiltonian, args)
+        return nothing
+    end
+
     abstract type ConcreteHamiltonian end
 
     const defined_derived = Dict{Type, Type}()

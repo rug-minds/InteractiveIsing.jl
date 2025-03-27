@@ -1,21 +1,94 @@
 using MacroTools
 RuntimeGeneratedFunctions.init(@__MODULE__)
-include("Ising.jl")
-include("GaussianBernoulli.jl")
-include("Clamping.jl")
 
-export CompositeHamiltonian
+export CompositeHamiltonian, HamiltonianTerms
+struct HamiltonianTerms{Hs <: Tuple{Vararg{Hamiltonian}}}
+    hs::Hs
+end
+
+"""
+From the type initialize
+"""
+function HamiltonianTerms{HS}(g::IsingGraph) where HS <: Tuple{Vararg{Hamiltonian}}
+    HamiltonianTerms{HS}(ntuple(i->HS.parameters[i](g), length(HS.parameters)))
+end
+
+HamiltonianTerms(hs::Type{<:Hamiltonian}...) = HamiltonianTerms{Tuple{hs...}}
+HamiltonianTerms(hs::Hamiltonian...) = HamiltonianTerms{Tuple{typeof.(hs)...}}(hs)
+
+Base.:+(h1::Hamiltonian, h2::Hamiltonian) = HamiltonianTerms((h1, h2))
+Base.:+(h1::Hamiltonian, h2::HamiltonianTerms) = HamiltonianTerms((h1, h2.hs...))
+Base.:+(h1::HamiltonianTerms, h2::Hamiltonian) = HamiltonianTerms((h1.hs..., h2))
+
+@generated function paramnames(h::HamiltonianTerms{Hs}) where Hs
+    _paramnames = tuple(Iterators.Flatten(paramnames.(Hs.parameters)...)...)
+    return :($_paramnames)
+end
+
+"""
+From the set of Hamiltonians, directly get a paramval from an underlying Hamiltonian
+"""
+# getparam(h::HamiltonianTerms, paramname::Symbol) = getparam(h, Val(paramname))
+function Base.getproperty(h::HamiltonianTerms, paramname::Symbol)
+    if paramname == :hamiltonians
+        return getfield(h, :hs)
+    end
+    getparam(h, Val(paramname))
+end
+
+@generated function getparam(h::HamiltonianTerms{Hs}, paramnameval::Val{paramname}) where {Hs, paramname}
+    for (hidx, H) in enumerate(Hs.parameters)
+        if paramname in fieldnames(H)
+            return :(getfield(h,:hs)[$hidx].$(paramname))
+        end
+    end
+    error("Parameter $paramname not found in any of the Hamiltonians")
+end
+
+# Fallback for fieldnames for a hamltonian
+Base.fieldnames(::Hamiltonian) = tuple()
+
+"""
+Iterating over terms forwards to the hamiltonians
+"""
+Base.iterate(hts::HamiltonianTerms, state = 1) = iterate(getfield(hts, :hs), state)
+
+Base.broadcastable(c::HamiltonianTerms) = getfield(c, :hs)
+
+"""
+Get a hamiltonian from the set of hamiltonians
+"""
+Base.getindex(hts::HamiltonianTerms, idx) = getfield(hts, :hs)[idx]
+
+"""
+If updating functions are defined, update
+"""
+@inline function update!(hts::HamiltonianTerms{Hs}, args) where Hs
+    @inline update!.(Hs, ref(args))
+end
+
+
+# Hamiltonian
+function deltaH(hts::HamiltonianTerms)
+    return reduce(+, deltaH.(hts))
+end
+
+
+
+## OLD
 """
 Type for a composition of Hamiltonians
 """
 struct CompositeHamiltonian{T} <: Hamiltonian end
+
+CompositeHamiltonian(hamiltonians::Hamiltonian...) = CompositeHamiltonian{tuple(hamiltonians...)}
 
 Base.length(h::Hamiltonian) = 1
 Base.length(c::CompositeHamiltonian) = length(c.parameters)
 Base.length(h::Type{<:Hamiltonian}) = 1
 Base.length(c::Type{<:CompositeHamiltonian}) = length(c.parameters)
 Base.iterate(h::Hamiltonian, state = 1) = state == 1 ? (h, 2) : nothing
-Base.iterate(c::CompositeHamiltonian, state = 1) = state <= length(c.parameters) ? c.parameters[state]() : nothing
+Base.iterate(c::CompositeHamiltonian, state = 1) = state <= length(c.parameters[1]) ? c.parameters[state] : nothing
 Base.iterate(ht::Type{H}, state = 1) where H <: Hamiltonian = iterate(H(), state)
 Base.iterate(c::Type{CH}, state = 1) where CH <: CompositeHamiltonian = iterate(CH(), state) 
 function Base.getindex(h::Hamiltonian, i::Int)
@@ -23,6 +96,16 @@ function Base.getindex(h::Hamiltonian, i::Int)
     return h
 end
 Base.getindex(c::CompositeHamiltonian, i::Int) = c.parameters[i]
+Base.broadcastable(c::CompositeHamiltonian{Hs}) where {Hs} = Hs
+
+
+include("Linear.jl")
+include("MagField.jl")
+include("Ising.jl")
+include("GaussianBernoulli.jl")
+include("Clamping.jl")
+include("DepolarisationField.jl")
+
 
 
 

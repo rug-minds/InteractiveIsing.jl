@@ -9,7 +9,7 @@ end
     #Define vars
     (;g, gstate, gadj, gparams, ΔH, lmeta, rng, latidx, M) = args
     latidx[] = mod1(latidx[]+1, length(gstate))
-    @inline Metropolis(latidx[], g, gstate, gadj, gparams, M, ΔH, rng, lmeta)
+    @inline Metropolis(args, latidx[], g, gstate, gadj, gparams, M, ΔH, rng, lmeta)
 end
 
 
@@ -42,7 +42,7 @@ function (::CheckeredSweepMetropolis)(@specialize(args))
     i = checkerboards[latidx[]]
     latidx[] = mod1(latidx[]+1, length(checkerboards))
 
-    @inline Metropolis(i, g, gstate, gadj, gparams, M, ΔH, rng, lmeta)
+    @inline Metropolis(args, i, g, gstate, gadj, gparams, M, ΔH, rng, lmeta)
 end
 
 @inline function checkerboard_lat(i, size, flip = false)

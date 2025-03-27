@@ -2,11 +2,23 @@ export Metropolis
 
 struct Metropolis <: MCAlgorithm end
 struct MetropolisNew <: MCAlgorithm end
-requires(::Type{Metropolis}) = Δi_H()
+struct deltaH end
 
+export MetropolisNew
+requires(::Type{Metropolis}) = Δi_H()
 
 function reserved_symbols(::Type{Metropolis})
     return [:w_ij => :wij, :sn_i => :newstate, :s_i => :oldstate, :s_j => :(gstate[j])]
+end
+
+function collect_ex(gstate, gadj, i)
+    cumsum = zero(eltype(gstate))
+    @turbo for ptr in nzrange(gadj, i)
+        j = gadj.rowval[ptr]
+        wij = gadj.nzval[ptr]
+        cumsum += wij * gstate[j]
+    end
+    return cumsum
 end
 
 function example_ising(i, gstate, newstate, oldstate, gadj, gparams, lt)
@@ -37,10 +49,10 @@ end
     #Define vars
     (;g, gstate, gadj, gparams, iterator, ΔH, lmeta, rng, M) = args
     i = rand(rng, iterator)
-    Metropolis(i, g, gstate, gadj, gparams, M, ΔH, rng, lmeta)
+    Metropolis(args, i, g, gstate, gadj, gparams, M, ΔH, rng, lmeta)
 end
 
-@inline function Metropolis(i, g, gstate::Vector{T}, gadj, gparams, M, ΔH, rng, lmeta) where {T}
+@inline function Metropolis(args, i, g, gstate::Vector{T}, gadj, gparams, M, ΔH, rng, lmeta) where {T}
     β = one(T)/(temp(g))
     
     oldstate = @inbounds gstate[i]
@@ -48,13 +60,15 @@ end
     newstate = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))   
 
     ΔE = @inline ΔH(i, gstate, newstate, oldstate, gadj, gparams, lmeta)
-
+    
     efac = exp(-β*ΔE)
     randnum = rand(rng, T)
 
     if (ΔE <= zero(T) || randnum < efac)
         @inbounds gstate[i] = newstate 
-        M[] += (newstate - oldstate)
+        @hasarg if M isa Ref
+            M[] += (newstate - oldstate)
+        end
     end
     
     return nothing
@@ -64,34 +78,49 @@ function Processes.prepare(::MetropolisNew, @specialize(args))
     (;g) = args
     gstate = g.state
     gadj = g.adj
-    gparams = g.params
+    params = g.params
     iterator = ising_it(g)
-    hamiltonian = g.hamiltonian
+    # hamiltonian = deltaH(g.hamiltonian)
+    ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
+    hamiltonian = NIsing(g)
+    deltafunc = deltaH(hamiltonian)
     rng = Random.GLOBAL_RNG
     M = Ref(sum(g.state))
     lmeta = LayerMetaData(g[1])
-    return (;g, gstate, gadj, gparams, iterator, hamiltonian, lmeta, rng, M)
+    # return (;g, gstate, gadj, params, iterator, ΔH, lmeta, rng, M)
+    return (;g, gstate, gadj, params, iterator, ΔH, hamiltonian, deltafunc, lmeta, rng, M)
+
 end
+
+struct NewState{T}
+    Val::T
+end
+@inline Base.getindex(n::NewState, i = nothing) = n.Val
+@inline Base.eltype(::NewState{T}) where T = T
+@inline Base.convert(::Type{T}, n::NewState) where T = T(n.Val)
+@inline Base.:-(n1::NewState, n::T) where T = T(n1.Val - n)
+@inline Base.:-(n::T, n1::NewState) where T = T(n - n1.Val)
+
+@inline Base.:+(n1::NewState, n::T) where T = T(n1.Val + n)
+@inline Base.:+(n::T, n1::NewState) where T = T(n + n1.Val)
+
+@inline Base.:*(n::T, n1::NewState) where T = NewState(n*n1.Val)
+@inline Base.:*(n1::NewState, n::T) where T = NewState(n*n1.Val)
 
 @inline function (::MetropolisNew)(@specialize(args))
     #Define vars
-    (;g, gstate, gadj, gparams, iterator, hamiltonian, lmeta, rng, M) = args
+    (;g, gstate, iterator, deltafunc, lmeta, rng, M) = args
     j = rand(rng, iterator)
-    MetropolisNew(args, j, g, gstate, gadj, gparams, hamiltonian, M, rng, lmeta)
+    MetropolisNew(args, j, g, gstate, deltafunc, M, rng, lmeta)
 end
-
-@inline function MetropolisNew(args, j, g, gstate::Vector{T}, gadj, gparams, hamiltonian, M, rng, lmeta) where {T}
+using JET
+@inline function MetropolisNew(@specialize(args), j, g, gstate::Vector{T}, deltafunc, M, rng, lmeta) where {T}
     β = one(T)/(temp(g))
-    
     oldstate = @inbounds gstate[j]
-    
-    newstate = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))   
-
-    ΔE = @inline dh(hamiltonian, (;args..., newstate); j)
-
-    efac = exp(-β*ΔE)
+    newstate = NewState(-oldstate)
+    ΔE = @inline deltafunc((;args..., newstate); j)
     randnum = rand(rng, T)
-
+    efac = exp(-β*ΔE)
     if (ΔE <= zero(T) || randnum < efac)
         @inbounds gstate[j] = newstate 
         M[] += (newstate - oldstate)
@@ -100,6 +129,38 @@ end
     return nothing
 end
 
+@inline specific_hamkw(@specialize(args); @specialize(kwargs...)) = @inline specific_ham(args, (;kwargs...))
+
+function specific_ham(@specialize(args), @specialize(kwargs))
+    (;params) = args
+    (;j, newstate) = kwargs
+    adj = args.gadj
+    state = args.gstate
+    cumsum = zero(Float32)
+    for ptr in nzrange(adj, j)
+        i = adj.rowval[ptr]
+        wij = adj.nzval[ptr]
+        cumsum += wij * state[i]
+    end
+    return (state[j]-newstate) * cumsum + (state[j]^2-newstate^2)*params.self[j] + (state[j]-newstate)*params.b[j]
+    # return (state[j]-newstate) * cumsum + (state[j]-newstate)*params.b[j] 
+end
+
+function specific_ham(@specialize(args), newstate, j)
+    (;params) = args
+    adj = args.gadj
+    state = args.gstate
+    cumsum = zero(Float32)
+    for ptr in nzrange(adj, j)
+        i = adj.rowval[ptr]
+        wij = adj.nzval[ptr]
+        cumsum += wij * state[i]
+    end
+    return (state[j]-newstate) * cumsum + (state[j]^2-newstate^2)*params.self[j] + (state[j]-newstate)*params.b[j]
+    # return (state[j]-newstate) * cumsum + (state[j]-newstate)*params.b[j] 
+end
+
+# :((s_i^2-sn_i^2)*self_i+(s_i-sn_i)*(b_i+collect_expr)
 
 # @inline function updateMetropolis(g, gstate::Vector{T}, gadj, gparams, ΔH)
 #     β = 1f0/(temp(g))

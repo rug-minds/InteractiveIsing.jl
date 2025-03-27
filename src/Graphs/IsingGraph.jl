@@ -17,17 +17,18 @@ isarchitecturetype(t::Tuple{A,B,C}) where {A,B,C} = (A<:Integer && B<:Integer &&
 isarchitecturetype(t::Tuple{A,B,C,D}) where {A,B,C,D} = (A<:Integer && B<:Integer && D<:Integer && t[4]<:StateType)
 
 # Ising Graph Representation and functions
-mutable struct IsingGraph{T <: AbstractFloat} <: AbstractIsingGraph{T}
+mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, V} <: AbstractIsingGraph{T}
     # Simulation
     sim::Union{Nothing, IsingSim}
     # Vertices and edges
     state::Vector{T}
     # Adjacency Matrix
-    adj::SparseMatrixCSC{T,Int32}
+    adj::M
+    self::V
     
     temp::T
 
-    default_algorithm::Type{<:MCAlgorithm}
+    default_algorithm::MCAlgorithm
     hamiltonian::Hamiltonian
     
     layers::ShuffleVec{IsingLayer}
@@ -59,14 +60,17 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
 
     sets = decode_statesets(sets, length(architecture), precision)
 
-    g = IsingGraph{precision}(
+    pval = ParamVal(precision[], 0, "Self Connections", false)
+
+    g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(pval)}(
         sim,
         precision[],
         SparseMatrixCSC{precision,Int32}(undef,0,0),
+        pval,
         #Temp            
         1f0,
         # Default algorithm
-        LayeredMetropolis,
+        LayeredMetropolis(),
         #Hamiltonians
         Ising(),
         #Layers
@@ -91,9 +95,17 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
             _addLayer!(g, arc[1], arc[2], arc[3]; weights, periodic, type = arc[end], set = sets[arc_idx], kwargs...)
         end
     end
+
+    prepare(g.default_algorithm, (;g))
     return g
 end
 
+"""
+The user gives:
+    [(length, width, height, type), ...]
+    where type = Continuous or Discrete
+    this puts the data in the correct format
+"""
 function decode_architecture(arcs)
     num_layers = length(arcs)
     architecture = []
@@ -118,6 +130,10 @@ function decode_architecture(arcs)
     return architecture
 end
 
+"""
+User gives, for discrete: (s1,s2,s3,...)
+For continuous: (s1,s2) which are the intervals
+"""
 function decode_statesets(sets, numlayers, precision)
      # Create the sets for each layer
     if isnothing(sets) # Just make some sets
@@ -134,45 +150,6 @@ function decode_statesets(sets, numlayers, precision)
         end
     end
     return sets
-end
-
-# Constructor for copying from other graph or savedata.
-function IsingGraph(
-                        state,
-                        adj,
-                        layers,
-                        defects,
-                        data,
-                        Hamiltonians = Ising()
-                        )
-    return IsingGraph(
-        # Sim
-        nothing,
-        #state
-        state,
-        # Adjacency
-        adj,            
-        #Temp
-        1f0,
-        # Default algorithm
-        updateMetropolis,
-        #Hamiltonians
-        Hamiltonians,
-        # Layers
-        layers,
-        # Connections between layers
-        Dict{Pair, Int32}(),
-        #params
-        (;self = ParamVal(zeros(eltype(state), length(state)), 0, "Self Connections", false)),
-        # For notifying simulations or other things
-        Emitter(Observable[]),
-        # Defects
-        defects,
-        # Data
-        data,
-        # Processes
-        Vector{Process}()
-    )
 end
 
 Base.eltype(::IsingGraph{T}) where T = T
@@ -203,7 +180,7 @@ export clamprange!
 @setterGetter IsingGraph adj params
 # @inline params(g::IsingGraph) = g.params
 export params
-@inline nStates(g) = length(state(g))
+@inline nStates(g::IsingGraph) = length(state(g))
 
 @inline nstates(g) = length(state(g))
 @inline adj(g::IsingGraph) = g.adj
@@ -260,7 +237,13 @@ function processes(g::IsingGraph)
 end
 processes(::Nothing) = nothing
 # Get the first process
-process(g::IsingGraph) = get!(g, :processes, nothing)[end]
+function process(g::IsingGraph)
+    ps = get!(g, :processes, nothing)
+    if isempty(ps) || isnothing(ps)
+        return nothing
+    end
+    return ps[end]
+end
 export process
 
 
@@ -355,13 +338,14 @@ function Base.resize!(g::IsingGraph{T}, newlength, startidx = length(state(g))) 
 
     if sizediff > 0
         randomstate = rand(T, sizediff)
-
-        # resize!(state(g), newlength)        
-        # state(g)[oldlength+1:newlength] .= randomstate
         idxs_to_add = startidx:(startidx + sizediff - 1)
 
+        # Resize state
         splice!(state(g), startidx:startidx-1, randomstate)
+        # Resize adjacency
         g.adj = insertrowcol(adj(g), idxs_to_add)
+        # Resize self
+        splice!(g.self, startidx:startidx-1, zeros(T, sizediff))
     else # if making smaller
         idxs_to_remove = startidx:(startidx + abs(sizediff) - 1)
         deleteat!(state(g), idxs_to_remove)
@@ -479,7 +463,6 @@ function _removeLayer!(g::IsingGraph, lidx::Integer)
     resize!(g, nStates(g) - nStates(layer), start(layer))
 
     return layers(g)
-
 end
 
 function removeLayer!(g::IsingGraph, lidx::Integer)
@@ -533,55 +516,43 @@ function compare_architecture_sizes(architecture1, architecture2)
 end
 
 
+#### SAVE
 
-### ETC ###
-
-### Old adjacency list stuff ###
-function tuples2sparse(adj)
-    colidx_len = 0
-    for col in adj
-        colidx_len += length(col)
-    end
-    colidx = Vector{Int32}(undef, colidx_len)
-    colidxidx = 1
-    for (idx,col) in enumerate(adj)
-        for i in 1:length(col)
-            colidx[colidxidx] = Int32(idx)
-            colidxidx += 1
-        end
-    end
-
-    rowidx = Vector{Int32}(undef, colidx_len)
-    rowidxidx = 1
-    for (idx,col) in enumerate(adj)
-        for i in 1:length(col)
-            rowidx[rowidxidx] = Int32(adj[idx][i][1])
-            rowidxidx += 1
-        end
-    end
-
-    vals = Vector{Float32}(undef, colidx_len)
-    valsidx = 1
-    for (idx,col) in enumerate(adj)
-        for i in 1:length(col)
-            vals[valsidx] = adj[idx][i][2]
-            valsidx += 1
-        end
-    end
-    return deepcopy(sparse(rowidx, colidx, vals))
-end
-export tuples2sparse
-
-"""
-Get index of connection
-"""
-@inline function connIdx(conn::Conn)::Int32
-    conn[1]
-end
-
-"""
-Get weight of connection
-"""
-@inline function connW(conn::Conn)::Weight
-    conn[2]
+# Constructor for copying from other graph or savedata.
+function IsingGraph(
+    state,
+    adj,
+    layers,
+    defects,
+    data,
+    Hamiltonians = Ising()
+    )
+return IsingGraph(
+# Sim
+nothing,
+#state
+state,
+# Adjacency
+adj,            
+#Temp
+1f0,
+# Default algorithm
+updateMetropolis,
+#Hamiltonians
+Hamiltonians,
+# Layers
+layers,
+# Connections between layers
+Dict{Pair, Int32}(),
+#params
+(;self = ParamVal(zeros(eltype(state), length(state)), 0, "Self Connections", false)),
+# For notifying simulations or other things
+Emitter(Observable[]),
+# Defects
+defects,
+# Data
+data,
+# Processes
+Vector{Process}()
+)
 end

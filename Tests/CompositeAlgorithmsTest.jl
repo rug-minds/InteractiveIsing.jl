@@ -40,4 +40,4 @@ function InteractiveIsing.prepare(::TrianglePulseProc, args)
     return pulse
 end
 
-IsingAndMag = CompositeAlgorithm( (Ising, TrianglePulseProc), (1,100) )
+IsingAndMag = CompositeAlgorithm( (Metropolis, TrianglePulseProc), (1,100) )

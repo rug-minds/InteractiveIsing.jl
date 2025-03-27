@@ -5,8 +5,14 @@ The linear part of the Ising Hamiltonian
 """
 struct Linear <: Hamiltonian end
 
-params(::Linear) = nothing
+Linear(g::IsingGraph) = Linear()
 
-function Δi_H(::Linear)
-    return 0
+# params(::Linear) = nothing
+
+# function Δi_H(::Linear)
+#     return 0
+# end
+
+@ParameterRefs function deltaH(::Linear)
+    return (s_i*w_ij)*(s_j-sn_j) + (s_j^2-sn_j^2)*self_j
 end

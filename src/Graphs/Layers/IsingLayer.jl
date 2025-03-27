@@ -14,10 +14,10 @@ Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val),
 
 export Coords
 # TODO: Make the topology part of the layertype
-mutable struct IsingLayer{StateType, DIMS, T, Top} <: AbstractIsingLayer{StateType,DIMS}
+mutable struct IsingLayer{StateType, DIMS, T, Top, GT} <: AbstractIsingLayer{StateType,DIMS}
     # Reference to the graph holding it    
     # Can be nothing so that saving is easier
-    graph::Union{Nothing, IsingGraph{T}}
+    graph::GT
     name::String
     # Internal idx of layer in shufflevec of graph
     internal_idx::Int32
@@ -40,7 +40,7 @@ mutable struct IsingLayer{StateType, DIMS, T, Top} <: AbstractIsingLayer{StateTy
     # DEFAULT INIT
     function IsingLayer{ST, DIMS, T, Topology}(g, name, internal_idx, start, size, nstates, traits, coords, connections, timers, top) where {ST, DIMS, T, Topology}
         @assert typeof(DIMS) == Int
-        return new{ST, DIMS, T, Topology}(g, name, internal_idx, start, size, nstates, traits, coords, connections, timers, top)
+        return new{ST, DIMS, T, Topology, typeof(g)}(g, name, internal_idx, start, size, nstates, traits, coords, connections, timers, top)
     end
 
 
@@ -77,7 +77,7 @@ mutable struct IsingLayer{StateType, DIMS, T, Top} <: AbstractIsingLayer{StateTy
         top = SquareTopology(lsize; periodic)
         graphidxs = isnothing(height) ? (start:(start+length*width-1)) : (start:(start+length*width*height-1))
         set = convert.(eltype(g), set)
-        layer = new{StateType, dims, eltype(g), typeof(top)}(
+        layer = new{StateType, dims, eltype(g), typeof(top), typeof(g)}(
             # Graph
             g,
             # Name
@@ -124,8 +124,12 @@ function layerparams(lt::Type{<:IsingLayer}, ::Val{S}) where S
         return parameters(lt)[3]
     elseif S == :Top
         return parameters(lt)[4]
+    elseif S == :GT
+        return parameters(lt)[5]
     end
 end
+
+@inline layerparams(l::IsingLayer, s) = layerparams(typeof(l), Val(s))
 
 function destructor(layer::IsingLayer)
     close.(timers(layer))
@@ -223,13 +227,14 @@ export conns, conncoords
 """
 Set graph of layer
 """
-@inline graph(layer::IsingLayer) = layer.graph
-@inline graph(layer::IsingLayer, g::IsingGraph) = layer.graph = g 
+@inline graph(layer::IsingLayer) = layer.graph::layerparams(layer, :GT)
+# @inline graph(layer::IsingLayer, g::IsingGraph) = layer.graph = g
+changegraph(l::IsingLayer, g) = IsingLayer{layerparams(l, :StateType), layerparams(l, :DIMS), layerparams(l, :T), layerparams(l, :Top)}(g, l.name, l.internal_idx, l.startidx, l.size, l.nstates, l.traits, l.coords, l.connections, l.timers, l.top)
 addons(layer::IsingLayer) = graph(layer).addons
 export addons
 
 # Get current layeridx through graph
-@inline layeridx(layer::IsingLayer) = externalidx(layers(graph(layer)), layer.internal_idx)
+@inline layeridx(layer::IsingLayer) = externalidx(layers(graph(layer)::layerparams(layer, :GT)), layer.internal_idx)
 @inline idx(layer::IsingLayer) = internal_idx(layer)
 
 ### COORDINATES OF LAYERS
