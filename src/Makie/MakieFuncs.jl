@@ -82,8 +82,8 @@ function getSingleViewImg(g, ml, _size::Tuple{Integer,Integer})
 end
 
 function getSingleViewImg(g, ml, size::NTuple{3,Integer})
-    if midpanel(ml)["showbfield"].active[]
-        unsafe = create_unsafe_vector(@view g.params[:b].val[graphidxs(currentLayer(sim(g)))])
+    if midpanel(ml)["showbfield"].active[] # Show the bfield
+        unsafe = create_unsafe_vector(@view getparam(g, :b).val[graphidxs(currentLayer(sim(g)))])
         return CastVec(Float64, unsafe)
     else
         unsafe = create_unsafe_vector(@view state(g)[graphidxs(currentLayer(sim(g)))])
@@ -112,6 +112,8 @@ function create_layer_axis!(layer, panel_or_window; color = nothing, pos = (1,1)
     if layerdim == 2
         println("Layerdim 2")
         panel_or_window["axis"] = ax = Axis(grid[pos[1],pos[2]], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
+        layer = currentLayer(sim(g))
+        
         # TODO: Set colorrange based on the type of layer
     else
         panel_or_window["axis"] = ax = Axis3(grid[pos[1],pos[2]], tellheight = true)
@@ -132,6 +134,7 @@ function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
         # cvm = CastViewMatrix(Float64, state(g), graphidxs(layer), size(layer)...)
         # ob = mp["obs"] = Observable(cvm)
         mp["image"] = image!(ax, ob, colormap = colormap, fxaa = false, interpolate = false)
+        mp["image"].colorrange[] = (first(stateset(layer)), last(stateset(layer)))
     elseif dims == 3
 
         if isnothing(color) #If no color given, take the state

@@ -20,10 +20,8 @@ function singleView(ml, g)
     # ISING IMAGE
     
     mp["sv_img_ob"] = img_ob = Observable(getSingleViewImg(g, ml))
-    # img_ob[] = getSingleViewImg(g, ml) #Bfield or state
     mp["axis_size"] = size(img_ob[])
     obs_funcs = etc(ml)["obs_funcs_singleView"] = ObserverFunction[]
-    # coupled_obs = etc(ml)["coupled_obs_singleView"] = Observable[]
     
 
     # LAYER SELECTOR  BUTTONS
@@ -40,9 +38,6 @@ function singleView(ml, g)
     push!(obs_funcs, on(midpanel(ml)["showbfield"].active, weak = true) do _
         img_ob[] = getSingleViewImg(g, ml)
     end)
-    # img_ob = Observable{Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Vector{Float32}, Tuple{UnitRange{Int32}}, true}, Tuple{}}}(state(currentLayer(simulation)))
-
-    
 
     push!(obs_funcs, on(leftbutton.clicks, weak = true) do _
         setLayerIdx!(simulation, layerIdx(simulation)[] -1)
