@@ -10,11 +10,11 @@ end
 RefReduce{A,B,C,D}() where {A,B,C,D} = RefReduce{A,B,C,Nothing}(nothing)
 
 RefReduce(refs::Tuple, reduce_fs, data = nothing; func = tuple()) = RefReduce{refs, reduce_fs, func ,typeof(data)}(data)
-# free_symb(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = tuple(union(free_symb.(Refs)...)...)
-# free_symb(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = tuple(union(free_symb.(Refs)...)...)
+# ref_indices(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = tuple(union(ref_indices.(Refs)...)...)
+# ref_indices(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = tuple(union(ref_indices.(Refs)...)...)
 get_prefs(rr::RefReduce{Refs}) where Refs = (Refs)
 get_reduce_fs(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = reduce_fs
-get_F(rr::RefReduce{R,rf,F}) where {R,rf,F} = F
+getF(rr::RefReduce{R,rf,F}) where {R,rf,F} = F
 
 function return_type(rr::RefReduce{Refs, reduce_fs, F, D}, args) where {Refs, reduce_fs, F, D}
     promote_type(return_type.(Refs, Ref(args))...)
@@ -67,6 +67,24 @@ function expand_exp(rr::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs}
     return expr
 end
 
+
+refreduce_resolve_exp = nothing
+function resolve_exp(rr::RefReduce, indorsymb)
+    refs = get_prefs(rr)
+    ops = get_reduce_fs(rr)
+    
+    # Start with the first expression
+    expr = expand_exp(refs[1])
+    
+    # Build the expression by applying operators in sequence
+    for i in 1:length(ops)
+        expr = Expr(:call, ops[i], expr, resolve_exp(refs[i+1], indorsymb))
+    end
+    
+    global refreduce_resolve_exp = expr
+    return expr
+end
+
 """
 instead of inlining the operators like (-)(r1,r2), inline them like r1-r2+...
 """
@@ -90,6 +108,7 @@ function expand_to_calls(rm::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs}
     ops = collect(reduce_fs)
     
     ref2expr = ref -> Expr(:call, ref, :($(Expr(:parameters, :(idxs...)))), :args)
+    # ref2expr = ref -> Expr(:call, ref, :($(Expr(:parameters, :($(Expr(:kw, :genid, :(nextID(genid()))))), :(idxs...)))), :args)
 
     expr = ref2expr(Refs[1])
     
@@ -102,7 +121,9 @@ function expand_to_calls(rm::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs}
     return expr
 end
 
-@inline (rr::RefReduce)(@specialize(args); @specialize(idxs...)) = @inline refreduce_type(rr, args, (;idxs...))
+@inline function (rr::RefReduce)(args::NT; genid = nothing, idxs...) where NT
+    @inline refreduce_type(rr, args, (;idxs...); genid)
+end
 
 refreduce_type_exp = nothing
 refreduce_type_args = nothing
@@ -110,11 +131,15 @@ refreduce_type_args = nothing
 """
 Inline a refreduce like: ref1(args; idxs...) +/- ref2(args; idxs...) ...
 """
-@inline @generated function refreduce_type(rr, @specialize(args), idxs)
+@inline @generated function refreduce_type(rr, @specialize(args), idxs; genid = TreeID(rr))
+    exptree = GenExpressionTree(genid(), :refreduce_type)
     global refreduce_type_args = [rr, args, idxs]
     global refreduce_type_exp = quote
         $(unpack_keyword_expr(idxs, :idxs))
         $(expand_to_calls(rr()))
     end
+    setexpr!(exptree, refreduce_type_exp)
+    # error("Tree: $exptree, id: $(genid())")
+    global last_exptree[] = mergetree(last_exptree[], exptree)
     return refreduce_type_exp
 end

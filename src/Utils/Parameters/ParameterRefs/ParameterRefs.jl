@@ -1,5 +1,6 @@
-export ParameterRef, RefMult, SparseAdj, get_prefs, free_symb, fixed_symb, ref_symbs, is_paramref, ParameterRef, find_paramref, substitute_paramval, @ParameterRefs, ParamCollection
+export ParameterRef, RefMult, SparseAdj, get_prefs, ref_indices, fixed_symb, ref_symbs, is_paramref, ParameterRef, find_paramref, substitute_paramval, @ParameterRefs, ParamCollection
 
+include("ExpressionTree.jl")
 include("Utils.jl")
 
 abstract type FType end
@@ -9,7 +10,7 @@ struct Binary <: FType end
 
 """
 Every AbstractParameterRef implements
-free_symb : gives tuple with free indices
+ref_indices : gives tuple with free indices
 get_prefs : gives tuple with all refs
 issparse : Says wether the ref points to a sparse structure
 @generated function (::AbstractParameterRef)(freeindices) ?
@@ -19,13 +20,25 @@ expand_exp ?
 abstract type AbstractParameterRef end
 
 type_apply(f, apr::Type{<:AbstractParameterRef}) = f(apr())
+# @generated function Base.hash(apr::AbstractParameterRef)
+#     h = hash(apr)
+#     return :($h)
+# end
 
 ### PARAMTER REF
 struct ParameterRef{Symb, indices, F, D} <: AbstractParameterRef 
     data::D
 end
 
-"""
+function ParameterRef(symb)
+    sstr = String(symb)
+    u_found = findfirst(x -> x == '_', sstr)
+    get_symb = sstr[1:u_found-1]
+    get_index = sstr[u_found+1:end]
+    return ParameterRef(Symbol(get_symb), Symbol.(tuple(get_index...))...)
+end
+
+""" 
 Indices in this node stay the same for every nody downwards in the tree
 """
 ispure(::ParameterRef) = true
@@ -43,21 +56,34 @@ Get a set of the indices present in the type of an AbstractParameterRef
 """
 ref_indices(::Type{PR}) where PR<:AbstractParameterRef = ref_indices(PR())
 
-get_F(::ParameterRef{S, idxs, F}) where {S, idxs, F} = F
-get_F(::Type{PR}) where PR<:AbstractParameterRef = get_F(PR())
+getF(::ParameterRef{S, idxs, F}) where {S, idxs, F} = F
+getF(::Type{PR}) where PR<:AbstractParameterRef = getF(PR())
+
+"""
+Apply the big F
+"""
+@inline applyF(val, F::Function, otherarg) = F(val, otherarg)
+@inline applyF(val, otherarg, F::Function) = F(otherarg,val)
+@inline applyF(val, F::Function) = F(val)
+@inline applyF(val) = val
+
 
 function expr_F_wrap(apr::AbstractParameterRef, expr)
-    if isempty(get_F(apr))
+    if isempty(getF(apr))
         return expr
     elseif F_type(apr) isa Unary
-        return Expr(:call, get_F(apr)[1], expr)
+        return Expr(:call, getF(apr)[1], expr)
     elseif F_type(apr) isa Binary
-        return Expr(:call, get_F(apr)[1], expr, get_F(apr)[2])
+        if getF(apr)[1] isa Function
+            return Expr(:call, getF(apr)[1], expr, getF(apr)[2])
+        else
+            return Expr(:call, getF(apr)[1], getF(apr)[2], expr)
+        end
     end
 end
 
 function apply_F(apr::AbstractParameterRef, result)
-    f = get_F(apr)
+    f = getF(apr)
     if isempty(f)
         return result
     elseif F_type(apr) isa Unary
@@ -65,6 +91,43 @@ function apply_F(apr::AbstractParameterRef, result)
     elseif F_type(apr) isa Binary
         return f[1](result, f[2])
     end
+end
+
+function wrap_turbo_collect(exp, iterator, symb)
+    quote
+        @turbo for $symb... in eachindex($(iterator))
+            $(exp)
+        end
+    end
+end
+
+function contracting_indices(ref_ind, fill_ind)
+    if !(isempty(fill_ind))
+        return tuple(setdiff(ref_ind, fill_ind)...)
+    else
+        return ref_ind
+    end
+end
+
+parameterref_resolve_exp = nothing
+function resolve_exp(reftype::ParameterRef, filled_indices = (), nocallback = true)
+    ind = ref_indices(reftype)
+    contract_ind = contracting_indices(ind, filled_indices)
+
+    expr = quote total += $(expand_exp(reftype)) end
+    for (i_ind, i) in enumerate(reverse(contract_ind))
+        expr = wrap_turbo_collect(expr, :(size($(struct_ref_exp(reftype)...), $i_ind)), i)
+    end
+
+    if nocallback
+        expr = quote
+            total = eltype($(struct_ref_exp(reftype)...))(0)
+            $(expr)
+            total
+        end
+    end
+    remove_line_number_nodes!(expr)
+    return expr
 end
 
 
@@ -161,42 +224,25 @@ end
 end
 
 
-paramref_type_exp = nothing
-paramref_type_args = []
-@inline @generated function (pr::ParameterRef)(args; idxs...)
-    # ref = get_ref(pr, args)
-    # returntype = eltype(ref)
-    # idxs = values(idxs[free_symb(pr)])
-    # get_ref(pr, args)[idxs...]::returntype
-    ref_exp = struct_ref_exp(pr())
-    ri = ref_indices(pr())
-    exp = Expr(:call, :getindex, ref_exp..., ri...)
-    global paramref_type_args = [pr, args, idxs]
-    global paramref_type_exp = quote
-        $(ri...) = idxs[$(QuoteNode(ri...))]
-        returntype = return_type(pr, args)
-        return ($exp)::returntype
-    end
-    return paramref_type_exp
+function Base.:^(pref::ParameterRef{S, idxs, f, d}, power) where {S, idxs, f, d}
+    ParameterRef(ref_symb(pref), ref_indices(pref)...; func = (^, power), data = pref.data)
 end
 
-function Base.:^(pref::ParameterRef{S, idxs, f, d}, power) where {S, idxs, f, d}
-    # ParameterRef{S, idxs, (f..., (^, power))}()
-    # ParameterRef(symb, indices...; func = nothing, data = nothing)
-    ParameterRef(ref_symb(pref), ref_indices(pref)...; func = (^, power), data = pref.data)
+function Base.:/(pref::ParameterRef, factor::Real) 
+    ParameterRef(ref_symb(pref), ref_indices(pref)...; func = (/, factor), data = pref.data)
 end
 
 expand_exp(pr::Type{<:AbstractParameterRef}) = expand_exp(pr())
 function expand_exp(pref::ParameterRef{S, idxs, f}) where {S, idxs, f}
     if isempty(f)
-        return Expr(:ref, struct_ref_exp(pref)..., free_symb(pref)...)
+        return Expr(:ref, struct_ref_exp(pref)..., ref_indices(pref)...)
     else
-        return Expr(:call, f[1], Expr(:ref, struct_ref_exp(pref)..., free_symb(pref)...), f[2])
+        return Expr(:call, f[1], Expr(:ref, struct_ref_exp(pref)..., ref_indices(pref)...), f[2])
     end
 end
 
 @inline function intersect_indices(pr::AbstractParameterRef, idxs)
-    idxs[free_symb(pr)]
+    idxs[ref_indices(pr)]
 end
 
 
@@ -241,17 +287,31 @@ For unified syntax to do contractions
     return :($t)
 end
 
-free_symb(pr::ParameterRef) = ref_indices(pr)
-@generated function free_symb(::RefMult{Refs, contractions}) where {Refs, contractions}
-    t = tuple(setdiff(union(free_symb.(Refs)...), contractions))
-    return :($t)
-end
-@generated function free_symb(apr::AbstractParameterRef)
-    t = tuple(union(free_symb.(get_prefs(apr))...)...)
+# # ref_indices(pr::ParameterRef) = ref_indices(pr)
+# @generated function ref_indices(::RefMult{Refs, contractions}) where {Refs, contractions}
+#     t = tuple(setdiff(union(ref_indices.(Refs)...), contractions))
+#     return :($t)
+# end
+
+"""
+Get the indices present in the RefMult
+"""
+@generated function ref_indices(rc::RefMult{Refs}) where Refs
+    t = nothing
+    if typeof(Refs) <: Tuple{Vararg{Tuple}}
+        t = tuple(union(ref_indices.(get_prefs(rc()))...)...)
+    else
+        t = tuple(union(ref_indices.(Refs)...)...)
+    end
     return :($t)
 end
 
-num_free(apr::AbstractParameterRef) = length(free_symb(apr))
+@generated function ref_indices(apr::AbstractParameterRef)
+    t = tuple(union(ref_indices.(get_prefs(apr))...)...)
+    return :($t)
+end
+
+num_free(apr::AbstractParameterRef) = length(ref_indices(apr))
 
 
 
@@ -295,43 +355,8 @@ function reftype(pr, args)
         apriori_type = sparsify(apriori_type, true)
     end
     return apriori_type
-    # if length(ref_indices(pr)) == 2
-    #     if pr isa ParameterRef && dereftype(pr, args) <: AbstractSparseMatrix
-    #         return SparseMatrixRef()
-    #     else
-    #         return MatrixRef()
-    #     end
-    # else
-    #     if pr isa ParameterRef && dereftype(pr, args) <: AbstractSparseVector
-    #         return SparseVecRef()
-    #     else
-    #         return VecRef()
-    #     end
-    # end
 end
 
-# function reftype(pr::Union{Type{ParameterRef}, ParameterRef}, args::Type)
-#     if pr isa Type
-#         pr = pr()
-#     end
-#     _dereftype = dereftype(pr, args)
-
-#     if length(ref_indices(pr)) == 2
-#         if pr isa ParameterRef && _dereftype <: AbstractSparseMatrix
-#             return SparseMatrixRef()
-#         else
-#             return MatrixRef()
-#         end
-#     else
-#         if pr isa ParameterRef && _dereftype <: AbstractSparseVector
-#             return SparseVecRef()
-#         else
-#             return VecRef()
-#         end
-#     end
-# end
-
-### CONTRACTIONS
 
 """
 Get a reference to a matrix in a contraction
@@ -419,92 +444,26 @@ end
 
 _reducerefs(::Nothing, ::Any, ::Any, ::Any) = 0
 
-# function ::(ParameterRef{S, idxs})(params) where {S, idxs}
-#     params[S]
-# end
-
-
-
-"""
-Find symbols of the form s_ij...
-"""
-function is_paramref(symb)
-    string = String(symb)
-    found = findfirst(x -> x == '_', string)
-    if !isnothing(found)
-        return true
+### Getting the ref
+paramref_type_exp = nothing
+paramref_type_args = []
+@inline @generated function (pr::ParameterRef)(args; genid = TreeID(pr), idxs...)
+    exptree = GenExpressionTree(genid(), :paramref_type)
+    ref_exp = struct_ref_exp(pr())
+    ri = ref_indices(pr())
+    exp = Expr(:call, :getindex, ref_exp..., ri...)
+    F = getF(pr)
+    global paramref_type_args = [pr, args, idxs]
+    global paramref_type_exp = quote
+        $(ri...) = idxs[$(QuoteNode(ri...))]
+        returntype = return_type(pr, args)
+        return applyF(($exp)::returntype, $F...)
     end
-    return false
+    setexpr!(exptree, paramref_type_exp)
+    global last_exptree[] = mergetree(last_exptree[], exptree)
+    return paramref_type_exp
 end
 
-function ParameterRef(symb)
-    sstr = String(symb)
-    u_found = findfirst(x -> x == '_', sstr)
-    get_symb = sstr[1:u_found-1]
-    get_index = sstr[u_found+1:end]
-    # fixed_index = tuple(Symbol.(tuple(get_index...))[1])
-    # free_index = Symbol.(tuple(get_index...))[2:end]
-    return ParameterRef(Symbol(get_symb), Symbol.(tuple(get_index...))...)
-end
 
-"""
-Find where there are symbols of the form s_ij...
-"""
-function find_paramref(ex)
-    symbs = []
-    indexes = []
-    for (idx, subex) in enumerate(ex.args)
-        _find_paramref(subex, (idx,), symbs, indexes)
-    end
-    return symbs, indexes
-end
-
-function _find_paramref(ex, this_idxs, symbs, indexes)
-    if ex isa Symbol
-        if is_paramref(ex)
-            push!(symbs, ex)
-            push!(indexes, this_idxs)
-        end
-    elseif ex isa Expr
-        for (this_idx, arg) in enumerate(ex.args)
-            _find_paramref(arg, (this_idxs..., this_idx), symbs, indexes)
-        end
-    end
-end
-
-"""
-Substitute in a ParameterRef
-"""
-function substitute_paramref(ex, indexes, symb)
-    replace_symb(ex, ParameterRef(symb), indexes)
-end
-
-ParameterRefs_ex = nothing
-macro ParameterRefs(ex)
-    if @capture(ex, function fname_(a__) body_ end)
-        symbs = find_paramref(body)
-        for (symb, indexes) in zip(symbs[1], symbs[2])
-            body = substitute_paramref(body, indexes, symb)
-        end
-        ex = quote function $fname($(a...)) $body end end
-        global ParameterRefs_ex = ex
-        return esc(ex)
-    else
-        if ex isa Symbol
-            ex = Expr(:block, ex)
-        end
-        symbs = find_paramref(ex)
-        for (symb, indexes) in zip(symbs[1], symbs[2])
-            ex = substitute_paramref(ex, indexes, symb)
-        end
-        global ParameterRefs_ex = ex
-        return esc(ex)
-    end 
-end
-
-export @ParameterRefs
 
 include("Resolvers.jl")
-
-# getval(::Type{Val{T}}) where T = T
-# getval(::Val{T}) where T = T

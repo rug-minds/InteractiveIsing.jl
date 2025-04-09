@@ -15,22 +15,6 @@ struct ParamVal{T, Default, Active, RD, N} <: AbstractArray{T, N}
     description::String
 end
 
-
-ParamVal{T, Default, Active, RD}(description::String = "") where {T, Default, Active, RD} = ParamVal{T, Default, Active, RD, (val isa AbstractArray ? length(size(val)) : 1)}(nothing, nothing, description)
-function ParamVal{T, Default, Active, RD, N}(description::String = "") where {T, Default, Active, RD, N}
-    val = nothing
-    rtglobal = nothing
-    if T <: AbstractArray
-        val = T[]
-    elseif T <: Number
-        val = T(0)
-    end
-    if !(RD <: Nothing)
-        rtglobal = Ref(Default)
-    end
-    ParamVal{T, Default, Active, RD, N}(val, nothing, description)
-end
-
 function ParamVal(val::T, default, description = "", active = false; runtimeglobal = false) where T
     # If val is vector type, default value must be eltype, 
     # otherwise it must be the same type
@@ -51,11 +35,31 @@ function ParamVal(val::T, default, description = "", active = false; runtimeglob
         end
     else
         default = convert(T, default)
-        return ParamVal{T, default, active, Nothing, DIMS}(Ref(val), nothing, description, )
+        value = Ref(val)
+        return ParamVal{typeof(value), default, active, Nothing, DIMS}(value, nothing, description)
     end
-    
-    
 end
+
+function GlobalParamVal(val, description = "", active = false)
+    return ParamVal(typeof(val)[], val, description, active; runtimeglobal = true)
+end
+
+
+ParamVal{T, Default, Active, RD}(description::String = "") where {T, Default, Active, RD} = ParamVal{T, Default, Active, RD, (val isa AbstractArray ? length(size(val)) : 1)}(nothing, nothing, description)
+function ParamVal{T, Default, Active, RD, N}(description::String = "") where {T, Default, Active, RD, N}
+    val = nothing
+    rtglobal = nothing
+    if T <: AbstractArray
+        val = T[]
+    elseif T <: Number
+        val = T(0)
+    end
+    if !(RD <: Nothing)
+        rtglobal = Ref(Default)
+    end
+    ParamVal{T, Default, Active, RD, N}(val, nothing, description)
+end
+
 
 function ParamVal(p::ParamVal, active::Bool = nothing)
     return ParamVal(p.val, default(p), p.description, precedence_val(active, isactive(p)))
@@ -96,24 +100,21 @@ getvalfield(p::ParamVal, field) = getfield(p.val, field)
 setvalfield!(p::ParamVal, field, val) = setfield!(p.val, field, val)
 
 
-
 #Vector Like ParamVals
 @inline function Base.getindex(p::ParamVal{T}, idx...) where T <: AbstractArray
     if isactive(p)
-        getindex(p.val, idx...)::eltype(T)
-    else
         if runtimeglobal(p)
             return p.runtimeglobal[]
         else
-            return default(p)
+            return getindex(p.val, idx...)::eltype(T)
         end
+    else
+        return default(p)
     end
 end
 @inline function Base.setindex!(p::ParamVal{T}, val, idx...) where T <: AbstractArray
-    if idx isa Real
-        if !isactive(p) && runtimeglobal(p)
-            return p.runtimeglobal[] = val
-        end
+    if runtimeglobal(p)
+        return p.runtimeglobal[] = val
     end
     return p.val[idx...] = val
 end
@@ -127,6 +128,17 @@ Base.splice!(p::ParamVal{T}, idx...) where T <: AbstractArray = splice!(p.val, i
 
 Base.push!(p::ParamVal{T}, val) where T <: AbstractArray = push!(p.val, val)
 
+
+#Changing parameters
+changeactivation(p::ParamVal{T}, activate) where T = ParamVal(p.val, default(p), p.description, activate)
+activate(p::ParamVal{T}) where T = changeactivation(p, true)
+deactivate(p::ParamVal{T}) where T = changeactivation(p, false)
+
+setruntimeglobal(p::ParamVal{T}, val) where T = Paramval(p.val, default(p), p.description, isactive(p), runtimeglobal = val)
+removeruntimeglobal(p::ParamVal{T}) where T = Paramval(p.val, default(p), p.description, isactive(p), runtimeglobal = false)
+
+
+
 # Loopvectorization stuff
 LoopVectorization.check_args(p::ParamVal{T}) where T <: AbstractArray = true
 @inline Base.pointer(p::ParamVal{T}) where T = pointer(p.val)
@@ -134,13 +146,6 @@ LoopVectorization.check_args(p::ParamVal{T}) where T <: AbstractArray = true
 For vector like objects, find the promote type of the eltypes
 """
 promote_eltype(vector_types...) = promote_type(eltype.(vector_types)...)
-
-
-
-
-
-
-
 
 """
 Gives the zero value of the type of the parameter
@@ -150,11 +155,8 @@ This works with inlining of default values.
 paramzero(val::Any) = typeof(val)(0)
 paramzero(::ParamVal{T}) where T = zero(T)
 export paramzero
-
-
 Base.BroadcastStyle(::Type{ParamVal{T,A,B}}) where {T<:AbstractArray,A,B} = Broadcast.ArrayStyle{ParamVal}()
 Base.BroadcastStyle(::Type{ParamVal{T,A,B}}) where {T,A,B} = Broadcast.Style{ParamVal}()
-
 
 function Base.show(io::IO, p::ParamVal{T}) where T
     print(io, (isactive(p) ? "Active " : "Inactive "))

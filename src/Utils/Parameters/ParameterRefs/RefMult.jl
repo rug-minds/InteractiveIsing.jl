@@ -35,12 +35,12 @@ Base.iterate(rc::RefMult, state = 1) = iterate(get_prefs(rc), state)
 """
 Get overall function
 """
-get_F(rm::RefMult{Refs, idxs, fs}) where {Refs, idxs, fs} = fs
+getF(rm::RefMult{Refs, idxs, fs}) where {Refs, idxs, fs} = fs
 
 """
 Is overall function Unary (stored as (F)) or Binary, stored as (F, number)
 """
-F_type(rm::AbstractParameterRef) = length(get_F(rm)) == 1 ? Unary() : Binary()
+F_type(rm::AbstractParameterRef) = length(getF(rm)) == 1 ? Unary() : Binary()
 
 """
 Overall function for RefMult
@@ -110,18 +110,7 @@ function struct_ref_exp(rm::RefMult{Refs}) where Refs
     return tuple(Iterators.flatten(struct_ref_exp.(Refs))...)
 end
 
-"""
-Get the indices present in the RefMult
-"""
-@generated function ref_indices(rc::RefMult{Refs}) where Refs
-    t = nothing
-    if typeof(Refs) <: Tuple{Vararg{Tuple}}
-        t = tuple(union(ref_indices.(get_prefs(rc()))...)...)
-    else
-        t = tuple(union(ref_indices.(Refs)...)...)
-    end
-    return :($t)
-end
+
 
 
 """
@@ -184,8 +173,8 @@ end
 Group two parameter refs into a RefMult
 """
 function group_mults(p1::AbstractParameterRef, p2::AbstractParameterRef)
-    if ispure(p1) && ispure(p2) && free_symb(p1) == free_symb(p2)
-        return RefMult{tuple(p1,p2), free_symb(p1)}(p1.data)
+    if ispure(p1) && ispure(p2) && ref_indices(p1) == ref_indices(p2)
+        return RefMult{tuple(p1,p2), ref_indices(p1)}(p1.data)
     else
         return RefMult{tuple(tuple(p1), tuple(p2)), tuple(indices_set(p1,p2)...)}(p1.data)
     end
@@ -209,7 +198,13 @@ Expand the total expression of the refmult
     For the refmult this essentially means we get :(F(expand(R1))*F(Expand(R2))*...)
 """
 function expand_exp(rc::RefMult{Refs, idxs}) where {Refs, idxs}
-    @assert !mixed_mult(rc)
+    # @assert !mixed_mult(rc)
     exp = Expr(:call, :*, expand_exp.(get_prefs(rc))...)
     return expr_F_wrap(rc, exp)
+end
+
+
+refmult_build_exp = nothing
+function build_exp(rc::RefMult{Refs, idxs}, indorsymb) where {Refs, idxs}
+    
 end
