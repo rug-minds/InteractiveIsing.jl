@@ -39,7 +39,7 @@ function Processes.prepare(::Metropolis, @specialize(args))
     iterator = ising_it(g)
     # rng = MersenneTwister()
     rng = Random.GLOBAL_RNG
-    ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
+    ΔH = Hamiltonian_Builder(Metropolis, g, Ising())
     M = Ref(sum(g.state))
     lmeta = LayerMetaData(g[1])
     return (;gstate, gadj, gparams, iterator, ΔH, lmeta, rng, M)
@@ -62,9 +62,8 @@ end
     ΔE = @inline ΔH(i, gstate, newstate, oldstate, gadj, gparams, lmeta)
     
     efac = exp(-β*ΔE)
-    randnum = rand(rng, T)
 
-    if (ΔE <= zero(T) || randnum < efac)
+    if (ΔE <= zero(T) || rand(rng, T) < efac)
         @inbounds gstate[i] = newstate 
         @hasarg if M isa Ref
             M[] += (newstate - oldstate)
@@ -80,18 +79,17 @@ function Processes.prepare(::MetropolisNew, @specialize(args))
     gadj = g.adj
     params = g.params
     iterator = ising_it(g)
-    # hamiltonian = deltaH(g.hamiltonian)
-    ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
-    hamiltonian = NIsing(g)
+    hamiltonian = init!(g.hamiltonian, g)
     deltafunc = deltaH(hamiltonian)
     rng = Random.GLOBAL_RNG
     M = Ref(sum(g.state))
     lmeta = LayerMetaData(g[1])
-    # return (;g, gstate, gadj, params, iterator, ΔH, lmeta, rng, M)
-    return (;g, gstate, gadj, params, iterator, ΔH, hamiltonian, deltafunc, lmeta, rng, M)
-
+    return (;g, gstate, gadj, params, iterator, hamiltonian, deltafunc, lmeta, rng, M)
 end
 
+"""
+Hacky way to define a ref that can be indexed but gives a constant value
+"""
 struct NewState{T}
     Val::T
 end
@@ -111,21 +109,39 @@ end
     #Define vars
     (;g, gstate, iterator, deltafunc, lmeta, rng, M) = args
     j = rand(rng, iterator)
-    MetropolisNew(args, j, g, gstate, deltafunc, M, rng, lmeta)
+    # MetropolisNew(args, j, g, gstate, deltafunc, M, rng, lmeta)
+    MetropolisNew((;args..., j))
 end
+
 using JET
-@inline function MetropolisNew(@specialize(args), j, g, gstate::Vector{T}, deltafunc, M, rng, lmeta) where {T}
+# @inline function MetropolisNew(args::As, j, g, gstate::Vector{T}, deltafunc, M, rng, lmeta) where {As,T}
+@inline function MetropolisNew(args::As) where As
+    (;g, gstate, j, deltafunc, M, rng, lmeta) = args
+    T = eltype(g)
     β = one(T)/(temp(g))
     oldstate = @inbounds gstate[j]
-    newstate = NewState(-oldstate)
+    # newstate = -oldstate
+    # ΔE = specific_ham(args, (;j, newstate))
+    newstate = NewState(@inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta)) )
+    # println(@report_opt deltafunc((;args..., newstate); j))
+    # error("A")
     ΔE = @inline deltafunc((;args..., newstate); j)
-    randnum = rand(rng, T)
+    
     efac = exp(-β*ΔE)
-    if (ΔE <= zero(T) || randnum < efac)
+    if (ΔE <= zero(T) || rand(rng, T) < efac)
         @inbounds gstate[j] = newstate 
-        M[] += (newstate - oldstate)
+        @hasarg if M isa Ref
+            M[] += (newstate - oldstate)
+        end
     end
     
+    # ham = args.hamiltonian
+    # dpf = gethamiltonian(ham, DepolField)
+    # layer2dsize = size(g[1],1)*size(g[1],2)
+    # if j <= layer2dsize*dpf.left_layers || j > layer2dsize*(size(g[1],3)-dpf.right_layers)
+    #     dpf.dpf[j] = dpf.dpf[j] + Δs_i
+    # end
+    # @inline update!(args.hamiltonian, args)
     return nothing
 end
 
@@ -157,24 +173,7 @@ function specific_ham(@specialize(args), newstate, j)
         cumsum += wij * state[i]
     end
     return (state[j]-newstate) * cumsum + (state[j]^2-newstate^2)*params.self[j] + (state[j]-newstate)*params.b[j]
-    # return (state[j]-newstate) * cumsum + (state[j]-newstate)*params.b[j] 
 end
-
-# :((s_i^2-sn_i^2)*self_i+(s_i-sn_i)*(b_i+collect_expr)
-
-# @inline function updateMetropolis(g, gstate::Vector{T}, gadj, gparams, ΔH)
-#     β = 1f0/(temp(g))
-
-#     oldstate = @inbounds gstate[idx]
-    
-#     ΔE = ΔH(g, oldstate, 1, gstate, gadj, idx, gstype, Discrete)
-
-#     if (ΔE <= 0f0 || rand(rng, Float32) < exp(-β*ΔE))
-#         @inbounds gstate[idx] *= -Int8(1)
-#     end
-#     return nothing
-# end
-
 
 
 
