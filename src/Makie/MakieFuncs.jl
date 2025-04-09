@@ -134,7 +134,7 @@ function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
         # cvm = CastViewMatrix(Float64, state(g), graphidxs(layer), size(layer)...)
         # ob = mp["obs"] = Observable(cvm)
         mp["image"] = image!(ax, ob, colormap = colormap, fxaa = false, interpolate = false)
-        mp["image"].colorrange[] = (first(stateset(layer)), last(stateset(layer)))
+        # mp["image"].colorrange[] = (first(stateset(layer)), last(stateset(layer)))
     elseif dims == 3
 
         if isnothing(color) #If no color given, take the state
@@ -151,7 +151,8 @@ function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
         zs = idx2zcoord.(Ref(sz), allidxs)
         
         mp["image"] = meshscatter!(ax, xs, ys, zs, markersize = 0.01, color = mp["obs"], colormap = colormap)
-    end
 
+    end
+        mp["image"].colorrange[] = (first(stateset(layer)), last(stateset(layer)))
 #     mp["image"].colorrange[] = stateset(layer)
 end

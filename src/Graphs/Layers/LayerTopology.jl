@@ -177,10 +177,12 @@ end
 function dist2(top::SquareTopology{P, 2}, i1, j1, i2, j2) where P
     di = abs(i1 - i2)
     dj = abs(j1 - j2)
-    if P isa Periodic 
+    if periodic(top, :x) 
         if di > size(top,1)/2
             di -= size(top,1)
         end
+    end
+    if periodic(top, :y)
         if dj > size(top,2)/2
             dj -= size(top,2)
         end
@@ -194,17 +196,22 @@ function dist2(top::SquareTopology{P,3}, (i1,j1,k1)::Tuple,(i2,j2,k2)::Tuple) wh
     di = abs(i1 - i2)
     dj = abs(j1 - j2)
     dk = abs(k1 - k2)
-    if P isa Periodic
+    if periodic(top, :x)
         if di > size(top,1)/2
             di -= size(top,1)
         end
+    end
+    if periodic(top, :y)
         if dj > size(top,2)/2
             dj -= size(top,2)
         end
+    end
+    if periodic(top, :z)
         if dk > size(top,3)/2
             dk -= size(top,3)
         end
     end
+    
 
     return di^2 + dj^2 + dk^2
 end
