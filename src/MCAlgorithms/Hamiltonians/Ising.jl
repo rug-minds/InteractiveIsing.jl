@@ -16,13 +16,6 @@ end
 end
 
 deltaH(ch::CompositeHamiltonian) = reduce(+, deltaH.(ch))
-# deltaH(ch::HamiltonianTerms) = reduce(+, deltaH.(ch))
-
-
-# function deltaH(type, args)
-#     (;j) = args
-#     return type.deltH(args; j)
-# end
 
 const NIsing{PV} = HamiltonianTerms(Linear, MagField{PV})
 NIsing(g::IsingGraph) = HamiltonianTerms(Linear(), MagField(g))

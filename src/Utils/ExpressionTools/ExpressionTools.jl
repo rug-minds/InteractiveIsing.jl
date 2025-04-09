@@ -168,6 +168,8 @@ end
 #     remove_args!(f, exp)
 #     return exp
 # end
+ismacrosymbol(s::Symbol) = startswith(string(s), "@")
+
 """
 Remove all LineNumberNodes from the expression
 """
@@ -176,10 +178,10 @@ function remove_line_number_nodes!(exp)
         return exp
     end
     
-    # Special handling for @turbo macro
-    if exp.head == :macrocall && exp.args[1] == Symbol("@turbo")
+    # Special handling for macro
+    if exp.head == :macrocall && ismacrosymbol(exp.args[1])
         turbo_args = exp.args[3]  # Save the for loop
-        return Expr(:macrocall, Symbol("@turbo"), nothing, remove_line_number_nodes!(turbo_args))
+        return Expr(:macrocall, exp.args[1], nothing, remove_line_number_nodes!(turbo_args))
     end
     
     # Handle regular block expressions

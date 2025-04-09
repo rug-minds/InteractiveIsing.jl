@@ -30,18 +30,22 @@ as = prepare(II.MetropolisNew(), (;g))
 
 as = (;as..., newstate = II.NewState(-as.gstate[1]))
 
-rc = @ParameterRefs s_i*w_ij 
+rc = @ParameterRefs (s_i*w_ij)*(sn_j - s_j)
+
+
 si = @ParameterRefs s_i
-wij = @ParameterRefs w_ij
-
-red = @ParameterRefs s_i+b_i-self_i
-red(as; i = 1) 
-
-# @benchmark $rc($as; j = 1)
 
 rc(as; j = 1)
+# wij = @ParameterRefs w_ij
 
-ms = @ParameterRefs (s_j^2-sn_j^2)*self_j
-ms1 = @ParameterRefs (s_j-sn_j)*(b_j)
+# red = @ParameterRefs s_i+b_i-self_i
+# red(as; i = 1) 
+
+# # @benchmark $rc($as; j = 1)
+
+# rc(as; j = 1)
+
+# ms = @ParameterRefs (s_j^2-sn_j^2)*self_j
+# ms1 = @ParameterRefs (s_j-sn_j)*(b_j)
 
 # II.deltH(Ising(), as)(as, i = 1)

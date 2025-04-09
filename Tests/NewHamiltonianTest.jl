@@ -6,22 +6,27 @@ g = IsingGraph(30,30,30, type = Discrete, periodic = (:z, :y))
 wg = @WG "(dr) -> dr == 1 ? 1 : 0" NN = (1,1,1)
 genAdj!(g[1], wg)
 
-createProcess(g, MetropolisNew, overrides = (;hamiltonian = II.deltaH(II.NIsing(g))))
+# g.hamiltonian = NIsing(g) + DepolField(g)
+g.hamiltonian = NIsing(g)
+g.hamiltonian = II.deactivateparam(g.hamiltonian, :b)
+
+
+interface(g)
+createProcess(g, MetropolisNew)
 
 close(process(g))
 as = (;fetch(g)..., newstate =II.NewState(0f0))
 quit(g)
 
-paramH = II.deltaH(NIsing)
+# paramH = II.deltaH(NIsing)
 
-interface(g)
 
-# createProcess(g, II.MetropolisNew())
+createProcess(g, II.MetropolisNew())
 
-createProcess(g, MetropolisNew, overrides = (;hamiltonian = II.deltaH(NIsing())))
+# createProcess(g, MetropolisNew, overrides = (;hamiltonian = II.deltaH(NIsing())))
 
 # contract = @ParameterRefs (s_i*w_ij)
-# reduce = @ParameterRefs (sn_j-s_j)
+# reduce = @ParameterRefs (sn_j-s_j)'
 # together = @ParameterRefs (s_i*w_ij)*(sn_j-s_j)
 
 # as = (;prepare(MetropolisNew(), (;g))..., newstate = II.NewState(-state(g)[2]))

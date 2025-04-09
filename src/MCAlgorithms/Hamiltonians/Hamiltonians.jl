@@ -2,7 +2,7 @@ using MacroTools
 RuntimeGeneratedFunctions.init(@__MODULE__)
 
 export CompositeHamiltonian, HamiltonianTerms
-struct HamiltonianTerms{Hs <: Tuple{Vararg{Hamiltonian}}}
+struct HamiltonianTerms{Hs <: Tuple{Vararg{Hamiltonian}}} <: Hamiltonian
     hs::Hs
 end
 
@@ -13,16 +13,44 @@ function HamiltonianTerms{HS}(g::IsingGraph) where HS <: Tuple{Vararg{Hamiltonia
     HamiltonianTerms{HS}(ntuple(i->HS.parameters[i](g), length(HS.parameters)))
 end
 
+function changeterm(hts, newham)
+    hams = hamiltonians(hts)
+    newhams = tuple((Base.typename(typeof(newham))  == Base.typename(typeof(h)) ? newham : h for h in hams)...)
+    return HamiltonianTerms{typeof(newhams)}(newhams)
+end
+
 HamiltonianTerms(hs::Type{<:Hamiltonian}...) = HamiltonianTerms{Tuple{hs...}}
 HamiltonianTerms(hs::Hamiltonian...) = HamiltonianTerms{Tuple{typeof.(hs)...}}(hs)
 
+hamiltonians(hts::HamiltonianTerms) = getproperty(hts, :hamiltonians)
+
 Base.:+(h1::Hamiltonian, h2::Hamiltonian) = HamiltonianTerms((h1, h2))
-Base.:+(h1::Hamiltonian, h2::HamiltonianTerms) = HamiltonianTerms((h1, h2.hs...))
-Base.:+(h1::HamiltonianTerms, h2::Hamiltonian) = HamiltonianTerms((h1.hs..., h2))
+Base.:+(h1::Hamiltonian, h2::HamiltonianTerms) = HamiltonianTerms((h1, hamiltonians(h2)...))
+Base.:+(h1::HamiltonianTerms, h2::Hamiltonian) = HamiltonianTerms((hamiltonians(h1)..., h2))
 
 @generated function paramnames(h::HamiltonianTerms{Hs}) where Hs
     _paramnames = tuple(Iterators.Flatten(paramnames.(Hs.parameters)...)...)
     return :($_paramnames)
+end
+
+function setparam(ham::Hamiltonian, field, paramval)
+    fnames = fieldnames(typeof(ham))
+    found = findfirst(x->x==field, fnames)
+    if isnothing(found)
+        error("Field $field not found in Hamiltonian $ham")
+    end
+    newfields = (i == found ? paramval : ham.fieldnames[i] for i in eachindex(fnames))
+    Base.typename(typeof(ham)).wrapper(newfields...)
+end
+
+function deactivateparam(ham::Hamiltonian, param::Symbol)
+    initialparam = getproperty(ham, param)
+    setparam(ham, param, deactivate(initialparam))
+end
+
+function deactivateparam(hts::HamiltonianTerms, param::Symbol)
+    newham = deactivateparam(gethamiltonian(hts, param), param)
+    changeterm(hts, newham)
 end
 
 """
@@ -36,6 +64,9 @@ function Base.getproperty(h::HamiltonianTerms, paramname::Symbol)
     getparam(h, Val(paramname))
 end
 
+"""
+Get a param
+"""
 @generated function getparam(h::HamiltonianTerms{Hs}, paramnameval::Val{paramname}) where {Hs, paramname}
     for (hidx, H) in enumerate(Hs.parameters)
         if paramname in fieldnames(H)
@@ -44,6 +75,31 @@ end
     end
     error("Parameter $paramname not found in any of the Hamiltonians")
 end
+
+"""
+Get a hamiltonian from a type
+"""
+function gethamiltonian(hts::HamiltonianTerms, t::Type)
+    for h in hamiltonians(hts)
+        if typeof(h) <: t
+            return h
+        end
+    end
+    error("Type $t not found in any of the Hamiltonians")
+end
+
+"""
+Get the hamiltonian from a parameter name
+"""
+function gethamiltonian(hts::HamiltonianTerms, t::Symbol)
+    for h in hamiltonians(hts)
+        if t in fieldnames(typeof(h))
+            return h
+        end
+    end
+    error("Type $t not found in any of the Hamiltonians")
+end
+export gethamiltonian
 
 # Fallback for fieldnames for a hamltonian
 Base.fieldnames(::Hamiltonian) = tuple()
@@ -63,9 +119,28 @@ Base.getindex(hts::HamiltonianTerms, idx) = getfield(hts, :hs)[idx]
 """
 If updating functions are defined, update
 """
+# @inline function update!(hts::HamiltonianTerms{Hs}, args) where Hs
+#     @inline update!.(hamiltonians(hts), Ref(args))
+# end
 @inline function update!(hts::HamiltonianTerms{Hs}, args) where Hs
-    @inline update!.(Hs, ref(args))
+    hs = hamiltonians(hts)
+    @inline _update!(gethead(hs),gettail(hs), args)
 end
+
+@inline function _update!(head, tail, args)
+    @inline update!(head, args)
+    @inline _update!(gethead(tail), gettail(tail), args)
+end
+
+@inline _update!(::Nothing, a, b) = nothing
+
+
+@inline function init!(hts::HamiltonianTerms{Hs}, g) where Hs
+    @inline init!.(hamiltonians(hts), Ref(g))
+    return hts
+end
+
+init!(hts::Any, g) = hts
 
 
 # Hamiltonian
