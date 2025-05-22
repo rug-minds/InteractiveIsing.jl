@@ -29,6 +29,8 @@ quit(g)
 
 # g.hamiltonian = deactivateparam(init!(NIsing(g)+DepolField(g), g), :b)
 g.hamiltonian = NIsing(g) + DepolField(g)
+g.hamiltonian = setglobalparam(g.hamiltonian, :b)
+
 # g.hamiltonian = Ising()
 # createProcess(g, Metropolis)
 
@@ -36,3 +38,4 @@ g.hamiltonian = NIsing(g) + DepolField(g)
 # g.hamiltonian = deactivateparam(init!(NIsing(g), g), :b)
 # quit(g)
 createProcess(g, MetropolisNew)
+# as = (;getargs(g)..., newstate = SparseVal(-1,1,1))

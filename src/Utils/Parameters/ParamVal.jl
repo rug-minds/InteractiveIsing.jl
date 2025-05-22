@@ -9,7 +9,7 @@ It also stores wether it's active and if not a fallback value
     the whole vector can be set to a constant value, so that
     memory does not need to be accessed.
 """
-struct ParamVal{T, Default, Active, RD, N} <: AbstractArray{T, N}
+mutable struct ParamVal{T, Default, Active, RD, N} <: AbstractArray{T, N}
     val::T
     runtimeglobal::RD # For vector valued parameters, a global value that can be changed at runtime
     description::String
@@ -29,7 +29,7 @@ function ParamVal(val::T, default, description = "", active = false; runtimeglob
         et = eltype(T)
         default = convert(eltype(T), default)
         if runtimeglobal
-            return ParamVal{T, default, active, Ref{et}, DIMS}(val, Ref(default), description)
+            return ParamVal{T, default, active, Base.RefValue{et}, DIMS}(val, Ref(default), description)
         else
             return ParamVal{T, default, active, Nothing, DIMS}(val, nothing, description)
         end
@@ -41,7 +41,7 @@ function ParamVal(val::T, default, description = "", active = false; runtimeglob
 end
 
 function GlobalParamVal(val, length = 0, description = "", active = false)
-    return ParamVal(typeof(val)[], val, description, active; runtimeglobal = true)
+    return ParamVal(zeros(eltype(val), length), zero(eltype(val)), description, active; runtimeglobal = true)
 end
 
 function DefaultParamVal(val, description = "")
@@ -85,6 +85,13 @@ isinactive(::Type{ParamVal{A,B,C,D,N}}) where {A,B,C,D,N} = !C
 description(p::ParamVal) = p.description
 runtimeglobal(p::ParamVal{T, Default, Active, RD}) where {T, Default, Active, RD} = RD != Nothing
 runtimeglobal(::Type{ParamVal{T, Default, Active, RD, N}}) where {T, Default, Active, RD, N} = RD != Nothing
+
+function get_globalval(p::ParamVal{T, Default, Active, RD, N}) where {T, Default, Active, RD, N}
+    rd = getfield(p, :runtimeglobal)::RD
+    return rd[]::eltype(T)
+end
+
+
 dims(p::ParamVal{T, Default, Active, RD, N}) where {T, Default, Active, RD, N} = N
 dims(::Type{ParamVal{T, Default, Active, RD, N}}) where {T, Default, Active, RD, N} = N
 

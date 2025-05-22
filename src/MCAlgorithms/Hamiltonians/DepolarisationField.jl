@@ -34,11 +34,11 @@ function DepolField(g; c = 3600, left_layers = 1, right_layers = 1)
 end
 
 function update!(dpf::DepolField, args)
-    (;lmeta, j, Δs_i) = args
+    (;lmeta, j, Δs_j) = args
     l1 = layer(lmeta)
     layer2dsize = size(l1,1)*size(l1,2)
     if j <= layer2dsize*dpf.left_layers || j > layer2dsize*(size(l1,3)-dpf.right_layers)
-        dpf.dpf[j] = dpf.dpf[j] + Δs_i[]
+        dpf.dpf[j] = dpf.dpf[j] + Δs_j[]
     end
     return 
 end

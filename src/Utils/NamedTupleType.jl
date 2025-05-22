@@ -31,6 +31,13 @@ gettype(nt::NamedTuple, symb::Symbol) = gettype(typeof(nt), symb)
 
 
 function _gettype_recursive(nt::Type, field::Symbol)
+    fn = nothing
+    try
+        fn = fieldnames(nt)
+    catch
+        return nothing
+    end
+
     for (i, fn) in enumerate(fieldnames(nt))
         if fn == field
             return fieldtypes(nt)[i]
@@ -60,6 +67,13 @@ gettype_recursive(nt::Type, field::Symbol) = gettype_recursive(nt, Val(field))
     return :($t)
 end
 
+gettype_recursive_nongen(::Type{NT}, field::Symbol) where NT = _gettype_recursive(NT, field)
+function gettype_recursive_nongen(nt::Type{NT}, fields::Tuple) where NT
+    if isempty(fields)
+        return NT
+    end
+    return gettype_recursive_nongen(gettype_recursive_nongen(NT, first(fields)), Base.tail(fields))
+end
 
 """
 Get consecutive types from structs with nested properties

@@ -239,7 +239,8 @@ end
 
 @inline function dereftype(pr, args::DataType)
     struct_refs = refmap(Val(ref_symb(pr)))
-    return gettype_recursive(args, struct_refs)
+    # return gettype_recursive(args, struct_refs)
+    return gettype_recursive_nongen(args, struct_refs)
 end
 
 

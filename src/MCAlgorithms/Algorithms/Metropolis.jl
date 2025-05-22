@@ -83,10 +83,10 @@ function Processes.prepare(::MetropolisNew, @specialize(args))
     deltafunc = deltaH(hamiltonian)
     rng = Random.GLOBAL_RNG
     M = Ref(sum(g.state))
-    Δs_i = Ref(zero(eltype(g.state)))
+    Δs_j = Ref(zero(eltype(g.state)))
 
     lmeta = LayerMetaData(g[1])
-    return (;g, gstate, gadj, params, iterator, hamiltonian, deltafunc, lmeta, rng, M, Δs_i)
+    return (;g, gstate, gadj, params, iterator, hamiltonian, deltafunc, lmeta, rng, M, Δs_j)
 end
 
 @inline function (::MetropolisNew)(@specialize(args))
@@ -112,12 +112,12 @@ end
         @hasarg if M isa Ref
             M[] += (newstate - oldstate)
         end
-        @hasarg if Δs_i isa Ref
-            Δs_i[] = newstate - oldstate
+        @hasarg if Δs_j isa Ref
+            Δs_j[] = newstate - oldstate
         end
     else
-        @hasarg if Δs_i isa Ref
-            Δs_i[] = 0
+        @hasarg if Δs_j isa Ref
+            Δs_j[] = 0
         end
     end
 
