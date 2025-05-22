@@ -83,48 +83,27 @@ function Processes.prepare(::MetropolisNew, @specialize(args))
     deltafunc = deltaH(hamiltonian)
     rng = Random.GLOBAL_RNG
     M = Ref(sum(g.state))
+    Δs_i = Ref(zero(eltype(g.state)))
+
     lmeta = LayerMetaData(g[1])
-    return (;g, gstate, gadj, params, iterator, hamiltonian, deltafunc, lmeta, rng, M)
+    return (;g, gstate, gadj, params, iterator, hamiltonian, deltafunc, lmeta, rng, M, Δs_i)
 end
-
-"""
-Hacky way to define a ref that can be indexed but gives a constant value
-"""
-struct NewState{T}
-    Val::T
-end
-@inline Base.getindex(n::NewState, i = nothing) = n.Val
-@inline Base.eltype(::NewState{T}) where T = T
-@inline Base.convert(::Type{T}, n::NewState) where T = T(n.Val)
-@inline Base.:-(n1::NewState, n::T) where T = T(n1.Val - n)
-@inline Base.:-(n::T, n1::NewState) where T = T(n - n1.Val)
-
-@inline Base.:+(n1::NewState, n::T) where T = T(n1.Val + n)
-@inline Base.:+(n::T, n1::NewState) where T = T(n + n1.Val)
-
-@inline Base.:*(n::T, n1::NewState) where T = NewState(n*n1.Val)
-@inline Base.:*(n1::NewState, n::T) where T = NewState(n*n1.Val)
 
 @inline function (::MetropolisNew)(@specialize(args))
     #Define vars
-    (;g, gstate, iterator, deltafunc, lmeta, rng, M) = args
+    (;iterator, rng) = args
     j = rand(rng, iterator)
-    # MetropolisNew(args, j, g, gstate, deltafunc, M, rng, lmeta)
     MetropolisNew((;args..., j))
 end
 
-using JET
-# @inline function MetropolisNew(args::As, j, g, gstate::Vector{T}, deltafunc, M, rng, lmeta) where {As,T}
 @inline function MetropolisNew(args::As) where As
     (;g, gstate, j, deltafunc, M, rng, lmeta) = args
     T = eltype(g)
     β = one(T)/(temp(g))
     oldstate = @inbounds gstate[j]
-    # newstate = -oldstate
-    # ΔE = specific_ham(args, (;j, newstate))
-    newstate = NewState(@inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta)) )
-    # println(@report_opt deltafunc((;args..., newstate); j))
-    # error("A")
+ 
+    newstate = SparseVal((@inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta)))::eltype(gstate), Int32(length(gstate)), j)::SparseVal{eltype(gstate), Int32}
+
     ΔE = @inline deltafunc((;args..., newstate); j)
     
     efac = exp(-β*ΔE)
@@ -133,15 +112,16 @@ using JET
         @hasarg if M isa Ref
             M[] += (newstate - oldstate)
         end
+        @hasarg if Δs_i isa Ref
+            Δs_i[] = newstate - oldstate
+        end
+    else
+        @hasarg if Δs_i isa Ref
+            Δs_i[] = 0
+        end
     end
-    
-    # ham = args.hamiltonian
-    # dpf = gethamiltonian(ham, DepolField)
-    # layer2dsize = size(g[1],1)*size(g[1],2)
-    # if j <= layer2dsize*dpf.left_layers || j > layer2dsize*(size(g[1],3)-dpf.right_layers)
-    #     dpf.dpf[j] = dpf.dpf[j] + Δs_i
-    # end
-    # @inline update!(args.hamiltonian, args)
+
+    @inline update!(args.hamiltonian, args)
     return nothing
 end
 

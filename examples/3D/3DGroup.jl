@@ -4,7 +4,6 @@ g = IsingGraph(40,40,40, type = Discrete)
  
 simulate(g)
 
-settopology!(g, Square(), yscale = 2)
 
 function weightfunc(dx,dy,dz)
     prefac = 1

@@ -16,6 +16,7 @@ indexset(lt::Type{<:LayerMetaData}) = typemap(lt, :IndexSet)
 stateset(lt::Type{<:LayerMetaData}) = typemap(lt, :StateSet)
 stateset(lt::LMD) where LMD<:LayerMetaData = stateset(LMD)
 statetype(lt::LayerMetaData) = statetype(lt.l)
+layer(lmd::LayerMetaData{LT}) where LT = lmd.l::LT
 
 function LayerMetaData(l::IsingLayer)
     LayerMetaData{typeof(l), graphidxs(l), stateset(l)}(l)

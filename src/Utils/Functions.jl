@@ -692,3 +692,32 @@ function functionargs(ex)
     @capture(ex2, function f_(xs__) where {T_}  body_ end)
     xs
 end
+
+# Tuple Sort
+
+Base.sort(t::Tuple; lt = isless, by = identity) = tuple(sort!(collect(t), lt = lt, by = by)...)
+
+function view_to_parent_idx(v::SubArray{T,N}, idx::Int) where {T,N}
+    pi = parentindices(v)
+    civ = CartesianIndices(v)
+    inds = civ[idx]
+    return LinearIndices(v.parent)[(pi[i][inds[i]] for i in 1:N)...]
+end
+
+# Filter! a part of a vector through a view
+function Base.filter!(f, v::SubArray{T,N}) where {T,N}
+    idxs = findall(x -> !f(x), v)
+    for del_idx in reverse(idxs)
+        parent_idx = view_to_parent_idx(v, del_idx)
+        deleteat!(v.parent, parent_idx)
+    end
+    return v.parent
+end
+
+# # Filter a part of a vector through a view
+# function Base.filter(f, v::SubArray{T,N}) where {T,N}
+#     filters = (x -> !f(x), v)
+#     idx_gen = (view_to_parent_idx(v, i) for i in idxs)
+#     println("idx_gen: ", idx_gen...)
+#     return v.parent[idx_gen...]
+# end

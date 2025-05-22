@@ -9,12 +9,16 @@ end
 
 RefReduce{A,B,C,D}() where {A,B,C,D} = RefReduce{A,B,C,Nothing}(nothing)
 
-RefReduce(refs::Tuple, reduce_fs, data = nothing; func = tuple()) = RefReduce{refs, reduce_fs, func ,typeof(data)}(data)
-# ref_indices(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = tuple(union(ref_indices.(Refs)...)...)
-# ref_indices(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = tuple(union(ref_indices.(Refs)...)...)
+RefReduce(refs::Tuple, reduce_fs, data = nothing; func = identity) = RefReduce{refs, reduce_fs, func ,typeof(data)}(data)
 get_prefs(rr::RefReduce{Refs}) where Refs = (Refs)
 get_reduce_fs(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = reduce_fs
+get_fs(rr::RefReduce) = get_reduce_fs(rr)
+
 getF(rr::RefReduce{R,rf,F}) where {R,rf,F} = F
+setF(rr::RefReduce{Refs, reduce_fs, F}, func) where {Refs, reduce_fs, F} = RefReduce(Refs, reduce_fs, rr.data, func = func)
+
+Base.getindex(rr::RefReduce, idx) = get_prefs(rr)[idx]
+Base.lastindex(rr::RefReduce) = length(get_prefs(rr))
 
 function return_type(rr::RefReduce{Refs, reduce_fs, F, D}, args) where {Refs, reduce_fs, F, D}
     promote_type(return_type.(Refs, Ref(args))...)
@@ -24,13 +28,52 @@ Base.length(rr::RefReduce) = length(get_prefs(rr))
 
 Base.:+(p1::AbstractParameterRef, p2::AbstractParameterRef) = RefReduce((p1, p2), (+,))
 Base.:-(p1::AbstractParameterRef, p2::AbstractParameterRef) = RefReduce((p1, p2), (-,))
-Base.:+(p1::AbstractParameterRef, p2::RefReduce) = RefReduce((p1, get_prefs(p2)...), (+, get_reduce_fs(p2)...))
-Base.:-(p1::AbstractParameterRef, p2::RefReduce) = RefReduce((p1, get_prefs(p2)...), (-, get_reduce_fs(p2)...))
-Base.:+(p1::RefReduce, p2::AbstractParameterRef) = RefReduce((get_prefs(p1)..., p2), (get_reduce_fs(p1)...,+))
-Base.:-(p1::RefReduce, p2::AbstractParameterRef) = RefReduce((get_prefs(p1)..., p2), (get_reduce_fs(p1)...,-))
 
-Base.:-(p::RefReduce) = RefReduce(get_prefs(p), get_reduce_fs(p), p.data, func = tuple(-))
-Base.:^(p::RefReduce, pow::Real) = RefReduce(get_prefs(p), get_reduce_fs(p), p.data, func = (^, pow))
+# Already a ref reduce
+# Plusses come first
+function Base.:+(p1::AbstractParameterRef, p2::RefReduce)
+    if getF(p2) == identity
+        return RefReduce((p1, get_prefs(p2)...), (+, get_reduce_fs(p2)...))
+    else # If there's a function, then keep it blocked
+        return RefReduce((p2, p1), tuple(+))
+    end
+end
+Base.:+(p1::RefReduce, p2::AbstractParameterRef) = (+)(p2, p1)
+
+function Base.:-(p1::RefReduce, p2::AbstractParameterRef)
+    if getF(p1) == identity 
+        return RefReduce((get_prefs(p1)..., p2), (get_reduce_fs(p1)..., -))
+    else # If there's a function, then keep it blocked
+        return RefReduce((p1, p2), tuple(-))
+    end
+end
+Base.:-(p1::AbstractParameterRef, p2::RefReduce) = (-)(p2, p1)
+
+
+# Base.:+(p1::RefReduce, p2::AbstractParameterRef) = RefReduce((p2, get_prefs(p1)...), (+, get_reduce_fs(p1)...))
+
+Base.:-(p::RefReduce) = RefReduce(get_prefs(p), get_reduce_fs(p), p.data, func = -)
+# Base.:^(p::RefReduce, pow::Real) = RefReduce(get_prefs(p), get_reduce_fs(p), p.data, func = (^, pow))
+
+function num_plusses(rr::RefReduce)
+    found = findfirst(get_reduce_fs(rr) .== -)
+    isnothing(found) && (found = length(get_reduce_fs(rr)) + 1)
+    found
+end
+
+function num_minuses(rr::RefReduce)
+    found = findfirst(get_reduce_fs(rr) .== -)
+    isnothing(found) && (found = length(get_reduce_fs(rr)) + 1)
+    length(get_reduce_fs(rr)) - found + 1
+end
+
+function get_plusses(rr::RefReduce)
+    tuple(rr[1:num_plusses(rr)]...)
+end
+
+function get_minuses(rr::RefReduce)
+    tuple(rr[num_plusses(rr)+1:end]...) 
+end
 
 @generated function ref_indices(rr::RefReduce)
     t = tuple(union(ref_indices.(get_prefs(rr()))...)...)
@@ -38,19 +81,23 @@ Base.:^(p::RefReduce, pow::Real) = RefReduce(get_prefs(p), get_reduce_fs(p), p.d
 end
 issparse(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = all(issparse.(Refs))
 
+"""
+Only consists of simple refs
+"""
 @generated function ispure(rr::RefReduce)
     pure = true
-    first_indexset = ref_indices(gethead(get_prefs(rr())))
+    all_indices_flattened = Set(Iterators.flatten(ref_indices.(get_prefs(rr()))))
     for ref in get_prefs(rr())
         idxs = ref_indices(ref)
-        pure = ispure(ref) && idxs ∈ first_indexset
+        pure = ispure(ref) && isempty(setdiff(all_indices_flattened, idxs)) #Underlying is pure, and all have same indices
         if !pure
             break
         end
     end
-    # return :(Val($pure))
     return :($pure)
 end
+
+### EXPRESSION STUFF
 
 function expand_exp(rr::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs}
     refs = collect(Refs)  # Convert tuple to array for easier manipulation
@@ -117,29 +164,6 @@ function expand_to_calls(rm::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs}
         expr = Expr(:call, ops[i], expr, ref2expr(Refs[i+1]))
     end
     
-    
     return expr
 end
 
-@inline function (rr::RefReduce)(args::NT; genid = nothing, idxs...) where NT
-    @inline refreduce_type(rr, args, (;idxs...); genid)
-end
-
-refreduce_type_exp = nothing
-refreduce_type_args = nothing
-
-"""
-Inline a refreduce like: ref1(args; idxs...) +/- ref2(args; idxs...) ...
-"""
-@inline @generated function refreduce_type(rr, @specialize(args), idxs; genid = TreeID(rr))
-    exptree = GenExpressionTree(genid(), :refreduce_type)
-    global refreduce_type_args = [rr, args, idxs]
-    global refreduce_type_exp = quote
-        $(unpack_keyword_expr(idxs, :idxs))
-        $(expand_to_calls(rr()))
-    end
-    setexpr!(exptree, refreduce_type_exp)
-    # error("Tree: $exptree, id: $(genid())")
-    global last_exptree[] = mergetree(last_exptree[], exptree)
-    return refreduce_type_exp
-end

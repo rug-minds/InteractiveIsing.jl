@@ -88,12 +88,7 @@ function find_struct_access(exp, symb)
     return find_idxs
 end
 
-"""
-Replace the args of an expression at level idxs with replace
-"""
-function replace_args!(exp, idxs, replace)
-    enter_args(exp, idxs[1:end-1]).args[idxs[end]] = replace
-end
+
 
 """
 Replace all struct accesses of a symbol in an expression with a new expression
@@ -165,14 +160,16 @@ function inline_default(exp, params::Union{Parameters, Type{<:Parameters}}, fiel
 end
 
 
-macro Parameters(func)
-    # println("Func ", func)
-    @capture(func, function name_(a__) body__ end)
-    paramname = find_type_in_args(a, :Parameters)
-    replace_struct_access(func, paramname, (exp) -> ifactive_defaultparamval(exp, structname_fieldname(exp)...))
-    println(func)
-    return esc(func)
-end
+# """
+# """
+# macro Parameters(func)
+#     # println("Func ", func)
+#     @capture(func, function name_(a__) body__ end)
+#     paramname = find_type_in_args(a, :Parameters)
+#     replace_struct_access(func, paramname, (exp) -> ifactive_defaultparamval(exp, structname_fieldname(exp)...))
+#     println(func)
+#     return esc(func)
+# end
 
 function matchfunction(funcexp)
     InteractiveIsing.MacroTools.@capture(funcexp, function fname_(a__) body_ end)

@@ -40,8 +40,12 @@ function ParamVal(val::T, default, description = "", active = false; runtimeglob
     end
 end
 
-function GlobalParamVal(val, description = "", active = false)
+function GlobalParamVal(val, length = 0, description = "", active = false)
     return ParamVal(typeof(val)[], val, description, active; runtimeglobal = true)
+end
+
+function DefaultParamVal(val, description = "")
+    return ParamVal(typeof(val)[], val, description, false)
 end
 
 
@@ -71,18 +75,28 @@ function ParamVal(p::ParamVal, default, active::Bool = nothing)
 end
 
 
+## TRAITS
 isinactive(::ParamVal{A,B,C}) where {A,B,C}= !C
 isactive(::ParamVal{A,B,C}) where {A,B,C} = C
-isactive(::Type{ParamVal{A,B,C,D}}) where {A,B,C,D} = C
-isinactive(::Type{ParamVal{A,B,C,D}}) where {A,B,C,D} = !C
-default(::Type{ParamVal{T, Default, Active, D}}) where {T, Default, Active, D} = Default
+isactive(::Type{ParamVal{A,B,C,D,N}}) where {A,B,C,D,N} = C
+isinactive(::Type{ParamVal{A,B,C,D,N}}) where {A,B,C,D,N} = !C
+@inline default(p::ParamVal{T, Default, Active, D, N}) where {T, Default, Active, D, N} = Default
+@inline default(::Type{ParamVal{T, Default, Active, D, N}}) where {T, Default, Active, D, N} = Default
 description(p::ParamVal) = p.description
 runtimeglobal(p::ParamVal{T, Default, Active, RD}) where {T, Default, Active, RD} = RD != Nothing
-runtimeglobal(::Type{ParamVal{T, Default, Active, RD}}) where {T, Default, Active, RD} = RD != Nothing
+runtimeglobal(::Type{ParamVal{T, Default, Active, RD, N}}) where {T, Default, Active, RD, N} = RD != Nothing
+dims(p::ParamVal{T, Default, Active, RD, N}) where {T, Default, Active, RD, N} = N
+dims(::Type{ParamVal{T, Default, Active, RD, N}}) where {T, Default, Active, RD, N} = N
+
+# Will be constant over any iteration
+loopconstant(p::ParamVal) = !isactive(p) || runtimeglobal(p)
+loopconstant(p::Type{<:ParamVal}) = !isactive(p) || runtimeglobal(p)
+function unroll_exp(p::Union{Type{<:ParamVal}, <:ParamVal}, vecname, exp_f = identity)
+    :(length(vecname)*$(exp_f(:($(vecname)[]))))
+end
 
 
 toggle(p::ParamVal{T, Default, Active}) where {T, Default, Active} = ParamVal{T, Default, !Active}(p.val)
-@inline default(::ParamVal{T, Default}) where {T, Default} = Default
 
 # Single value Params
 @inline Base.getindex(p::ParamVal{T}) where T <: Ref =p.val[]
@@ -92,6 +106,7 @@ toggle(p::ParamVal{T, Default, Active}) where {T, Default, Active} = ParamVal{T,
 Base.size(p::ParamVal{T}) where T = (1,)
 Base.length(p::ParamVal{T}) where T = 1
 @inline Base.eltype(p::ParamVal{T}) where T = T
+@inline Base.eltype(pt::Type{<:ParamVal{T,D,A,RD,N}}) where {T,D,A,RD,N} = eltype(T)
 
 """
 For getting and setting fields of the value of a ParamVal
@@ -101,23 +116,52 @@ setvalfield!(p::ParamVal, field, val) = setfield!(p.val, field, val)
 
 
 #Vector Like ParamVals
-@inline function Base.getindex(p::ParamVal{T}, idx...) where T <: AbstractArray
-    if isactive(p)
-        if runtimeglobal(p)
-            return p.runtimeglobal[]
-        else
-            return getindex(p.val, idx...)::eltype(T)
-        end
+function Base.getindex(p::ParamVal{T}) where T <: AbstractArray
+    if isactive(p) && !runtimeglobal(p)
+        error("Cannot index an active parameter with []")
+    end
+    if runtimeglobal(p)
+        return p.runtimeglobal[]::eltype(T)
     else
-        return default(p)
+        return default(p)::eltype(T)
     end
 end
+
+
+@inline function Base.getindex(p::ParamVal{T}, idx) where T <: AbstractArray
+    if isactive(p)
+        if runtimeglobal(p)
+            return p.runtimeglobal[]::eltype(T)
+        else
+            return getindex(p.val, idx)::eltype(T)
+        end
+    else
+        return default(p)::eltype(T)
+    end
+end
+
+@inline function Base.getindex(p::ParamVal{T}, idx::UnitRange) where T <: AbstractArray
+    if isactive(p)
+        if runtimeglobal(p)
+            return [p.runtimeglobal[] for i in idx]::Vector{eltype(T)}
+        else
+            return getindex(p.val, idx)::Vector{eltype(T)}
+        end
+    else
+        return [default(p) for i in idx]::Vector{eltype(T)}
+    end
+end
+
 @inline function Base.setindex!(p::ParamVal{T}, val, idx...) where T <: AbstractArray
     if runtimeglobal(p)
         return p.runtimeglobal[] = val
     end
-    return p.val[idx...] = val
+    return setindex!(p.val, val, idx...)::eltype(T)
 end
+
+Base.dotview(p::ParamVal{T}, i...) where T <: AbstractArray = Base.dotview(p.val, i...)
+Base.materialize!(p::ParamVal{T}, a::Base.Broadcast.Broadcasted{<:Any}) where T <: AbstractArray = Base.materialize!(p.val, a)
+
 @inline Base.lastindex(p::ParamVal{T}) where T <: AbstractArray = lastindex(p.val)
 @inline Base.firstindex(p::ParamVal{T}) where T <: AbstractArray = firstindex(p.val)
 @inline Base.eachindex(p::ParamVal{T}) where T <: AbstractArray = eachindex(p.val)
@@ -138,14 +182,34 @@ setruntimeglobal(p::ParamVal{T}, val) where T = Paramval(p.val, default(p), p.de
 removeruntimeglobal(p::ParamVal{T}) where T = Paramval(p.val, default(p), p.description, isactive(p), runtimeglobal = false)
 
 
-
 # Loopvectorization stuff
-LoopVectorization.check_args(p::ParamVal{T}) where T <: AbstractArray = true
-@inline Base.pointer(p::ParamVal{T}) where T = pointer(p.val)
+using LayoutPointers
+LoopVectorization.check_args(p::ParamVal{T}) where T <: DenseArray = true
+@inline Base.pointer(p::ParamVal{T}) where T <: DenseArray = pointer(p.val)
+@inline LayoutPointers.memory_reference(p::ParamVal{T}) where T <: DenseArray = LayoutPointers.memory_reference(p.val)
+@inline LayoutPointers.stridedpointer_preserve(p::ParamVal{T}) where T <: DenseArray = LayoutPointers.stridedpointer_preserve(p.val)
+Base.strides(p::ParamVal{T}) where T <: DenseArray = strides(p.val)
+# Base.IndexStyle(::Type{<:ParamVal}) = IndexLinear()
+# Base.BroadcastStyle(::Type{ParamVal{T,A,B,C,D}}) where {T<:AbstractArray,A,B,C,D} = Broadcast.ArrayStyle{ParamVal}()
+# Base.BroadcastStyle(::Type{ParamVal{T,A,B,C,D}}) where {T,A,B,C,D} = Broadcast.Style{ParamVal}()
+
+
+vec_val_eltype(r::Real) = typeof(r)
+vec_val_eltype(v::AbstractArray) = eltype(v)
+vec_val_eltype(t::Type{<:Real}) = t
+vec_val_eltype(t::Type{<:AbstractArray}) = eltype(t)
+vec_val_eltype(v::ParamVal) = eltype(v)
+vec_val_eltype(t::Type{<:ParamVal}) = eltype(t)
 """
 For vector like objects, find the promote type of the eltypes
 """
-promote_eltype(vector_types...) = promote_type(eltype.(vector_types)...)
+@generated function promote_eltype(vector_types...)
+    t = promote_type(vec_val_eltype.(vector_types)...)
+    return :($t)
+end
+
+
+
 
 """
 Gives the zero value of the type of the parameter
@@ -155,21 +219,26 @@ This works with inlining of default values.
 paramzero(val::Any) = typeof(val)(0)
 paramzero(::ParamVal{T}) where T = zero(T)
 export paramzero
-Base.BroadcastStyle(::Type{ParamVal{T,A,B}}) where {T<:AbstractArray,A,B} = Broadcast.ArrayStyle{ParamVal}()
-Base.BroadcastStyle(::Type{ParamVal{T,A,B}}) where {T,A,B} = Broadcast.Style{ParamVal}()
 
-function Base.show(io::IO, p::ParamVal{T}) where T
+
+function Base.show(io::IO, ::MIME"text/plain", p::ParamVal{T}) where T
     print(io, (isactive(p) ? "Active " : "Inactive "))
     print(io, "$(p.description) with value: ")
     println(io, "$(p.val)")
     print(io, "Defaulting to: $(default(p))")
 end
 
-function Base.show(io::IO, p::ParamVal{T}) where {T <: AbstractVector}
-    print(io, (isactive(p) ? "Active " : "Inactive "))
-    println(io, "$(p.description) with vector value.")
-    println(io, "Defaulting to: $(default(p))")
-    display(p.val)
+function Base.show(io::IO, ::MIME"text/plain", p::ParamVal{T}) where {T <: AbstractVector}
+    if runtimeglobal(p)
+        l = length(p.val)
+        println(io, "$(l)-element $(eltype(p.val)) constant parameter")
+        print(io, "Value: $(p.runtimeglobal[])")
+    else
+        println(io, (isactive(p) ? "Active " : "Inactive "))
+        println(io, "$(p.description) with vector value.")
+        println(io, "Defaulting to: $(default(p))")
+        display(p.val)
+    end
 end
 
 """

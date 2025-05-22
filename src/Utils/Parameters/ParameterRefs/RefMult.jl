@@ -8,15 +8,50 @@ Refs store an set of AbstractParameterRefs
         The significance of being pure is that this may be represented simply as
         a simple multiplication of the ref values for a fill and contraction
 """
-struct RefMult{Refs, idxs, F, D} <: AbstractParameterRef 
+struct RefMult{Refs, mult_f, F, D} <: AbstractParameterRef 
     data::D
 end
+
+get_mult_f(rm::RefMult{Refs, mult_f}) where {Refs, mult_f} = mult_f
+get_fs(rm::RefMult) = get_mult_f(rm)
+
+Base.length(rm::RefMult{Refs}) where Refs = length(Refs)
 """
-Stndard Constructor
+Standard Constructor
 """
-function RefMult{Refs, idxs}(data = nothing; func = tuple()) where {Refs, idxs}
-    RefMult{Refs, idxs, func, typeof(data)}(data)
+function RefMult{Refs, mult_f}(data = nothing; func = identity) where {Refs, mult_f}
+    RefMult{Refs, mult_f, func, typeof(data)}(data)
 end
+
+function RefMult(refs, mult_f, data = nothing; func = identity)
+    RefMult{refs, mult_f, func, typeof(data)}(data)
+end
+
+"""
+Create a RefMult from two parameter refs
+"""
+function RefMult(p1::AbstractParameterRef, p2::AbstractParameterRef, f::Function = *)
+    if ispure(p1) && ispure(p2) && ref_indices(p1) == ref_indices(p2)
+        if f == *
+            data = p1.data
+            if p1 isa RefMult && getF(p1) == identity && get_fs(p1) == *
+                p1 = get_prefs(p1)
+            else
+                p1 = tuple(p1)
+            end
+            if p2 isa RefMult && getF(p2) == identity && get_fs(p2) == *
+                p2 = get_prefs(p2)
+            else
+                p2 = tuple(p2)
+            end
+            return RefMult{tuple(p1...,p2...), f}(data)
+        end
+        return RefMult{tuple(p1,p2), f}(p1.data)
+    else
+        return RefMult{tuple(tuple(p1), tuple(p2)), f}(p1.data)
+    end
+end
+
 """
 Empty constructor for generated functions
 """
@@ -25,7 +60,10 @@ RefMult{A,B,C,D}() where {A,B,C,D} = RefMult{A,B,C,Nothing}(nothing)
 """
 Multiplications of two refs
 """
-Base.:*(p1::AbstractParameterRef, p2::AbstractParameterRef) = RefMult(p1, p2)
+Base.:*(p1::AbstractParameterRef, p2::AbstractParameterRef) = RefMult(p1, p2, *)
+function Base.:/(p1::AbstractParameterRef, p2::AbstractParameterRef)
+    RefMult(p1, p2, /)
+end
 
 """
 Iterating over a RefMult
@@ -38,24 +76,26 @@ Get overall function
 getF(rm::RefMult{Refs, idxs, fs}) where {Refs, idxs, fs} = fs
 
 """
-Is overall function Unary (stored as (F)) or Binary, stored as (F, number)
+Set overall function
 """
-F_type(rm::AbstractParameterRef) = length(getF(rm)) == 1 ? Unary() : Binary()
+function setF(rm::RefMult{Refs, mult_f}, func) where {Refs, mult_f}
+    return RefMult(Refs, mult_f, rm.data, func = func)
+end
 
 """
 Overall function for RefMult
 """
-Base.:-(rm::RefMult{Refs, idxs}) where {Refs,idxs} = RefMult{Refs, idxs}(rm.data, func = tuple(-))
+Base.:-(rm::RefMult{Refs, mult_f}) where {Refs, mult_f} = RefMult{Refs, mult_f}(rm.data, func = tuple(-))
 
-"""
-Overall function for RefMult
-"""
-Base.:^(rm::RefMult{Refs,idxs}, pow::Real) where {Refs,idxs} = RefMult{get_prefs(rm), getidxs(rm)}(rm.data, func = (^, pow))
+# """
+# Overall function for RefMult
+# """
+# Base.:^(rm::RefMult{Refs,idxs}, pow::Real) where {Refs,idxs} = RefMult{get_prefs(rm), getidxs(rm)}(rm.data, func = (^, pow))
 
 """
 Get the return type of the RefMult
 """
-function return_type(rm::RefMult{Refs, idxs, F, D}, args) where {Refs, idxs, F, D}
+function return_type(rm::RefMult{Refs, mult_f, F, D}, args) where {Refs, mult_f, F, D}
     promote_type(return_type.(Refs, Ref(args))...)
 end
 
@@ -65,7 +105,44 @@ Get all the symbols that are in the refmult (symbols refer to the name of the pa
 """
 ref_symb(::RefMult{Refs}) where Refs = tuple(ref_symb.(Refs)...)
 
+### EXPS
 
+"""
+Get all vector like refs
+"""
+function vec_refs(rc::Union{Type{<:RefMult}, RefMult}, args)
+    if rc isa Type
+        rc = rc()
+    end
+    refs = get_prefs(rc)
+    return tuple(_vec_refs(args, gethead(refs), gettail(refs))...)
+end
+
+"""
+Get a reference to a matrix in a contraction
+    Returns nothing if it's not found
+"""
+function matrix_ref(rc::Union{Type{<:RefMult}, RefMult}, args)
+    if rc isa Type
+        rc = rc()
+    end
+    for ref in rc
+        if reftype(ref, args) isa MatrixLike
+            return ref
+            break
+        end
+    end
+    return nothing
+end
+
+"""
+Get all references to the structs in a contraction
+"""
+function struct_ref_exps(ref::RefMult)
+    return tuple(Iterators.flatten(struct_ref_exp.(get_prefs(ref)))...)
+end
+
+### TRAITS
 """
 Refs are represented as a tuple of tuples of AbstractParameterRefs if they are mixed
 """
@@ -86,7 +163,18 @@ end
 """
 Gives wether all the refs are sparse
 """
-issparse(::RefMult{Refs, idxs}) where {Refs, idxs} = all(issparse.(Refs))
+issparse(::RefMult{Refs}) where {Refs} = all(issparse.(Refs))
+
+function contraction_type(rc::RefMult, args)
+    prefs = get_prefs(rc)
+    if length(prefs) == 2
+        if reftype(last(prefs), args) == MatrixLike
+            return SparseColumn()
+        else
+            return VectorContraction()
+        end
+    end
+end
 
 """
 Get the flattened parameter refs
@@ -106,8 +194,9 @@ Get the struct reference expressions (i.e. args.params.symobl) for each paramete
     in a tuple (args.params.s1, args.params.s2, ...)
 """
 function struct_ref_exp(rm::RefMult{Refs}) where Refs
-    @assert !mixed_mult(rm)
-    return tuple(Iterators.flatten(struct_ref_exp.(Refs))...)
+    # @assert !mixed_mult(rm)
+    refs = get_prefs(rm)
+    return tuple(Iterators.flatten(struct_ref_exp.(refs))...)
 end
 
 
@@ -120,22 +209,36 @@ Check if a RefMult is pure
     I.e. (a_i + b_j) * (c_i + d_j) is not pure, 
         even though both reduces have the same indices
 """
-@generated function ispure(rm::RefMult{Refs}) where {Refs}
-    if typeof(Refs) <: Tuple{Vararg{Tuple}} # If Refs has multiple partitions, then it is not pure
-        return :(false)
-    end
+function ispure(rm::RefMult{Refs}) where {Refs}
+    # if typeof(Refs) <: Tuple{Vararg{Tuple}} # If Refs has multiple partitions, then it is not pure
+    #     return :(false)
+    # end
     pure = true
     # indexset = ref_indices(rm())
-    prefs = get_prefs(rm())
-    first_inddexset = ref_indices(first(prefs))
-    for ref in prefs
-        idxs = ref_indices(ref)
-        pure = ispure(ref) && idxs ∈ first_inddexset
-        if !pure
-            break
+    prefs = get_prefs(rm)
+    for ridx in 1:length(prefs)-1
+        if !isempty(ref_indices(prefs[ridx])) || !isempty(ref_indices(prefs[ridx+1]))
+            if ref_indices(prefs[ridx]) != ref_indices(prefs[ridx+1])
+                pure = false
+                break
+            end
         end
     end
-    return :($pure)
+    # return :($pure)
+    return pure
+end
+
+"""
+Get the indices present in the RefMult
+"""
+@generated function ref_indices(rc::RefMult{Refs}) where Refs
+    t = nothing
+    if typeof(Refs) <: Tuple{Vararg{Tuple}}
+        t = tuple(union(ref_indices.(get_prefs(rc()))...)...)
+    else
+        t = tuple(union(ref_indices.(Refs)...)...)
+    end
+    return :($t)
 end
 
 ### MULTS
@@ -163,28 +266,22 @@ Given two refs and indices that are filled, return the indices that are contract
     idcs1 = ref_indices(ref1())
     idcs2 = ref_indices(ref2())
     _intersect = tuple(intersect(idcs1, idcs2)...)
-    if !(filled_indices <: Nothing) # If indices are filled, they are esentially not there
+    if !(filled_indices <: Nothing) && !(filled_indices == @NamedTuple{}) # If indices are filled, they are esentially not there
         _intersect = tuple((setdiff(_intersect, getval(filled_indices)))...)
     end
     return :($_intersect)
 end
 
 """
-Group two parameter refs into a RefMult
-"""
-function group_mults(p1::AbstractParameterRef, p2::AbstractParameterRef)
-    if ispure(p1) && ispure(p2) && ref_indices(p1) == ref_indices(p2)
-        return RefMult{tuple(p1,p2), ref_indices(p1)}(p1.data)
-    else
-        return RefMult{tuple(tuple(p1), tuple(p2)), tuple(indices_set(p1,p2)...)}(p1.data)
-    end
-end
 
 """
-Create a RefMult from two parameter refs
-"""
-function RefMult(p1::AbstractParameterRef, p2::AbstractParameterRef)
-    return group_mults(p1, p2)
+function loop_idxs(ref, filled_indices = nothing)
+    indxs = ref_indices(ref)
+    filled_indices = index_names(filled_indices)
+    if !(isnothing(filled_indices))
+        indxs = tuple((setdiff(indxs, filled_indices))...)
+    end
+    return indxs
 end
 
 """
@@ -197,14 +294,9 @@ Expand the total expression of the refmult
     This gives expand calles downwards
     For the refmult this essentially means we get :(F(expand(R1))*F(Expand(R2))*...)
 """
-function expand_exp(rc::RefMult{Refs, idxs}) where {Refs, idxs}
+function expand_exp(rc::RefMult{Refs}) where {Refs}
     # @assert !mixed_mult(rc)
     exp = Expr(:call, :*, expand_exp.(get_prefs(rc))...)
     return expr_F_wrap(rc, exp)
 end
 
-
-refmult_build_exp = nothing
-function build_exp(rc::RefMult{Refs, idxs}, indorsymb) where {Refs, idxs}
-    
-end

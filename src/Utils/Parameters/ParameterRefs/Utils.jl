@@ -1,20 +1,15 @@
-"""
-Get the expression that unpacks the keyword arguments with var name `name`
-    (;k1, k2, ...) = name
-"""
-function unpack_keyword_expr(kwtuple::NamedTuple, name::Symbol)
-    return :((;$(keys(kwtuple)...)) = $name)
+function index_names(nt::Union{Type{<:NamedTuple}, NamedTuple, Tuple})
+    if nt isa NamedTuple
+        return tuple(keys(nt)...)
+    elseif nt isa Tuple
+        return nt
+    elseif nt <: NamedTuple
+        return tuple(fieldnames(nt)...)
+    else
+        throw(ArgumentError("index_names only works on NamedTuples, Tuples and Nothings"))
+    end
 end
-"""
-For a keyword tuple type get the expression that unpacks the keyword arguments
-    (;k1, k2, ...) = name
-"""
-function unpack_keyword_expr(kwtuple::Type{<:NamedTuple}, name::Symbol)
-    keys = fieldnames(kwtuple)
-    return :((;$(keys...)) = $name)
-end
-
-
+index_names(nt::Nothing) = nothing
 ### Macro putting in prefs
 """
 Find symbols of the form s_ij...
@@ -83,4 +78,31 @@ macro ParameterRefs(ex)
     end 
 end
 
-export @ParameterRefs
+var"@PR" = var"@ParameterRefs"
+
+export @ParameterRefs, @PR
+
+
+#####
+
+# build_getproperty_chain(symbs::Tuple) = build_getfield_chain(first(symbs), Base.tail(symbs))
+"""
+From a base struct and then a list of symbols
+    build the expression to get the properties, i.e.
+    getproperty(getproperty((...(base_expr), symbs[1]...), symbs[end-1]) symbs[end])
+"""
+function build_getproperty_chain(base_expr, symbols::Tuple)
+    if isempty(symbols)
+        return base_expr
+    end
+    return build_getproperty_chain(:(getproperty($base_expr, $(QuoteNode(first(symbols))))), Base.tail(symbols))
+end
+
+
+##
+function expr_F_wrap(exp, func::Function)
+    if typof(func) == identity
+        return exp
+    end
+    return Expr(:call, func, exp)
+end
