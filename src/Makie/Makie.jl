@@ -54,14 +54,14 @@ function _interface(g, createview = singleView; kwargs...)
     ml = simulation[].ml[]
 
     # If interface is not running, create a new basefig
-    if isnothing(ml["basefig_active"])
+    if isnothing(ml[:basefig_active])
         println("Starting Interface")
         baseFig(g)
     end
 
     # If there is already a view, clean it up
-    if !isnothing(ml["current_view"])
-        cleanup(ml, ml["current_view"])
+    if !isnothing(ml[:current_view])
+        cleanup(ml, ml[:current_view])
     end
 
     # Then assign a new one
@@ -91,7 +91,7 @@ function cleanup(ml, ::Nothing)
 end
 
 function set_colorrange(l::IsingLayer)
-    midpanel(getml())["image"].colorrange[] = stateset(l)
+    midpanel(getml())[:image].colorrange[] = stateset(l)
 end
 export set_colorrange
 
