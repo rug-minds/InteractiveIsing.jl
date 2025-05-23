@@ -12,6 +12,10 @@ function operator_reduce_exp(exps, ops)
     return exp
 end
 
+function operator_reduce_exp_single(exps, ops)
+    return Expr(:call, :+, exps[1], (ops[i-1] == (+) ? exps[i] : Expr(:call, :-, exps[i]) for i in 2:length(exps))...)
+end
+
 """
 Get the expression that unpacks the keyword arguments with var name `name`
     (;k1, k2, ...) = name
@@ -125,40 +129,50 @@ function value_exp(apr::AbstractParameterRef, args, filled_idxs = nothing)
     end
 end
 
+using OrderedCollections
+
 function assignment_map(apr::AbstractParameterRef, args, filled_idxs = nothing)
     flat_prefs = flatprefs(apr)
     assignments = get_assignments(apr, args, filled_idxs)
-    symbs = full_symb.(flat_prefs)
+    # symbs = full_symb.(flat_prefs)
+    bare_refs = remF.(flat_prefs)
     
     # d = Dict{ParameterRef, Tuple}(k => v for (k,v) in zip(flat_prefs, assignments))
-    nt = (;zip(symbs, assignments)...)
-    return nt
+    # nt = (;zip(symbs, assignments)...)
+    d = OrderedDict(zip(bare_refs, assignments))
+    return d
 end
 
-function keyselect(nt, keys::Union{NTuple{N, K}, Vector{K}}) where {K, N}
-    # return Dict(zip(keys, getindex.(Ref(d), keys)))
-    return nt[keys]
+function keyselect(od, keys::Union{NTuple{N, K}, Vector{K}}) where {K, N}
+    return OrderedDict(zip(keys, getindex.(Ref(od), keys)))
+    # return nt[keys]
 end
 
-# get_assignment(map, ref) = map[remF(ref)]
-get_assignment(t, refsymb::Symbol) = t[refsymb] |> getexpr
-# get_name(map, ref) = map[ref][1]
-get_name(t, refsymb::Symbol) = t[refsymb] |> name
-get_assignment_exp(t, refsymb::Symbol) = Expr(:(=), refsymb, get_assignment(t, refsymb)[2])
-# get_names(map) = full_symb.(keys(map))
-get_names(t) = name.(values(t)) 
+get_assignment(od, ref) = od[remF(ref)] |> getexpr
+# get_assignment(t, refsymb::Symbol) = t[refsymb] |> getexpr
+get_name(od, ref) = od[ref] |> name
+# get_name(t, refsymb::Symbol) = t[refsymb] |> name
+# get_assignment_exp(t, refsymb::Symbol) = Expr(:(=), refsymb, get_assignment(t, refsymb)[2])
+get_names(od) = name.(values(od))
+# get_names(t) = name.(values(t)) 
 
-submap(t, ref::AbstractParameterRef) = keyselect(t, full_symb.(flatprefs(ref)))
-first_veclike_name(t, args, filled_idxs) = name(values(t)[findfirst(p -> !isloopconstant(p, args, filled_idxs), pref.(values(t)))])
+# submap(t, ref::AbstractParameterRef) = keyselect(t, full_symb.(flatprefs(ref)))
+submap(od::OrderedDict, ref::AbstractParameterRef) = keyselect(od, remF.(flatprefs(ref)))
+# first_veclike_name(t, args, filled_idxs) = name(values(t)[findfirst(p -> !isloopconstant(p, args, filled_idxs), pref.(values(t)))])
+first_veclike_name(od, args, filled_idxs) = name(values(od)[findfirst(p -> !isloopconstant(p, args, filled_idxs), pref.(values(od)))])
 
-function get_axes_exp(t, args, filled_idxs, index_symb = nothing)
-    veclike_name = first_veclike_name(t, args, filled_idxs)
+# function get_axes_exp(t, args, filled_idxs, index_symb = nothing)
+#     veclike_name = first_veclike_name(t, args, filled_idxs)
+#     return Expr(:call, :axes, veclike_name, 1)
+# end
+
+function get_axes_exp(od, args, filled_idxs, index_symb = nothing)
+    veclike_name = first_veclike_name(od, args, filled_idxs)
     return Expr(:call, :axes, veclike_name, 1)
 end
 
-
-function unique_assignments(t)
-    [Expr(:(=), get_name(t, ref), get_assignment(t, ref)) for ref in keys(t)]
+function unique_assignments(od)
+    [Expr(:(=), get_name(od, ref), get_assignment(od, ref)) for ref in keys(od)]
 end
 
 itag(tag = nothing) = remove_line_number_nodes(:(@$($tag)))

@@ -38,4 +38,13 @@ g.hamiltonian = setglobalparam(g.hamiltonian, :b)
 # g.hamiltonian = deactivateparam(init!(NIsing(g), g), :b)
 # quit(g)
 createProcess(g, MetropolisNew)
-# as = (;getargs(g)..., newstate = SparseVal(-1,1,1))
+as = (;getargs(g)..., newstate = SparseVal(-1,1,1))
+dh = II.deltaH(g.hamiltonian)
+
+
+
+
+
+
+
+

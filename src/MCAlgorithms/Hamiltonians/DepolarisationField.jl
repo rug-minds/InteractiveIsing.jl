@@ -44,6 +44,6 @@ function update!(dpf::DepolField, args)
 end
 
 @ParameterRefs function deltaH(::DepolField)
-    return (dpf_j/c_)*(s_j-sn_j)
+    return (dpf_j/c_)*(sn_j-s_j)
 end
 

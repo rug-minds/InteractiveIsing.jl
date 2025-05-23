@@ -124,7 +124,7 @@ function create_layer_axis!(layer, panel_or_window; color = nothing, pos = (1,1)
     new_img!(g, layer, panel_or_window; color, colormap)
 end
 
-const makie_markersize = Ref(0.01)
+const makie_markersize = Ref(0.3)
 # Get image either for 2d or 3d
 function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
     dims = length(size(layer))

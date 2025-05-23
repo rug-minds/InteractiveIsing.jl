@@ -144,6 +144,14 @@ function getzero_exp(apr::AbstractParameterRef, precision = nothing)
     end
 end
 
+function getzero_exp(precision::Union{Nothing, Type}, names...)
+    if !isnothing(precision)
+        return :(zero($(precision)))
+    else
+        return :(zero(promote_eltype($(names...))))
+    end
+end
+
 """
 Get the reference to the struct in either args or params
     Based on the symbol
@@ -277,7 +285,7 @@ vec_refs(rc::Type{PR}, args) where PR<:AbstractParameterRef = vec_refs(PR(), arg
 
 loopconstant(::Any) = false
 ### Getting the ref
-function generate_block(reftype::ParameterRef, argstype, idxs = (;); rem_lnn = true)
+function generate_block(reftype::ParameterRef, argstype, idxs = (;), precision = nothing, assignments = nothing)
     ind = ref_indices(reftype)
     filled_indices = index_names(idxs)
     contract_ind = idx_subtract(ind, filled_indices)
@@ -310,9 +318,7 @@ function generate_block(reftype::ParameterRef, argstype, idxs = (;); rem_lnn = t
     #     # rtype = $(rtype)
     #     $totalname
     # end
-    if rem_lnn
-        remove_line_number_nodes!(expr)
-    end
+
     return expr
 end
 

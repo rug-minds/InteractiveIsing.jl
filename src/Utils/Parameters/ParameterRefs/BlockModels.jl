@@ -52,8 +52,8 @@ function get_blockmodel(apr::AbstractParameterRef, argstype, idxs)
 end
 
 #Fallback BlockModel
-function (::BlockModel{Nothing})(pr, argstype, idxs)
-    generate_block(pr, argstype, idxs)
+function (::BlockModel{Nothing})(pr, argstype, idxs, precision = nothing, assignments = nothing)
+    generate_block(pr, argstype, idxs, precision, assignments)
 end
 
 ###
@@ -110,7 +110,7 @@ function (::typeof(BlockModel()))(rr::RefReduce, argstype, idxs, precision = not
     # Name for the return
     totalname = gensym(:total)
 
-    block_exps = generate_block.(prefs, Ref(argstype), Ref(idxs))
+    block_exps = generate_block.(prefs, Ref(argstype), Ref(idxs), Ref(precision), Ref(assignments))
     blocknames = [Symbol("block_", i) for i in 1:length(prefs)]
     reduce_exp = :($totalname += $(operator_reduce_exp(blocknames, get_reduce_fs(rr))))
     exps = quote
