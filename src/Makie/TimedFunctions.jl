@@ -1,4 +1,4 @@
-const timedFunctions = Dict{String, Function}()
+const timedFunctions = Dict{Symbol, Function}()
 
 function timerFuncs(sim)
     for func in values(timedFunctions)

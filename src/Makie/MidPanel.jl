@@ -2,8 +2,8 @@ function midPanel(ml,g)
     f = fig(ml)
     simulation = sim(g)
 
-    obs_funcs = ml["obs_funcs_midPanel"] = ObserverFunction[]
-    coupled_obs = ml["coupled_obs_midPanel"] = Observable[]
+    obs_funcs = ml[:obs_funcs_midPanel] = ObserverFunction[]
+    coupled_obs = ml[:coupled_obs_midPanel] = Observable[]
 
     # Mid Panel
     midgrid = GridLayout(f[2,1])
@@ -11,13 +11,13 @@ function midPanel(ml,g)
     mp = midpanel(ml)
 
     # LEFT Panel
-    mp["leftpanel"] = leftpanel = GridLayout(midgrid[1,1], tellheight = false)
+    mp[:leftpanel] = leftpanel = GridLayout(midgrid[1,1], tellheight = false)
 
             # LEFT PANEL 1,1
-            mp["buttons"] = buttons = GridLayout(leftpanel[1,1])
+            mp[:buttons] = buttons = GridLayout(leftpanel[1,1])
 
             # Brush buttons
-                mp["bs"] = bs = [Button(buttons[-i+2,1], padding = (0,0,0,0), fontsize = 24, width = 40, height = 40, label = "$i") for i in 1:-1:-1]
+                mp[:bs] = bs = [Button(buttons[-i+2,1], padding = (0,0,0,0), fontsize = 24, width = 40, height = 40, label = "$i") for i in 1:-1:-1]
 
                 for (idx,val) in enumerate(1:-1:-1)
                     push!(obs_funcs, on(bs[idx].clicks) do _
@@ -27,18 +27,18 @@ function midPanel(ml,g)
                 end
 
             # Clamp toggle
-                mp["clamplabel"] = Label(buttons[4,1], "Clamping", fontsize = 18)
+                mp[:clamplabel] = Label(buttons[4,1], "Clamping", fontsize = 18)
 
-                mp["clamptoggle"] = clamptoggle = Toggle(buttons[5,1], active = false)
+                mp[:clamptoggle] = clamptoggle = Toggle(buttons[5,1], active = false)
 
             # LEFT PANEL 2,2
             # SIZE TEXTBOX 
-                mp["sizetextbox"] = size_grid = GridLayout(leftpanel[2,1])
+                mp[:sizetextbox] = size_grid = GridLayout(leftpanel[2,1])
 
                 size_validator(r_string) = try 0 < parse(UInt, r_string) < sim_max_r(simulation); catch; false; end
-                mp["size_label_text"] = sl_text = lift(x -> "Radius < $(sim_max_r(simulation))", layerIdx(simulation)) 
-                mp["sizelabel"] = Label(size_grid[1,1], sl_text)
-                mp["sizefield"] = sizefield = UIntTextbox(size_grid[2,1], 
+                mp[:size_label_text] = sl_text = lift(x -> "Radius < $(sim_max_r(simulation))", layerIdx(simulation)) 
+                mp[:sizelabel] = Label(size_grid[1,1], sl_text)
+                mp[:sizefield] = sizefield = UIntTextbox(size_grid[2,1], 
                     onfunc = (num) -> brushR(simulation)[] = num,
                     placeholder = "$(brushR(simulation)[])",
                     upper = () -> sim_max_r(simulation), 
@@ -54,11 +54,11 @@ function midPanel(ml,g)
                 end)
 
             # SHOW BFIELD
-            mp["showbfield"] = showbfield = Toggle(leftpanel[4,1], active = false)
-            mp["showbfieldlabel"] = Label(leftpanel[3,1], "Show BField", fontsize = 18)
+            mp[:showbfield] = showbfield = Toggle(leftpanel[4,1], active = false)
+            mp[:showbfieldlabel] = Label(leftpanel[3,1], "Show BField", fontsize = 18)
 
             push!(obs_funcs, on(showbfield.active) do x
-                mp["obs"][] = getSingleViewImg(g, ml)
+                mp[:obs][] = getSingleViewImg(g, ml)
             end)
         
 
@@ -89,7 +89,7 @@ function midPanel(ml,g)
 
 
     # RIGHT PANEL
-    mp["rightpanel"] = rightpanel = GridLayout(midgrid[1,3])
+    mp[:rightpanel] = rightpanel = GridLayout(midgrid[1,3])
 
         # TEMPERATURE SLIDER
             # push!(coupled_obs, mp["temptext"])
@@ -98,13 +98,13 @@ function midPanel(ml,g)
 
 
             Box(rightpanel[1,1], width = 100, height = 50, visible = false)
-            tempslider = mp["tempslider"] = tempslider = Slider(rightpanel[2,1], range = 0.0:0.02:20, value = 1.0, horizontal = false)
+            tempslider = mp[:tempslider] = tempslider = Slider(rightpanel[2,1], range = 0.0:0.02:20, value = 1.0, horizontal = false)
             
             tempslider.value.ignore_equal_values = true
 
             set_close_to!(tempslider, temp(g)[])
             ob_pair = Observables.ObservablePair(tempslider.value, temp(simulation))
-            mp["ob_pair"] = ob_pair
+            mp[:ob_pair] = ob_pair
 
             #Isn't this redundant?
             on(tempslider.value) do x
@@ -113,9 +113,9 @@ function midPanel(ml,g)
 
             push!(obs_funcs, ob_pair.links...)
 
-            mp["temptext"] = lift(x -> "T: $x", tempslider.value)
+            mp[:temptext] = lift(x -> "T: $x", tempslider.value)
 
-            mp["templabel"] = Label(rightpanel[1,1], mp["temptext"], fontsize = 18)
+            mp[:templabel] = Label(rightpanel[1,1], mp[:temptext], fontsize = 18)
         
     # rowsize!(f.layout, 1, Auto())
     colsize!(mp[], 1, 200)
@@ -123,12 +123,12 @@ function midPanel(ml,g)
 end
 
 function cleanup(ml, ::typeof(midPanel))
-        @justtry if !isempty(ml["obs_funcs_midPanel"])
-            off.(ml["obs_funcs_midPanel"])
+        @justtry if !isempty(ml[:obs_funcs_midPanel])
+            off.(ml[:obs_funcs_midPanel])
         end
-        @justtry delete!(ml, "obs_funcs_midPanel")
+        @justtry delete!(ml, :obs_funcs_midPanel)
         # decouple!.(ml["coupled_obs_midPanel"])
-        @justtry delete!(ml, "coupled_obs_midPanel")
+        @justtry delete!(ml, :coupled_obs_midPanel)
 
         midpanel(ml, LayoutPanel())
 end

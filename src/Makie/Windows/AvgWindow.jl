@@ -1,6 +1,6 @@
 function createAvgWindow(layer; buffersize = 512, window_time = 1, framerate = buffersize*window_time)
     ml = simulation[].ml[]
-    if haskey(ml, "avgwindow_active") && ml["avgwindow_active"]
+    if haskey(ml, :avgwindow_active) && ml[:avgwindow_active]
         cleanup(ml, avgWindow)
     end
     avgWindow(ml, layer, buffersize, framerate)
@@ -16,7 +16,7 @@ mutable struct AvgWindow{T} <: Function
     img_ob::Observable{Matrix{T}}
     screen::GLMakie.Screen
     f::Figure
-    other::Dict{String, Any}
+    other::Dict{Symbol, Any}
     timer::Timer
     AvgWindow(a,b,c,d,e,f) = new{eltype(c[])}(a,b,c,d,e,f)
 end
@@ -41,8 +41,8 @@ function avgWindow(ml, layer, buffersize, framerate)
     ax.yreversed = @load_preference("makie_y_flip", default = false)
     
 
-    avgwindow = AvgWindow(layer, buffers, img_ob, newscreen, f, Dict{String, Any}())
-    ml["avgWindow"] = avgwindow
+    avgwindow = AvgWindow(layer, buffers, img_ob, newscreen, f, Dict{Symbol, Any}())
+    ml[:avgWindow] = avgwindow
     
     # DISPLAY
 
@@ -53,7 +53,7 @@ function avgWindow(ml, layer, buffersize, framerate)
 
     # timedFunctions["avgWindow"] = update_avgWindow
 
-    on(events(ml["avgWindow"].f).window_open) do _
+    on(events(ml[:avgWindow].f).window_open) do _
         cleanup(ml, avgWindow)
     end
     
@@ -62,7 +62,7 @@ end
 
 function update_avgWindow(sim)
     ml = sim.ml[]::SimLayout
-    avgWindow = ml["avgWindow"]
+    avgWindow = ml[:avgWindow]
     buffers = avgWindow.buffers
     img_ob = avgWindow.img_ob
 
@@ -89,13 +89,13 @@ end
 
 function cleanup(ml, ::typeof(avgWindow))
     println("Cleaning up avgWindow")
-    avgwindow = ml["avgWindow"]
+    avgwindow = ml[:avgWindow]
     close(avgwindow.timer)
     # delete!(timedFunctions, "avgWindow")
     try 
         GLFW.SetWindowShouldClose(to_native(avgwindow.screen), true)
     catch
     end
-    delete!(ml, "avgWindow")
+    delete!(ml, :avgWindow)
     return nothing
 end

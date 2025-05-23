@@ -2,7 +2,7 @@ mutable struct LayerWindow <: AbstractWindow
     l::IsingLayer    
     f::Figure
     screen::GLMakie.Screen
-    other::Dict{String, Any}
+    other::Dict{Symbol, Any}
     timer::PTimer
     LayerWindow(a,b,c,d) = new(a,b,c,d)
 end
@@ -18,7 +18,7 @@ function LayerWindow(l::IsingLayer)
     ax, im, img_ob = LayerAxis(grid[1,1], l, title = "Layer $(name(l))", tellwidth = false, tellheight = false)
     timer = create_window_timer(() -> notify(img_ob), isopen)
 
-    lw = LayerWindow(l, f, screen, Dict{String, Any}())
+    lw = LayerWindow(l, f, screen, Dict{Symbol, Any}())
     push!(ml.windowlist, lw)
     lw.timer = timer
 

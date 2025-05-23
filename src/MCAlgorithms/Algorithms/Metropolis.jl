@@ -86,7 +86,7 @@ function Processes.prepare(::MetropolisNew, @specialize(args))
     Δs_j = Ref(zero(eltype(g.state)))
 
     lmeta = LayerMetaData(g[1])
-    return (;g, gstate, gadj, params, iterator, hamiltonian, deltafunc, lmeta, rng, M, Δs_j)
+    return (;gstate, gadj, params, iterator, hamiltonian, deltafunc, lmeta, rng, M, Δs_j)
 end
 
 @inline function (::MetropolisNew)(@specialize(args))

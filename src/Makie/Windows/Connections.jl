@@ -2,13 +2,13 @@ export visualize_connections
 function visualize_connections(g, i)
     window = new_window()
     # Make GridLayout
-    window["gridlayout"] = window.f[1, 1] = GridLayout()
+    window[:gridlayout] = window.f[1, 1] = GridLayout()
 
     colorvec = zeros(RGBAf, nstates(g))
     weights = conn_weights(g,i)
     colorvec[conn_idxs(g,i)] .= weight_colors(weights)
     # return (colorvec)
-    window["ax"] = create_layer_axis!(g, window, color = colorvec)
+    window[:ax] = create_layer_axis!(g, window, color = colorvec)
 end
 
 visualize_connections(g, i, j) = visualize_connections(g, coordToIdx(Int32.((i, j)), size(g)))

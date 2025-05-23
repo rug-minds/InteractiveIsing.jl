@@ -23,7 +23,7 @@ mutable struct IsingSim
     # Process being used
     processes::ProcessList
     # Timers
-    timers::Dict{String,PTimer}
+    timers::Dict{Symbol,PTimer}
     # Simulation Parameters
     const params::IsingParams
     
@@ -54,7 +54,7 @@ mutable struct IsingSim
             Ref(false),
             Ref(false),
             ProcessList(4),
-            Dict{String,Timer}(),
+            Dict{Symbol,PTimer}(),
             IsingParams(;initbrushR, colorscheme),
             # memory
             Dict(),
@@ -96,7 +96,7 @@ mutable struct IsingSim
             Ref(false),
             Ref(false),
             ProcessList(4),
-            Dict{String,Timer}(),
+            Dict{Symbol,Timer}(),
             IsingParams(;initbrushR, colorscheme),
             # memory
             Dict(),

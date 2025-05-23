@@ -12,8 +12,8 @@ mutable struct AnalysisWindow <: AbstractWindow
     l::IsingLayer    
     f::Figure
     screen::GLMakie.Screen
-    other::Dict{String, Any}
-    shared_funcs::Dict{String,Tuple{Function,Function,Function, Any}} #update, reset, pause, data
+    other::Dict{Symbol, Any}
+    shared_funcs::Dict{Symbol,Tuple{Function,Function,Function, Any}} #update, reset, pause, data
     obsfuncs::Vector{Any}
     running::Observable{Bool}
     timer::PTimer
@@ -50,7 +50,7 @@ export AnalysisWindow
 function AnalysisWindow(l::IsingLayer, panel1, panel2 = correlation_panel; shared_interval = 1/30, tstep = 0.05)
     f, screen, isopen = empty_window()
 
-    analysiswindow = AnalysisWindow(l, f, screen, Dict{String, Any}())
+    analysiswindow = AnalysisWindow(l, f, screen, Dict{Symbol, Any}())
     axesgrid = GridLayout(f[1:3,1])
 
     # Create panel 1
@@ -128,7 +128,7 @@ function AnalysisWindow(l::IsingLayer, panel1, panel2 = correlation_panel; share
             sliderlabel = Label(slidergrid[1,1], templabel, tellwidth = false, tellheight = false, fontsize = 20)
             tempslider = Slider(slidergrid[2,1], horizontal = false, range = 0:tstep:5)
             # tempslider.value[] = temp(graph(l))
-            analysiswindow["tempslider"] = tempslider
+            analysiswindow[:tempslider] = tempslider
             
             set_close_to!(tempslider, temp(graph(l)))
 
@@ -211,8 +211,8 @@ function MT_panel(window, axesgrid, pos, layer)
     m_buffer = Observable(CircularBuffer{etype}(10000))
     m_avg = AverageCircular(etype,10)
         
-    window["t_buffer"] = t_buffer
-    window["m_buffer"] = m_buffer
+    window[:t_buffer] = t_buffer
+    window[:m_buffer] = m_buffer
 
    
     axis = Axis(getindex(axesgrid,pos...), tellwidth = false, tellheight = false, xlabel = "T", ylabel = "M", title = "Magnetization vs Temperature", titlesize = 32, xlabelsize = 24, ylabelsize = 24)
@@ -367,9 +367,9 @@ function Tχ_panel(window, axesgrid, pos, layer)
     axis = Axis(getindex(axesgrid,pos...), tellwidth = false, tellheight = false, xlabel = "T", ylabel = "χ", title = "Magnetic Susceptibility", titlesize = 32, xlabelsize = 24, ylabelsize = 24)
     etype = eltype(layer)
     data = shareddata_STDev(window)
-    window["data"] = data
+    window[:data] = data
     idx = Ref(1)
-    window["idx"] = idx
+    window[:idx] = idx
     trange = 1:0.05:5
     # allts = [trange;]
     ts = Observable([temp(graph(layer))])
@@ -446,7 +446,7 @@ function χₘ_panel(window, axesgrid, pos, layer)
     timer = PTimer((timer) -> begin notify(Mbars); reset_limits!(axis) end, 0., interval = 1/10)
     isactive = Observable(true)
     
-    window["Mbars"] = Mbars
+    window[:Mbars] = Mbars
     
 
     on(isactive) do x
@@ -484,9 +484,9 @@ function correlation_panel(window, axesgrid, pos, layer)
     ylims!(axis, -0.2, 1)
     isactive = Observable(true)
     
-    window["corr_r"] = corr_r
-    window["corr"] = corr
-    window["corr_avgs"] = corr_avgs
+    window[:corr_r] = corr_r
+    window[:corr] = corr
+    window[:corr_avgs] = corr_avgs
 
     function update(timer)
         # corr_l, corr_val = fetch(Threads.@spawn correlationLength(layer))
@@ -504,9 +504,9 @@ function correlation_panel(window, axesgrid, pos, layer)
     on(isactive) do x
         if !x
             close(timer)
-            delete!(window, "corr_r")
-            delete!(window, "corr")
-            delete!(window, "corr_avgs")
+            delete!(window, :corr_r)
+            delete!(window, :corr)
+            delete!(window, :corr_avgs)
         end
     end
 

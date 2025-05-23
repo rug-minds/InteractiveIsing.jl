@@ -12,7 +12,7 @@ function createMultipleLayerView(ml, g)
 
     state_obs = StateObs[]
     mp = midpanel(ml)
-    mp["obs"] = state_obs
+    mp[:obs] = state_obs
 
     ims = Image[]
 
@@ -38,10 +38,10 @@ function createMultipleLayerView(ml, g)
         return
     end
 
-    if haskey(etc(ml), "timedfunctions_timer")
-        close(etc(ml)["timedfunctions_timer"])
+    if haskey(etc(ml), :timedfunctions_timer)
+        close(etc(ml)[:timedfunctions_timer])
     end
-    etc(ml)["timedfunctions_timer"] = Timer((timer) -> notify.(state_obs) ,0., interval = 1/60)
+    etc(ml)[:timedfunctions_timer] = Timer((timer) -> notify.(state_obs) ,0., interval = 1/60)
     
     return ax
 end

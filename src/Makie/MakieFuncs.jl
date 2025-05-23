@@ -23,16 +23,16 @@ function setLayerSV(idx)
 
     g = gs(sim)[1]
 
-    delete!(mp["axis"], mp["image"])
-    mp["sv_img_ob"][] = img_ob = getSingleViewImg(g, ml)
+    delete!(mp[:axis], mp[:image])
+    mp[:sv_img_ob][] = img_ob = getSingleViewImg(g, ml)
     # img_ob = mp["sv_img_ob"]
 
     cur_layer = cur_layer
     # create_layer_axis(cur_layer, mp)
     new_img!(g, cur_layer, mp)
-    mp["image"].colorrange = stateset(cur_layer)
+    mp[:image].colorrange = stateset(cur_layer)
 
-    reset_limits!(mp["axis"])
+    reset_limits!(mp[:axis])
 end
 
 # Drawing on the axis
@@ -40,7 +40,7 @@ function MDrawCircle(ax, buttons, sim)
     ml = getml()
     if ispressed(ax.scene, Mouse.left)
         pos = mouseposition(ax.scene)
-        drawCircle(currentLayer(sim), pos[1], pos[2], brush(sim)[]; clamp = midpanel(ml)["clamptoggle"].active[])
+        drawCircle(currentLayer(sim), pos[1], pos[2], brush(sim)[]; clamp = midpanel(ml)[:clamptoggle].active[])
     end
     return
 end
@@ -48,7 +48,7 @@ end
 function MDrawCircle2(ax, sim)
     ml = getml()
     pos = mouseposition(ax.scene)
-    @async drawCircle(currentLayer(sim), pos[1], pos[2], brush(sim)[]; clamp = midpanel(ml)["clamptoggle"].active[])
+    @async drawCircle(currentLayer(sim), pos[1], pos[2], brush(sim)[]; clamp = midpanel(ml)[:clamptoggle].active[])
     return
 end
 
@@ -74,7 +74,7 @@ getSingleViewImg(g, ml) = getSingleViewImg(g, ml, size(currentLayer(sim(g))))
 function getSingleViewImg(g, ml, _size::Tuple{Integer,Integer})
     simulation = sim(g)
     this_layer = currentLayer(simulation)
-    if midpanel(ml)["showbfield"].active[]
+    if midpanel(ml)[:showbfield].active[]
         return CastViewMatrix(Float64, g.params[:b].val , graphidxs(this_layer), size(this_layer)...)
     else
         return CastViewMatrix(Float64, state(g), graphidxs(this_layer), size(this_layer)...)
@@ -82,7 +82,7 @@ function getSingleViewImg(g, ml, _size::Tuple{Integer,Integer})
 end
 
 function getSingleViewImg(g, ml, size::NTuple{3,Integer})
-    if midpanel(ml)["showbfield"].active[] # Show the bfield
+    if midpanel(ml)[:showbfield].active[] # Show the bfield
         unsafe = create_unsafe_vector(@view getparam(g, :b).val[graphidxs(currentLayer(sim(g)))])
         return CastVec(Float64, unsafe)
     else
@@ -96,13 +96,13 @@ function flip_y_axis()
     @set_preferences!("makie_y_flip" => !(@load_preference("makie_y_flip", default = false)))
     try
         ml = getml()
-        midpanel(ml)["axis"].yreversed[] = @load_preference("makie_y_flip", default = false)
+        midpanel(ml)[:axis].yreversed[] = @load_preference("makie_y_flip", default = false)
     catch
     end
 end
 
 getgrid(lp::LayoutPanel) = lp.panel
-getgrid(window::MakieWindow) = window["gridlayout"]
+getgrid(window::MakieWindow) = window[:gridlayout]
 
 function create_layer_axis!(layer, panel_or_window; color = nothing, pos = (1,1), colormap = :thermal)
     layerdim = length(size((layer)))
@@ -111,12 +111,12 @@ function create_layer_axis!(layer, panel_or_window; color = nothing, pos = (1,1)
     println(typeof(panel_or_window))
     if layerdim == 2
         println("Layerdim 2")
-        panel_or_window["axis"] = ax = Axis(grid[pos[1],pos[2]], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
+        panel_or_window[:axis] = ax = Axis(grid[pos[1],pos[2]], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
         layer = currentLayer(sim(g))
         
         # TODO: Set colorrange based on the type of layer
     else
-        panel_or_window["axis"] = ax = Axis3(grid[pos[1],pos[2]], tellheight = true)
+        panel_or_window[:axis] = ax = Axis3(grid[pos[1],pos[2]], tellheight = true)
         # TODO: 3D BField
     end
     # panel_or_window["axis"].yreversed = @load_preference("makie_y_flip", default = false)
@@ -128,21 +128,21 @@ const makie_markersize = Ref(0.3)
 # Get image either for 2d or 3d
 function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
     dims = length(size(layer))
-    ax = mp["axis"]
+    ax = mp[:axis]
 
     if dims == 2
-        ob = isnothing(color) ? (mp["obs"] = Observable(getSingleViewImg(g, getml()))) : color
+        ob = isnothing(color) ? (mp[:obs] = Observable(getSingleViewImg(g, getml()))) : color
         # cvm = CastViewMatrix(Float64, state(g), graphidxs(layer), size(layer)...)
         # ob = mp["obs"] = Observable(cvm)
-        mp["image"] = image!(ax, ob, colormap = colormap, fxaa = false, interpolate = false)
+        mp[:image] = image!(ax, ob, colormap = colormap, fxaa = false, interpolate = false)
         # mp["image"].colorrange[] = (first(stateset(layer)), last(stateset(layer)))
     elseif dims == 3
 
         if isnothing(color) #If no color given, take the state
-            mp["obs"] = Observable(getSingleViewImg(g, getml()))
+            mp[:obs] = Observable(getSingleViewImg(g, getml()))
             # mp["obs"] = Observable(@view state(g)[graphidxs(layer)])
         else
-            mp["obs"] = color
+            mp[:obs] = color
         end
        
         sz = size(layer)
@@ -151,9 +151,9 @@ function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
         ys = idx2ycoord.(Ref(sz), allidxs)
         zs = idx2zcoord.(Ref(sz), allidxs)
         
-        mp["image"] = meshscatter!(ax, xs, ys, zs, markersize = makie_markersize[], color = mp["obs"], colormap = colormap)
+        mp[:image] = meshscatter!(ax, xs, ys, zs, markersize = makie_markersize[], color = mp[:obs], colormap = colormap)
 
     end
-        mp["image"].colorrange[] = (first(stateset(layer)), last(stateset(layer)))
+        mp[:image].colorrange[] = (first(stateset(layer)), last(stateset(layer)))
 #     mp["image"].colorrange[] = stateset(layer)
 end
