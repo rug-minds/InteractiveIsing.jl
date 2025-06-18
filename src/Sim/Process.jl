@@ -6,7 +6,7 @@ function createProcess(g::IsingGraph, func = nothing; run = true, threaded = tru
     
     ps = processes(g)
     push!(ps, process)
-    start(process)
+    start(process; threaded)
 
     return
 end

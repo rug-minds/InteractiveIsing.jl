@@ -62,8 +62,7 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
 
     pval = ParamVal(precision[], 0, "Self Connections", false)
 
-
-    datalen = sum(map(x->prod(x[1:end-1]), architecture))
+    datalen = arch_to_datalen(architecture)
 
     g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(pval)}(
         sim,
@@ -153,6 +152,20 @@ function decode_statesets(sets, numlayers, precision)
         end
     end
     return sets
+end
+
+function arch_to_datalen(architecture)
+    total = 0
+    for layer in architecture
+        prod = 1
+        for dim in 1:3
+            if !isnothing(layer[dim])
+                prod *= layer[dim]
+            end
+        end
+        total += prod
+    end
+    return total
 end
 
 Base.eltype(::IsingGraph{T}) where T = T

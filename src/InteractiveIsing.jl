@@ -96,48 +96,36 @@ include("GPlotting.jl")
 include("Barebones.jl")
 
 
-const ca = CompositeAlgorithm((LayeredMetropolis, Metropolis), (1,2))
+const ca1 = CompositeAlgorithm((LayeredMetropolis, Metropolis), (1,2))
 
 # PRECOMPILATION FUNCTION FOR FAST USAGE
-# @setup_workload begin
-#     # GC.enable(false)
+@setup_workload begin
+    GC.enable(false)
 
-#     println("HERE")
-#     cg1 = IsingGraph(20, 20, type = Discrete)
-#     println("HERE2")
-#     cg3d = IsingGraph(20, 20, 20, type = Continuous)
+    cg1 = IsingGraph(20, 20, type = Discrete)
+    cg3d = IsingGraph(20, 20, 20, type = Continuous)
 
-#     @compile_workload begin
-#         println("Compiling")
-#         simulate(cg1)
-#         println("Simulated")
-#         quit(cg1)
-#         println("Quitted")
-#         closeinterface()
-#         println("Closed")
-
-#         simulate(cg3d)
-#         println("Simulated")
-#         quit(cg3d)
-#         println("Quitted")
-#         closeinterface()
-#         println("Closed")
-   
-#         cwg = @WG "(dr) -> 1" NN=1
-#         println("HERE3")
-#         genAdj!(cg[1], cwg)
-#         println("HERE4")
-#         setparam!(cg[1], :b, 0, true)
-#         println("HERE5")
-
-#         createProcess(g, ca, lifetime = 10)
-#         println("HERE6")
-#         fetch(process(g))
-#         println("HERE7")
+    @compile_workload begin
+        cwg = @WG "(dr) -> 1" NN=1
+        prepare(ca1, (;g = cg1))
+        genAdj!(cg1[1], cwg)
+        createProcess(cg1, ca1, lifetime = 10)
+        quit(cg1)
+        interface(cg1)
+        closeinterface()
+  
+        prepare(ca1, (;g = cg3d))
+        interface(cg3d)
+        closeinterface()   
+        genAdj!(cg3d[1], cwg)
+        createProcess(cg3d, ca1, lifetime = 10)
+        fetch(process(cg3d))
+        quit(cg3d)
+        simulation |> reset!
         
-#         # GC.enable(true)
-#     end
-# end
+        GC.enable(true)
+    end
+end
 
 
 

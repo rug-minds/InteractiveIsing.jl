@@ -23,7 +23,7 @@ wg = @WG "(dx,dy,dz) -> weightfunc(dx,dy,dz)" NN = (1,1,3)
 
 genAdj!(g[1], wg)
 
-setparam!(g[1], :b, 0, true)
+# setparam!(g[1], :b, 0, true)
 
 #TODO Optimize this
 function scaleWeights(g::IsingGraph{T}, idx, scale::T) where T
