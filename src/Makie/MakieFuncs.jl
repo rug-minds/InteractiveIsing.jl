@@ -83,7 +83,8 @@ end
 
 function getSingleViewImg(g, ml, size::NTuple{3,Integer})
     if midpanel(ml)[:showbfield].active[] # Show the bfield
-        unsafe = create_unsafe_vector(@view getparam(g, :b).val[graphidxs(currentLayer(sim(g)))])
+        # unsafe = create_unsafe_vector(@view getparam(g, :b).val[graphidxs(currentLayer(sim(g)))])
+        unsafe = create_unsafe_vector(@view getparam(g.hamiltonian, :b).val[graphidxs(currentLayer(sim(g)))])
         return CastVec(Float64, unsafe)
     else
         unsafe = create_unsafe_vector(@view state(g)[graphidxs(currentLayer(sim(g)))])

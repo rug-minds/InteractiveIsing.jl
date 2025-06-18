@@ -29,8 +29,8 @@ end
     (;g, gstate, j, deltafunc, M, rng, lmeta) = args
     T = eltype(g)
     β = one(T)/(temp(g))
+    
     oldstate = @inbounds gstate[j]
- 
     newstate = SparseVal((@inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta)))::eltype(gstate), Int32(length(gstate)), j)::SparseVal{eltype(gstate), Int32}
 
     ΔE = @inline deltafunc((;args..., newstate); j)

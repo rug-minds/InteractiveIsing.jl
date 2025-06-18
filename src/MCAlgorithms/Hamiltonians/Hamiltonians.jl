@@ -33,6 +33,7 @@ Base.broadcastable(c::CompositeHamiltonian{Hs}) where {Hs} = Hs
 include("Linear.jl")
 include("MagField.jl")
 include("Ising.jl")
+include("IsingOLD.jl")
 include("GaussianBernoulli.jl")
 include("Clamping.jl")
 include("DepolarisationField.jl")
@@ -97,7 +98,7 @@ HamiltonianExprs(pair::Pair{Symbol,Expr}...) = HamiltonianExprs(Dict(map(pair->[
 """
 Adds the paramvals to g.params, overwrites the old ones
 """
-function addHparams!(graph, hamiltonian_params)
+function addHparams(graph, oldparams, hamiltonian_params)
     pairs = Pair{Symbol, ParamVal}[]
     for index in eachindex(hamiltonian_params.names)
         type  = hamiltonian_params.types[index]
@@ -109,20 +110,20 @@ function addHparams!(graph, hamiltonian_params)
         end
         push!(pairs, hamiltonian_params.names[index] => ParamVal(val, hamiltonian_params.defaultvals[index], hamiltonian_params.descriptions[index]))
     end
-    graph.params = Parameters(;pairs...,get_nt(graph.params)...)
+    params = Parameters(;pairs..., get_nt(oldparams)...)
 end
 """
 Doesn't work if vector param is written as v_i
 """
-function Hamiltonian_Builder(::Type{algo}, graph, hamiltonians::Hamiltonian) where {algo <: MCAlgorithm}
-    addHparams!(graph, params(hamiltonians, graph))
+function Hamiltonian_Builder(::Type{algo}, graph, oldparams, hamiltonians::Hamiltonian) where {algo <: MCAlgorithm}
+    gparams = addHparams(graph, oldparams, params(hamiltonians, graph))
     required_H = requires(algo)
 
     H_ex = H_expr(required_H, graph, hamiltonians...)
  
-    H_ex = param_function(Meta.parse(H_ex), algo, graph.params)
+    H_ex = param_function(Meta.parse(H_ex), algo, gparams)
 
-    @RuntimeGeneratedFunction(H_ex)
+    (;ΔH = @RuntimeGeneratedFunction(H_ex), gparams)
 end
 
 rawH(algo, gr::IsingGraph) = Meta.parse(H_expr(requires(algo), gr, gr.hamiltonian...))

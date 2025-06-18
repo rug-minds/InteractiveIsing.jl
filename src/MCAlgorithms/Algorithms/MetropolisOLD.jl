@@ -1,6 +1,6 @@
 struct MetropolisOLD <: MCAlgorithm end
 
-export MetropolisNew
+export MetropolisOLD
 requires(::Type{MetropolisOLD}) = Δi_H()
 
 function reserved_symbols(::Type{MetropolisOLD})
@@ -27,18 +27,20 @@ function example_ising(i, gstate, newstate, oldstate, gadj, gparams, lt)
     return (oldstate-newstate) * cumsum
 end
 
-function Processes.prepare(::MetropolisOLD, @specialize(args))
+function Processes.prepare(::MetropolisOLD, args::As) where As
     (;g) = args
     gstate = g.state
     gadj = g.adj
-    gparams = g.params
+    type = eltype(gstate)
+    len = length(gstate)
+    gparams = Parameters(self = ParamVal(zeros(type, len), 0, "Self Connections", false), b = ParamVal(zeros(type, len), 0, "Magnetic Field", false))
     iterator = ising_it(g)
     # rng = MersenneTwister()
     rng = Random.GLOBAL_RNG
-    ΔH = Hamiltonian_Builder(MetropolisOLD, g, Ising())
+    extraargs = Hamiltonian_Builder(MetropolisOLD, g, gparams, IsingOLD())
     M = Ref(sum(g.state))
     lmeta = LayerMetaData(g[1])
-    return (;gstate, gadj, gparams, iterator, ΔH, lmeta, rng, M)
+    return (;gstate, gadj, gparams, iterator, lmeta, rng, M, extraargs...)
 end
 
 @inline function (::MetropolisOLD)(@specialize(args))
