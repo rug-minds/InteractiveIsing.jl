@@ -1,5 +1,5 @@
 mutable struct GraphDefects
-    g::Union{Nothing, IsingGraph}
+    graph::Union{Nothing, IsingGraph}
     hasDefects::Bool
     isDefect::Vector{Bool}
     aliveList::Vector{Int32}
@@ -31,9 +31,9 @@ function Base.show(io::IO, defects::GraphDefects)
     end
 end
 
-@setterGetter GraphDefects g
-@inline g(gd::GraphDefects)::IsingGraph = gd.g
-@inline g(gd::GraphDefects, g::IsingGraph) = gd.g = g
+@setterGetter GraphDefects
+# @inline graph(gd::GraphDefects)::IsingGraph = gd.graph
+# @inline graph(gd::GraphDefects, g::IsingGraph) = gd.graph = g
 
 #Initialize GraphDefects
 GraphDefects(g) = GraphDefects(g, false, Bool[], Int32[], Int32[], Int32[])
@@ -85,7 +85,7 @@ function Base.setindex!(gd::GraphDefects, val, idx::Int32)
         end
     end
 
-    layeridx = spinidx2layer_i_index(g(gd), idx)
+    layeridx = spinidx2layer_i_index(graph(gd), idx)
     layerdefects(gd)[layeridx] += val ? 1 : -1
 
     return isDefect(gd)[idx] = val
@@ -159,7 +159,7 @@ function setaliverange!(gd::GraphDefects, idxs)::Int32
     @inbounds isDefect(gd)[d_idxs] .= false
 
     # Set all the defects in the layers
-    setlayerdefects(gd, g(gd), d_idxs, false)
+    setlayerdefects(gd, graph(gd), d_idxs, false)
 
     if length(defectList(gd)) == 0
         hasDefects(gd, false)
@@ -193,7 +193,7 @@ function setdefectrange!(gd::GraphDefects, idxs)::Int32
 
     # Set all the defects in the layers
     # TODO: NOT SETTING CORRECT
-    # setlayerdefects(gd, g(gd), d_idxs, true)
+    # setlayerdefects(gd, graph(gd), d_idxs, true)
 
     #return amount set
     return length(d_idxs)
@@ -248,7 +248,7 @@ Remove a layer from the graph defects
 # NEEDS TO BE CALLED AFTER REMOVING THE LAYER FROM THE GRAPH
 function removeLayer!(gd::GraphDefects, lidx)
    
-    _graph = g(gd)
+    _graph = graph(gd)
     _layers = unshuffled(layers(_graph))
     preceding_layers = _layers[1:(lidx-1)]
     # Get the number of defects in the layer

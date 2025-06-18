@@ -106,3 +106,12 @@ function expr_F_wrap(exp, func::Function)
     end
     return Expr(:call, func, exp)
 end
+
+function isnothing_generated(x)
+    if isnothing(x)
+        return true
+    elseif x isa Type 
+        return x <: Nothing
+    end
+    return false
+end

@@ -534,3 +534,4 @@ export statetype, setstatetype
 @inline function initstate!(layer::IsingLayer)
     state(layer)[:] .= rand(layer, nStates(layer))
 end
+export initstate!

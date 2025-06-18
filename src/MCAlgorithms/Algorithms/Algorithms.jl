@@ -20,4 +20,5 @@ include("Metropolis.jl")
 include("LayeredMetropolis.jl")
 include("SweepMetropolis.jl")
 include("MetropolisGlobalB.jl")
+include("KineticMC.jl")
 

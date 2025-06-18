@@ -8,7 +8,9 @@ struct MagField{PV <: ParamVal} <: Hamiltonian
 end
 
 MagField{PV}(g::IsingGraph) where PV <: ParamVal = MagField{PV}(PV())
-MagField(g) = MagField(ParamVal(zeros(eltype(g), length(state(g))), eltype(g) |> zero, "Magnetic Field", true))
+
+MagField(g) = MagField(eltype(g), statelen(g))z
+MagField(type, len) = MagField(ParamVal(zeros(type, len), type |> zero, "Magnetic Field", true))
 
 params(::Type{MagField}) = HamiltonianParams((:b, Vector{GraphType}, GraphType(0), "Magnetic Field"))
 

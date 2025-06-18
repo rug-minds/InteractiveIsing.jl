@@ -1,7 +1,7 @@
 using InteractiveIsing, LoopVectorization, Processes
 import InteractiveIsing as II
 
-g = IsingGraph(40,40,40, type = Discrete)
+g = IsingGraph(40,40,40, type = II.Discrete)
  
 simulate(g)
 
@@ -27,19 +27,13 @@ genAdj!(g[1], wg)
 setparam!(g[1], :b, 130, false)
 quit(g)
 
-# g.hamiltonian = deactivateparam(init!(NIsing(g)+DepolField(g), g), :b)
-g.hamiltonian = NIsing(g) + DepolField(g)
+# g.hamiltonian = NIsing(g) + DepolField(g)
+g.hamiltonian = Ising(g)
 g.hamiltonian = setglobalparam(g.hamiltonian, :b)
 
-# g.hamiltonian = Ising()
-# createProcess(g, Metropolis)
-
-# g.hamiltonian = init!(NIsing(g), g)
-# g.hamiltonian = deactivateparam(init!(NIsing(g), g), :b)
-# quit(g)
-createProcess(g, MetropolisNew)
-as = (;getargs(g)..., newstate = SparseVal(-1,1,1))
-dh = II.deltaH(g.hamiltonian)
+createProcess(g, KineticMC)
+# as = (;getargs(g)..., newstate = SparseVal(-1,1,1))
+# dh = II.deltaH(g.hamiltonian)
 
 
 

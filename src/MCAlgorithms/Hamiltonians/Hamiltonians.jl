@@ -6,7 +6,6 @@ include("HamiltonianTerms.jl")
 export CompositeHamiltonian, HamiltonianTerms
 
 
-
 ## OLD
 """
 Type for a composition of Hamiltonians

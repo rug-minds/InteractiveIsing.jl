@@ -73,7 +73,7 @@ function generate_block(rr::RefReduce, argstype, idxs = (;), precision = nothing
     end
 
     prefs = get_prefs(rr)
-    ind = ref_indices(rr)
+    # ind = ref_indices(rr)
     filled_indices = index_names(idxs)
     # contract_ind = idx_subtract(ind, filled_indices)
 

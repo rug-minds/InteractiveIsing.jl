@@ -84,7 +84,7 @@ function ref_indices_val(ar::AbstractParameterRef)
 end
 
 function ref_indices(apr::AbstractParameterRef)
-    t = tuple(union(ref_indices.(get_prefs(apr()))...)...)
+    t = tuple(union(ref_indices.(get_prefs(apr))...)...)
     return t
 end
 
@@ -339,9 +339,10 @@ include("RefMult.jl")
 
 include("RefTree.jl")
 include("Traits.jl")
+include("BlockModels.jl")
+
 
 include("Blocks.jl")
 
-include("BlockModels.jl")
 include("Resolvers.jl")
 include("Show.jl")

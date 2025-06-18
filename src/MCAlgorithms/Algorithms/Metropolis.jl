@@ -6,7 +6,7 @@ function Processes.prepare(::Metropolis, @specialize(args))
     (;g) = args
     gstate = g.state
     gadj = g.adj
-    params = g.params
+    # params = g.params
     iterator = ising_it(g)
     hamiltonian = init!(g.hamiltonian, g)
     deltafunc = deltaH(hamiltonian)
@@ -15,7 +15,7 @@ function Processes.prepare(::Metropolis, @specialize(args))
     Δs_j = Ref(zero(eltype(g.state)))
 
     lmeta = LayerMetaData(g[1])
-    return (;gstate, gadj, params, iterator, hamiltonian, deltafunc, lmeta, rng, M, Δs_j)
+    return (;gstate, gadj, iterator, hamiltonian, deltafunc, lmeta, rng, M, Δs_j)
 end
 
 @inline function (::Metropolis)(@specialize(args))

@@ -5,7 +5,7 @@ The linear part of the Ising Hamiltonian
 """
 struct Linear <: Hamiltonian end
 
-Linear(g::IsingGraph) = Linear()
+Linear(type, len) = Linear()
 
 # params(::Linear) = nothing
 

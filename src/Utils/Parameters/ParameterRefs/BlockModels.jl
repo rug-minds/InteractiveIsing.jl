@@ -199,15 +199,6 @@ end
 #     return exp
 # end
 
-function isnothing_generated(x)
-    if isnothing(x)
-        return true
-    elseif x isa Type 
-        return x <: Nothing
-    end
-    return false
-end
-
 function (::typeof(BlockModel(allPure)))(rc::RefMult, argstype, filled_idxs, precision = nothing, assignments = nothing)
     debugmode = argstype isa NamedTuple
     if debugmode

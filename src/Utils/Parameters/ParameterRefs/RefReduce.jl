@@ -84,17 +84,17 @@ issparse(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = all(issparse.(R
 """
 Only consists of simple refs
 """
-@generated function ispure(rr::RefReduce)
+function ispure(rr::RefReduce)
     pure = true
-    all_indices_flattened = Set(Iterators.flatten(ref_indices.(get_prefs(rr()))))
-    for ref in get_prefs(rr())
+    all_indices_flattened = Set(Iterators.flatten(ref_indices.(get_prefs(rr))))
+    for ref in get_prefs(rr)
         idxs = ref_indices(ref)
         pure = ispure(ref) && isempty(setdiff(all_indices_flattened, idxs)) #Underlying is pure, and all have same indices
         if !pure
             break
         end
     end
-    return :($pure)
+    return pure
 end
 
 ### EXPRESSION STUFF

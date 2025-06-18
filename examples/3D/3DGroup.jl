@@ -7,7 +7,7 @@ simulate(g)
 
 function weightfunc(dx,dy,dz)
     prefac = 1
-    # dr2 = (dx)^2+(dy)^2+dz^2
+    dr2 = (dx)^2+(dy)^2+dz^2
 
     if abs(dy) > 0 || abs(dx) > 0
         prefac *= 1
@@ -68,5 +68,4 @@ function TrianglePulseB(args)
     push!(x, pulse[loopidx(proc)])
 end
 
-w = lines_window(TrianglePulseB, lifetime = 1000, amp = 0.5, numpulses = 2, tstep = 0.001);
 # InteractiveIsing.change_args!(w, tstep = 0.001, amp = 2)

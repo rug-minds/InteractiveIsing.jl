@@ -15,5 +15,7 @@ genAdj!(g[1], wg1)
 genAdj!(g[2], wg2)
 genAdj!(g[1], g[2], layer_connections)
 
+g.hamiltonian = Ising(g)
+
 simulate(g)
 

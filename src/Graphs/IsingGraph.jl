@@ -35,7 +35,7 @@ mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, V} <: Abst
 
     # Connection between layers, Could be useful to track for faster removing of layers
     layerconns::Dict{Set, Int32}
-    params::Parameters #TODO: Make this a custom type?
+    # params::Parameters #TODO: Make this a custom type?
 
     # For notifying simulations or other things
     emitter::Emitter
@@ -62,6 +62,9 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
 
     pval = ParamVal(precision[], 0, "Self Connections", false)
 
+
+    datalen = sum(map(x->prod(x[1:end-1]), architecture))
+
     g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(pval)}(
         sim,
         precision[],
@@ -72,12 +75,12 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
         # Default algorithm
         LayeredMetropolis(),
         #Hamiltonians
-        Ising(),
+        Ising(precision, datalen),
         #Layers
         ShuffleVec{IsingLayer}(relocate = relocate!),
         Dict{Pair, Int32}(),
         #Params
-        Parameters(self = ParamVal(precision[], 0, "Self Connections", false)),
+        # Parameters(self = ParamVal(precision[], 0, "Self Connections", false)),
         #Emitter
         Emitter(Observable[]),
         #Defects
@@ -85,7 +88,7 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
         Dict{Symbol, Any}()
     )
 
-    g.defects.g = g
+    g.defects.graph = g
 
     # Couple the shufflevec and the defects
     internalcouple!(g.layers, g.defects, (layer) -> Int32(0), push = addLayer!, insert = (obj, idx, item) -> addLayer!(obj, item), deleteat = removeLayer!)
@@ -196,11 +199,10 @@ set_adj!(g::IsingGraph, vecs::Tuple) = adj(g, sparse(vecs..., nStates(g), nState
 export adj
 
 # @forwardfields IsingGraph GraphData d
-@forwardfields IsingGraph GraphDefects defects
+@forwardfields IsingGraph GraphDefects defects graph
 
 @inline glength(g::IsingGraph)::Int32 = size(g)[1]
 @inline gwidth(g::IsingGraph)::Int32 = size(g)[2]
-
 @inline graph(g::IsingGraph) = g
 
 ### Access the layer ###
@@ -525,7 +527,7 @@ function IsingGraph(
     layers,
     defects,
     data,
-    Hamiltonians = Ising()
+    Hamiltonians = Ising(g)
     )
 return IsingGraph(
 # Sim

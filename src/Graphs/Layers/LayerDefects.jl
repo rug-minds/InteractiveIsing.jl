@@ -2,7 +2,7 @@
 ## just keep track of the number of defecs in a vector
 
 struct LayerDefects
-    g::IsingGraph
+    graph::IsingGraph
     l::IsingLayer
     layeridx::Integer
 end
@@ -19,12 +19,12 @@ ndefect(defects::LayerDefects) = ndefect(defects.l)
 
 maxdefects(defects::LayerDefects) = nStates(defects.layer)
 
-graphdefects(df::LayerDefects) = defects(df.g)
+graphdefects(df::LayerDefects) = defects(df.graph)
 
 reset!(defects::LayerDefects) = ndefect(defects,0)
 
 function Base.getindex(d::LayerDefects, idx)
-    defects(d.g)[idxLToG(idx, d.l)]
+    defects(d.graph)[idxLToG(idx, d.l)]
 end
 
 function Base.setindex!(d::LayerDefects, val, idx)
