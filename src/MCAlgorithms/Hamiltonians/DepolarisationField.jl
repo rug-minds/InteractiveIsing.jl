@@ -25,9 +25,9 @@ function init!(dpf::DepolField, g)
 end
 
 function DepolField(g; c = 3600, left_layers = 1, right_layers = 1)
-    pv = GlobalParamVal(eltype(g) |> zero, length(state(g[1])), "Depolarisation Field", true)
+    pv = HomogenousParamVal(eltype(g) |> zero, length(state(g[1])), "Depolarisation Field", true)
     cv = DefaultParamVal(eltype(g)(c), "Depolarisation Field")
-    println(pv.runtimeglobal)
+    println(pv.homogenousval)
     dpf = DepolField(pv, cv, Int32(left_layers), Int32(right_layers))
     init!(dpf, g)
     return dpf

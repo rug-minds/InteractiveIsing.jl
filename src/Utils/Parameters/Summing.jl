@@ -45,7 +45,7 @@ end
 function dimsum_exp(pv::Union{Type{<:ParamVal}, ParamVal}, idxs::Union{Type{<:NamedTuple}, NamedTuple, Tuple} = @NamedTuple{}; fexp = (:(F(@$))), valname = :pv, idxsname = :idxs)
     if !isactive(pv)
         return :(length(pv)*default(pv))
-    elseif  runtimeglobal(pv)
+    elseif  homogenousval(pv)
         return :((length(pv))*(pv[1]))
     end
 

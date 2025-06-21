@@ -60,7 +60,7 @@ end
 
 function setglobalparam(ham::Hamiltonian, param::Symbol)
     initialparam = getproperty(ham, param)
-    newparam = GlobalParamVal(initialparam.val, length(initialparam.val), initialparam.description, true)
+    newparam = HomogenousParamVal(initialparam.val, length(initialparam.val), initialparam.description, true)
     setparam(ham, param, newparam)
 end
 

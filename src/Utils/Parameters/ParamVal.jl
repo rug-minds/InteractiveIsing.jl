@@ -1,4 +1,4 @@
-export ParamVal, isinactive, isactive, toggle, default, getvalfield, setvalfield!, runtimeglobal, description
+export ParamVal, isinactive, isactive, toggle, default, getvalfield, setvalfield!, homogenousval, description
 """
 A value for the parameters of a Hamiltonian
 It holds a description and a value of type t
@@ -11,11 +11,11 @@ It also stores wether it's active and if not a fallback value
 """
 mutable struct ParamVal{T, Default, Active, RD, N} <: AbstractArray{T, N}
     val::T
-    runtimeglobal::RD # For vector valued parameters, a global value that can be changed at runtime
+    homogenousval::RD # For vector valued parameters, a global value that can be changed at runtime
     description::String
 end
 
-function ParamVal(val::T, default, description = "", active = false; runtimeglobal = false) where T
+function ParamVal(val::T, default, description = "", active = false; homogenousval = false) where T
     # If val is vector type, default value must be eltype, 
     # otherwise it must be the same type
     DIMS = nothing
@@ -28,7 +28,7 @@ function ParamVal(val::T, default, description = "", active = false; runtimeglob
     if T <: Vector 
         et = eltype(T)
         default = convert(eltype(T), default)
-        if runtimeglobal
+        if homogenousval
             return ParamVal{T, default, active, Base.RefValue{et}, DIMS}(val, Ref(default), description)
         else
             return ParamVal{T, default, active, Nothing, DIMS}(val, nothing, description)
@@ -40,8 +40,8 @@ function ParamVal(val::T, default, description = "", active = false; runtimeglob
     end
 end
 
-function GlobalParamVal(val, length = 0, description = "", active = false)
-    return ParamVal(zeros(eltype(val), length), zero(eltype(val)), description, active; runtimeglobal = true)
+function HomogenousParamVal(val, length = 0, description = "", active = false)
+    return ParamVal(zeros(eltype(val), length), zero(eltype(val)), description, active; homogenousval = true)
 end
 
 function DefaultParamVal(val, description = "")
@@ -83,11 +83,11 @@ isinactive(::Type{ParamVal{A,B,C,D,N}}) where {A,B,C,D,N} = !C
 @inline default(p::ParamVal{T, Default, Active, D, N}) where {T, Default, Active, D, N} = Default
 @inline default(::Type{ParamVal{T, Default, Active, D, N}}) where {T, Default, Active, D, N} = Default
 description(p::ParamVal) = p.description
-runtimeglobal(p::ParamVal{T, Default, Active, RD}) where {T, Default, Active, RD} = RD != Nothing
-runtimeglobal(::Type{ParamVal{T, Default, Active, RD, N}}) where {T, Default, Active, RD, N} = RD != Nothing
+homogenousval(p::ParamVal{T, Default, Active, RD}) where {T, Default, Active, RD} = RD != Nothing
+homogenousval(::Type{ParamVal{T, Default, Active, RD, N}}) where {T, Default, Active, RD, N} = RD != Nothing
 
 function get_globalval(p::ParamVal{T, Default, Active, RD, N}) where {T, Default, Active, RD, N}
-    rd = getfield(p, :runtimeglobal)::RD
+    rd = getfield(p, :homogenousval)::RD
     return rd[]::eltype(T)
 end
 
@@ -96,8 +96,8 @@ dims(p::ParamVal{T, Default, Active, RD, N}) where {T, Default, Active, RD, N} =
 dims(::Type{ParamVal{T, Default, Active, RD, N}}) where {T, Default, Active, RD, N} = N
 
 # Will be constant over any iteration
-loopconstant(p::ParamVal) = !isactive(p) || runtimeglobal(p)
-loopconstant(p::Type{<:ParamVal}) = !isactive(p) || runtimeglobal(p)
+loopconstant(p::ParamVal) = !isactive(p) || homogenousval(p)
+loopconstant(p::Type{<:ParamVal}) = !isactive(p) || homogenousval(p)
 function unroll_exp(p::Union{Type{<:ParamVal}, <:ParamVal}, vecname, exp_f = identity)
     :(length(vecname)*$(exp_f(:($(vecname)[]))))
 end
@@ -124,11 +124,11 @@ setvalfield!(p::ParamVal, field, val) = setfield!(p.val, field, val)
 
 #Vector Like ParamVals
 @inline @generated function Base.getindex(p::ParamVal{T}) where T <: AbstractArray
-    if isactive(p) && !runtimeglobal(p)
+    if isactive(p) && !homogenousval(p)
         :(error("Cannot index an active parameter with []"))
     end
-    if runtimeglobal(p)
-        return :(p.runtimeglobal[]::eltype(T))
+    if homogenousval(p)
+        return :(p.homogenousval[]::eltype(T))
     else
         return :($(default(p))::eltype(T))
     end
@@ -137,8 +137,8 @@ end
 
 @inline @generated function Base.getindex(p::ParamVal{T}, idx) where T <: AbstractArray
     if isactive(p)
-        if runtimeglobal(p)
-            return :(p.runtimeglobal[]::eltype(T))
+        if homogenousval(p)
+            return :(p.homogenousval[]::eltype(T))
         else
             return :(getindex(p.val, idx)::eltype(T))
         end
@@ -149,8 +149,8 @@ end
 
 @inline @generated function Base.getindex(p::ParamVal{T}, idx::UnitRange) where T <: AbstractArray
     if isactive(p)
-        if runtimeglobal(p)
-            return :([p.runtimeglobal[] for i in idx]::Vector{eltype(T)})
+        if homogenousval(p)
+            return :([p.homogenousval[] for i in idx]::Vector{eltype(T)})
         else
             return :((getindex(p.val, idx))::Vector{eltype(T)})
         end
@@ -160,10 +160,19 @@ end
 end
 
 @inline @generated function Base.setindex!(p::ParamVal{T}, val, idx) where T <: AbstractArray
-    if runtimeglobal(p)
-        return :((p.runtimeglobal[] = val)::T)
+    if homogenousval(p)
+        return :((p.homogenousval[] = val)::eltype(T))
     end
     return :((setindex!(p.val, val, idx))::T)
+end
+
+@inline @generated function Base.setindex!(p::ParamVal{T}, val) where T <: AbstractArray
+    if homogenousval(p)
+        return quote
+            p.homogenousval[] = val
+        end
+    end
+    error("Cannot set a value to a non-homogenous ParamVal without an index")
 end
 
 Base.dotview(p::ParamVal{T}, i...) where T <: AbstractArray = Base.dotview(p.val, i...)
@@ -185,8 +194,8 @@ changeactivation(p::ParamVal{T}, activate) where T = ParamVal(p.val, default(p),
 activate(p::ParamVal{T}) where T = changeactivation(p, true)
 deactivate(p::ParamVal{T}) where T = changeactivation(p, false)
 
-setruntimeglobal(p::ParamVal{T}, val) where T = Paramval(p.val, default(p), p.description, isactive(p), runtimeglobal = val)
-removeruntimeglobal(p::ParamVal{T}) where T = Paramval(p.val, default(p), p.description, isactive(p), runtimeglobal = false)
+sethomogenousval(p::ParamVal{T}, val) where T = Paramval(p.val, default(p), p.description, isactive(p), homogenousval = val)
+removehomogenousval(p::ParamVal{T}) where T = Paramval(p.val, default(p), p.description, isactive(p), homogenousval = false)
 
 
 # Loopvectorization stuff
@@ -236,10 +245,10 @@ function Base.show(io::IO, ::MIME"text/plain", p::ParamVal{T}) where T
 end
 
 function Base.show(io::IO, ::MIME"text/plain", p::ParamVal{T}) where {T <: AbstractVector}
-    if runtimeglobal(p)
+    if homogenousval(p)
         l = length(p.val)
         println(io, "$(l)-element $(eltype(p.val)) constant parameter")
-        print(io, "Value: $(p.runtimeglobal[])")
+        print(io, "Value: $(p.homogenousval[])")
     else
         println(io, (isactive(p) ? "Active " : "Inactive "))
         println(io, "$(p.description) with vector value.")

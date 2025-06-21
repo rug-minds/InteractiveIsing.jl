@@ -24,11 +24,11 @@ wg = @WG "(dx,dy,dz) -> weightfunc(dx,dy,dz)" NN = (1,1,3)
 
 genAdj!(g[1], wg)
 
-setparam!(g[1], :b, 130, false)
+# setparam!(g[1], :b, 130, false)
 quit(g)
 
-# g.hamiltonian = NIsing(g) + DepolField(g)
-g.hamiltonian = Ising(g)
+g.hamiltonian = Ising(g) + DepolField(g)
+# g.hamiltonian = Ising(g)
 g.hamiltonian = setglobalparam(g.hamiltonian, :b)
 
 createProcess(g, KineticMC)
