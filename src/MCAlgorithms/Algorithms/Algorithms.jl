@@ -16,14 +16,11 @@
         return oldstate == stateset[1] ? stateset[2] : stateset[1]
     else
         N = length(stateset)
-        r = rand(1:N)
+        r = rand(1:N-1)
         if stateset[r] != oldstate
             return stateset[r]
         else
-            # Now we know the index of old is r
-            s = rand(1:N-1)
-            newidx = s < r ? s : s+1
-            return stateset[newidx]
+            return stateset[N]
         end
     end
 end
