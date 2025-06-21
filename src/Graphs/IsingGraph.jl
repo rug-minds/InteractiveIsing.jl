@@ -92,6 +92,8 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
     # Couple the shufflevec and the defects
     internalcouple!(g.layers, g.defects, (layer) -> Int32(0), push = addLayer!, insert = (obj, idx, item) -> addLayer!(obj, item), deleteat = removeLayer!)
 
+    println("Graph architecture: ", architecture)
+    println("State sets: ", sets)
     if !isnothing(architecture)
         for (arc_idx,arc) in enumerate(architecture)
             _addLayer!(g, arc[1], arc[2], arc[3]; weights, periodic, type = arc[end], set = sets[arc_idx], kwargs...)
@@ -148,7 +150,7 @@ function decode_statesets(sets, numlayers, precision)
                 push!(sets, convert(precision,(-1,1)))
             end
         else
-            sets = sets[1:length(architecture)]
+            sets = sets[1:numlayers]
         end
     end
     return sets

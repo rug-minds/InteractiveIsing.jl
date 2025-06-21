@@ -30,7 +30,7 @@ function setLayerSV(idx)
     cur_layer = cur_layer
     # create_layer_axis(cur_layer, mp)
     new_img!(g, cur_layer, mp)
-    mp[:image].colorrange = stateset(cur_layer)
+    mp[:image].colorrange = (stateset(cur_layer)[1], stateset(cur_layer)[end])
 
     reset_limits!(mp[:axis])
 end

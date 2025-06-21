@@ -3,7 +3,7 @@ using InteractiveIsing, LoopVectorization, Processes
 using Preferences
 set_preferences!(InteractiveIsing, "precompile_workload" => false; force=true)
 
-g = IsingGraph(10,40,40, type = Discrete)
+g = IsingGraph(10,40,40, type = Discrete, sets = [(-1,0,1)])
  
 simulate(g)
 
