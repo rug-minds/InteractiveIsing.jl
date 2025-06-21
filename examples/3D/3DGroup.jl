@@ -1,6 +1,9 @@
 using InteractiveIsing, LoopVectorization, Processes
 
-g = IsingGraph(40,40,40, type = Discrete)
+using Preferences
+set_preferences!(InteractiveIsing, "precompile_workload" => false; force=true)
+
+g = IsingGraph(10,40,40, type = Discrete)
  
 simulate(g)
 

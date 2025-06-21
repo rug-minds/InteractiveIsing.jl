@@ -13,31 +13,34 @@ function Processes.prepare(::Metropolis, @specialize(args))
     rng = Random.GLOBAL_RNG
     M = Ref(sum(g.state))
     Δs_j = Ref(zero(eltype(g.state)))
+    newstate = SparseVal(eltype(gstate)(0), Int32(0), Int32(length(gstate)))
 
     lmeta = LayerMetaData(g[1])
-    return (;gstate, gadj, iterator, hamiltonian, deltafunc, lmeta, rng, M, Δs_j)
+    return (;gstate, gadj, iterator, hamiltonian, deltafunc, lmeta, rng, M, Δs_j, newstate)
+    # args = (;gstate, gadj, iterator, hamiltonian, deltafunc, lmeta, rng, newstate)
 end
 
-@inline function (::Metropolis)(@specialize(args))
+
+@inline function (::Metropolis)(args::As) where As
     #Define vars
     (;iterator, rng) = args
     j = rand(rng, iterator)
-    Metropolis((;args..., j))
+    @inline Metropolis((;args..., j))
 end
 
 @inline function Metropolis(args::As) where As
-    (;g, gstate, j, deltafunc, M, rng, lmeta) = args
-    T = eltype(g)
-    β = one(T)/(temp(g))
-    
-    oldstate = @inbounds gstate[j]
-    newstate = SparseVal((@inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta)))::eltype(gstate), Int32(length(gstate)), j)::SparseVal{eltype(gstate), Int32}
+    (;g, gstate, j, deltafunc, rng, lmeta, newstate) = args
+    Ttype = eltype(g)
+    β = one(Ttype)/(temp(g))
 
-    ΔE = @inline deltafunc((;args..., newstate); j)
+    oldstate = @inbounds gstate[j]
+    newstate[j] = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))
+
+    ΔE = @inline deltafunc((;args..., newstate), (;j))
     
     efac = exp(-β*ΔE)
-    if (ΔE <= zero(T) || rand(rng, T) < efac)
-        @inbounds gstate[j] = newstate 
+    if (ΔE <= zero(Ttype) || rand(rng, Ttype) < efac)
+        @inbounds gstate[j] = newstate[]
         @hasarg if M isa Ref
             M[] += (newstate - oldstate)
         end

@@ -248,13 +248,13 @@ function Base.convert(::Type{<:IsingLayer}, g::IsingGraph)
 end 
 
 function processes(g::IsingGraph)
-    get!(g, :processes, [])
+    get!(g, :processes, Process[])::Vector{Process}
 end
 processes(::Nothing) = nothing
 # Get the first process
 function process(g::IsingGraph)
-    ps = get!(g, :processes, nothing)
-    if isempty(ps) || isnothing(ps)
+    ps = get!(g, :processes, Process[])
+    if isempty(ps)
         return nothing
     end
     return ps[end]

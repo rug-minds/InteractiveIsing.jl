@@ -18,7 +18,7 @@ end
 HamiltonianTerms(hs::Type{<:Hamiltonian}...) = HamiltonianTerms{Tuple{hs...}}
 HamiltonianTerms(hs::Hamiltonian...) = HamiltonianTerms{Tuple{typeof.(hs)...}}(hs)
 
-hamiltonians(hts::HamiltonianTerms) = getproperty(hts, :hamiltonians)
+hamiltonians(hts::HamiltonianTerms) = getfield(hts, :hs)
 numhamiltonians(hts::HamiltonianTerms) = length(hamiltonians(hts))
 numhamiltonians(hts::Type{<:HamiltonianTerms}) = length(hts.parameters[1].parameters)
 
@@ -71,14 +71,33 @@ end
 
 export deactivateparam, setglobalparam
 
+struct LazyTermField{HTS, substruct, paramname} end
+
+
+ltf_exp = nothing
+@generated function (ltf::LazyTermField{HTS, substruct, paramname})(hts) where {HTS, substruct, paramname} 
+    global ltf_exp = :(getfield(hts, :hs)[$substruct].$(paramname))
+    return ltf_exp
+end
+
 """
 From the set of Hamiltonians, directly get a paramval from an underlying Hamiltonian
 """
-function Base.getproperty(h::HamiltonianTerms, paramname::Symbol)
-    if paramname == :hamiltonians
-        return getfield(h, :hs)
+# function Base.getproperty(h::HamiltonianTerms, paramname::Symbol)
+#     # constant propagation flag:
+#     if paramname == :hamiltonians
+#         return getfield(h, :hs)
+#     end
+#     getparam(h, Val(paramname))
+# end
+@inline @generated function Base.getproperty(h::HamiltonianTerms{HS}, paramname::Symbol) where HS
+    args = (;)
+    for (hidx, H) in enumerate(HS.parameters)
+        for (fidx, fieldname) in enumerate(fieldnames(H))
+            args = (;args..., fieldname => LazyTermField{typeof(h), hidx, fieldname}())
+        end
     end
-    getparam(h, Val(paramname))
+    return :(getfield($args, paramname)(h))
 end
 
 """
@@ -86,11 +105,14 @@ Get a param
 """
 @generated function getparam(h::HamiltonianTerms{Hs}, paramnameval::Val{paramname}) where {Hs, paramname}
     for (hidx, H) in enumerate(Hs.parameters)
-        if paramname in fieldnames(H)
-            return :(getfield(h,:hs)[$hidx].$(paramname))
+        for (fidx, fieldname) in enumerate(fieldnames(H))
+            if paramname == fieldname
+                ft = fieldtypes(H)[fidx]
+                return :(getfield(h,:hs)[$hidx].$(paramname)::$(ft))
+            end
         end
     end
-    error("Parameter $paramname not found in any of the Hamiltonians")
+    error("Parameter $paramname not found in any of the Hamitonians")
 end
 
 """

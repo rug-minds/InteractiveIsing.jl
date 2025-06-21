@@ -62,7 +62,7 @@ function zero_assignment(args...; precision = nothing)
     if !isnothing_generated(precision)
         return :($precision(0))
     else
-        return :(promote_eltype($(args...))(0))
+        return :(zero(promote_eltype($(args...))))
     end
 end
 

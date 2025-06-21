@@ -2,10 +2,10 @@ export SparseVal
 """
 Hacky way to define a ref that can be indexed but gives a constant value
 """
-struct SparseVal{T, IT <: Integer} <: AbstractSparseArray{T, IT, 1}
+mutable struct SparseVal{T, IT <: Integer} <: AbstractSparseArray{T, IT, 1}
     Val::T
     idx::IT
-    len::IT
+    const len::IT
 end
 
 function Base.show(io::IO, ::MIME"text/plain", sp::SparseVal)
@@ -19,6 +19,9 @@ end
 @inline Base.length(sp::SparseVal) = sp.len
 @inline Base.getindex(sp::SparseVal{T}, i::Integer) where T = i == sp.idx ? sp.Val : zero(T)
 @inline Base.getindex(sp::SparseVal{T}) where T = sp.Val
+@inline Base.setindex!(sp::SparseVal{T}, v, i::Integer) where T = begin sp.Val = v; sp.idx = i end
+@inline Base.setindex!(sp::SparseVal{T}, v::T) where T = sp.Val = v
+
 @inline Base.axes(sp::SparseVal) = (Base.OneTo(sp.len),)
 @inline Base.axes(sp::SparseVal, i) = axes(sp::SparseVal)[i]
 @inline Base.eltype(::SparseVal{T}) where T = T

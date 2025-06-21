@@ -123,47 +123,47 @@ setvalfield!(p::ParamVal, field, val) = setfield!(p.val, field, val)
 
 
 #Vector Like ParamVals
-function Base.getindex(p::ParamVal{T}) where T <: AbstractArray
+@inline @generated function Base.getindex(p::ParamVal{T}) where T <: AbstractArray
     if isactive(p) && !runtimeglobal(p)
-        error("Cannot index an active parameter with []")
+        :(error("Cannot index an active parameter with []"))
     end
     if runtimeglobal(p)
-        return p.runtimeglobal[]::eltype(T)
+        return :(p.runtimeglobal[]::eltype(T))
     else
-        return default(p)::eltype(T)
+        return :($(default(p))::eltype(T))
     end
 end
 
 
-@inline function Base.getindex(p::ParamVal{T}, idx) where T <: AbstractArray
+@inline @generated function Base.getindex(p::ParamVal{T}, idx) where T <: AbstractArray
     if isactive(p)
         if runtimeglobal(p)
-            return p.runtimeglobal[]::eltype(T)
+            return :(p.runtimeglobal[]::eltype(T))
         else
-            return getindex(p.val, idx)::eltype(T)
+            return :(getindex(p.val, idx)::eltype(T))
         end
     else
-        return default(p)::eltype(T)
+        return :($(default(p))::eltype(T))
     end
 end
 
-@inline function Base.getindex(p::ParamVal{T}, idx::UnitRange) where T <: AbstractArray
+@inline @generated function Base.getindex(p::ParamVal{T}, idx::UnitRange) where T <: AbstractArray
     if isactive(p)
         if runtimeglobal(p)
-            return [p.runtimeglobal[] for i in idx]::Vector{eltype(T)}
+            return :([p.runtimeglobal[] for i in idx]::Vector{eltype(T)})
         else
-            return getindex(p.val, idx)::Vector{eltype(T)}
+            return :((getindex(p.val, idx))::Vector{eltype(T)})
         end
     else
-        return [default(p) for i in idx]::Vector{eltype(T)}
+        return :([$(default(p)) for i in idx]::Vector{eltype(T)})
     end
 end
 
-@inline function Base.setindex!(p::ParamVal{T}, val, idx...) where T <: AbstractArray
+@inline @generated function Base.setindex!(p::ParamVal{T}, val, idx) where T <: AbstractArray
     if runtimeglobal(p)
-        return p.runtimeglobal[] = val
+        return :((p.runtimeglobal[] = val)::T)
     end
-    return setindex!(p.val, val, idx...)::eltype(T)
+    return :((setindex!(p.val, val, idx))::T)
 end
 
 Base.dotview(p::ParamVal{T}, i...) where T <: AbstractArray = Base.dotview(p.val, i...)
