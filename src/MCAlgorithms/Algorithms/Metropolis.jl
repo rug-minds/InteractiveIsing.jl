@@ -30,7 +30,8 @@ end
 
 @inline function Metropolis(args::As) where As
     (;g, gstate, j, deltafunc, rng, lmeta, newstate) = args
-    Ttype = eltype(g)
+    # Ttype = eltype(g)
+    Ttype = Float32
     β = one(Ttype)/(temp(g))
 
     oldstate = @inbounds gstate[j]
