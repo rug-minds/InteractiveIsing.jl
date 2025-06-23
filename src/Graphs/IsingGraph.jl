@@ -542,7 +542,11 @@ end
     g.self = deactivate(g.self) # Ensure self is inactive
     refresh(g)
 end
-export activateself!, disableself!
+@inline function homogenousself!(g, val = 1)
+    g.self = sethomogenousval(g.self, val) # Set self to zero
+    refresh(g)
+end
+export activateself!, disableself!, homogenousself!
 
 
 #### SAVE
