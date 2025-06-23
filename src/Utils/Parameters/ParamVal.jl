@@ -194,8 +194,8 @@ changeactivation(p::ParamVal{T}, activate) where T = ParamVal(p.val, default(p),
 activate(p::ParamVal{T}) where T = changeactivation(p, true)
 deactivate(p::ParamVal{T}) where T = changeactivation(p, false)
 
-sethomogenousval(p::ParamVal{T}, val) where T = Paramval(p.val, default(p), p.description, isactive(p), homogenousval = val)
-removehomogenousval(p::ParamVal{T}) where T = Paramval(p.val, default(p), p.description, isactive(p), homogenousval = false)
+sethomogenousval(p::ParamVal{T}, val) where T = ParamVal(p.val, default(p), p.description, isactive(p), homogenousval = val)
+removehomogenousval(p::ParamVal{T}) where T = ParamVal(p.val, default(p), p.description, isactive(p), homogenousval = false)
 
 
 # Loopvectorization stuff
