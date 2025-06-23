@@ -58,18 +58,18 @@ function deactivateparam(hts::HamiltonianTerms, param::Symbol)
     changeterm(hts, newham)
 end
 
-function setglobalparam(ham::Hamiltonian, param::Symbol)
+function sethomogenousparam(ham::Hamiltonian, param::Symbol)
     initialparam = getproperty(ham, param)
     newparam = HomogenousParamVal(initialparam.val, length(initialparam.val), initialparam.description, true)
     setparam(ham, param, newparam)
 end
 
-function setglobalparam(hts::HamiltonianTerms, param::Symbol)
-    newham = setglobalparam(gethamiltonian(hts, param), param)
+function sethomogenousparam(hts::HamiltonianTerms, param::Symbol)
+    newham = sethomogenousparam(gethamiltonian(hts, param), param)
     changeterm(hts, newham)
 end
 
-export deactivateparam, setglobalparam
+export deactivateparam, sethomogenousparam
 
 struct LazyTermField{HTS, substruct, paramname} end
 
