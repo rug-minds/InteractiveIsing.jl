@@ -194,7 +194,7 @@ changeactivation(p::ParamVal{T}, activate) where T = ParamVal(p.val, default(p),
 activate(p::ParamVal{T}) where T = changeactivation(p, true)
 deactivate(p::ParamVal{T}) where T = changeactivation(p, false)
 
-sethomogenousval(p::ParamVal{T}, val) where T = ParamVal(p.val, default(p), p.description, isactive(p), homogenousval = val)
+sethomogenousval(p::ParamVal{T}, val) where T = ParamVal(p.val, val, p.description, isactive(p), homogenousval = true)
 removehomogenousval(p::ParamVal{T}) where T = ParamVal(p.val, default(p), p.description, isactive(p), homogenousval = false)
 
 
