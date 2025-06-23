@@ -14,5 +14,5 @@ Linear(type, len) = Linear()
 # end
 
 @ParameterRefs function deltaH(::Linear)
-    return (s_i*w_ij)*(s_j-sn_j) + (s_j^2-sn_j^2)*self_j
+    return (s_i*w_ij)*(s_j-sn_j) + (sn_j^2-s_j^2)*self_j
 end

@@ -5,7 +5,7 @@ function refmap(::Val{:w})
 end
 
 function refmap(::Val{:self})
-    return (:g, :self)
+    return (:self,)
 end
 
 function refmap(::Val{:s})

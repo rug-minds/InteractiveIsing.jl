@@ -17,14 +17,14 @@ isarchitecturetype(t::Tuple{A,B,C}) where {A,B,C} = (A<:Integer && B<:Integer &&
 isarchitecturetype(t::Tuple{A,B,C,D}) where {A,B,C,D} = (A<:Integer && B<:Integer && D<:Integer && t[4]<:StateType)
 
 # Ising Graph Representation and functions
-mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, V} <: AbstractIsingGraph{T}
+mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}} <: AbstractIsingGraph{T}
     # Simulation
     sim::Union{Nothing, IsingSim}
     # Vertices and edges
     state::Vector{T}
     # Adjacency Matrix
     adj::M
-    self::V
+    self::ParamVal{Vector{T}}
     
     temp::T
 
@@ -64,7 +64,7 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
 
     datalen = arch_to_datalen(architecture)
 
-    g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(pval)}(
+    g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}}(
         sim,
         precision[],
         SparseMatrixCSC{precision,Int32}(undef,0,0),
@@ -531,6 +531,18 @@ function compare_architecture_sizes(architecture1, architecture2)
     end
     return true
 end
+
+
+### SELF ENERGY
+@inline function activateself!(g)
+    g.self = activate(g.self) # Ensure self is active
+    refresh(g)
+end
+@inline function disableself!(g)
+    g.self = deactivate(g.self) # Ensure self is inactive
+    refresh(g)
+end
+export activateself!, disableself!
 
 
 #### SAVE

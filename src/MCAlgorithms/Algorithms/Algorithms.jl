@@ -8,7 +8,7 @@
 
 @inline sample_from_stateset(::Any, rng::AbstractRNG, stateset::AbstractVector) = rand(rng, stateset)
 @inline sample_from_stateset(::Type{Discrete}, rng::AbstractRNG, stateset::Tuple) = rand(rng, stateset)
-@inline sample_from_stateset(::Type{Continuous}, rng::AbstractRNG, stateset::Tuple) = uniform_rand(rng, stateset[1], stateset[2])
+@inline sample_from_stateset(::Type{Continuous}, rng::AbstractRNG, stateset::Tuple) = uniform_rand(rng, stateset[1], stateset[end])
 
 @inline sampleState(::Any, oldstate, rng, stateset) = rand(stateset)
 @inline function sampleState(::Type{Discrete}, oldstate, rng, stateset)

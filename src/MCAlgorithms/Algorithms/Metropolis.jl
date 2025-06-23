@@ -6,7 +6,7 @@ function Processes.prepare(::Metropolis, @specialize(args))
     (;g) = args
     gstate = g.state
     gadj = g.adj
-    # params = g.params
+    self = g.self
     iterator = ising_it(g)
     hamiltonian = init!(g.hamiltonian, g)
     deltafunc = deltaH(hamiltonian)
@@ -16,7 +16,7 @@ function Processes.prepare(::Metropolis, @specialize(args))
     newstate = SparseVal(eltype(gstate)(0), Int32(0), Int32(length(gstate)))
 
     lmeta = LayerMetaData(g[1])
-    return (;gstate, gadj, iterator, hamiltonian, deltafunc, lmeta, rng, M, Δs_j, newstate)
+    return (;gstate, gadj, iterator, hamiltonian, deltafunc, lmeta, rng, M, Δs_j, newstate, self)
     # args = (;gstate, gadj, iterator, hamiltonian, deltafunc, lmeta, rng, newstate)
 end
 
