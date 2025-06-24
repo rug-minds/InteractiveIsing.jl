@@ -4,7 +4,7 @@ import InteractiveIsing as II
 wg1 = @WG "(dr) -> dr == 1 ? 1 : 0" NN = 1
 wg2 = @WG "(dr) -> 1/dr" NN = 1
 
-layer_connections = @WG "(dr, dx, dy) -> 1" NN = 3
+layer_connections = @WG "(dr, dx, dy) -> 1" NN = 1
 
 g = IsingGraph(500, 500, type = Discrete)
 # interface(g)
@@ -17,5 +17,6 @@ genAdj!(g[1], g[2], layer_connections)
 
 g.hamiltonian = Ising(g)
 
+g = IsingGraph(500, 500, type = Discrete)
 simulate(g)
 

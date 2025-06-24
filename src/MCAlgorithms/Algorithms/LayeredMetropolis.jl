@@ -11,18 +11,6 @@ struct LayeredMetropolis <: MCAlgorithm end
 
 function Processes.prepare(::LayeredMetropolis, @specialize(args))
     (;g) = args
-    # ΔH = Hamiltonian_Builder(Metropolis, g, g.hamiltonian)
-
-    # return (; gstate = g.state,
-    #         gadj = g.adj,
-    #         gparams = g.params,
-    #         iterator = ising_it(g),
-    #         layers = unshuffled(g.layers),
-    #         ΔH,
-    #         rng = MersenneTwister(),
-    #         layerarch = GetArchitecture(unshuffled(g.layers)...),
-    #         Ms = [Ref(sum(state(g[i]))) for i in 1:length(g.layers)]
-    #     )
     args = prepare(Metropolis(), args)
     Ms = [Ref(sum(state(g[i]))) for i in 1:length(g.layers)]
 
@@ -40,9 +28,8 @@ Base.@propagate_inbounds @inline function (::LayeredMetropolis)(@specialize(args
     @inline layerswitch(LayeredMetropolis, j, layerarch, args)
 end
 
-@inline function LayeredMetropolis(j, args, layeridx, lmeta)
+Base.@propagate_inbounds @inline function LayeredMetropolis(j, args, layeridx, lmeta)
     M = args.Ms[layeridx]
     args = (;args..., j, layeridx, M, lmeta)
-    # @inline Metropolis(args, i, g, gstate, gadj, gparams, Ms[layeridx], ΔH, rng, lmeta)
-    Metropolis(args)
+    @inline Metropolis()(args)
 end

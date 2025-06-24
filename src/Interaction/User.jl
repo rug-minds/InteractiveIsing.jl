@@ -45,7 +45,7 @@ end
 """
 Randomly make p percent of states in layer defect
 """
-function addRandomDefects!(layer, p)
+function addRandomDefects!(layer, p, val = 0)
     println("Adding random defects to layer")
 
     nonzeros = Int32[]
@@ -61,7 +61,9 @@ function addRandomDefects!(layer, p)
     # From nonzeros or non-defects choose p% to set to 0 and defect
     idxs = nonzeros[sample([true, false], Weights([p/100,1-p/100]), length(nonzeros))]
 
-    setSpins!(layer, idxs, 0, true)
+    setSpins!(layer, idxs, val, true)
+
+    refresh(graph(layer))
 
     return
 end

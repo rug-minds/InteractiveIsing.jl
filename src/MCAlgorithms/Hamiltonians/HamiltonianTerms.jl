@@ -48,6 +48,26 @@ function setparam(ham::Hamiltonian, field, paramval)
 end
 export setparam
 
+function paramactivation!(g::IsingGraph, param::Symbol, activation::Bool)
+    g.hamiltonian = paramactivation(g.hamiltonian, param, activation)
+    refresh(g)
+end
+
+function h_param(g::IsingGraph, param::Symbol)
+    return getproperty(g.hamiltonian, param)
+end
+export paramactivation!, h_param
+
+
+function paramactivation(ham::Hamiltonian, param::Symbol, activation::Bool)
+    initialparam = getproperty(ham, param)
+    if activation
+        return activateparam(ham, param)
+    else
+        return deactivateparam(ham, param)
+    end
+end
+
 function activateparam(ham::Hamiltonian, param::Symbol)
     initialparam = getproperty(ham, param)
     setparam(ham, param, activate(initialparam))

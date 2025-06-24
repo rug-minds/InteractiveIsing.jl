@@ -140,7 +140,7 @@ end
 
 # Extend show for IsingLayer, showing the layer idx, and the size of the layer
 function Base.show(io::IO, layer::IsingLayer{A,B}) where {A,B}
-    showstr = "$A IsingLayer $(layeridx(layer)) with size $(size(layer)) and stateset $B\n"
+    showstr = "$A IsingLayer $(layeridx(layer)) with size $(size(layer)) and stateset $(stateset(layer))\n"
     if coords(layer) != nothing
         showstr *= " at coordinates $(coords(layer))"
     end

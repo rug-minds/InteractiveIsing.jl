@@ -58,6 +58,7 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
         architecture = decode_architecture(architecture)
     end
 
+
     sets = decode_statesets(sets, length(architecture), precision)
 
     pval = ParamVal(precision[], 0, "Self Connections", false)
@@ -92,13 +93,18 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
     # Couple the shufflevec and the defects
     internalcouple!(g.layers, g.defects, (layer) -> Int32(0), push = addLayer!, insert = (obj, idx, item) -> addLayer!(obj, item), deleteat = removeLayer!)
 
-    println("Graph architecture: ", architecture)
-    println("State sets: ", sets)
+    # println("Graph architecture: ", architecture)
+    # println("State sets: ", sets)
     if !isnothing(architecture)
         for (arc_idx,arc) in enumerate(architecture)
-            _addLayer!(g, arc[1], arc[2], arc[3]; weights, periodic, type = arc[end], set = sets[arc_idx], kwargs...)
+            height = arc[3] isa Real ? arc[3] : nothing
+            _addLayer!(g, arc[1], arc[2], height; weights, periodic, type = arc[end], set = sets[arc_idx], kwargs...)
         end
     end
+    
+    cb = x -> layerIdx(sim(x))
+    set_listener_callback!(g, cb)
+    # println("cb: ", cb)
 
     prepare(g.default_algorithm, (;g))
     return g
@@ -115,13 +121,12 @@ function decode_architecture(arcs)
     architecture = []
     for layer in arcs
         # If last is a state type, just push
-        if typeof(layer[end]) <: StateType
+        if layer[end] <: StateType
             if length(layer) == 3
                 push!(architecture, (layer[1:2]..., nothing, layer[3]))
             else
                 push!(architecture, (layer..., Continuous))
             end
-            push!(architecture, layer)
         else # add default state type
             if length(layer) == 2
                 push!(architecture, (layer..., nothing, Continuous))
@@ -130,7 +135,6 @@ function decode_architecture(arcs)
             end
         end
     end
-
     return architecture
 end
 
@@ -147,7 +151,7 @@ function decode_statesets(sets, numlayers, precision)
         if length(sets) < numlayers
             lengthdiff = numlayers - length(sets)
             for _ in 1:lengthdiff # If less sets than layers, add default set
-                push!(sets, convert(precision,(-1,1)))
+                push!(sets, convert.(precision,(-1,1)))
             end
         else
             sets = sets[1:numlayers]
@@ -161,7 +165,7 @@ function arch_to_datalen(architecture)
     for layer in architecture
         prod = 1
         for dim in 1:3
-            if !isnothing(layer[dim])
+            if !isnothing(layer[dim]) && layer[dim] isa Real
                 prod *= layer[dim]
             end
         end
@@ -242,6 +246,20 @@ Base.view(g::IsingGraph, idx) = view(g.layers, idx)
 Base.get!(g::IsingGraph, s, d) = get!(g.addons, s, d)
 Base.get(g::IsingGraph, s) = get(g.addons, s)
 Base.get(g::IsingGraph, s, d) = get(g.addons, s, d)
+
+function set_listener_callback!(g, f::Function)
+    if !haskey(g.addons, :listener_callback)
+        g.addons[:listener_callback] = Function[f]
+    else
+        push!(g.addons[:listener_callback], f)
+    end
+end
+
+function listener_callback(g)
+    for f in get(g.addons, :listener_callback, Function[])
+        f(g)
+    end
+end
 
 
 function Base.convert(::Type{<:IsingLayer}, g::IsingGraph)
@@ -354,11 +372,15 @@ function Base.resize!(g::IsingGraph{T}, newlength, startidx = length(state(g))) 
     #TODO RESIZE GPARAMS
 
     if sizediff > 0
-        randomstate = rand(T, sizediff)
+        # randomstate = rand(T, sizediff)
         idxs_to_add = startidx:(startidx + sizediff - 1)
 
         # Resize state
-        splice!(state(g), startidx:startidx-1, randomstate)
+        # splice!(state(g), startidx:startidx-1, zeros(T, sizediff))
+        resize!(state(g), newlength)
+        # Fill copy state to the new indices
+
+
         # Resize adjacency
         g.adj = insertrowcol(adj(g), idxs_to_add)
         # Resize self
@@ -423,7 +445,7 @@ function _addLayer!(g::IsingGraph{T}, llength, lwidth, lheight = nothing; weight
         _layers = unshuffled(layers(g))
 
         extra_states = llength*lwidth
-        if !isnothing(lheight)
+        if !isnothing(lheight) && lheight isa Real
             extra_states *= lheight
         end
         # Resize the old state

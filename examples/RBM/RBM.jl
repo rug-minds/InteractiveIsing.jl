@@ -1,6 +1,6 @@
 using InteractiveIsing
 
-g = IsingGraph(precision=Float64, architecture=[(28, 28, Discrete), (32, 32, Discrete)], sets=[(0, 1), (0, 1)])
+g = IsingGraph(precision=Float32, architecture=[(28, 28, Discrete), (32, 32, Discrete)], sets=[(0, 1), (0, 1)])
 simulate(g)
 
 function weights_2_sparse(w1)
@@ -35,10 +35,8 @@ d = load("examples/RBM/rbm1.jld2")
 w = reshape(d["weights"], (28 * 28, 32 * 32))
 biases = [d["vbias"][:]; d["hbias"][:]]
 adj(g, weights_2_sparse(w))
-setparam!(g, :b, biases, true)
-# bfield(g) .= biases
-#TODO:MOVE THIS TO PARAMS
-# setSType!(g, :Magfield => true)
+paramactivation!(g, :b, true)
+h_param(g, :b) .= biases
 w2 = LayerWindow(g[2])
 set_colorrange(g[1])
 restart(g)

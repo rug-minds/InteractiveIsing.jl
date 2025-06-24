@@ -7,7 +7,7 @@ Set spins either to a value or clamp them
 """
 #Clean this up
 # TODO: Shouldn't always refresh sim if the iterator didn't change
-function setSpins!(g::AbstractIsingGraph{T}, idxs::Union{AbstractArray{Int}, AbstractArray{Int32}, <:UnitRange}, val, clamp::Bool = false) where T
+function setSpins!(g::AbstractIsingGraph{T}, idxs::Union{AbstractArray{<:Integer}, AbstractArray{<:Integer}, <:UnitRange, AbstractArray{<:CartesianIndex}}, val, clamp::Bool = false) where T
     hasdefects_before = hasDefects(graph(g))
 
     # Set the defects
@@ -20,6 +20,10 @@ function setSpins!(g::AbstractIsingGraph{T}, idxs::Union{AbstractArray{Int}, Abs
 
     # Set the spins
     copystate(g, idxs, val)
+end
+
+function setdefect!(g::AbstractIsingLayer{T,D}, vals, idxs) where {T,D}
+
 end
 
 copystate(g::AbstractIsingGraph, idxs, val::Real) = @inbounds state(g)[idxs] .= closestTo(g, val)
