@@ -269,8 +269,8 @@ DIMS(layer::AbstractIsingLayer{T,DIMS}) where {T,DIMS} = DIMS
 end
 export maxdist
 
-@inline coordToIdx(i,j,layer::AbstractIsingLayer) = coordToIdx(latmod(i, size(layer,1)), latmod(j, size(layer,2)), size(layer,1))
-@inline idxToCoord(idx, layer::AbstractIsingLayer) = idxToCoord(idx, size(layer,1))
+@inline coordToIdx(i,j,layer::AbstractIsingLayer) = coordToIdx(latmod(Int32(i), size(layer,1)), latmod(Int32(j), size(layer,2)), size(layer,1))
+@inline idxToCoord(idx, layer::AbstractIsingLayer) = idxToCoord(Int32(idx), size(layer,1))
 @inline c2i(i, j, layer::AbstractIsingLayer) = coordToIdx(i, j, layer)
 @inline i2c(i, layer::AbstractIsingLayer) = idxToCoord(i, layer)
 
