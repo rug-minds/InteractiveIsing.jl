@@ -84,6 +84,7 @@ function singleView(ml, g)
     push!(obs_funcs, wg_label_obs.inputs...)
     bp = bottompanel(ml)
     bp_midgrid_toprow = 1+bp[:mid_grid].offsets[1]
+
     bottompanel(ml)[:wf_label] = Label(bp[:mid_grid][bp_midgrid_toprow - 1,1], wg_label_obs, fontsize = 12)
 
     # TIMER FOR THE SCREEN

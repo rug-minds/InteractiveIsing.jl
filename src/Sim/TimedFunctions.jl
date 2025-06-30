@@ -31,8 +31,8 @@ let avgWindow = 60, updateWindow = AverageCircular(Int, avgWindow), lastTwo = Ci
 
         if frames > avgWindow
             sm_avgw = avg(updateWindow)
-            upf(sim)[] = Float32(sm_avgw)
-            upfps(sim)[] = Float32(sm_avgw/statelength)
+            upf(sim)[] = sm_avgw
+            upfps(sim)[] = sm_avgw/statelength
             frames = 1
         else
             frames += 1

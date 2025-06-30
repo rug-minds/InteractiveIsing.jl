@@ -221,8 +221,8 @@ function conncoords(i::Integer, j::Integer, layer1::IsingLayer, layer2::IsingLay
 end
 export conns, conncoords
 
-@inline wg(layer::IsingLayer) = try connections(layer)[internal_idx(layer) => internal_idx(layer)]; catch; return ""; end
-@inline wg(layer1::IsingLayer, layer2::IsingLayer) = try connections(layer1)[internal_idx(layer1) => internal_idx(layer2)]; catch; return ""; end
+@inline wg(layer::IsingLayer) = try connections(layer)[internal_idx(layer) => internal_idx(layer)]; catch; return "No weightfunc"; end
+@inline wg(layer1::IsingLayer, layer2::IsingLayer) = try connections(layer1)[internal_idx(layer1) => internal_idx(layer2)]; catch; return "No weightfunc"; end
 
 """
 Set graph of layer
