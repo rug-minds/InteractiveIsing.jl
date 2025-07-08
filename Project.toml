@@ -46,7 +46,6 @@ JET = "0.9.18"
 LayoutPointers = "0.1.17"
 MacroTools = "0.5.15"
 OrderedCollections = "1.8.0"
-Processes = "0.1.2"
 
 [extras]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
