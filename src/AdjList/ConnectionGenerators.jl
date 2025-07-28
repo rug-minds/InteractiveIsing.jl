@@ -206,23 +206,4 @@ function getConnIdxs!(topology, vert_idx, coord_vert::NTuple{3,Int32}, size::NTu
     end
 end
 
-# """
-# Get all indices of a vertex with idx vert_idx and coordinates vert_i, vert_j
-# """
-# @inline function getConnIdxsGen(vert_idx, vert_i, vert_j, len, wid, NN)
-#     return (if (i == 0 && j == 0)
-#                 nothing
-#             else
-#                 let (conn_i, conn_j) = latmod(vert_i + i, vert_j + j, len, wid), conn_idx = coordToIdx(conn_i, conn_j, len);
-#                     if conn_idx < vert_idx
-#                         nothing
-#                     else
-#                         (conn_i, conn_j, conn_idx)
-#                     end
-#                 end
-#             end
-#             for j in -NN:NN for i in -NN:NN)
-# end
-
-
 
