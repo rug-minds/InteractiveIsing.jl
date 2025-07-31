@@ -50,14 +50,32 @@ struct SquareTopology{U,DIMS} <: LayerTopology{U, DIMS}
         new{U, DIMS}(size)
     end
 end
-mutable struct LatticeTopology{T <: LatticeType, U, Dim} <: LayerTopology{U, Dim} 
+mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: LayerTopology{U, Dim} 
     # layer::Union{Nothing, AbstractIsingGraph}
-    pvecs::NTuple{Dim, SVector{Dim, Float32}}
-    covecs::NTuple{Dim, SVector{Dim, Float32}}
+    pvecs::NTuple{Dim, SVector{Dim, Precision}}
+    covecs::NTuple{Dim, SVector{Dim, Precision}}
     size::NTuple{Dim, Int32}
 
+    # This function uses SMatrix Inverse to calculate the covectors
+    function LatticeTop(_size::NTuple{Dim}, vecs::NTuple{Dim, <:AbstractArray}; periodic = nothing, precision = Float32)
+        D = length(_size)
+        vecs = Vector{SVector{D, precision}}(undef, D)
+        for i in 1:D
+            if i <= length(vecs)
+                vecs[i] = SVector{D, precision}(vecs[i]...)
+            else
+                vecs[i] = SVector{D, precision}([i == j ? one(precision) : zero(precision) for j in 1:D])
+            end
+        end
+        vecs = tuple(vecs...)
+        m = SMatrix{D, D, precision}(vecs...)
+        covs = tuple(eachcol(inv(m))...)  # Calculate the covectors using the inverse of the matrix
+
+        return new{Square, U, D}(vecs, covs, _size)
+    end
+
     function LatticeTopology(_size::Tuple, vec1::Union{Nothing,AbstractArray} = nothing, vec2::Union{Nothing,AbstractArray} = nothing, vec3::Union{Nothing,AbstractArray} = nothing; periodic::Union{Nothing, Bool, Tuple} = nothing)
-        D = DIMS(layer)
+        D = length(_size)
         
         ##### Calculate the covectors
         if D == 2 

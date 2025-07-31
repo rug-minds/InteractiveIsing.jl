@@ -271,8 +271,8 @@ export maxdist
 
 @inline coordToIdx(i,j,layer::AbstractIsingLayer) = coordToIdx(latmod(Int32(i), size(layer,1)), latmod(Int32(j), size(layer,2)), size(layer,1))
 @inline idxToCoord(idx, layer::AbstractIsingLayer) = idxToCoord(Int32(idx), size(layer,1))
-@inline c2i(i, j, layer::AbstractIsingLayer) = coordToIdx(i, j, layer)
-@inline i2c(i, layer::AbstractIsingLayer) = idxToCoord(i, layer)
+c2i = coordToIdx
+i2c = idxToCoord
 
 # @inline startidx(layer::AbstractIsingLayer) = start(layer)
 @inline endidx(layer::AbstractIsingLayer) = startidx(layer) + prod(size(layer)) - 1

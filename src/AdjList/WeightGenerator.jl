@@ -230,9 +230,4 @@ Base.zero(::Type{NTuple{N,T}}) where {N,T} = NTuple{N,T}(Base.zero(T) for i in 1
 Base.zero(::Type{Tuple{T1,T2}}) where {T1,T2} = (Base.zero(T1), Base.zero(T2))
 
 
-
-
-
-# TODO: Shouldn't be here probably?
-
 const wg_isingdefault = @WeightGenerator "(dr) -> dr == 1" NN = 1
