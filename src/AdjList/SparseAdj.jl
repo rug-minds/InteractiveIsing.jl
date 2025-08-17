@@ -24,9 +24,11 @@ function genLayerConnections(layer::AbstractIsingLayer{T,D}, wg) where {T,D}
     g = graph(layer)
 
     _NN = wg.NN
+    println("WG: ", wg)
+    println("D: ", D)
     
     # Either global NN is given, or a tuple of NN for each dimension
-    @assert if !(_NN isa Int32); length(_NN) == D; else true; end
+    @assert (!(_NN isa Int32) || length(_NN) == D )
     
     blocksize = Int32(0)
     if _NN isa Int32

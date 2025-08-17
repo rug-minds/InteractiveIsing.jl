@@ -170,7 +170,7 @@ function getConnIdxs!(top, vert_idx, vert_i, vert_j, (len, wid)::NTuple{2,Int32}
     end
 end
 
-function getConnIdxs!(topology, vert_idx, coord_vert::NTuple{3,Int32}, size::NTuple{3,Int32}, NNi, NNj, NNk, conn_idxs, conn_is, conn_js, conn_ks)
+function getConnIdxs!(topology, vert_idx, coord_vert::NTuple{3,Integer}, size::NTuple{3,Integer}, NNi, NNj, NNk, conn_idxs, conn_is, conn_js, conn_ks)
     for k in -NNk:NNk
         for j in -NNj:NNj
             for i in -NNi:NNi

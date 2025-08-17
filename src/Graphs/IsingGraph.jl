@@ -10,6 +10,11 @@ end
 Observables.notify(emitter::Emitter) = notify.(emitter.obs)
 Observables.notify(g::IsingGraph) = notify(g.emitter)
 
+intprecision(::Type{Float16}) = Int16
+intprecision(::Type{Float32}) = Int32
+intprecision(::Type{Float64}) = Int64
+
+
 getIntType(::Float64) = Int64
 getFloatType(::Float64) = Float64
 isarchitecturetype(::Any) = false
@@ -17,7 +22,7 @@ isarchitecturetype(t::Tuple{A,B,C}) where {A,B,C} = (A<:Integer && B<:Integer &&
 isarchitecturetype(t::Tuple{A,B,C,D}) where {A,B,C,D} = (A<:Integer && B<:Integer && D<:Integer && t[4]<:StateType)
 
 # Ising Graph Representation and functions
-mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}} <: AbstractIsingGraph{T}
+mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers} <: AbstractIsingGraph{T}
     # Simulation
     sim::Union{Nothing, IsingSim}
     # Vertices and edges
@@ -31,7 +36,6 @@ mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}} <: Abstrac
     default_algorithm::MCAlgorithm
     hamiltonian::Hamiltonian
     
-    layers::ShuffleVec{IsingLayer}
 
     # Connection between layers, Could be useful to track for faster removing of layers
     layerconns::Dict{Set, Int32}
@@ -43,33 +47,49 @@ mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}} <: Abstrac
     defects::GraphDefects
     # d::GraphData{T} #Other stuff. Maybe just make this a dict?
     addons::Dict{Symbol, Any}
+
+    layers::Layers
 end
 
 # Default Initializer for IsingGraph
-function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim = nothing,  periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
-    architecture = searchkey(kwargs, :architecture, fallback = nothing)
+function IsingGraph(dims...; sim = nothing,  periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
+    # architecture = searchkey(kwargs, :architecture, fallback = LProps(dims...; stype = type, stateset = sets, periodic))
+    if isnothing(sets) || length(sets) == 1
+        length(sets) == 1 && (sets = sets[1])
+        ls = (LProps(dims...;stype = type, stateset = sets, periodic),)
+    end
     @assert (isnothing(glength) && isnothing(gwidth) && isnothing(architecture)) || (!isnothing(glength) && !isnothing(gwidth)) || !isnothing(architecture) "Either give length and width or architecture"
 
+    # @assert (isempty(dims) && !isnothing(architecture)) || (!isempty(dims) && isnothing(architecture)) "Either give dims or architecture, not both"
 
-    # Create the architecture
-    if isnothing(architecture) && !isnothing(glength) && !isnothing(gwidth)
-        architecture = [(glength, gwidth, gheight, type)]
-    else
-        architecture = decode_architecture(architecture)
-    end
+    # layers = makelayers(g, architecture)
+    # # Create the architecture
+    # if isnothing(architecture) && !isnothing(glength) && !isnothing(gwidth)
+    #     architecture = [(glength, gwidth, gheight, type)]
+    # else
+    #     architecture = decode_architecture(architecture)
+    # end
 
+    # sets = decode_statesets(sets, length(architecture), precision)
 
-    sets = decode_statesets(sets, length(architecture), precision)
+    self = ParamVal(precision[], 0, "Self Connections", false)
 
-    pval = ParamVal(precision[], 0, "Self Connections", false)
+    # datalen = arch_to_datalen(architecture)
+    datalen = reduce(*, nStates.(ls))
+    # startidxs = arch_to_startidxs(architecture)
+    # println("Arc: ", architecture)
 
-    datalen = arch_to_datalen(architecture)
+    # ls = tuple((
+    #     IsingLayer(architecture[x][end], nothing, x, startidxs[x], architecture[x][1:end-1]..., set = sets[x]; precision, periodic, adjtype = SparseMatrixCSC{precision,Int32})
+    #     for x in 1:length(architecture))...)
 
-    g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}}(
+    # println("Layers: ", ls)
+    # println("Layertype : ", typeof(ls))
+    g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(ls)}(
         sim,
-        precision[],
-        SparseMatrixCSC{precision,Int32}(undef,0,0),
-        pval,
+        zeros(precision, datalen),
+        SparseMatrixCSC{precision,intprecision(precision)}(undef,datalen,datalen),
+        self,
         #Temp            
         1f0,
         # Default algorithm
@@ -77,7 +97,6 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
         #Hamiltonians
         Ising(precision, datalen),
         #Layers
-        ShuffleVec{IsingLayer}(relocate = relocate!),
         Dict{Pair, Int32}(),
         #Params
         # Parameters(self = ParamVal(precision[], 0, "Self Connections", false)),
@@ -85,23 +104,28 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
         Emitter(Observable[]),
         #Defects
         GraphDefects(nothing),
-        Dict{Symbol, Any}()
+        Dict{Symbol, Any}(),
+        ls
     )
 
     g.defects.graph = g
+    for layer in g.layers
+        layer.graph = g
+    end
+    
 
     # Couple the shufflevec and the defects
-    internalcouple!(g.layers, g.defects, (layer) -> Int32(0), push = addLayer!, insert = (obj, idx, item) -> addLayer!(obj, item), deleteat = removeLayer!)
+    # internalcouple!(g.layers, g.defects, (layer) -> Int32(0), push = addLayer!, insert = (obj, idx, item) -> addLayer!(obj, item), deleteat = removeLayer!)
 
     # println("Graph architecture: ", architecture)
     # println("State sets: ", sets)
-    if !isnothing(architecture)
-        for (arc_idx,arc) in enumerate(architecture)
-            height = arc[3] isa Real ? arc[3] : nothing
-            _addLayer!(g, arc[1], arc[2], height; weights, periodic, type = arc[end], set = sets[arc_idx], kwargs...)
-        end
-    end
-    
+    # if !isnothing(architecture)
+    #     for (arc_idx,arc) in enumerate(architecture)
+    #         height = arc[3] isa Real ? arc[3] : nothing
+    #         _addLayer!(g, arc[1], arc[2], height; weights, periodic, type = arc[end], set = sets[arc_idx], kwargs...)
+    #     end
+    # end
+    initRandomState(g)
     cb = x -> layerIdx(sim(x))
     set_listener_callback!(g, cb)
     # println("cb: ", cb)
@@ -109,6 +133,12 @@ function IsingGraph(glength = nothing, gwidth = nothing, gheight = nothing; sim 
     prepare(g.default_algorithm, (;g))
     return g
 end
+
+function makelayers(g, arcs)
+    return ntuple(i -> IsingLayer(g, arcs[i]), length(arcs))
+end
+
+nlayers(g::IsingGraph) = length(g.layers)
 
 """
 The user gives:
@@ -119,22 +149,22 @@ The user gives:
 function decode_architecture(arcs)
     num_layers = length(arcs)
     architecture = []
-    for layer in arcs
-        # If last is a state type, just push
-        if layer[end] <: StateType
-            if length(layer) == 3
-                push!(architecture, (layer[1:2]..., nothing, layer[3]))
-            else
-                push!(architecture, (layer..., Continuous))
-            end
-        else # add default state type
-            if length(layer) == 2
-                push!(architecture, (layer..., nothing, Continuous))
-            else
-                push!(architecture, (layer..., Continuous))
-            end
-        end
-    end
+    # for layer in arcs
+    #     # If last is a state type, just push
+    #     if layer[end] isa Type && layer[end] <: StateType
+    #         if length(layer) == 3
+    #             push!(architecture, (layer[1:2]..., nothing, layer[3]))
+    #         else
+    #             push!(architecture, (layer..., Continuous()))
+    #         end
+    #     else # add default state type
+    #         if length(layer) == 2
+    #             push!(architecture, (layer..., nothing, Continuous()))
+    #         else
+    #             push!(architecture, (layer..., Continuous()))
+    #         end
+    #     end
+    # end
     return architecture
 end
 
@@ -160,9 +190,9 @@ function decode_statesets(sets, numlayers, precision)
     return sets
 end
 
-function arch_to_datalen(architecture)
+function arch_to_datalen(architecture, idx = length(architecture))
     total = 0
-    for layer in architecture
+    for layer in architecture[1:idx]
         prod = 1
         for dim in 1:3
             if !isnothing(layer[dim]) && layer[dim] isa Real
@@ -172,6 +202,22 @@ function arch_to_datalen(architecture)
         total += prod
     end
     return total
+end
+
+function arch_to_startidxs(architecture)
+    startidxs = Int32[1]
+    total = 1
+    for layer in architecture
+        prod = 1
+        for dim in 1:3
+            if !isnothing(layer[dim]) && layer[dim] isa Real
+                prod *= layer[dim]
+            end
+        end
+        total += prod
+        push!(startidxs, total)
+    end
+    return startidxs
 end
 
 Base.eltype(::IsingGraph{T}) where T = T
@@ -227,7 +273,8 @@ export adj
 ### Access the layer ###
 @inline function spinidx2layer(g::IsingGraph, idx)::IsingLayer
     @assert idx <= nStates(g) "Index out of bounds"
-    for layer in unshuffled(layers(g))
+    # for layer in unshuffled(layers(g))
+    for layer in layers(g)
         if idx ∈ layer
             return layer
         end
@@ -312,7 +359,9 @@ Initialize from a graph
 """
 function initRandomState(g)
     _state = similar(state(g))
-    for layer in unshuffled(layers(g))
+    # for layer in unshuffled(layers(g))
+    for layer in layers(g)
+        println("Initializing random state: ", layer)
         _state[graphidxs(layer)] .= rand(layer, length(graphidxs(layer)))
     end
     return _state
@@ -361,176 +410,176 @@ continuous(g::IsingGraph{T}) where T = T <: Integer ? false : true
 
 setdefect(g::IsingGraph, val, idx) = defects(g)[idx] = val
 
-"""
-Resize Graph to new size with random states and no connections for the new states
-Need to be bigger than original size?
-"""
-function Base.resize!(g::IsingGraph{T}, newlength, startidx = length(state(g))) where T
-    oldlength = nStates(g)
-    sizediff = newlength - oldlength
+# """
+# Resize Graph to new size with random states and no connections for the new states
+# Need to be bigger than original size?
+# """
+# function Base.resize!(g::IsingGraph{T}, newlength, startidx = length(state(g))) where T
+#     oldlength = nStates(g)
+#     sizediff = newlength - oldlength
 
-    #TODO RESIZE GPARAMS
+#     #TODO RESIZE GPARAMS
 
-    if sizediff > 0
-        # randomstate = rand(T, sizediff)
-        idxs_to_add = startidx:(startidx + sizediff - 1)
+#     if sizediff > 0
+#         # randomstate = rand(T, sizediff)
+#         idxs_to_add = startidx:(startidx + sizediff - 1)
 
-        # Resize state
-        # splice!(state(g), startidx:startidx-1, zeros(T, sizediff))
-        resize!(state(g), newlength)
-        # Fill copy state to the new indices
+#         # Resize state
+#         # splice!(state(g), startidx:startidx-1, zeros(T, sizediff))
+#         resize!(state(g), newlength)
+#         # Fill copy state to the new indices
 
 
-        # Resize adjacency
-        g.adj = insertrowcol(adj(g), idxs_to_add)
-        # Resize self
-        splice!(g.self, startidx:startidx-1, zeros(T, sizediff))
-    else # if making smaller
-        idxs_to_remove = startidx:(startidx + abs(sizediff) - 1)
-        deleteat!(state(g), idxs_to_remove)
-        g.adj = deleterowcol(adj(g), idxs_to_remove)
-    end
+#         # Resize adjacency
+#         g.adj = insertrowcol(adj(g), idxs_to_add)
+#         # Resize self
+#         splice!(g.self, startidx:startidx-1, zeros(T, sizediff))
+#     else # if making smaller
+#         idxs_to_remove = startidx:(startidx + abs(sizediff) - 1)
+#         deleteat!(state(g), idxs_to_remove)
+#         g.adj = deleterowcol(adj(g), idxs_to_remove)
+#     end
     
-    return g
-end
+#     return g
+# end
 
 
 
 #export resize!
 
-export addLayer!
-nlayers(::Nothing) = Observable(0)
-function addLayer!(g::IsingGraph, llength, lwidth, lheight = nothing; weights = nothing, periodic = true, type = default_ltype(g), set = convert.(eltype(g),(-1,1)), rangebegin = set[1], rangeend = set[2], kwargs...)
-    newlayer = nothing
-    Processes.@tryLockPause g begin 
-        newlayer = _addLayer!(g, llength, lwidth, lheight; set, weights, periodic, type, kwargs...)
-        # Update the layer idxs
-        nlayers(sim(g))[] += 1
-    end
-    return newlayer
-end
+# export addLayer!
+# nlayers(::Nothing) = Observable(0)
+# function addLayer!(g::IsingGraph, llength, lwidth, lheight = nothing; weights = nothing, periodic = true, type = default_ltype(g), set = convert.(eltype(g),(-1,1)), rangebegin = set[1], rangeend = set[2], kwargs...)
+#     newlayer = nothing
+#     Processes.@tryLockPause g begin 
+#         newlayer = _addLayer!(g, llength, lwidth, lheight; set, weights, periodic, type, kwargs...)
+#         # Update the layer idxs
+#         nlayers(sim(g))[] += 1
+#     end
+#     return newlayer
+# end
 
-# addLayer!(g::IsingGraph, llength, lwidth, wg; kwargs...) = addLayer!(g, llength, lwidth; weights = wg, kwargs...)
+# # addLayer!(g::IsingGraph, llength, lwidth, wg; kwargs...) = addLayer!(g, llength, lwidth; weights = wg, kwargs...)
 
-function addLayer!(g, dims::Vector, wgs...; kwargs...)
-    for (dimidx,dim) in enumerate(dims)
-        addLayer!(g, dim[1], dim[2], wgs[dimidx]; kwargs...)
-    end
-    return layers(g)
-end
+# function addLayer!(g, dims::Vector, wgs...; kwargs...)
+#     for (dimidx,dim) in enumerate(dims)
+#         addLayer!(g, dim[1], dim[2], wgs[dimidx]; kwargs...)
+#     end
+#     return layers(g)
+# end
 
-"""
-Add a layer to graph g.
-addLayer(g::IsingGraph, length, width)
+# """
+# Add a layer to graph g.
+# addLayer(g::IsingGraph, length, width)
 
-Give keyword argument weightfunc to set a weightfunc.
-If weightfunc = :Default, uses default weightfunc for the Ising Model
+# Give keyword argument weightfunc to set a weightfunc.
+# If weightfunc = :Default, uses default weightfunc for the Ising Model
 
-When layer needs to be inserted, layers are shifted around
-This is handled by the relocate! function automatically in the shufflevec
-Because the shufflevec knows then internal data is being pushed around
-Not sure if this is the most transparent way to do it since resizing is not done within the shufflevec
-"""
-function _addLayer!(g::IsingGraph{T}, llength, lwidth, lheight = nothing; weights = nothing, periodic = true, type = nothing, kwargs...) where T
-    if isnothing(type)
-        type = default_ltype(g)
-    end
-    # Look if a stateset is given, otherwise give the default and convert to the graph type  
-    set = T.(searchkey(kwargs, :set, fallback = convert.(eltype(g),(-1,1))))
+# When layer needs to be inserted, layers are shifted around
+# This is handled by the relocate! function automatically in the shufflevec
+# Because the shufflevec knows then internal data is being pushed around
+# Not sure if this is the most transparent way to do it since resizing is not done within the shufflevec
+# """
+# function _addLayer!(g::IsingGraph{T}, llength, lwidth, lheight = nothing; weights = nothing, periodic = true, type = nothing, kwargs...) where T
+#     if isnothing(type)
+#         type = default_ltype(g)
+#     end
+#     # Look if a stateset is given, otherwise give the default and convert to the graph type  
+#     set = T.(searchkey(kwargs, :set, fallback = convert.(eltype(g),(-1,1))))
    
-    # Function that makes the new layer based on the insertidx
-    # Found by the shufflevec
-    # TODO: Maybe I should make an insert function for the layers?
-    make_newlayer(idx) = begin
-        _layers = unshuffled(layers(g))
+#     # Function that makes the new layer based on the insertidx
+#     # Found by the shufflevec
+#     # TODO: Maybe I should make an insert function for the layers?
+#     make_newlayer(idx) = begin
+#         _layers = unshuffled(layers(g))
 
-        extra_states = llength*lwidth
-        if !isnothing(lheight) && lheight isa Real
-            extra_states *= lheight
-        end
-        # Resize the old state
+#         extra_states = llength*lwidth
+#         if !isnothing(lheight) && lheight isa Real
+#             extra_states *= lheight
+#         end
+#         # Resize the old state
 
-        # Find the startidx of the new layer
-        # Based on the insertidx found by the shufflevec
-        if !isempty(_layers) && idx > 1
-            _startidx = endidx(_layers[idx-1]) + 1
-        else
-            _startidx = 1
-        end
+#         # Find the startidx of the new layer
+#         # Based on the insertidx found by the shufflevec
+#         if !isempty(_layers) && idx > 1
+#             _startidx = endidx(_layers[idx-1]) + 1
+#         else
+#             _startidx = 1
+#         end
 
-        resize!(g, nStates(g) + extra_states, _startidx)
+#         resize!(g, nStates(g) + extra_states, _startidx)
 
 
-        return IsingLayer(type, g, idx , _startidx, llength, lwidth, lheight; periodic, set)
-    end
+#         return IsingLayer(type, g, idx , _startidx, llength, lwidth, lheight; periodic, set)
+#     end
     
-    layertype =  IsingLayer{type, set}
-    push!(layers(g), make_newlayer, layertype)
-    newlayer = layers(g)[end]
-    # g.layers.data = remake_type.(g.layers.data)
+#     layertype =  IsingLayer{type, set}
+#     push!(layers(g), make_newlayer, layertype)
+#     newlayer = layers(g)[end]
+#     # g.layers.data = remake_type.(g.layers.data)
 
-    # Generate the adjacency matrix from the weightfunc
-    if !isnothing(weights)
-        genAdj!(newlayer, weights)
-    elseif weights == :Default
-        println("No weightgenerator given, using default")
-        genAdj!(newlayer, wg_isingdefault)
-    end
+#     # Generate the adjacency matrix from the weightfunc
+#     if !isnothing(weights)
+#         genAdj!(newlayer, weights)
+#     elseif weights == :Default
+#         println("No weightgenerator given, using default")
+#         genAdj!(newlayer, wg_isingdefault)
+#     end
 
-    # SET COORDS
-    setcoords!(g[end], z = length(g)-1)
+#     # SET COORDS
+#     setcoords!(g[end], z = length(g)-1)
 
-    # Init the state
-    initstate!(newlayer)
+#     # Init the state
+#     initstate!(newlayer)
 
-    return newlayer
-end
+#     return newlayer
+# end
 
-function _removeLayer!(g::IsingGraph, lidx::Integer)
-    #if only one layer error
-    if length(layers(g)) <= 1
-        error("Cannot remove last layer")
-    end
+# function _removeLayer!(g::IsingGraph, lidx::Integer)
+#     #if only one layer error
+#     if length(layers(g)) <= 1
+#         error("Cannot remove last layer")
+#     end
 
-    # Remove the layer from the graph
-    layervec = layers(g)
-    layer = layervec[lidx]
+#     # Remove the layer from the graph
+#     layervec = layers(g)
+#     layer = layervec[lidx]
 
-    # Remove the layer from the graph
-    deleteat!(layervec, lidx)
+#     # Remove the layer from the graph
+#     deleteat!(layervec, lidx)
 
-    resize!(g, nStates(g) - nStates(layer), start(layer))
+#     resize!(g, nStates(g) - nStates(layer), start(layer))
 
-    return layers(g)
-end
+#     return layers(g)
+# end
 
-function removeLayer!(g::IsingGraph, lidx::Integer)
-    @tryLockPause sim(g) begin 
-        _removeLayer!(g, lidx) 
-         # If the slected layer is after the layer to be removed, decrement layerIdx
-        if layerIdx(sim(g))[] >= lidx && layerIdx(sim(g))[] > 1
-            layerIdx(sim(g))[] -= 1
-        else
-            notify(layerIdx(sim(g)))
-        end
-        nlayers(sim(g))[] -= 1 
-    end
-    return layers(g)
-end
-removeLayer!(layer::IsingLayer) = removeLayer!(graph(layer), layer)
-export removeLayer!
+# function removeLayer!(g::IsingGraph, lidx::Integer)
+#     @tryLockPause sim(g) begin 
+#         _removeLayer!(g, lidx) 
+#          # If the slected layer is after the layer to be removed, decrement layerIdx
+#         if layerIdx(sim(g))[] >= lidx && layerIdx(sim(g))[] > 1
+#             layerIdx(sim(g))[] -= 1
+#         else
+#             notify(layerIdx(sim(g)))
+#         end
+#         nlayers(sim(g))[] -= 1 
+#     end
+#     return layers(g)
+# end
+# removeLayer!(layer::IsingLayer) = removeLayer!(graph(layer), layer)
+# export removeLayer!
 
-function removeLayer!(g, idxs::Vector{Int}) 
-    _layers = layers(g)
-    # Sort by internal storage order from last to first, this causes minimal relocations
-    sort!(idxs, lt = (x,y) -> internalidx(_layers, x) > internalidx(_layers, y))
-    @tryLockPause sim(g) for idx in idxs
-        _removeLayer!(g, idx)
-        nlayers(sim(g))[] -= 1
-    end
-    return layers(g)
-end
-removeLayer!(g::IsingGraph, layer::IsingLayer) = removeLayer!(g, layeridx(layer))
+# function removeLayer!(g, idxs::Vector{Int}) 
+#     _layers = layers(g)
+#     # Sort by internal storage order from last to first, this causes minimal relocations
+#     sort!(idxs, lt = (x,y) -> internalidx(_layers, x) > internalidx(_layers, y))
+#     @tryLockPause sim(g) for idx in idxs
+#         _removeLayer!(g, idx)
+#         nlayers(sim(g))[] -= 1
+#     end
+#     return layers(g)
+# end
+# removeLayer!(g::IsingGraph, layer::IsingLayer) = removeLayer!(g, layeridx(layer))
 
 ### ARCHITECTURE
 function getarchitecture(g)

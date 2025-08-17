@@ -4,11 +4,6 @@ using Preferences
 # set_preferences!(InteractiveIsing, "precompile_workload" => false; force=true)
 
 g = IsingGraph(10,40,40, type = Discrete, sets = [(-1,0,1)])
-w = simwindow(g);
-createProcess(g)
- 
-# simulate(g)
-
 
 function weightfunc(dx,dy,dz)
     prefac = 1
@@ -23,10 +18,11 @@ function weightfunc(dx,dy,dz)
     return prefac
 end
 
-
-wg = @WG "(dx,dy,dz) -> weightfunc(dx,dy,dz)" NN = (1,1,3)
+wg = @WG "(dx,dy,dz) -> weightfunc(dx,dy,dz)" NN = (1,1,3) 
 
 genAdj!(g[1], wg)
+
+# simulate(g)
 
 # # setparam!(g[1], :b, 0, true)
 
@@ -68,6 +64,7 @@ genAdj!(g[1], wg)
 
 
 #     setparam!(g[1], :b, pulse[loopidx(proc)])
+
 
 #     push!(y, sum(state(g)))            
 #     push!(x, pulse[loopidx(proc)])

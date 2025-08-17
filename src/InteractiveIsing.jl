@@ -60,18 +60,18 @@ include("Utils/Utils.jl")
 abstract type StateType end
 struct Discrete <: StateType end
 struct Continuous <: StateType end
-struct Static <: StateType end
+struct Static <: StateType end #
 
-Base.isless(::Type{Continuous}, ::Type{Discrete}) = true
-Base.isless(::Type{Discrete}, ::Type{Continuous}) = false
+# Base.isless(::Type{Continuous}, ::Type{Discrete}) = true
+# Base.isless(::Type{Discrete}, ::Type{Continuous}) = false
 
-Base.isless(::Type{Discrete}, ::Type{Static}) = true
-Base.isless(::Type{Static}, ::Type{Discrete}) = false
+# Base.isless(::Type{Discrete}, ::Type{Static}) = true
+# Base.isless(::Type{Static}, ::Type{Discrete}) = false
 
-Base.isless(::Type{Continuous}, ::Type{Static}) = true
-Base.isless(::Type{Static}, ::Type{Continuous}) = false
+# Base.isless(::Type{Continuous}, ::Type{Static}) = true
+# Base.isless(::Type{Static}, ::Type{Continuous}) = false
 
-Base.isless(::Type{<:StateType}, ::Type{<:StateType}) = false
+# Base.isless(::Type{<:StateType}, ::Type{<:StateType}) = false
     
 export Discrete, Continuous, Static
 
@@ -98,34 +98,34 @@ include("Barebones.jl")
 
 const ca1 = CompositeAlgorithm((LayeredMetropolis, Metropolis), (1,2))
 
-# PRECOMPILATION FUNCTION FOR FAST USAGE
-@setup_workload begin
-    GC.enable(false)
+# # PRECOMPILATION FUNCTION FOR FAST USAGE
+# @setup_workload begin
+#     GC.enable(false)
 
-    cg1 = IsingGraph(20, 20, type = Discrete)
-    cg3d = IsingGraph(20, 20, 20, type = Continuous)
+#     cg1 = IsingGraph(20, 20, type = Discrete)
+#     cg3d = IsingGraph(20, 20, 20, type = Continuous)
 
-    @compile_workload begin
-        cwg = @WG "(dr) -> 1" NN=1
-        prepare(ca1, (;g = cg1))
-        genAdj!(cg1[1], cwg)
-        createProcess(cg1, ca1, lifetime = 10)
-        quit(cg1)
-        interface(cg1)
-        closeinterface()
+#     @compile_workload begin
+#         cwg = @WG "(dr) -> 1" NN=1
+#         prepare(ca1, (;g = cg1))
+#         genAdj!(cg1[1], cwg)
+#         createProcess(cg1, ca1, lifetime = 10)
+#         quit(cg1)
+#         interface(cg1)
+#         closeinterface()
   
-        prepare(ca1, (;g = cg3d))
-        interface(cg3d)
-        closeinterface()   
-        genAdj!(cg3d[1], cwg)
-        createProcess(cg3d, ca1, lifetime = 10)
-        fetch(process(cg3d))
-        quit(cg3d)
-        simulation |> reset!
+#         prepare(ca1, (;g = cg3d))
+#         interface(cg3d)
+#         closeinterface()   
+#         genAdj!(cg3d[1], cwg)
+#         createProcess(cg3d, ca1, lifetime = 10)
+#         fetch(process(cg3d))
+#         quit(cg3d)
+#         simulation |> reset!
         
-        GC.enable(true)
-    end
-end
+#         GC.enable(true)
+#     end
+# end
 
 
 

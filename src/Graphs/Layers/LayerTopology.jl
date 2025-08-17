@@ -39,10 +39,13 @@ struct GenericTopology{U} <: LayerTopology{U,0} end
 @inline periodic(lt::LayerTopology{U}, symb) where U = periodic(U, symb)
 struct SquareTopology{U,DIMS} <: LayerTopology{U, DIMS}
     size::NTuple{DIMS,Int32}
-    function SquareTopology(size; periodic::Union{Bool, <:Tuple} = true)
+    function SquareTopology(size; periodic::Union{Bool, <:Tuple, Nothing} = true)
         U = nothing
+        
         if periodic isa Bool
             U = periodic ? Periodic() : NonPeriodic()
+        elseif isnothing(periodic)
+            U = Periodic()
         else
             U = PartPeriodic(periodic...) 
         end
@@ -57,8 +60,8 @@ mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: LayerTopo
     size::NTuple{Dim, Int32}
 
     # This function uses SMatrix Inverse to calculate the covectors
-    function LatticeTop(_size::NTuple{Dim}, vecs::NTuple{Dim, <:AbstractArray}; periodic = nothing, precision = Float32)
-        D = length(_size)
+    function LatticeTop(_size::NTuple{D}, vecs::NTuple{D, <:AbstractArray}; periodic = nothing, precision = Float32) where D
+        # D = length(_size)
         vecs = Vector{SVector{D, precision}}(undef, D)
         for i in 1:D
             if i <= length(vecs)
@@ -71,7 +74,7 @@ mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: LayerTopo
         m = SMatrix{D, D, precision}(vecs...)
         covs = tuple(eachcol(inv(m))...)  # Calculate the covectors using the inverse of the matrix
 
-        return new{Square, U, D}(vecs, covs, _size)
+        return new{Square, U, D, precision}(vecs, covs, _size)
     end
 
     function LatticeTopology(_size::Tuple, vec1::Union{Nothing,AbstractArray} = nothing, vec2::Union{Nothing,AbstractArray} = nothing, vec3::Union{Nothing,AbstractArray} = nothing; periodic::Union{Nothing, Bool, Tuple} = nothing)
@@ -88,7 +91,7 @@ mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: LayerTopo
                 vecs = SVector.((1f0,0f0), (0f0,1f0))
                 covs = SVector.((1f0,0f0), (0f0,1f0))
 
-                return new{Square, U, 2}(vecs, covs, _size)
+                return new{Square, U, 2, Float32}(vecs, covs, _size)
             end
 
             y1 = 1/(vec1[1]-(vec1[2]*vec2[1]/vec2[2]))
@@ -115,7 +118,7 @@ mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: LayerTopo
                 
         
             # return new{lattice_type, ptype, typeof(layer)}(layer, (vec1, vec2), (cov1, cov2))
-            return new{lattice_type, ptype, D}( Float32.(vec1, vec2), Float32.(cov1, cov2), _size)
+            return new{lattice_type, ptype, D, Float32}( Float32.(vec1, vec2), Float32.(cov1, cov2), _size)
         elseif DIMS(layer) == 3
             # Assert either none given or all
             @assert (isnothing(vec1) && isnothing(vec2) && isnothing(vec3)) || (!isnothing(vec1) && !isnothing(vec2) && !isnothing(vec3))
@@ -124,7 +127,7 @@ mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: LayerTopo
                 vecs = SVector.((1f0,0f0,0f0), (0f0,1f0,0f0), (0f0,0f0,1f0))
                 covs = SVector.((1f0,0f0,0f0), (0f0,1f0,0f0), (0f0,0f0,1f0))
 
-                return new{Square, U, 3}(vecs, covs, _size)
+                return new{Square, U, 3, Float32}(vecs, covs, _size)
             end
 
             #calculation of covectors
@@ -146,7 +149,7 @@ mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: LayerTopo
             #TODO Add support for other lattices
             lattice_type = AnyLattice
             
-            return new{AnyLattice, ptype, D}( Float32.(vec1, vec2, vec3), Float32.(cov1, cov2, cov3), _size)
+            return new{AnyLattice, ptype, D, Float32}( Float32.(vec1, vec2, vec3), Float32.(cov1, cov2, cov3), _size)
         end
        
     end
