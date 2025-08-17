@@ -1,7 +1,7 @@
 export singleView
-max_r_slider(window, slider) = slider.range[] = 1:(floor(Int64,min(size(current_layer(window))...)/2))
-function sim_max_r(window::MakieWindow{:Simulation})
-    maxsize = (floor(Int64,min(size(current_layer(window))...)/2))
+max_r_slider(simulation, slider) = slider.range[] = 1:(floor(Int64,min(size(currentLayer(simulation))...)/2))
+function sim_max_r(simulation)
+    maxsize = (floor(Int64,min(size(currentLayer(simulation))...)/2))
     return maxsize == 0 ? 1 : maxsize
 end
 
@@ -15,22 +15,20 @@ function singleView(window)
     g = window[:graph]
     mp = midpanel(ml)
     f = fig(ml)
-    # simulation = sim(g)
+    simulation = sim(g)
 
     ml[:current_view] = singleView
 
     # ISING IMAGE
     
-    # mp[:sv_img_ob] = img_ob = Observable(getSingleViewImg(window))
-    mp[:obs] = img_ob = Observable(getSingleViewImg(window))
-    window[:image] = img_ob
+    mp[:sv_img_ob] = img_ob = Observable(getSingleViewImg(window))
     mp[:axis_size] = size(img_ob[])
     obs_funcs = etc(ml)[:obs_funcs_singleView] = ObserverFunction[]
     
 
     # LAYER SELECTOR  BUTTONS
     toppanel(ml)[:sb] = selector_buttons = GridLayout(toppanel(ml)[:mid_grid][3,1], tellwidth = false)
-    toppanel(ml)[:sll] = selected_layer_label = lift((x,y) -> "$x/$y", window[:layer_idx], nlayers(g))
+    toppanel(ml)[:sll] = selected_layer_label = lift((x,y) -> "$x/$y", layerIdx(simulation), nlayers(simulation))
     push!(obs_funcs, selected_layer_label.inputs...)
 
     toppanel(ml)[:sb_l] = selector_buttons[1,1] = leftbutton = Button(f, label = "<", padding = (0,0,0,0), fontsize = 14, width = 40, height = 28)
@@ -40,44 +38,36 @@ function singleView(window)
 
     # BFIELD BUTTON
     push!(obs_funcs, on(midpanel(ml)[:showbfield].active, weak = true) do _
-        img_ob[] = getSingleViewImg(window)
+        img_ob[] = getSingleViewImg(g, ml)
     end)
 
     push!(obs_funcs, on(leftbutton.clicks, weak = true) do _
-        # setLayerIdx!(simulation, layerIdx(simulation)[] -1)
-        if window[:layer_idx] > 1
-            window[:layer_idx] -= 1
-        end
+        setLayerIdx!(simulation, layerIdx(simulation)[] -1)
     end)
 
     push!(obs_funcs, on(rightbutton.clicks, weak = true) do _
-        if window[:layer_idx] < nlayers(g)
-            window[:layer_idx] += 1
-        end
+        setLayerIdx!(simulation, layerIdx(simulation)[] + 1)
     end)
 
-    push!(obs_funcs, on(window[:layer_idx], weak = true) do _
-        setLayerSV(window)
+    push!(obs_funcs, on(layerIdx(simulation), weak = true) do val
+        setLayerSV(val)
     end)
 
 
-    cur_layer = current_layer(window)
+    cur_layer = currentLayer(simulation)
 
     # Create the axis for the layer type
-    create_layer_axis!(window, mp, pos = (1,2))
+    create_layer_axis!(cur_layer, mp, pos = (1,2))
 
     ax = mp[:axis]
     
     # mp[:axis].yreversed[] = @load_preference("makie_y_flip", default = false)
     # mp[:image].colorrange[] = (-1,1)
 
-    #TODO:Restore this
-    # push!(obs_funcs, on(events(ax.scene).mousebutton, weak = true) do buttons
-    #     MDrawCircle(ax, buttons, simulation)
-    #     return
-    # end)
-
-
+    push!(obs_funcs, on(events(ax.scene).mousebutton, weak = true) do buttons
+        MDrawCircle(ax, buttons, simulation)
+        return
+    end)
     # me_axis = addmouseevents!(ax.scene)
 
     # onmouseleftdown(me_axis) do ev
@@ -92,7 +82,7 @@ function singleView(window)
     # end
 
     # Weightgenerator display
-    wg_label_obs = lift(x-> "$(wg(g[x]))", window[:layer_idx])
+    wg_label_obs = lift(x-> "$(wg(g[x]))", layerIdx(simulation))
     push!(obs_funcs, wg_label_obs.inputs...)
     bp = bottompanel(ml)
     bp_midgrid_toprow = 1+bp[:mid_grid].offsets[1]
@@ -104,8 +94,7 @@ function singleView(window)
         close(ml[:timedfunctions_timer])
     end
 
-    iob = mp[:obs]
-    pushmainfunc!(window, (window) -> notify(iob))
+    timedFunctions[:screen] = (sim) -> notify(mp[:obs])
 
     return
 end
@@ -148,10 +137,10 @@ function cleanup(ml, ::typeof(singleView))
     delete!(timedFunctions, :screen)
 
     delete!(etc(ml), :timedfunctions_timer)
-    # if !isnothing(simulation)
-    #     close(timers(simulation[])[:makie])
-    #     delete!(timers(simulation[]), :makie)
-    # end
+    if !isnothing(simulation)
+        close(timers(simulation[])[:makie])
+        delete!(timers(simulation[]), :makie)
+    end
     
 
     ml[:current_view] = nothing

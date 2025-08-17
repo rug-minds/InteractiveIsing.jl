@@ -1,9 +1,6 @@
-function midPanel(window)
-    ml = window[:layout]
-    g = window[:graph]
+function midPanel(ml,g)
     f = fig(ml)
-    # simulation = sim(g)
-    window[:brush_r] = Observable(sim_max_r(window)/2)
+    simulation = sim(g)
 
     obs_funcs = ml[:obs_funcs_midPanel] = ObserverFunction[]
     coupled_obs = ml[:coupled_obs_midPanel] = Observable[]
@@ -38,22 +35,22 @@ function midPanel(window)
             # SIZE TEXTBOX 
                 mp[:sizetextbox] = size_grid = GridLayout(leftpanel[2,1])
 
-                size_validator(r_string) = try 0 < parse(UInt, r_string) < sim_max_r(window); catch; false; end
-                mp[:size_label_text] = sl_text = lift(x -> "Radius < $(sim_max_r(window))", window[:layer_idx])
+                size_validator(r_string) = try 0 < parse(UInt, r_string) < sim_max_r(simulation); catch; false; end
+                mp[:size_label_text] = sl_text = lift(x -> "Radius < $(sim_max_r(simulation))", layerIdx(simulation)) 
                 mp[:sizelabel] = Label(size_grid[1,1], sl_text)
                 mp[:sizefield] = sizefield = UIntTextbox(size_grid[2,1], 
-                    onfunc = (num) -> window[:brush_r][] = num,
-                    placeholder = "$(window[:brush_r][])",
-                    upper = () -> sim_max_r(window), 
+                    onfunc = (num) -> brushR(simulation)[] = num,
+                    placeholder = "$(brushR(simulation)[])",
+                    upper = () -> sim_max_r(simulation), 
                     width = 40, 
                     defocus_on_submit = true, 
                     reset_on_defocus = true)
 
-                # TODO: Restore
-                push!(obs_funcs, on(window[:brush_r]) do x
+
+                push!(obs_funcs, on(brushR(simulation)) do x
                     sizefield.placeholder[] = string(x)
                     #Set circle
-                    circ(simulation, getOrdCirc(window[:brush_r][]))
+                    circ(simulation, getOrdCirc(brushR(simulation)[]))
                 end)
 
             # SHOW BFIELD
@@ -61,7 +58,7 @@ function midPanel(window)
             mp[:showbfieldlabel] = Label(leftpanel[3,1], "Show BField", fontsize = 18)
 
             push!(obs_funcs, on(showbfield.active) do x
-                mp[:obs][] = getSingleViewImg(window)
+                mp[:obs][] = getSingleViewImg(g, ml)
             end)
         
 
@@ -106,13 +103,7 @@ function midPanel(window)
             tempslider.value.ignore_equal_values = true
 
             set_close_to!(tempslider, temp(g)[])
-            window[:gtemp] = PolledObservable(temp(g), (o) -> temp(g))
-            on(window[:gtemp]) do x
-                temp(g, x)
-                set_close_to!(tempslider, x)
-            end
-            pushpolled!(window, window[:gtemp])
-            ob_pair = Observables.ObservablePair(tempslider.value, window[:gtemp])
+            ob_pair = Observables.ObservablePair(tempslider.value, temp(simulation))
             mp[:ob_pair] = ob_pair
 
             #Isn't this redundant?

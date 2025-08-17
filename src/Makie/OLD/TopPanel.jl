@@ -1,27 +1,6 @@
-Processes.loopidx(::Nothing) = 0
-
-function topPanel(window)
-    ml = window[:layout]
-    g = graph(window)
+function topPanel(ml, g)
     f = fig(ml)
-
-    fps = round(Int,1/getinterval(window))
-    last_two = CircularBuffer{UInt}(2)
-    push!(last_two, sum(loopidx.(processes(g))));
-
-    update_deltas = AverageCircular(Int, fps)
-    upf = window[:upf] = Observable(0.)
-    upfps = window[:upfps] = Observable(0.)
-
-    pushmainfunc!(window, (window) -> begin
-        li = loopidx.(processes(g))
-        push!(last_two, sum(li))
-        delta = last_two[2] == 0 ? 0 : last_two[2] - last_two[1]
-        push!(update_deltas, delta)
-        a = avg(update_deltas)
-        upf[] = a / fps
-        upfps[] = upf[] / nstates(g)
-    end)
+    simulation = sim(g)
 
     obs_funcs = ml[:obs_funcs_topPanel] = ObserverFunction[]
     coupled_obs = ml[:coupled_obs_topPanel] = Observable[]
@@ -44,19 +23,19 @@ function topPanel(window)
         tp[:resetbutton] = resetbutton = Button(mid_grid[1,1], label = "Reset Graph", fontsize = 18, height = 30, halign = :center, tellwidth = false)
         
         # PAUSE BUTTON
-        tp[:buttontext] = buttontext = lift(x -> x ? "Paused" : "Running", ispaused(window))
+        tp[:buttontext] = buttontext = lift(x -> x ? "Paused" : "Running", isPaused(simulation))
         push!(obs_funcs, buttontext.inputs...)
 
         tp[:pausebutton] = pausebutton = Button(mid_grid[2,1], padding = (0,0,0,0), fontsize = 18, width = 100, height = 30, label = buttontext, halign = :center, tellwidth = false)
         
         # RESET BUTTON
         push!(obs_funcs, on(resetbutton.clicks) do _
-            # reset!(simulation)
+            reset!(simulation)
         end)
 
         # PAUSE BUTTON
         push!(obs_funcs, on(pausebutton.clicks) do _
-            togglepause(window)
+            isPaused(simulation)[] = !isPaused(simulation)[]
             togglepause(g)
         end)
 
@@ -64,11 +43,11 @@ function topPanel(window)
 
         tp[:upsgrid] = upsgrid = GridLayout(topgrid[1,1])
 
-        update_label_upf = lift(x -> "Updates per frame: $(round(x, digits = 2))", upf)
+        update_label_upf = lift(x -> "Updates per frame: $(round(x, digits = 2))", upf(simulation))
         push!(obs_funcs, update_label_upf.inputs...)
 
 
-        update_label_upfps = lift(x -> "Updates per frame per spin: $(round(x, digits = 4))", upfps)
+        update_label_upfps = lift(x -> "Updates per frame per spin: $(round(x, digits = 4))", upfps(simulation))
         push!(obs_funcs, update_label_upfps.inputs...)
         
         tp[:updates_label] = upsgrid[1,1] = updates_label = Label(f, update_label_upf, padding = (0,0,0,0), fontsize = 18, halign = :left, valign = :top, tellheight = false, tellwidth = false)
