@@ -15,7 +15,7 @@ function Processes.prepare(::LayeredMetropolis, @specialize(args))
     Ms = [Ref(sum(state(g[i]))) for i in 1:length(g.layers)]
 
     return (;args..., 
-            layerarch = GetArchitecture(unshuffled(g.layers)...),
+            layerarch = GetArchitecture(g.layers...),
             Ms = Ms)
 end
 
