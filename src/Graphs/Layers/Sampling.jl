@@ -25,4 +25,4 @@
         end
     end
 end
-@inline sampleState(::Continuous, oldstate, rng, stateset) = sample_from_stateset(Continuous, rng, stateset)
+@inline sampleState(::Continuous, oldstate, rng, stateset) = sample_from_stateset(Continuous(), rng, stateset)
