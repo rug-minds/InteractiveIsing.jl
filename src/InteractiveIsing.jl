@@ -22,6 +22,9 @@ using FileIO, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, Lin
     StatsBase, LaTeXStrings, DataStructures, Preferences, GLMakie, SparseArrays, FFTW, ExprTools, UUIDs, DataStructures
 using Images
 
+
+include("../deps/Processes/src/Processes.jl")
+import .Processes
 using Processes
 export Processes
 import Processes: prepare
