@@ -55,7 +55,7 @@ end
 function IsingGraph(dims...; sim = nothing,  periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
     # architecture = searchkey(kwargs, :architecture, fallback = LProps(dims...; stype = type, stateset = sets, periodic))
     if isnothing(sets) || length(sets) == 1
-        length(sets) == 1 && (sets = sets[1])
+        !isnothing(sets) && length(sets) == 1 && (sets = sets[1])
         ls = (LProps(dims...;stype = type, stateset = sets, periodic),)
     end
     @assert (isnothing(glength) && isnothing(gwidth) && isnothing(architecture)) || (!isnothing(glength) && !isnothing(gwidth)) || !isnothing(architecture) "Either give length and width or architecture"
