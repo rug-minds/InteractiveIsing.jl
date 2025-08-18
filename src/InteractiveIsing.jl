@@ -23,7 +23,7 @@ using FileIO, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, Lin
 using Images
 
 
-include("Processes/src/Processes.jl")
+include("../deps/Processes/src/Processes.jl")
 
 using .Processes
 export Processes

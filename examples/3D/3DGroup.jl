@@ -3,10 +3,9 @@ using InteractiveIsing
 using Preferences
 # set_preferences!(InteractiveIsing, "precompile_workload" => false; force=true)
 
-g = IsingGraph(10,40,40, type = Discrete)
+g = IsingGraph(10,40,40, type = Continuous)
 w = simwindow(g);
 createProcess(g)
- 
 # simulate(g)
 
 
