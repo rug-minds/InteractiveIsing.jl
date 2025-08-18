@@ -43,7 +43,6 @@ JET = "~0.9.18"
 LayoutPointers = "~0.1.17"
 MacroTools = "~0.5.15"
 OrderedCollections = "~1.8.0"
-Processes = "0.1.2"
 Unitful = "~1.23.1"
 
 [extras]
