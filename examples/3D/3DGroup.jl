@@ -1,9 +1,9 @@
-using InteractiveIsing, LoopVectorization, Processes
+using InteractiveIsing
 
 using Preferences
 # set_preferences!(InteractiveIsing, "precompile_workload" => false; force=true)
 
-g = IsingGraph(10,40,40, type = Discrete, sets = [(-1,0,1)])
+g = IsingGraph(10,40,40, type = Discrete)
 w = simwindow(g);
 createProcess(g)
  

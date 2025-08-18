@@ -130,6 +130,9 @@ function LProps(dims...; g = nothing, idx = 1, start = 1, name = "Layer $idx", p
         stype = stype()
     end    
     dims = map(x->convert(Int,x), dims)
+    if isnothing(stateset)
+        stateset = (-1, 1)
+    end
     stateset = map(x->convert(precision, x), stateset)
     if isnothing(periodic)
         periodic = true
