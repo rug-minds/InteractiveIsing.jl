@@ -23,11 +23,11 @@ using FileIO, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, Lin
 using Images
 
 
-include("../deps/Processes/src/Processes.jl")
-import .Processes
-using Processes
+include("Processes/src/Processes.jl")
+
+using .Processes
 export Processes
-import Processes: prepare
+import .Processes: prepare
 
 using PrecompileTools
 

@@ -1,4 +1,4 @@
-@inline function func_tuple_unroll(fs, args::Union{Nothing, Tuple}) where N
+@inline function func_tuple_unroll(fs, args::Union{Nothing, Tuple})
     tuple(_func_tuple_unroll(gethead(fs), gettail(fs), args)...)
 end
 
