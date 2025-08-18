@@ -6,21 +6,27 @@ function topPanel(window)
     f = fig(ml)
 
     fps = round(Int,1/getinterval(window))
-    last_two = CircularBuffer{UInt}(2)
-    push!(last_two, sum(loopidx.(processes(g))));
+    last_two_updates = CircularBuffer{UInt}(2)
+    push!(last_two_updates, sum(loopidx.(processes(g))));
 
     update_deltas = AverageCircular(Int, fps)
-    upf = window[:upf] = Observable(0.)
-    upfps = window[:upfps] = Observable(0.)
+    times = CircularBuffer{UInt}(fps)
+    push!(times, time_ns())
+
+
+    ups = window[:ups] = Observable(0.)
+    upsps = window[:upsps] = Observable(0.)
 
     pushmainfunc!(window, (window) -> begin
         li = loopidx.(processes(g))
-        push!(last_two, sum(li))
-        delta = last_two[2] == 0 ? 0 : last_two[2] - last_two[1]
+        push!(last_two_updates, sum(li))
+        push!(times, time_ns())
+
+        delta = last_two_updates[2] == 0 ? 0 : last_two_updates[2] - last_two_updates[1]
         push!(update_deltas, delta)
         a = avg(update_deltas)
-        upf[] = a / fps
-        upfps[] = upf[] / nstates(g)
+        ups[] = a / (times[end] - times[1]) * 1e9  # Convert to seconds
+        upsps[] = ups[] / nstates(g)
     end)
 
     obs_funcs = ml[:obs_funcs_topPanel] = ObserverFunction[]
@@ -64,15 +70,15 @@ function topPanel(window)
 
         tp[:upsgrid] = upsgrid = GridLayout(topgrid[1,1])
 
-        update_label_upf = lift(x -> "Updates per frame: $(round(x, digits = 2))", upf)
-        push!(obs_funcs, update_label_upf.inputs...)
+        update_label_ups = lift(x -> "Updates per second: $(round(x, digits = 2))", ups)
+        push!(obs_funcs, update_label_ups.inputs...)
 
 
-        update_label_upfps = lift(x -> "Updates per frame per spin: $(round(x, digits = 4))", upfps)
-        push!(obs_funcs, update_label_upfps.inputs...)
-        
-        tp[:updates_label] = upsgrid[1,1] = updates_label = Label(f, update_label_upf, padding = (0,0,0,0), fontsize = 18, halign = :left, valign = :top, tellheight = false, tellwidth = false)
-        tp[:updates_label_per_spin] = upsgrid[2,1] = updates_label_per_spin = Label(f, update_label_upfps, fontsize = 18,  halign = :left, valign = :top, tellheight = false, tellwidth = false)
+        update_label_upsps = lift(x -> "Updates per second per spin: $(round(x, digits = 4))", upsps)
+        push!(obs_funcs, update_label_upsps.inputs...)
+
+        tp[:updates_label] = upsgrid[1,1] = updates_label = Label(f, update_label_ups, padding = (0,0,0,0), fontsize = 18, halign = :left, valign = :top, tellheight = false, tellwidth = false)
+        tp[:updates_label_per_spin] = upsgrid[2,1] = updates_label_per_spin = Label(f, update_label_upsps, fontsize = 18,  halign = :left, valign = :top, tellheight = false, tellwidth = false)
     # TOP RIGHT PANEL
 
     # Etcetera buttons
