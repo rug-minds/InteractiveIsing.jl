@@ -21,3 +21,7 @@ current_layer(window::MakieWindow{:Simulation}) = graph(window)[window[:layer_id
 
 graph(window::MakieWindow{:Simulation}) = window.obj_ptr
 
+function Base.show(io::IO, window::MakieWindow{:Simulation})
+    println(io, "Simulation Window for:")
+    print(graph(window))
+end
