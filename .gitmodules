@@ -1,0 +1,3 @@
+[submodule "deps/Processes"]
+	path = deps/Processes
+	url = https://github.com/f-ij/Processes.jl
