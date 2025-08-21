@@ -55,8 +55,14 @@ function Base.close(window::MakieWindow)
     close(window.maintimer)
     close.(window.timers)
     close.(window.polled_observables)
-    closewindow(window)
+    close_window(window)
+    close_glfw(window)
 end
+
+function close_window(window::MakieWindow) #Overloadable for custom closing
+    return
+end
+
 
 """
 Creates a new Makie window with a figure and a screen
@@ -95,7 +101,7 @@ function new_window(;window_type = :Any, objectptr = nothing, refresh_rate = 30,
     on(events(f.scene).keyboardbutton) do events
         hotkey = (Keyboard.left_super, Keyboard.w)
         if ispressed(f, hotkey)
-            closewindow(w)
+            close(w)
         end
     end
 
@@ -122,7 +128,7 @@ window_open(w::MakieWindow) = w.other[:window_open]::Observable{Bool}
 
 # Is this type of window unique?
 pushtype(::W) where W<:AbstractWindow = pushtype(W) 
-function closewindow(w::AbstractWindow) 
+function close_glfw(w::AbstractWindow) 
     GLFW.SetWindowShouldClose(to_native(w.screen), true)
 end
 function window_isopen(w::AbstractWindow)
@@ -130,7 +136,7 @@ function window_isopen(w::AbstractWindow)
 end
 function cleanup(w::AbstractWindow)
     close(w)
-    # closewindow(w)
+    # close_glfw(w)
     # delete!(getml().windowlist, w)
     delete!(getwindows(), w)
 end

@@ -92,13 +92,13 @@ function topPanel(window)
 
     me = addmouseevents!(f.scene, cam_a.layoutobservables.computedbbox)
     push!(obs_funcs, onmouseleftclick(me) do _
-        saveGImg(currentLayer(simulation))
+        saveGImg(current_layer(window))
     end)
 
     # Plot correlation function
     corr_b = Button(etc_bs[2,1], label = "Correlation", padding = (0,0,0,0), fontsize = 14, width = 80, height = 30, halign = :right, valign = :top, tellwidth = false)
     push!(obs_funcs, on(corr_b.clicks) do _
-        plotCorr(correlationLength(currentLayer(simulation)), save = false)
+        plotCorr(correlationLength(current_layer(window)), save = false)
     end)
 end
 

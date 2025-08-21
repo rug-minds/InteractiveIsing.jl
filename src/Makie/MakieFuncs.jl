@@ -76,7 +76,7 @@ function getSingleViewImg(window, _size::Tuple{Integer,Integer})
     ml = window[:layout]
     g = window[:graph]
     this_layer = current_layer(window)
-    if midpanel(ml)[:showbfield].active[]
+    if haskey(midpanel(ml), :showbfield) && midpanel(ml)[:showbfield].active[]
         return CastViewMatrix(Float64, g.params[:b].val , graphidxs(this_layer), size(this_layer)...)
     else
         return CastViewMatrix(Float64, state(g), graphidxs(this_layer), size(this_layer)...)
@@ -86,7 +86,7 @@ end
 function getSingleViewImg(window, size::NTuple{3,Integer})
     ml = window[:layout]
     g = window[:graph]
-    if midpanel(ml)[:showbfield].active[] # Show the bfield
+    if haskey(midpanel(ml), :showbfield) && midpanel(ml)[:showbfield].active[] # Show the bfield
         # unsafe = create_unsafe_vector(@view getparam(g, :b).val[graphidxs(currentLayer(sim(g)))])
         unsafe = create_unsafe_vector(@view g.hamiltonian.b.val[graphidxs(current_layer(window))])
         return CastVec(Float64, unsafe)

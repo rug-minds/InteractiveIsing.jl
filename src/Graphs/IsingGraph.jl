@@ -361,7 +361,6 @@ function initRandomState(g)
     _state = similar(state(g))
     # for layer in unshuffled(layers(g))
     for layer in layers(g)
-        println("Initializing random state: ", layer)
         _state[graphidxs(layer)] .= rand(layer, length(graphidxs(layer)))
     end
     return _state

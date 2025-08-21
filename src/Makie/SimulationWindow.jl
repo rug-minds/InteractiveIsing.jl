@@ -8,7 +8,7 @@ function simwindow(g)
     w[:polling_rate] = 10
     # w[:u_observable] = PolledObservable()
 
-    baseFig(w)
+    w[:basefig] = baseFig(w)
     singleView(w)
 
     # push!(w.timers, PTimer((timer) -> poll!.(w[:u_observable]), 0., .5))
@@ -24,4 +24,8 @@ graph(window::MakieWindow{:Simulation}) = window.obj_ptr
 function Base.show(io::IO, window::MakieWindow{:Simulation})
     println(io, "Simulation Window for:")
     print(graph(window))
+end
+
+function close_window(window::MakieWindow{:Simulation})
+    cleanup(window[:layout], baseFig)
 end

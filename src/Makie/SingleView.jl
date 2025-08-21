@@ -22,7 +22,12 @@ function singleView(window)
     # ISING IMAGE
     
     # mp[:sv_img_ob] = img_ob = Observable(getSingleViewImg(window))
-    mp[:obs] = img_ob = Observable(getSingleViewImg(window))
+    # mp[:showbfield] = Observable(false)
+    if !haskey(mp, :obs)
+        mp[:obs] = img_ob = Observable(getSingleViewImg(window))
+    else
+        img_ob = mp[:obs]
+    end
     window[:image] = img_ob
     mp[:axis_size] = size(img_ob[])
     obs_funcs = etc(ml)[:obs_funcs_singleView] = ObserverFunction[]

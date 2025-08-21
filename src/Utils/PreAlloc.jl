@@ -29,7 +29,7 @@ function ThreadedPrealloc(type::Type, N, nthreads)
 end
 
 Base.getindex(pre::AbstractPreAlloc, i) = pre.vec[i]
-Base.setindex!(pre::AbstractPreAlloc, tup, i) = (pre.vec[i] = tup; pre.used = max(pre.used, i))
+Base.setindex!(pre::AbstractPreAlloc, tup, i) = (pre.vec[i] = tup; pre.used = capacity(pre.used, i))
 Base.length(pre::AbstractPreAlloc) = pre.used
 Base.push!(pre::AbstractPreAlloc, tup) = (pre.vec[pre.used+1] = tup; pre.used += 1)
 reset!(pre::AbstractPreAlloc) = (pre.used = 0; return)

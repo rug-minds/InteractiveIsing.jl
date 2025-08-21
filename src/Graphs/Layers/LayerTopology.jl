@@ -212,8 +212,9 @@ function dist2(top::SquareTopology{P, 2}, i1, j1, i2, j2) where P
     return di^2 + dj^2
 end
 
+dist2(top::SquareTopology{P, 3}, (i1,j1,k1)::Tuple,(i2,j2,k2)::Tuple) where P = dist2(top, i1,j1,k1,i2,j2,k2)
 
-function dist2(top::SquareTopology{P,3}, (i1,j1,k1)::Tuple,(i2,j2,k2)::Tuple) where P
+function dist2(top::SquareTopology{P,3}, i1,j1,k1,i2,j2,k2) where P
     di = abs(i1 - i2)
     dj = abs(j1 - j2)
     dk = abs(k1 - k2)
