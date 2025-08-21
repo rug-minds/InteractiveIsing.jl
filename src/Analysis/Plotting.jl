@@ -9,18 +9,17 @@ function plotCorr(lVec, corrVec; save = true, dodisplay = true, foldername = "Da
         corrPlot = lines(lVec,corrVec, axis = (;xlabel = "Length"))
         f = corrPlot.figure
         Label(f[0,1], L"C(L)", tellwidth = false)
-        
-        if dodisplay
-            # display(colorbuffer(f.scene))
-            # resize!(f, 1200, 900)  # width, height in pixels
-            # cb = colorbuffer(f, backend = CairoMakie, size = (1200, 900))
-            display(f)
-        end
 
         if save
             Tstring = replace("$T", '.' => ',')
             # pl.savefig(corrPlot,"$(foldername)Ising Corrplot L$lidx $tidx T$Tstring d$point")
         end
+        
+        if dodisplay
+            return f
+        end
+
+            
     end
 end
 
