@@ -249,7 +249,8 @@ Remove a layer from the graph defects
 function removeLayer!(gd::GraphDefects, lidx)
    
     _graph = graph(gd)
-    _layers = unshuffled(layers(_graph))
+    # _layers = unshuffled(layers(_graph))
+    _layers = layers(_graph)
     preceding_layers = _layers[1:(lidx-1)]
     # Get the number of defects in the layer
     l_ndefect = layerdefects(gd)[lidx]

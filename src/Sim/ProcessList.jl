@@ -2,7 +2,7 @@ struct ProcessList{Max}
     processes::Vector{Process}
     graphidx::Vector{Int}
 end
-max(pl::ProcessList{M}) where M = M
+DataStructures.capacity(pl::ProcessList{M}) where M = M
 
 ProcessList(max) = ProcessList{max}(Process[], Int[])
 Base.getindex(pl::ProcessList, idx) = pl.processes[idx]
@@ -13,7 +13,7 @@ Base.empty!(pl::ProcessList) = empty!(pl.processes)
 
 
 function Base.push!(pl::ProcessList, (p, idx)::Tuple{Process, Int})
-    @assert length(pl.processes) < max(pl) "ProcessList is full" 
+    @assert length(pl.processes) < capacity(pl) "ProcessList is full" 
     push!(pl.processes, p)
     push!(pl.graphidx, idx)
 end

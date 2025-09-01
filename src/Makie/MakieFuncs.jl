@@ -7,16 +7,17 @@ function rslider_func(x, sim)
         # circ(sim, getOrdCirc(brushR(simulation)[]))
 end
 
-function setLayerSV(idx)
+function setLayerSV(window) # set layer singleview
     ml = getml()
     mp = midpanel(ml)
 
     # dim = glength(currentLayer(simulation[]))
 
-    sim = simulation[]
-    cur_layer = currentLayer(sim)
+    # sim = simulation[]
+    # cur_layer = currentLayer(sim)
+    cur_layer = current_layer(window)
 
-    newR = round(min(size(currentLayer(sim))...) / 10)
+    newR = round(min(size(cur_layer)...) / 10)
 
     setCircR!(sim, newR)
     layerName(sim)[] = name(cur_layer)
@@ -24,12 +25,12 @@ function setLayerSV(idx)
     g = gs(sim)[1]
 
     delete!(mp[:axis], mp[:image])
-    mp[:sv_img_ob][] = img_ob = getSingleViewImg(g, ml)
+    mp[:sv_img_ob][] = img_ob = getSingleViewImg(window)
     # img_ob = mp["sv_img_ob"]
 
     cur_layer = cur_layer
     # create_layer_axis(cur_layer, mp)
-    new_img!(g, cur_layer, mp)
+    new_img!(window, mp)
     mp[:image].colorrange = (stateset(cur_layer)[1], stateset(cur_layer)[end])
 
     reset_limits!(mp[:axis])
@@ -68,26 +69,29 @@ function create_unsafe_vector(view_array)
     return unsafe_vector
 end
 
-getSingleViewImg(g, ml) = getSingleViewImg(g, ml, size(currentLayer(sim(g))))
+getSingleViewImg(window) = getSingleViewImg(window, size(current_layer(window)))
 
 # Maybe I can just make makie get the latest image always?
-function getSingleViewImg(g, ml, _size::Tuple{Integer,Integer})
-    simulation = sim(g)
-    this_layer = currentLayer(simulation)
-    if midpanel(ml)[:showbfield].active[]
+function getSingleViewImg(window, _size::Tuple{Integer,Integer})
+    ml = window[:layout]
+    g = window[:graph]
+    this_layer = current_layer(window)
+    if haskey(midpanel(ml), :showbfield) && midpanel(ml)[:showbfield].active[]
         return CastViewMatrix(Float64, g.params[:b].val , graphidxs(this_layer), size(this_layer)...)
     else
         return CastViewMatrix(Float64, state(g), graphidxs(this_layer), size(this_layer)...)
     end
 end
 
-function getSingleViewImg(g, ml, size::NTuple{3,Integer})
-    if midpanel(ml)[:showbfield].active[] # Show the bfield
+function getSingleViewImg(window, size::NTuple{3,Integer})
+    ml = window[:layout]
+    g = window[:graph]
+    if haskey(midpanel(ml), :showbfield) && midpanel(ml)[:showbfield].active[] # Show the bfield
         # unsafe = create_unsafe_vector(@view getparam(g, :b).val[graphidxs(currentLayer(sim(g)))])
-        unsafe = create_unsafe_vector(@view g.hamiltonian.b.val[graphidxs(currentLayer(sim(g)))])
+        unsafe = create_unsafe_vector(@view g.hamiltonian.b.val[graphidxs(current_layer(window))])
         return CastVec(Float64, unsafe)
     else
-        unsafe = create_unsafe_vector(@view state(g)[graphidxs(currentLayer(sim(g)))])
+        unsafe = create_unsafe_vector(@view state(g)[graphidxs(current_layer(window))])
         return CastVec(Float64, unsafe)
     end
     
@@ -105,7 +109,8 @@ end
 getgrid(lp::LayoutPanel) = lp.panel
 getgrid(window::MakieWindow) = window[:gridlayout]
 
-function create_layer_axis!(layer, panel_or_window; color = nothing, pos = (1,1), colormap = :thermal)
+function create_layer_axis!(window, panel_or_window; color = nothing, pos = (1,1), colormap = :thermal)
+    layer = current_layer(window)
     layerdim = length(size((layer)))
     g = graph(layer)
     grid = getgrid(panel_or_window)
@@ -122,17 +127,18 @@ function create_layer_axis!(layer, panel_or_window; color = nothing, pos = (1,1)
     end
     # panel_or_window["axis"].yreversed = @load_preference("makie_y_flip", default = false)
 
-    new_img!(g, layer, panel_or_window; color, colormap)
+    new_img!(window, panel_or_window; color, colormap)
 end
 
 const makie_markersize = Ref(0.3)
 # Get image either for 2d or 3d
-function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
+function new_img!(window, mp; color = nothing, colormap = :thermal)
+    layer = current_layer(window)
     dims = length(size(layer))
     ax = mp[:axis]
 
     if dims == 2
-        ob = isnothing(color) ? (mp[:obs] = Observable(getSingleViewImg(g, getml()))) : color
+        ob = isnothing(color) ? (mp[:obs] = Observable(getSingleViewImg(window))) : color
         # cvm = CastViewMatrix(Float64, state(g), graphidxs(layer), size(layer)...)
         # ob = mp["obs"] = Observable(cvm)
         mp[:image] = image!(ax, ob, colormap = colormap, fxaa = false, interpolate = false)
@@ -140,7 +146,7 @@ function new_img!(g, layer, mp; color = nothing, colormap = :thermal)
     elseif dims == 3
 
         if isnothing(color) #If no color given, take the state
-            mp[:obs] = Observable(getSingleViewImg(g, getml()))
+            mp[:obs] = Observable(getSingleViewImg(window))
             # mp["obs"] = Observable(@view state(g)[graphidxs(layer)])
         else
             mp[:obs] = color

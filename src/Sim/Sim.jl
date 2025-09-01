@@ -91,7 +91,8 @@ function _simulate(g; run = true, start = true, gui = true, args...)
     end
 end
 
-interface(g; overwrite = true) = simulate(g; start = false, gui = true, overwrite)
+# interface(g; overwrite = true) = simulate(g; start = false, gui = true, overwrite)
+interface(g; overwrite = true) = simwindow(g)
 
 export simulate, getgraph, interface
 

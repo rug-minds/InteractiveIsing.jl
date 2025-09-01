@@ -1,41 +1,142 @@
 abstract type AbstractWindow end
 const windows = Dict{UUID,AbstractWindow}()
-mutable struct MakieWindow{type} <: AbstractWindow
+mutable struct MakieWindow{type, O} <: AbstractWindow
     uuid::UUID
     f::Figure
     screen::GLMakie.Screen
-    timers::Vector{PTimer}
-    funcs::NamedTuple
+
+    maintimer::PTimer
+    mainupdate::Tuple{Vararg{Function}}
+
+    timers::Vector{PTimer} # Includes the polling timer
+    polled_observables::Vector{PolledObservable} # Observables that are polled,
+                                                    # all at some interval set at the beginning
+
+    funcs::NamedTuple # TODO: What's this for?
     other::Dict{Symbol, Any}
+    obj_ptr::O
 end
 
-MakieWindow(u,f,s,t,fs,o) = MakieWindow{:Any}(u,f,s,t,fs,o)
+MakieWindow(u,f,mt,mu,s,t,po,fs,o,op = nothing) = MakieWindow{:Any, typeof(op)}(u,f,mt,mu,s,t,po,fs,o,op)
+
+
+function object(mw::MakieWindow)
+    mw.obj_ptr
+end
+
+getinterval(mw::MakieWindow) = getinterval(mw.maintimer) # Main update interval
+getdelay(mw::MakieWindow) = getdelay(mw.maintimer)
+
+function newmaintimer!(w::MakieWindow)
+    close(w.maintimer)
+    _newmaintimer!(w, w.mainupdate)
+end
+
+function _newmaintimer!(w::MakieWindow, mainupdate::Tuple{Vararg{Function}})
+    w.maintimer = PTimer((timer) -> begin
+        func_tuple_unroll(mainupdate, tuple(w))
+    end, getdelay(w), interval = getinterval(w))
+end
+
+function pushmainfunc!(w::MakieWindow, func::Function)
+    w.mainupdate = (w.mainupdate..., func)
+    newmaintimer!(w)  # Rebuild the maintimer with the new function
+end
+
+
+function pushpolled!(w::MakieWindow, po::PolledObservable)
+    if isempty(w.polled_observables) #  If this is the first polled observable, create a timer to poll
+        push!(w.timers, PTimer((timer) -> poll!.(w.polled_observables), 0., interval = 1/w[:polling_rate]))
+    end
+    push!(w.polled_observables, po)
+end
+
+function Base.close(window::MakieWindow)
+    close(window.maintimer)
+    close.(window.timers)
+    close.(window.polled_observables)
+    close_window(window)
+    close_glfw(window)
+end
+
+function close_window(window::MakieWindow) #Overloadable for custom closing
+    return
+end
+
+
+"""
+Creates a new Makie window with a figure and a screen
+It also registers the window in the windows dictionary
+"""
+function new_window(;window_type = :Any, objectptr = nothing, refresh_rate = 30, polling_rate = 10, kwargs...)
+    f, screen, window_open = empty_window(;kwargs...)
+    u1 = uuid1()
+    mainfuncs = tuple()
+    maintimer = PTimer((timer) -> begin
+        for f in mainfuncs
+            f()
+        end
+    end, 0., interval = 1/refresh_rate)
+    d = Dict{Symbol, Any}(:window_open => window_open)
+    w = MakieWindow{window_type, typeof(objectptr)}(u1, f, screen, maintimer, mainfuncs, PTimer[], PolledObservable[], (;), d, objectptr)
+    w[:polling_rate] = polling_rate
+
+    w[:paused] = Observable(false)
+    on(w[:paused]) do x
+        if x
+            close.(w.timers)
+        else
+            start.(w.timers)
+        end
+    end
+
+    on(window_open) do x
+        if !x
+            close(w)
+            delete!(windows, w)
+        end
+    end
+
+    # CMD + W to close
+    on(events(f.scene).keyboardbutton) do events
+        hotkey = (Keyboard.left_super, Keyboard.w)
+        if ispressed(f, hotkey)
+            close(w)
+        end
+    end
+
+    register_window(w, u1)
+    return w
+end
+
 
 # Dict accessing
 Base.getindex(w::MakieWindow, key) = w.other[key]
 Base.setindex!(w::MakieWindow, val, key) = setindex!(w.other, val, key)
+Processes.ispaused(w::MakieWindow) = w[:paused]::Observable{Bool}
+togglepause(w::MakieWindow) = w[:paused][] = !w[:paused][]
+
+
 function pushtimer!(w::MakieWindow, t::PTimer)
     if w[:paused][]
         pause(t)
     end
     push!(w.timers, t)
 end
-window_open(w::MakieWindow) = w.other[:window_open]
+
+window_open(w::MakieWindow) = w.other[:window_open]::Observable{Bool}
 
 # Is this type of window unique?
 pushtype(::W) where W<:AbstractWindow = pushtype(W) 
-function closewindow(w::AbstractWindow) 
+function close_glfw(w::AbstractWindow) 
     GLFW.SetWindowShouldClose(to_native(w.screen), true)
 end
 function window_isopen(w::AbstractWindow)
     return events(w.f).window_open
 end
-
-closetimers(w::MakieWindow) = close.(w.timers)
-
 function cleanup(w::AbstractWindow)
-    closetimers(w)
-    # closewindow(w)
+    close(w)
+    # close_glfw(w)
     # delete!(getml().windowlist, w)
     delete!(getwindows(), w)
 end
@@ -48,8 +149,6 @@ include("AvgWindow.jl")
 include("LayerWindow.jl")
 include("Connections.jl")
 include("LinesWindow.jl")
-
-
 
 
 function LayerAxis(gridposition, l; colormap = :thermal, kwargs...)
@@ -72,34 +171,6 @@ function empty_window(;kwargs...)
     return f, newscreen, window_open(f)
 end
 export empty_window
-
-"""
-Creates a new Makie window with a figure and a screen
-It also registers the window in the windows dictionary
-"""
-function new_window(;window_type = :Any, kwargs...)
-    f, screen, window_open = empty_window(;kwargs...)
-    u1 = uuid1()
-    w = MakieWindow{window_type}(u1, f, screen, [], (;), Dict(:window_open => window_open))
-    w[:paused] = Observable(false)
-    on(window_open) do x
-        if !x
-            closetimers(w)
-            delete!(windows, w)
-        end
-    end
-
-    # CMD + W to close
-    on(events(f.scene).keyboardbutton) do events
-        hotkey = (Keyboard.left_super, Keyboard.w)
-        if ispressed(f, hotkey)
-            closewindow(w)
-        end
-    end
-
-    register_window(w, u1)
-    return w
-end
 
 function axis_window(;pausebutton = true, kwargs...)
     window_type, kwargs = popkwarg(kwargs, :window_type, :Any)
@@ -166,4 +237,6 @@ function window_open(f::Figure)
     return events(f).window_open
 end
 export window_open
+
+
 

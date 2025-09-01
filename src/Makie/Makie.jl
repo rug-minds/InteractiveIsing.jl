@@ -40,6 +40,9 @@ include("BottomPanel.jl")
 
 include("BaseFig.jl")
 
+include("SimulationWindow.jl")
+include("Utils.jl")
+
 #TODO: Overhaul this
 # Sim should keep track of a vector of AbstractWindows
 # Every window should be a scruct with a cleanup function

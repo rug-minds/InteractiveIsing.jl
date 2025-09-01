@@ -139,7 +139,7 @@ export refresh
 #     return
 # end
 
-function togglePause(g::IsingGraph)
+function togglepause(g::IsingGraph)
     if any(isrunning.(processes(g)))
         pause.(processes(g))
     else
@@ -152,5 +152,5 @@ function togglePause(g::IsingGraph)
 end
 
 
-export togglePause
+export togglepause
 

@@ -5,7 +5,6 @@ function createAnalysisWindow(l, panels...;kwargs...)
 end
 
     
-
 export createAnalysisWindow
 
 mutable struct AnalysisWindow <: AbstractWindow

@@ -2,42 +2,43 @@
 # DEV:
 export ml, midpanel, toppanel, bottompanel
 
-function baseFig(g; disp = true, interval = 1/60)
-    ml = simulation[].ml[]
+function baseFig(window; framerate = 30.0)
+    ml = window[:layout]
+    g = window[:graph]
     if haskey(ml, :basefig_active) && ml[:basefig_active]
         cleanup(ml, baseFig)
     end
 
     timedFunctions[:upf] = updatesPerFrame
     timedFunctions[:magnetization] = magnetization
-    sim = simulation[]
-    sim.timers[:makie] = PTimer((timer) -> timerFuncs(sim) ,0., interval = interval)
+    # sim.timers[:makie] = PTimer((timer) -> timerFuncs(sim) ,0., interval = interval)
 
 
     ml[:basefig_active] = true
 
-    f = fig(ml, Figure(size = (1500, 1500)))
+    # f = fig(ml, Figure(size = (1500, 1500)))
+    f = window.f
 
     GLMakie.activate!(;
         vsync = false,
-        framerate = 60.0,
+        framerate = framerate,
         pause_renderloop = false,
         focus_on_show = true,
         decorated = true,
         title = "Interactive Ising Simulation"
     )
 
-    topPanel(ml, g)
+    topPanel(window)
 
-    midPanel(ml,g)
+    midPanel(window)
 
-    bottomPanel(ml, g)
+    bottomPanel(window)
 
-    if disp
-        println("Displaying")
-        screen = display(f)
-        ml[:screen] = screen
-    end
+    # if disp
+    #     println("Displaying")
+    #     screen = display(f)
+    #     ml[:screen] = screen
+    # end
 
     return f
 end
@@ -49,8 +50,8 @@ function cleanup(ml, ::typeof(baseFig))
     end
 
     try 
-        close(simulation[].timers[:makie])
-        delete!(simulation[].timers, :makie)
+        # close(simulation[].timers[:makie])
+        # delete!(simulation[].timers, :makie)
     catch
     end
     

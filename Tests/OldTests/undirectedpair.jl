@@ -4,7 +4,7 @@ struct UPair
 end
 
 function Base.show(io::IO, p::UPair)
-    print(io, "$(min(p.x,p.y)) <=> $(max(p.x,p.y))")
+    print(io, "$(min(p.x,p.y)) <=> $(capacity(p.x,p.y))")
 end
 
 #extend ==
