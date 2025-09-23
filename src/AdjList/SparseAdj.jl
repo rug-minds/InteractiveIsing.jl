@@ -24,21 +24,20 @@ function genLayerConnections(layer::AbstractIsingLayer{T,D}, wg) where {T,D}
     g = graph(layer)
 
     _NN = getNN(wg)
-    println("WG: ", wg)
-    println("D: ", D)
+
     
     
     # Either global NN is given, or a tuple of NN for each dimension
-    @assert (!(_NN isa Integer) || length(_NN) == D )
+    @assert (_NN isa Integer || length(_NN) == D )
     
     blocksize = Int32(0)
-    if _NN isa Int32
+    if _NN isa Integer
         blocksize = (2*_NN+1)^D - 1
     else
         blocksize = prod(2 .* _NN .+ 1) - 1
     end
 
-    n_conns = nStates(g)*blocksize
+    n_conns = nstates(g)*blocksize
     sizehint!(col_idxs, 2*n_conns)
     sizehint!(row_idxs, 2*n_conns)
     sizehint!(weights, 2*n_conns)
@@ -109,7 +108,7 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_i
             d = c2 - c1
 
             # weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
-            weight = T(wg(;d, c1, c2))
+            weight = eltype(layer)((wg(;d, c1, c2)))
 
             if !(weight == 0 || isnan(weight))
                 g_col_idx     = idxLToG(col_idx, layer)
@@ -126,18 +125,17 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_i
         end
         
 
-        if SelfType(wg) == Self()
-            weight = getSelfWeight(wg, y = vert_i, x = vert_j;z)
-            push!(row_idxs, col_idx)
-            push!(col_idxs, col_idx)
-            push!(weights, weight)
-        end
+        # if SelfType(wg) == Self()
+        #     weight = getSelfWeight(wg, y = vert_i, x = vert_j;z)
+        #     push!(row_idxs, col_idx)
+        #     push!(col_idxs, col_idx)
+        #     push!(weights, weight)
+        # end
     end
 end
 
-function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, weights, topology, @specialize(wg), conns...) where {T}
+function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, weights, topology, wg::WG, conns...) where {T,WG}
     NN = getNN(wg)
-    println("Typeof NN: ", typeof(NN))
     @assert (NN isa Integer || length(NN) == 3)
 
     conn_idxs, conn_is, conn_js, conn_ks = conns
@@ -176,7 +174,7 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, wei
             c2 = Coordinate(conn_i, conn_j, conn_k)
             d = c2 - c1
 
-            weight = T(wg(;d, c1, c2))
+            weight = eltype(layer)((wg(;d, c1, c2)))
 
             if !(weight == 0 || isnan(weight))
                 g_col_idx     = idxLToG(col_idx, layer)
@@ -194,12 +192,12 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, wei
         end
         
 
-        if SelfType(wg) == Self()
-            weight = getSelfWeight(wg, y = vert_i, x = vert_j;z)
-            push!(row_idxs, col_idx)
-            push!(col_idxs, col_idx)
-            push!(weights, weight)
-        end
+        # if SelfType(wg) == Self()
+        #     weight = getSelfWeight(wg, y = vert_i, x = vert_j;z)
+        #     push!(row_idxs, col_idx)
+        #     push!(col_idxs, col_idx)
+        #     push!(weights, weight)
+        # end
     end
 end
 

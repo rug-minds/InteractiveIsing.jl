@@ -19,6 +19,7 @@ Generate the connections in a layer based on a weightgenerator and set the conne
 Then put the connections directly in the graph
 """
 @inline genAdj!(layer::IsingLayer, wg) = set_adj!(layer, wg, genAdj(layer, wg))
+@inline genAdj!(x::IsingLayer, ::Nothing) = nothing
 
 """
 Give a weightgenerator and two layers.

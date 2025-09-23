@@ -2,18 +2,18 @@ abstract type AbstractPreAlloc{T} <: AbstractVector{T} end
 
 mutable struct Prealloc{T} <: AbstractPreAlloc{T}
     const vec::Vector{T} 
-    used::Int32
-    const maxsize::Int32
-
-    function Prealloc(type::Type, N)
-        vec = Vector{type}(undef, N)
-        maxsize = N
-        used = 0
-        new{type}(vec, used, maxsize)
-    end
-
+    used::Int
+    const maxsize::Int
 end
 
+function Prealloc(type::Type, N)
+        println("Creating Prealloc of type ", type, " with size ", N)
+        vec = Vector{type}(undef, N)
+        println("Length of vec: ", length(vec))
+        maxsize = N
+        used = 0
+        Prealloc{type}(vec, used, maxsize)
+end
 struct ThreadedPrealloc{PreallocT}
     vec::Vector{PreallocT}
 end
@@ -35,6 +35,9 @@ Base.push!(pre::AbstractPreAlloc, tup) = (pre.vec[pre.used+1] = tup; pre.used +=
 reset!(pre::AbstractPreAlloc) = (pre.used = 0; return)
 Base.size(pre::AbstractPreAlloc) = tuple(pre.used)
 Base.eachindex(pre::AbstractPreAlloc) = Base.OneTo(pre.used)
+maxsize(pre::AbstractPreAlloc) = pre.maxsize
+
+alloc_length(pre::AbstractPreAlloc) = length(pre.vec)
 
 export Prealloc
 

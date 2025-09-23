@@ -56,6 +56,7 @@ include("Utils/Utils.jl")
 ### DECLARED TYPES
 @ForwardDeclare IsingGraph "Graphs"
 @ForwardDeclare IsingLayer "Graphs/Layers"
+@ForwardDeclare LayerProperties "Graphs/Layers"
 # @ForwardDeclare Parameters "Graphs"
 @ForwardDeclare IsingSim "Sim"
 @ForwardDeclare SimLayout "Makie"
