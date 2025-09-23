@@ -7,9 +7,7 @@ mutable struct Prealloc{T} <: AbstractPreAlloc{T}
 end
 
 function Prealloc(type::Type, N)
-        println("Creating Prealloc of type ", type, " with size ", N)
         vec = Vector{type}(undef, N)
-        println("Length of vec: ", length(vec))
         maxsize = N
         used = 0
         Prealloc{type}(vec, used, maxsize)

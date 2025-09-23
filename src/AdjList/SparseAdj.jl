@@ -69,8 +69,8 @@ end
 From a generator that returns (i, j, idx) for the connections
     fill the row_idxs, col_idxs, and weights
 """ 
-function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_idxs, weights, topology, @specialize(wg), conns...) where {T}
-    NN = wg.NN
+function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_idxs, weights, topology, wg::WG, conns...) where {T,WG}
+    NN = getNN(wg)
     @assert (NN isa Integer || length(NN) == 2)
 
 
@@ -94,7 +94,7 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_i
             conn_j = conn_js[conn_num]
             conn_idx = conn_idxs[conn_num]
 
-            dr = dist(topology, vert_i, vert_j, conn_i, conn_j)
+            dr = dist(topology, Int.((vert_i, vert_j, conn_i, conn_j))...)
             # TODO: Overal coords?
             # _,_,z = coords(layer)
             z = 1
