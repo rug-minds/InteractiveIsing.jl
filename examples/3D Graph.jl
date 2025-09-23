@@ -10,7 +10,7 @@ function IsingWG(d)
     end
 end
 
-wg = ii.@WGNew d -> norm2(d) == 1 ? 1 : 0 NN=1
+wg = ii.@WG d -> norm2(d) == 1 ? 1 : 0 NN=1
 
 g3d = ii.IsingGraph(10,10,10, type = Discrete)
 createProcess(g3d)

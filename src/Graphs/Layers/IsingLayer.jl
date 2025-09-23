@@ -87,11 +87,8 @@ function IsingLayer(
 end
 
 get_weightgenerator(layer::IsingLayer) = get(layer.connections, layer.idx => layer.idx, nothing)
-
-
-
 struct LayerProperties
-     size::Tuple
+    size::Tuple
     kwargs::NamedTuple
 end
 
