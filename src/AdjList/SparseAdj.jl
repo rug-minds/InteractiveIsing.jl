@@ -106,6 +106,8 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_i
             c1 = Coordinate(vert_i, vert_j)
             c2 = Coordinate(conn_i, conn_j)
             d = c2 - c1
+            d = topology(d)
+
 
             # weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
             weight = eltype(layer)((wg(;d, c1, c2)))
@@ -173,6 +175,7 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, wei
             c1 = Coordinate(vert_i, vert_j, vert_k)
             c2 = Coordinate(conn_i, conn_j, conn_k)
             d = c2 - c1
+            d = topology(d)
 
             weight = eltype(layer)((wg(;d, c1, c2)))
 

@@ -97,6 +97,7 @@ datalen(lp::LayerProperties) = prod(lp.size)
 function Layer(dims...; kwargs...)
     LayerProperties(tuple(dims...), (;kwargs...))
 end
+
 export Layer
 
 IsingLayer(g, idx, startidx, lp::LayerProperties) = IsingLayer(g, lp.size, idx, startidx; lp.kwargs...)

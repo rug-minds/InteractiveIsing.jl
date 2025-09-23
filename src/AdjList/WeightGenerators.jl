@@ -20,10 +20,11 @@ end
 
 Base.:(-)(c1::Coordinate, c2::Coordinate) = DeltaCoordinate(ntuple(i->c2.coords[i]-c1.coords[i], Val(length(c1.coords)))...)
 
-DeltaCoordinate(n::Integer...) = DeltaCoordinate{length(n)}(n, sum(x->x^2, n), sqrt(sum(x->x^2, n)))
+DeltaCoordinate(n::Integer...; norm = nothing, norm2 = nothing) = DeltaCoordinate{length(n)}(n, isnothing(norm2) ? sum(x->x^2, n) : norm2, isnothing(norm) ? sqrt(sum(x->x^2, n)) : norm)
 Coordinate(n::Integer...) = Coordinate{length(n)}(n)
 LinearAlgebra.norm(dc::DeltaCoordinate) = dc.norm
 norm2(dc::DeltaCoordinate) = dc.norm2
+Base.length(dc::DeltaCoordinate) = length(dc.deltas)
 
 
 macro dr()
@@ -85,6 +86,8 @@ macro WG(func, kwargs...)
 
     return :(WeightGenerator($(newfunc), $(kwargs[:NN]), $(kwargs[:rng]), exp = $funcexp))
 end
+
+export @WG
 
 function (wg::WeightGenerator)(;d, c1 = nothing, c2 = nothing)
     return @inline wg.func(d, c1, c2)

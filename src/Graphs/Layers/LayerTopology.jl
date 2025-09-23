@@ -53,6 +53,23 @@ struct SquareTopology{U,DIMS} <: LayerTopology{U, DIMS}
         new{U, DIMS}(size)
     end
 end
+
+function (lt::SquareTopology{Periodic()})(d::DeltaCoordinate)
+    @assert length(d) == length(size(lt))
+    function get_taurus_dist(di, size_i)
+        di = abs(di)
+        if di > size_i/2
+            di -= size_i
+        end
+        return di
+    end
+    DeltaCoordinate(ntuple(i -> get_taurus_dist(d.deltas[i], size(lt,i)), Val(length(d.deltas)))...)
+end
+
+function (lt::SquareTopology{NonPeriodic()})(d::DeltaCoordinate)
+    return d
+end
+
 mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: LayerTopology{U, Dim} 
     # layer::Union{Nothing, AbstractIsingGraph}
     pvecs::NTuple{Dim, SVector{Dim, Precision}}

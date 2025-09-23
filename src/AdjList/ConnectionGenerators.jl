@@ -153,8 +153,6 @@ function getConnIdxs!(top, vert_idx, vert_i, vert_j, (len, wid)::NTuple{2,Intege
             
             conn_i, conn_j = latmod(vert_i + i, vert_j + j, len, wid)
 
-           
-
             if conn_i == 0 || conn_j == 0
                 continue
             end
