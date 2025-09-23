@@ -61,7 +61,7 @@ function midPanel(window)
             mp[:showbfieldlabel] = Label(leftpanel[3,1], "Show BField", fontsize = 18)
 
             push!(obs_funcs, on(showbfield.active) do x
-                mp[:obs][] = getSingleViewImg(window)
+                mp[:img_obs][] = getSingleViewImg(window)
             end)
         
 

@@ -23,13 +23,14 @@ function singleView(window)
     
     # mp[:sv_img_ob] = img_ob = Observable(getSingleViewImg(window))
     # mp[:showbfield] = Observable(false)
-    if !haskey(mp, :obs)
-        mp[:obs] = img_ob = Observable(getSingleViewImg(window))
-    else
-        img_ob = mp[:obs]
-    end
-    window[:image] = img_ob
-    mp[:axis_size] = size(img_ob[])
+    # if !haskey(mp, :obs)
+    #     mp[:img_obs] = img_obs = Observable(getSingleViewImg(window))
+    # else
+    #     img_obs = mp[:img_obs]
+    # end
+    mp[:img_obs] = img_obs = Observable(getSingleViewImg(window))
+    window[:image] = img_obs
+    mp[:axis_size] = size(img_obs[])
     obs_funcs = etc(ml)[:obs_funcs_singleView] = ObserverFunction[]
     
 
@@ -45,19 +46,19 @@ function singleView(window)
 
     # BFIELD BUTTON
     push!(obs_funcs, on(midpanel(ml)[:showbfield].active, weak = true) do _
-        img_ob[] = getSingleViewImg(window)
+        img_obs[] = getSingleViewImg(window)
     end)
 
     push!(obs_funcs, on(leftbutton.clicks, weak = true) do _
         # setLayerIdx!(simulation, layerIdx(simulation)[] -1)
-        if window[:layer_idx] > 1
-            window[:layer_idx] -= 1
+        if window[:layer_idx][] > 1
+            window[:layer_idx][] -= 1
         end
     end)
 
     push!(obs_funcs, on(rightbutton.clicks, weak = true) do _
-        if window[:layer_idx] < nlayers(g)
-            window[:layer_idx] += 1
+        if window[:layer_idx][] < nlayers(g)
+            window[:layer_idx][] += 1
         end
     end)
 
@@ -77,10 +78,11 @@ function singleView(window)
     # mp[:image].colorrange[] = (-1,1)
 
     #TODO:Restore this
-    # push!(obs_funcs, on(events(ax.scene).mousebutton, weak = true) do buttons
-    #     MDrawCircle(ax, buttons, simulation)
-    #     return
-    # end)
+    push!(obs_funcs, on(events(ax.scene).mousebutton, weak = true) do buttons
+        # MDrawCircle(ax, buttons, simulation)
+        drawCircle(state(current_layer(window)), tuple(round.(Int, mouseposition(ax.scene))...), 20)
+        return
+    end)
 
 
     # me_axis = addmouseevents!(ax.scene)
@@ -109,8 +111,9 @@ function singleView(window)
         close(ml[:timedfunctions_timer])
     end
 
-    iob = mp[:obs]
-    pushmainfunc!(window, (window) -> notify(iob))
+    # iob = mp[:img_obs]
+    # pushmainfunc!(window, (window) -> notify(iob))
+    pushmainfunc!(window, (window) -> notify(mp[:img_obs]))
 
     return
 end
