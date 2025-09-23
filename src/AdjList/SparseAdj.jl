@@ -23,12 +23,13 @@ function genLayerConnections(layer::AbstractIsingLayer{T,D}, wg) where {T,D}
 
     g = graph(layer)
 
-    _NN = wg.NN
+    _NN = getNN(wg)
     println("WG: ", wg)
     println("D: ", D)
     
+    
     # Either global NN is given, or a tuple of NN for each dimension
-    @assert (!(_NN isa Int32) || length(_NN) == D )
+    @assert (!(_NN isa Integer) || length(_NN) == D )
     
     blocksize = Int32(0)
     if _NN isa Int32
@@ -71,14 +72,14 @@ From a generator that returns (i, j, idx) for the connections
 """ 
 function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_idxs, weights, topology, @specialize(wg), conns...) where {T}
     NN = wg.NN
-    @assert (NN isa Int32 || length(NN) == 2)
+    @assert (NN isa Integer || length(NN) == 2)
 
 
     conn_idxs, conn_is, conn_js = conns
 
     NNi = Int32(0)
     NNj = Int32(0)
-    if NN isa Int32
+    if NN isa Integer
         NNi = NN
         NNj = NN
     else
@@ -100,12 +101,16 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_i
             z = 1
 
             dx, dy = dxdy(topology, (vert_i, vert_j), (conn_i, conn_j))
-            dz = 0
-            x = (vert_i+conn_i)/2
-            y = (vert_j+conn_j)/2
+            # dz = 0
+            # x = (vert_i+conn_i)/2
+            # y = (vert_j+conn_j)/2
+            c1 = Coordinate(vert_i, vert_j)
+            c2 = Coordinate(conn_i, conn_j)
+            d = c2 - c1
 
-            weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
-            
+            # weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
+            weight = T(wg(;d, c1, c2))
+
             if !(weight == 0 || isnan(weight))
                 g_col_idx     = idxLToG(col_idx, layer)
                 g_conn_idx    = idxLToG(conn_idx, layer)
@@ -131,9 +136,9 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_i
 end
 
 function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, weights, topology, @specialize(wg), conns...) where {T}
-    NN = wg.NN
-
-    @assert (NN isa Int32 || length(NN) == 3)
+    NN = getNN(wg)
+    println("Typeof NN: ", typeof(NN))
+    @assert (NN isa Integer || length(NN) == 3)
 
     conn_idxs, conn_is, conn_js, conn_ks = conns
     
@@ -141,7 +146,7 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, wei
     NNj = Int32(0)
     NNk = Int32(0)
 
-    if NN isa Int32
+    if NN isa Integer
         NNi = NNj = NNk = NN
     else
         NNi, NNj, NNk = NN
@@ -164,12 +169,15 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, wei
 
             vert_i, vert_j, vert_k = coords_vert
             # This doesn't make sense for periodic?
-            x = (vert_i+conn_i)/2
-            y = (vert_j+conn_j)/2
-            z = (vert_k+conn_k)/2
+            # x = (vert_i+conn_i)/2
+            # y = (vert_j+conn_j)/2
+            # z = (vert_k+conn_k)/2
+            c1 = Coordinate(vert_i, vert_j, vert_k)
+            c2 = Coordinate(conn_i, conn_j, conn_k)
+            d = c2 - c1
 
-            weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
-            
+            weight = T(wg(;d, c1, c2))
+
             if !(weight == 0 || isnan(weight))
                 g_col_idx     = idxLToG(col_idx, layer)
                 g_conn_idx    = idxLToG(conn_idx, layer)
