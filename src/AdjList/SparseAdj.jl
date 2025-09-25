@@ -94,22 +94,11 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_i
             conn_j = conn_js[conn_num]
             conn_idx = conn_idxs[conn_num]
 
-            dr = dist(topology, Int.((vert_i, vert_j, conn_i, conn_j))...)
-            # TODO: Overal coords?
-            # _,_,z = coords(layer)
-            z = 1
-
-            dx, dy = dxdy(topology, (vert_i, vert_j), (conn_i, conn_j))
-            # dz = 0
-            # x = (vert_i+conn_i)/2
-            # y = (vert_j+conn_j)/2
             c1 = Coordinate(vert_i, vert_j)
             c2 = Coordinate(conn_i, conn_j)
 
             dr = dist(topology, c1, c2)
 
-
-            # weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
             weight = eltype(layer)((wg(;dr, c1, c2)))
 
             if !(weight == 0 || isnan(weight))
@@ -162,16 +151,9 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, wei
             conn_k = conn_ks[conn_num]
             conn_idx = conn_idxs[conn_num]
 
-            dr = dist(topology, coords_vert, (conn_i, conn_j, conn_k))
-            # TODO: Overal coords?
-            # _,_,z = coords(layer)
-            dx, dy, dz = dxdydz(topology, coords_vert, (conn_i, conn_j, conn_k))
 
             vert_i, vert_j, vert_k = coords_vert
-            # This doesn't make sense for periodic?
-            # x = (vert_i+conn_i)/2
-            # y = (vert_j+conn_j)/2
-            # z = (vert_k+conn_k)/2
+       
             c1 = Coordinate(vert_i, vert_j, vert_k)
             c2 = Coordinate(conn_i, conn_j, conn_k)
             dr = dist(topology, c1, c2)

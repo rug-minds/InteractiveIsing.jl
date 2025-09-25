@@ -55,9 +55,13 @@ struct GenericTopology{U} <: LayerTopology{U,0} end
 @inline periodic(lt::LayerTopology{U}, symb) where U = periodic(U, symb)
 struct SquareTopology{U,DIMS} <: LayerTopology{U, DIMS}
     size::NTuple{DIMS,Int32}
-    function SquareTopology(size; periodic::Union{Bool, <:Tuple, Nothing} = true)
+end
+
+function SquareTopology(size = tuple(); periodic::Union{Bool, <:Tuple, Nothing} = true)
         U = nothing
-        
+
+        @assert periodic == true ? !isempty(size) : true "Size must be given if periodic is true"
+
         if periodic isa Bool
             U = periodic ? Periodic() : NonPeriodic()
         elseif isnothing(periodic)
@@ -66,8 +70,7 @@ struct SquareTopology{U,DIMS} <: LayerTopology{U, DIMS}
             U = PartPeriodic(periodic...) 
         end
         DIMS = length(size)
-        new{U, DIMS}(size)
-    end
+        SquareTopology{U, DIMS}(size)
 end
 
 function (lt::SquareTopology{Periodic()})(d::DeltaCoordinate)
