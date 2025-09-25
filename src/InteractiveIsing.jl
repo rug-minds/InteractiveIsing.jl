@@ -56,6 +56,7 @@ include("Utils/Utils.jl")
 ### DECLARED TYPES
 @ForwardDeclare IsingGraph "Graphs"
 @ForwardDeclare IsingLayer "Graphs/Layers"
+@ForwardDeclare LayerProperties "Graphs/Layers"
 # @ForwardDeclare Parameters "Graphs"
 @ForwardDeclare IsingSim "Sim"
 @ForwardDeclare SimLayout "Makie"
@@ -82,6 +83,7 @@ export Discrete, Continuous, Static
 const rng = MersenneTwister()
 
 include("WeightFuncs.jl")
+include("Topology/Topology.jl")
 include("AdjList/AdjList.jl")
 
 # @ForwardDeclare LayerMetaData "Graphs/Layers"

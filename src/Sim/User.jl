@@ -72,8 +72,18 @@ function startSim(sim; threads = 1, async = true, loadQML = true)
         sim
 end
 
+function drawCircle(vec::AbstractArray{T,2}, center::Tuple{Integer,Integer}, imgsize::Tuple{Integer,Integer}, r::Integer, periodic = true) where T
+    gen = ((i,j, Int(floor(i^2 + j^2) < r^2)) for i in -r:r, j in -r:r)
+    for (i,j,val) in gen
+        if true
+        end
+        vec[center[1]+i, center[2]+j] = val
+    end
+    return vec
+end
+
 function setCircR!(sim, r)
-    brushR(sim)[] = r
+     brushR(sim)[] = r
     circ(sim, getOrdCirc(brushR(sim)[]))
 end
 export setCircR!

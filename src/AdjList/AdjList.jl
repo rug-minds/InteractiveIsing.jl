@@ -1,6 +1,6 @@
 include("Utils.jl")
 include("WeightGenerator.jl")
-
+include("WeightGenerators.jl")
 include("ConnectionGenerators.jl")
 include("SparseAdj.jl")
 include("Connections.jl")

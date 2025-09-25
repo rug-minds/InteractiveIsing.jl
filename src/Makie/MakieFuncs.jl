@@ -8,7 +8,8 @@ function rslider_func(x, sim)
 end
 
 function setLayerSV(window) # set layer singleview
-    ml = getml()
+    # ml = getml()
+    ml = window[:layout]
     mp = midpanel(ml)
 
     # dim = glength(currentLayer(simulation[]))
@@ -19,13 +20,12 @@ function setLayerSV(window) # set layer singleview
 
     newR = round(min(size(cur_layer)...) / 10)
 
-    setCircR!(sim, newR)
-    layerName(sim)[] = name(cur_layer)
+    # setCircR!(sim, newR)
+    # layerName(sim)[] = name(cur_layer)
 
-    g = gs(sim)[1]
 
     delete!(mp[:axis], mp[:image])
-    mp[:sv_img_ob][] = img_ob = getSingleViewImg(window)
+    mp[:img_obs] = Observable(getSingleViewImg(window))
     # img_ob = mp["sv_img_ob"]
 
     cur_layer = cur_layer
@@ -118,7 +118,7 @@ function create_layer_axis!(window, panel_or_window; color = nothing, pos = (1,1
     if layerdim == 2
         println("Layerdim 2")
         panel_or_window[:axis] = ax = Axis(grid[pos[1],pos[2]], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
-        layer = currentLayer(sim(g))
+        layer = current_layer(window)
         
         # TODO: Set colorrange based on the type of layer
     else
@@ -138,7 +138,7 @@ function new_img!(window, mp; color = nothing, colormap = :thermal)
     ax = mp[:axis]
 
     if dims == 2
-        ob = isnothing(color) ? (mp[:obs] = Observable(getSingleViewImg(window))) : color
+        ob = isnothing(color) ? (mp[:img_obs] = Observable(getSingleViewImg(window))) : color
         # cvm = CastViewMatrix(Float64, state(g), graphidxs(layer), size(layer)...)
         # ob = mp["obs"] = Observable(cvm)
         mp[:image] = image!(ax, ob, colormap = colormap, fxaa = false, interpolate = false)
@@ -146,10 +146,10 @@ function new_img!(window, mp; color = nothing, colormap = :thermal)
     elseif dims == 3
 
         if isnothing(color) #If no color given, take the state
-            mp[:obs] = Observable(getSingleViewImg(window))
+            mp[:img_obs] = Observable(getSingleViewImg(window))
             # mp["obs"] = Observable(@view state(g)[graphidxs(layer)])
         else
-            mp[:obs] = color
+            mp[:img_obs] = color
         end
        
         sz = size(layer)
@@ -158,7 +158,7 @@ function new_img!(window, mp; color = nothing, colormap = :thermal)
         ys = idx2ycoord.(Ref(sz), allidxs)
         zs = idx2zcoord.(Ref(sz), allidxs)
         
-        mp[:image] = meshscatter!(ax, xs, ys, zs, markersize = makie_markersize[], color = mp[:obs], colormap = colormap)
+        mp[:image] = meshscatter!(ax, xs, ys, zs, markersize = makie_markersize[], color = mp[:img_obs], colormap = colormap)
 
 
     end

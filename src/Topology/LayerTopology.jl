@@ -6,15 +6,31 @@ struct Periodic <: PeriodicityType end
 struct PartPeriodic{T} <: PeriodicityType end
 struct NonPeriodic <: PeriodicityType end
 
+const part_periodic_map = Dict(
+    :x => 1,
+    :y => 2,
+    :z => 3
+)
+
+map_pp_f(i::Integer) = i
+map_pp_f(symb::Symbol) = part_periodic_map[symb]
+
+
 function PartPeriodic(args...) 
     # assert only has a combination of x y and z
-    @assert all(x -> x in (:x, :y, :z), args)
+    @assert all(x -> x in (:x, :y, :z), args) || all(x -> x isa Integer && 1 <= x , args) "PartPeriodic only takes a combination of :x, :y, :z or integers"
+    args = tuple(map(map_pp_f, args)...)
     return PartPeriodic{args}()
 end
 
 periodic(p::PeriodicityType, symb::Symbol) = periodic(p, Val(symb))
-@generated function periodic(P::PartPeriodic{Parts}, ::Val{symb}) where {Parts,symb}
-    found = findfirst(x -> x == symb, Parts)
+periodic(p::PeriodicityType, dim::Int) = periodic(p, Val(dim))
+
+@generated function periodic(P::PartPeriodic{Parts}, ::Val{dim}) where {Parts,dim}
+    if dim isa Symbol
+        dim = map_pp_f(dim)
+    end
+    found = findfirst(x -> x == dim, Parts)
     return :($(!isnothing(found)))
 end
 
@@ -39,9 +55,13 @@ struct GenericTopology{U} <: LayerTopology{U,0} end
 @inline periodic(lt::LayerTopology{U}, symb) where U = periodic(U, symb)
 struct SquareTopology{U,DIMS} <: LayerTopology{U, DIMS}
     size::NTuple{DIMS,Int32}
-    function SquareTopology(size; periodic::Union{Bool, <:Tuple, Nothing} = true)
+end
+
+function SquareTopology(size = tuple(); periodic::Union{Bool, <:Tuple, Nothing} = true)
         U = nothing
-        
+
+        @assert periodic == true ? !isempty(size) : true "Size must be given if periodic is true"
+
         if periodic isa Bool
             U = periodic ? Periodic() : NonPeriodic()
         elseif isnothing(periodic)
@@ -50,9 +70,25 @@ struct SquareTopology{U,DIMS} <: LayerTopology{U, DIMS}
             U = PartPeriodic(periodic...) 
         end
         DIMS = length(size)
-        new{U, DIMS}(size)
-    end
+        SquareTopology{U, DIMS}(size)
 end
+
+function (lt::SquareTopology{Periodic()})(d::DeltaCoordinate)
+    @assert length(d) == length(size(lt))
+    function get_taurus_dist(di, size_i)
+        di = abs(di)
+        if di > size_i/2
+            di -= size_i
+        end
+        return di
+    end
+    DeltaCoordinate(ntuple(i -> get_taurus_dist(d.deltas[i], size(lt,i)), Val(length(d.deltas)))...)
+end
+
+function (lt::SquareTopology{NonPeriodic()})(d::DeltaCoordinate)
+    return d
+end
+
 mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: LayerTopology{U, Dim} 
     # layer::Union{Nothing, AbstractIsingGraph}
     pvecs::NTuple{Dim, SVector{Dim, Precision}}

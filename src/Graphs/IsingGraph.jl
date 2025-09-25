@@ -23,8 +23,6 @@ isarchitecturetype(t::Tuple{A,B,C,D}) where {A,B,C,D} = (A<:Integer && B<:Intege
 
 # Ising Graph Representation and functions
 mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers} <: AbstractIsingGraph{T}
-    # Simulation
-    sim::Union{Nothing, IsingSim}
     # Vertices and edges
     state::Vector{T}
     # Adjacency Matrix
@@ -42,7 +40,7 @@ mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers} <:
     # params::Parameters #TODO: Make this a custom type?
 
     # For notifying simulations or other things
-    emitter::Emitter
+    # emitter::Emitter
 
     defects::GraphDefects
     # d::GraphData{T} #Other stuff. Maybe just make this a dict?
@@ -51,80 +49,76 @@ mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers} <:
     layers::Layers
 end
 
+function IsingGraph(dims::Int...; 
+                    periodic = nothing, 
+                    sets = nothing, 
+                    weights::Union{Nothing,WeightGenerator} = nothing,
+                    type = Continuous,
+                    kwargs...)
+    single_layer = Layer(dims...; stateset = sets, stype = type, weights, periodic, kwargs...)
+    IsingGraph(single_layer; kwargs...)
+end
+
+
 # Default Initializer for IsingGraph
-function IsingGraph(dims...; sim = nothing,  periodic = nothing, sets = nothing, weights::Union{Nothing,WeightGenerator} = nothing, type = Continuous, weighted = true, precision = Float32, kwargs...)
-    # architecture = searchkey(kwargs, :architecture, fallback = LProps(dims...; stype = type, stateset = sets, periodic))
-    if isnothing(sets) || length(sets) == 1
-        !isnothing(sets) && length(sets) == 1 && (sets = sets[1])
-        ls = (LProps(dims...;stype = type, stateset = sets, periodic),)
+function IsingGraph(layers_or_wgs::Union{LayerProperties, WeightGenerator}...; precision = Float32, kwargs...)
+    println("Layers or WGs: ", layers_or_wgs)
+    layers_props = tuple((layers_or_wgs[i] for i in eachindex(layers_or_wgs) if isa(layers_or_wgs[i], LayerProperties))...)
+    @show layers_props
+    # Fill the weight generator list
+    layer_idx = 0
+    wgs = []
+    for l_or_wgs in layers_or_wgs
+        if l_or_wgs isa WeightGenerator
+            push!(wgs, (layer_idx => layer_idx + 1 , l_or_wgs))
+        else
+            layer_idx += 1
+        end 
     end
-    @assert (isnothing(glength) && isnothing(gwidth) && isnothing(architecture)) || (!isnothing(glength) && !isnothing(gwidth)) || !isnothing(architecture) "Either give length and width or architecture"
 
-    # @assert (isempty(dims) && !isnothing(architecture)) || (!isempty(dims) && isnothing(architecture)) "Either give dims or architecture, not both"
-
-    # layers = makelayers(g, architecture)
-    # # Create the architecture
-    # if isnothing(architecture) && !isnothing(glength) && !isnothing(gwidth)
-    #     architecture = [(glength, gwidth, gheight, type)]
-    # else
-    #     architecture = decode_architecture(architecture)
-    # end
-
-    # sets = decode_statesets(sets, length(architecture), precision)
-
+    l_startidx = 1
+    layers = ntuple(i -> begin
+        l = IsingLayer(nothing, i, l_startidx, layers_props[i])
+        l_datalen = datalen(layers_props[i])
+        l_startidx += l_datalen
+        l
+    end,
+    length(layers_props))
+    
     self = ParamVal(precision[], 0, "Self Connections", false)
 
-    # datalen = arch_to_datalen(architecture)
-    datalen = reduce(*, nStates.(ls))
-    # startidxs = arch_to_startidxs(architecture)
-    # println("Arc: ", architecture)
+    _datalen = l_startidx - 1
 
-    # ls = tuple((
-    #     IsingLayer(architecture[x][end], nothing, x, startidxs[x], architecture[x][1:end-1]..., set = sets[x]; precision, periodic, adjtype = SparseMatrixCSC{precision,Int32})
-    #     for x in 1:length(architecture))...)
-
-    # println("Layers: ", ls)
-    # println("Layertype : ", typeof(ls))
-    g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(ls)}(
-        sim,
-        zeros(precision, datalen),
-        SparseMatrixCSC{precision,intprecision(precision)}(undef,datalen,datalen),
+    g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(layers)}(
+        # sim,
+        zeros(precision, _datalen),
+        SparseMatrixCSC{precision,intprecision(precision)}(undef,_datalen,_datalen),
         self,
         #Temp            
         1f0,
         # Default algorithm
         LayeredMetropolis(),
         #Hamiltonians
-        Ising(precision, datalen),
+        Ising(precision, _datalen),
         #Layers
         Dict{Pair, Int32}(),
-        #Params
-        # Parameters(self = ParamVal(precision[], 0, "Self Connections", false)),
         #Emitter
-        Emitter(Observable[]),
+        # Emitter(Observable[]),
         #Defects
         GraphDefects(nothing),
         Dict{Symbol, Any}(),
-        ls
+        layers
     )
 
+
+    # Set Graph refs
     g.defects.graph = g
     for layer in g.layers
         layer.graph = g
+        println("Making weights for layer ", layer)
+        genAdj!(layer, get_weightgenerator(layer))
     end
-    
 
-    # Couple the shufflevec and the defects
-    # internalcouple!(g.layers, g.defects, (layer) -> Int32(0), push = addLayer!, insert = (obj, idx, item) -> addLayer!(obj, item), deleteat = removeLayer!)
-
-    # println("Graph architecture: ", architecture)
-    # println("State sets: ", sets)
-    # if !isnothing(architecture)
-    #     for (arc_idx,arc) in enumerate(architecture)
-    #         height = arc[3] isa Real ? arc[3] : nothing
-    #         _addLayer!(g, arc[1], arc[2], height; weights, periodic, type = arc[end], set = sets[arc_idx], kwargs...)
-    #     end
-    # end
     initRandomState(g)
     cb = x -> layerIdx(sim(x))
     set_listener_callback!(g, cb)
@@ -251,6 +245,8 @@ export params
 @inline nStates(g::IsingGraph) = length(state(g))
 
 @inline nstates(g) = length(state(g))
+export nstates
+
 @inline adj(g::IsingGraph) = g.adj
 @inline function adj(g::IsingGraph, adj)
     @assert adj.m == adj.n == length(state(g))

@@ -22,80 +22,56 @@ mutable struct IsingLayer{StateType, StateSet, Dim, Size, PtrRange, Top, Precisi
     name::String
     # Idx of the layer in the graph
     const idx::Int
-    # # Internal idx of layer in shufflevec of graph
-    # internal_idx::Int32
-    # startidx::Int32
-    # size::NTuple{DIMS, Int32}
-    # nstates::Int32
-    # stateset::Tuple
+    # TRAITS, Not used?
     traits::NamedTuple
     coords::Coords{Tuple{Int32,Int32,Int32}}
     # Keeps track of the connected layers
     connections::Dict{Pair{Int32,Int32}, Any} 
     # A layer can hold its own timers (WHY)
-    timers::Vector{PTimer}
-    # defects::LayerDefects
-    top::Top
+    const timers::Vector{PTimer}
+    const top::Top   
+end
 
-    # DEFAULT INIT
-    # function IsingLayer{ST, DIMS, T, Topology}(g, name, internal_idx, start, size, nstates, traits, coords, connections, timers, top) where {ST, DIMS, T, Topology}
-    #     return new{ST, DIMS, T, Topology, typeof(g)}(g, name, internal_idx, start, size, nstates, traits, coords, connections, timers, top)
-    # end
-
-
-    function IsingLayer(
-            StateType, 
+function IsingLayer(
             g::Union{Nothing, IsingGraph},
             lsize,
             idx, 
-            start;
-            # length, 
-            # width,
-            # height = nothing; 
+            start::Int;
+            StateType = Discrete(), 
             precision = Float32,
             set = convert.(eltype(g),(-1,1)), 
-            name = "$(length)ex$(width) Layer", 
-            traits = (;StateType = StateType, StateSet = set, Indices = (start:(start+length*width-1)), Hamiltonians = (Ising,)),
+            name = "Layer $idx", 
+            # traits = (;StateType = StateType, StateSet = set, Indices = (start:(start+length*width-1)), Hamiltonians = (Ising,)),
+            traits = (;),
             coords = Coords(nothing), 
             adjtype = SparseMatrixCSC{precision,Int32},
-            connections = Dict{Pair{Integer,Integer}, 
-            WeightGenerator}(), 
+            wg::Union{WeightGenerator, Nothing} = nothing,
+            connections = Dict{Pair{Integer,Integer}, WeightGenerator}(), 
             periodic::Union{Nothing,Bool,Tuple} = true,
+            kwargs...
         )
-        # dims = 2
-        # if !isnothing(height)
-        #     dims = 3
-        # end
 
-        # if isnothing(lsize)
-        #     if dims == 2
-        #         lsize = tuple(Int32(length), Int32(width))
-        #     else
-        #         lsize = tuple(Int32(length), Int32(width), Int32(height))
-        #     end
-        # end
+        if !isnothing(wg)
+            connections[idx=>idx] = wg
+        end
+
+        if StateType isa Type
+            StateType = StateType()
+        end
+    
         dims = length(lsize)
         isnothing(periodic) && (periodic = true)
         top = SquareTopology(lsize; periodic)
-        # graphidxs = isnothing(height) ? (start:(start+length*width-1)) : (start:(start+length*width*height-1))
         graphidxs = start:(start+reduce(*, lsize)-1)
         set = convert.(eltype(g), set)
 
-        layer = new{StateType, set, dims, lsize, graphidxs, typeof(top), precision, adjtype}(
+        layer = IsingLayer{StateType, set, dims, lsize, graphidxs, typeof(top), precision, adjtype}(
             # Graph
             g,
             # Name
             name,
             # Layer idx
             idx,
-            # # Start idx
-            # Int32(start),
-            # Size
-            # lsize,
-            # Number of states
-            # Int32(reduce(*, lsize)),
-            # State set
-            # set,
             # Traits
             traits,
             #Coordinates
@@ -107,75 +83,24 @@ mutable struct IsingLayer{StateType, StateSet, Dim, Size, PtrRange, Top, Precisi
             # Topology
             top
         )
-        # TODO: Topology should support 3d
-        # finalizer(destructor, layer)
         return layer
-    end
 end
 
-# struct LayerProperties{N,NS,Precision}
-#     idx::Int
-#     start::Int
-#     name::String
-#     size::NTuple{N, Int}
-#     type::StateType
-#     stateset::NTuple{NS, Precision}
-#     periodic::Union{NTuple, Bool}
-#     top::LayerTopology
-# end
+get_weightgenerator(layer::IsingLayer) = get(layer.connections, layer.idx => layer.idx, nothing)
+struct LayerProperties
+    size::Tuple
+    kwargs::NamedTuple
+end
 
-# getprecision(lp::LayerProperties{N,NS,Precision}) where {N,NS,Precision} = Precision
+datalen(lp::LayerProperties) = prod(lp.size)
 
-function LProps(dims...; g = nothing, idx = 1, start = 1, name = "Layer $idx", precision = Float32, stype = Continuous(), stateset = (-1, 1), periodic = true, topology = SquareTopology(dims; periodic))
-    if stype isa Type
-        stype = stype()
-    end    
-    dims = map(x->convert(Int,x), dims)
-    if isnothing(stateset)
-        stateset = (-1, 1)
-    end
-    stateset = map(x->convert(precision, x), stateset)
-    if isnothing(periodic)
-        periodic = true
-    end
-    size = map(x->convert(Int64,x), dims)
-    # LayerProperties{length(dims), length(stateset), precision}(idx, start, name, dims, stype, stateset, periodic)
-    return IsingLayer(
-        stype,
-        g,
-        size,
-        idx,
-        start,
-        precision = precision,
-        set = stateset,
-        name = name,
-        traits = (;StateType = stype, StateSet = stateset, Indices = (start:(start+reduce(*, size)-1)), Hamiltonians = (Ising,)),
-        coords = Coords(nothing),
-        connections = Dict{Pair{Integer,Integer}, WeightGenerator}(),
-        periodic = periodic
-    ) 
-end 
+function Layer(dims...; kwargs...)
+    LayerProperties(tuple(dims...), (;kwargs...))
+end
 
-# function IsingLayer(g, lp::LayerProperties)
-#     # Convert the stateset to a tuple
-#     stateset = lp.stateset isa Tuple ? lp.stateset : Tuple(lp.stateset)
-#     # Create the layer
-#     return IsingLayer(
-#         lp.type,
-#         g,
-#         lp.size,
-#         idx,
-#         start,
-#         precision = getprecision(lp),
-#         lsize = lp.size,
-#         set = stateset,
-#         name = name,
-#         traits = (;StateType = lp.type, StateSet = stateset, Indices = (start:(start+reduce(*, lp.size)-1)), Hamiltonians = (Ising,)),
-#         coords = Coords(nothing),
-#         connections = Dict{Pair{Integer,Integer}, WeightGenerator}(),
-#         periodic = lp.periodic
-#     )   
-# end
+export Layer
+
+IsingLayer(g, idx, startidx, lp::LayerProperties) = IsingLayer(g, lp.size, idx, startidx; lp.kwargs...)
 
 export IsingLayer
 
@@ -237,15 +162,13 @@ Base.show(io::IO, layertype::Type{IsingLayer{A,B}}) where {A,B} = print(io, "$A 
 ## ACCESSORS
 @inline state(l::IsingLayer) = reshape((@view state(graph(l))[graphidxs(l)]), size(l)...)
 
-
-# @inline adj(l::IsingLayer) = reshape((@view adj(graph(l))[graphidxs(l)]), glength(l), gwidth(l))
 @inline adj(l::IsingLayer) = @view adj(graph(l))[:, graphidxs(l)] 
 
 @inline function set_adj!(layer::IsingLayer, wg::WeightGenerator, rcw)
     # connections(layer)[internal_idx(layer) => internal_idx(layer)] = wg
     connections(layer)[(layeridx(layer) => layeridx(layer))] = wg
     set_adj!(graph(layer), rcw)
-    notify(layer)
+    # notify(layer)
     return adj(graph(layer))
 end
 
@@ -427,26 +350,26 @@ export aliveidxs
 Resize a layer
 Is this used?
 """
-function Base.resize!(layer::IsingLayer, len, wid)
-    g = graph(layer)
-    old_nstates = nStates(layer)
-    new_nstates = len*wid
-    extra_states = new_nstates - old_nstates
-    if extra_states == 0
-        return
-    end
-    _startidx = startidx(layer)
-    _endidx = endidx(layer)
-    if extra_states > 0
-        insert!(state(g), _endidx+1, rand(len*wid))
-        adj(g, insertrowcol(g, _endidx+1:(_endidx+1 + extra_states)))
-    else # extra_states < 0
-        notidxs = graphidxs(layer)[end+extra_states+1:end]
-        deleteat!(state(g), _startidx:_endidx)
-        adj(g, deleterowcol(g, notidxs))
-    end
-    return layer
-end
+# function Base.resize!(layer::IsingLayer, len, wid)
+#     g = graph(layer)
+#     old_nstates = nStates(layer)
+#     new_nstates = len*wid
+#     extra_states = new_nstates - old_nstates
+#     if extra_states == 0
+#         return
+#     end
+#     _startidx = startidx(layer)
+#     _endidx = endidx(layer)
+#     if extra_states > 0
+#         insert!(state(g), _endidx+1, rand(len*wid))
+#         adj(g, insertrowcol(g, _endidx+1:(_endidx+1 + extra_states)))
+#     else # extra_states < 0
+#         notidxs = graphidxs(layer)[end+extra_states+1:end]
+#         deleteat!(state(g), _startidx:_endidx)
+#         adj(g, deleterowcol(g, notidxs))
+#     end
+#     return layer
+# end
 
 ### RELOCATING
 ### Shift from placing 1 layer befor
@@ -454,16 +377,16 @@ end
 When shifting a layer by one index,
 Copy over the state to the right position, except the adjacency matrix
 """
-function relocate!(movable_layer::IsingLayer, causing_layer::IsingLayer, shift, copy::Bool = true)
-    println("Moveable layer: ", movable_layer)
-    println("Causing layer: ", causing_layer)
-    oldstate_view = state(movable_layer)
-    movable_layer.startidx += shift*nStates(causing_layer)
-    movable_layer.internal_idx += shift*1
-    if copy  
-        state(movable_layer) .= oldstate_view
-    end
-end
+# function relocate!(movable_layer::IsingLayer, causing_layer::IsingLayer, shift, copy::Bool = true)
+#     println("Moveable layer: ", movable_layer)
+#     println("Causing layer: ", causing_layer)
+#     oldstate_view = state(movable_layer)
+#     movable_layer.startidx += shift*nStates(causing_layer)
+#     movable_layer.internal_idx += shift*1
+#     if copy  
+#         state(movable_layer) .= oldstate_view
+#     end
+# end
 
 #TODO: This is a patchwork fix, fix this better
 # This is used to update the stateset in the type
@@ -491,7 +414,7 @@ iterator(g::IsingGraph) = 1:(nStates(g))
 
 # Notify a change in the simulation
 # TODO: Make this an observable in the graph that can be coupled with the one in the simulation
-Base.notify(layer::AbstractIsingLayer) = let _sim = sim(layer); if !isnothing(_sim); notify(layerIdx(_sim)) end; end
+# Base.notify(layer::AbstractIsingLayer) = let _sim = sim(layer); if !isnothing(_sim); notify(layerIdx(_sim)) end; end
 
 export setPeriodic!
 
