@@ -83,6 +83,7 @@ export Discrete, Continuous, Static
 const rng = MersenneTwister()
 
 include("WeightFuncs.jl")
+include("Topology/Topology.jl")
 include("AdjList/AdjList.jl")
 
 # @ForwardDeclare LayerMetaData "Graphs/Layers"

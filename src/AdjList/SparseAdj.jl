@@ -105,12 +105,12 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_i
             # y = (vert_j+conn_j)/2
             c1 = Coordinate(vert_i, vert_j)
             c2 = Coordinate(conn_i, conn_j)
-            d = c2 - c1
-            d = topology(d)
+
+            dr = dist(topology, c1, c2)
 
 
             # weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
-            weight = eltype(layer)((wg(;d, c1, c2)))
+            weight = eltype(layer)((wg(;dr, c1, c2)))
 
             if !(weight == 0 || isnan(weight))
                 g_col_idx     = idxLToG(col_idx, layer)
@@ -174,10 +174,9 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, wei
             # z = (vert_k+conn_k)/2
             c1 = Coordinate(vert_i, vert_j, vert_k)
             c2 = Coordinate(conn_i, conn_j, conn_k)
-            d = c2 - c1
-            d = topology(d)
+            dr = dist(topology, c1, c2)
 
-            weight = eltype(layer)((wg(;d, c1, c2)))
+            weight = eltype(layer)((wg(;dr, c1, c2)))
 
             if !(weight == 0 || isnan(weight))
                 g_col_idx     = idxLToG(col_idx, layer)

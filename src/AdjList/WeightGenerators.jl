@@ -7,36 +7,6 @@ end
 getNN(wg::WeightGenerator{F, NN}) where {F,NN} = NN
 getNN(wg::WeightGenerator{F, NN}, dims) where {F,NN} = ntuple(i -> (i <= length(NN) ? NN[i] : 1), Val(length(dims)))
 
-
-struct Coordinate{N} # N dimensional coordinate
-    coords::NTuple{N, Int}
-end
-
-struct DeltaCoordinate{N} # N dimensional coordinate difference
-    deltas::NTuple{N, Int}
-    norm2::Float64
-    norm::Float64
-end
-
-Base.:(-)(c1::Coordinate, c2::Coordinate) = DeltaCoordinate(ntuple(i->c2.coords[i]-c1.coords[i], Val(length(c1.coords)))...)
-
-DeltaCoordinate(n::Integer...; norm = nothing, norm2 = nothing) = DeltaCoordinate{length(n)}(n, isnothing(norm2) ? sum(x->x^2, n) : norm2, isnothing(norm) ? sqrt(sum(x->x^2, n)) : norm)
-Coordinate(n::Integer...) = Coordinate{length(n)}(n)
-LinearAlgebra.norm(dc::DeltaCoordinate) = dc.norm
-norm2(dc::DeltaCoordinate) = dc.norm2
-Base.length(dc::DeltaCoordinate) = length(dc.deltas)
-
-
-macro dr()
-    esc(:(norm(d))) 
-end
-macro dr2()
-    esc(:(norm2(d))) 
-end
-
-export norm, norm2, @dr, @dr2
-
-
 function WeightGenerator(func, NN = tuple(1), rng = Random.MersenneTwister(); exp = nothing)
     WeightGenerator{typeof(func),NN}(func, exp, rng)
 end
@@ -65,7 +35,7 @@ macro WG(func, kwargs...)
     end
     println("Function argnames are: $f_argnames")
     # Check if argnames only contain a subset of the symbols allowedargs_func
-    allowedargs_func = [:d, :c1, :c2]
+    allowedargs_func = [:dr, :c1, :c2]
     if !(all([arg ∈ allowedargs_func for arg in f_argnames]))
         error("Function must only contain arguments $allowedargs_func")
     end
@@ -75,11 +45,11 @@ macro WG(func, kwargs...)
     println("Function location is: $f_location")
     if f_location == :anonymous
         funcbody = func.args[2]
-        newfunc = quote @inline (d, c1, c2) -> $funcbody end
+        newfunc = quote @inline (dr, c1, c2) -> $funcbody end
         funcexp = QuoteNode(remove_line_number_nodes(func))
 
     else
-        newfunc = quote @inline (d, c1, c2) -> Main.$func($(f_argnames...)) end
+        newfunc = quote @inline (dr, c1, c2) -> Main.$func($(f_argnames...)) end
         funcexp = :(Main.$func)
     end
     # End of function parsing
@@ -89,10 +59,12 @@ end
 
 export @WG
 
-function (wg::WeightGenerator)(;d, c1 = nothing, c2 = nothing)
-    return @inline wg.func(d, c1, c2)
+function (wg::WeightGenerator)(;dr, c1 = nothing, c2 = nothing)
+    return @inline wg.func(dr, c1, c2)
 end
 
+const IsingWG = @WG dr -> dr == 1 ? 1 : 0 NN=1
+export IsingWG
 
 
 

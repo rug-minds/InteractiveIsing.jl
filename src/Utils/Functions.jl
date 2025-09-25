@@ -530,7 +530,8 @@ macro ForwardDeclare(structname, subfolder)
     # println(structstring)
     # println("Searching Dir $(@__DIR__)/$subfolder for struct $structname")
     expr = Meta.parse(structstring)
-
+    println("Giving forward declaration for struct $structname")
+    println("With expression: $expr")
     return esc(quote
                 try
                     $expr
