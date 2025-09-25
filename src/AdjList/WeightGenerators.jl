@@ -1,3 +1,4 @@
+export WeightGenerator, IsingWG, @WG
 struct WeightGenerator{F, NN}
     func::F
     funcexp::Union{String, Expr, Symbol, Function, Nothing}
@@ -45,26 +46,24 @@ macro WG(func, kwargs...)
     println("Function location is: $f_location")
     if f_location == :anonymous
         funcbody = func.args[2]
+        println("Function body is: $funcbody")
         newfunc = quote @inline (dr, c1, c2) -> $funcbody end
         funcexp = QuoteNode(remove_line_number_nodes(func))
-
     else
-        newfunc = quote @inline (dr, c1, c2) -> Main.$func($(f_argnames...)) end
+        newfunc = quote @inline (dr, c1, c2) -> $func($(f_argnames...)) end
         funcexp = :(Main.$func)
     end
     # End of function parsing
 
-    return :(WeightGenerator($(newfunc), $(kwargs[:NN]), $(kwargs[:rng]), exp = $funcexp))
+    return esc(:(WeightGenerator($(newfunc), $(kwargs[:NN]), $(kwargs[:rng]), exp = $funcexp)))
 end
 
-export @WG
 
 function (wg::WeightGenerator)(;dr, c1 = nothing, c2 = nothing)
     return @inline wg.func(dr, c1, c2)
 end
 
 const IsingWG = @WG dr -> dr == 1 ? 1 : 0 NN=1
-export IsingWG
 
 
 
