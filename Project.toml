@@ -37,14 +37,7 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [compat]
-CairoMakie = "0.15.5"
-ColorSchemes = "~3.29.0"
-GLMakie = "~0.13.2"
-JET = "~0.9.18"
-LayoutPointers = "~0.1.17"
-MacroTools = "~0.5.15"
-OrderedCollections = "~1.8.0"
-Unitful = "~1.23.1"
+
 
 [extras]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"

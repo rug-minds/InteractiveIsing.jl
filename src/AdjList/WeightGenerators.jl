@@ -17,7 +17,7 @@ macro WG(func, kwargs...)
 
     #Function parsing
     # Either anonymous function which has to have a combination of
-    # dr, dx, dy, dz, c1, c2 as arguments
+    # 
     # 
     # Or a global function with the same with any set of these arguments
     f_argnames = nothing
@@ -28,13 +28,13 @@ macro WG(func, kwargs...)
         f_location = :anonymous
     catch
         try # Else try to eval in Main
-            f_argnames = method_argnames(last(methods(eval(:(Main.$func)))))[2:end]
+            f_argnames = method_argnames(last(methods(eval(:($func)))))[2:end]
             f_location = :global
         catch
             error("Could not evaluate function $func. Make sure it is defined.")
         end
     end
-    println("Function argnames are: $f_argnames")
+    # println("Function argnames are: $f_argnames")
     # Check if argnames only contain a subset of the symbols allowedargs_func
     allowedargs_func = [:dr, :c1, :c2]
     if !(all([arg ∈ allowedargs_func for arg in f_argnames]))
@@ -43,15 +43,14 @@ macro WG(func, kwargs...)
 
     newfunc = nothing
     funcexp = nothing
-    println("Function location is: $f_location")
+    # println("Function location is: $f_location")
     if f_location == :anonymous
         funcbody = func.args[2]
-        println("Function body is: $funcbody")
         newfunc = quote @inline (dr, c1, c2) -> $funcbody end
         funcexp = QuoteNode(remove_line_number_nodes(func))
     else
         newfunc = quote @inline (dr, c1, c2) -> $func($(f_argnames...)) end
-        funcexp = :(Main.$func)
+        funcexp = QuoteNode(remove_line_number_nodes(func))
     end
     # End of function parsing
 

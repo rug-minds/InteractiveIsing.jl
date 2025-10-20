@@ -10,6 +10,12 @@ genAdj!(g[1], wg)
 g.hamiltonian = NIsing(g)
 g.hamiltonian = II.deactivateparam(g.hamiltonian, :b)
 
+function tulliotest(g, state, adj, params, idx)
+    (;b) = params
+    @tullio sum := b[j]*state[j]  + adj[idx, j]*state[j]
+    return sum
+end
+
 
 interface(g)
 createProcess(g, MetropolisNew)
@@ -21,7 +27,7 @@ quit(g)
 # paramH = II.deltaH(NIsing)
 
 
-createProcess(g, II.MetropolisNew())
+# createProcess(g, II.MetropolisNew())
 
 # createProcess(g, MetropolisNew, overrides = (;hamiltonian = II.deltaH(NIsing())))
 

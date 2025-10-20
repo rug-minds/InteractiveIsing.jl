@@ -174,14 +174,6 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, wei
             reset!(conn_ks)
             reset!(conn_idxs)
         end
-        
-
-        # if SelfType(wg) == Self()
-        #     weight = getSelfWeight(wg, y = vert_i, x = vert_j;z)
-        #     push!(row_idxs, col_idx)
-        #     push!(col_idxs, col_idx)
-        #     push!(weights, weight)
-        # end
     end
 end
 
