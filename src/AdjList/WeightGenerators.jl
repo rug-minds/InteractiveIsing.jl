@@ -28,7 +28,7 @@ macro WG(func, kwargs...)
         f_location = :anonymous
     catch
         try # Else try to eval in Main
-            f_argnames = method_argnames(last(methods(eval(:($func)))))[2:end]
+            f_argnames = method_argnames(last(methods(eval(:(Main.$func)))))[2:end]
             f_location = :global
         catch
             error("Could not evaluate function $func. Make sure it is defined.")
