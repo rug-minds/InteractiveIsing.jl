@@ -41,9 +41,9 @@ function weightfunc_xy_dilog_antiferro(dr, c1, c2)
     dx, dy, dz = d
     
     if (abs(dx) + abs(dy)) % 2 == 0
-        return 1.0 / dr2    # 铁磁
+        return 1.0 / norm2(d)    # 铁磁
     else
-        return -1.0 / dr2   # 反铁磁
+        return -1.0 / norm2(d)   # 反铁磁
     end
     
     return prefac / norm2(d)
@@ -111,99 +111,6 @@ function (::TrianglePulseA)(args)
 end
 
 
-##################################################################################
-### Pulse type: PUNDa (no delay time between pulses)
-struct PUNDa end
-
-function Processes.prepare(::PUNDa, args)
-    (;amp, numpulses, rise_point) = args
-    steps = num_calls(args)
-
-    first  = LinRange(0, amp, round(Int,rise_point))
-    second = LinRange(amp, 0, round(Int,rise_point))
-    third  = LinRange(0, -amp, round(Int,rise_point))
-    fourth = LinRange(-amp, 0, round(Int,rise_point))
-    pulse = vcat(first, second, first, second, third, fourth, third, fourth)
-    pulse = repeat(pulse, numpulses)
-
-    if steps < length(pulse)
-        println("Pulse is longer than lifetime")
-    else
-        fix_num = num_calls(args) - length(pulse)
-        fix_arr = zeros(Int, fix_num)
-        pulse   = vcat(pulse, fix_arr)
-    end
-
-    # Predefine storage arrays
-    x = Float32[]
-    y = Float32[]
-    all_Es = Float32[]
-    processsizehint!(args, x)
-    processsizehint!(args, y)
-
-    return (;pulse, x, y)
-end
-
-function (::PUNDa)(args)
-    (;pulse, M, x, y, hamiltonian) = args
-    pulse_val = pulse[algo_loopidx(args)]
-    hamiltonian.b[] = pulse_val
-    push!(x, pulse_val)
-    push!(y, M[])
-end
-
-
-##################################################################################
-### Pulse type: PUNDb (with delay time between each pulse)
-struct PUNDb end
-
-function Processes.prepare(::PUNDb, args)
-    (;amp, numpulses, rise_point) = args
-    steps = num_calls(args)
-
-    delay  = zeros(Int, rise_point)
-    first  = LinRange(0, amp, round(Int,rise_point))
-    amp1   = fill(amp, rise_point)
-    second = LinRange(amp, 0, round(Int,rise_point))
-    third  = LinRange(0, -amp, round(Int,rise_point))
-    amp2   = fill(-amp, rise_point)
-    fourth = LinRange(-amp, 0, round(Int,rise_point))
-
-    pulse = vcat(delay, first, amp1, second,
-                 delay, first, amp1, second,
-                 delay, third, amp2, fourth,
-                 delay, third, amp2, fourth)
-
-    pulse = repeat(pulse, numpulses)
-
-    if steps < length(pulse)
-        println("Pulse is longer than lifetime")
-    else
-        fix_num = num_calls(args) - length(pulse)
-        fix_arr = zeros(Int, fix_num)
-        pulse   = vcat(pulse, fix_arr)
-    end
-
-    # Predefine storage arrays
-    x = Float32[]
-    y = Float32[]
-    all_Es = Float32[]
-    processsizehint!(args, x)
-    processsizehint!(args, y)
-
-    return (;pulse, x, y)
-end
-
-function (::PUNDb)(args)
-    (;pulse, M, x, y, hamiltonian) = args
-    pulse_val = pulse[algo_loopidx(args)]
-    hamiltonian.b[] = pulse_val
-    push!(x, pulse_val)
-    push!(y, M[])
-end
-
-
-
 xL = 100  # Length in the x-dimension
 yL = 100  # Length in the y-dimension
 zL = 10   # Length in the z-dimension
@@ -214,7 +121,7 @@ II.makie_markersize[] = 0.3
 # Launch interactive visualization (idle until createProcess(...) later)
 interface(g)
 
-temp(g,10)
+temp(g,1.5)
 g.hamiltonian = Ising(g) + DepolField(g, c=60000, left_layers=1, right_layers=1)
 g.hamiltonian = sethomogenousparam(g.hamiltonian, :b)
 
