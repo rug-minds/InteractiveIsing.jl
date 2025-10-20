@@ -50,11 +50,11 @@ function midPanel(window)
                     reset_on_defocus = true)
 
                 # TODO: Restore
-                push!(obs_funcs, on(window[:brush_r]) do x
-                    sizefield.placeholder[] = string(x)
-                    #Set circle
-                    circ(simulation, getOrdCirc(window[:brush_r][]))
-                end)
+                # push!(obs_funcs, on(window[:brush_r]) do x
+                #     sizefield.placeholder[] = string(x)
+                #     #Set circle
+                #     circ(simulation, getOrdCirc(window[:brush_r][]))
+                # end)
 
             # SHOW BFIELD
             mp[:showbfield] = showbfield = Toggle(leftpanel[4,1], active = false)
@@ -117,7 +117,7 @@ function midPanel(window)
 
 
             on(tempslider.value) do x
-                if 0.0 < x < slider_max
+                if 0.0 <= x <= slider_max
                     temp(g, x)
                 end
             end

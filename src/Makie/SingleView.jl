@@ -78,11 +78,11 @@ function singleView(window)
     # mp[:image].colorrange[] = (-1,1)
 
     #TODO:Restore this
-    push!(obs_funcs, on(events(ax.scene).mousebutton, weak = true) do buttons
-        # MDrawCircle(ax, buttons, simulation)
-        drawCircle(state(current_layer(window)), tuple(round.(Int, mouseposition(ax.scene))...), 20)
-        return
-    end)
+    # push!(obs_funcs, on(events(ax.scene).mousebutton, weak = true) do buttons
+    #     # MDrawCircle(ax, buttons, simulation)
+    #     drawCircle(state(current_layer(window)), tuple(round.(Int, mouseposition(ax.scene))...), 20)
+    #     return
+    # end)
 
 
     # me_axis = addmouseevents!(ax.scene)
