@@ -4,16 +4,42 @@
 
     abstract type MCAlgorithm <: ProcessAlgorithm end
     abstract type Hamiltonian end
+    abstract type AbstractHamiltonianTerms{HS} <: Hamiltonian end
+    getHS(::Type{<:AbstractHamiltonianTerms{HS}}) where {HS} = HS
+    getHS(::AbstractHamiltonianTerms{HS}) where {HS} = HS
+    getHS(h::Type{<:Hamiltonian}) = (h,)
+
+    function _paramnames(h::Type{<:Hamiltonian}, all_names = Symbol[])
+        for h in getHS(h)
+            if h <: AbstractHamiltonianTerms
+                _paramnames(h, all_names)
+            else
+                fnames = fieldnames(h)
+                ftypes = fieldtypes(h)
+                for (idx, name) in enumerate(fnames)
+                    if ftypes[idx] <: ParamVal
+                        push!(all_names, name)
+                    end
+                end
+            end
+        end
+    end
 
     """
     For a Hamiltonian, return all fieldnames that are a ParamVal
     """
-    @generated function paramnames(h::Hamiltonian)
-        _fieldnames = fieldnames(h)
-        _fieldtypes = fieldtypes(h)
-        paramval_params = tuple((fieldnames[i] for i in eachindex(fieldnames) if fieldtypes[i] <: ParamVal)...)
+    @generated function paramnames(h::Union{Hamiltonian, AbstractHamiltonianTerms})
+        h = getHS(h)
+        all_names = Symbol[]
+        _fieldnames = fieldnames.(h)
+        _fieldtypes = fieldtypes.(h)
+        for i in eachindex(_fieldnames)
+            _paramnames(h[i], all_names)
+        end
+        paramval_params = (all_names...,)
         return (:($paramval_params))
     end
+
 
     function update!(::Hamiltonian, args)
         return nothing
