@@ -35,7 +35,7 @@ function IsingLayer(
             lsize,
             idx, 
             start::Int;
-            StateType = Discrete(), 
+            stype = Discrete(), 
             precision = Float32,
             set = convert.(eltype(g),(-1,1)), 
             name = "Layer $idx", 
@@ -53,8 +53,8 @@ function IsingLayer(
             connections[idx=>idx] = wg
         end
 
-        if StateType isa Type
-            StateType = StateType()
+        if stype isa Type
+            stype = stype()
         end
     
         dims = length(lsize)
@@ -63,7 +63,7 @@ function IsingLayer(
         graphidxs = start:(start+reduce(*, lsize)-1)
         set = convert.(eltype(g), set)
 
-        layer = IsingLayer{StateType, set, dims, lsize, graphidxs, typeof(top), precision, adjtype}(
+        layer = IsingLayer{stype, set, dims, lsize, graphidxs, typeof(top), precision, adjtype}(
             # Graph
             g,
             # Name
