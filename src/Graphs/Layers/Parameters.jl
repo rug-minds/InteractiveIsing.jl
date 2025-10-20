@@ -1,6 +1,6 @@
 # SET AND GET GRAPH PARAMETERS THROUGH THE LAYER
 
-function getparam(l, param::Symbol)
+function getparam(l::AbstractIsingLayer, param::Symbol)
     val = getparam(graph(l), param)
     paramtype = eltype(val)
     if paramtype <: Vector

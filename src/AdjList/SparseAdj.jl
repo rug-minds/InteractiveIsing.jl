@@ -23,21 +23,21 @@ function genLayerConnections(layer::AbstractIsingLayer{T,D}, wg) where {T,D}
 
     g = graph(layer)
 
-    _NN = wg.NN
-    println("WG: ", wg)
-    println("D: ", D)
+    _NN = getNN(wg)
+
+    
     
     # Either global NN is given, or a tuple of NN for each dimension
-    @assert (!(_NN isa Int32) || length(_NN) == D )
+    @assert (_NN isa Integer || length(_NN) == D )
     
     blocksize = Int32(0)
-    if _NN isa Int32
+    if _NN isa Integer
         blocksize = (2*_NN+1)^D - 1
     else
         blocksize = prod(2 .* _NN .+ 1) - 1
     end
 
-    n_conns = nStates(g)*blocksize
+    n_conns = nstates(g)*blocksize
     sizehint!(col_idxs, 2*n_conns)
     sizehint!(row_idxs, 2*n_conns)
     sizehint!(weights, 2*n_conns)
@@ -69,16 +69,16 @@ end
 From a generator that returns (i, j, idx) for the connections
     fill the row_idxs, col_idxs, and weights
 """ 
-function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_idxs, weights, topology, @specialize(wg), conns...) where {T}
-    NN = wg.NN
-    @assert (NN isa Int32 || length(NN) == 2)
+function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_idxs, weights, topology, wg::WG, conns...) where {T,WG}
+    NN = getNN(wg)
+    @assert (NN isa Integer || length(NN) == 2)
 
 
     conn_idxs, conn_is, conn_js = conns
 
     NNi = Int32(0)
     NNj = Int32(0)
-    if NN isa Int32
+    if NN isa Integer
         NNi = NN
         NNj = NN
     else
@@ -94,18 +94,13 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_i
             conn_j = conn_js[conn_num]
             conn_idx = conn_idxs[conn_num]
 
-            dr = dist(topology, vert_i, vert_j, conn_i, conn_j)
-            # TODO: Overal coords?
-            # _,_,z = coords(layer)
-            z = 1
+            c1 = Coordinate(vert_i, vert_j)
+            c2 = Coordinate(conn_i, conn_j)
 
-            dx, dy = dxdy(topology, (vert_i, vert_j), (conn_i, conn_j))
-            dz = 0
-            x = (vert_i+conn_i)/2
-            y = (vert_j+conn_j)/2
+            dr = dist(topology, c1, c2)
 
-            weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
-            
+            weight = eltype(layer)((wg(;dr, c1, c2)))
+
             if !(weight == 0 || isnan(weight))
                 g_col_idx     = idxLToG(col_idx, layer)
                 g_conn_idx    = idxLToG(conn_idx, layer)
@@ -121,19 +116,18 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_i
         end
         
 
-        if SelfType(wg) == Self()
-            weight = getSelfWeight(wg, y = vert_i, x = vert_j;z)
-            push!(row_idxs, col_idx)
-            push!(col_idxs, col_idx)
-            push!(weights, weight)
-        end
+        # if SelfType(wg) == Self()
+        #     weight = getSelfWeight(wg, y = vert_i, x = vert_j;z)
+        #     push!(row_idxs, col_idx)
+        #     push!(col_idxs, col_idx)
+        #     push!(weights, weight)
+        # end
     end
 end
 
-function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, weights, topology, @specialize(wg), conns...) where {T}
-    NN = wg.NN
-
-    @assert (NN isa Int32 || length(NN) == 3)
+function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, weights, topology, wg::WG, conns...) where {T,WG}
+    NN = getNN(wg)
+    @assert (NN isa Integer || length(NN) == 3)
 
     conn_idxs, conn_is, conn_js, conn_ks = conns
     
@@ -141,7 +135,7 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, wei
     NNj = Int32(0)
     NNk = Int32(0)
 
-    if NN isa Int32
+    if NN isa Integer
         NNi = NNj = NNk = NN
     else
         NNi, NNj, NNk = NN
@@ -157,19 +151,15 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, wei
             conn_k = conn_ks[conn_num]
             conn_idx = conn_idxs[conn_num]
 
-            dr = dist(topology, coords_vert, (conn_i, conn_j, conn_k))
-            # TODO: Overal coords?
-            # _,_,z = coords(layer)
-            dx, dy, dz = dxdydz(topology, coords_vert, (conn_i, conn_j, conn_k))
 
             vert_i, vert_j, vert_k = coords_vert
-            # This doesn't make sense for periodic?
-            x = (vert_i+conn_i)/2
-            y = (vert_j+conn_j)/2
-            z = (vert_k+conn_k)/2
+       
+            c1 = Coordinate(vert_i, vert_j, vert_k)
+            c2 = Coordinate(conn_i, conn_j, conn_k)
+            dr = dist(topology, c1, c2)
 
-            weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
-            
+            weight = eltype(layer)((wg(;dr, c1, c2)))
+
             if !(weight == 0 || isnan(weight))
                 g_col_idx     = idxLToG(col_idx, layer)
                 g_conn_idx    = idxLToG(conn_idx, layer)
@@ -183,14 +173,6 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, wei
             reset!(conn_js)
             reset!(conn_ks)
             reset!(conn_idxs)
-        end
-        
-
-        if SelfType(wg) == Self()
-            weight = getSelfWeight(wg, y = vert_i, x = vert_j;z)
-            push!(row_idxs, col_idx)
-            push!(col_idxs, col_idx)
-            push!(weights, weight)
         end
     end
 end
@@ -231,7 +213,7 @@ export genLayerConnections
 Give preallocated vectors for row_idxs, col_idxs, and weights
     fills them with the connections withing between two layers
 """
-function _fillSparseVecs(layer1::IsingLayer, layer2::IsingLayer, row_idxs, col_idxs, weights, wg, pre_3tuple)
+function _fillSparseVecs(layer1::AbstractIsingLayer, layer2::AbstractIsingLayer, row_idxs, col_idxs, weights, wg, pre_3tuple)
     NN = wg.NN
 
     local NNi = NN
@@ -293,8 +275,8 @@ struct Copy <: ConnectionReturnType end
 """
 Remove all connections within layer
 """
-# @inline removeConnections(layer::IsingLayer) = removeConnections(layer, View)
-function removeConnections(layer::IsingLayer)
+# @inline removeConnections(layer::AbstractIsingLayer) = removeConnections(layer, View)
+function removeConnections(layer::AbstractIsingLayer)
     old_rows, old_cols, old_weights  = findnz(adj(graph(layer)))
 
     filter = Vector{Bool}(undef , length(old_rows))
@@ -322,7 +304,7 @@ end
 """
 Remove all connections within layer and going in and out of layer
 """
-function removeConnectionsAll(layer::IsingLayer)
+function removeConnectionsAll(layer::AbstractIsingLayer)
     old_rows, old_cols, old_weights  = findnz(adj(graph(layer)))
 
     filter = Vector{Bool}(undef , length(old_rows))

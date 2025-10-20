@@ -495,7 +495,7 @@ function getstruct(strctname, files)
     open_expressions = 1
     num_ends = 0
     open_expression_terms = ["function", "while", "for", "if", "begin", "let", "quote", "do"]
-    while open_expressions > num_ends || eof(stream)
+    while open_expressions > num_ends && !eof(stream)
         # Fix so that it also works         
         # word = readuntil(stream, ' ', keep = false)
         word = getword(stream, ignore_comment = true)
@@ -519,22 +519,43 @@ end
 # with a field that has a type that's gona make it fail
 macro ForwardDeclare(structname, subfolder)
     #get files from current dir
-    files = readdir(joinpath(modulefolder, subfolder))
-
-    # get all files that end in .jl
-    files = filter(x -> endswith(x, ".jl"), files)
-
-    # add the path to the files
-    files = map(x -> joinpath(modulefolder, subfolder, x), files)
+    path = joinpath(modulefolder, subfolder)
+    
+    # Check if it's a file or directory
+    if isfile(path)
+        # If it's a file, use it directly
+        files = [path]
+    else
+        # If it's a directory, get all .jl files
+        files = readdir(path)
+        # get all files that end in .jl
+        files = filter(x -> endswith(x, ".jl"), files)
+        # add the path to the files
+        files = map(x -> joinpath(path, x), files)
+    end
+    
     structstring = getstruct(string(structname), files)
     # println(structstring)
     # println("Searching Dir $(@__DIR__)/$subfolder for struct $structname")
     expr = Meta.parse(structstring)
-
+    
+    # Inject an inner constructor with an undefined type that will cause the struct definition to fail
+    # This doesn't change the struct signature, so the real definition can still "complete" it
+    if expr.head == :struct
+        struct_body = expr.args[3]
+        if struct_body.head == :block
+            # Insert a function definition with an undefined type as a parameter
+            # This forces the struct definition to fail without changing the field signature
+            push!(struct_body.args, :(function $(Symbol(structname))(x::ThisTypeDoesNotExistForwardDeclare) end))
+        end
+    end
+    
+    # println("Giving forward declaration for struct $structname")
+    # println("With expression: $expr")
     return esc(quote
                 try
                     $expr
-                catch
+                catch e
                 end
             end)
 end

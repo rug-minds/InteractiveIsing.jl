@@ -9,8 +9,8 @@ function baseFig(window; framerate = 30.0)
         cleanup(ml, baseFig)
     end
 
-    timedFunctions[:upf] = updatesPerFrame
-    timedFunctions[:magnetization] = magnetization
+    # timedFunctions[:upf] = updatesPerFrame
+    # timedFunctions[:magnetization] = magnetization
     # sim.timers[:makie] = PTimer((timer) -> timerFuncs(sim) ,0., interval = interval)
 
 

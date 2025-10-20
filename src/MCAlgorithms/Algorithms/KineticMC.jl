@@ -58,7 +58,7 @@ function get_r(fe::FlipEnergies, β, i)
     return r
 end
 
-function FlipEnergies(g::IsingGraph, args::As, r0 = one(eltype(g))) where As
+function FlipEnergies(g::AbstractIsingGraph, args::As, r0 = one(eltype(g))) where As
     totalrate = zero(eltype(g.state))
     vec = zeros(eltype(g.state), length(g.state))
     rates = zeros(eltype(g.state), length(g.state))

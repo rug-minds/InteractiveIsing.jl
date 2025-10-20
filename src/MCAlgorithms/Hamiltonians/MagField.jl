@@ -7,7 +7,7 @@ struct MagField{PV <: ParamVal} <: Hamiltonian
     b::PV
 end
 
-MagField{PV}(g::IsingGraph) where PV <: ParamVal = MagField{PV}(PV())
+MagField{PV}(g::AbstractIsingGraph) where PV <: ParamVal = MagField{PV}(PV())
 
 MagField(g) = MagField(eltype(g), statelen(g))z
 MagField(type, len, active = false) = MagField(ParamVal(zeros(type, len), type |> zero, "Magnetic Field", active))

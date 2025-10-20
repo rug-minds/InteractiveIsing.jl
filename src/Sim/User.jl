@@ -1,89 +1,99 @@
-"""
-Re initialize simulation while running
-"""
-function reset!(sim::IsingSim)
-    for g in sim.gs
-        pause(g)
-        reset!(g)
-    end
+# """
+# Re initialize simulation while running
+# """
+# function reset!(sim::IsingSim)
+#     for g in sim.gs
+#         pause(g)
+#         reset!(g)
+#     end
 
-    M(sim)[] = 0
+#     M(sim)[] = 0
 
-    for g in sim.gs
-        restart(g)
-    end
-    return
-end
-export reset!
+#     for g in sim.gs
+#         restart(g)
+#     end
+#     return
+# end
+# export reset!
 
-function annealing(sim, Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Tstep:Tf, reInit = true, saveImg = true)
-    # Reinitialize
-    reInit && reset!(sim)
+# function annealing(sim, Ti, Tf, initWait = 30, stepWait = 5; Tstep = .5, T_it = Ti:Tstep:Tf, reInit = true, saveImg = true)
+#     # Reinitialize
+#     reInit && reset!(sim)
 
-    # Set temp and initial wait
-    temp(sim)[] = Ti
-    sleep(initWait)
+#     # Set temp and initial wait
+#     temp(sim)[] = Ti
+#     sleep(initWait)
     
-    for temp in T_it
-        temp(sim)[] = temp
-        sleep(stepWait)
-        if saveImg
-            save(File{format"PNG"}("Images/Annealing/Ising T$temp.PNG"), img[])
-        end
-    end
-end
+#     for temp in T_it
+#         temp(sim)[] = temp
+#         sleep(stepWait)
+#         if saveImg
+#             save(File{format"PNG"}("Images/Annealing/Ising T$temp.PNG"), img[])
+#         end
+#     end
+# end
 
-export startSim
-# Set the render loop,
-# Define qml functions
-# Start graph update and qml interface
-function startSim(sim; threads = 1, async = true, loadQML = true)
-    if !started(sim)
-        # Set sim started to true
-        started(sim,true)
+# export startSim
+# # Set the render loop,
+# # Define qml functions
+# # Start graph update and qml interface
+# function startSim(sim; threads = 1, async = true, loadQML = true)
+#     if !started(sim)
+#         # Set sim started to true
+#         started(sim,true)
 
-        # Spawn MCMC thread on layer 1
-        # createProcess(sim, threads; gidx = 1)
-        createProcess(sim; gidx = 1)
+#         # Spawn MCMC thread on layer 1
+#         # createProcess(sim, threads; gidx = 1)
+#         createProcess(sim; gidx = 1)
 
-        # Load QML interface?
-        # TODO: FIX THIS, remove these funtions
-        # if loadQML
-        #     # Register QML Functions
-        #     # qmlFunctions(sim)
-        #     # Set render loop global variable
-        #     # setRenderLoop()
+#         # Load QML interface?
+#         # TODO: FIX THIS, remove these funtions
+#         # if loadQML
+#         #     # Register QML Functions
+#         #     # qmlFunctions(sim)
+#         #     # Set render loop global variable
+#         #     # setRenderLoop()
 
-        #     # Load qml files, observables and functions
-        #     # loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction)
-        #     # Start interface in interactive mode or not
-        #     if async
-        #         exec_async()
-        #     else
-        #         exec()
-        #     end
-        # end
-    # If no processes are started just create a new one
-    elseif all(status(sim) .== :Terminated)
-        createProcess(sim, threads; gidx = 1)
-    else
-        println("Simulation already started")
-    end
-        sim
-end
+#         #     # Load qml files, observables and functions
+#         #     # loadqml( qmlfile, obs = sim.pmap, showlatest = showlatest_cfunction)
+#         #     # Start interface in interactive mode or not
+#         #     if async
+#         #         exec_async()
+#         #     else
+#         #         exec()
+#         #     end
+#         # end
+#     # If no processes are started just create a new one
+#     elseif all(status(sim) .== :Terminated)
+#         createProcess(sim, threads; gidx = 1)
+#     else
+#         println("Simulation already started")
+#     end
+#         sim
+# end
 
-function setCircR!(sim, r)
-    brushR(sim)[] = r
-    circ(sim, getOrdCirc(brushR(sim)[]))
-end
-export setCircR!
+# function drawCircle(vec::AbstractArray{T,2}, center::Tuple{Integer,Integer}, imgsize::Tuple{Integer,Integer}, r::Integer, periodic = true) where T
+#     gen = ((i,j, Int(floor(i^2 + j^2) < r^2)) for i in -r:r, j in -r:r)
+#     for (i,j,val) in gen
+#         if true
+#         end
+#         vec[center[1]+i, center[2]+j] = val
+#     end
+#     return vec
+# end
 
-function setLayerIdx!(sim, layeridx)
-    if layeridx < 1 || layeridx > nlayers(sim)[]
-        println("Cannot choose layer idx smaller than 1 or larger than the number of layers")
-        return
-    end
+# function setCircR!(sim, r)
+#      brushR(sim)[] = r
+#     circ(sim, getOrdCirc(brushR(sim)[]))
+# end
+# export setCircR!
 
-    layerIdx(sim)[] = layeridx
-end
-export setLayerIdx!
+# function setLayerIdx!(sim, layeridx)
+#     if layeridx < 1 || layeridx > nlayers(sim)[]
+#         println("Cannot choose layer idx smaller than 1 or larger than the number of layers")
+#         return
+#     end
+
+#     layerIdx(sim)[] = layeridx
+# end
+# export setLayerIdx!

@@ -12,6 +12,10 @@ Gets the keywords args for a macro
 From the args given
 """
 function prunekwargs(args...)
+    if isempty(args)
+        return Expr[]
+    end
+    
     @nospecialize
     firstarg = first(args)
     if isa(firstarg, Expr) && firstarg.head == :parameters

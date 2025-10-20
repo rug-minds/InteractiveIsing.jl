@@ -1,5 +1,7 @@
 module InteractiveIsing
 
+@debug "Starting InteractiveIsing module load"
+
 const mtimers = Timer[]
 const mtasks = Task[]
 const mptimers = Any[]
@@ -16,12 +18,15 @@ end
 
 const modulefolder = @__DIR__
 
+@debug "Loading dependencies"
+
 # using QML
 # export QML
 using FileIO, ColorSchemes, Dates, JLD2, Random, Distributions, Observables, LinearAlgebra,
     StatsBase, LaTeXStrings, DataStructures, Preferences, GLMakie, SparseArrays, FFTW, ExprTools, UUIDs, DataStructures
 using Images
 
+@debug "Loading Processes module"
 
 include("../deps/Processes/src/Processes.jl")
 
@@ -29,10 +34,14 @@ using .Processes
 export Processes
 import .Processes: prepare
 
+@debug "Loading PrecompileTools and Revise"
+
 using PrecompileTools
 
 #TEMP
 using Revise
+
+@debug "Loading additional dependencies"
 
 # import Plots as pl
 
@@ -43,6 +52,7 @@ using SparseArrays, StaticArrays, LoopVectorization
 export AbstractIsingGraph
 abstract type AbstractIsingGraph{T} end
 abstract type AbstractIsingLayer{T,DIMS} <: AbstractIsingGraph{T} end
+abstract type AbstractLayerProperties end
 
 
 
@@ -50,15 +60,21 @@ abstract type AbstractIsingLayer{T,DIMS} <: AbstractIsingGraph{T} end
 # Is needed for fast execution if part of hamiltonian doesn't need to be checked
 # Should be in IsingSim.jl
 
+@debug "Including Utils"
 include("Utils/Utils.jl")
+@debug "Utils loaded"
 
 
 ### DECLARED TYPES
-@ForwardDeclare IsingGraph "Graphs"
-@ForwardDeclare IsingLayer "Graphs/Layers"
+@debug "Forward declaring types"
+# @ForwardDeclare IsingGraph "Graphs/IsingGraph.jl"
+# @ForwardDeclare IsingLayer "Graphs/Layers/IsingLayer.jl"
+# @ForwardDeclare LayerProperties "Graphs/Layers/IsingLayer.jl"
 # @ForwardDeclare Parameters "Graphs"
-@ForwardDeclare IsingSim "Sim"
-@ForwardDeclare SimLayout "Makie"
+# @ForwardDeclare IsingSim "Sim"  # Commented out because IsingSim struct is commented out in source
+# @ForwardDeclare SimLayout "Makie/SimLayout.jl"
+abstract type AbstractSimLayout end
+@debug "Forward declarations complete"
 
 abstract type StateType end
 struct Discrete <: StateType end
@@ -81,25 +97,59 @@ export Discrete, Continuous, Static
 # Global RNG for module
 const rng = MersenneTwister()
 
+@debug "Including WeightFuncs"
 include("WeightFuncs.jl")
+@debug "WeightFuncs loaded"
+
+@debug "Including Topology"
+include("Topology/Topology.jl")
+@debug "Topology loaded"
+
+@debug "Including AdjList"
 include("AdjList/AdjList.jl")
+@debug "AdjList loaded"
 
 # @ForwardDeclare LayerMetaData "Graphs/Layers"
 # @ForwardDeclare LayerArchitecture "Graphs/Layers"
+@debug "Including MCAlgorithms"
 include("MCAlgorithms/MCAlgorithms.jl")
 # using .MCAlgorithms
+@debug "MCAlgorithms loaded"
 
+@debug "Including Graphs"
 include("Graphs/Graphs.jl")
+@debug "Graphs loaded"
 
+@debug "Including Sim"
 include("Sim/Sim.jl")
+@debug "Sim loaded"
+
+@debug "Including Interaction"
 include("Interaction/Interaction.jl")
+@debug "Interaction loaded"
+
+@debug "Including Analysis"
 include("Analysis/Analysis.jl")
+@debug "Analysis loaded"
+
+@debug "Including Makie"
 include("Makie/Makie.jl")
+@debug "Makie loaded"
+
+@debug "Including GPlotting"
 include("GPlotting.jl")
+@debug "GPlotting loaded"
+
+@debug "Including Barebones"
 include("Barebones.jl")
+@debug "Barebones loaded"
 
 
+# @debug "Creating CompositeAlgorithm"
 const ca1 = CompositeAlgorithm((LayeredMetropolis, Metropolis), (1,2))
+@debug "CompositeAlgorithm created"
+
+@debug "InteractiveIsing module load complete"
 
 # # PRECOMPILATION FUNCTION FOR FAST USAGE
 # @setup_workload begin

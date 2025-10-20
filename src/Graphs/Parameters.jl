@@ -1,10 +1,10 @@
-export getparams
+export getparam, getparams
 
-getparams(g::IsingGraph) = params(g)
-getparams(g::IsingGraph, param::Symbol) = getparam(g, param)
+getparams(g::AbstractIsingGraph) = params(g)
+getparam(g::AbstractIsingGraph, param::Symbol) = h_param(g, param)
 
-param(g::IsingGraph, param::Symbol) = getparam(g, param)
-params(g::IsingGraph) = g.params
+param(g::AbstractIsingGraph, param::Symbol) = getparam(g, param)
+params(g::AbstractIsingGraph) = g.params
 
 function changeactivation!(g, param, activate)
     old_active = isactive(getparam(g, param))
@@ -15,13 +15,9 @@ function changeactivation!(g, param, activate)
     return g.params
 end
 
-@inline function getparam(g::IsingGraph, param::Symbol)
-    getproperty(g.params, param)
-end
-
-activate!(g::IsingGraph, param) = changeactivation!(g, param, true)
-deactivate!(g::IsingGraph, param) = changeactivation!(g, param, false)
-function setglobal!(g::IsingGraph, param, val)
+activate!(g::AbstractIsingGraph, param) = changeactivation!(g, param, true)
+deactivate!(g::AbstractIsingGraph, param) = changeactivation!(g, param, false)
+function setglobal!(g::AbstractIsingGraph, param, val)
     pval = getparam(g, param)
     old_default = default(pval)
     g.params = Parameters(param = ParamVal(pval, val, false); get_nt(g.params)...)
@@ -35,7 +31,7 @@ end
 """
 Get a graph and a symbol, then set the value of the parameter to the given value
 """
-function setparam!(g::IsingGraph, param::Symbol, val, active = true, si = nothing, ei = nothing)
+function setparam!(g::AbstractIsingGraph, param::Symbol, val, active = true, si = nothing, ei = nothing)
     @assert haskey(g.params, param) "Parameter $param not found in graph"
     pval = g.params[param]
     _setparam!(pval, param, val, si, ei)

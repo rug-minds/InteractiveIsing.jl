@@ -46,7 +46,7 @@ function correlationLength(layer::AbstractIsingLayer{T,2}, ::Fourier) where T
    return [1:length(correlations);], correlations
 end
 
-function correlationLength(layer::IsingLayer{A,B,3}, ::Fourier) where {A,B,C}
+function correlationLength(layer::IsingLayer{A,B,3}, ::Fourier) where {A,B}
    @inline function bin(dist)
       max(floor(Int32, dist),1)
    end 

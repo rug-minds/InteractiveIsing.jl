@@ -1,5 +1,5 @@
 mutable struct GraphDefects
-    graph::Union{Nothing, IsingGraph}
+    graph::Union{Nothing, AbstractIsingGraph}
     hasDefects::Bool
     isDefect::Vector{Bool}
     aliveList::Vector{Int32}
@@ -199,14 +199,14 @@ function setdefectrange!(gd::GraphDefects, idxs)::Int32
     return length(d_idxs)
 end
 
-function setdefectrange!(g::IsingGraph, idxs)
+function setdefectrange!(g::AbstractIsingGraph, idxs)
     setdefectrange!(defects(g), idxs)
 end
-function setdefectrange!(l::IsingLayer, idxs)
+function setdefectrange!(l::AbstractIsingLayer, idxs)
     d_idxs = setdefectrange!(defects(graph(l)), idxLToG.(idxs, Ref(l)))
     defects(graph(l)).layerdefects[internal_idx(l)] += d_idxs
 end
-function setaliverange!(l::IsingLayer, idxs)
+function setaliverange!(l::AbstractIsingLayer, idxs)
     d_idxs = setaliverange!(defects(graph(l)), idxLToG.(idxs, Ref(l)))
     defects(graph(l)).layerdefects[internal_idx(l)] -= d_idxs
 end

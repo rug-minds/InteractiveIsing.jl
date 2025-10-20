@@ -16,11 +16,6 @@ end
 
 export reshapeView
 
-# TODO: Self weight with continuous graphs
-# TODO: Generation ranges of states
-
-# include("AdjList.jl")
-
 include("Data.jl")
 include("GraphDefects.jl")
 include("Parameters.jl")

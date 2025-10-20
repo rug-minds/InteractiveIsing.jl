@@ -5,7 +5,7 @@ end
 """
 From the type initialize
 """
-function HamiltonianTerms{HS}(g::IsingGraph) where HS <: Tuple{Vararg{Hamiltonian}}
+function HamiltonianTerms{HS}(g::AbstractIsingGraph) where HS <: Tuple{Vararg{Hamiltonian}}
     HamiltonianTerms{HS}(ntuple(i->HS.parameters[i](g), length(HS.parameters)))
 end
 
@@ -38,7 +38,7 @@ Base.:+(h1::HamiltonianTerms, h2::Hamiltonian) = HamiltonianTerms((hamiltonians(
 end
 
 function setparam(ham::Hamiltonian, field, paramval)
-    fnames = fieldnames(typeof(ham))
+    fnames = paramnames(typeof(ham))
     found = findfirst(x->x==field, fnames)
     if isnothing(found)
         error("Field $field not found in Hamiltonian $ham")
@@ -48,12 +48,12 @@ function setparam(ham::Hamiltonian, field, paramval)
 end
 export setparam
 
-function paramactivation!(g::IsingGraph, param::Symbol, activation::Bool)
+function paramactivation!(g::AbstractIsingGraph, param::Symbol, activation::Bool)
     g.hamiltonian = paramactivation(g.hamiltonian, param, activation)
     refresh(g)
 end
 
-function h_param(g::IsingGraph, param::Symbol)
+function h_param(g::AbstractIsingGraph, param::Symbol)
     return getproperty(g.hamiltonian, param)
 end
 export paramactivation!, h_param
