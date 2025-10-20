@@ -27,6 +27,8 @@ function weightfunc_xy_antiferro(dr, c1, c2)
     # z 方向保持铁磁 (正耦合)
     if dx == 0 && dy == 0
         prefac = 1
+    elseif dx == 0
+        prefac = 1
     else
         # xy 平面反铁磁 (负耦合)
         prefac = -1
@@ -116,14 +118,14 @@ II.makie_markersize[] = 0.3
 # Launch interactive visualization (idle until createProcess(...) later)
 interface(g)
 
-temp(g,1.5)
+temp(g,0)
 g.hamiltonian = Ising(g) + DepolField(g, c=60000, left_layers=1, right_layers=1)
 g.hamiltonian = sethomogenousparam(g.hamiltonian, :b)
 
-homogeneousself!(g,2)
+homogeneousself!(g,-1000)
 
 # wg1 = @WG weightfunc_xy_antiferro NN = (2,2,2)
-wg1 = @WG weightfunc1 NN = (1,1,1)
+wg1 = @WG weightfunc_xy_antiferro NN = (1,1,1)
 genAdj!(g[1], wg1)
 
 fullsweep = xL*yL*zL
@@ -132,7 +134,7 @@ SpeedRate = Int(Time_fctr*fullsweep)
 
 ### risepoint and Amptitude are factors from pulse
 risepoint=500
-Amptitude =10
+Amptitude =500
 # risepoint = round(Int, Amptitude/0.01)
 
 ### Run with TrianlePulseA
