@@ -2,9 +2,14 @@ using InteractiveIsing, InteractiveIsing.Processes, BenchmarkTools, JET, Tullio,
 import AcceleratedKernels as AK
 import InteractiveIsing as II
 
+function ising(dr)
+    return dr == 1 ? 1 : 0
+end
+
 g = IsingGraph(30,30,30, type = Discrete, periodic = (:z, :y))
 # g.hamiltonian = NIsing
-wg = @WG (dr) -> dr == 1 ? 1 : 0 NN = (1,1,1)
+wg = @WG ising NN = (1,1,1)
+
 genAdj!(g[1], wg)
 
 # g.hamiltonian = NIsing(g) + DepolField(g)
@@ -15,16 +20,15 @@ getparam(g, :b)
 
 function tulliotest(state, adj, hamiltonian, idx)
     (;b) = hamiltonian
-    @tullio threads = false avx = true sum := b[j]*state[j]  + adj[idx, j]*state[j]
+    @tullio threads = false sum := b[idx]*state[idx]  + adj[j, idx]*state[j]
     return sum
 end
 
 function ak_test(state, adj, hamiltonian, idx)
     (;b) = hamiltonian
     sum = Float32(0)
-    AK.foreachindex(nzrange(adj, idx)) do ptr
-        j = nzrange(adj, idx)[ptr]
-        sum += b[j]*state[j]  + adj[idx, j]*state[j]
+    AK.foraxes(adj, 2) do j
+        sum += b[idx]*state[idx]  + adj[idx, j]*state[j]
     end
     return sum
 end
@@ -36,13 +40,25 @@ pause(g)
 _state = II.state(g)
 _adj = II.adj(g)
 gh = g.hamiltonian
+tadj = Tensor(_adj)
 
-
+tulliotest(_state, _adj, gh, 1, proposal_state = 1)
 @benchmark tulliotest($_state, $_adj, $gh, 1)
 @benchmark ak_test($_state, $_adj, $gh, 1)
 h = II.deltaH(g.hamiltonian)
 @benchmark h(args, j = 1)
+args.newstate
 
+function finchtest(state, adj, hamiltonian, idx, proposal_state = 1)
+    (;b) = hamiltonian
+    # sum = 0f0
+    @einsum sum[] += b[idx]*(state[idx]-proposal_state)  + adj[idx, j]*(state[j]-proposal_state)
+    return sum
+end
+
+finchtest(_state, _adj, gh, 1)[]
+h(args, j = 1)
+@benchmark finchtest($_state, $_adj, $gh, 1)
 
 interface(g)
 createProcess(g, Metropolis)
