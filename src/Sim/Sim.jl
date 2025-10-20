@@ -10,7 +10,7 @@ include("Process.jl")
 include("TimedFunctions.jl")
 include("User.jl")
 
-const simulation = UnRef(IsingSim, destructor)
+# const simulation = UnRef(IsingSim, destructor)
 
 function simulate(
     len::Integer = 500,

@@ -3,7 +3,7 @@
 const coord_symbs = (:i, :j, :k, :l, :m, :n)
 
 # Gives a vector of the relative lattice positions
-function dlayer(layer1::IsingLayer, layer2)::NTuple{3,Int32}
+function dlayer(layer1::AbstractIsingLayer, layer2)::NTuple{3,Int32}
     if coords(layer1) != nothing && coords(layer2) != nothing
         return rel_coords = coords(layer2) .- coords(layer1)
     else
@@ -62,7 +62,7 @@ export nearest
 """
 Check wether a coordinate is in the layer
 """
-function isin(i, j, layer::IsingLayer)
+function isin(i, j, layer::AbstractIsingLayer)
     if (1 <= i <= glength(layer)) && (1 <= j <= gwidth(layer))
         return true
     end
@@ -72,7 +72,7 @@ end
 
 isin((i, j)::NTuple{2,T}, layer) where T = isin(i, j, layer)
 
-function isin(i,j,k,layer::IsingLayer)
+function isin(i,j,k,layer::AbstractIsingLayer)
     _size = size(layer)
     if (1 <= i <= _size[1]) && (1 <= j <= _size[2]) && (1 <= k <= _size[3])
         return true
@@ -83,22 +83,22 @@ end
 
 isin((i, j, k)::NTuple{3,T}, layer) where T = isin(i, j, k, layer)
 
-function dist2(layer1::IsingLayer, layer2::IsingLayer, i1, j1, i2, j2, alignment::Symbol = :center)
+function dist2(layer1::AbstractIsingLayer, layer2::AbstractIsingLayer, i1, j1, i2, j2, alignment::Symbol = :center)
     _, _, dlz = dlayer(layer1, layer2)
     i21, j21 = coordsl2tol1(layer1, layer2, i2, j2, alignment)
     return (i1 - i21)^2 + (j1 - j21)^2 + dlz^2
 end
 
-function dist2(layer1::IsingLayer, layer2::IsingLayer, idx1, idx2, alignment::Symbol = :center) 
+function dist2(layer1::AbstractIsingLayer, layer2::AbstractIsingLayer, idx1, idx2, alignment::Symbol = :center) 
     i1, j1 = idxToCoord(idx1, glength(layer1))
     i2 ,j2 = idxToCoord(idx2, glength(layer2))
 
     return @inline dist2(layer1, layer2, i1, j1, i2, j2, alignment)
 end
 
-dist(layer1::IsingLayer, layer2::IsingLayer, i1, j1, i2, j2, alignment::Symbol = :center) = sqrt(dist2(layer1, layer2, i1, j1, i2, j2, alignment))
+dist(layer1::AbstractIsingLayer, layer2::AbstractIsingLayer, i1, j1, i2, j2, alignment::Symbol = :center) = sqrt(dist2(layer1, layer2, i1, j1, i2, j2, alignment))
 
-function lattice2_iterator(layer1::IsingLayer, layer2::IsingLayer, i1, j1, NN, alignment = :center)
+function lattice2_iterator(layer1::AbstractIsingLayer, layer2::AbstractIsingLayer, i1, j1, NN, alignment = :center)
     # Get a square around the coordinate
     coordsl1 = [(i1+i,j1+j) for i in (-(NN)):(NN), j in (-(NN)):(NN)]
     # Given the relative positions of the layers
@@ -116,7 +116,7 @@ Give two layers and a coordinate in the first one
 Return the connections of the coordinate in the first layer to the second layer
     by returning the coordinates of the connections and the values of the connections
 """
-function lattice2_iterator(layer1::IsingLayer, layer2::IsingLayer, i1, j1, NNi, NNj, prealloc::AbstractPreAlloc, alignment = :center)
+function lattice2_iterator(layer1::AbstractIsingLayer, layer2::AbstractIsingLayer, i1, j1, NNi, NNj, prealloc::AbstractPreAlloc, alignment = :center)
     # it = (-(NN)):(NN)
     for j in -NNj:NNj
         for i in -NNi:NNi

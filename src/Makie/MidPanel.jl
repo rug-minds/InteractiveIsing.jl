@@ -101,28 +101,30 @@ function midPanel(window)
 
 
             Box(rightpanel[1,1], width = 100, height = 50, visible = false)
-            tempslider = mp[:tempslider] = tempslider = Slider(rightpanel[2,1], range = 0.0:0.02:20, value = 1.0, horizontal = false)
+            slider_max = 20.0
+
+            tempslider = mp[:tempslider] = tempslider = Slider(rightpanel[2,1], range = 0.0:0.02:slider_max, value = 1.0, horizontal = false)
             
             tempslider.value.ignore_equal_values = true
 
-            set_close_to!(tempslider, temp(g)[])
+            set_close_to!(tempslider, temp(g))
             window[:gtemp] = PolledObservable(temp(g), (o) -> temp(g))
+                        
             on(window[:gtemp]) do x
-                temp(g, x)
                 set_close_to!(tempslider, x)
             end
             pushpolled!(window, window[:gtemp])
-            ob_pair = Observables.ObservablePair(tempslider.value, window[:gtemp])
-            mp[:ob_pair] = ob_pair
 
-            #Isn't this redundant?
+
             on(tempslider.value) do x
-                set_close_to!(tempslider, x)
+                if 0.0 < x < slider_max
+                    temp(g, x)
+                end
             end
 
-            push!(obs_funcs, ob_pair.links...)
+            # push!(obs_funcs, ob_pair.links...)
 
-            mp[:temptext] = lift(x -> "T: $x", tempslider.value)
+            mp[:temptext] = lift(x -> "T: $x", window[:gtemp])
 
             mp[:templabel] = Label(rightpanel[1,1], mp[:temptext], fontsize = 18)
         

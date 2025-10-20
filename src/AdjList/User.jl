@@ -18,8 +18,8 @@ end
 Generate the connections in a layer based on a weightgenerator and set the connections in the layer
 Then put the connections directly in the graph
 """
-@inline genAdj!(layer::IsingLayer, wg) = set_adj!(layer, wg, genAdj(layer, wg))
-@inline genAdj!(x::IsingLayer, ::Nothing) = nothing
+@inline genAdj!(layer::AbstractIsingLayer, wg) = set_adj!(layer, wg, genAdj(layer, wg))
+@inline genAdj!(x::AbstractIsingLayer, ::Nothing) = nothing
 
 """
 Give a weightgenerator and two layers.
@@ -46,7 +46,7 @@ genAdjFull!(l1, l2) = connectLayersFull!(l1,l2)
 Generate the connections between two layers based on a weightgenerator and set the connections in the layers
 Then put the connections directly in the graph
 """
-@inline genAdj!(layer1::IsingLayer, layer2::IsingLayer, wg) = set_adj!(layer1, layer2, wg, genAdj(layer1, layer2, wg))
+@inline genAdj!(layer1::AbstractIsingLayer, layer2::AbstractIsingLayer, wg) = set_adj!(layer1, layer2, wg, genAdj(layer1, layer2, wg))
 
 """
 Removes the connections within a layer
@@ -68,7 +68,7 @@ Give two layers and an index in the first layer
 Return the connections of the index in the first layer to the second layer
     by returning the coordinates of the connections and the values of the connections
 """
-function viewConnections(layer1::IsingLayer, layer2::IsingLayer, idx)
+function viewConnections(layer1::AbstractIsingLayer, layer2::AbstractIsingLayer, idx)
     # g = graph(layer1)
     # g_idx = idxLToG(idx, layer)
     connections = adj(layer1)[:, idx]
@@ -79,7 +79,7 @@ end
 """
 Same as the other, but now provide the coordinates of the index in the first layer
 """
-viewConnections(layer1::IsingLayer, layer2::IsingLayer, i, j) = viewConnections(layer1, layer2, coordToIdx(i,j,layer1))
+viewConnections(layer1::AbstractIsingLayer, layer2::AbstractIsingLayer, i, j) = viewConnections(layer1, layer2, coordToIdx(i,j,layer1))
 
 """
 Give a list of indexes in the state of a layer

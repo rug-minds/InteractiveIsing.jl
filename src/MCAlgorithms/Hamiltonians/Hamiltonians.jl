@@ -71,9 +71,9 @@ function GatherHamiltonianParams(tups::Tuple{Symbol, DataType, <:Real, String}..
     return HamiltonianParams(symbs, types, defaultvals, descriptions)
 end
 
-params(c::Type{<:CompositeHamiltonian}, graph::IsingGraph) = merge(params.(hamiltonians(c), eltype(graph))...)
-params(h::Type{H}, graph::IsingGraph) where H <: Hamiltonian = params(H(), eltype(graph))
-params(h::Hamiltonian, g::IsingGraph) = params(h, eltype(g))
+params(c::Type{<:CompositeHamiltonian}, graph::AbstractIsingGraph) = merge(params.(hamiltonians(c), eltype(graph))...)
+params(h::Type{H}, graph::AbstractIsingGraph) where H <: Hamiltonian = params(H(), eltype(graph))
+params(h::Hamiltonian, g::AbstractIsingGraph) = params(h, eltype(g))
 
 args(::Type{H}) where H <: Hamiltonian = args(H())
 
@@ -126,9 +126,9 @@ function Hamiltonian_Builder(::Type{algo}, graph, oldparams, hamiltonians::Hamil
     (;ΔH = @RuntimeGeneratedFunction(H_ex), gparams)
 end
 
-rawH(algo, gr::IsingGraph) = Meta.parse(H_expr(requires(algo), gr, gr.hamiltonian...))
-getH(gr::IsingGraph) = Hamiltonian_Builder(gr.default_algorithm, gr, gr.hamiltonian)
-getH(algo, gr::IsingGraph) = Hamiltonian_Builder(algo, gr, gr.hamiltonian)
+rawH(algo, gr::AbstractIsingGraph) = Meta.parse(H_expr(requires(algo), gr, gr.hamiltonian...))
+getH(gr::AbstractIsingGraph) = Hamiltonian_Builder(gr.default_algorithm, gr, gr.hamiltonian)
+getH(algo, gr::AbstractIsingGraph) = Hamiltonian_Builder(algo, gr, gr.hamiltonian)
 
 function setH!(gr, Hs...)
     if length(Hs) == 1

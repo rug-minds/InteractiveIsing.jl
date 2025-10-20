@@ -8,8 +8,8 @@ function baseFig(g; disp = true, interval = 1/60)
         cleanup(ml, baseFig)
     end
 
-    timedFunctions[:upf] = updatesPerFrame
-    timedFunctions[:magnetization] = magnetization
+    # timedFunctions[:upf] = updatesPerFrame
+    # timedFunctions[:magnetization] = magnetization
     sim = simulation[]
     sim.timers[:makie] = PTimer((timer) -> timerFuncs(sim) ,0., interval = interval)
 
