@@ -15,5 +15,5 @@ MagField(type, len, active = false) = MagField(ParamVal(zeros(type, len), type |
 params(::Type{MagField}) = HamiltonianParams((:b, Vector{GraphType}, GraphType(0), "Magnetic Field"))
 
 @ParameterRefs function deltaH(::MagField)
-    return (s_j - sn_j)*b_j
+    return (s[j] - sn[j])*b[j]
 end

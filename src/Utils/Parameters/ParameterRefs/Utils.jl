@@ -56,26 +56,31 @@ function substitute_paramref(ex, indexes, symb)
 end
 
 ParameterRefs_ex = nothing
+# macro ParameterRefs(ex)
+#     if @capture(ex, function fname_(a__) body_ end)
+#         symbs = find_paramref(body)
+#         for (symb, indexes) in zip(symbs[1], symbs[2])
+#             body = substitute_paramref(body, indexes, symb)
+#         end
+#         ex = quote function $fname($(a...)) $body end end
+#         global ParameterRefs_ex = ex
+#         return esc(ex)
+#     else
+#         if ex isa Symbol
+#             ex = Expr(:block, ex)
+#         end
+#         symbs = find_paramref(ex)
+#         for (symb, indexes) in zip(symbs[1], symbs[2])
+#             ex = substitute_paramref(ex, indexes, symb)
+#         end
+#         global ParameterRefs_ex = ex
+#         return esc(ex)
+#     end 
+# end
+
 macro ParameterRefs(ex)
-    if @capture(ex, function fname_(a__) body_ end)
-        symbs = find_paramref(body)
-        for (symb, indexes) in zip(symbs[1], symbs[2])
-            body = substitute_paramref(body, indexes, symb)
-        end
-        ex = quote function $fname($(a...)) $body end end
-        global ParameterRefs_ex = ex
-        return esc(ex)
-    else
-        if ex isa Symbol
-            ex = Expr(:block, ex)
-        end
-        symbs = find_paramref(ex)
-        for (symb, indexes) in zip(symbs[1], symbs[2])
-            ex = substitute_paramref(ex, indexes, symb)
-        end
-        global ParameterRefs_ex = ex
-        return esc(ex)
-    end 
+    # if @capture(ex, function fname_(a__) body_ end)
+    MacroTools.postwalk(x -> @capture(x, p_[i__]) ? ParameterRef(p, i...) : x, ex)
 end
 
 var"@PR" = var"@ParameterRefs"

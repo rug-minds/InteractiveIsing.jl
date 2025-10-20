@@ -33,6 +33,9 @@ end
 function ParameterRef(symb)
     sstr = String(symb)
     u_found = findfirst(x -> x == '_', sstr)
+    if isnothing(u_found)
+        return ParameterRef(symb; func = identity, data = nothing)
+    end
     if length(sstr) == 2
         return ParameterRef(Symbol(sstr[1]); func = identity, data = nothing)
     end
