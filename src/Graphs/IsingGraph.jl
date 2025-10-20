@@ -53,7 +53,7 @@ Default initializer for IsingGraphs
     or
     (Layer1, Weightgenerator12, Layer2, Layer3, WeightGenerator34)
 """
-function IsingGraph(layers_or_wgs::Union{LayerProperties, WeightGenerator}...; precision = Float32, kwargs...)
+function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerator}...; precision = Float32, kwargs...)
     layers_props = tuple((layers_or_wgs[i] for i in eachindex(layers_or_wgs) if isa(layers_or_wgs[i], LayerProperties))...)
 
     # Fill the weight generator list
@@ -259,7 +259,7 @@ export adj
 @inline graph(g::IsingGraph) = g
 
 ### Access the layer ###
-@inline function spinidx2layer(g::IsingGraph, idx)::IsingLayer
+@inline function spinidx2layer(g::IsingGraph, idx)
     @assert idx <= nStates(g) "Index out of bounds"
     # for layer in unshuffled(layers(g))
     for layer in layers(g)
@@ -297,7 +297,7 @@ Base.get(g::IsingGraph, s, d) = get(g.addons, s, d)
 # end
 
 
-function Base.convert(::Type{<:IsingLayer}, g::IsingGraph)
+function Base.convert(::Type{<:AbstractIsingLayer}, g::IsingGraph)
     @assert length(g.layers) == 1 "Graph has more than one layer, ambiguous"
     return g.layers[1]
 end 

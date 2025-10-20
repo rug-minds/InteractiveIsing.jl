@@ -13,8 +13,6 @@ Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val),
 
 
 export Coords
-# TODO: Make the topology part of the layertype
-const IsingLayerDim{N} = IsingLayer{ST,SS, N, S, PR, T, Ps, AT} where {ST,SS,S,PR,T,Ps,AT} 
 mutable struct IsingLayer{StateType, StateSet, Dim, Size, PtrRange, Top, Precision, AdjType} <: AbstractIsingLayer{StateType, Dim}
     # Reference to the graph holding it    
     # Can be nothing so that saving is easier
@@ -87,7 +85,7 @@ function IsingLayer(
 end
 
 get_weightgenerator(layer::IsingLayer) = get(layer.connections, layer.idx => layer.idx, nothing)
-struct LayerProperties
+struct LayerProperties <: AbstractLayerProperties
     size::Tuple
     kwargs::NamedTuple
 end

@@ -2,12 +2,12 @@
 ## just keep track of the number of defecs in a vector
 
 struct LayerDefects
-    graph::IsingGraph
-    l::IsingLayer
+    graph::AbstractIsingGraph
+    l::AbstractIsingLayer
     layeridx::Integer
 end
 
-defects(layer::IsingLayer) = LayerDefects(graph(layer), layer, internal_idx(layer))
+defects(layer::AbstractIsingLayer) = LayerDefects(graph(layer), layer, internal_idx(layer))
 export defects
 #extend base show for Layerdefects, showing only the number of defects
 function Base.show(io::IO, defects::LayerDefects)

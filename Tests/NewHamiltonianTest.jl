@@ -1,24 +1,40 @@
-using InteractiveIsing, Processes, BenchmarkTools, JET
+using InteractiveIsing, InteractiveIsing.Processes, BenchmarkTools, JET, Tullio
 import InteractiveIsing as II
 
 g = IsingGraph(30,30,30, type = Discrete, periodic = (:z, :y))
 # g.hamiltonian = NIsing
-wg = @WG "(dr) -> dr == 1 ? 1 : 0" NN = (1,1,1)
+wg = @WG (dr) -> dr == 1 ? 1 : 0 NN = (1,1,1)
 genAdj!(g[1], wg)
 
 # g.hamiltonian = NIsing(g) + DepolField(g)
-g.hamiltonian = NIsing(g)
-g.hamiltonian = II.deactivateparam(g.hamiltonian, :b)
+g.hamiltonian = Ising(g)
+# g.hamiltonian = II.deactivateparam(g.hamiltonian, :b)
 
-function tulliotest(g, state, adj, params, idx)
-    (;b) = params
-    @tullio sum := b[j]*state[j]  + adj[idx, j]*state[j]
+getparam(g.hamiltonian, :b)
+
+function tulliotest(state, adj, hamiltonian, idx)
+    (;b) = hamiltonian
+    @tullio threads = false avx = true sum := b[j]*state[j]  + adj[idx, j]*state[j]
     return sum
 end
 
+createProcess(g, Metropolis)
+args = getargs(process(g))
+pause(g)
+
+_state = II.state(g)
+_adj = II.adj(g)
+gh = g.hamiltonian
+
+
+@benchmark tulliotest($_state, $_adj, $gh, 1)
+h = II.deltaH(g.hamiltonian)
+@benchmark h(args, j = 1)
+
 
 interface(g)
-createProcess(g, MetropolisNew)
+createProcess(g, Metropolis)
+
 
 close(process(g))
 as = (;fetch(g)..., newstate =II.NewState(0f0))

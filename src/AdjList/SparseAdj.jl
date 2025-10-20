@@ -213,7 +213,7 @@ export genLayerConnections
 Give preallocated vectors for row_idxs, col_idxs, and weights
     fills them with the connections withing between two layers
 """
-function _fillSparseVecs(layer1::IsingLayer, layer2::IsingLayer, row_idxs, col_idxs, weights, wg, pre_3tuple)
+function _fillSparseVecs(layer1::AbstractIsingLayer, layer2::AbstractIsingLayer, row_idxs, col_idxs, weights, wg, pre_3tuple)
     NN = wg.NN
 
     local NNi = NN
@@ -275,8 +275,8 @@ struct Copy <: ConnectionReturnType end
 """
 Remove all connections within layer
 """
-# @inline removeConnections(layer::IsingLayer) = removeConnections(layer, View)
-function removeConnections(layer::IsingLayer)
+# @inline removeConnections(layer::AbstractIsingLayer) = removeConnections(layer, View)
+function removeConnections(layer::AbstractIsingLayer)
     old_rows, old_cols, old_weights  = findnz(adj(graph(layer)))
 
     filter = Vector{Bool}(undef , length(old_rows))
@@ -304,7 +304,7 @@ end
 """
 Remove all connections within layer and going in and out of layer
 """
-function removeConnectionsAll(layer::IsingLayer)
+function removeConnectionsAll(layer::AbstractIsingLayer)
     old_rows, old_cols, old_weights  = findnz(adj(graph(layer)))
 
     filter = Vector{Bool}(undef , length(old_rows))

@@ -52,6 +52,7 @@ using SparseArrays, StaticArrays, LoopVectorization
 export AbstractIsingGraph
 abstract type AbstractIsingGraph{T} end
 abstract type AbstractIsingLayer{T,DIMS} <: AbstractIsingGraph{T} end
+abstract type AbstractLayerProperties end
 
 
 
@@ -66,12 +67,13 @@ include("Utils/Utils.jl")
 
 ### DECLARED TYPES
 @debug "Forward declaring types"
-@ForwardDeclare IsingGraph "Graphs/IsingGraph.jl"
-@ForwardDeclare IsingLayer "Graphs/Layers/IsingLayer.jl"
-@ForwardDeclare LayerProperties "Graphs/Layers/IsingLayer.jl"
+# @ForwardDeclare IsingGraph "Graphs/IsingGraph.jl"
+# @ForwardDeclare IsingLayer "Graphs/Layers/IsingLayer.jl"
+# @ForwardDeclare LayerProperties "Graphs/Layers/IsingLayer.jl"
 # @ForwardDeclare Parameters "Graphs"
 # @ForwardDeclare IsingSim "Sim"  # Commented out because IsingSim struct is commented out in source
-@ForwardDeclare SimLayout "Makie/SimLayout.jl"
+# @ForwardDeclare SimLayout "Makie/SimLayout.jl"
+abstract type AbstractSimLayout end
 @debug "Forward declarations complete"
 
 abstract type StateType end
