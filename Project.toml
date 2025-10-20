@@ -42,6 +42,7 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 [compat]
 AcceleratedKernels = "0.4.3"
 Finch = "1.2.10"
+MacroTools = "0.5.16"
 Tullio = "0.3.8"
 
 [extras]

@@ -52,11 +52,17 @@ function pushpolled!(w::MakieWindow, po::PolledObservable)
 end
 
 function Base.close(window::MakieWindow)
+    # println("Closing window ", window.uuid)
     close(window.maintimer)
+    # println("Closed main timer")
     close.(window.timers)
+    # println("Closed other timers")
     close.(window.polled_observables)
+    # println("Closed polled observables")
     close_window(window)
+    # println("Called custom close_window")
     close_glfw(window)
+    # println("Closed GLFW window")
 end
 
 function close_window(window::MakieWindow) #Overloadable for custom closing
@@ -92,8 +98,11 @@ function new_window(;window_type = :Any, objectptr = nothing, refresh_rate = 30,
 
     on(window_open) do x
         if !x
+            # println("Window open set to false, closing window.")
             close(w)
+            # println("Deleting window from registry.")
             delete!(windows, w)
+            # println("Window deleted.")
         end
     end
 
