@@ -24,7 +24,9 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Observables = "510215fc-4207-5dde-b226-833fc4488ee2"
+OpenCV = "f878e3a2-a245-4720-8660-60795d644f2a"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -39,19 +41,10 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [compat]
-<<<<<<< Updated upstream
 AcceleratedKernels = "0.4.3"
+OpenCV = "4.6.1"
+Plots = "1.41.1"
 Tullio = "0.3.8"
-=======
-CairoMakie = "0.15.4"
-ColorSchemes = "~3.29.0"
-GLMakie = "~0.13.2"
-JET = "~0.9.18"
-LayoutPointers = "~0.1.17"
-MacroTools = "~0.5.15"
-OrderedCollections = "~1.8.0"
-Unitful = "~1.23.1"
->>>>>>> Stashed changes
 
 [extras]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
