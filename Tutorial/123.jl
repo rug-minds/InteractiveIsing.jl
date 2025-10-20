@@ -48,7 +48,6 @@ function weightfunc_xy_dilog_antiferro(dr, c1, c2)
     return prefac / norm2(d)
 end
 
-
 # Weight function variant 1
 function weightfunc3(dr,c1,c2)
     prefac = 1
