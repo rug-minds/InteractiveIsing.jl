@@ -20,7 +20,6 @@ function weightfunc1(dr,c1,c2)
     return prefac / norm2(d)
 end
 
-
 function weightfunc_xy_antiferro(dr, c1, c2)
     d = delta(c1, c2)
     dx, dy, dz = d
@@ -66,9 +65,6 @@ function weightfunc4(dr,c1,c2)
     # Always positive coupling (ferromagnetic)
     return prefac / norm2(d)
 end
-
-
-
 
 ##################################################################################
 ### Pulse type: TrianglePulseA (simple four-segment triangular waveform)
