@@ -34,8 +34,9 @@ end
     β = one(Ttype)/(temp(g))
 
     oldstate = @inbounds gstate[j]
-    newstate[j] = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))
 
+    newstate[j] = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))
+    
     ΔE = @inline deltafunc((;args..., newstate), (;j))
     
     efac = exp(-β*ΔE)

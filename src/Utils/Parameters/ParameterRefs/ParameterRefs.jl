@@ -295,30 +295,6 @@ function generate_block(reftype::ParameterRef, argstype, idxs = (;), precision =
     func_exp = partialf_exp(getF(reftype), :(@$))
     expr = dimsum_exp(rtype, filled_indices; valname = struct_ref[1], fexp = func_exp)
     
-    # rtype = dereftype(reftype, argstype)
-    # func = getF(reftype)
-    # vec_index_exp = Expr(:ref, :vec, ind...)
-    # # value_exp = expr_F_wrap(reftype, vec_index_exp)
-    # value_exp = Expr(:call, func, vec_index_exp)
-
-    # totalname = gensym(:total)
-    # expr = nothing
-    # if loopconstant(rtype)
-    #     expr = :($totalname += $(unroll_exp(rtype, :vec, name -> expr_F_wrap(reftype, name))))
-    # else
-    #     expr = nested_turbo_wrap(:( $totalname += $(value_exp)), (:(axes(vec, $i_ind)) for i_ind in 1:length(contract_ind)) |> collect, contract_ind)
-    # end
-    
-
-    # expr = quote
-    #     $(unpack_keyword_expr(filled_indices, :idxs))
-    #     vec = $(struct_ref_exp(reftype)...)
-    #     $totalname = eltype(vec)(0)
-    #     $(expr)
-    #     # rtype = $(rtype)
-    #     $totalname
-    # end
-
     return expr
 end
 

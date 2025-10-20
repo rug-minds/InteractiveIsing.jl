@@ -61,7 +61,7 @@ function IsingLayer(
         isnothing(periodic) && (periodic = true)
         top = SquareTopology(lsize; periodic)
         graphidxs = start:(start+reduce(*, lsize)-1)
-        set = convert.(eltype(g), set)
+        set = convert.(precision, set)
 
         layer = IsingLayer{stype, set, dims, lsize, graphidxs, typeof(top), precision, adjtype}(
             # Graph
