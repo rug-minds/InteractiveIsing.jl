@@ -44,6 +44,9 @@ function ParamVal(val::T, default = nothing, active = false; description = "", h
     end
 end
 
+ScalarParam(val::Real; description = "") = ParamVal(val, val, true; description)
+ScalarParam(T::Type, val::Real; description = "") = ParamVal(convert(T, val), convert(T, val), true; description)
+
 const HomogenousParamVal{T, D, Active, N} = ParamVal{T, D, Active, Base.RefValue{eltype(T)}, N}
 
 """
