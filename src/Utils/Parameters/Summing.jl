@@ -2,6 +2,16 @@ const idxnames = (:i, :j, :k, :l, :m, :n)
 
 getkeys(idxs) = (idxs isa Tuple || idxs <: Tuple) ? idxs : index_names(idxs)
 
+"""
+    dimsum_common_exp(idxs, N; fexp = (:(F(@\$))), valname = :pv, idxsname = :idxs, precision = nothing)
+
+Generate an expression for summing over N-dimensional arrays with optional fixed indices.
+
+This metaprogramming function creates code that efficiently sums over an N-dimensional array,
+optionally fixing some indices and looping over the rest. The `fexp` parameter allows custom
+transformations via interpolation (where `@\$` is replaced with array element access). Uses
+`@turbo` for performance when looping over free indices.
+"""
 function dimsum_common_exp(idxs, N; fexp = (:(F(@$))), valname = :pv, idxsname = :idxs, precision = nothing)
     totalname = gensym(:total)
     filled_inds = getkeys(idxs)

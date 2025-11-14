@@ -77,7 +77,7 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
     end,
     length(layers_props))
     
-    self = ParamVal(precision[], 0, "Self Connections", false)
+    self = ParamVal(precision[], 0, false, description = "Self Connections")
 
     _datalen = l_startidx - 1
 

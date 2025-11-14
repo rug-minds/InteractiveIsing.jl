@@ -93,7 +93,7 @@ Base.splat(p::Parameters) = splat(get_nt(p))
 
 function changeactivation(params, param, activate)
     if !isnothing(activate) && isactive(params, param) != activate
-        newparam = ParamVal(getproperty(params,param).val, default(params, param), description(params, param), activate)
+        newparam = ParamVal(getproperty(params,param).val, default(params, param), activate, description = description(params, param))
         return Parameters(;get_nt(params)..., param => newparam)
     end 
     return params
@@ -101,7 +101,7 @@ end
 
 function changedefault(params, param, val)
     if default(params, param) != val
-        newparam = ParamVal(getproperty(params,param).val, val, description(params, param), isactive(params, param))
+        newparam = ParamVal(getproperty(params,param).val, val, isactive(params, param), description = description(params, param))
         return Parameters(;get_nt(params)..., param => newparam)
     end 
     return params

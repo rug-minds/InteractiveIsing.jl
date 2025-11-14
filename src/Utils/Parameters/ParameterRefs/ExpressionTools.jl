@@ -88,7 +88,7 @@ Base.iterate(a::AssignmentExprPrepare, state = 1) = state == 2 ? nothing : (a, s
 function get_assignments(apr::AbstractParameterRef, args, filled_idxs = nothing)
     if isa(apr, ParameterRef)
         lidxs = loop_idxs(apr, filled_idxs)
-        if loopconstant(dereftype(apr, args))
+        if loopconstant(dereftype(apr, args)) # If it's value-like then it was already assigned
             return AssignmentExprPrepare(apr, gensym(ref_symb(apr)), Expr(:call, :getindex, struct_ref_exp(apr)...))
         elseif isempty(lidxs) # If there's no loop idxs, it can safely be assigned
             return AssignmentExprPrepare(apr, gensym(ref_symb(apr)), Expr(:call, :getindex, struct_ref_exp(apr)..., ref_indices(apr)...))

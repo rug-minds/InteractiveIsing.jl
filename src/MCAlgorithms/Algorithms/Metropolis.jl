@@ -1,6 +1,6 @@
 export Metropolis
 struct Metropolis<: MCAlgorithm end
-struct deltaH end
+# struct deltaH end
 
 function Processes.prepare(::Metropolis, @specialize(args))
     (;g) = args
@@ -9,14 +9,16 @@ function Processes.prepare(::Metropolis, @specialize(args))
     self = g.self
     iterator = ising_it(g)
     hamiltonian = init!(g.hamiltonian, g)
-    deltafunc = deltaH(hamiltonian)
+    # deltafunc = deltaH(hamiltonian)
     rng = Random.GLOBAL_RNG
     M = Ref(sum(g.state))
     Δs_j = Ref(zero(eltype(g.state)))
-    newstate = SparseVal(eltype(gstate)(0), Int32(0), Int32(length(gstate)))
+    # newstate = SparseVal(eltype(gstate)(0), Int32(0), Int32(length(gstate)))
+    
+    drule = DeltaRule(:s, j = 0 => eltype(gstate)(0)) # Specify which spin will be flipped
 
     lmeta = LayerMetaData(g[1])
-    return (;gstate, gadj, iterator, hamiltonian, deltafunc, lmeta, rng, M, Δs_j, newstate, self)
+    return (;g ,gstate, gadj, iterator, hamiltonian, lmeta, rng, M, Δs_j, self, drule)
     # args = (;gstate, gadj, iterator, hamiltonian, deltafunc, lmeta, rng, newstate)
 end
 
@@ -29,24 +31,27 @@ end
 end
 
 @inline function Metropolis(args::As) where As
-    (;g, gstate, j, deltafunc, rng, lmeta, newstate) = args
+    (;g, gstate, gadj, self, j, rng, lmeta, hamiltonian, drule) = args
     Ttype = eltype(g)
     β = one(Ttype)/(temp(g))
 
     oldstate = @inbounds gstate[j]
 
-    newstate[j] = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))
+    # newstate[j] = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))
+    drule[j] = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))
     
-    ΔE = @inline deltafunc((;args..., newstate), (;j))
+    # ΔE = @inline deltafunc((;args..., newstate), (;j))
+
+    ΔE = ΔH(hamiltonian, (;args..., self = self, s = gstate, w = gadj, hamiltonian...), drule)
     
     efac = exp(-β*ΔE)
     if (ΔE <= zero(Ttype) || rand(rng, Ttype) < efac)
-        @inbounds gstate[j] = newstate[]
+        @inbounds gstate[j] = drule[]
         @hasarg if M isa Ref
-            M[] += (newstate - oldstate)
+            M[] += (drule[] - oldstate)
         end
         @hasarg if Δs_j isa Ref
-            Δs_j[] = newstate - oldstate
+            Δs_j[] = drule[] - oldstate
         end
     else
         @hasarg if Δs_j isa Ref

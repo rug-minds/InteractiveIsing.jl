@@ -75,27 +75,26 @@ function get_minuses(rr::RefReduce)
     tuple(rr[num_plusses(rr)+1:end]...) 
 end
 
-@generated function ref_indices(rr::RefReduce)
-    t = tuple(union(ref_indices.(get_prefs(rr()))...)...)
-    return :($t)
-end
+_ref_indices(rr::RefReduce) = tuple(union(_ref_indices.(_get_prefs(rr))...)...)
+
 issparse(::RefReduce{Refs, reduce_fs}) where {Refs, reduce_fs} = all(issparse.(Refs))
 
-"""
-Only consists of simple refs
-"""
-function ispure(rr::RefReduce)
+function _ispure(rr::RefReduce)
     pure = true
-    all_indices_flattened = Set(Iterators.flatten(ref_indices.(get_prefs(rr))))
-    for ref in get_prefs(rr)
-        idxs = ref_indices(ref)
-        pure = ispure(ref) && isempty(setdiff(all_indices_flattened, idxs)) #Underlying is pure, and all have same indices
+    all_indices_flattened = Set(Iterators.flatten(_ref_indices.(_get_prefs(rr))))
+    for ref in _get_prefs(rr)
+        idxs = _ref_indices(ref)
+        pure = _ispure(ref) && isempty(setdiff(all_indices_flattened, idxs)) #Underlying is pure, and all have same indices
         if !pure
             break
         end
     end
     return pure
 end
+
+"""
+Only consists of simple refs
+"""
 
 ### EXPRESSION STUFF
 

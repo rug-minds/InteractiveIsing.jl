@@ -90,7 +90,7 @@ end
 
 function sethomogenousparam(ham::Hamiltonian, param::Symbol)
     initialparam = getproperty(ham, param)
-    newparam = HomogenousParamVal(initialparam.val, length(initialparam.val), initialparam.description, true)
+    newparam = HomogenousParamVal(initialparam.val, length(initialparam.val), true; description = initialparam.description)
     setparam(ham, param, newparam)
 end
 

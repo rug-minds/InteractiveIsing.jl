@@ -24,24 +24,11 @@ expand_exp ?
 
 
 type_apply(f, apr::Type{<:AbstractParameterRef}) = f(apr())
+Base.iterate(apr::AbstractParameterRef, state = 1) = iterate(get_prefs(apr), state)
 
 ### PARAMTER REF
 struct ParameterRef{Symb, indices, F, D} <: AbstractParameterRef 
     data::D
-end
-
-function ParameterRef(symb)
-    sstr = String(symb)
-    u_found = findfirst(x -> x == '_', sstr)
-    if isnothing(u_found)
-        return ParameterRef(symb; func = identity, data = nothing)
-    end
-    if length(sstr) == 2
-        return ParameterRef(Symbol(sstr[1]); func = identity, data = nothing)
-    end
-    get_symb = sstr[1:u_found-1]
-    get_index = sstr[u_found+1:end]
-    return ParameterRef(Symbol(get_symb), Symbol.(tuple(get_index...))...)
 end
 
 function ParameterRef(symb, indices...; func = identity, data = nothing)
@@ -60,11 +47,14 @@ setF(pr::ParameterRef, func) = ParameterRef(ref_symb(pr), ref_indices(pr)...; fu
 """ 
 Indices in this node stay the same for every nody downwards in the tree
 """
+_ispure(apr::AbstractParameterRef) = ispure(apr)
 ispure(::ParameterRef) = true
 ispure(::Type{PR}) where PR<:AbstractParameterRef = ispure(PR())
 ispureval(::ParameterRef) = Val(true)
 ispureval(::Type{PR}) where PR<:AbstractParameterRef = Val(ispure(PR()))
 
+_get_prefs(apr::AbstractParameterRef) = get_prefs(apr)
+# _get_prefs(apr::ParameterRef) = get_prefs(apr)
 get_prefs(p::ParameterRef) = tuple(p)
 
 ref_symb(::ParameterRef{S}) where S = S #Get the symbol of the reference
@@ -72,6 +62,7 @@ ref_symb(::Type{PR}) where PR<:AbstractParameterRef = ref_symb(PR())
 full_symb(pr::ParameterRef) = Symbol(ref_symb(pr), ref_indices(pr)...)
 full_symb(::Type{PR}) where PR<:AbstractParameterRef = full_symb(PR())
 
+_ref_indices(apr::AbstractParameterRef) = ref_indices(apr)
 ref_indices(::ParameterRef{S, idxs}) where {S, idxs} = idxs #Get the indices
 """
 Get a set of the indices present in the type of an AbstractParameterRef
@@ -134,10 +125,6 @@ Base.:*(apr::AbstractParameterRef, factor::Real) = setF(apr, PartialF(*, nothing
 Base.:*(factor::Real, apr::AbstractParameterRef) = setF(apr, PartialF(*, factor, nothing))
 
 
-@generated function get_ref(p, args::DataType)
-    return :(args.$(ref_symb(p)))
-end
-
 #Expression stuff
 function getzero_exp(apr::AbstractParameterRef, precision = nothing)
     if isnothing(precision)
@@ -160,8 +147,9 @@ Get the reference to the struct in either args or params
     Based on the symbol
 """
 function struct_ref_exp(p::ParameterRef)
-    path = tuple(refmap(Val(ref_symb(p)))...)
-    return (build_getproperty_chain(:args, path),)
+    return (Expr(:call, :getproperty, :args, QuoteNode(ref_symb(p))),)
+    # path = tuple(refmap(Val(ref_symb(p)))...)
+    # return (build_getproperty_chain(:args, path),)
 end
 
 """
@@ -223,11 +211,6 @@ end
 end
 
 ## ACCESSORS
-@generated function Base.get(pr::ParameterRef, args)
-    ref = struct_ref_exp(pr)
-    exp = quote $(ref...) end
-    return exp
-end
 export get
 
 num_free(apr::AbstractParameterRef) = length(ref_indices(apr))
@@ -235,23 +218,16 @@ num_free(apr::AbstractParameterRef) = length(ref_indices(apr))
 """
 Go from parameter ref to the struct it wants to reference
 """
-get_ref_exp = nothing
-@generated function get_ref(p, args::Union{<:NamedTuple, <:Base.Pairs})
-    symb = type_apply(ref_symb, p)
-    refs = refmap(Val(symb))
-    global get_ref_exp = :($(build_getproperty_chain(:args, refs)))
-    return get_ref_exp
-end
 
 ## PREF FUNCTIONS
 @inline function dereftype(pr::ParameterRef, args::NamedTuple)
     @inline typeof(get_ref(pr, args))
 end
 
-@inline function dereftype(pr, args::DataType)
-    struct_refs = refmap(Val(ref_symb(pr)))
-    # return gettype_recursive(args, struct_refs)
-    return gettype_recursive_nongen(args, struct_refs)
+ii_fieldtype(nt::NamedTuple, field::Symbol) = fieldtype(typeof(nt), field)
+ii_fieldtype(nt::Type{<:NamedTuple}, field::Symbol) = fieldtype(nt, field)
+@inline function dereftype(pr::ParameterRef, args::DataType)
+    return ii_fieldtype(args, ref_symb(pr))
 end
 
 
@@ -306,11 +282,6 @@ paramref_type_args = []
 
 (pr::ParameterRef)(args::AS; idxs...) where AS = @inline (pr)(args, (;idxs...))
 
-@inline @generated function (pr::ParameterRef)(args::AS, idxs) where AS
-    global paramref_type_exp = generate_block(pr(), args, idxs, rem_lnn = false)
-    return paramref_type_exp
-end
-
 include("Simplify.jl")
 
 include("RefReduce.jl")
@@ -323,5 +294,10 @@ include("BlockModels.jl")
 
 include("Blocks.jl")
 
+# Generated functions separated to avoid circular dependencies
+include("GeneratedTraits.jl")
+
 # include("Resolvers.jl")
 include("Show.jl")
+
+include("NewParameterRefs.jl")
