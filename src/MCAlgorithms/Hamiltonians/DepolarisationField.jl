@@ -33,7 +33,7 @@ function DepolField(g; c = 3600, top_layers = 1, bottom_layers = 1)
     return dpf
 end
 
-function update!(dpf::DepolField, args)
+function update!(::Metropolis, dpf::DepolField, args)
     (;lmeta, j, Δs_j) = args
     l1 = layer(lmeta)
     layer2dsize = size(l1,1)*size(l1,2)

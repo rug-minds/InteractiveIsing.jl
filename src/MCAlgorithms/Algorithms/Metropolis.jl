@@ -59,6 +59,6 @@ end
         end
     end
 
-    @inline update!(args.hamiltonian, args)
+    @inline update!(Metropolis(), args.hamiltonian, args)
     return nothing
 end

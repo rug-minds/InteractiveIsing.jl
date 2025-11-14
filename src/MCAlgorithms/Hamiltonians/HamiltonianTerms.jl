@@ -186,16 +186,16 @@ Get a hamiltonian from the set of hamiltonians
 Base.getindex(hts::HamiltonianTerms, idx::Int) = getfield(hts, :hs)[idx]
 
 
-update!(a,b) = nothing
+update!(algo, a,b) = nothing
 """
 If updating functions are defined, update
 """
 update!_expr = quote end
-@inline @generated function update!(hts::HamiltonianTerms{Hs}, args) where Hs
+@inline @generated function update!(algo, hts::HamiltonianTerms{Hs}, args) where Hs
     # names = paramnames(hts)
     num_h = numhamiltonians(hts)
     global update!_expr = quote
-        $([:(update!(hamiltonians(hts)[$i]::$(Hs.parameters[i]), args)) for i in 1:num_h]...)
+        $([:(update!(algo, hamiltonians(hts)[$i]::$(Hs.parameters[i]), args)) for i in 1:num_h]...)
     end
     return update!_expr
 end
