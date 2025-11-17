@@ -7,7 +7,7 @@ end
 
 wg = ii.@WG (dr,c1,c2) -> 1/dr NN=1
 
-g3d = ii.IsingGraph(10,10,10, type = Continuous, periodic = true)
+g3d = ii.IsingGraph(40,40,10, type = Continuous, periodic = (:x,:y))
 genAdj!(g3d[1], wg) 
 
 wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=1

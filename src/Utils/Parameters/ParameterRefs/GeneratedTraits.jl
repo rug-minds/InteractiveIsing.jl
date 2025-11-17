@@ -63,11 +63,6 @@ end
     return :($_intersect)
 end
 
-@inline @generated function (rc::RefMult{Refs})(args::NT, idxs) where {Refs,NT}
-    global refmult_type_exp = generate_block(rc(), args, idxs)
-    return refmult_type_exp    
-end
-
 # RefReduce generated functions
 @generated function ref_indices(rr::RefReduce)
     t = _ref_indices(rr())
@@ -79,9 +74,9 @@ end
     return :($pure)
 end
 
-@inline @generated function (rr::RefReduce)(args::NT, idxs) where NT
-    rr = simplify(rr)
-    global refreduce_type_args = [rr, args, idxs]
-    global refreduce_type_exp = generate_block(rr(), args, idxs)
-    return refreduce_type_exp
-end
+# @inline @generated function (rr::RefReduce)(args::NT, idxs) where NT
+#     rr = simplify(rr)
+#     global refreduce_type_args = [rr, args, idxs]
+#     global refreduce_type_exp = generate_block(rr(), args, idxs)
+#     return refreduce_type_exp
+# end

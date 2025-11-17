@@ -110,12 +110,13 @@ end
     #     return (;_prepare(Algo, args)...)
     # end
 
+
 include("HamiltonianTerms.jl")
 
 
 
 export HamiltonianTerms
-include("DeltaH.jl")
+include("DeltaRule.jl")
 include("Quadratic.jl")
 include("Quartic.jl")
 include("MagField.jl")
@@ -125,4 +126,6 @@ include("IsingOLD.jl")
 include("GaussianBernoulli.jl")
 include("Clamping.jl")
 include("DepolarisationField.jl")
+include("DeltaH.jl")
+
     
