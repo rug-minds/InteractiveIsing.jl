@@ -1,0 +1,3 @@
+struct DepolDFT <: Hamiltonian
+    
+end

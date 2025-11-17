@@ -8,6 +8,7 @@
     
 
     include("Utils.jl")
-    include("Hamiltonians/Hamiltonians.jl")
     include("Algorithms/Algorithms.jl")
+    include("Hamiltonians/Hamiltonians.jl")
+
 # end

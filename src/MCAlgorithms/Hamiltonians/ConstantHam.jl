@@ -14,7 +14,7 @@ end
 # Define how the Hamiltonian updates internal state
 # At the end of the Metropolis step
 # May use the args that are prepared for the Metropolis algorithm
-function update!(::Metropolis, ch::ExampleHamiltonian, args)
+function update!(ch::ExampleHamiltonian, args)
     ch.value += 1
     return ch
 end
