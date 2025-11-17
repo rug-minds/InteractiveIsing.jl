@@ -176,18 +176,20 @@ function contraction_type(rc::RefMult, args)
     end
 end
 
+
+function _get_prefs(rm::RefMult{Refs}) where Refs
+    if mixed_mult(rm)
+        c = tuple(collect(Iterators.flatten(Refs))...)
+        return c
+    else
+        return Refs
+    end
+end
+
 """
 Get the flattened parameter refs
 Ie. if Refs = ((R1), (R2)) then get_prefs = (R1, R2)
 """
-@generated function get_prefs(p::RefMult{Refs}) where Refs
-    if mixed_mult(p())
-        c = tuple(collect(Iterators.flatten(Refs))...)
-        return :($c)
-    else
-        return :($Refs)
-    end
-end
 
 """
 Get the struct reference expressions (i.e. args.params.symobl) for each parameter ref
@@ -200,22 +202,10 @@ function struct_ref_exp(rm::RefMult{Refs}) where Refs
 end
 
 
-
-
-"""
-Check if a RefMult is pure
-    This only holds if it is a simple multiplication of the refs
-    And all the underlying refs are pure
-    I.e. (a_i + b_j) * (c_i + d_j) is not pure, 
-        even though both reduces have the same indices
-"""
-function ispure(rm::RefMult{Refs}) where {Refs}
-    # if typeof(Refs) <: Tuple{Vararg{Tuple}} # If Refs has multiple partitions, then it is not pure
-    #     return :(false)
-    # end
+function _ispure(rm::RefMult{Refs}) where {Refs}
     pure = true
     # indexset = ref_indices(rm())
-    prefs = get_prefs(rm)
+    prefs = _get_prefs(rm)
     for ridx in 1:length(prefs)-1
         if !isempty(ref_indices(prefs[ridx])) || !isempty(ref_indices(prefs[ridx+1]))
             if ref_indices(prefs[ridx]) != ref_indices(prefs[ridx+1])
@@ -224,37 +214,34 @@ function ispure(rm::RefMult{Refs}) where {Refs}
             end
         end
     end
-    # return :($pure)
     return pure
 end
 
 """
+Check if a RefMult is pure
+    This only holds if it is a simple multiplication of the refs
+    And all the underlying refs are pure
+    I.e. (a_i + b_j) * (c_i + d_j) is not pure, 
+        even though both reduces have the same indices
+"""
+
+function _ref_indices(rc::RefMult)
+    t = nothing
+    if mixed_mult(rc)
+        t = tuple(union(_ref_indices.(Iterators.flatten(_get_prefs(rc)))...)...)
+    else
+        t = tuple(union(_ref_indices.(_get_prefs(rc))...)...)
+    end
+    return t
+end
+"""
 Get the indices present in the RefMult
 """
-@generated function ref_indices(rc::RefMult{Refs}) where Refs
-    t = nothing
-    if typeof(Refs) <: Tuple{Vararg{Tuple}}
-        t = tuple(union(ref_indices.(get_prefs(rc()))...)...)
-    else
-        t = tuple(union(ref_indices.(Refs)...)...)
-    end
-    return :($t)
-end
 
 ### MULTS
 """
 Gives the indices that are present in both refs
 """
-@generated function indices_set(ref1::AbstractParameterRef, ref2::AbstractParameterRef, filled_indices = nothing)
-    idcs1 = ref_indices(ref1())
-    idcs2 = ref_indices(ref2())
-    _union = tuple(union(idcs1, idcs2)...)
-    if !(filled_indices <: Nothing) # If indices are filled, they are esentially not there
-        _union = tuple((setdiff(_union, getval(filled_indices)))...)
-    end
-    # Return each symbol without duplicates
-    return :($_union)
-end
 
 """
 Given two refs and indices that are filled, return the indices that are contracted
@@ -262,15 +249,6 @@ Given two refs and indices that are filled, return the indices that are contract
     Filled indices are indices specified by the user to have a singular value
     This allows for contractions of say: a_i*w_i2, where in w_ij j is of constant value 2
 """
-@generated function contract_indices(ref1, ref2, filled_indices = nothing)
-    idcs1 = ref_indices(ref1())
-    idcs2 = ref_indices(ref2())
-    _intersect = tuple(intersect(idcs1, idcs2)...)
-    if !(filled_indices <: Nothing) && !(filled_indices == @NamedTuple{}) # If indices are filled, they are esentially not there
-        _intersect = tuple((setdiff(_intersect, getval(filled_indices)))...)
-    end
-    return :($_intersect)
-end
 
 """
 

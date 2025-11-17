@@ -1,6 +1,6 @@
 export visualize_connections
-function visualize_connections(g, i)
-    window = new_window()
+function visualize_connections(g::AbstractIsingLayer, i)
+    window = new_window(window_type = :Connections, title = "Connections from node $i")
     # Make GridLayout
     window[:gridlayout] = window.f[1, 1] = GridLayout()
 
@@ -8,8 +8,12 @@ function visualize_connections(g, i)
     weights = conn_weights(g,i)
     colorvec[conn_idxs(g,i)] .= weight_colors(weights)
     # return (colorvec)
+    window[:layer] = g
     window[:ax] = create_layer_axis!(window, window, color = colorvec)
 end
+
+current_layer(window::MakieWindow{:Connections}) = window[:layer]
+
 
 visualize_connections(g, i, j) = visualize_connections(g, coordToIdx(Int32.((i, j)), size(g)))
 visualize_connections(g, i, j, k) = visualize_connections(g, coordToIdx(Int32.((i, j, k)), size(g)) )

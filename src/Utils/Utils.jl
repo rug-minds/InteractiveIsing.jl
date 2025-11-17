@@ -1,4 +1,5 @@
 include("Functions.jl")
+include("Expressions.jl")
 include("ShuffleVec.jl")
 include("PreAlloc.jl")
 include("Sparse.jl")
