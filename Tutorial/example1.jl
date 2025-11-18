@@ -50,15 +50,6 @@ function weightfunc_xy_dilog_antiferro(dr, c1, c2)
     return prefac / norm2(d)
 end
 
-# Weight function variant 1
-function weightfunc3(dr,c1,c2)
-    prefac = 1
-    d = delta(c1,c2)
-    dx, dy, _ = d
-    # Always positive coupling (ferromagnetic)
-    return prefac / norm2(d)
-end
-
 function weightfunc4(dr,c1,c2)
     prefac = -1
     d = delta(c1,c2)
@@ -111,20 +102,47 @@ end
 xL = 40  # Length in the x-dimension
 yL = 40  # Length in the y-dimension
 zL = 10   # Length in the z-dimension
-g = IsingGraph(xL, yL, zL, stype = Continuous(), periodic = false)
+g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
 
 # Launch interactive visualization (idle until createProcess(...) later)
 interface(g)
 
-temp(g,0)
-g.hamiltonian = Ising(g) + DepolField(g, c=60000, left_layers=1, right_layers=1)
+temp(g,1.5)
+# g.hamiltonian = Ising(g) + DepolField(g, c=8000, left_layers=1, right_layers=1)
+g.hamiltonian = Ising(g) + DepolField(g, c=8000, top_layers=1, bottom_layers=1)
+
+# g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1) + Quartic(g) + Sextic(g)
+
+### Use ii. to check if the terms are correct
+
+
+### Now the H is written like H_self + H_quartic
+### Which is Jii*Si^2 + Qc*Jii*Si^4 wichi means Jii=a, Qc*Jii=b in a*Si^2 + b*Si^4
+### Set Jii=-0.5
+
+
+a1, b1, c1 = 1, 0, 0   
+# x = range(-1.0, 1.0, length=1000)
+# y = a1 .* x.^2 .+ b1 .* x.^4 .+ c1 .* x.^6
+# fig = Figure(resolution = (800, 400))
+# ax = Axis(fig[1, 1]; xlabel = "x", ylabel = "f(x)")
+# lines!(ax, x, y, color = :blue, linewidth = 2)
+# hlines!(ax, [0], color = (:gray, 0.5), linestyle = :dash)
+# display(fig)
+
+
 g.hamiltonian = sethomogenousparam(g.hamiltonian, :b)
+homogeneousself!(g,a1)
+# ### Set Qc*Jii=1
+# g.hamiltonian[4].qc[] = b1/a1
+# ### Set Sc*Jii=1
+# g.hamiltonian[5].sc[] = c1/a1
 
-homogeneousself!(g,-1000)
 
-# wg1 = @WG weightfunc_xy_antiferro NN = (2,2,2)
+
+# wg1 = @WG weightfunc_xy_dilog_antiferro NN = (2,2,2)
 wg1 = @WG weightfunc1 NN = (1,1,1)
 # wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
 
@@ -167,6 +185,8 @@ Pr= args.y;
 # end
 w2=newmakie(lines, voltage, Pr)
 w3=newmakie(lines,Pr)
+
+
 
 
 # show_connections(g[1],1,1,1)
