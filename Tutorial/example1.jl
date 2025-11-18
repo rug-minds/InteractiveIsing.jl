@@ -118,14 +118,11 @@ II.makie_markersize[] = 0.3
 # Launch interactive visualization (idle until createProcess(...) later)
 interface(g)
 
-temp(g,1)
-# g.hamiltonian = Ising(g) + DepolField(g, c=8000, left_layers=1, right_layers=1)
-# g.hamiltonian = Ising(g) + DepolField(g, c=8000, top_layers=1, bottom_layers=1)
-g.hamiltonian = Ising(g) + Quartic(g, qc=1 ) + DepolField(g, c=8000, left_layers=1, right_layers=1)
-
-### Use ii. to check if the terms are correct
+temp(g,0)
+g.hamiltonian = Ising(g) + DepolField(g, c=60000, left_layers=1, right_layers=1)
 g.hamiltonian = sethomogenousparam(g.hamiltonian, :b)
-homogeneousself!(g,1)
+
+homogeneousself!(g,-1000)
 
 # wg1 = @WG weightfunc_xy_antiferro NN = (2,2,2)
 wg1 = @WG weightfunc1 NN = (1,1,1)
