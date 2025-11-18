@@ -61,10 +61,7 @@ function Base.close(window::MakieWindow)
     # println("Closed polled observables")
     close_window(window)
     # println("Called custom close_window")
-    # Only close GLFW if window is still open (avoid circular callback)
-    if window[:window_open][]
-        close_glfw(window)
-    end
+    close_glfw(window)
     # println("Closed GLFW window")
 end
 

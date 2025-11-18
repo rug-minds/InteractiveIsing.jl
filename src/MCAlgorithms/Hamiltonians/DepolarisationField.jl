@@ -14,6 +14,8 @@ function Base.in(j::Integer, dpf::DepolField)
 end
 
 
+
+
 function get_dpf(dpf, g)
     ll = dpf.top_layers
     rl = dpf.bottom_layers
@@ -31,11 +33,11 @@ function init!(dpf::DepolField, g)
 end
 
 function DepolField(g; top_layers = 1, bottom_layers = 1, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers) )
-    pv = HomogenousParamVal(eltype(g) |> zero, length(state(g[1])), true, description = "Depolarisation Field")
+    pv = HomogeneousParam(eltype(g)(0), length(state(g[1])), description = "Depolarisation Field")
     # cv = DefaultParamVal(eltype(g)(c), description = "Depolarisation Field")
     cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
     fval = ScalarParam(eltype(g), 0.5; description = "Field contribution scale")
-    wg = @WG (dr) -> 1/dr^3 NN = 3
+    wg = @WG (dr) -> 1/dr^3 NN = 2
     fv = sparse(genLayerConnections(g[1], wg)..., nstates(g[1]), nstates(g[1]))
     
     dpf = DepolField(pv, cv, fval, fv, Int32(top_layers), Int32(bottom_layers), size(g[1]))
@@ -58,21 +60,19 @@ end
 function ΔH(dpf::DepolField, args, drule)
     (;s, self, c) = args
     j = getidx(drule)
-    if j ∈ dpf
+    base_term = c[]*dpf.dpf[j]
+    if j ∈ dpf # If in the surface
+                # Also compute the effect of changhing the field
         field_delta = zero(eltype(s))
         @turbo for ptr in nzrange(dpf.field_adj, j)
             i = dpf.field_adj.rowval[ptr]
             w_ij = dpf.field_adj.nzval[ptr]
             field_delta += w_ij * s[i]
         end
-        return (c[]*dpf.dpf[j] - dpf.field_c[]*field_delta)*(s[j] - drule[]) 
-    else
-
-        # H_j = - c* F_j*s_j
-        # ΔE = - c * F_j * (s_j' - s_j) = c * F_j * (s_j - s_j')
-        return (dpf.dpf[j]/c[])*(s[j] - drule[])
-
+        base_term -= dpf.field_c[]*field_delta
     end
+
+    return base_term * (s[j] - drule[])
 end
 
 @ParameterRefs function deltaH(::DepolField)

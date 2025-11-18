@@ -1,4 +1,4 @@
-export ParamVal, isinactive, isactive, toggle, default, getvalfield, setvalfield!, homogenousval, description
+export ParamVal, isinactive, isactive, toggle, default, getvalfield, setvalfield!, homogeneousval, description, toggle
 """
 A value for the parameters of a Hamiltonian
 It holds a description and a value of type t
@@ -10,15 +10,22 @@ It also stores wether it's active and if not a fallback value
     memory does not need to be accessed.
 """
 abstract type AbstractParamVal{T, Default, Active, N} <: AbstractArray{T,N} end
-mutable struct ParamVal{AT, Default, Active, H, N} <: AbstractParamVal{AT, Default, Active, N}
-    val::AT   
-    homogenousval::H # For vector valued parameters, a global value that can be changed at runtime
-                     # Either is of value T or Nothing
+mutable struct ParamVal{AT, Default, Active, N} <: AbstractParamVal{AT, Default, Active, N}
+    const val::AT
+    size::NTuple{N, Int}
     description::String
 end
 
+# Special Cases:
+# Vector like but same value everywhere
+const HomogeneousParamVal{T, D, Active, N} = ParamVal{<:AbstractArray{T,0}, D, Active, N}
+# Scalar Like/Reflike
+const ScalarParamVal{T, D, Active} = ParamVal{<:AbstractArray{T,0}, D, Active, 0}
+# Either, but inlined static value
+const StaticParamVal{T, D, N} = ParamVal{<:AbstractArray{T,N}, D, false, N}
 
-function ParamVal(val::T, default = nothing, active = false; description = "", homogenousval = false) where T
+
+function ParamVal(val::T, default = nothing, active = false; description = "") where T
     # If val is vector type, default value must be eltype, 
     # otherwise it must be the same type
     DIMS = nothing
@@ -28,105 +35,118 @@ function ParamVal(val::T, default = nothing, active = false; description = "", h
         DIMS = 0
     end    
     
-    if T <: Vector 
+    value = val
+    if T <: Vector #
         et = eltype(T)
         default = default == nothing ? et(1) : convert(eltype(T), default)
-        if homogenousval
-            return ParamVal{T, default, active, et, DIMS}(val, default, description)
-        else
-            return ParamVal{T, default, active, Nothing, DIMS}(val, nothing, description)
-        end
     else
         default = default == nothing ? T(1) : convert(T, default)
         value = Array{T}(undef)
         value[] = val
-        return ParamVal{typeof(value), default, active, Nothing, DIMS}(value, nothing, description)
     end
+    return ParamVal{typeof(value), default, active, DIMS}(value, size(value), description)
 end
+
+ParamVal{T, Default, Active, RD}(description::String = "") where {T, Default, Active, RD} = 
+    ParamVal{T, Default, Active, RD, (val isa AbstractArray ? length(size(val)) : 1)}(nothing, nothing, description)
 
 ScalarParam(val::Real; description = "") = ParamVal(val, val, true; description)
 ScalarParam(T::Type, val::Real; description = "") = ParamVal(convert(T, val), convert(T, val), true; description)
 
-const HomogenousParamVal{T, D, Active, N} = ParamVal{T, D, Active, Base.RefValue{eltype(T)}, N}
 
 """
-Stores a homogenous value for vector like ParamVals
+Stores a homogeneous value for vector like ParamVals
 """
-function HomogenousParamVal(val, length = 0, active = false; description = "")
-    return ParamVal(zeros(eltype(val), length), zero(eltype(val)), active; description = description, homogenousval = true)
+function HomogeneousParam(val, size...; active = true, description = "")
+    value = fill(val)
+    return ParamVal{typeof(value), val, active, length(size)}(value, size, description)
 end
 
-function DefaultParamVal(val; description = "")
-    return ParamVal(typeof(val)[], val, false; description = description)
+function StaticParam(val, size...; description = "")
+    return ParamVal(zeros(typeof(val), size...), val, false, description = description)
 end
 
-
-ParamVal{T, Default, Active, RD}(description::String = "") where {T, Default, Active, RD} = ParamVal{T, Default, Active, RD, (val isa AbstractArray ? length(size(val)) : 1)}(nothing, nothing, description)
-
-function ParamVal{T, Default, Active, H, N}(description::String = "") where {T, Default, Active, H, N}
-    val = nothing
-    hval = nothing
-    if T <: AbstractArray
-        val = T[]
-    elseif T <: Number
-        val = T(0)
-    end
-    if !(H <: Nothing)
-        hval = default
-    end
-    ParamVal{T, Default, Active, H, N}(val, hval, description)
-end
-
-
-function ParamVal(p::ParamVal, active::Bool = nothing)
-    return ParamVal(p.val, default(p), precedence_val(active, isactive(p)), description = p.description)
-end
-
-function ParamVal(p::ParamVal, default, active::Bool = nothing)
+# From other ParamVals
+function ParamVal(p::ParamVal, default = nothing , active::Bool = nothing)
     isnothing(active) && (active = isactive(p))
+    isnothing(default) && (default = default(p))
     return ParamVal(p.val, default, active, description = p.description)
 end
 
+"""
+Paramval: Active -> Static
+"""
+toggle(p::ParamVal{T, Default, Active}) where {T, Default, Active} = ParamVal{T, Default, !Active}(p.val)
+
+#Changing parameters
+changeactivation(p::ParamVal{T}, activate) where T = ParamVal(p.val, default(p), activate, description = p.description)
+activate(p::ParamVal{T}) where T = changeactivation(p, true)
+deactivate(p::ParamVal{T}) where T = changeactivation(p, false)
+
 
 ## TRAITS
-isinactive(::ParamVal{A,B,C}) where {A,B,C}= !C
-isactive(::ParamVal{A,B,C}) where {A,B,C} = C
-isactive(::Type{ParamVal{A,B,C,D,N}}) where {A,B,C,D,N} = C
-isinactive(::Type{ParamVal{A,B,C,D,N}}) where {A,B,C,D,N} = !C
-@inline default(p::ParamVal{T, Default, Active, D, N}) where {T, Default, Active, D, N} = Default
-@inline default(::Type{ParamVal{T, Default, Active, D, N}}) where {T, Default, Active, D, N} = Default
+# isinactive(::ParamVal{A,B,C,N}) where {A,B,C,N}= !C
+# isactive(::ParamVal{A,B,C,N}) where {A,B,C,N} = C
+# isactive(::Type{ParamVal{A,B,C,N}}) where {A,B,C,N} = C
+# isinactive(::Type{ParamVal{A,B,C,N}}) where {A,B,C,N} = !C
+
+
+ishomogeneous(p::Type{<:ParamVal}) = p <: HomogeneousParamVal
+ishomogeneous(p::ParamVal) = ishomogeneous(typeof(p))
+
+isscalar(p::Union{Type{<:ParamVal}, ParamVal}) = dims(p) == 0
+isstatic(p::Type{<:ParamVal{A,B,Active}}) where {A,B,Active} = !Active
+isstatic(p::ParamVal) = isstatic(typeof(p))
+
+isactive(p::ParamVal{A,B,C}) where {A,B,C} = C
+isactive(p::Type{<:ParamVal{A,B,C}}) where {A,B,C} = C
+isinactive(p::ParamVal{A,B,C}) where {A,B,C}= !C
+
+@inline default(p::ParamVal{T, Default, Active, N}) where {T, Default, Active, N} = Default
+@inline default(::Type{<:ParamVal{T, Default}}) where {T, Default} = Default
 description(p::ParamVal) = p.description
-ishomogenous(p::ParamVal{T, Default, Active, RD}) where {T, Default, Active, RD} = RD != Nothing
-ishomogenous(::Type{ParamVal{T, Default, Active, RD, N}}) where {T, Default, Active, RD, N} = RD != Nothing
 
-function get_globalval(p::ParamVal{T, Default, Active, RD, N}) where {T, Default, Active, RD, N}
-    rd = getfield(p, :homogenousval)::RD
-    return rd[]::eltype(T)
-end
-
-
-dims(p::ParamVal{T, Default, Active, RD, N}) where {T, Default, Active, RD, N} = N
-dims(::Type{ParamVal{T, Default, Active, RD, N}}) where {T, Default, Active, RD, N} = N
+dims(p::ParamVal{T, Default, Active, N}) where {T, Default, Active, N} = N
+dims(::Type{ParamVal{T, Default, Active, N}}) where {T, Default, Active, N} = N
 
 # Will be constant over any iteration
-loopconstant(p::ParamVal) = !isactive(p) || ishomogenous(p)
-loopconstant(p::Type{<:ParamVal}) = !isactive(p) || ishomogenous(p)
+loopconstant(p::ParamVal) = !isactive(p) || ishomogeneous(p)
+loopconstant(p::Type{<:ParamVal}) = !isactive(p) || ishomogeneous(p)
 function unroll_exp(p::Union{Type{<:ParamVal}, <:ParamVal}, vecname, exp_f = identity)
     :(length(vecname)*$(exp_f(:($(vecname)[]))))
 end
 
+# # Single value Params
+# Base.getindex(p::ParamVal) = p.val[]
+# Base.getindex(p::ParamVal, idx) = p.val[idx]
 
-toggle(p::ParamVal{T, Default, Active}) where {T, Default, Active} = ParamVal{T, Default, !Active}(p.val)
+function Base.setindex!(p::ParamVal, val)
+    @assert !isstatic(p) "Cannot set value of a static ParamVal"
+    @assert ishomogeneous(p) || isscalar(p) "Cannot set value of a non-homogeneous/scalar ParamVal without an index"
+    p.val[] = val
+end
+function Base.setindex!(p::ParamVal, val, idx)
+    @assert !isstatic(p) "Cannot set value of a static ParamVal"
+    p.val[idx] = val
+end
 
-# Single value Params
-@inline Base.getindex(p::ParamVal{T}) where T <: Array{TT,0} where TT = p.val[]
-@inline Base.setindex!(p::ParamVal{T}, val) where T <: Array{TT,0} where TT = (p.val[] = val)
-@inline Base.lastindex(p::ParamVal{T}) where T <: Array{TT,0} where TT = 1
-@inline Base.eachindex(p::ParamVal{T}) where T <: Array{TT,0} where TT = Base.OneTo(1)
-Base.size(p::ParamVal{T}) where T = (1,)
-Base.length(p::ParamVal{T}) where T = 1
-@inline Base.eltype(p::ParamVal{T}) where T = T
-@inline Base.eltype(pt::Type{<:ParamVal{T,D,A,RD,N}}) where {T,D,A,RD,N} = eltype(T)
+function Base.eachindex(p::ParamVal)
+    if ishomogeneous(p)
+        return Base.OneTo(prod(size(p)))
+    end
+    eachindex(p.val)
+end
+
+Base.size(p::ParamVal) = size(p.val)
+function Base.length(p::ParamVal)
+    if ishomogeneous(p)
+        return prod(size(p))
+    end
+    length(p.val)
+end
+
+Base.eltype(p::ParamVal) = eltype(p.val)
+Base.eltype(pt::Type{<:ParamVal{T,D,A,N}}) where {T,D,A,N} = eltype(T)
 
 """
 For getting and setting fields of the value of a ParamVal
@@ -136,60 +156,64 @@ setvalfield!(p::ParamVal, field, val) = setfield!(p.val, field, val)
 
 
 #Vector Like ParamVals
-@inline @generated function Base.getindex(p::ParamVal{T}) where T <: AbstractArray
-    if isactive(p) && !ishomogenous(p)
-        :(error("Cannot index an active parameter with []"))
-    end
-    if ishomogenous(p)
-        return :(p.homogenousval::eltype(T))
+# @inline @generated function Base.getindex(p::ParamVal{T}) where T <: AbstractArray
+#     @assert !isactive(p) || ishomogeneous(p) "Cannot index an active parameter with []"
+#     getval = isstatic(p) ? :(p.val[]) : :(default(p))
+#     return :($(getval)::eltype(T))
+# end
+@inline function Base.getindex(p::ParamVal{T}) where T <: AbstractArray
+    @assert !isactive(p) || ishomogeneous(p) "Cannot index an active parameter with []"
+    getval = isstatic(p) ? default(p) : p.val[]
+    return getval::eltype(T)
+end
+
+
+@inline function Base.getindex(p::ParamVal{T}, idx::Integer) where T <: AbstractArray
+    if ishomogeneous(p)
+        @boundscheck 0 < idx <= prod(size(p))
+        retval = p.val[]
+    elseif isstatic(p)
+        @boundscheck checkbounds(p.val, idx)
+        retval = default(p)
     else
-        return :($(default(p))::eltype(T))
+        retval = p.val[idx]
     end
+    return retval::eltype(T)
 end
 
-
-@inline @generated function Base.getindex(p::ParamVal{T}, idx) where T <: AbstractArray
-    if isactive(p)
-        if ishomogenous(p)
-            return :(p.homogenousval::eltype(T))
-        else
-            return :(getindex(p.val, idx)::eltype(T))
-        end
+@inline function Base.getindex(p::ParamVal{T}, idx::UnitRange) where T <: AbstractArray
+    if ishomogeneous(p)
+        @boundscheck 0 < first(idx) <= last(idx) <= prod(size(p))
+        return fill(p.val[], size(p))::Vector{eltype(T)}
+    elseif isstatic(p)
+        @boundscheck checkbounds(p.val, idx)
+        return fill(default(p), length(idx))::Vector{eltype(T)}
     else
-        return :($(default(p))::eltype(T))
+        return p.val[idx]::Vector{eltype(T)}
     end
 end
 
-@inline @generated function Base.getindex(p::ParamVal{T}, idx::UnitRange) where T <: AbstractArray
-    if isactive(p)
-        if ishomogenous(p)
-            return :([p.homogenousval for i in idx]::Vector{eltype(T)})
-        else
-            return :((getindex(p.val, idx))::Vector{eltype(T)})
-        end
+# @inline @generated function Base.setindex!(p::ParamVal{T}, val, idx) where T <: AbstractArray
+#     if ishomogeneous(p)
+#         return :((p.homogeneousval = val)::eltype(T))
+#     end
+#     return :((setindex!(p.val, val, idx))::T)
+# end
+
+@inline function Base.setindex!(p::ParamVal{T}, val, idx) where T <: AbstractArray
+    @assert !isstatic(p) "Cannot set value of a static ParamVal, use StaticParamVal(param, val) instead"
+    if ishomogeneous(p)
+        @boundscheck 0 < idx <= prod(size(p))
+        p.val[] = val
     else
-        return :([$(default(p)) for i in idx]::Vector{eltype(T)})
+        p.val[idx] = val
     end
 end
 
-@inline @generated function Base.setindex!(p::ParamVal{T}, val, idx) where T <: AbstractArray
-    if ishomogenous(p)
-        return :((p.homogenousval = val)::eltype(T))
-    end
-    return :((setindex!(p.val, val, idx))::T)
-end
-
-@inline @generated function Base.setindex!(p::ParamVal{T}, val) where T <: AbstractArray
-    if ishomogenous(p)
-        return quote
-            p.homogenousval = val
-        end
-    elseif dims(p) == 0
-        return quote
-            p.val[] = val
-        end
-    end
-    error("Cannot set a value to a non-homogenous ParamVal without an index")
+@inline function Base.setindex!(p::ParamVal{T}, val) where T <: AbstractArray
+    @assert !isstatic(p) "Cannot set value of a static ParamVal, use StaticParamVal(param, val) instead"
+    @assert ishomogeneous(p) || isscalar(p) "Cannot set value of a non-homogeneous/scalar ParamVal without an index"
+    p.val[] = val
 end
 
 Base.dotview(p::ParamVal{T}, i...) where T <: AbstractArray = Base.dotview(p.val, i...)
@@ -205,14 +229,8 @@ Base.splice!(p::ParamVal{T}, idx...) where T <: AbstractArray = splice!(p.val, i
 
 Base.push!(p::ParamVal{T}, val) where T <: AbstractArray = push!(p.val, val)
 
-
-#Changing parameters
-changeactivation(p::ParamVal{T}, activate) where T = ParamVal(p.val, default(p), activate, description = p.description)
-activate(p::ParamVal{T}) where T = changeactivation(p, true)
-deactivate(p::ParamVal{T}) where T = changeactivation(p, false)
-
-sethomogenousval(p::ParamVal{T}, val) where T = ParamVal(p.val, val, isactive(p), description = p.description, homogenousval = true)
-removehomogenousval(p::ParamVal{T}, def = default(p)) where T = ParamVal(p.val, def, isactive(p), description = p.description, homogenousval = false)
+sethomogeneousval(p::ParamVal{T}, val) where T = ParamVal(p.val, val, isactive(p), description = p.description, homogeneousval = true)
+removehomogeneousval(p::ParamVal{T}, def = default(p)) where T = ParamVal(p.val, def, isactive(p), description = p.description, homogeneousval = false)
 
 
 # Loopvectorization stuff
@@ -262,10 +280,10 @@ function Base.show(io::IO, ::MIME"text/plain", p::ParamVal{T}) where T
 end
 
 function Base.show(io::IO, ::MIME"text/plain", p::ParamVal{T}) where {T <: AbstractVector}
-    if ishomogenous(p)
+    if ishomogeneous(p)
         l = length(p.val)
         println(io, "$(l)-element $(eltype(p.val)) constant parameter")
-        print(io, "Value: $(p.homogenousval[])")
+        print(io, "Value: $(p.homogeneousval[])")
     else
         println(io, (isactive(p) ? "Active " : "Inactive "))
         println(io, "$(p.description) with vector value.")
@@ -273,43 +291,3 @@ function Base.show(io::IO, ::MIME"text/plain", p::ParamVal{T}) where {T <: Abstr
         display(p.val)
     end
 end
-
-"""
-If one of the values is nothing, return the other, otherwise return the logical and of the two values
-"""
-function nothing_and(val1, val2)
-    if isnothing(val1)
-        return val2
-    elseif isnothing(val2)
-        return val1
-    else
-        return val1 && val2
-    end
-end
-
-"""
-If one of the values is nothing, return the other, otherwise return the logical or of the two values
-"""
-function nothing_or(val1, val2)
-    if isnothing(val1)
-        return val2
-    elseif isnothing(val2)
-        return val1
-    else
-        return val1 || val2
-    end
-end
-
-"""
-If the first value is nothing, return the second value, otherwise return the first value
-"""
-function precedence_val(val1, val2)
-    if isnothing(val1)
-        return val2
-    else
-        return val1
-    end
-end
-
-
-export ParamVal, toggle

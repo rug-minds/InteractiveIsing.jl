@@ -77,9 +77,12 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
     end,
     length(layers_props))
     
-    self = ParamVal(precision[], 0, false, description = "Self Connections")
 
     _datalen = l_startidx - 1
+    
+
+    self = StaticParam(0f0, _datalen, description = "Self Connections")
+
 
     g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(layers)}(
         # sim,
@@ -429,7 +432,7 @@ end
     refresh(g)
 end
 @inline function homogeneousself!(g, val = 1)
-    g.self = sethomogenousval(g.self, val) # Set self to zero
+    g.self = sethomogeneousval(g.self, val) # Set self to zero
     refresh(g)
 end
 export activateself!, disableself!, homogeneousself!

@@ -1,21 +1,22 @@
-using InteractiveIsing
+using InteractiveIsing, JET
 import InteractiveIsing as ii
 
 function isingfunc(dr, c1, c2)
-    return 2/dr
+    return 2/dr^2
 end
 
 
 g3d = ii.IsingGraph(80,80,10, type = Continuous, periodic = (:x,:y))
 
 wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=3
-@code_warntype genAdj!(g3d[1], wg) 
+genAdj!(g3d[1], wg) 
+@report_opt genAdj!(g3d[1], wg) 
 
 
 
-g3d.hamiltonian = Ising(g3d) + Quartic(g3d) + DepolField(g3d)
-g3d.hamiltonian[4].field_c[] = 2.0
-# g3d.hamiltonian[4].c[] /= 4 
+
+h = g3d.hamiltonian = Ising(g3d) + Quartic(g3d) + DepolField(g3d)
+g3d.hamiltonian[4].field_c[] = 3
 
 
 createProcess(g3d)

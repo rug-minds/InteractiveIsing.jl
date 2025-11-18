@@ -120,7 +120,7 @@ interface(g)
 
 temp(g,0)
 g.hamiltonian = Ising(g) + DepolField(g, c=60000, left_layers=1, right_layers=1)
-g.hamiltonian = sethomogenousparam(g.hamiltonian, :b)
+g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
 homogeneousself!(g,-1000)
 
