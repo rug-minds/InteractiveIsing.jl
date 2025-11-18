@@ -88,14 +88,14 @@ function deactivateparam(hts::HamiltonianTerms, param::Symbol)
     changeterm(hts, newham)
 end
 
-function sethomogeneousparam(ham::Hamiltonian, param::Symbol)
+function sethomogeneousparam(ham::Hamiltonian, param::Symbol, val = default(getproperty(ham, param)))
     initialparam = getproperty(ham, param)
-    newparam = HomogeneousParam(initialparam.val, length(initialparam.val); description = initialparam.description)
+    newparam = HomogeneousParam(val, length(initialparam.val); description = initialparam.description)
     setparam(ham, param, newparam)
 end
 
-function sethomogeneousparam(hts::HamiltonianTerms, param::Symbol)
-    newham = sethomogeneousparam(gethamiltonian(hts, param), param)
+function sethomogeneousparam(hts::HamiltonianTerms, param::Symbol, val = default(getproperty(hts, param)))
+    newham = sethomogeneousparam(gethamiltonian(hts, param), param, val)
     changeterm(hts, newham)
 end
 

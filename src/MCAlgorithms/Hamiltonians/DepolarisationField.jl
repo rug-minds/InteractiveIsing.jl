@@ -13,7 +13,16 @@ function Base.in(j::Integer, dpf::DepolField)
     j <= prod(dpf.size[1:end-1])*dpf.top_layers || j > prod(dpf.size[1:end-1])*(dpf.size[end]-dpf.bottom_layers)
 end
 
-
+function Base.show(io::IO, ::MIME"text/plain", dpf::DepolField)
+    println(io, "DepolField Hamiltonian")
+    println(io, "  top_layers: $(dpf.top_layers)")
+    println(io, "  bottom_layers: $(dpf.bottom_layers)")
+    println(io, "  size: $(dpf.size)")
+    println(io, "  field_adj: $(size(dpf.field_adj)) sparse matrix with $(nnz(dpf.field_adj)) nonzeros")
+    println(io, "  dpf: ", dpf.dpf)
+    println(io, "  c: ", dpf.c)
+    print(io, "  field_c: ", dpf.field_c)
+end
 
 
 function get_dpf(dpf, g)
@@ -37,6 +46,7 @@ function DepolField(g; top_layers = 1, bottom_layers = 1, c = 1/prod(size(g[1])[
     # cv = DefaultParamVal(eltype(g)(c), description = "Depolarisation Field")
     cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
     fval = ScalarParam(eltype(g), 0.5; description = "Field contribution scale")
+
     wg = @WG (dr) -> 1/dr^3 NN = 2
     fv = sparse(genLayerConnections(g[1], wg)..., nstates(g[1]), nstates(g[1]))
     

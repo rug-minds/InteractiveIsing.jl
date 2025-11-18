@@ -16,6 +16,7 @@ genAdj!(g3d[1], wg)
 
 
 h = g3d.hamiltonian = Ising(g3d) + Quartic(g3d) + DepolField(g3d)
+hnew = sethomogeneousparam(h, :b)
 g3d.hamiltonian[4].field_c[] = 3
 
 
