@@ -297,6 +297,8 @@ include("Blocks.jl")
 # Generated functions separated to avoid circular dependencies
 include("GeneratedTraits.jl")
 
+include("Generated.jl")
+
 # include("Resolvers.jl")
 include("Show.jl")
 

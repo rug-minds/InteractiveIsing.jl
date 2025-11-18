@@ -2,18 +2,21 @@ using InteractiveIsing
 import InteractiveIsing as ii
 
 function isingfunc(dr, c1, c2)
-    return 1/dr
+    return 2/dr
 end
 
-wg = ii.@WG (dr,c1,c2) -> 1/dr NN=1
 
-g3d = ii.IsingGraph(10,10,10, type = Continuous, periodic = true)
-genAdj!(g3d[1], wg) 
+g3d = ii.IsingGraph(80,80,10, type = Continuous, periodic = (:x,:y))
 
-wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=1
-wg(;dr=1, c1=Coordinate(1,1,1), c2=Coordinate(2,2,2) )
+wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=3
+@code_warntype genAdj!(g3d[1], wg) 
+
+
 
 g3d.hamiltonian = Ising(g3d) + Quartic(g3d) + DepolField(g3d)
+g3d.hamiltonian[4].field_c[] = 2.0
+# g3d.hamiltonian[4].c[] /= 4 
+
 
 createProcess(g3d)
 

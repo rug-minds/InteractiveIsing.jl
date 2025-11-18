@@ -11,17 +11,19 @@ end
 
 macro NewParameterRefs(ex)
    
-    MacroTools.postwalk(x -> @capture(x, p_[i__]) ? begin println("found param ", ParameterRef(p, getlocation(ex, p), i...), " in expression: ", ex); x end : x, ex)
+    # MacroTools.postwalk(x -> @capture(x, p_[i__]) ? begin println("found param ", ParameterRef(p, getlocation(ex, p), i...), " in expression: ", ex); x end : x, ex)
+    #Without println
+    MacroTools.postwalk(x -> @capture(x, p_[i__]) ? begin ParameterRef(p, getlocation(ex, p), i...) ; x end : x, ex)
 
-    println("Ex: ", ex)
+    # println("Ex: ", ex)
     @capture(ex, function fname_(a__) body_ end)
 
-    println("Body: ", body)
+    # println("Body: ", body)
 
     returnstatement = nothing
     MacroTools.postwalk(x -> @capture(x, return rt_) ? begin returnstatement = rt; x end : x, body)
     
-    println("Returnstatement: ", returnstatement)
+    # println("Returnstatement: ", returnstatement)
     return esc(:(
         function $fname($(a...))
             $returnstatement

@@ -22,7 +22,7 @@ end
 
 
 abstract type AbstractHamiltonianTerms{HS} <: Hamiltonian end
-Base.pairs(ht::AbstractHamiltonianTerms) = pairs(merge(pairs.(getfield(ht, :hs))...))
+# Base.pairs(ht::AbstractHamiltonianTerms) = pairs(merge(pairs.(getfield(ht, :hs))...))
 getHS(::Type{<:AbstractHamiltonianTerms{HS}}) where {HS} = HS
 getHS(::AbstractHamiltonianTerms{HS}) where {HS} = HS
 getHS(h::Type{<:Hamiltonian}) = (h,)
@@ -110,12 +110,13 @@ end
     #     return (;_prepare(Algo, args)...)
     # end
 
+
 include("HamiltonianTerms.jl")
 
 
 
 export HamiltonianTerms
-include("DeltaH.jl")
+include("DeltaRule.jl")
 include("Quadratic.jl")
 include("Quartic.jl")
 include("MagField.jl")
@@ -125,4 +126,6 @@ include("IsingOLD.jl")
 include("GaussianBernoulli.jl")
 include("Clamping.jl")
 include("DepolarisationField.jl")
+include("DeltaH.jl")
+
     
