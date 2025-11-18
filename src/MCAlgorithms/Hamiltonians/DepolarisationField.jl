@@ -1,7 +1,8 @@
 export DepolField
-struct DepolField{PV <: ParamVal, CV <: ParamVal, SP, T} <: Hamiltonian 
+struct DepolField{PV <: ParamVal, CV <: ParamVal, FV, SP, T} <: Hamiltonian 
     dpf::PV
     c::CV
+    field_c::FV
     field_adj::SP
     top_layers::Int32
     bottom_layers::Int32
@@ -29,14 +30,15 @@ function init!(dpf::DepolField, g)
     return dpf
 end
 
-function DepolField(g; top_layers = 1, bottom_layers = 1, c = prod(size(g[1])[1:end-1])*(top_layers+bottom_layers) )
+function DepolField(g; top_layers = 1, bottom_layers = 1, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers) )
     pv = HomogenousParamVal(eltype(g) |> zero, length(state(g[1])), true, description = "Depolarisation Field")
     # cv = DefaultParamVal(eltype(g)(c), description = "Depolarisation Field")
     cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
+    fval = ScalarParam(eltype(g), 0.5; description = "Field contribution scale")
     wg = @WG (dr) -> 1/dr^3 NN = 3
     fv = sparse(genLayerConnections(g[1], wg)..., nstates(g[1]), nstates(g[1]))
     
-    dpf = DepolField(pv, cv, fv, Int32(top_layers), Int32(bottom_layers), size(g[1]))
+    dpf = DepolField(pv, cv, fval, fv, Int32(top_layers), Int32(bottom_layers), size(g[1]))
     init!(dpf, g)
     return dpf
 end
@@ -63,13 +65,7 @@ function ΔH(dpf::DepolField, args, drule)
             w_ij = dpf.field_adj.nzval[ptr]
             field_delta += w_ij * s[i]
         end
-        # s is in surface
-        # So dpf at all I changes. Dpf is proportional to - s_j, and the distances are stored in field_adj
-        # H_j = - c (F_j*s_j - ∑_i s_i fw_ij s_j)
-        # ΔE =  - c (F_j*(s_j' - s_j) - ∑_i s_i fw_ij (s_j' - s_j)) 
-        # ΔE = c *(F_j - ∑_i s_i fw_ij) * (s_j - s_j')
-
-        return (dpf.dpf[j]/c[] - field_delta)*(s[j] - drule[]) 
+        return (c[]*dpf.dpf[j] - dpf.field_c[]*field_delta)*(s[j] - drule[]) 
     else
 
         # H_j = - c* F_j*s_j

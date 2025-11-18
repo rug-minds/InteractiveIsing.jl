@@ -74,9 +74,3 @@ end
     return :($pure)
 end
 
-# @inline @generated function (rr::RefReduce)(args::NT, idxs) where NT
-#     rr = simplify(rr)
-#     global refreduce_type_args = [rr, args, idxs]
-#     global refreduce_type_exp = generate_block(rr(), args, idxs)
-#     return refreduce_type_exp
-# end
