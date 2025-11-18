@@ -127,5 +127,7 @@ include("GaussianBernoulli.jl")
 include("Clamping.jl")
 include("DepolarisationField.jl")
 include("DeltaH.jl")
+include("Sextic.jl")
+
 
     
