@@ -1,16 +1,34 @@
 export DepolField
-struct DepolField{PV <: ParamVal, CV <: ParamVal, FV, SP, T} <: Hamiltonian 
+struct DepolField{PV <: ParamVal, CV <: ParamVal, F, SP, T} <: Hamiltonian 
     dpf::PV
     c::CV
-    field_c::FV
+    zfunc::F
     field_adj::SP
     top_layers::Int32
     bottom_layers::Int32
     size::T
 end
 
+Base.CartesianIndices(df::DepolField) = CartesianIndices(df.size)
+Base.LinearIndices(df::DepolField) = LinearIndices(df.size)
+
+get_top_layers(dpf::DepolField, g) = @view state(g[1])[CartesianIndices(dpf.size)[:,:,1:dpf.top_layers]]
+get_bottom_layers(dpf::DepolField, g) = @view state(g[1])[CartesianIndices(dpf.size)[:,:,end - dpf.bottom_layers +1:end]]
+ 
+
+
 function Base.in(j::Integer, dpf::DepolField)
-    j <= prod(dpf.size[1:end-1])*dpf.top_layers || j > prod(dpf.size[1:end-1])*(dpf.size[end]-dpf.bottom_layers)
+    CI = CartesianIndices(dpf.size)
+    CI[j] ∈ CI[:,:,1:dpf.top_layers] || CI[j] ∈ CI[:,:,end - dpf.bottom_layers +1:end]
+end
+
+"""
+How many layers from the top or bottom is index j in dpf
+"""
+function layers_deep(j, dpf::DepolField)
+    z = CartesianIndices(dpf.size)[j].I[end]
+    z = z >= round(Int,dpf.size[end]/2) ? (dpf.size[end] - z + 1) : z
+    return z
 end
 
 function Base.show(io::IO, ::MIME"text/plain", dpf::DepolField)
@@ -29,10 +47,19 @@ function get_dpf(dpf, g)
     ll = dpf.top_layers
     rl = dpf.bottom_layers
     if length(size(g[1])) == 2
-        return -sum(state(g[1])[:,1:ll])
+        return 
     else
-        layer_2dsize = size(g[1],1)*size(g[1],2)
-        return -sum(state(g)[1:layer_2dsize*ll]) + sum(state(g)[end+1 - layer_2dsize*rl: end])
+        CI = CartesianIndices(dpf)
+        top_layers = get_top_layers(dpf, g)
+        bottom_layers = get_bottom_layers(dpf, g)
+        total = zero(eltype(g))
+        for slice in vcat(eachslice(top_layers, dims = 3), eachslice(bottom_layers, dims = 3))
+            z = slice.indices[end]
+            z = z >= round(Int,dpf.size[end]/2) ? (dpf.size[end] - z + 1) : z
+            total += dpf.zfunc(z) * sum(slice)
+        end
+
+        return -total
     end
 end
 
@@ -41,16 +68,13 @@ function init!(dpf::DepolField, g)
     return dpf
 end
 
-function DepolField(g; top_layers = 1, bottom_layers = 1, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers) )
+function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers), zfunc = x -> 1)
     pv = HomogeneousParam(eltype(g)(0), length(state(g[1])), description = "Depolarisation Field")
-    # cv = DefaultParamVal(eltype(g)(c), description = "Depolarisation Field")
     cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
-    fval = ScalarParam(eltype(g), 0.5; description = "Field contribution scale")
-
     wg = @WG (dr) -> 1/dr^3 NN = 2
     fv = sparse(genLayerConnections(g[1], wg)..., nstates(g[1]), nstates(g[1]))
     
-    dpf = DepolField(pv, cv, fval, fv, Int32(top_layers), Int32(bottom_layers), size(g[1]))
+    dpf = DepolField(pv, cv, zfunc, fv, Int32(top_layers), Int32(bottom_layers), size(g[1]))
     init!(dpf, g)
     return dpf
 end
@@ -58,9 +82,10 @@ end
 function update!(::Metropolis, dpf::DepolField, args)
     (;lmeta, j, Δs_j) = args
     l1 = layer(lmeta)
-    layer2dsize = size(l1,1)*size(l1,2)
-    if j <= layer2dsize*dpf.top_layers || j > layer2dsize*(size(l1,3)-dpf.bottom_layers)
-        dpf.dpf[j] = dpf.dpf[j] - Δs_j[]
+    
+    if j ∈ dpf
+        z = layers_deep(j, dpf)
+        dpf.dpf[j] = dpf.dpf[j] - dpf.zfunc(z)*Δs_j[]
     end
     return 
 end
@@ -79,7 +104,8 @@ function ΔH(dpf::DepolField, args, drule)
             w_ij = dpf.field_adj.nzval[ptr]
             field_delta += w_ij * s[i]
         end
-        base_term -= dpf.field_c[]*field_delta
+        z = layers_deep(j, dpf)
+        base_term -= dpf.zfunc(z)*field_delta
     end
 
     return base_term * (s[j] - drule[])
