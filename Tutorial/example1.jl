@@ -110,8 +110,12 @@ II.makie_markersize[] = 0.3
 interface(g)
 
 temp(g,1.5)
-# g.hamiltonian = Ising(g) + DepolField(g, c=8000, left_layers=1, right_layers=1)
-g.hamiltonian = Ising(g) + DepolField(g, c=8000, top_layers=1, bottom_layers=1)
+g.hamiltonian = Ising(g) + Quartic(g) + Sextic(g)
+
+g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1)
+
+
+
 
 # g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1) + Quartic(g) + Sextic(g)
 
@@ -133,7 +137,7 @@ a1, b1, c1 = 1, 0, 0
 # display(fig)
 
 
-g.hamiltonian = sethomogenousparam(g.hamiltonian, :b)
+g.hamiltonian = sethomogeneousval(g.hamiltonian, :b)
 homogeneousself!(g,a1)
 # ### Set Qc*Jii=1
 # g.hamiltonian[4].qc[] = b1/a1
