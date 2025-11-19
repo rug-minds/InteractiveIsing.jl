@@ -9,13 +9,23 @@ struct DepolField{PV <: ParamVal, CV <: ParamVal, F, SP, T} <: Hamiltonian
     size::T
 end
 
+function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers), zfunc = z -> 1)
+    pv = HomogeneousParam(eltype(g)(0), length(state(g[1])), description = "Depolarisation Field")
+    cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
+    wg = @WG (dr) -> 1/dr^3 NN = 2
+    fv = sparse(genLayerConnections(g[1], wg)..., nstates(g[1]), nstates(g[1]))
+    
+    dpf = DepolField(pv, cv, zfunc, fv, Int32(top_layers), Int32(bottom_layers), size(g[1]))
+    init!(dpf, g)
+    return dpf
+end
+
 Base.CartesianIndices(df::DepolField) = CartesianIndices(df.size)
 Base.LinearIndices(df::DepolField) = LinearIndices(df.size)
 
 get_top_layers(dpf::DepolField, g) = @view state(g[1])[CartesianIndices(dpf.size)[:,:,1:dpf.top_layers]]
 get_bottom_layers(dpf::DepolField, g) = @view state(g[1])[CartesianIndices(dpf.size)[:,:,end - dpf.bottom_layers +1:end]]
  
-
 
 function Base.in(j::Integer, dpf::DepolField)
     CI = CartesianIndices(dpf.size)
@@ -31,24 +41,15 @@ function layers_deep(j, dpf::DepolField)
     return z
 end
 
-function Base.show(io::IO, ::MIME"text/plain", dpf::DepolField)
-    println(io, "DepolField Hamiltonian")
-    println(io, "  top_layers: $(dpf.top_layers)")
-    println(io, "  bottom_layers: $(dpf.bottom_layers)")
-    println(io, "  size: $(dpf.size)")
-    println(io, "  field_adj: $(size(dpf.field_adj)) sparse matrix with $(nnz(dpf.field_adj)) nonzeros")
-    println(io, "  dpf: ", dpf.dpf)
-    println(io, "  c: ", dpf.c)
-    print(io, "  field_c: ", dpf.field_c)
-end
-
 
 function get_dpf(dpf, g)
     ll = dpf.top_layers
     rl = dpf.bottom_layers
     if length(size(g[1])) == 2
         return 
-    else
+    else # 3Dim
+
+        # Count every 2D layer, scale by zfunc
         CI = CartesianIndices(dpf)
         top_layers = get_top_layers(dpf, g)
         bottom_layers = get_bottom_layers(dpf, g)
@@ -68,24 +69,12 @@ function init!(dpf::DepolField, g)
     return dpf
 end
 
-function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers), zfunc = x -> 1)
-    pv = HomogeneousParam(eltype(g)(0), length(state(g[1])), description = "Depolarisation Field")
-    cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
-    wg = @WG (dr) -> 1/dr^3 NN = 2
-    fv = sparse(genLayerConnections(g[1], wg)..., nstates(g[1]), nstates(g[1]))
-    
-    dpf = DepolField(pv, cv, zfunc, fv, Int32(top_layers), Int32(bottom_layers), size(g[1]))
-    init!(dpf, g)
-    return dpf
-end
-
 function update!(::Metropolis, dpf::DepolField, args)
     (;lmeta, j, Δs_j) = args
     l1 = layer(lmeta)
-    
     if j ∈ dpf
         z = layers_deep(j, dpf)
-        dpf.dpf[j] = dpf.dpf[j] - dpf.zfunc(z)*Δs_j[]
+        dpf.dpf[j] -= dpf.zfunc(z)*Δs_j[]
     end
     return 
 end
@@ -115,3 +104,13 @@ end
     return (dpf[j]/c[])*(sn[j]-s[j])
 end
 
+function Base.show(io::IO, ::MIME"text/plain", dpf::DepolField)
+    println(io, "DepolField Hamiltonian")
+    println(io, "  top_layers: $(dpf.top_layers)")
+    println(io, "  bottom_layers: $(dpf.bottom_layers)")
+    println(io, "  size: $(dpf.size)")
+    println(io, "  field_adj: $(size(dpf.field_adj)) sparse matrix with $(nnz(dpf.field_adj)) nonzeros")
+    println(io, "  dpf: ", dpf.dpf)
+    println(io, "  c: ", dpf.c)
+    print(io, "  field_c: ", dpf.field_c)
+end
