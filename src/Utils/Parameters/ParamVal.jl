@@ -50,14 +50,15 @@ end
 ParamVal{T, Default, Active, RD}(description::String = "") where {T, Default, Active, RD} = 
     ParamVal{T, Default, Active, RD, (val isa AbstractArray ? length(size(val)) : 1)}(nothing, nothing, description)
 
-ScalarParam(val::Real; description = "") = ParamVal(val, val, true; description)
-ScalarParam(T::Type, val::Real; description = "") = ParamVal(convert(T, val), convert(T, val), true; description)
+ScalarParam(val::Real; description = "") = ScalarParam(typeof(val), val; description = description)
+ScalarParam(T::Type, val::Real; description = "") = ParamVal{Array{T,0}, T(val), true, 0}(fill(val), (), description)
 
 
 """
 Stores a homogeneous value for vector like ParamVals
 """
-function HomogeneousParam(val, size...; active = true, description = "")
+function HomogeneousParam(val::Real, size...; active = true, description = "")
+    @assert !isempty(size) "HomogeneousParam requires size arguments"
     value = fill(val)
     return ParamVal{typeof(value), val, active, length(size)}(value, size, description)
 end
@@ -137,7 +138,8 @@ function Base.eachindex(p::ParamVal)
     eachindex(p.val)
 end
 
-Base.size(p::ParamVal) = size(p.val)
+Base.size(p::ParamVal) = p.size
+
 function Base.length(p::ParamVal)
     if ishomogeneous(p)
         return prod(size(p))
@@ -222,7 +224,6 @@ Base.materialize!(p::ParamVal{T}, a::Base.Broadcast.Broadcasted{<:Any}) where T 
 @inline Base.lastindex(p::ParamVal{T}) where T <: AbstractArray = lastindex(p.val)
 @inline Base.firstindex(p::ParamVal{T}) where T <: AbstractArray = firstindex(p.val)
 @inline Base.eachindex(p::ParamVal{T}) where T <: AbstractArray = eachindex(p.val)
-Base.size(p::ParamVal{T}) where T <: AbstractArray = size(p.val)
 Base.length(p::ParamVal{T}) where T <: AbstractArray = length(p.val)
 @inline Base.eltype(p::ParamVal{<:AbstractArray{T}}) where T = T
 Base.splice!(p::ParamVal{T}, idx...) where T <: AbstractArray = splice!(p.val, idx...)
@@ -271,12 +272,35 @@ paramzero(val::Any) = typeof(val)(0)
 paramzero(::ParamVal{T}) where T = zero(T)
 export paramzero
 
+# Compact show for when ParamVal appears in other structs
+function Base.show(io::IO, p::ParamVal{T}) where T
+    if get(io, :compact, false)
+        if ishomogeneous(p)
+            print(io, "ParamVal($(p.val[]), len=$(length(p)))")
+        else
+            print(io, "ParamVal($(eltype(p))[...], len=$(length(p)))")
+        end
+    else
+        print(io, "ParamVal{", T, "}(")
+        print(io, p.description == "" ? "no description" : "\"$(p.description)\"")
+        print(io, ", ", isactive(p) ? "active" : "inactive")
+        if ishomogeneous(p)
+            print(io, ", val=$(p.val[]), len=$(length(p)))")
+        else
+            print(io, ", len=$(length(p)))")
+        end
+    end
+end
 
 function Base.show(io::IO, ::MIME"text/plain", p::ParamVal{T}) where T
     print(io, (isactive(p) ? "Active " : "Inactive "))
-    print(io, "$(p.description) with value: ")
-    println(io, "$(p.val)")
-    print(io, "Defaulting to: $(default(p))")
+    ishomogeneous(p) && print(io, "Homogeneous ")
+    println(io, "$(p.description) with value: ")
+    if isscalar(p)
+        print(io, "$(p.val[])")
+    else
+        print(io, p[1:end])
+    end
 end
 
 function Base.show(io::IO, ::MIME"text/plain", p::ParamVal{T}) where {T <: AbstractVector}
