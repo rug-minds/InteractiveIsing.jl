@@ -6,3 +6,4 @@ LocalPreferences.toml
 Manifest.toml
 
 /docs/build
+.vscode/settings.json
