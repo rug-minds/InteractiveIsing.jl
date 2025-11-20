@@ -110,9 +110,11 @@ II.makie_markersize[] = 0.3
 interface(g)
 
 temp(g,1.5)
-g.hamiltonian = Ising(g) + Quartic(g) + Sextic(g)
+# g.hamiltonian = Ising(g) + Quartic(g) + Sextic(g)
 
-g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1)
+g.hamiltonian = Ising(g) + DepolField(g, c=3000, top_layers=1, bottom_layers=1, zfunc = z -> 1.0/z^2) + Quartic(g) + Sextic(g)
+# refresh!(g)
+
 
 
 
@@ -120,29 +122,28 @@ g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1)
 # g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1) + Quartic(g) + Sextic(g)
 
 ### Use ii. to check if the terms are correct
-
-
 ### Now the H is written like H_self + H_quartic
 ### Which is Jii*Si^2 + Qc*Jii*Si^4 wichi means Jii=a, Qc*Jii=b in a*Si^2 + b*Si^4
 ### Set Jii=-0.5
 
 
-a1, b1, c1 = 1, 0, 0   
-# x = range(-1.0, 1.0, length=1000)
-# y = a1 .* x.^2 .+ b1 .* x.^4 .+ c1 .* x.^6
-# fig = Figure(resolution = (800, 400))
-# ax = Axis(fig[1, 1]; xlabel = "x", ylabel = "f(x)")
-# lines!(ax, x, y, color = :blue, linewidth = 2)
-# hlines!(ax, [0], color = (:gray, 0.5), linestyle = :dash)
-# display(fig)
+a1, b1, c1 = 1, -2, 1   
+x = range(-1.0, 1.0, length=1000)
+y = a1 .* x.^2 .+ b1 .* x.^4 .+ c1 .* x.^6
+fig = Figure(resolution = (800, 400))
+ax = Axis(fig[1, 1]; xlabel = "x", ylabel = "f(x)")
+lines!(ax, x, y, color = :blue, linewidth = 2)
+hlines!(ax, [0], color = (:gray, 0.5), linestyle = :dash)
+display(fig)
 
 
-g.hamiltonian = sethomogeneousval(g.hamiltonian, :b)
+g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 homogeneousself!(g,a1)
+
 # ### Set Qc*Jii=1
-# g.hamiltonian[4].qc[] = b1/a1
-# ### Set Sc*Jii=1
-# g.hamiltonian[5].sc[] = c1/a1
+g.hamiltonian[4].qc[] = b1/a1
+### Set Sc*Jii=1
+g.hamiltonian[5].sc[] = c1/a1
 
 
 
@@ -152,7 +153,6 @@ wg1 = @WG weightfunc1 NN = (1,1,1)
 
 
 genAdj!(g[1], wg1)
-
 fullsweep = xL*yL*zL
 Time_fctr = 0.5
 SpeedRate = Int(Time_fctr*fullsweep)
