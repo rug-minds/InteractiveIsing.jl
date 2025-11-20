@@ -124,15 +124,6 @@ end
 # Base.getindex(p::ParamTensor) = p.val[]
 # Base.getindex(p::ParamTensor, idx) = p.val[idx]
 
-function Base.setindex!(p::ParamTensor, val)
-    @assert !isstatic(p) "Cannot set value of a static ParamTensor"
-    @assert ishomogeneous(p) || isscalar(p) "Cannot set value of a non-homogeneous/scalar ParamTensor without an index"
-    p.val[] = val
-end
-function Base.setindex!(p::ParamTensor, val, idx)
-    @assert !isstatic(p) "Cannot set value of a static ParamTensor"
-    p.val[idx] = val
-end
 
 function Base.eachindex(p::ParamTensor)
     if ishomogeneous(p)
@@ -198,12 +189,6 @@ end
     end
 end
 
-# @inline @generated function Base.setindex!(p::ParamTensor{T}, val, idx) where T <: AbstractArray
-#     if ishomogeneous(p)
-#         return :((p.homogeneousval = val)::eltype(T))
-#     end
-#     return :((setindex!(p.val, val, idx))::T)
-# end
 
 @inline function Base.setindex!(p::ParamTensor{T}, val, idx) where T
     @assert !isstatic(p) "Cannot set value of a static ParamTensor, use StaticParamTensor(param, val) instead"
