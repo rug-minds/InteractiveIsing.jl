@@ -10,7 +10,7 @@ It also stores wether it's active and if not a fallback value
     memory does not need to be accessed.
 """
 abstract type AbstractParamVal{T, Default, Active, N} <: AbstractArray{T,N} end
-mutable struct ParamVal{AT, Default, Active, N} <: AbstractParamVal{AT, Default, Active, N}
+mutable struct ParamVal{T, Default, Active, AT, N} <: AbstractParamVal{T, Default, Active, N}
     const val::AT
     size::NTuple{N, Int}
     description::String
@@ -18,40 +18,44 @@ end
 
 # Special Cases:
 # Vector like but same value everywhere
-const HomogeneousParamVal{T, D, Active, N} = ParamVal{<:AbstractArray{T,0}, D, Active, N}
+const HomogeneousParamVal{T, D, Active, N} = ParamVal{T, D, Active, <:AbstractArray{T,0} , N}
 # Scalar Like/Reflike
-const ScalarParamVal{T, D, Active} = ParamVal{<:AbstractArray{T,0}, D, Active, 0}
+const ScalarParamVal{T, D, Active} = ParamVal{T, D, Active, <:AbstractArray{T,0}, 0}
 # Either, but inlined static value
-const StaticParamVal{T, D, N} = ParamVal{<:AbstractArray{T,N}, D, false, N}
+const StaticParamVal{T, D, N} = ParamVal{T, D, false, <:AbstractArray{T,N}, N}
 
 
-function ParamVal(val::T, default = nothing, active = false; description = "") where T
-    # If val is vector type, default value must be eltype, 
-    # otherwise it must be the same type
-    DIMS = nothing
-    if val isa AbstractArray
-       DIMS = length(size(val))
-    else
-        DIMS = 0
-    end    
+function ParamVal(val::T, default = nothing; size = nothing, active = false, description = "") where T
+    # # If val is vector type, default value must be eltype, 
+    # # otherwise it must be the same type
+    # DIMS = nothing
+    # if val isa AbstractArray
+    #    DIMS = length(Base.size(val))
+    # else
+    #     DIMS = 0
+    # end    
     
     value = val
-    if T <: Vector #
+    if T <: Array #
         et = eltype(T)
         default = default == nothing ? et(1) : convert(eltype(T), default)
     else
         default = default == nothing ? T(1) : convert(T, default)
-        value = Array{T}(undef)
-        value[] = val
+        value = fill(val)
+        et = T
     end
-    return ParamVal{typeof(value), default, active, DIMS}(value, size(value), description)
+
+    isnothing(size) && (size = Base.size(value))
+    DIMS = length(size)
+    return ParamVal{et, default, active, typeof(value), DIMS}(value, size, description)
 end
 
-ParamVal{T, Default, Active, RD}(description::String = "") where {T, Default, Active, RD} = 
-    ParamVal{T, Default, Active, RD, (val isa AbstractArray ? length(size(val)) : 1)}(nothing, nothing, description)
+# ParamVal{T, Default, Active, RD}(description::String = "") where {T, Default, Active, RD} = 
+#     ParamVal{T, Default, Active, RD, (val isa AbstractArray ? length(size(val)) : 1)}(nothing, nothing, description)
 
 ScalarParam(val::Real; description = "") = ScalarParam(typeof(val), val; description = description)
-ScalarParam(T::Type, val::Real; description = "") = ParamVal{Array{T,0}, T(val), true, 0}(fill(val), (), description)
+# ScalarParam(T::Type, val::Real; description = "") = ParamVal{T, T(val), true, Array{T,0}, 0}(fill(val), (), description)
+ScalarParam(T::Type, val::Real; active = true, description = "") = ParamVal(fill(convert(T,val)), convert(T,val); active, size = tuple(), description = description)
 
 
 """
@@ -59,19 +63,18 @@ Stores a homogeneous value for vector like ParamVals
 """
 function HomogeneousParam(val::Real, size...; active = true, description = "")
     @assert !isempty(size) "HomogeneousParam requires size arguments"
-    value = fill(val)
-    return ParamVal{typeof(value), val, active, length(size)}(value, size, description)
+    return ParamVal(fill(val), val; size, active, description = description)
 end
 
 function StaticParam(val, size...; description = "")
-    return ParamVal(zeros(typeof(val), size...), val, false, description = description)
+    return ParamVal(zeros(typeof(val), size...), val, active = false, description = description)
 end
 
 # From other ParamVals
 function ParamVal(p::ParamVal, default = nothing , active::Bool = nothing)
     isnothing(active) && (active = isactive(p))
     isnothing(default) && (default = default(p))
-    return ParamVal(p.val, default, active, description = p.description)
+    return ParamVal(p.val, default; active, description = p.description)
 end
 
 """
@@ -80,7 +83,7 @@ Paramval: Active -> Static
 toggle(p::ParamVal{T, Default, Active}) where {T, Default, Active} = ParamVal{T, Default, !Active}(p.val)
 
 #Changing parameters
-changeactivation(p::ParamVal{T}, activate) where T = ParamVal(p.val, default(p), activate, description = p.description)
+changeactivation(p::ParamVal{T}, activate) where T = ParamVal(p.val, default(p), active = activate, description = p.description)
 activate(p::ParamVal{T}) where T = changeactivation(p, true)
 deactivate(p::ParamVal{T}) where T = changeactivation(p, false)
 

@@ -82,6 +82,7 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
     
 
     self = StaticParam(0f0, _datalen, description = "Self Connections")
+    @show typeof(self)
 
 
     g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(layers)}(

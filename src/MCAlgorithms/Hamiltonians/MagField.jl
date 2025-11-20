@@ -10,7 +10,7 @@ end
 MagField{PV}(g::AbstractIsingGraph) where PV <: ParamVal = MagField{PV}(PV())
 
 MagField(g::AbstractIsingGraph) = MagField(eltype(g), statelen(g))
-MagField(type, len, active = false) = MagField(ParamVal(zeros(type, len), type |> zero, active, description = "Magnetic Field"))
+MagField(type, len, active = false) = MagField(ParamVal(zeros(type, len), type |> zero; active, description = "Magnetic Field"))
 
 params(::Type{MagField}) = HamiltonianParams((:b, Vector{GraphType}, GraphType(0), "Magnetic Field"))
 
