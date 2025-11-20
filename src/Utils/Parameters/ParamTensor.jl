@@ -61,9 +61,9 @@ ScalarParam(T::Type, val::Real; active = true, description = "") = ParamTensor(f
 """
 Stores a homogeneous value for vector like ParamTensors
 """
-function HomogeneousParam(val::Real, size...; active = true, description = "")
+function HomogeneousParam(val::Real, size::Integer...; default = val, active = true, description = "")
     @assert !isempty(size) "HomogeneousParam requires size arguments"
-    return ParamTensor(fill(val), val; size, active, description = description)
+    return ParamTensor(fill(val), default; size, active, description = description)
 end
 
 function StaticParam(val, size...; description = "")
@@ -211,7 +211,7 @@ Base.materialize!(p::ParamTensor{T}, a::Base.Broadcast.Broadcasted{<:Any}) where
 
 @inline Base.lastindex(p::ParamTensor{T}) where T = lastindex(p.val)
 @inline Base.firstindex(p::ParamTensor{T}) where T = firstindex(p.val)
-@inline Base.eachindex(p::ParamTensor{T}) where T = eachindex(p.val)
+# @inline Base.eachindex(p::ParamTensor{T}) where T = eachindex(p.val)
 Base.length(p::ParamTensor{T}) where T = length(p.val)
 @inline Base.eltype(p::ParamTensor{T}) where T = T
 Base.splice!(p::ParamTensor{T}, idx...) where T = splice!(p.val, idx...)
@@ -219,7 +219,8 @@ Base.push!(p::ParamTensor{T}, val) where T = push!(p.val, val)
 
 function sethomogeneoustensor(p::ParamTensor{T}, val) where T
     val = convert(T, val)
-    HomogeneousParam(val, default(p), active = true, description = p.description)
+    size = Base.size(p)
+    HomogeneousParam(val, size..., default = default(p), active = true, description = p.description)
 end
 function removehomogeneousval(p::ParamTensor{T}, def = default(p)) where T
     def = convert(T, def)
