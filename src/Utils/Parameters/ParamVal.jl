@@ -230,8 +230,8 @@ Base.splice!(p::ParamVal{T}, idx...) where T <: AbstractArray = splice!(p.val, i
 
 Base.push!(p::ParamVal{T}, val) where T <: AbstractArray = push!(p.val, val)
 
-sethomogeneousval(p::ParamVal{T}, val) where T = ParamVal(p.val, val, isactive(p), description = p.description, homogeneousval = true)
-removehomogeneousval(p::ParamVal{T}, def = default(p)) where T = ParamVal(p.val, def, isactive(p), description = p.description, homogeneousval = false)
+sethomogeneousval(p::ParamVal{T}, val) where T = HomogeneousParam(val, default(p), active = isactive(p), description = p.description)
+removehomogeneousval(p::ParamVal{T}, def = default(p)) where T = ParamVal(fill(p[], size(p)...), def, isactive(p), description = p.description)
 
 
 # Loopvectorization stuff
