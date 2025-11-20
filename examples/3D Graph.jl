@@ -10,7 +10,7 @@ g3d = ii.IsingGraph(80,80,10, type = Continuous, periodic = (:x,:y))
 
 wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=3
 genAdj!(g3d[1], wg) 
-@report_opt genAdj!(g3d[1], wg) 
+# @report_opt genAdj!(g3d[1], wg) 
 
 
 

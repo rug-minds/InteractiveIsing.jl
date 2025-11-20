@@ -435,7 +435,7 @@ end
     refresh(g)
 end
 @inline function homogeneousself!(g, val = 1)
-    g.self = sethomogeneousval(g.self, val) # Set self to zero
+    g.self = sethomogeneoustensor(g.self, val) # Set self to zero
     refresh(g)
 end
 export activateself!, disableself!, homogeneousself!

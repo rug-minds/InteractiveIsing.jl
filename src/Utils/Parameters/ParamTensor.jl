@@ -217,8 +217,14 @@ Base.length(p::ParamTensor{T}) where T = length(p.val)
 Base.splice!(p::ParamTensor{T}, idx...) where T = splice!(p.val, idx...)
 Base.push!(p::ParamTensor{T}, val) where T = push!(p.val, val)
 
-sethomogeneousval(p::ParamTensor{T}, val) where T = HomogeneousParam(val, default(p), active = isactive(p), description = p.description)
-removehomogeneousval(p::ParamTensor{T}, def = default(p)) where T = ParamTensor(fill(p[], size(p)...), def, isactive(p), description = p.description)
+function sethomogeneoustensor(p::ParamTensor{T}, val) where T
+    val = convert(T, val)
+    HomogeneousParam(val, default(p), active = true, description = p.description)
+end
+function removehomogeneousval(p::ParamTensor{T}, def = default(p)) where T
+    def = convert(T, def)
+    ParamTensor(fill(p[], size(p)...), def; active = true, description = p.description)
+end
 
 
 # Loopvectorization stuff
