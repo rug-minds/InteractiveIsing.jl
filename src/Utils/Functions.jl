@@ -12,17 +12,17 @@ end
 end
 
 @inline function coordToIdx(coords::NTuple{N,T1}, size::NTuple{N,T2}) where {N, T1<: Integer, T2 <: Integer}
-    # # Convert
-    # coords = Int32.(coords)
-    # size = Int32.(size)
+    # Convert
+    coords = Int32.(coords)
+    size = Int32.(size)
     
-    # idx = 1
-    # for i in 1:N
-    #     idx += (coords[i] - 1) * prod(size[1:i-1])
-    # end
-    # return idx
-    CartesianIndices(size)[coords...].I
-    
+    idx = 1
+    for i in 1:N
+        idx += (coords[i] - 1) * prod(size[1:i-1])
+    end
+    return convert(T1, idx)
+    # CartesianIndices(size)[coords...].I
+
 end
 
 # Insert coordinates as tuple
