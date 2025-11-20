@@ -7,13 +7,13 @@ abstract type Hamiltonian end
 
 Base.merge(nt::NamedTuple, h::Hamiltonian) = (;nt..., pairs(h)...)
 """
-Pairs gives an iterator over the ParamVal fields of the Hamiltonian
+Pairs gives an iterator over the ParamTensor fields of the Hamiltonian
 """
 @generated function Base.pairs(h::Hamiltonian)
     fnames = fieldnames(h)
     ftypes = fieldtypes(h)
     names_types = zip(fnames, ftypes)
-    pvals_names = (x[1] for x in names_types if x[2] <: ParamVal) 
+    pvals_names = (x[1] for x in names_types if x[2] <: ParamTensor) 
     tuple_exp = Expr(:tuple, Expr(:parameters, (Expr(:kw, name, :(getproperty(h, $(QuoteNode(name))))) for name in pvals_names)...))
     return :(pairs($(tuple_exp)))
 end
@@ -35,13 +35,13 @@ Collect all pairs from all hamiltonian terms
 """
 @generated function Base.pairs(ht::AbstractHamiltonianTerms) 
     hs = H_types(ht)
-    # Get all ParamVal fields from all Hamiltonian terms
+    # Get all ParamTensor fields from all Hamiltonian terms
     all_kvs = []
     for (idx, ham_type) in enumerate(hs)
         fnames = fieldnames(ham_type)
         ftypes = fieldtypes(ham_type)
         for (fname, ftype) in zip(fnames, ftypes)
-            if ftype <: ParamVal
+            if ftype <: ParamTensor
                 # Access via ht.hs[idx].fieldname
                 push!(all_kvs, Expr(:kw, fname, :(getproperty(getfield(getfield(ht, :hs), $idx), $(QuoteNode(fname))))))
             end
@@ -59,7 +59,7 @@ function _paramnames(h::Type{<:Hamiltonian}, all_names = Symbol[])
             fnames = fieldnames(h)
             ftypes = fieldtypes(h)
             for (idx, name) in enumerate(fnames)
-                if ftypes[idx] <: ParamVal
+                if ftypes[idx] <: ParamTensor
                     push!(all_names, name)
                 end
             end
@@ -68,7 +68,7 @@ function _paramnames(h::Type{<:Hamiltonian}, all_names = Symbol[])
 end
 
     """
-    For a Hamiltonian, return all fieldnames that are a ParamVal
+    For a Hamiltonian, return all fieldnames that are a ParamTensor
     """
     @generated function paramnames(h::Union{Hamiltonian, AbstractHamiltonianTerms})
         h = getHS(h)
@@ -78,8 +78,8 @@ end
         for i in eachindex(_fieldnames)
             _paramnames(h[i], all_names)
         end
-        paramval_params = (all_names...,)
-        return (:($paramval_params))
+        paramtensor_params = (all_names...,)
+        return (:($paramtensor_params))
     end
 
 

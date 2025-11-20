@@ -33,7 +33,7 @@ function Processes.prepare(::MetropolisOLD, args::As) where As
     gadj = g.adj
     type = eltype(gstate)
     len = length(gstate)
-    gparams = Parameters(self = ParamVal(zeros(type, len), 0, "Self Connections", false), b = ParamVal(zeros(type, len), 0, "Magnetic Field", false))
+    gparams = Parameters(self = ParamTensor(zeros(type, len), 0, "Self Connections", false), b = ParamTensor(zeros(type, len), 0, "Magnetic Field", false))
     iterator = ising_it(g)
     # rng = MersenneTwister()
     rng = Random.GLOBAL_RNG

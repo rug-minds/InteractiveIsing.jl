@@ -1,4 +1,4 @@
-export ParameterRef, RefMult, SparseAdj, get_prefs, ref_indices, fixed_symb, ref_symbs, is_paramref, ParameterRef, find_paramref, substitute_paramval, @ParameterRefs, ParamCollection
+export ParameterRef, RefMult, SparseAdj, get_prefs, ref_indices, fixed_symb, ref_symbs, is_paramref, ParameterRef, find_paramref, substitute_paramtensor, @ParameterRefs, ParamCollection
 
 abstract type AbstractParameterRef end
 

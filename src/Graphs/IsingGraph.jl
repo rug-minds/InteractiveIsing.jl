@@ -468,7 +468,7 @@ export activateself!, disableself!, homogeneousself!
 # # Connections between layers
 # Dict{Pair, Int32}(),
 # #params
-# # (;self = ParamVal(zeros(eltype(state), length(state)), 0, "Self Connections", false)),
+# # (;self = ParamTensor(zeros(eltype(state), length(state)), 0, "Self Connections", false)),
 # # For notifying simulations or other things
 # Emitter(Observable[]),
 # # Defects

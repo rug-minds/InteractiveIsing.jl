@@ -1,5 +1,5 @@
 export DepolField
-struct DepolField{PV <: ParamVal, CV <: ParamVal, F, SP, T} <: Hamiltonian 
+struct DepolField{PV <: ParamTensor, CV <: ParamTensor, F, SP, T} <: Hamiltonian 
     dpf::PV
     c::CV
     zfunc::F

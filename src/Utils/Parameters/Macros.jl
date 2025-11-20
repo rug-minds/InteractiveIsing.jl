@@ -43,7 +43,7 @@ function replace_struct_field_access(func, paramname, replace)
     return func
 end
 
-function replace_paramval(func, paramname)
+function replace_paramtensor(func, paramname)
     function replacefunc(containing_exp, paramname, fieldname) 
         containing_exp = enter_args(func, idxs[1:end-2])
         if containing_exp.head == :ref
@@ -121,11 +121,11 @@ function structname_fieldname(struct_access_exp)
     return structname, fieldname
 end
 
-function default_paramval(paramname, fieldname)
+function default_paramtensor(paramname, fieldname)
     :(default($paramname, $fieldname))
 end
 
-function ifactive_defaultparamval(exp, paramname, fieldname)
+function ifactive_defaultparamtensor(exp, paramname, fieldname)
     quote   if isactive($paramname, $(fieldname))
                 $exp
             else
@@ -170,7 +170,7 @@ end
 #     # println("Func ", func)
 #     @capture(func, function name_(a__) body__ end)
 #     paramname = find_type_in_args(a, :Parameters)
-#     replace_struct_access(func, paramname, (exp) -> ifactive_defaultparamval(exp, structname_fieldname(exp)...))
+#     replace_struct_access(func, paramname, (exp) -> ifactive_defaultparamtensor(exp, structname_fieldname(exp)...))
 #     println(func)
 #     return esc(func)
 # end

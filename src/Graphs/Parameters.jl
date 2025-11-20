@@ -20,7 +20,7 @@ deactivate!(g::AbstractIsingGraph, param) = changeactivation!(g, param, false)
 function setglobal!(g::AbstractIsingGraph, param, val)
     pval = getparam(g, param)
     old_default = default(pval)
-    g.params = Parameters(param = ParamVal(pval, val, false); get_nt(g.params)...)
+    g.params = Parameters(param = ParamTensor(pval, val, false); get_nt(g.params)...)
     if old_default != val
         refresh(g)
     end
@@ -40,12 +40,12 @@ function setparam!(g::AbstractIsingGraph, param::Symbol, val, active = true, si 
     return g.params[param]
 end
 
-function _setparam!(pval::ParamVal{T}, param::Symbol, val, si = nothing, ei = nothing) where T
+function _setparam!(pval::ParamTensor{T}, param::Symbol, val, si = nothing, ei = nothing) where T
     param[] = val
     return nothing
 end
 
-function _setparam!(pval::ParamVal{T}, param::Symbol, val, startidx = nothing, endidx = nothing) where T<:Vector
+function _setparam!(pval::ParamTensor{T}, param::Symbol, val, startidx = nothing, endidx = nothing) where T<:Vector
     isnothing(startidx) && (startidx = 1)
     isnothing(endidx)   && (endidx = length(pval))
     @assert length(pval) >= endidx - startidx + 1

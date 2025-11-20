@@ -45,7 +45,7 @@ function replace_struct_field_access(func, paramname, replace)
     return func
 end
 
-function replace_paramval(func, paramname)
+function replace_paramtensor(func, paramname)
     function replacefunc(containing_exp, paramname, fieldname) 
         containing_exp = enter_args(func, idxs[1:end-2])
         if containing_exp.head == :ref
@@ -128,11 +128,11 @@ function structname_fieldname(struct_access_exp)
     return structname, fieldname
 end
 
-function default_paramval(paramname, fieldname)
+function default_paramtensor(paramname, fieldname)
     :(default($paramname, $fieldname))
 end
 
-function ifactive_defaultparamval(exp, paramname, fieldname)
+function ifactive_defaultparamtensor(exp, paramname, fieldname)
     quote   if isactive($paramname, $(fieldname))
                 $exp
             else
@@ -167,16 +167,16 @@ function inline_default(exp, params::Union{Parameters, Type{<:Parameters}}, fiel
 end
 
 
-macro ParamValFunc(func)
+macro ParamTensorFunc(func)
     # println("Func ", func)
     @capture(func, function name_(a__) body__ end)
     paramname = find_type_in_args(a, :Parameters)
-    replace_struct_access(func, paramname, (exp) -> ifactive_defaultparamval(exp, structname_fieldname(exp)...))
+    replace_struct_access(func, paramname, (exp) -> ifactive_defaultparamtensor(exp, structname_fieldname(exp)...))
     println(func)
     return esc(func)
 end
 
-@ParamValFunc function test2(params::Parameters)
+@ParamTensorFunc function test2(params::Parameters)
     cum = paramzero(params.p1)
     @simd for idx in 1:length(params.p1)
         p1 = params.p1[idx]
@@ -186,7 +186,7 @@ end
     return cum
 end
 
-macro GeneratedParamVal(func)
+macro GeneratedParamTensor(func)
     @capture(func, function fname_(a__) body_ end)
     paramname = find_type_in_args(a, :Parameters)
     find_struct_accesses = find_struct_field_access(func, paramname)
@@ -233,17 +233,17 @@ macro GeneratedParamVal(func)
     return esc(returnexp)
     # return nothing
 end
-@GeneratedParamVal function testtgen(idx, params::Parameters)
+@GeneratedParamTensor function testtgen(idx, params::Parameters)
     return params.p1[idx] + params.p2[idx]
 end
 
-p1 = ParamVal([1:10;], 0, "", true)
-p2 = ParamVal([1:1.:10;], 1, "", false)
-p20 = ParamVal([1:1.:10;], 0, "", false)
-p3 = ParamVal(10, 1, "", false)
+p1 = ParamTensor([1:10;], 0, "", true)
+p2 = ParamTensor([1:1.:10;], 1, "", false)
+p20 = ParamTensor([1:1.:10;], 0, "", false)
+p3 = ParamTensor(10, 1, "", false)
 
 const i1 = Parameters(;p1 = deepcopy(p1), p2 = deepcopy(p2), p3= deepcopy(p3))
-const i2 = Parameters(;p1 = deepcopy(p1), p2 = deepcopy(ParamVal(p2, true)), p3 = deepcopy(p3))
+const i2 = Parameters(;p1 = deepcopy(p1), p2 = deepcopy(ParamTensor(p2, true)), p3 = deepcopy(p3))
 const i3 = Parameters(;p1 = deepcopy(p1), p2 = deepcopy(p20), p3 = deepcopy(p3))
 
 testtgen_exp(1, i1)
@@ -261,7 +261,7 @@ function test2(params::Parameters)
     return cum
 end 
 
-@GeneratedParamVal function test3(params::Parameters)
+@GeneratedParamTensor function test3(params::Parameters)
     cum = 0.
     @turbo for idx in eachindex(params.p1)
         cum += params.p1[idx] + params.p2[idx]

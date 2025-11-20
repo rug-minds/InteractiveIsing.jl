@@ -10,7 +10,7 @@ function ValueExpression(val, indexes::Tuple{Vararg{Union{Symbol, Int}}} = (); n
     ValueExpression{typeof(expr)}(name, assignment, expr, indexes, flag)
 end
 
-function value_expression(pv::Union{Type{<:ParamVal}, ParamVal}, name::Symbol)
+function value_expression(pv::Union{Type{<:ParamTensor}, ParamTensor}, name::Symbol)
     if !isactive(pv)
         return ValueExpression(:($(default(pv))), tuple())
     end

@@ -1,12 +1,12 @@
 using InteractiveIsing
-import InteractiveIsing: Parameters, ParamVal, GeneratedParameters
-p1 = ParamVal([1:10;], 0, "", true)
-p2 = ParamVal([1:1.:10;], 1, "", false)
-p20 = ParamVal([1:1.:10;], 0, "", false)
-p3 = ParamVal(10, 1, "", false)
+import InteractiveIsing: Parameters, ParamTensor, GeneratedParameters
+p1 = ParamTensor([1:10;], 0, "", true)
+p2 = ParamTensor([1:1.:10;], 1, "", false)
+p20 = ParamTensor([1:1.:10;], 0, "", false)
+p3 = ParamTensor(10, 1, "", false)
 
 const i1 = Parameters(;p1 = deepcopy(p1), p2 = deepcopy(p2), p3= deepcopy(p3))
-const i2 = Parameters(;p1 = deepcopy(p1), p2 = deepcopy(ParamVal(p2, true)), p3 = deepcopy(p3))
+const i2 = Parameters(;p1 = deepcopy(p1), p2 = deepcopy(ParamTensor(p2, true)), p3 = deepcopy(p3))
 const i3 = Parameters(;p1 = deepcopy(p1), p2 = deepcopy(p20), p3 = deepcopy(p3))
 
 # function test2(params::Parameters)

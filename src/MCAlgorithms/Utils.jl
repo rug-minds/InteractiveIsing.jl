@@ -488,7 +488,7 @@
 # export substitute_math
 
 # """
-# Checks ParamVals for inactivity and removes all inactive symbol branches
+# Checks ParamTensors for inactivity and removes all inactive symbol branches
 # """
 # function replace_inactive_symbs(params, expr::Expr)
 #     for (name,param) in zip(keys(params),params)
@@ -520,7 +520,7 @@
 # end
 
 # """
-# For a function that uses ParamVals, replace the symbols that are inactive by their default values
+# For a function that uses ParamTensors, replace the symbols that are inactive by their default values
 #     als point them to the gparams.param[indices...]
 # """
 # function substitute_symbols(algorithm::Type{<:MCAlgorithm}, params, expr::Expr)
@@ -536,7 +536,7 @@
 
 
 # """
-# For a function that uses ParamVals, replace the symbols that are inactive by their default values
+# For a function that uses ParamTensors, replace the symbols that are inactive by their default values
 # """
 # function param_function(func_expr, Algo, params)
 #     # Replace the symbols that are inactive by their default values

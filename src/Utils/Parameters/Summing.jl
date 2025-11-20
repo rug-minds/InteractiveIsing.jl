@@ -52,7 +52,7 @@ function dimsum_common_exp(idxs, N; fexp = (:(F(@$))), valname = :pv, idxsname =
     end
 end
 
-function dimsum_exp(pv::Union{Type{<:ParamVal}, ParamVal}, idxs::Union{Type{<:NamedTuple}, NamedTuple, Tuple} = @NamedTuple{}; fexp = (:(F(@$))), valname = :pv, idxsname = :idxs)
+function dimsum_exp(pv::Union{Type{<:ParamTensor}, ParamTensor}, idxs::Union{Type{<:NamedTuple}, NamedTuple, Tuple} = @NamedTuple{}; fexp = (:(F(@$))), valname = :pv, idxsname = :idxs)
     if !isactive(pv)
         return :(length(pv)*default(pv))
     elseif  homogeneousval(pv)
@@ -77,7 +77,7 @@ function dimsum_exp(sp::Union{Type{<:SparseVal}, SparseVal}, idxs::Union{Type{<:
     return interpolate(fexp, val)
 end
 
-@generated function dimsum(pv::ParamVal, idxs = (;), F = identity)
+@generated function dimsum(pv::ParamTensor, idxs = (;), F = identity)
     return dimsum_exp(pv, idxs)
 end
 

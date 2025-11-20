@@ -37,13 +37,13 @@ Base.:+(h1::HamiltonianTerms, h2::Hamiltonian) = HamiltonianTerms((hamiltonians(
 #     return :($(tuple(names...)))
 # end
 
-function setparam(ham::Hamiltonian, field, paramval)
+function setparam(ham::Hamiltonian, field, paramtensor)
     fnames = paramnames(ham)
     found = findfirst(x->x==field, fnames)
     if isnothing(found)
         error("Field $field not found in Hamiltonian $ham")
     end
-    newfields = (i == found ? paramval : ham.fieldnames[i] for i in eachindex(fnames))  # Regenerate all the subhamiltonians
+    newfields = (i == found ? paramtensor : ham.fieldnames[i] for i in eachindex(fnames))  # Regenerate all the subhamiltonians
     Base.typename(typeof(ham)).wrapper(newfields...)                                    # Create a new Hamiltonian type
 end
 export setparam
@@ -111,7 +111,7 @@ ltf_exp = nothing
 end
 
 """
-From the set of Hamiltonians, directly get a paramval from an underlying Hamiltonian
+From the set of Hamiltonians, directly get a paramtensor from an underlying Hamiltonian
 """
 # function Base.getproperty(h::HamiltonianTerms, paramname::Symbol)
 #     # constant propagation flag:
