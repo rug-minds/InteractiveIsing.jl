@@ -35,6 +35,9 @@ mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers} <:
     layers::Layers
 end
 
+const SingleLayerGraph{T<:AbstractFloat, M<:AbstractMatrix{T}} = IsingGraph{T,M,<:Tuple{<:AbstractIsingLayer}}
+
+
 function IsingGraph(dims::Int...; 
                     periodic = nothing, 
                     sets = nothing, 
@@ -82,7 +85,6 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
     
 
     self = StaticParam(0f0, _datalen, description = "Self Connections")
-    @show typeof(self)
 
 
     g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(layers)}(

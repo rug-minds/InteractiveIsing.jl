@@ -15,7 +15,7 @@ genAdj!(g3d[1], wg)
 
 
 
-h = g3d.hamiltonian = Ising(g3d) + Quartic(g3d) + DepolField(g3d, top_layers = 2, zfunc = z -> 3/z)
+h = g3d.hamiltonian = Ising(g3d) + Quartic(g3d) + DepolField(g3d, top_layers = 2, zfunc = z -> 3/z) + Sextic(g3d)
 refresh(g3d)
 h[4].c[] = 1/(2*2500)
 createProcess(g3d)

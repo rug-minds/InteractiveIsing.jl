@@ -166,14 +166,14 @@ setvalfield!(p::ParamTensor, field, val) = setfield!(p.val, field, val)
 #     getval = isstatic(p) ? :(p.val[]) : :(default(p))
 #     return :($(getval)::eltype(T))
 # end
-@inline function Base.getindex(p::ParamTensor{T}) where T <: AbstractArray
+@inline function Base.getindex(p::ParamTensor{T}) where T
     @assert !isactive(p) || ishomogeneous(p) "Cannot index an active parameter with []"
     getval = isstatic(p) ? default(p) : p.val[]
-    return getval::eltype(T)
+    return getval::T
 end
 
 
-@inline function Base.getindex(p::ParamTensor{T}, idx::Integer) where T <: AbstractArray
+@inline function Base.getindex(p::ParamTensor{T}, idx::Integer) where T
     if ishomogeneous(p)
         @boundscheck 0 < idx <= prod(size(p))
         retval = p.val[]
@@ -183,18 +183,18 @@ end
     else
         retval = p.val[idx]
     end
-    return retval::eltype(T)
+    return retval::T
 end
 
-@inline function Base.getindex(p::ParamTensor{T}, idx::UnitRange) where T <: AbstractArray
+@inline function Base.getindex(p::ParamTensor{T}, idx::UnitRange) where T
     if ishomogeneous(p)
         @boundscheck 0 < first(idx) <= last(idx) <= prod(size(p))
-        return fill(p.val[], size(p))::Vector{eltype(T)}
+        return fill(p.val[], size(p))::Vector{T}
     elseif isstatic(p)
         @boundscheck checkbounds(p.val, idx)
-        return fill(default(p), length(idx))::Vector{eltype(T)}
+        return fill(default(p), length(idx))::Vector{T}
     else
-        return p.val[idx]::Vector{eltype(T)}
+        return p.val[idx]::Vector{T}
     end
 end
 
@@ -205,7 +205,7 @@ end
 #     return :((setindex!(p.val, val, idx))::T)
 # end
 
-@inline function Base.setindex!(p::ParamTensor{T}, val, idx) where T <: AbstractArray
+@inline function Base.setindex!(p::ParamTensor{T}, val, idx) where T
     @assert !isstatic(p) "Cannot set value of a static ParamTensor, use StaticParamTensor(param, val) instead"
     if ishomogeneous(p)
         @boundscheck 0 < idx <= prod(size(p))
@@ -215,23 +215,22 @@ end
     end
 end
 
-@inline function Base.setindex!(p::ParamTensor{T}, val) where T <: AbstractArray
+@inline function Base.setindex!(p::ParamTensor{T}, val) where T
     @assert !isstatic(p) "Cannot set value of a static ParamTensor, use StaticParamTensor(param, val) instead"
     @assert ishomogeneous(p) || isscalar(p) "Cannot set value of a non-homogeneous/scalar ParamTensor without an index"
     p.val[] = val
 end
 
-Base.dotview(p::ParamTensor{T}, i...) where T <: AbstractArray = Base.dotview(p.val, i...)
-Base.materialize!(p::ParamTensor{T}, a::Base.Broadcast.Broadcasted{<:Any}) where T <: AbstractArray = Base.materialize!(p.val, a)
+Base.dotview(p::ParamTensor{T}, i...) where T = Base.dotview(p.val, i...)
+Base.materialize!(p::ParamTensor{T}, a::Base.Broadcast.Broadcasted{<:Any}) where T = Base.materialize!(p.val, a)
 
-@inline Base.lastindex(p::ParamTensor{T}) where T <: AbstractArray = lastindex(p.val)
-@inline Base.firstindex(p::ParamTensor{T}) where T <: AbstractArray = firstindex(p.val)
-@inline Base.eachindex(p::ParamTensor{T}) where T <: AbstractArray = eachindex(p.val)
-Base.length(p::ParamTensor{T}) where T <: AbstractArray = length(p.val)
-@inline Base.eltype(p::ParamTensor{<:AbstractArray{T}}) where T = T
-Base.splice!(p::ParamTensor{T}, idx...) where T <: AbstractArray = splice!(p.val, idx...)
-
-Base.push!(p::ParamTensor{T}, val) where T <: AbstractArray = push!(p.val, val)
+@inline Base.lastindex(p::ParamTensor{T}) where T = lastindex(p.val)
+@inline Base.firstindex(p::ParamTensor{T}) where T = firstindex(p.val)
+@inline Base.eachindex(p::ParamTensor{T}) where T = eachindex(p.val)
+Base.length(p::ParamTensor{T}) where T = length(p.val)
+@inline Base.eltype(p::ParamTensor{T}) where T = T
+Base.splice!(p::ParamTensor{T}, idx...) where T = splice!(p.val, idx...)
+Base.push!(p::ParamTensor{T}, val) where T = push!(p.val, val)
 
 sethomogeneousval(p::ParamTensor{T}, val) where T = HomogeneousParam(val, default(p), active = isactive(p), description = p.description)
 removehomogeneousval(p::ParamTensor{T}, def = default(p)) where T = ParamTensor(fill(p[], size(p)...), def, isactive(p), description = p.description)
@@ -239,11 +238,11 @@ removehomogeneousval(p::ParamTensor{T}, def = default(p)) where T = ParamTensor(
 
 # Loopvectorization stuff
 using LayoutPointers
-LoopVectorization.check_args(p::ParamTensor{T}) where T <: DenseArray = true
-@inline Base.pointer(p::ParamTensor{T}) where T <: DenseArray = pointer(p.val)
-@inline LayoutPointers.memory_reference(p::ParamTensor{T}) where T <: DenseArray = LayoutPointers.memory_reference(p.val)
-@inline LayoutPointers.stridedpointer_preserve(p::ParamTensor{T}) where T <: DenseArray = LayoutPointers.stridedpointer_preserve(p.val)
-Base.strides(p::ParamTensor{T}) where T <: DenseArray = strides(p.val)
+LoopVectorization.check_args(p::ParamTensor{T,A,B,V}) where {T,A,B,V <: DenseArray} = true
+@inline Base.pointer(p::ParamTensor{T,A,B,V}) where {T,A,B,V <: DenseArray} = pointer(p.val)
+@inline LayoutPointers.memory_reference(p::ParamTensor{T,A,B,V}) where {T,A,B,V <: DenseArray} = LayoutPointers.memory_reference(p.val)
+@inline LayoutPointers.stridedpointer_preserve(p::ParamTensor{T,A,B,V}) where {T,A,B,V <: DenseArray} = LayoutPointers.stridedpointer_preserve(p.val)
+Base.strides(p::ParamTensor{T,A,B,V}) where {T,A,B,V <: DenseArray} = strides(p.val)
 # Base.IndexStyle(::Type{<:ParamTensor}) = IndexLinear()
 # Base.BroadcastStyle(::Type{ParamTensor{T,A,B,C,D}}) where {T<:AbstractArray,A,B,C,D} = Broadcast.ArrayStyle{ParamTensor}()
 # Base.BroadcastStyle(::Type{ParamTensor{T,A,B,C,D}}) where {T,A,B,C,D} = Broadcast.Style{ParamTensor}()

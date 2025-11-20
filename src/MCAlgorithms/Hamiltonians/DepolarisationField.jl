@@ -11,7 +11,6 @@ end
 
 function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers), zfunc = z -> 1)
     pv = HomogeneousParam(eltype(g)(0), length(state(g[1])), description = "Depolarisation Field")
-    @show typeof(pv)
     cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
     wg = @WG (dr) -> 1/dr^3 NN = 2
     fv = sparse(genLayerConnections(g[1], wg)..., nstates(g[1]), nstates(g[1]))
