@@ -13,7 +13,7 @@ mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers} <:
     state::Vector{T}
     # Adjacency Matrix
     adj::M
-    self::ParamVal{Vector{T}}
+    self::AbstractArray{T,1} # Diagonal of adj stored as a separate array for efficiency
     
     temp::T
 
