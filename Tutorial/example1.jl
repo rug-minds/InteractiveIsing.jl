@@ -59,9 +59,13 @@ function weightfunc4(dr,c1,c2)
 end
 
 ##################################################################################
-### Pulse type: TrianglePulseA (simple four-segment triangular waveform)
+### struct start: TrianglePulseA (simple four-segment triangular waveform)
+### Run with TrianlePulseA
+###  /\
+### /  \    _____
+###     \  /
+###      \/
 struct TrianglePulseA end
-
 function Processes.prepare(::TrianglePulseA, args)
     (;amp, numpulses, rise_point) = args
     steps = num_calls(args)
@@ -89,7 +93,6 @@ function Processes.prepare(::TrianglePulseA, args)
 
     return (;pulse, x, y)
 end
-
 function (::TrianglePulseA)(args)
     (;pulse, M, x, y, hamiltonian) = args
     pulse_val = pulse[algo_loopidx(args)]
@@ -97,11 +100,13 @@ function (::TrianglePulseA)(args)
     push!(x, pulse_val)
     push!(y, M[])
 end
+### struct end: TrianglePulseA
+##################################################################################
 
 
 xL = 40  # Length in the x-dimension
 yL = 40  # Length in the y-dimension
-zL = 10   # Length in the z-dimension
+zL = 8   # Length in the z-dimension
 g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
@@ -109,25 +114,8 @@ II.makie_markersize[] = 0.3
 # Launch interactive visualization (idle until createProcess(...) later)
 interface(g)
 
-temp(g,1.5)
-# g.hamiltonian = Ising(g) + Quartic(g) + Sextic(g)
 
-g.hamiltonian = Ising(g) + DepolField(g, c=3000, top_layers=1, bottom_layers=1, zfunc = z -> 1.0/z^2) + Quartic(g) + Sextic(g)
-# refresh!(g)
-
-
-
-
-
-# g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1) + Quartic(g) + Sextic(g)
-
-### Use ii. to check if the terms are correct
-### Now the H is written like H_self + H_quartic
-### Which is Jii*Si^2 + Qc*Jii*Si^4 wichi means Jii=a, Qc*Jii=b in a*Si^2 + b*Si^4
-### Set Jii=-0.5
-
-
-a1, b1, c1 = 1, -2, 1   
+a1, b1, c1 = -1, 0.5, 2 
 x = range(-1.0, 1.0, length=1000)
 y = a1 .* x.^2 .+ b1 .* x.^4 .+ c1 .* x.^6
 fig = Figure(resolution = (800, 400))
@@ -136,13 +124,24 @@ lines!(ax, x, y, color = :blue, linewidth = 2)
 hlines!(ax, [0], color = (:gray, 0.5), linestyle = :dash)
 display(fig)
 
+temp(g,1.5)
 
+g.hamiltonian = Ising(g) + DepolField(g, c=0.0001, top_layers=2, bottom_layers=2, zfunc = z -> 0.1/z^2) + Quartic(g) + Sextic(g)
+refresh(g)
+
+
+# g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1) + Quartic(g) + Sextic(g)
+
+### Use ii. to check if the terms are correct
+### Now the H is written like H_self + H_quartic
+### Which is Jii*Si^2 + Qc*Jii*Si^4 wichi means Jii=a, Qc*Jii=b in a*Si^2 + b*Si^4
+
+### Set Jii
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 homogeneousself!(g,a1)
-
-# ### Set Qc*Jii=1
+### Set Qc*Jii
 g.hamiltonian[4].qc[] = b1/a1
-### Set Sc*Jii=1
+### Set Sc*Jii
 g.hamiltonian[5].sc[] = c1/a1
 
 
@@ -162,11 +161,6 @@ risepoint=500
 Amptitude =30
 # risepoint = round(Int, Amptitude/0.01)
 
-### Run with TrianlePulseA
-###  /\
-### /  \    _____
-###     \  /
-###      \/
 
 PulseN = 2
 Pulsetime = (PulseN * 4 + 10) * risepoint * SpeedRate
