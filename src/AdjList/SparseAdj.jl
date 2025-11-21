@@ -38,9 +38,9 @@ function genLayerConnections(layer::AbstractIsingLayer{T,D}, wg) where {T,D}
     end
 
     n_conns = nstates(g)*blocksize
-    sizehint!(col_idxs, 2*n_conns)
-    sizehint!(row_idxs, 2*n_conns)
-    sizehint!(weights, 2*n_conns)
+    sizehint!(col_idxs, 2*n_conns)::Vector{Int32}
+    sizehint!(row_idxs, 2*n_conns)::Vector{Int32}
+    sizehint!(weights, 2*n_conns)::Vector{Float32}
 
     conn_is = Prealloc(Int32, blocksize)
     conn_js = Prealloc(Int32, blocksize)
@@ -154,9 +154,9 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, wei
 
             vert_i, vert_j, vert_k = coords_vert
        
-            c1 = Coordinate(vert_i, vert_j, vert_k)
-            c2 = Coordinate(conn_i, conn_j, conn_k)
-            dr = dist(topology, c1, c2)
+            c1 = Coordinate(topology, vert_i, vert_j, vert_k)
+            c2 = Coordinate(topology, conn_i, conn_j, conn_k)
+            dr = dist(c1, c2)
 
             weight = eltype(layer)((wg(;dr, c1, c2)))
 

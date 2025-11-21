@@ -51,7 +51,7 @@ using SparseArrays, StaticArrays, LoopVectorization
 
 export AbstractIsingGraph
 abstract type AbstractIsingGraph{T} end
-abstract type AbstractIsingLayer{T,DIMS} <: AbstractIsingGraph{T} end
+abstract type AbstractIsingLayer{T,DIMS} end
 abstract type AbstractLayerProperties end
 
 

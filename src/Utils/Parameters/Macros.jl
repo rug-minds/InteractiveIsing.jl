@@ -43,7 +43,7 @@ function replace_struct_field_access(func, paramname, replace)
     return func
 end
 
-function replace_paramtensor(func, paramname)
+function replace_paramval(func, paramname)
     function replacefunc(containing_exp, paramname, fieldname) 
         containing_exp = enter_args(func, idxs[1:end-2])
         if containing_exp.head == :ref
@@ -121,11 +121,11 @@ function structname_fieldname(struct_access_exp)
     return structname, fieldname
 end
 
-function default_paramtensor(paramname, fieldname)
+function default_paramval(paramname, fieldname)
     :(default($paramname, $fieldname))
 end
 
-function ifactive_defaultparamtensor(exp, paramname, fieldname)
+function ifactive_defaultparamval(exp, paramname, fieldname)
     quote   if isactive($paramname, $(fieldname))
                 $exp
             else
@@ -170,7 +170,7 @@ end
 #     # println("Func ", func)
 #     @capture(func, function name_(a__) body__ end)
 #     paramname = find_type_in_args(a, :Parameters)
-#     replace_struct_access(func, paramname, (exp) -> ifactive_defaultparamtensor(exp, structname_fieldname(exp)...))
+#     replace_struct_access(func, paramname, (exp) -> ifactive_defaultparamval(exp, structname_fieldname(exp)...))
 #     println(func)
 #     return esc(func)
 # end
@@ -299,7 +299,7 @@ function macro_parse_kwargs(kwargs, available_names::Dict)
         this_arg_val = args[2]
         if haskey(available_names, this_arg_name)
             expected_type = gettype(available_names[this_arg_name])
-            if eval(this_arg_val) isa expected_type
+            if eval(this_arg_val) isa expected_type || this_arg_val isa Symbol
                 push!(key_vals, this_arg_name => this_arg_val)
             else
                 error("Keyword argument $this_arg_name must be of type $expected_type, got $(typeof(this_arg_val))")

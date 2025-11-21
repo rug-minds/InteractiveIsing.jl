@@ -5,12 +5,20 @@ function conn_coords(g,i)
     idxToCoord.(graph(g).adj.rowval[nzrange(graph(g).adj,i)],Ref(size(g)))
 end
 
-function conn_idxs(g,i)
-    graph(g).adj.rowval[nzrange(graph(g).adj,i)]
+function conn_idxs(g::AbstractIsingGraph,i)
+    conn_idxs(graph(g).adj,i)
 end
 
-function conn_weights(g,i)
-    graph(g).adj.nzval[nzrange(graph(g).adj,i)]
+function conn_weights(g::AbstractIsingGraph,i)
+    conn_weights(graph(g).adj,i)
+end
+
+function conn_weights(adj::SparseMatrixCSC, i)
+    adj.nzval[nzrange(adj,i)]
+end
+
+function conn_idxs(adj::SparseMatrixCSC, i)
+    adj.rowval[nzrange(adj,i)]
 end
 
 function show_connections(g,i)

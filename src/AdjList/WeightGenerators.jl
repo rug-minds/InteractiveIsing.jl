@@ -13,7 +13,7 @@ function WeightGenerator(func, NN = tuple(1), rng = Random.MersenneTwister(); ex
 end
 
 macro WG(func, kwargs...)
-    kwargs = macro_parse_kwargs(kwargs, :NN => Union{Int, NTuple}, :rng, NN = 1, rng = MersenneTwister())
+    kwargs = macro_parse_kwargs(kwargs, :NN => Union{Int, NTuple, Symbol}, :rng, NN = 1, rng = MersenneTwister())
 
     #Function parsing
     # Either anonymous function which has to have a combination of

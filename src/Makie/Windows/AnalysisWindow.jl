@@ -1,4 +1,4 @@
-layer(l::IsingLayer) = l.l
+layer(l::IsingLayer) = l
 layer(g::IsingGraph) = convert(IsingLayer, g)
 function createAnalysisWindow(l, panels...;kwargs...)
     AnalysisWindow(layer(l), panels...;kwargs...)
