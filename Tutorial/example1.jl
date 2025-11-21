@@ -13,7 +13,7 @@ end
 
 # Weight function variant 1
 function weightfunc1(dr,c1,c2)
-    prefac = 1
+    prefac = 2
     d = delta(c1,c2)
     dx, dy, dz = d
     # Always positive coupling (ferromagnetic)
@@ -104,8 +104,8 @@ end
 ##################################################################################
 
 
-xL = 40  # Length in the x-dimension
-yL = 40  # Length in the y-dimension
+xL = 120  # Length in the x-dimension
+yL = 120  # Length in the y-dimension
 zL = 8   # Length in the z-dimension
 g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
 # Visual marker size (tune for clarity vs performance)
@@ -115,7 +115,7 @@ II.makie_markersize[] = 0.3
 interface(g)
 
 
-a1, b1, c1 = -1, 0.5, 2 
+a1, b1, c1 = -2, 2, 0 
 x = range(-1.0, 1.0, length=1000)
 y = a1 .* x.^2 .+ b1 .* x.^4 .+ c1 .* x.^6
 fig = Figure(resolution = (800, 400))
@@ -124,9 +124,9 @@ lines!(ax, x, y, color = :blue, linewidth = 2)
 hlines!(ax, [0], color = (:gray, 0.5), linestyle = :dash)
 display(fig)
 
-temp(g,1.5)
+temp(g,1)
 
-g.hamiltonian = Ising(g) + DepolField(g, c=0.0001, top_layers=2, bottom_layers=2, zfunc = z -> 0.1/z^2) + Quartic(g) + Sextic(g)
+g.hamiltonian = Ising(g) + DepolField(g, c=0.0003, top_layers=4, bottom_layers=4, zfunc = z -> 2/z) + Quartic(g) + Sextic(g)
 refresh(g)
 
 
@@ -147,7 +147,7 @@ g.hamiltonian[5].sc[] = c1/a1
 
 
 # wg1 = @WG weightfunc_xy_dilog_antiferro NN = (2,2,2)
-wg1 = @WG weightfunc1 NN = (1,1,1)
+wg1 = @WG weightfunc1 NN = (1,1,2)
 # wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
 
 
