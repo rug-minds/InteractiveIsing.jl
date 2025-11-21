@@ -42,7 +42,9 @@ function layers_deep(j, dpf::DepolField)
     return z
 end
 
-
+"""
+Get the total Depolarisation (sum of all boundary layer spins scaled by zfunc)
+"""
 function get_dpf(dpf, g)
     ll = dpf.top_layers
     rl = dpf.bottom_layers

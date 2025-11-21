@@ -4,21 +4,21 @@ export Coordinate, DeltaCoordinate, coord, norm2, delta
 struct Coordinate{N,T} <: Base.AbstractCartesianIndex{N} # N dimensional coordinate
     top::T
     coords::CartesianIndex{N}
-end
 
-function Coordinate(top::LayerTopology, n::Integer...)
-    dims = length(size(top))
-    @assert length(n) == dims "Number of coordinates $(length(n)) must match topology dimensions $dims"
+    function Coordinate(top::LayerTopology, n::Integer...)
+        dims = length(size(top))
+        @assert length(n) == dims "Number of coordinates $(length(n)) must match topology dimensions $dims"
 
-    periodic = fill(false, length(n))
-    for ax in periodicaxes(top)
-        periodic[ax] = true
+        periodic = fill(false, length(n))
+        for ax in periodicaxes(top)
+            periodic[ax] = true
+        end
+        new_coords = ntuple(i -> periodic[i] ? mod1(n[i], size(top)[i]) : n[i], length(n))
+        
+        @assert all(x -> 0 < x[1] <= size(top)[x[2]], zip(new_coords, 1:length(n))) "Coordinate $n is out of bounds for topology of size $(size(top))"
+
+        new{dims, typeof(top)}(top, CartesianIndex(new_coords))
     end
-    new_coords = ntuple(i -> periodic[i] ? mod1(n[i], size(top)[i]) : n[i], length(n))
-    
-    @assert all(x -> 0 < x[1] <= size(top)[x[2]], zip(new_coords, 1:length(n))) "Coordinate $n is out of bounds for topology of size $(size(top))"
-
-    Coordinate{dims, typeof(top)}(top, CartesianIndex(new_coords))
 end
 
 Coordinate(top, t::Tuple) = Coordinate(top, t...)
