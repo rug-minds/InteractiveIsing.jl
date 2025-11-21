@@ -9,10 +9,10 @@ struct DepolField{PV <: ParamTensor, CV <: ParamTensor, F, SP, T} <: Hamiltonian
     size::T
 end
 
-function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers), zfunc = z -> 1)
+function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers), zfunc = z -> 1, NN=2)
     pv = HomogeneousParam(eltype(g)(0), length(state(g[1])), description = "Depolarisation Field")
     cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
-    wg = @WG (dr) -> 1/dr^3 NN = 2
+    wg = @WG (dr) -> 1/dr^3 NN = NN
     fv = sparse(genLayerConnections(g[1], wg)..., nstates(g[1]), nstates(g[1]))
     
     dpf = DepolField(pv, cv, zfunc, fv, Int32(top_layers), Int32(bottom_layers), size(g[1]))
@@ -42,7 +42,9 @@ function layers_deep(j, dpf::DepolField)
     return z
 end
 
-
+"""
+Get the total Depolarisation (sum of all boundary layer spins scaled by zfunc)
+"""
 function get_dpf(dpf, g)
     ll = dpf.top_layers
     rl = dpf.bottom_layers

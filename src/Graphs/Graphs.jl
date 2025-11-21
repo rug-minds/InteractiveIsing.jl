@@ -23,6 +23,7 @@ include("IsingGraph.jl")
 
 
 include("Layers/Layers.jl")
+include("SingleLayerGraph.jl")
 
 include("SetEls.jl")
 

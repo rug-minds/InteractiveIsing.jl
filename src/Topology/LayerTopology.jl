@@ -1,6 +1,7 @@
 using LinearAlgebra
 
 export PeriodicityType, Periodic, NonPeriodic, PartPeriodic
+export periodic, periodicaxes
 abstract type PeriodicityType end
 struct Periodic <: PeriodicityType end
 struct PartPeriodic{T} <: PeriodicityType end
@@ -36,10 +37,10 @@ end
 
 periodic(P::Periodic, ::Val{symb}) where symb = true
 periodic(P::NonPeriodic, ::Val{symb}) where symb = false
+periodicaxes(P::PartPeriodic{Parts}, dims) where {Parts} = Parts
+periodicaxes(P::Periodic, dims) = ntuple(i -> i, dims)
+periodicaxes(P::NonPeriodic, dims) = tuple()
 
-
-abstract type LatticeType end
-abstract type LayerTopology{U, Dim} end
 
 struct Square <: LatticeType end
 struct Rectangular <: LatticeType end
@@ -52,7 +53,22 @@ export LatticeType, Square, Rectangular, Oblique, Hexagonal, Rhombic, AnyLattice
 
 struct GenericTopology{U} <: LayerTopology{U,0} end
 
+ndims(lt::LayerTopology) = length(size(lt))
+ndims(lt::Type{<:LayerTopology{U,DIM}}) where {U,DIM} = DIM
+
 @inline periodic(lt::LayerTopology{U}, symb) where U = periodic(U, symb)
+@inline periodicaxes(lt::LayerTopology{U}) where U = periodicaxes(U, length(size(lt)))
+@inline periodicaxes(lt::Type{<:LayerTopology{U,DIM}}) where {U,DIM} = periodicaxes(U, DIM)
+
+@inline @generated function whichperiodic(lt::LayerTopology)
+    periodic = fill(false, ndims(lt))
+    for ax in periodicaxes(lt)
+        periodic[ax] = true
+    end
+    periodic = tuple(periodic...)
+    return :($periodic)
+end
+
 struct SquareTopology{U,DIMS} <: LayerTopology{U, DIMS}
     size::NTuple{DIMS,Int32}
 end

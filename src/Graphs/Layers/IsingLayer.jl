@@ -84,6 +84,13 @@ function IsingLayer(
         return layer
 end
 
+# convert(::Type{<:IsingLayer}, g::SingleLayerGraph) = g[1]
+# layer(l::IsingLayer) = l
+# layer(g::AbstractIsingGraph) = g[1]
+Base.LinearIndices(l::IsingLayer) = LinearIndices(size(l))
+Base.CartesianIndices(l::IsingLayer) = CartesianIndices(size(l))
+
+
 get_weightgenerator(layer::IsingLayer) = get(layer.connections, layer.idx => layer.idx, nothing)
 struct LayerProperties <: AbstractLayerProperties
     size::Tuple
@@ -136,6 +143,9 @@ end
 
 @setterGetter IsingLayer coords size idx graph
 stateset(layer::IsingLayer) = layerparams(layer, :StateSet)
+
+topology(l) = layer(l).top
+export topology
 
 # Extend show for IsingLayer, showing the layer idx, and the size of the layer
 function Base.show(io::IO, layer::IsingLayer{A,B}) where {A,B}
@@ -267,7 +277,11 @@ Get adjacency of layer in layer coordinates
 end
 export maxdist
 
-@inline coordToIdx(i,j,layer::AbstractIsingLayer) = coordToIdx(latmod(Int32(i), size(layer,1)), latmod(Int32(j), size(layer,2)), size(layer,1))
+# @inline coordToIdx(i,j,layer::AbstractIsingLayer) = coordToIdx(latmod(Int32(i), size(layer,1)), latmod(Int32(j), size(layer,2)), size(layer,1))
+function coordToIdx(idxs::NTuple{N,T}, layer::AbstractIsingLayer) where {N,T}
+    sl = size(layer)
+    coordToIdx(ntuple(i -> let idx = idxs[i]; T(latmod(i, size(layer, idx))) end, length(idxs) ), sl)
+end
 @inline idxToCoord(idx, layer::AbstractIsingLayer) = idxToCoord(Int32(idx), size(layer,1))
 c2i = coordToIdx
 i2c = idxToCoord

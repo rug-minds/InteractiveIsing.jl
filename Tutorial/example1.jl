@@ -107,7 +107,7 @@ end
 xL = 120  # Length in the x-dimension
 yL = 120  # Length in the y-dimension
 zL = 8   # Length in the z-dimension
-g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
+g = IsingGraph(xL, yL, zL, stype = Continuous(), periodic = (:x,:y))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
 
@@ -118,7 +118,7 @@ interface(g)
 a1, b1, c1 = -2, 2, 0 
 x = range(-1.0, 1.0, length=1000)
 y = a1 .* x.^2 .+ b1 .* x.^4 .+ c1 .* x.^6
-fig = Figure(resolution = (800, 400))
+fig = Figure(size = (800, 400))
 ax = Axis(fig[1, 1]; xlabel = "x", ylabel = "f(x)")
 lines!(ax, x, y, color = :blue, linewidth = 2)
 hlines!(ax, [0], color = (:gray, 0.5), linestyle = :dash)
@@ -126,7 +126,8 @@ display(fig)
 
 temp(g,1)
 
-g.hamiltonian = Ising(g) + DepolField(g, c=0.0003, top_layers=4, bottom_layers=4, zfunc = z -> 2/z) + Quartic(g) + Sextic(g)
+g.hamiltonian = Ising(g) + DepolField(g, c=0.0003, top_layers=1, bottom_layers=1, zfunc = z -> 1.15/z) + Quartic(g) + Sextic(g)
+h = g.hamiltonian
 refresh(g)
 
 
@@ -151,7 +152,7 @@ wg1 = @WG weightfunc1 NN = (1,1,2)
 # wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
 
 
-genAdj!(g[1], wg1)
+genAdj!(g, wg1)
 fullsweep = xL*yL*zL
 Time_fctr = 0.5
 SpeedRate = Int(Time_fctr*fullsweep)

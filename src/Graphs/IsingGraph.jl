@@ -8,9 +8,9 @@ intprecision(::Type{Float32}) = Int32
 intprecision(::Type{Float64}) = Int64
 
 # Ising Graph Representation and functions
-mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers} <: AbstractIsingGraph{T}
+mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers, N} <: AbstractIsingGraph{T}
     # Vertices and edges
-    state::Vector{T}
+    state::AbstractArray{T,N}
     # Adjacency Matrix
     adj::M
     self::AbstractArray{T,1} # Diagonal of adj stored as a separate array for efficiency
@@ -34,8 +34,6 @@ mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers} <:
 
     layers::Layers
 end
-
-const SingleLayerGraph{T<:AbstractFloat, M<:AbstractMatrix{T}} = IsingGraph{T,M,<:Tuple{<:AbstractIsingLayer}}
 
 
 function IsingGraph(dims::Int...; 
@@ -87,7 +85,7 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
     self = StaticParam(0f0, _datalen, description = "Self Connections")
 
 
-    g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(layers)}(
+    g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(layers), 1}(
         # sim,
         zeros(precision, _datalen),
         SparseMatrixCSC{precision,intprecision(precision)}(undef,_datalen,_datalen),
@@ -240,9 +238,9 @@ export clamprange!
 @setterGetter IsingGraph adj params
 # @inline params(g::IsingGraph) = g.params
 export params
-@inline nStates(g::IsingGraph) = length(state(g))
+@inline nStates(g::IsingGraph) = length(state(g))::Int
 
-@inline nstates(g) = length(state(g))
+@inline nstates(g) = length(state(g))::Int
 export nstates
 
 @inline adj(g::IsingGraph) = g.adj

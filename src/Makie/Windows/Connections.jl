@@ -1,12 +1,12 @@
 export visualize_connections
-function visualize_connections(g::AbstractIsingLayer, i)
+function make_visualize_connections(g::AbstractIsingLayer, i::Integer; adj = InteractiveIsing.adj(g))
     window = new_window(window_type = :Connections, title = "Connections from node $i")
     # Make GridLayout
     window[:gridlayout] = window.f[1, 1] = GridLayout()
 
     colorvec = zeros(RGBAf, nstates(g))
-    weights = conn_weights(g,i)
-    colorvec[conn_idxs(g,i)] .= weight_colors(weights)
+    weights = conn_weights(adj,i)
+    colorvec[conn_idxs(adj,i)] .= weight_colors(weights)
     # return (colorvec)
     window[:layer] = g
     window[:ax] = create_layer_axis!(window, window, color = colorvec)
@@ -15,8 +15,10 @@ end
 current_layer(window::MakieWindow{:Connections}) = window[:layer]
 
 
-visualize_connections(g, i, j) = visualize_connections(g, coordToIdx(Int32.((i, j)), size(g)))
-visualize_connections(g, i, j, k) = visualize_connections(g, coordToIdx(Int32.((i, j, k)), size(g)) )
+# visualize_connections(g, i, j) = visualize_connections(g, coordToIdx(Int32.((i, j)), size(g)))
+# visualize_connections(g, i, j, k) = visualize_connections(g, coordToIdx(Int32.((i, j, k))..., size(g)) )
+visualize_connections(l, coords::Int...; adj = InteractiveIsing.adj(l)) = make_visualize_connections(l, LinearIndices(l)[coords...]; adj)
+
 
 function weight_colors(weights)
     max_weight = maximum(weights)

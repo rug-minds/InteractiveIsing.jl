@@ -141,7 +141,6 @@ function Base.length(p::ParamTensor)
     length(p.val)
 end
 
-Base.eltype(p::ParamTensor) = eltype(p.val)
 Base.eltype(pt::Type{<:ParamTensor{T,D,A,N}}) where {T,D,A,N} = eltype(T)
 
 """
@@ -212,7 +211,6 @@ Base.materialize!(p::ParamTensor{T}, a::Base.Broadcast.Broadcasted{<:Any}) where
 @inline Base.lastindex(p::ParamTensor{T}) where T = lastindex(p.val)
 @inline Base.firstindex(p::ParamTensor{T}) where T = firstindex(p.val)
 # @inline Base.eachindex(p::ParamTensor{T}) where T = eachindex(p.val)
-Base.length(p::ParamTensor{T}) where T = length(p.val)
 @inline Base.eltype(p::ParamTensor{T}) where T = T
 Base.splice!(p::ParamTensor{T}, idx...) where T = splice!(p.val, idx...)
 Base.push!(p::ParamTensor{T}, val) where T = push!(p.val, val)
