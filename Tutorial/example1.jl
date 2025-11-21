@@ -126,9 +126,16 @@ display(fig)
 
 temp(g,1)
 
-g.hamiltonian = Ising(g) + DepolField(g, c=0.0003, top_layers=1, bottom_layers=1, zfunc = z -> 1.15/z) + Quartic(g) + Sextic(g)
+# wg1 = @WG weightfunc_xy_dilog_antiferro NN = (2,2,2)
+wg1 = @WG weightfunc1 NN = (1,1,2)
+# wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
+
+
+genAdj!(g, wg1)
+
+g.hamiltonian = Ising(g) + DepolField(g, c=0.0005, top_layers=1, bottom_layers=1, zfunc = z -> 1.05/z) + Quartic(g) + Sextic(g)
 h = g.hamiltonian
-refresh(g)
+# refresh(g)
 
 
 # g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1) + Quartic(g) + Sextic(g)
@@ -147,12 +154,6 @@ g.hamiltonian[5].sc[] = c1/a1
 
 
 
-# wg1 = @WG weightfunc_xy_dilog_antiferro NN = (2,2,2)
-wg1 = @WG weightfunc1 NN = (1,1,2)
-# wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
-
-
-genAdj!(g, wg1)
 fullsweep = xL*yL*zL
 Time_fctr = 0.5
 SpeedRate = Int(Time_fctr*fullsweep)
