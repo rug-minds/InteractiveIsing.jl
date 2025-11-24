@@ -35,6 +35,9 @@ mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers, N}
     layers::Layers
 end
 
+const PottsGraph{T, M, L}  = IsingGraph{T, M, L, 2}
+const GlauberGraph{T, M, L} =IsingGraph{T, M, L, 3}
+
 
 function IsingGraph(dims::Int...; 
                     periodic = nothing, 

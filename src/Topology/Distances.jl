@@ -14,9 +14,11 @@ end
 function dist2(top::SquareTopology, c1::Coordinate, c2::Coordinate)
     if periodic(top) isa Periodic
         d = c2-c1
-        gen = (abs(d[i]) > size(top, 1)/2 ? d[i] - sign(d[i]) * size(top, 1) : d[i] for i in 1:length(c1))
+        ds = top.ds
+        gen = (abs(d[i]) > size(top, 1)/2 ? ds[i](d[i] - sign(d[i]) * size(top, 1)) : ds[i]*d[i] for i in 1:length(c1))
         return reduce((x,y) -> x + y^2, gen, init = 0)
     else
-        return reduce((x,y) -> x + y^2, c2-c1, init = 0)
+        gen = (top.ds[i]*(c2[i]-c1[i]) for i in 1:length(c1))
+        return reduce((x,y) -> x + y^2, gen, init = 0)
     end   
 end
