@@ -5,6 +5,9 @@ export periodic, periodicaxes
 abstract type PeriodicityType end
 struct Periodic <: PeriodicityType end
 struct PartPeriodic{T} <: PeriodicityType end
+parts(P::Type{<:PartPeriodic{Parts}}) where {Parts} = Parts
+parts(p::PartPeriodic) = parts(typeof(p))
+
 struct NonPeriodic <: PeriodicityType end
 
 const part_periodic_map = Dict(
@@ -21,7 +24,7 @@ function PartPeriodic(args...)
     # assert only has a combination of x y and z
     @assert all(x -> x in (:x, :y, :z), args) || all(x -> x isa Integer && 1 <= x , args) "PartPeriodic only takes a combination of :x, :y, :z or integers"
     args = tuple(map(map_pp_f, args)...)
-    return PartPeriodic{args}()
+    return PartPeriodic{args}
 end
 
 periodic(p::PeriodicityType, symb::Symbol) = periodic(p, Val(symb))
@@ -35,11 +38,14 @@ periodic(p::PeriodicityType, dim::Int) = periodic(p, Val(dim))
     return :($(!isnothing(found)))
 end
 
+
 periodic(P::Periodic, ::Val{symb}) where symb = true
 periodic(P::NonPeriodic, ::Val{symb}) where symb = false
 periodicaxes(P::PartPeriodic{Parts}, dims) where {Parts} = Parts
 periodicaxes(P::Periodic, dims) = ntuple(i -> i, dims)
 periodicaxes(P::NonPeriodic, dims) = tuple()
+
+
 
 
 struct Square <: LatticeType end
@@ -56,9 +62,9 @@ struct GenericTopology{U} <: LayerTopology{U,0} end
 ndims(lt::LayerTopology) = length(size(lt))
 ndims(lt::Type{<:LayerTopology{U,DIM}}) where {U,DIM} = DIM
 
-@inline periodic(lt::LayerTopology{U}, symb) where U = periodic(U, symb)
-@inline periodicaxes(lt::LayerTopology{U}) where U = periodicaxes(U, length(size(lt)))
-@inline periodicaxes(lt::Type{<:LayerTopology{U,DIM}}) where {U,DIM} = periodicaxes(U, DIM)
+@inline periodic(lt::LayerTopology{U}, symb) where U = periodic(U(), symb)
+@inline periodicaxes(lt::LayerTopology{U}) where U = periodicaxes(U(), length(size(lt)))
+@inline periodicaxes(lt::Type{<:LayerTopology{U,DIM}}) where {U,DIM} = periodicaxes(U(), DIM)
 
 @inline @generated function whichperiodic(lt::LayerTopology)
     periodic = fill(false, ndims(lt))
@@ -81,9 +87,9 @@ function SquareTopology(size = tuple(); ds = tuple(fill(1.0, length(size))...), 
         @assert length(ds) == length(size) "ds must be same length as size" 
 
         if periodic isa Bool
-            U = periodic ? Periodic() : NonPeriodic()
+            U = periodic ? Periodic : NonPeriodic
         elseif isnothing(periodic)
-            U = Periodic()
+            U = Periodic
         else
             U = PartPeriodic(periodic...) 
         end
@@ -93,7 +99,7 @@ end
 
 setdist!(lt::SquareTopology{U,DIMS,P}, ds::NTuple{DIMS,P}) where {U,DIMS,P} = begin lt.ds .= ds; lt end
 
-function (lt::SquareTopology{Periodic()})(d::DeltaCoordinate)
+function (lt::SquareTopology{Periodic})(d::DeltaCoordinate)
     @assert length(d) == length(size(lt))
     function get_taurus_dist(di, size_i)
         di = abs(di)
@@ -105,8 +111,28 @@ function (lt::SquareTopology{Periodic()})(d::DeltaCoordinate)
     DeltaCoordinate(ntuple(i -> get_taurus_dist(d.deltas[i], size(lt,i)), Val(length(d.deltas)))...)
 end
 
-function (lt::SquareTopology{NonPeriodic()})(d::DeltaCoordinate)
+function (lt::SquareTopology{NonPeriodic})(d::DeltaCoordinate)
     return d
+end
+
+function Base.in(coord, lt::SquareTopology{NonPeriodic})
+    all(1 .<= coord .<= size(lt))
+end
+
+Base.in(coord, lt::SquareTopology{Periodic}) = true
+
+function Base.in(coord, lt::SquareTopology{P}) where {P <: PartPeriodic}
+    _isin = true
+    for (i,isperiodic) in enumerate(whichperiodic(lt))
+        if !_isin
+            break
+        end
+        if isperiodic
+            continue
+        end
+        _isin &= (1 <= coord[i] <= size(lt,i))
+    end
+    _isin
 end
 
 mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: LayerTopology{U, Dim} 
@@ -160,12 +186,12 @@ mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: LayerTopo
             
             if !isnothing(periodic)
                 if periodic isa Bool
-                    ptype = periodic ? Periodic() : NonPeriodic()
+                    ptype = periodic ? Periodic : NonPeriodic
                 elseif periodic isa Tuple
                     ptype = PartPeriodic(periodic...)
                 end
             else
-                ptype = Periodic()
+                ptype = Periodic
             end
 
             if vec1 == [1,0] && vec2 == [0,1]
@@ -394,13 +420,13 @@ function lat_mod_or_in(top::LayerTopology{P,N}, coord::NTuple{N,Int32}, size::NT
 end
 
 function coordperiodicity(top::LayerTopology{Periodic}, symb)
-    return Periodic()
+    return Periodic
 end
 
 function coordperiodicity(top::LayerTopology{NonPeriodic}, symb)
-    return NonPeriodic()
+    return NonPeriodic
 end
 
 function coordperiodicity(top::LayerTopology{PartPeriodic{Parts}}, symb) where {Parts}
-    return symb in Parts ? Periodic() : NonPeriodic()
+    return symb in Parts ? Periodic : NonPeriodic
 end

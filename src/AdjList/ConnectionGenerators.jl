@@ -173,21 +173,24 @@ function getConnIdxs!(topology, vert_idx, coord_vert::NTuple{3,Integer}, size::N
         for j in -NNj:NNj
             for i in -NNi:NNi
                 
+                # Ignore self-connection
                 (i == 0 && j == 0 && k == 0) && continue
+
                 vert_i, vert_j, vert_k = coord_vert
                 
-                if (!periodic(topology, :x) && (vert_i + i < 1 || vert_i + i > size[1])) || 
-                    (!periodic(topology, :y) && (vert_j + j < 1 || vert_j + j > size[2])) ||
-                    (!periodic(topology, :z) && (vert_k + k < 1 || vert_k + k > size[3]))
-                    continue
-                end
+                # if (!periodic(topology, :x) && (vert_i + i < 1 || vert_i + i > size[1])) || 
+                #     (!periodic(topology, :y) && (vert_j + j < 1 || vert_j + j > size[2])) ||
+                #     (!periodic(topology, :z) && (vert_k + k < 1 || vert_k + k > size[3]))
+                #     continue
+                # end
 
                 #Apply the periodicity
                 conn_i, conn_j, conn_k = latmod((vert_i + i, vert_j + j, vert_k + k), size)
                 
-                if conn_i == 0 || conn_j == 0 || conn_k == 0
-                    continue
-                end
+                # 
+                # if conn_i == 0 || conn_j == 0 || conn_k == 0
+                #     continue
+                # end
 
                 
                 #Turn the coordinates into an index

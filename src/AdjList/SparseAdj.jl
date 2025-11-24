@@ -30,35 +30,28 @@ function genLayerConnections(layer::AbstractIsingLayer{T,D}, wg) where {T,D}
     # Either global NN is given, or a tuple of NN for each dimension
     @assert (_NN isa Integer || length(_NN) == D )
     
-    blocksize = Int32(0)
-    if _NN isa Integer
-        blocksize = (2*_NN+1)^D - 1
-    else
-        blocksize = prod(2 .* _NN .+ 1) - 1
+    _NNt = nothing
+    if _NN isa Integer # all dimensions same NN
+        _NNt = ntuple(i -> _NN, D)
     end
 
+    blocksize = Int32(prod(2 .* _NNt .+ 1) - 1)
+
     n_conns = nstates(g)*blocksize
+
     sizehint!(col_idxs, 2*n_conns)::Vector{Int32}
     sizehint!(row_idxs, 2*n_conns)::Vector{Int32}
     sizehint!(weights, 2*n_conns)::Vector{Float32}
 
-    conn_is = Prealloc(Int32, blocksize)
-    conn_js = Prealloc(Int32, blocksize)
+    # Conn_idxs, conn_i,j,k,...
+    # conns = ntuple(i -> Prealloc(Int32, blocksize::Int32), D)
+    # conn_idxs = Prealloc(Int32, blocksize)
+    _fillSparseVecs(layer, row_idxs, col_idxs, weights, top(layer), wg)
+    
 
-    conns = (conn_is, conn_js)
-    if D == 3
-        conn_ks = Prealloc(Int32, blocksize)
-        conns = (conns..., conn_ks)
-    end
-
-    conn_idxs = Prealloc(Int32, blocksize)
-
-    _fillSparseVecs(layer, row_idxs, col_idxs, weights, top(layer), wg, conn_idxs, conns...)
-
-
-    append!(row_idxs, col_idxs)
-    append!(col_idxs, @view(row_idxs[1:end÷2]))
-    append!(weights, weights)
+    # append!(row_idxs, col_idxs)
+    # append!(col_idxs, @view(row_idxs[1:end÷2]))
+    # append!(weights, weights)
 
     return row_idxs, col_idxs, weights
 end
@@ -70,20 +63,10 @@ From a generator that returns (i, j, idx) for the connections
     fill the row_idxs, col_idxs, and weights
 """ 
 function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_idxs, weights, topology, wg::WG, conns...) where {T,WG}
-    NN = getNN(wg)
+    NN = getNN(wg, length(size(layer)))
     @assert (NN isa Integer || length(NN) == 2)
 
-
     conn_idxs, conn_is, conn_js = conns
-
-    NNi = Int32(0)
-    NNj = Int32(0)
-    if NN isa Integer
-        NNi = NN
-        NNj = NN
-    else
-        NNi, NNj = NN
-    end
 
     for col_idx in Int32(1):nstates(layer)
         vert_i, vert_j = idxToCoord(col_idx, glength(layer))
@@ -125,55 +108,74 @@ function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_i
     end
 end
 
-function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, weights, topology, wg::WG, conns...) where {T,WG}
-    NN = getNN(wg)
+function _fillSparseVecs(layer::AbstractIsingLayer{T,3}, row_idxs, col_idxs, weights, topology, wg::WG) where {T,WG}
+    NN = getNN(wg, length(size(layer)))
     @assert (NN isa Integer || length(NN) == 3)
 
-    conn_idxs, conn_is, conn_js, conn_ks = conns
-    
-    NNi = Int32(0)
-    NNj = Int32(0)
-    NNk = Int32(0)
-
-    if NN isa Integer
-        NNi = NNj = NNk = NN
-    else
-        NNi, NNj, NNk = NN
-    end
+    # conn_idxs, conn_is, conn_js, conn_ks = conns
+    LI = LinearIndices(size(layer))
 
     for col_idx in Int32(1):nstates(layer)
-        coords_vert = idxToCoord(col_idx, size(layer)) # Coords of the spin
-        getConnIdxs!(topology, col_idx, coords_vert, size(layer), NNi, NNj, NNk, conn_idxs, conn_is, conn_js, conn_ks)
-        
-        @fastmath for conn_num in eachindex(conn_is)
-            conn_i = conn_is[conn_num]
-            conn_j = conn_js[conn_num]
-            conn_k = conn_ks[conn_num]
-            conn_idx = conn_idxs[conn_num]
+        # coords_spin = idxToCoord(col_idx, size(layer)) # Coords of the spin
+        coords_spin = Coordinate(topology, col_idx)
+        for k in -NN[3]:NN[3]
+            for j in -NN[2]:NN[2]
+                for i in -NN[1]:NN[1]
+                    # Ignore self-connection
+                    (i == 0 && j == 0 && k == 0) && continue
 
+                    coords_conn = offset(coords_spin, i,j,k)
+                    if !(in(coords_conn, topology))
+                        continue
+                    end
 
-            vert_i, vert_j, vert_k = coords_vert
-       
-            c1 = Coordinate(topology, vert_i, vert_j, vert_k)
-            c2 = Coordinate(topology, conn_i, conn_j, conn_k)
-            dr = dist(c1, c2)
+                    dr = dist(topology, coords_spin, coords_conn)
+                    weight = eltype(layer)((wg(;dr, c1 = coords_spin, c2 = coords_conn)))
+                    if !(weight == 0 || isnan(weight))
+                        g_col_idx     = idxLToG(col_idx, layer)
 
-            weight = eltype(layer)((wg(;dr, c1, c2)))
+                        conn_idx = LI[convert(CartesianIndex, coords_conn)]
+                        g_conn_idx    = idxLToG(conn_idx, layer)
 
-            if !(weight == 0 || isnan(weight))
-                g_col_idx     = idxLToG(col_idx, layer)
-                g_conn_idx    = idxLToG(conn_idx, layer)
-
-                push!(row_idxs, g_conn_idx)
-                push!(col_idxs, g_col_idx)
-                push!(weights, weight)
+                        push!(row_idxs, g_conn_idx)
+                        push!(col_idxs, g_col_idx)
+                        push!(weights, weight)
+                    end
+                end
             end
-
-            reset!(conn_is)
-            reset!(conn_js)
-            reset!(conn_ks)
-            reset!(conn_idxs)
         end
+
+        # getConnIdxs!(topology, col_idx, coords_vert, size(layer), NN..., conn_idxs, conn_is, conn_js, conn_ks)
+        
+        # @fastmath for conn_num in eachindex(conn_is)
+        #     conn_i = conn_is[conn_num]
+        #     conn_j = conn_js[conn_num]
+        #     conn_k = conn_ks[conn_num]
+        #     conn_idx = conn_idxs[conn_num]
+
+
+        #     vert_i, vert_j, vert_k = coords_vert
+       
+        #     c1 = Coordinate(topology, vert_i, vert_j, vert_k)
+        #     c2 = Coordinate(topology, conn_i, conn_j, conn_k)
+        #     dr = dist(c1, c2)
+
+        #     weight = eltype(layer)((wg(;dr, c1, c2)))
+
+        #     if !(weight == 0 || isnan(weight))
+        #         g_col_idx     = idxLToG(col_idx, layer)
+        #         g_conn_idx    = idxLToG(conn_idx, layer)
+
+        #         push!(row_idxs, g_conn_idx)
+        #         push!(col_idxs, g_col_idx)
+        #         push!(weights, weight)
+        #     end
+
+        #     reset!(conn_is)
+        #     reset!(conn_js)
+        #     reset!(conn_ks)
+        #     reset!(conn_idxs)
+        # end
     end
 end
 

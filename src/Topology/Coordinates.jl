@@ -5,17 +5,18 @@ struct Coordinate{N,T} <: Base.AbstractCartesianIndex{N} # N dimensional coordin
     top::T
     coords::CartesianIndex{N}
 
-    function Coordinate(top::LayerTopology, n::Integer...)
+    function Coordinate(top::LayerTopology, n::Integer...; check = true)
         dims = length(size(top))
         @assert length(n) == dims "Number of coordinates $(length(n)) must match topology dimensions $dims"
 
-        periodic = fill(false, length(n))
-        for ax in periodicaxes(top)
-            periodic[ax] = true
-        end
+        periodic = whichperiodic(top)
         new_coords = ntuple(i -> periodic[i] ? mod1(n[i], size(top)[i]) : n[i], length(n))
         
-        @assert all(x -> 0 < x[1] <= size(top)[x[2]], zip(new_coords, 1:length(n))) "Coordinate $n is out of bounds for topology of size $(size(top))"
+        # @assert all(x -> 0 < x[1] <= size(top)[x[2]], zip(new_coords, 1:length(n))) "Coordinate $n is out of bounds for topology of size $(size(top))"
+        if check
+            assert_gen = [0 < new_coords[i] <= size(top)[i] for i in 1:length(n)]::Vector{Bool}
+            @assert all(assert_gen) "Coordinate $n is out of bounds for topology of size $(size(top))"
+        end
 
         new{dims, typeof(top)}(top, CartesianIndex(new_coords))
     end
@@ -23,6 +24,10 @@ end
 
 Coordinate(top, t::Tuple) = Coordinate(top, t...)
 Coordinate(top, ci::CartesianIndex) = Coordinate(top, ci.I...)
+Coordinate(top::LayerTopology, i::Int) = Coordinate(top, CartesianIndices(size(top))[i])
+convert(::Type{<:CartesianIndex}, c::Coordinate) = c.coords
+
+offset(c::Coordinate, deltas...; check = false) = Coordinate(c.top, ntuple(i->c.coords[i]+deltas[i], length(c))...; check = false)
 
 function Base.:(-)(c1::Coordinate, c2::Coordinate)
     @assert c1.top == c2.top "Coordinates must belong to the same topology"

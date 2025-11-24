@@ -6,7 +6,13 @@ struct WeightGenerator{F, NN}
 end
 
 getNN(wg::WeightGenerator{F, NN}) where {F,NN} = NN
-getNN(wg::WeightGenerator{F, NN}, dims) where {F,NN} = ntuple(i -> (i <= length(NN) ? NN[i] : 1), Val(length(dims)))
+function getNN(wg::WeightGenerator{F, NN}, dims) where {F,NN}
+    if NN isa Integer
+        return ntuple(i -> NN, dims)
+    else
+        return NN
+    end
+end
 
 function WeightGenerator(func, NN = tuple(1), rng = Random.MersenneTwister(); exp = nothing)
     WeightGenerator{typeof(func),NN}(func, exp, rng)

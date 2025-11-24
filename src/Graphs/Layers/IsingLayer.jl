@@ -168,9 +168,12 @@ Base.show(io::IO, layertype::Type{IsingLayer{A,B}}) where {A,B} = print(io, "$A 
 
 
 ## ACCESSORS
-@inline state(l::IsingLayer) = reshape((@view state(graph(l))[graphidxs(l)]), size(l)...)
-
-@inline adj(l::IsingLayer) = @view adj(graph(l))[:, graphidxs(l)] 
+@inline function state(l::IsingLayer)
+    et = eltype(l)
+    gstate = getstate(graph(l))::Vector{et}
+    v = @view gstate[graphidxs(l)]
+    v = unsafe_wrap(Array, pointer(v), size(l))
+end 
 
 @inline function set_adj!(layer::IsingLayer, wg::WeightGenerator, rcw)
     # connections(layer)[internal_idx(layer) => internal_idx(layer)] = wg
@@ -235,8 +238,8 @@ export conns, conncoords
 """
 Set graph of layer
 """
-@inline graph(layer::IsingLayer) = layer.graph
-@inline graph(layer::IsingLayer, g::IsingGraph) = layer.graph = g
+@inline graph(layer::IsingLayer{A,B,C,D,E,F,Precision,AdjType}) where {A,B,C,D,E,F, Precision,AdjType} = layer.graph::IsingGraph{Precision, AdjType}
+# @inline graph(layer::IsingLayer, g::IsingGraph) = layer.graph = g
 # changegraph(l::IsingLayer, g) = IsingLayer{layerparams(l, :StateType), layerparams(l, :DIMS), layerparams(l, :T), layerparams(l, :Top)}(g, l.name, l.internal_idx, l.startidx, l.size, l.nstates, l.traits, l.coords, l.connections, l.timers, l.top)
 addons(layer::IsingLayer) = graph(layer).addons
 export addons

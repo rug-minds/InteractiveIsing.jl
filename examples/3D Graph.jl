@@ -1,4 +1,4 @@
-using InteractiveIsing, JET
+using InteractiveIsing, JET, BenchmarkTools
 import InteractiveIsing as ii
 
 function isingfunc(dr, c1, c2)
@@ -9,23 +9,23 @@ end
 g3d = ii.IsingGraph(80,80,10, type = Continuous, periodic = (:x,:y))
 setdist!(g3d, (2.0, 1.0, 1.0))
 
-wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=3
-genAdj!(g3d, wg) 
-println(@report_opt genAdj!(g3d[1], wg) )
+wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=
+# println(@report_opt genAdj!(g3d, wg) )
+genAdj!(g3d, wg)
 
 # homogeneousself!(g3d, 0.5f0)
 
 
 
-h = g3d.hamiltonian = Ising(g3d) + Quartic(g3d) + DepolField(g3d, top_layers = 2, zfunc = z -> 3/z, NN = 5) + Sextic(g3d)
-# refresh(g3d)
-# h[4].c[] = 1/(2*2500)
-createProcess(g3d)
+# h = g3d.hamiltonian = Ising(g3d) + Quartic(g3d) + DepolField(g3d, top_layers = 2, zfunc = z -> 3/z, NN = 5) + Sextic(g3d)
+# # refresh(g3d)
+# # h[4].c[] = 1/(2*2500)
+# createProcess(g3d)
 
-w = interface(g3d)
+# w = interface(g3d)
 
 
-# pause(g3d)
+# # pause(g3d)
 # # args = fetch(g3d)
 # args = ii.prepare(Metropolis(), (;g = g3d))
 # dr = DeltaRule(:s, j = 1 => -1f0)

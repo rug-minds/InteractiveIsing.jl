@@ -289,6 +289,9 @@ Base.get!(g::IsingGraph, s, d) = get!(g.addons, s, d)
 Base.get(g::IsingGraph, s) = get(g.addons, s)
 Base.get(g::IsingGraph, s, d) = get(g.addons, s, d)
 
+# Don't overload!
+@inline getstate(g::IsingGraph) = g.state
+
 # function set_listener_callback!(g, f::Function)
 #     if !haskey(g.addons, :listener_callback)
 #         g.addons[:listener_callback] = Function[f]
