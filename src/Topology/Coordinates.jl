@@ -25,7 +25,7 @@ end
 Coordinate(top, t::Tuple) = Coordinate(top, t...)
 Coordinate(top, ci::CartesianIndex) = Coordinate(top, ci.I...)
 Coordinate(top::LayerTopology, i::Int) = Coordinate(top, CartesianIndices(size(top))[i])
-convert(::Type{<:CartesianIndex}, c::Coordinate) = c.coords
+Base.convert(::Type{<:CartesianIndex}, c::Coordinate) = c.coords
 
 offset(c::Coordinate, deltas...; check = false) = Coordinate(c.top, ntuple(i->c.coords[i]+deltas[i], length(c))...; check = false)
 

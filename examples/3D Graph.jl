@@ -9,7 +9,7 @@ end
 g3d = ii.IsingGraph(80,80,10, type = Continuous, periodic = (:x,:y))
 setdist!(g3d, (2.0, 1.0, 1.0))
 
-wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=
+wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=2
 # println(@report_opt genAdj!(g3d, wg) )
 genAdj!(g3d, wg)
 
@@ -17,7 +17,7 @@ genAdj!(g3d, wg)
 
 
 
-# h = g3d.hamiltonian = Ising(g3d) + Quartic(g3d) + DepolField(g3d, top_layers = 2, zfunc = z -> 3/z, NN = 5) + Sextic(g3d)
+h = g3d.hamiltonian = Ising(g3d) + Quartic(g3d) + DepolField(g3d, top_layers = 2, zfunc = z -> 3/z, NN = 5) + Sextic(g3d)
 # # refresh(g3d)
 # # h[4].c[] = 1/(2*2500)
 # createProcess(g3d)

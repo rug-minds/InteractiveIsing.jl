@@ -12,13 +12,26 @@ function dist2(c1::Coordinate, c2::Coordinate)
 end
 
 function dist2(top::SquareTopology, c1::Coordinate, c2::Coordinate)
-    if periodic(top) isa Periodic
-        d = c2-c1
-        ds = top.ds
-        gen = (abs(d[i]) > size(top, 1)/2 ? ds[i](d[i] - sign(d[i]) * size(top, 1)) : ds[i]*d[i] for i in 1:length(c1))
-        return reduce((x,y) -> x + y^2, gen, init = 0)
-    else
-        gen = (top.ds[i]*(c2[i]-c1[i]) for i in 1:length(c1))
-        return reduce((x,y) -> x + y^2, gen, init = 0)
-    end   
+    ps = whichperiodic(top)
+    total = 0.
+    for (i, isperiodic) in enumerate(ps)
+        d = c2[i]-c1[i]
+        if isperiodic
+            halfsize = div(size(top)[i], 2)
+            if abs(d) > halfsize
+                d -= sign(d) * size(top)[i]
+            end
+        end
+        total += (top.ds[i]*d)^2
+    end
+    return total
+    # if periodic(top) isa Periodic
+    #     d = c2-c1
+    #     ds = top.ds
+    #     gen = (abs(d[i]) > size(top, 1)/2 ? ds[i](d[i] - sign(d[i]) * size(top, 1)) : ds[i]*d[i] for i in 1:length(c1))
+    #     return reduce((x,y) -> x + y^2, gen, init = 0)
+    # else
+    #     gen = (top.ds[i]*(c2[i]-c1[i]) for i in 1:length(c1))
+    #     return reduce((x,y) -> x + y^2, gen, init = 0)
+    # end   
 end
