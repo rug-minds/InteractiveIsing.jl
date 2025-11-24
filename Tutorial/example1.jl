@@ -20,6 +20,22 @@ function weightfunc1(dr,c1,c2)
     return prefac / norm2(d)
 end
 
+# Weight function variant 2
+# Skymion-like coupling
+function weightfunc_skymion(dr,c1,c2)
+    d = delta(c1, c2)
+    dx, dy, dz = d  # 先解包
+    # z 方向保持铁磁 (正耦合)
+    prefac = 2
+    if abs(dy) > 1 || abs(dx) > 1
+        prefac = -2
+    end
+    
+    return prefac / norm2(d)
+end
+
+
+
 function weightfunc_xy_antiferro(dr, c1, c2, ax, ay, az)
     d = delta(c1, c2)
     dx, dy, dz = d  # 先解包
@@ -104,8 +120,8 @@ end
 ##################################################################################
 
 
-xL = 120  # Length in the x-dimension
-yL = 120  # Length in the y-dimension
+xL = 40  # Length in the x-dimension
+yL = 40  # Length in the y-dimension
 zL = 8   # Length in the z-dimension
 g = IsingGraph(xL, yL, zL, stype = Continuous(), periodic = (:x,:y))
 # Visual marker size (tune for clarity vs performance)
@@ -113,6 +129,18 @@ II.makie_markersize[] = 0.3
 
 # Launch interactive visualization (idle until createProcess(...) later)
 interface(g)
+# wg1 = @WG weightfunc_xy_dilog_antiferro NN = (2,2,2)
+# wg1 = @WG weightfunc1 NN = (1,1,1)
+wg2 = @WG weightfunc_skymion NN = (2,2,2)
+# wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
+
+
+genAdj!(g, wg2)
+fullsweep = xL*yL*zL
+Time_fctr = 0.5
+SpeedRate = Int(Time_fctr*fullsweep)
+
+
 
 
 a1, b1, c1 = -2, 2, 0 
@@ -126,16 +154,9 @@ display(fig)
 
 temp(g,1)
 
-# wg1 = @WG weightfunc_xy_dilog_antiferro NN = (2,2,2)
-wg1 = @WG weightfunc1 NN = (1,1,2)
-# wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
-
-
-genAdj!(g, wg1)
-
-g.hamiltonian = Ising(g) + DepolField(g, c=0.0005, top_layers=1, bottom_layers=1, zfunc = z -> 1.05/z) + Quartic(g) + Sextic(g)
+g.hamiltonian = Ising(g) + DepolField(g, c=0.0001/(2 * xL * yL), top_layers=1, bottom_layers=1, zfunc = z -> 0.3/z) + Quartic(g) + Sextic(g)
 h = g.hamiltonian
-# refresh(g)
+refresh(g)
 
 
 # g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1) + Quartic(g) + Sextic(g)
@@ -154,9 +175,7 @@ g.hamiltonian[5].sc[] = c1/a1
 
 
 
-fullsweep = xL*yL*zL
-Time_fctr = 0.5
-SpeedRate = Int(Time_fctr*fullsweep)
+
 
 ### risepoint and Amptitude are factors from pulse
 risepoint=500
