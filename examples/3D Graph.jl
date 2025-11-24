@@ -7,6 +7,7 @@ end
 
 
 g3d = ii.IsingGraph(80,80,10, type = Continuous, periodic = (:x,:y))
+setdist!(g3d, (2.0, 1.0, 1.0))
 
 wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=3
 genAdj!(g3d, wg) 

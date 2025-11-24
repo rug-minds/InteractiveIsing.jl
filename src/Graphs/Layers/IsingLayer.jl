@@ -144,7 +144,7 @@ end
 @setterGetter IsingLayer coords size idx graph
 stateset(layer::IsingLayer) = layerparams(layer, :StateSet)
 
-topology(l) = layer(l).top
+topology(l::IsingLayer) = layer(l).top
 export topology
 
 # Extend show for IsingLayer, showing the layer idx, and the size of the layer

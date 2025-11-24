@@ -69,14 +69,16 @@ ndims(lt::Type{<:LayerTopology{U,DIM}}) where {U,DIM} = DIM
     return :($periodic)
 end
 
-struct SquareTopology{U,DIMS} <: LayerTopology{U, DIMS}
-    size::NTuple{DIMS,Int32}
+struct SquareTopology{U,DIMS, P <: AbstractFloat} <: LayerTopology{U, DIMS}
+    size::NTuple{DIMS,Int}
+    ds::MVector{DIMS, P}
 end
 
-function SquareTopology(size = tuple(); periodic::Union{Bool, <:Tuple, Nothing} = true)
+function SquareTopology(size = tuple(); ds = tuple(fill(1.0, length(size))...), periodic::Union{Bool, <:Tuple, Nothing} = true)
         U = nothing
 
         @assert periodic == true ? !isempty(size) : true "Size must be given if periodic is true"
+        @assert length(ds) == length(size) "ds must be same length as size" 
 
         if periodic isa Bool
             U = periodic ? Periodic() : NonPeriodic()
@@ -86,8 +88,10 @@ function SquareTopology(size = tuple(); periodic::Union{Bool, <:Tuple, Nothing} 
             U = PartPeriodic(periodic...) 
         end
         DIMS = length(size)
-        SquareTopology{U, DIMS}(size)
+        SquareTopology{U, DIMS, eltype(ds)}(size, tuple(ds...))
 end
+
+setdist!(lt::SquareTopology{U,DIMS,P}, ds::NTuple{DIMS,P}) where {U,DIMS,P} = begin lt.ds .= ds; lt end
 
 function (lt::SquareTopology{Periodic()})(d::DeltaCoordinate)
     @assert length(d) == length(size(lt))

@@ -103,6 +103,10 @@ function ΔH(dpf::DepolField, args, drule)
     return base_term * (s[j] - drule[])
 end
 
+# function ΔH(dpf::DepolField, g::PottsGraph, args, drule)
+    
+# end
+
 @ParameterRefs function deltaH(::DepolField)
     return (dpf[j]/c[])*(sn[j]-s[j])
 end
