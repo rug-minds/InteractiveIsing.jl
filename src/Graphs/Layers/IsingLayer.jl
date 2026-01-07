@@ -146,8 +146,10 @@ end
 
 @setterGetter IsingLayer coords size idx graph
 
-stateset(lt::Type{<:IsingLayer{A,B}}) where {A,B} = B   
-stateset(l::IsingLayer) = stateset(typeof(l))
+@inline stateset(lt::Type{<:IsingLayer{A,B}}) where {A,B} = B   
+@inline stateset(l::IsingLayer) = @inline stateset(typeof(l))
+@inline statetype(lt::Type{<:IsingLayer{A}}) where {A} = A
+@inline statetype(l::IsingLayer) = @inline statetype(typeof(l))
 
 topology(l::IsingLayer) = layer(l).top
 export topology
@@ -538,8 +540,8 @@ export changeset!, stateset
 ### TYPE STUFF
 ## DEFAULT NEW LAYER TYPE BASED ON GRAPH
 default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous 
-@inline statetype(layer::IsingLayer{ST}) where {ST} = ST
-@inline statetype(::Type{<:IsingLayer}) = layerparams(IsingLayer, Val(:StateType))
+# @inline statetype(layer::IsingLayer{ST}) where {ST} = ST
+# @inline statetype(::Type{<:IsingLayer}) = layerparams(IsingLayer, Val(:StateType))
 setstatetype(l::IsingLayer{ST}, stype) where {ST} = IsingLayer{stype}(l.graph, l.name, l.internal_idx, l.startidx, l.size, l.nstates, l.coords, l.connections, l.timers, l.top)
 
 Base.eltype(l::IsingLayer) = eltype(graph(l))
