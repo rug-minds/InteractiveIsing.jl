@@ -146,8 +146,8 @@ include("Barebones.jl")
 
 
 # @debug "Creating CompositeAlgorithm"
-const ca1 = CompositeAlgorithm((LayeredMetropolis, Metropolis), (1,2))
-@debug "CompositeAlgorithm created"
+# const ca1 = CompositeAlgorithm((LayeredMetropolis, Metropolis), (1,2))
+# @debug "CompositeAlgorithm created"
 
 @debug "InteractiveIsing module load complete"
 

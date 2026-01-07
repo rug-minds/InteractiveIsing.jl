@@ -73,8 +73,7 @@ function init!(dpf::DepolField, g)
 end
 
 function update!(::Metropolis, dpf::DepolField, args)
-    (;lmeta, j, Δs_j) = args
-    l1 = layer(lmeta)
+    (;j, Δs_j) = args
     if j ∈ dpf
         z = layers_deep(j, dpf)
         dpf.dpf[j] -= dpf.zfunc(z)*Δs_j[]

@@ -114,24 +114,27 @@ Two IsingLayers are equivalent when
 """
 equiv(i1::Type{IsingLayer{A,B,T1,Top1}}, i2::Type{IsingLayer{E,F,T2,Top2}}) where {A,B,E,F,T1,T2,Top1,Top2} = A == E && B == F
 
-function layerparams(lt::Type{<:IsingLayer}, ::Val{S}) where S
+@inline function layerparams(lt::Type{<:IsingLayer}, ::Val{S}) where S
+    ps = parameters(lt)
+    idx = nothing
     if S == :StateType
-        return parameters(lt)[1]
+        idx = 1 
     elseif S == :StateSet
-        return parameters(lt)[2]
+        idx = 2
     elseif S == :Dim
-        return parameters(lt)[3]
+        idx = 3
     elseif S == :Size
-        return parameters(lt)[4]
+        idx = 4
     elseif S == :PtrRange
-        return parameters(lt)[5]    
-    elseif S == :T
-        return parameters(lt)[6]
-    elseif S == :Top
-        return parameters(lt)[7]
-    # elseif S == :GT
-    #     return parameters(lt)[6]
+        idx = 5    
+    elseif S == :Tpt
+        idx = 6
+    elseif S == :Precision
+        idx = 7
+    elseif S == :AdjType
+        idx = 8
     end
+    return ps[idx]
 end
 
 @inline layerparams(l::IsingLayer, s) = layerparams(typeof(l), Val(s))
@@ -142,7 +145,9 @@ end
 
 
 @setterGetter IsingLayer coords size idx graph
-stateset(layer::IsingLayer) = layerparams(layer, :StateSet)
+
+stateset(lt::Type{<:IsingLayer{A,B}}) where {A,B} = B   
+stateset(l::IsingLayer) = stateset(typeof(l))
 
 topology(l::IsingLayer) = layer(l).top
 export topology
@@ -485,6 +490,7 @@ end
 export changeset, changeset!
 
 indexset(l::IsingLayer) = graphidxs(l)
+indexset(lt::Type{<:IsingLayer}) = layerparams(lt, Val(:PtrRange))
 
 function extremiseDiscrete!(l::IsingLayer{ST}) where ST
     if ST == Discrete

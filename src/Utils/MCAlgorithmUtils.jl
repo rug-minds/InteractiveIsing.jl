@@ -60,16 +60,19 @@ Inlined so no runtime dispatch
 # function _layerswitch(::Any, ::Any, ::Any, ::Nothing, ::Any, ::Any, ::Any, ::Any)
 #     throw(BoundsError("Index out of bounds"))
 # end
-function layerswitch(@specialize(func), i, layers::LA, @specialize(args)) where LA
-    idxsets = @inline tuple_type_property(indexset, layers.metadatas)
-    @inline _layerswitch(func, i , 1, gethead(layers.metadatas), gethead(idxsets), gettail(layers.metadatas), gettail(idxsets), args)
+
+"""
+"""
+@inline function layerswitch(f::F, i, layers::LA, args) where {F, LA}
+    idxsets = @inline tuple_type_property(indexset, layers)
+    @inline _layerswitch(f, i , 1, gethead(layers), gethead(idxsets), gettail(layers), gettail(idxsets), args)
 end
 
-function _layerswitch(func, i, layeridx, thislayermd, thisidxset, layersmd_tail, sets_tail, args)
+function _layerswitch(func, i, layeridx, thislayer, thisidxset, layers_tail, sets_tail, args)
     if i in thisidxset
-        return @inline func(i, args, layeridx, thislayermd)
+        return @inline func(i, args, layeridx, thislayer)
     end
-    return @inline _layerswitch(func, i, layeridx+1, gethead(layersmd_tail), gethead(sets_tail), gettail(layersmd_tail), gettail(sets_tail), args)
+    return @inline _layerswitch(func, i, layeridx+1, gethead(layers_tail), gethead(sets_tail), gettail(layers_tail), gettail(sets_tail), args)
 end
 
 function _layerswitch(::Any, ::Any, ::Any, ::Nothing, ::Any, ::Any, ::Any, ::Any)
