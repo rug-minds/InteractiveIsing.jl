@@ -9,7 +9,7 @@ export LayeredMetropolis
 #     return [:w_ij => :wij, :sn_i => :newstate, :s_i => :oldstate, :s_j => :(gstate[j])]
 # end
 
-@ProcessAlgorithm function LayeredMetropolis(iterator, rng, layers, args)
+@NamedProcessAlgorithm Metropolis function LayeredMetropolis(iterator, rng, layers, args)
     #Define varso
     
     # (;iterator, rng, layerarch) = args
