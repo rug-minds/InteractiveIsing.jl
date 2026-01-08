@@ -3,7 +3,7 @@ using InteractiveIsing.Processes
 import InteractiveIsing as II
 
 ## Utility functions for experiments
-### Use II. to check if the terms are correct
+### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic
 ### Which is Jii*Si^2 + Qc*Jii*Si^4 wichi means Jii=a, Qc*Jii=b in a*Si^2 + b*Si^4
 
@@ -96,11 +96,11 @@ function weightfunc_angle_ferro(dr, c1, c2)
 end
 
 # Shell-based coupling + dipolar coupling
-function weightfunc_shell(dr, c1, c2, ax, ay, az, csr, lambda1, lambda2)
+function weightfunc_shell(dr, c1, c2, ax, ay, az, csr)
     dx, dy, dz = delta(c1, c2)
     k1  = 1.0
-    k2  = lambda1 * k1
-    k3  = lambda2 * k2
+    k2  = 0.5
+    k3  = 0.25
 
     # --- physical distance for dipolar term ---
     rx = ax * dx
@@ -198,7 +198,6 @@ end
 
 @NamedProcessAlgorithm Metropolis function TrianglePulseA(args)
     (;pulse, M, x, y, hamiltonian) = args
-    # pulse_val = pulse[algo_loopidx(args)]
     pulse_val = pulse[algo_call_number(args)]
     hamiltonian.b[] = pulse_val
     push!(x, pulse_val)
@@ -281,9 +280,21 @@ Layer_Dep = 1
 Cdep=120
 Cz = 0.1
 lambda = 0.1
+# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(64,64,3)) + Quartic(g) + Sextic(g)
+# refresh(g)
+
+# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(20,20,4)) + Quartic(g) + Sextic(g)
+
+# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((z-1)/lambda) , NN=8)
+
 g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz , NN=8)
 refresh(g)
+
 # g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1) + Quartic(g) + Sextic(g)
+
+### Use ii. to check if the terms are correct
+### Now the H is written like H_self + H_quartic
+### Which is Jii*Si^2 + Qc*Jii*Si^4 wichi means Jii=a, Qc*Jii=b in a*Si^2 + b*Si^4
 
 ### Set Jii
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
