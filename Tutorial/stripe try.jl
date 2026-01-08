@@ -135,7 +135,6 @@ function weightfunc_shell(dr, c1, c2, ax, ay, az, csr, lambda1, lambda2)
     return Jdip + Jsr
 end
 
-
 # Skymion-like coupling
 function weightfunc_skymion(dr,c1,c2)
     d = delta(c1, c2)
@@ -199,6 +198,7 @@ end
 
 @NamedProcessAlgorithm Metropolis function TrianglePulseA(args)
     (;pulse, M, x, y, hamiltonian) = args
+    # pulse_val = pulse[algo_loopidx(args)]
     pulse_val = pulse[algo_call_number(args)]
     hamiltonian.b[] = pulse_val
     push!(x, pulse_val)
@@ -281,21 +281,9 @@ Layer_Dep = 1
 Cdep=120
 Cz = 0.1
 lambda = 0.1
-# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(64,64,3)) + Quartic(g) + Sextic(g)
-# refresh(g)
-
-# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(20,20,4)) + Quartic(g) + Sextic(g)
-
-# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((z-1)/lambda) , NN=8)
-
 g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz , NN=8)
 refresh(g)
-
 # g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1) + Quartic(g) + Sextic(g)
-
-### Use ii. to check if the terms are correct
-### Now the H is written like H_self + H_quartic
-### Which is Jii*Si^2 + Qc*Jii*Si^4 wichi means Jii=a, Qc*Jii=b in a*Si^2 + b*Si^4
 
 ### Set Jii
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
