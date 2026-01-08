@@ -202,6 +202,7 @@ end
     hamiltonian.b[] = pulse_val
     push!(x, pulse_val)
     push!(y, M[])
+    return (;)
 end
 function Processes.prepare(::TrianglePulseA, args)
     (;amp, numpulses, rise_point) = args
@@ -321,8 +322,8 @@ est_remaining(process(g))
 args = process(g) |> fetch # If you want to close ctr+c
 # args = process(g) |> getargs
 # EnergyG= args.all_Es;
-voltage= args.x
-Pr= args.y;
+voltage= args.Metropolis.x
+Pr= args.Metropolis.y;
 
 
 # inlineplot() do 
