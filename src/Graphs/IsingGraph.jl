@@ -17,7 +17,7 @@ mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers, N}
     
     temp::T
 
-    default_algorithm::MCAlgorithm
+    default_algorithm::ProcessAlgorithm
     hamiltonian::Hamiltonian
     
 

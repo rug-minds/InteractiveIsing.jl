@@ -2,7 +2,16 @@ export Metropolis
 struct Metropolis<: MCAlgorithm end
 # struct deltaH end
 
-function Processes.prepare(::Metropolis, @specialize(args))
+# @inline function (::Metropolis)(args::As) where As
+@ProcessAlgorithm function Metropolis(iterator, rng, args)
+    #Define vars
+    # (;iterator, rng) = args
+    j = rand(rng, iterator)
+    @inline Metropolis_step((;args..., j))
+end
+
+
+function Processes.prepare(::Metropolis, args::A) where A
     (;g) = args
     s = g.state
     wij = g.adj
@@ -17,28 +26,22 @@ function Processes.prepare(::Metropolis, @specialize(args))
     
     drule = DeltaRule(:s, j = 0 => eltype(s)(0)) # Specify which spin will be flipped
 
-    lmeta = LayerMetaData(g[1])
-    return (;g ,s, wij, iterator, hamiltonian, lmeta, rng, M, Δs_j, self, drule)
+    layer = g.layers[1]
+    return (;g ,s, wij, iterator, hamiltonian, layer, rng, M, Δs_j, self, drule)
     # args = (;s, wij, iterator, hamiltonian, deltafunc, lmeta, rng, newstate)
 end
 
 
-@inline function (::Metropolis)(args::As) where As
-    #Define vars
-    (;iterator, rng) = args
-    j = rand(rng, iterator)
-    @inline Metropolis((;args..., j))
-end
 
-@inline function Metropolis(args::As) where As
-    (;g, s, wij, self, j, rng, lmeta, hamiltonian, drule) = args
+function Metropolis_step(args)
+    (;g, s, wij, self, j, rng, layer, hamiltonian, drule) = args
     Ttype = eltype(g)
     β = one(Ttype)/(temp(g))
 
     oldstate = @inbounds s[j]
 
     # newstate[j] = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))
-    drule[j] = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))
+    drule[j] = @inline sampleState(statetype(layer), oldstate, rng, stateset(layer))
     
     # ΔE = @inline deltafunc((;args..., newstate), (;j))
 
