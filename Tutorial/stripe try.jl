@@ -98,8 +98,8 @@ end
 # Shell-based coupling + dipolar coupling
 function weightfunc_shell(dr, c1, c2, ax, ay, az, csr)
     dx, dy, dz = delta(c1, c2)
-    k1  = 1.0,
-    k2  = 0.5,
+    k1  = 1.0
+    k2  = 0.5
     k3  = 0.25
 
     # --- physical distance for dipolar term ---
