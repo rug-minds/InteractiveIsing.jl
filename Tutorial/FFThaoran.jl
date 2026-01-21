@@ -133,13 +133,8 @@ function depolar_from_Pz(Pz;
 end
 
 
-# ----------------------------
-# Quick demo (like your size)
-# ----------------------------
-
 Nx, Ny, Nz = 40, 40, 8
-# random Ising polarization
-# s = rand([-1.0, 1.0], Nx, Ny, Nz)
+
 s = ones(Float64, Nx, Ny, Nz)
 s[:, :, 1] .= rand(0:1, Nx, Ny)
 s[:, :, Nz] .= rand(0:1, Nx, Ny)
