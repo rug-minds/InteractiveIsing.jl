@@ -7,7 +7,7 @@ function async_lines_window(func; fps = 30, lifetime, kwargs...)
 
     proc = Process(func; lifetime , kwargs...)
     Processes.preparedata!(proc)
-    (;x, y) = getargs(proc)
+    (;x, y) = getcontext(proc)
     w = axis_window(window_type = :Lines)
   
     # Storage of data
@@ -61,7 +61,7 @@ function async_lines_window(func; fps = 30, lifetime, kwargs...)
         Processes.syncclose(proc)
         close.(w.timers)
         createtask!(proc)
-        (;x,y) = getargs(proc)
+        (;x,y) = getcontext(proc)
        
         xob = Observable(@view x[1:end])
         yob = Observable(@view y[1:end])
@@ -122,13 +122,13 @@ function get_plot(w::MakieWindow{:Lines})
 end
 export get_plot
 
-change_args!(w::MakieWindow{:Lines}; args...) = changeargs!(w[:proc]; args...)
+change_context!(w::MakieWindow{:Lines}; context...) = changecontext!(w[:proc]; context...)
 
 function sync_lines_window(proc1, func; fps = 30, lifetime, kwargs...)
 
     proc = Process(func; lifetime, graphproc = proc1, kwargs...)
     Processes.preparedata!(proc)
-    (;x, y) = getargs(proc)
+    (;x, y) = getcontext(proc)
     w = axis_window(window_type = :Lines)
   
     # Storage of data
@@ -182,7 +182,7 @@ function sync_lines_window(proc1, func; fps = 30, lifetime, kwargs...)
         Processes.syncclose(proc)
         close.(w.timers)
         createtask!(proc)
-        (;x,y) = getargs(proc)
+        (;x,y) = getcontext(proc)
        
         xob = Observable(@view x[1:end])
         yob = Observable(@view y[1:end])

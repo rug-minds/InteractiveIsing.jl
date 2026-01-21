@@ -34,7 +34,7 @@ function ak_test(state, adj, hamiltonian, idx)
 end
 
 createProcess(g, Metropolis)
-args = getargs(process(g))
+context = getcontext(process(g))
 pause(g)
 
 _state = II.state(g)
@@ -46,8 +46,8 @@ tulliotest(_state, _adj, gh, 1, proposal_state = 1)
 @benchmark tulliotest($_state, $_adj, $gh, 1)
 @benchmark ak_test($_state, $_adj, $gh, 1)
 h = II.deltaH(g.hamiltonian)
-@benchmark h(args, j = 1)
-args.newstate
+@benchmark h(context, j = 1)
+context.newstate
 
 function finchtest(state, adj, hamiltonian, idx, proposal_state = 1)
     (;b) = hamiltonian
@@ -57,7 +57,7 @@ function finchtest(state, adj, hamiltonian, idx, proposal_state = 1)
 end
 
 finchtest(_state, _adj, gh, 1)[]
-h(args, j = 1)
+h(context, j = 1)
 @benchmark finchtest($_state, $_adj, $gh, 1)
 
 interface(g)
@@ -84,4 +84,3 @@ quit(g)
 # reduce(as; j = Int32(2))
 
 # together(as; j = Int32(2))
-

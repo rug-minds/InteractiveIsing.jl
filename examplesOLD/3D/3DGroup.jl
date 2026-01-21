@@ -74,4 +74,4 @@ interface(g)
 #     push!(x, pulse[loopidx(proc)])
 # end
 
-# # InteractiveIsing.change_args!(w, tstep = 0.001, amp = 2)
+# # InteractiveIsing.change_context!(w, tstep = 0.001, amp = 2)

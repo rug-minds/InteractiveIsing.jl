@@ -3,7 +3,7 @@ struct Metropolis<: MCAlgorithm end
 # struct deltaH end
 
 # @inline function (::Metropolis)(args::As) where As
-@NamedProcessAlgorithm Metropolis function Metropolis(iterator, rng, args)
+@ProcessAlgorithm Metropolis function Metropolis(iterator, rng, args)
     #Define vars
     # (;iterator, rng) = args
     j = rand(rng, iterator)

@@ -319,7 +319,7 @@ createProcess(g, compalgo, lifetime =Pulsetime, amp = Amptitude, numpulses = Pul
 est_remaining(process(g))
 # Wait until it is done
 args = process(g) |> fetch # If you want to close ctr+c
-# args = process(g) |> getargs
+# args = process(g) |> getcontext
 # EnergyG= args.all_Es;
 voltage= args.x
 Pr= args.y;

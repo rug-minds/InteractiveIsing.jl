@@ -62,7 +62,7 @@ routine = Routine((Equilibration, SweepSusceptibility), (eqsteps*onesweep, sweep
 
 
 
-# final_arguments = getargs(process(g))
+# final_context = getcontext(process(g))
 # total_chi = final_arguments.total_chi # Access calculated chi
 # println("Total Susceptibility: ", total_chi)
 # using Random
@@ -81,7 +81,6 @@ routine = Routine((Equilibration, SweepSusceptibility), (eqsteps*onesweep, sweep
 # end
 
 # rng = SimpleRNG(0.2f0, 10*Float32(pi), 0f0, 1f0)
-
 
 
 
