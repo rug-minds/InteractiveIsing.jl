@@ -1,8 +1,8 @@
 function BarWindow(func; fps = 30, lifetime, kwargs...)
 
-    proc = Process(func; lifetime , kwargs...)
-    preparedata!(proc)
-    (;x, y) = getcontext(proc)
+    process = Process(func; lifetime , kwargs...)
+    preparedata!(process)
+    (;x, y) = getcontext(process)
     # xref = Ref(x)
     # yref = Ref(y)
     w = axis_window(window_type = :Lines)
@@ -44,7 +44,7 @@ function BarWindow(func; fps = 30, lifetime, kwargs...)
     pushtimer!(w, PTimer(timerfunc, 0., interval = 1/fps))
     
     reset() = begin
-        Processes.syncclose(proc)
+        Processes.syncclose(process)
         for line in w[:lines]
             delete!(w[:ax], line)
         end
@@ -60,17 +60,17 @@ function BarWindow(func; fps = 30, lifetime, kwargs...)
     end
 
     function newlines!()
-        Processes.syncclose(proc)
+        Processes.syncclose(process)
         close.(w.timers)
-        createtask!(proc)
-        (;x,y) = getcontext(proc)
+        createtask!(process)
+        (;x,y) = getcontext(process)
        
         xob = Observable(@view x[1:end])
         yob = Observable(@view y[1:end])
         newest_obs[1] = xob
         newest_obs[2] = yob
          
-        spawntask!(proc)
+        spawntask!(process)
         start.(w.timers)
         push!(w[:lines], lines!(w[:ax], xob, yob))
     end
@@ -92,24 +92,24 @@ function BarWindow(func; fps = 30, lifetime, kwargs...)
         end
     end
 
-    # If a proc is given, add the proc controls
-    if !isnothing(proc)
-        w[:proc] = proc
+    # If a process is given, add the process controls
+    if !isnothing(process)
+        w[:process] = process
         on(window_open(w)) do x
             if !x
-                quit(proc)
+                quit(process)
             end
         end
 
         on(w[:pausebutton].clicks) do _
             if w[:paused][]
-                pause(proc)
+                pause(process)
             else
-                start(proc)
+                start(process)
             end
         end
     end
 
-    spawntask!(proc) 
+    spawntask!(process) 
     return w
 end

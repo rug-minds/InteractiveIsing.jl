@@ -2,7 +2,7 @@ abstract type ProcessAlgorithm end
 struct TrianglePulseProc <: ProcessAlgorithm end
 
 function TrianglePulseProc(args)
-    (;proc, triggers, x, y) = args
+    (;process, triggers, x, y) = args
 
         # Waits so that the pulse is applied every tstep time
     while time() - t_i < tstep

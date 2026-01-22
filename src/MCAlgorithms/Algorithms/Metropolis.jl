@@ -1,6 +1,12 @@
 export Metropolis
-struct Metropolis<: MCAlgorithm end
-# struct deltaH end
+struct Metropolis <: MCAlgorithm 
+    track_M::Bool
+    track_sj::Bool
+end
+
+const MetropolisStandard = Metropolis(false, false)
+const MetropolisTracked = Metropolis(true, true)
+
 
 # @inline function (::Metropolis)(args::As) where As
 @ProcessAlgorithm Metropolis function Metropolis(iterator, rng, args)
@@ -11,8 +17,8 @@ struct Metropolis<: MCAlgorithm end
 end
 
 
-function Processes.prepare(::Metropolis, args::A) where A
-    (;g) = args
+function Processes.prepare(::Metropolis, context::A) where A
+    (;g) = context
     s = g.state
     wij = g.adj
     self = g.self
@@ -28,7 +34,6 @@ function Processes.prepare(::Metropolis, args::A) where A
 
     layer = g.layers[1]
     return (;g ,s, wij, iterator, hamiltonian, layer, rng, M, Δs_j, self, drule)
-    # args = (;s, wij, iterator, hamiltonian, deltafunc, lmeta, rng, newstate)
 end
 
 

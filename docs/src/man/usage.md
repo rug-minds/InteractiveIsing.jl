@@ -252,15 +252,15 @@ The argument `func` is any function like object that accepts a namedtuple holdin
 
 ```
 process = makeprocess(repeats; prepare, a = Int[], b = 2, c = SomeStruct()) do args
-    (;proc, a, b, c) =  args
+    (;process, a, b, c) =  args
     # Update the args
 end
 ```
 
-The arguments are passed as keyword arguments, so that they are accessible through named tuple unpacking within the function. The argument `proc` is included as a standard argument, mainly so that the function can be aware of the iteration number it's currently in. The iteration number can be accessed through
+The arguments are passed as keyword arguments, so that they are accessible through named tuple unpacking within the function. The argument `process` is included as a standard argument, mainly so that the function can be aware of the iteration number it's currently in. The iteration number can be accessed through
 
 ```
-loopidx(proc)
+loopidx(process)
 ```
 
 ## What are Windows
