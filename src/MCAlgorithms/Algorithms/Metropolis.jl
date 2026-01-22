@@ -4,21 +4,24 @@ struct Metropolis <: MCAlgorithm
     track_sj::Bool
 end
 
+Metropolis() = Metropolis(false, false)
+
 const MetropolisStandard = Metropolis(false, false)
 const MetropolisTracked = Metropolis(true, true)
 
 
-# @inline function (::Metropolis)(args::As) where As
-@ProcessAlgorithm Metropolis function Metropolis(iterator, rng, args)
+# @inline function (::Metropolis)(context::As) where As
+@ProcessAlgorithm function Metropolis(iterator, rng, context)
     #Define vars
-    # (;iterator, rng) = args
+    # (;iterator, rng) = context
     j = rand(rng, iterator)
-    @inline Metropolis_step((;args..., j))
+    @inline Metropolis_step(context, j)
 end
 
 
 function Processes.prepare(::Metropolis, context::A) where A
     (;g) = context
+
     s = g.state
     wij = g.adj
     self = g.self
@@ -38,8 +41,9 @@ end
 
 
 
-function Metropolis_step(args)
-    (;g, s, wij, self, j, rng, layer, hamiltonian, drule) = args
+function Metropolis_step(context, j)
+    (;g, s, wij, self, rng, layer, hamiltonian, drule) = context
+
     Ttype = eltype(g)
     β = one(Ttype)/(temp(g))
 
@@ -48,9 +52,9 @@ function Metropolis_step(args)
     # newstate[j] = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))
     drule[j] = @inline sampleState(statetype(layer), oldstate, rng, stateset(layer))
     
-    # ΔE = @inline deltafunc((;args..., newstate), (;j))
+    # ΔE = @inline deltafunc((;context..., newstate), (;j))
 
-    ΔE = ΔH(hamiltonian, (;args..., self = self, s = s, w = wij, hamiltonian...), drule)
+    ΔE = ΔH(hamiltonian, (;self = self, s = s, w = wij, hamiltonian...), drule)
     
     efac = exp(-β*ΔE)
     if (ΔE <= zero(Ttype) || rand(rng, Ttype) < efac)
@@ -67,6 +71,6 @@ function Metropolis_step(args)
         end
     end
 
-    @inline update!(Metropolis(), args.hamiltonian, args)
+    @inline update!(Metropolis(), context.hamiltonian, context)
     return nothing
 end

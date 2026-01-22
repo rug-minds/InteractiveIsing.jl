@@ -2,7 +2,7 @@ function createProcess(g::IsingGraph, func = nothing; run = true, threaded = tru
     if isnothing(func)
         func = get(args, :algorithm, g.default_algorithm)
     end
-    process = Process(func; lifetime, g, args...)
+    process = Process(func, Input(func; g); lifetime)
     
     ps = processes(g)
     push!(ps, process)

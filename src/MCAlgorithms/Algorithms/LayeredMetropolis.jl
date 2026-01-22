@@ -9,26 +9,26 @@ export LayeredMetropolis
 #     return [:w_ij => :wij, :sn_i => :newstate, :s_i => :oldstate, :s_j => :(gstate[j])]
 # end
 
-@NamedProcessAlgorithm Metropolis function LayeredMetropolis(iterator, rng, layers, args)
+@ProcessAlgorithm function LayeredMetropolis(iterator, rng, layers, context)
     #Define varso
     
-    # (;iterator, rng, layerarch) = args
+    # (;iterator, rng, layerarch) = context
     j = rand(rng, iterator)
-    @inline layerswitch(Layered_step, j, layers, args)
+    @inline layerswitch(Layered_step, j, layers, context)
 end
 
-function Processes.prepare(::LayeredMetropolis, args::A) where A
-    (;g) = args
-    args = prepare(Metropolis(), args)
+function Processes.prepare(::LayeredMetropolis, context::A) where A
+    (;g) = context
+    context = prepare(Metropolis(), context)
     Ms = [Ref(sum(state(g[i]))) for i in 1:length(g.layers)]
 
-    return (;args..., 
+    return (;context..., 
             layers = g.layers,
             Ms = Ms)
 end
 
-Base.@propagate_inbounds @inline function Layered_step(j, args::NamedTuple, layeridx, layer)
-    M = args.Ms[layeridx]
-    args = (;args..., j, layeridx, M, layer)
-    @inline Metropolis_step(args)
+Base.@propagate_inbounds @inline function Layered_step(j, context::NamedTuple, layeridx, layer)
+    M = context.Ms[layeridx]
+    args = (;context..., j, layeridx, M, layer)
+    @inline Metropolis_step(context, args)
 end
