@@ -196,8 +196,7 @@ end
 
 # struct TrianglePulseA end
 
-@NamedProcessAlgorithm Metropolis function TrianglePulseA(args)
-    (;pulse, M, x, y, hamiltonian) = args
+@ProcessAlgorithm function TrianglePulseA(pulse::P, M, x, y, hamiltonian) where P
     pulse_val = pulse[algo_call_number(args)]
     hamiltonian.b[] = pulse_val
     push!(x, pulse_val)
