@@ -11,7 +11,7 @@ const MetropolisTracked = Metropolis(true, true)
 
 
 # @inline function (::Metropolis)(context::As) where As
-@ProcessAlgorithm function Metropolis(iterator, rng, context)
+@ProcessAlgorithm function Metropolis(iterator::I, rng, context::C) where {I, C}
     #Define vars
     # (;iterator, rng) = context
     j = rand(rng, iterator)
@@ -41,7 +41,7 @@ end
 
 
 
-function Metropolis_step(context, j)
+function Metropolis_step(context::C, j) where C
     (;g, s, wij, self, rng, layer, hamiltonian, drule) = context
 
     Ttype = eltype(g)
@@ -54,7 +54,7 @@ function Metropolis_step(context, j)
     
     # ΔE = @inline deltafunc((;context..., newstate), (;j))
 
-    ΔE = ΔH(hamiltonian, (;self = self, s = s, w = wij, hamiltonian...), drule)
+    ΔE = @inline ΔH(hamiltonian, (;self = self, s = s, w = wij, hamiltonian...), drule)
     
     efac = exp(-β*ΔE)
     if (ΔE <= zero(Ttype) || rand(rng, Ttype) < efac)
