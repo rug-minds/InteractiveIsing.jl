@@ -17,7 +17,7 @@ export LayeredMetropolis
     @inline layerswitch(Layered_step, j, layers, context)
 end
 
-function Processes.prepare(::LayeredMetropolis, context::A) where A
+function Processes.prepare(::LayeredMetropolis, context::Con) where Con
     (;g) = context
     context = prepare(Metropolis(), context)
     Ms = [Ref(sum(state(g[i]))) for i in 1:length(g.layers)]

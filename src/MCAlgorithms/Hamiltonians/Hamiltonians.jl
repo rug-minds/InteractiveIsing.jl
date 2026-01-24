@@ -116,7 +116,7 @@ include("HamiltonianTerms.jl")
 
 
 export HamiltonianTerms
-include("DeltaRule.jl")
+include("Proposals/Proposals.jl")
 include("Quadratic.jl")
 include("Quartic.jl")
 include("MagField.jl")

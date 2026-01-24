@@ -143,7 +143,7 @@ function assignment_map(apr::AbstractParameterRef, args, filled_idxs = nothing)
     return d
 end
 
-function keyselect(od, keys::Union{NTuple{N, K}, Vector{K}}) where {K, N}
+function keyselect(od, keys::Union{NTuple{N, K} where N, Vector{K}}) where {K}
     return OrderedDict(zip(keys, getindex.(Ref(od), keys)))
     # return nt[keys]
 end

@@ -123,7 +123,6 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
     # set_listener_callback!(g, cb)
     # println("cb: ", cb)
 
-    prepare(g.default_algorithm, (;g))
     return g
 end
 

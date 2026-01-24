@@ -24,5 +24,6 @@ include("TupleTypes.jl")
 include("PartialF.jl")
 include("Printing.jl")
 include("FunctionTuple.jl")
+include("TupleBinarySearch.jl")
 
 include("Parameters/Parameters.jl")

@@ -148,8 +148,16 @@ end
 
 @inline stateset(lt::Type{<:IsingLayer{A,B}}) where {A,B} = B   
 @inline stateset(l::IsingLayer) = @inline stateset(typeof(l))
+@inline stateset_end(lt::Type{<:IsingLayer{A,B}}) where {A,B} = last(B)
+@inline stateset_end(l::IsingLayer) = @inline stateset_end(typeof(l))
+
 @inline statetype(lt::Type{<:IsingLayer{A}}) where {A} = A
 @inline statetype(l::IsingLayer) = @inline statetype(typeof(l))
+
+@inline range(lt::Type{<:IsingLayer{A,B,C,D,E}}) where {A,B,C,D,E} = E
+@inline range(l::IsingLayer) = @inline range(typeof(l))
+@inline range_end(lt::Type{<:IsingLayer{A,B,C,D,E}}) where {A,B,C,D,E} = last(E)
+@inline range_end(l::IsingLayer) = @inline range_end(typeof(l))
 
 topology(l::IsingLayer) = layer(l).top
 export topology
@@ -556,9 +564,6 @@ Base.eltype(l::IsingLayer) = eltype(graph(l))
 
 export statetype, setstatetype
 
-### GENERATING STATE
-@inline Base.rand(layer::IsingLayer{StateType}) where {StateType} = sample_from_stateset(StateType, stateset(layer))
-@inline Base.rand(layer::IsingLayer{StateType}, num::Integer) where {StateType} =  sample_from_stateset(StateType, stateset(layer), num)
 
 
 @inline function initstate!(layer::IsingLayer)

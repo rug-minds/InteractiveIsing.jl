@@ -3,7 +3,7 @@ struct ExampleHamiltonian{T} <: Hamiltonian
 end
 
 # Either define the Hamiltonian in index notation 
-# => System will auto generate difference based on DeltaRule
+# => System will auto generate difference based on FlipProposal
 ΔH_expr[ExampleHamiltonian] = :(s[i]*self[i]*value[])
 
 # Or define explicit energy difference

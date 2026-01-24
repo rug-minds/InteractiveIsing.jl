@@ -1,11 +1,11 @@
 
 """
-Takes a hamiltonian H, a deltarule, idx_symbol: idx_value -> statevalue
-    to generate the change in energy due to the deltarule
+Takes a hamiltonian H, a FlipProposal, idx_symbol: idx_value -> statevalue
+    to generate the change in energy due to the FlipProposal
 For Hamitlonians which have an explicit ΔH defined, it will get that function,
 otherwise it will generate the ΔH based on the hamiltonian expression using parameterrefs
 """
-@generated function ΔH(H::AbstractHamiltonianTerms, hargs, deltarules::DeltaRule...)
+@generated function ΔH(H::AbstractHamiltonianTerms, hargs, FlipProposals::FlipProposal...)
     # has_methods = tuple() # Check which hamiltonians have explicit definitions
     # generate_methods = tuple()
     HS = H_types(H)
@@ -24,7 +24,7 @@ otherwise it will generate the ΔH based on the hamiltonian expression using par
 
             
             # Generate the deltas
-            push!(delta_exps, to_delta_exp(get_ΔH_expr(h), deltarules...))
+            push!(delta_exps, to_delta_exp(get_ΔH_expr(h), FlipProposals...))
             
         end
     end
@@ -33,9 +33,9 @@ otherwise it will generate the ΔH based on the hamiltonian expression using par
     pref_exprs = to_ParameterRefs.(delta_exps)
 
     # For the generated methods
-    fixed_idxs, d_idxs = deltarules_to_fixed_idxs(deltarules...)
+    fixed_idxs, d_idxs = FlipProposals_to_fixed_idxs(FlipProposals...)
 
-    delta_names = ntuple(i -> Symbol("delta_", i), length(deltarules))
+    delta_names = ntuple(i -> Symbol("delta_", i), length(FlipProposals))
 
     get_delta_index_exprs = map(i -> Expr(:ref, :(getidx($i))), delta_names)
     global generated_func_calls = Expr(   :call, 
@@ -46,12 +46,12 @@ otherwise it will generate the ΔH based on the hamiltonian expression using par
             
 
     # For the defined methods
-    defined_func_calls = wrap_in_call(defined_ΔH_accesses, :ΔH, :hargs, :(deltarules...))
+    defined_func_calls = wrap_in_call(defined_ΔH_accesses, :ΔH, :hargs, :(FlipProposals...))
     
     global gen_ΔH_expr = quote
-        ($(delta_names...),) = deltarules
+        ($(delta_names...),) = FlipProposals
         # names = tuple($(QuoteNode.(delta_names...)))
-        hargs = (;hargs..., $(delta_names...) ) # Sets up deltarules to be used with parameter refs
+        hargs = (;hargs..., $(delta_names...) ) # Sets up FlipProposals to be used with parameter refs
         $(Expr(:call, :+, defined_func_calls..., generated_func_calls))
     end
 
