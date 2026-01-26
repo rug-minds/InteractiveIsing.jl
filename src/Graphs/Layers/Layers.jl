@@ -6,3 +6,4 @@ include("LayerArchitecture.jl")
 
 include("Parameters.jl")
 include("Sampling.jl")
+include("InlineLayerDispatch.jl")

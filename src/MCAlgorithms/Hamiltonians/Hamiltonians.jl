@@ -5,7 +5,7 @@ An hamiltonia is a struct that holds parameters
 """
 abstract type Hamiltonian end
 
-Base.merge(nt::NamedTuple, h::Hamiltonian) = (;nt..., pairs(h)...)
+@inline Base.merge(nt::NamedTuple, h::Hamiltonian) = (;nt..., pairs(h)...)
 """
 Pairs gives an iterator over the ParamTensor fields of the Hamiltonian
 """
@@ -116,7 +116,7 @@ include("HamiltonianTerms.jl")
 
 
 export HamiltonianTerms
-include("DeltaRule.jl")
+include("Proposals/Proposals.jl")
 include("Quadratic.jl")
 include("Quartic.jl")
 include("MagField.jl")

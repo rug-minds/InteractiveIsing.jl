@@ -32,9 +32,8 @@ g.hamiltonian = Ising(g) + DepolField(g)
 g.hamiltonian = setglobalparam(g.hamiltonian, :b)
 
 createProcess(g, KineticMC)
-# as = (;getargs(g)..., newstate = SparseVal(-1,1,1))
+# as = (;getcontext(g)..., newstate = SparseVal(-1,1,1))
 # dh = II.deltaH(g.hamiltonian)
-
 
 
 

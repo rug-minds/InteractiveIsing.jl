@@ -16,13 +16,10 @@ genAdj!(g3d, wg)
 
 # homogeneousself!(g3d, 0.5f0)
 
-
-
 g3d.hamiltonian = Ising(g3d) 
 # h = g3d.hamiltonian = Ising(g3d) + Quartic(g3d) + DepolField(g3d, top_layers = 2, zfunc = z -> 3/z, NN = 2) + Sextic(g3d)
 # # refresh(g3d)
 # # h[4].c[] = 1/(2*2500)
-createProcess(g3d)
 
 w = interface(g3d)
 
@@ -30,7 +27,7 @@ w = interface(g3d)
 # # pause(g3d)
 # # args = fetch(g3d)
 # args = ii.prepare(Metropolis(), (;g = g3d))
-# dr = DeltaRule(:s, j = 1 => -1f0)
+# dr = FlipProposal(:s, j = 1 => -1f0)
 
 
 # pref = ii.@ParameterRefs (s[j]-delta_1[j])*b[j]
@@ -38,7 +35,7 @@ w = interface(g3d)
 
 # ii.get_assignments(pref, hargs, (;j = 1))
 
-# dr = DeltaRule(:s, j = 1 => -1f0)
+# dr = FlipProposal(:s, j = 1 => -1f0)
 
 # h = g3d.hamiltonian
 

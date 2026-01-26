@@ -55,5 +55,4 @@ routine = Routine((Equilibration, SweepSusceptibility), (eqsteps*onesweep, sweep
 using Random
 createProcess(g, routine, overrides = (;rng = MersenneTwister()))
 
-final_arguments = getargs(process(g))
-
+final_context = getcontext(process(g))

@@ -54,9 +54,9 @@ struct FibLuc end
 Processes.prepare(::Type{FibLuc}, args) = (;fiblist = [0, 1], luclist = [2, 1])
 
 function FibLuc(args)
-    (;proc) = args
+    (;process) = args
     @inline Fib(args)
-    if loopidx(proc) % 2 == 0
+    if loopidx(process) % 2 == 0
         @inline Luc(args)
     end
 end
@@ -79,10 +79,10 @@ function Processes.prepare(::Type{FibLucTrig{Intervals}}, args) where Intervals
 end
 
 function FibLucTrig{(1,2)}(args)
-    (;proc, triggers) = args
+    (;process, triggers) = args
     Fib(args)
     Processes.skiplist!(triggers)
-    if Processes.shouldtrigger(triggers, loopidx(proc))
+    if Processes.shouldtrigger(triggers, loopidx(process))
         Luc(args)
         Processes.inc!(triggers)
     end
@@ -97,7 +97,7 @@ benchmark(FibLuc, 1000000)
 # benchmark(FibLucComp, 1000000, loopfunction = Processes.typeloop, progress = true)
 
 
-# p, args = ex_p_and_args(FibLucComp, 1000000, loopfunction = unrollloop)
+# p, context = ex_p_and_context(FibLucComp, 1000000, loopfunction = unrollloop)
 # (;lifetime) = args
 
 # import Processes: _comp_dispatch, gethead, gettail, get_intervals, headval, get_funcs, typeheadval, typetail

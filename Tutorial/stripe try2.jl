@@ -196,14 +196,14 @@ end
 
 # struct TrianglePulseA end
 
-@NamedProcessAlgorithm Metropolis function TrianglePulseA(args)
-    (;pulse, M, x, y, hamiltonian) = args
+@ProcessAlgorithm function TrianglePulseA(pulse::P, M, x, y, hamiltonian) where P
     pulse_val = pulse[algo_call_number(args)]
     hamiltonian.b[] = pulse_val
     push!(x, pulse_val)
     push!(y, M[])
     return (;)
 end
+
 function Processes.prepare(::TrianglePulseA, args)
     (;amp, numpulses, rise_point) = args
     steps = num_calls(args)
@@ -314,39 +314,40 @@ Amptitude =10
 PulseN = 2
 Pulsetime = (PulseN * 4 + 10) * risepoint * SpeedRate
 
-compalgo = CompositeAlgorithm((Metropolis, TrianglePulseA), (1, SpeedRate))
-createProcess(g, compalgo, lifetime =Pulsetime, amp = Amptitude, numpulses = PulseN, rise_point=risepoint)
-### estimate time
-est_remaining(process(g))
-# Wait until it is done
-args = process(g) |> fetch # If you want to close ctr+c
-# args = process(g) |> getargs
-# EnergyG= args.all_Es;
-voltage= args.Metropolis.x
-Pr= args.Metropolis.y;
+createProcess(g, Metropolis())
+# compalgo = CompositeAlgorithm((Metropolis, TrianglePulseA), (1, SpeedRate))
+# createProcess(g, compalgo, lifetime =Pulsetime, amp = Amptitude, numpulses = PulseN, rise_point=risepoint)
+# ### estimate time
+# est_remaining(process(g))
+# # Wait until it is done
+# args = process(g) |> fetch # If you want to close ctr+c
+# # args = process(g) |> getcontext
+# # EnergyG= args.all_Es;
+# voltage= args.Metropolis.x
+# Pr= args.Metropolis.y;
 
 
-# inlineplot() do 
-#     lines(Ex, Ey)
-# end
+# # inlineplot() do 
+# #     lines(Ex, Ey)
+# # end
 
-figPr = Figure()
-ax = Axis(figPr[1, 1])
-lines!(ax, voltage, Pr)
-# save("D:/Code/data/shell/stripes with skymions/axayaz_1.5_1.5_1_T$(Temperature)_Amp$(Amptitude)_Speed$(Time_fctr)_80_20_20.png", figPr)
-# save("D:/Code/data/shell/stripes with skymions/thickness/demo.png", figPr)
+# figPr = Figure()
+# ax = Axis(figPr[1, 1])
+# lines!(ax, voltage, Pr)
+# # save("D:/Code/data/shell/stripes with skymions/axayaz_1.5_1.5_1_T$(Temperature)_Amp$(Amptitude)_Speed$(Time_fctr)_80_20_20.png", figPr)
+# save("D:/Code/data/shell/stripes with skymions/thickness/z=1.png", figPr)
 
-# inlineplot() do 
-#     lines(voltage, Pr)
-# end
+# # inlineplot() do 
+# #     lines(voltage, Pr)
+# # end
 
 
-# inlineplot() do 
-#     lines(Pr)
-# end
+# # inlineplot() do 
+# #     lines(Pr)
+# # end
 
-w2=newmakie(lines, voltage, Pr)
-w3=newmakie(lines,Pr)
+# w2=newmakie(lines, voltage, Pr)
+# w3=newmakie(lines,Pr)
 
 
 # show_connections(g,1,1,1)

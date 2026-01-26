@@ -6,18 +6,20 @@ Use within prepare function
 For a process with a limited lifetime,
 give the array a size hint based on the lifetime and the number of updates per step.
 """
-@inline function processsizehint!(args, array, updates_per_step = 1)
-    if !haskey(args, :_instance) || !haskey(args, :lifetime)
+@inline function processsizehint!(array, context::AbstractContext, updates_per_step = 1)
+    if !(context isa AbstractContext)
+        @show context
         @warn("Cannot give a sizehint, prepare is not called from a process")
         return nothing
     end
 
-    lifetime = args.lifetime
+    globals = getglobal(context)
+    lifetime = globals.lifetime
     if lifetime isa Indefinite
         return sizehint!(array, 2^16)
     end
 
-    multiplier = getmultiplier(args.algo, args._instance)
+    multiplier = getmultiplier(globals.algo, this_instance(context))
     startsize = length(array)
 
     recommended_extra = ceil(Int, repeats(lifetime)*multiplier*updates_per_step)
@@ -63,41 +65,35 @@ function num_calls(args)
 end
 
 """
-Routines will call inc! multuple times per loop
-"""
-function inc_multiplier(pa::ProcessAlgorithm)
-    if pa isa Routine
-        return sum(repeats(pa))
-    else 
-        return 1
-    end
-end
-
-"""
 Gives the maximum loop index for a process
 """
 function maximum_loopidx(p::Process)
-    return repeats(p)*inc_multiplier(getfunc(p))
-end
-
-"""
-Get the allocator directly from the args
-"""
-getallocator(args) = getallocator(args.proc)
-function newallocator(args)
-    if haskey(args, :algotracker)
-        if algoidx(args.algotracker) == 1
-            return args.proc.allocator = Arena()
-        else
-            return getallocator(args)
-        end
-    end
+    return repeats(p)
 end
 
 """
 Get the current loop index for a process
 """
-loopidx(args::NamedTuple) = loopidx(args.proc)
+loopidx(args::NamedTuple) = loopidx(args.process)
+
+"""
+TODO: Replace this
+"""
+algo_call_number(args) = loopidx(args.globalargs.process) ÷ args.globalargs.interval
+export algo_call_number
+# """
+# Get the allocator directly from the args
+# """
+# getallocator(args) = getallocator(args.process)
+# function newallocator(args)
+#     if haskey(args, :algotracker)
+#         if algoidx(args.algotracker) == 1
+#             return args.process.allocator = Arena()
+#         else
+#             return getallocator(args)
+#         end
+#     end
+# end
 
 
 ####
@@ -174,15 +170,15 @@ macro hasarg(ex)
     type = nothing
     condition = nothing 
     if @capture(ex, if argname_ isa type_ body_ end)
-        condition = :(haskey(args, ($(QuoteNode(argname)))) && args.$argname isa $type)
+        condition = :(haskey(context, ($(QuoteNode(argname)))) && context.$argname isa $type)
     else @capture(ex, if argname_ body_ end)
-        condition = :(haskey(args, ($(QuoteNode(argname)))))
+        condition = :(haskey(context, ($(QuoteNode(argname)))))
     end
 
     
     body = MacroTools.postwalk(body) do x
         if x == argname
-            return :(args.$argname)
+            return :(context.$argname)
         else
             return x
         end

@@ -1,70 +1,66 @@
 #AlgoTracker
 export inc!, nextalgo!
-export CompositeAlgorithm, prepare, loopexp
-mutable struct CompositeAlgorithm{T, Intervals, NSR} <: ComplexLoopAlgorithm
-    const funcs::T
-    inc::Int # To track the intervals
-    const flags::Set{Symbol}
-    const registry::NSR
+export CompositeAlgorithm
+struct CompositeAlgorithm{T, Intervals, NSR, S, R} <: ComplexLoopAlgorithm
+    funcs::T
+    inc::Base.RefValue{Int} # To track the intervals
+    registry::NSR
+    shared_contexts::S
+    shared_vars::R
 end
 
-function CompositeAlgorithm(funcs::NTuple{N, Any}, intervals::NTuple{N, Real} = ntuple(_ -> 1, N); names = tuple(), flags...) where {N}
-    set = isempty(flags) ? Set{Symbol}() : Set(flags)
-    allfuncs = Any[]
-    allintervals = Int[]
-    registry = NameSpaceRegistry()
-    multipliers = 1. ./(Float64.(intervals))
-
-    for (func_idx, func) in enumerate(funcs)
-  
-        if func isa Type
-            func = func()
-        end
-
-        if func isa CompositeAlgorithm || func isa Routine # So that they track their own starts/incs
-            func = deepcopy(func)
-        end
-
-        name = getname(func)
-        if !isnothing(name) && !(func isa NamedAlgorithm)
-            func = NamedAlgorithm(func, name)
-        end
-
-        if !needsname(func)
-            registry, func = add_named_instance(registry, func, multipliers[func_idx])
-        elseif needsname(func)
-            registry, func = get_named_instance(registry, func, multipliers[func_idx])
-        end
+"""
+Update auto generated names means registry has been overruled, thus we set this to nothing
+"""
+update_instance(ca::CompositeAlgorithm{T,I}, ::NameSpaceRegistry) where {T,I} = CompositeAlgorithm{T, I, Nothing, Nothing, Nothing}(ca.funcs, ca.inc, nothing, nothing, nothing)
+getmultipliers_from_specification_num(::Type{<:CompositeAlgorithm}, specification_num) = 1 ./(Float64.(specification_num))
 
 
-        I = intervals[func_idx]
-        push!(allfuncs, func)
-        push!(allintervals, I)
-    end
-
-    registries = getregistry.(allfuncs)
-    registries = scale_multipliers.(registries, multipliers)
-    func_replacements = Vector{Vector{Pair{Symbol,Symbol}}}(undef, length(allfuncs))
-    # Merging registries pairwise so replacement direction is explicit
-    for (idx, subregistry) in enumerate(registries)
-        registry, repl = merge_registries(registry, subregistry)
-        func_replacements[idx] = repl
-    end
-    # Updating names downwards (each branch only needs its own replacements)
-    allfuncs = update_loopalgorithm_names.(allfuncs, func_replacements)
-
-    tfuncs = tuple(allfuncs...)
-    allintervals = tuple(floor.(Int, allintervals)...)
-    _instances = unique_instances(tfuncs)
-
-    flags = Set(flags...)
-    CompositeAlgorithm{typeof(tfuncs), allintervals, typeof(registry)}(tfuncs, 1, flags, registry)
+function CompositeAlgorithm(funcs::NTuple{N, Any}, 
+                            intervals::NTuple{N, Real} = ntuple(_ -> 1, N), 
+                            options::Union{Share, Route, ProcessState}...) where {N}
+    (;functuple, registry, shared_contexts, shared_vars) = setup(CompositeAlgorithm, funcs, intervals, options...)
+    CompositeAlgorithm{typeof(functuple), intervals, typeof(registry), typeof(shared_contexts), typeof(shared_vars)}(functuple, Ref(1), registry, shared_contexts, shared_vars)
 end
+
+
+# function CompositeAlgorithm(funcs::NTuple{N, Any}, 
+#                             intervals::NTuple{N, Real} = ntuple(_ -> 1, N), 
+#                             shares_and_routes::Union{Share, Route}...; 
+#                             flags...) where {N}
+
+#     set = isempty(flags) ? Set{Symbol}() : Set(flags)
+#     allfuncs = Any[]
+#     allintervals = Int[]
+#     registry = NameSpaceRegistry()
+#     multipliers = 1. ./(Float64.(intervals))
+
+#     for (func_idx, func) in enumerate(funcs)
+#         if func isa ComplexLoopAlgorithm # Deepcopy to make multiple instances independent
+#             func = deepcopy(func)
+#         else
+#             registry, namedfunc = add_instance(registry, func, multipliers[func_idx])
+#         end
+#         I = intervals[func_idx]
+#         push!(allfuncs, namedfunc)
+#         push!(allintervals, I)
+#     end
+
+#     registry = inherit(registry, get_registry.(allfuncs)...; multipliers)
+#     # Updating names downwards (each branch only needs its own replacements)
+#     allfuncs = update_loopalgorithm_names.(allfuncs, Ref(registry))
+
+#     tfuncs = tuple(allfuncs...)
+#     allintervals = tuple(floor.(Int, allintervals)...)
+
+#     flags = Set(flags...)
+#     CompositeAlgorithm{typeof(tfuncs), allintervals, typeof(registry), typeof(shares_and_routes)}(tfuncs, Ref(1), flags, registry, shares_and_routes)
+# end
 
 # CompositeAlgorithm(ca::CompositeAlgorithm, funcs = ca.funcs) = CompositeAlgorithm(funcs, ca.inc, flags = ca.flags)
 function newfuncs(ca::CompositeAlgorithm, funcs)
     nsr = NameSpaceRegistry(funcs)
-    CompositeAlgorithm{typeof(funcs), intervals(ca), typeof(nsr)}(funcs, ca.inc, ca.flags, nsr)
+    CompositeAlgorithm{typeof(funcs), intervals(ca), typeof(nsr), typeof(ca.shared_specs)}(funcs, ca.inc, ca.flags, nsr, ca.shared_specs)
 end
 
 subalgorithms(ca::CompositeAlgorithm) = ca.funcs
@@ -83,10 +79,10 @@ Increment the stepidx for the composite algorithm
 """
 @generated function inc!(ca::CompositeAlgorithm)
     _max = max(ca.parameters[2]...)
-    return :(ca.inc = mod1(ca.inc + 1, $_max))
+    return :(ca.inc[] = mod1(ca.inc[] + 1, $_max))
 end
 function reset!(ca::CompositeAlgorithm)
-    ca.inc = 1
+    ca.inc[] = 1
     reset!.(ca.funcs)
 end
 
@@ -120,17 +116,16 @@ get_intervals(ct::Type{<:CompositeAlgorithm}) = ct.parameters[2]
     return Val.(Is)
 end
 
-inc(ca::CompositeAlgorithm) = ca.inc
+inc(ca::CompositeAlgorithm) = ca.inc[]
 
-get_this_interval(args) = getinterval(getfunc(args.proc), algoidx(args))
+get_this_interval(args) = getinterval(getfunc(args.process), algoidx(args))
 
 numfuncs(::CompositeAlgorithm{T,I}) where {T,I} = length(I)
 @inline getfuncname(::CompositeAlgorithm{T,I}, idx) where {T,I} = T.parameters[idx]
 @inline getinterval(::CompositeAlgorithm{T,I}, idx) where {T,I} = I[idx]
 iterval(ca::CompositeAlgorithm, idx) = getinterval(ca, idx)
 
-algo_call_number(args) = loopidx(args.globalargs.proc) ÷ args.globalargs.interval
-export algo_call_number
+
 
 # CompositeAlgorithm(f, interval::Int, flags...) = CompositeAlgorithm((f,), (interval,), flags...)
 
@@ -141,50 +136,28 @@ export algo_call_number
 Running a composite algorithm allows for static unrolling and inlining of all sub-algorithms through 
     recursive calls
 """
-@inline function step!(ca::CompositeAlgorithm{T, Is}, args::As) where {T,Is,As<:NamedTuple}
+@inline function step!(ca::CompositeAlgorithm{T, Is}, context::C) where {T,Is,C<:AbstractContext}
     algoidx = 1
-    return @inline _comp_dispatch(ca, gethead(ca.funcs), headval(Is), gettail(ca.funcs), gettail(Is), (;args..., algoidx, interval = gethead(Is)))
+    this_inc = inc(ca)
+    return @inline _comp_dispatch(ca, context::C, algoidx, this_inc, gethead(ca.funcs), headval(Is), gettail(ca.funcs), gettail(Is))
 end
 
 """
 Dispatch on a composite function
     Made such that the functions will be completely inlined at compile time
 """
-@inline function _comp_dispatch(ca::CompositeAlgorithm, thisfunc::TF, interval::Val{I}, funcs, intervals, args) where {I,TF}
-    returnval = nothing
-    if I == 1
-        returnval = namedstep!(thisfunc, args)
-
+@inline function _comp_dispatch(ca::CompositeAlgorithm, context::C, algoidx::Int, this_inc::Int, thisfunc::TF, interval, funcs, intervals) where {TF,C<:AbstractContext}
+    if isnothing(thisfunc)
+        inc!(ca)
+        GC.safepoint()
+        return context
+    end
+    if interval == 1
+        context = step!(thisfunc, context)
     else
-        if inc(ca) % I == 0
-            returnval = namedstep!(thisfunc, args)
+        if this_inc % interval == 0
+            context = step!(thisfunc, context)
         end
     end
-    args = mergeargs(args, returnval)
-    return @inline _comp_dispatch(ca, gethead(funcs), headval(intervals), gettail(funcs), gettail(intervals), (;args..., algoidx = args.algoidx + 1, interval = gethead(intervals)))
-end
-
-"""
-Last dispatch function when all functions have been called
-"""
-@inline function _comp_dispatch(ca::CompositeAlgorithm, ::Nothing, ::Any, ::Any, ::Any, args)
-    inc!(ca)
-    GC.safepoint()
-    # return args
-    return
-end
-
-# SHOWING
-function Base.show(io::IO, ca::CompositeAlgorithm)
-    indentio = NextIndentIO(io, VLine(), "Composite Algorithm")
-    _intervals = intervals(ca)
-    q_postfixes(indentio, ("\texecuting every $interval time(s)" for interval in _intervals)...)
-    for thisfunc in ca.funcs
-        if thisfunc isa CompositeAlgorithm || thisfunc isa Routine
-            invoke(show, Tuple{IO, typeof(thisfunc)}, next(indentio), thisfunc)
-        else
-            invoke(show, Tuple{IndentIO, Any}, next(indentio), thisfunc)
-            # show(next(indentio), thisfunc)
-        end
-    end
+    return @inline _comp_dispatch(ca, context, algoidx + 1, this_inc, gethead(funcs), gethead(intervals), gettail(funcs), gettail(intervals))
 end

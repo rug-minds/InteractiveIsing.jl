@@ -5,9 +5,9 @@ Create a new Makie window with a lines plot for the observables x and y
 """
 function async_lines_window(func; fps = 30, lifetime, kwargs...)
 
-    proc = Process(func; lifetime , kwargs...)
-    Processes.preparedata!(proc)
-    (;x, y) = getargs(proc)
+    process = Process(func; lifetime , kwargs...)
+    Processes.preparedata!(process)
+    (;x, y) = getcontext(process)
     w = axis_window(window_type = :Lines)
   
     # Storage of data
@@ -41,7 +41,7 @@ function async_lines_window(func; fps = 30, lifetime, kwargs...)
     pushtimer!(w, PTimer(timerfunc, 0., interval = 1/fps))
     
     reset() = begin
-        Processes.syncclose(proc)
+        Processes.syncclose(process)
         for line in w[:lines]
             delete!(w[:ax], line)
         end
@@ -58,17 +58,17 @@ function async_lines_window(func; fps = 30, lifetime, kwargs...)
     end
 
     function newlines!()
-        Processes.syncclose(proc)
+        Processes.syncclose(process)
         close.(w.timers)
-        createtask!(proc)
-        (;x,y) = getargs(proc)
+        createtask!(process)
+        (;x,y) = getcontext(process)
        
         xob = Observable(@view x[1:end])
         yob = Observable(@view y[1:end])
         newest_obs[1] = xob
         newest_obs[2] = yob
          
-        Processes.spawntask!(proc)
+        Processes.spawntask!(process)
         start.(w.timers)
         push!(w[:lines], lines!(w[:ax], xob, yob))
     end
@@ -90,25 +90,25 @@ function async_lines_window(func; fps = 30, lifetime, kwargs...)
         end
     end
 
-    # If a proc is given, add the proc controls
-    if !isnothing(proc)
-        w[:proc] = proc
+    # If a process is given, add the process controls
+    if !isnothing(process)
+        w[:process] = process
         on(window_open(w)) do x
             if !x
-                quit(proc)
+                quit(process)
             end
         end
 
         on(w[:pausebutton].clicks) do _
             if w[:paused][]
-                pause(proc)
+                pause(process)
             else
-                start(proc)
+                start(process)
             end
         end
     end
 
-    Processes.spawntask!(proc) 
+    Processes.spawntask!(process) 
     return w
 end
 
@@ -122,13 +122,13 @@ function get_plot(w::MakieWindow{:Lines})
 end
 export get_plot
 
-change_args!(w::MakieWindow{:Lines}; args...) = changeargs!(w[:proc]; args...)
+change_context!(w::MakieWindow{:Lines}; context...) = changecontext!(w[:process]; context...)
 
 function sync_lines_window(proc1, func; fps = 30, lifetime, kwargs...)
 
-    proc = Process(func; lifetime, graphproc = proc1, kwargs...)
-    Processes.preparedata!(proc)
-    (;x, y) = getargs(proc)
+    process = Process(func; lifetime, graphproc = proc1, kwargs...)
+    Processes.preparedata!(process)
+    (;x, y) = getcontext(process)
     w = axis_window(window_type = :Lines)
   
     # Storage of data
@@ -162,7 +162,7 @@ function sync_lines_window(proc1, func; fps = 30, lifetime, kwargs...)
     pushtimer!(w, PTimer(timerfunc, 0., interval = 1/fps))
     
     reset() = begin
-        Processes.syncclose(proc)
+        Processes.syncclose(process)
         for line in w[:lines]
             delete!(w[:ax], line)
         end
@@ -179,17 +179,17 @@ function sync_lines_window(proc1, func; fps = 30, lifetime, kwargs...)
     end
 
     function newlines!()
-        Processes.syncclose(proc)
+        Processes.syncclose(process)
         close.(w.timers)
-        createtask!(proc)
-        (;x,y) = getargs(proc)
+        createtask!(process)
+        (;x,y) = getcontext(process)
        
         xob = Observable(@view x[1:end])
         yob = Observable(@view y[1:end])
         newest_obs[1] = xob
         newest_obs[2] = yob
          
-        Processes.spawntask!(proc)
+        Processes.spawntask!(process)
         start.(w.timers)
         push!(w[:lines], lines!(w[:ax], xob, yob))
     end
@@ -211,24 +211,24 @@ function sync_lines_window(proc1, func; fps = 30, lifetime, kwargs...)
         end
     end
 
-    # If a proc is given, add the proc controls
-    if !isnothing(proc)
-        w[:proc] = proc
+    # If a process is given, add the process controls
+    if !isnothing(process)
+        w[:process] = process
         on(window_open(w)) do x
             if !x
-                quit(proc)
+                quit(process)
             end
         end
 
         on(w[:pausebutton].clicks) do _
             if w[:paused][]
-                pause(proc)
+                pause(process)
             else
-                start(proc)
+                start(process)
             end
         end
     end
 
-    Processes.spawntask!(proc) 
+    Processes.spawntask!(process) 
     return w
 end

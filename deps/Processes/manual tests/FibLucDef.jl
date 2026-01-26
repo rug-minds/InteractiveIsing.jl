@@ -1,15 +1,12 @@
-using Pkg
-Pkg.activate(joinpath(@__DIR__, ".."))
-using Processes
-
+include("_env.jl")
 @ProcessAlgorithm function Fib(fiblist)
     push!(fiblist, fiblist[end] + fiblist[end-1])
     return (;)
 end
 
-function Processes.prepare(::Fib, args)
+function Processes.prepare(::Fib, context)
     fiblist = Int[0, 1]
-    processsizehint!(args, fiblist)
+    processsizehint!(fiblist, context)
     return (;fiblist)
 end
 
@@ -18,9 +15,9 @@ end
     return (;)
 end
 
-function Processes.prepare(::Luc, args)
+function Processes.prepare(::Luc, context)
     luclist = Int[2, 1]
-    processsizehint!(args, luclist)
+    processsizehint!(luclist,context)
     return (;luclist)
 end
 
@@ -39,8 +36,8 @@ function NaiveFibluc(num, trials = 100)
         luclist = Int[2, 1]
         fiblist = Int[0, 1]
 
-        sizehint!(fiblist, num)
-        sizehint!(luclist, num)
+        sizehint!(fiblist, num+2)
+        sizehint!(luclist, num+2)
         t1 = time_ns()
         for iteration in 1:num
             push!(fiblist, fiblist[end] + fiblist[end-1])

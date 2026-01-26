@@ -31,9 +31,9 @@ struct FibLuc end
 InteractiveIsing.prepare(::Type{FibLuc}, args) = (;fiblist = [0, 1], luclist = [2, 1])
 
 function FibLuc(args)
-    (;proc) = args
+    (;process) = args
     Fib(args)
-    if loopidx(proc) % 2 == 0
+    if loopidx(process) % 2 == 0
         Luc(args)
     end
 end
@@ -56,10 +56,10 @@ function InteractiveIsing.prepare(::Type{FibLucTrig{Intervals}}, args) where Int
 end
 
 function FibLucTrig{(1,2)}(args)
-    (;proc, triggers) = args
+    (;process, triggers) = args
     Fib(args)
     InteractiveIsing.skiplist!(triggers)
-    if InteractiveIsing.shouldtrigger(triggers, loopidx(proc))
+    if InteractiveIsing.shouldtrigger(triggers, loopidx(process))
         Luc(args)
         InteractiveIsing.inc!(triggers)
     end

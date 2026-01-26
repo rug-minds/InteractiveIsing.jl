@@ -2,7 +2,11 @@ function createProcess(g::IsingGraph, func = nothing; run = true, threaded = tru
     if isnothing(func)
         func = get(args, :algorithm, g.default_algorithm)
     end
-    process = Process(func; lifetime, g, args...)
+    destructed_graph = Destructure(g)
+
+    algo = SimpleAlgo(tuple(func), destructed_graph, Share(destructed_graph, func))
+
+    process = Process(algo; lifetime)
     
     ps = processes(g)
     push!(ps, process)
@@ -29,5 +33,5 @@ Fetch last output
 Base.fetch(g::IsingGraph) = fetch(process(g))
 export wait, fetch
 
-Processes.getargs(g::IsingGraph) = getargs(process(g))
-export getargs
+Processes.getcontext(g::IsingGraph) = getcontext(process(g))
+export getcontext

@@ -6,12 +6,12 @@ end
     return rand(T)*(rangeend-rangebegin) + rangebegin
 end
 
-@inline function uniform_rand(rng::AbstractRNG, rangebegin::T, rangeend::T, num) where T
-    return (rand(rng,T, num)).*(rangeend-rangebegin) .+ rangebegin
+@inline function uniform_rand(rng::AbstractRNG, rangebegin::T, rangeend::T, dims::Int...) where T
+    return (rand(rng,T, dims...)).*(rangeend-rangebegin) .+ rangebegin
 end
 
-@inline function uniform_rand(rangebegin::T, rangeend::T, num) where T
-    return (rand(T, num)).*(rangeend-rangebegin) .+ rangebegin
+@inline function uniform_rand(rangebegin::T, rangeend::T, dims::Int...) where T
+    return (rand(T, dims...)).*(rangeend-rangebegin) .+ rangebegin
 end
 
 function reset_global_rng!(seed = nothing)

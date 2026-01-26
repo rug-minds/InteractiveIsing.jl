@@ -72,20 +72,22 @@ function init!(dpf::DepolField, g)
     return dpf
 end
 
-function update!(::Metropolis, dpf::DepolField, args)
-    (;j, Δs_j) = args
-    if j ∈ dpf
-        z = layers_deep(j, dpf)
-        dpf.dpf[j] -= dpf.zfunc(z)*Δs_j[]
+function update!(::Metropolis, dpf::DepolField, params)
+    (;j, proposal) = params
+    if isaccepted(proposal)
+        if j ∈ dpf
+            z = layers_deep(j, dpf)
+            dpf.dpf[j] -= dpf.zfunc(z)*delta(proposal)
+        end
     end
     return 
 end
 
 # ΔH_expr[DepolField] = :( (dpf[j]/c[])*(s[j]) )
 
-function ΔH(dpf::DepolField, args, drule)
-    (;s, self, c) = args
-    j = getidx(drule)
+function ΔH(dpf::DepolField, params, proposal)
+    (;s, self, c) = params
+    j = getidx(proposal)
     base_term = c[]*dpf.dpf[j]
     if j ∈ dpf # If in the surface
                 # Also compute the effect of changhing the field
@@ -99,10 +101,10 @@ function ΔH(dpf::DepolField, args, drule)
         base_term -= dpf.zfunc(z)*field_delta
     end
 
-    return base_term * (s[j] - drule[])
+    return base_term * (s[j] - proposal[])
 end
 
-# function ΔH(dpf::DepolField, g::PottsGraph, args, drule)
+# function ΔH(dpf::DepolField, g::PottsGraph, args, proposal)
     
 # end
 

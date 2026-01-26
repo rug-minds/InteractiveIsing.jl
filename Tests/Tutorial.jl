@@ -213,7 +213,7 @@ function general_algorithm_namedtuple(t::NamedTuple, algorithm::Function)
     return result
 end
 
-getargs()
+getcontext()
 
 # STRUCT TUTORIAL 2: Setters and getters
 

@@ -1,67 +1,54 @@
 export Metropolis
-struct Metropolis<: MCAlgorithm end
-# struct deltaH end
-
-# @inline function (::Metropolis)(args::As) where As
-@NamedProcessAlgorithm Metropolis function Metropolis(iterator, rng, args)
-    #Define vars
-    # (;iterator, rng) = args
-    j = rand(rng, iterator)
-    @inline Metropolis_step((;args..., j))
+struct Metropolis <: MCAlgorithm 
+    track_M::Bool
+    track_sj::Bool
 end
 
+Metropolis() = Metropolis(false, false)
 
-function Processes.prepare(::Metropolis, args::A) where A
-    (;g) = args
-    s = g.state
-    wij = g.adj
-    self = g.self
-    iterator = ising_it(g)
-    hamiltonian = init!(g.hamiltonian, g)
-    # deltafunc = deltaH(hamiltonian)
-    rng = Random.GLOBAL_RNG
-    M = Ref(sum(g.state))
-    Δs_j = Ref(zero(eltype(g.state)))
-    # newstate = SparseVal(eltype(s)(0), Int32(0), Int32(length(s)))
-    
-    drule = DeltaRule(:s, j = 0 => eltype(s)(0)) # Specify which spin will be flipped
+const MetropolisStandard = Metropolis(false, false)
+const MetropolisTracked = Metropolis(true, true)
 
-    layer = g.layers[1]
-    return (;g ,s, wij, iterator, hamiltonian, layer, rng, M, Δs_j, self, drule)
-    # args = (;s, wij, iterator, hamiltonian, deltafunc, lmeta, rng, newstate)
+
+# @inline function (::Metropolis)(context::As) where As
+@ProcessAlgorithm function Metropolis(rng, context::C) where {C}
+    @inline Metropolis_step(context)
+end
+
+function Processes.prepare(::Metropolis, context::Cont) where Cont
+    (;isinggraph, state, hamiltonian) = context
+
+    rng = Random.MersenneTwister()
+
+    hamiltonian = init!(hamiltonian, isinggraph)
+    proposer = get_proposer(isinggraph)
+    proposal = FlipProposal{:s, :j, statetype(proposer)}(0, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
+    M = sum(state)
+    return (;hamiltonian, proposer, rng, proposal, M)
 end
 
 
 
-function Metropolis_step(args)
-    (;g, s, wij, self, j, rng, layer, hamiltonian, drule) = args
-    Ttype = eltype(g)
-    β = one(Ttype)/(temp(g))
+@inline function Metropolis_step(context::C) where C
+    (;isinggraph, state, adj, self, rng, hamiltonian, proposer, proposal, M) = context
 
-    oldstate = @inbounds s[j]
+    proposal = @inline rand(rng, proposer)::FlipProposal{:s, :j, statetype(proposer)}
+    # proposal = FlipProposal{:s, :j, statetype(proposer)}(1, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
 
-    # newstate[j] = @inline sampleState(statetype(lmeta), oldstate, rng, stateset(lmeta))
-    drule[j] = @inline sampleState(statetype(layer), oldstate, rng, stateset(layer))
+    Ttype = eltype(isinggraph)
+    β = one(Ttype)/(temp(isinggraph))
+    # β = one(Ttype)/T
     
-    # ΔE = @inline deltafunc((;args..., newstate), (;j))
+    # ΔE = @inline deltafunc((;context..., newstate), (;j))
 
-    ΔE = ΔH(hamiltonian, (;args..., self = self, s = s, w = wij, hamiltonian...), drule)
-    
-    efac = exp(-β*ΔE)
-    if (ΔE <= zero(Ttype) || rand(rng, Ttype) < efac)
-        @inbounds s[j] = drule[]
-        @hasarg if M isa Ref
-            M[] += (drule[] - oldstate)
-        end
-        @hasarg if Δs_j isa Ref
-            Δs_j[] = drule[] - oldstate
-        end
-    else
-        @hasarg if Δs_j isa Ref
-            Δs_j[] = 0
-        end
+    ΔE = @inline ΔH(hamiltonian, (;self = self, s = state, w = adj, hamiltonian...), proposal)
+
+    if (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-β*ΔE))
+        proposal = @inline accept(state, proposal)
+        M += delta(proposal)
     end
 
-    @inline update!(Metropolis(), args.hamiltonian, args)
-    return nothing
+    context = viewmerge(context, (;proposal, M))
+    @inline update!(Metropolis(), hamiltonian, context)
+    return (;proposal, M)
 end

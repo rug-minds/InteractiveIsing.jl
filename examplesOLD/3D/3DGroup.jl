@@ -64,14 +64,14 @@ interface(g)
 # end
 
 # function TrianglePulseB(args)
-#     (;proc, pulse, tstep, x, y) = args
+#     (;process, pulse, tstep, x, y) = args
 #     wait(args, tstep)
 
 
-#     setparam!(g[1], :b, pulse[loopidx(proc)])
+#     setparam!(g[1], :b, pulse[loopidx(process)])
 
 #     push!(y, sum(state(g)))            
-#     push!(x, pulse[loopidx(proc)])
+#     push!(x, pulse[loopidx(process)])
 # end
 
-# # InteractiveIsing.change_args!(w, tstep = 0.001, amp = 2)
+# # InteractiveIsing.change_context!(w, tstep = 0.001, amp = 2)
