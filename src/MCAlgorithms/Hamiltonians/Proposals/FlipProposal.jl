@@ -19,7 +19,10 @@ function delta(fp::FlipProposal{S, Idx, T}) where {S, Idx, T}
     return fp.to_val - fp.from_val
 end
 
-accept(f::FlipProposal) = FlipProposal(f, f.at_idx, f.from_val, f.to_val, f.layer_idx, true)
+function accept(state, f::FlipProposal)
+    state[at_idx(f)] = to_val(f)
+    FlipProposal(f, f.at_idx, f.from_val, f.to_val, f.layer_idx, true)
+end
 isaccepted(r::FlipProposal) = r.accepted
 
 at_idx(r::FlipProposal) = r.at_idx
