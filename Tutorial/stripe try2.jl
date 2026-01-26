@@ -207,7 +207,6 @@ end
 function Processes.prepare(::TrianglePulseA, args)
     (;amp, numpulses, rise_point) = args
     steps = num_calls(args)
-
     first  = LinRange(0, amp, round(Int,rise_point))
     second = LinRange(amp, 0, round(Int,rise_point))
     third  = LinRange(0, -amp, round(Int,rise_point))
@@ -238,9 +237,9 @@ end
 
 
 
-xL = 10  # Length in the x-dimension
-yL = 10  # Length in the y-dimension
-zL = 10   # Length in the z-dimension
+xL = 20  # Length in the x-dimension
+yL = 20  # Length in the y-dimension
+zL = 20   # Length in the z-dimension
 g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
@@ -261,7 +260,7 @@ setdist!(g, (1.0,1.0,1.0))
 # wg3 = @WG weightfunc_angle_anti NN = 3
 # wg4 = @WG weightfunc_angle_ferro NN = 3
 ### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
-wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1.5, 1.5, 1, 1, 0.1, 0.5) NN = 3
+wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 2, 2, 1, 0.3, 0.1, 0.5) NN = 3
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
@@ -288,10 +287,11 @@ lambda = 0.1
 
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((z-1)/lambda) , NN=8)
 
-g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz , NN=8)
-refresh(g)
+# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz , NN=20)
+# refresh(g)
 
-# g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1) + Quartic(g) + Sextic(g)
+g.hamiltonian = Ising(g)
+refresh(g)
 
 ### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic
@@ -310,7 +310,7 @@ Time_fctr = 1
 SpeedRate = Int(Time_fctr*fullsweep)
 ### risepoint and Amptitude are factors from pulse
 risepoint=500
-Amptitude =20
+Amptitude =10
 PulseN = 2
 Pulsetime = (PulseN * 4 + 10) * risepoint * SpeedRate
 
@@ -334,7 +334,7 @@ figPr = Figure()
 ax = Axis(figPr[1, 1])
 lines!(ax, voltage, Pr)
 # save("D:/Code/data/shell/stripes with skymions/axayaz_1.5_1.5_1_T$(Temperature)_Amp$(Amptitude)_Speed$(Time_fctr)_80_20_20.png", figPr)
-save("D:/Code/data/shell/stripes with skymions/thickness/z=1.png", figPr)
+# save("D:/Code/data/shell/stripes with skymions/thickness/demo.png", figPr)
 
 # inlineplot() do 
 #     lines(voltage, Pr)
