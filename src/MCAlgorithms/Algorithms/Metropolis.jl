@@ -36,19 +36,19 @@ end
     # proposal = FlipProposal{:s, :j, statetype(proposer)}(1, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
 
     Ttype = eltype(isinggraph)
-    β = one(Ttype)/(temp(isinggraph))
+    β = one(Ttype)/(@inline temp(isinggraph))
     # β = one(Ttype)/T
     
     # ΔE = @inline deltafunc((;context..., newstate), (;j))
 
     ΔE = @inline ΔH(hamiltonian, (;self = self, s = state, w = adj, hamiltonian...), proposal)
 
-    if (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-β*ΔE))
+    if (@inline (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-β*ΔE)))
         proposal = @inline accept(state, proposal)
-        M += delta(proposal)
+        M += @inline delta(proposal)
     end
 
-    context = viewmerge(context, (;proposal, M))
+    context = @inline viewmerge(context, (;proposal, M))
     @inline update!(Metropolis(), hamiltonian, context)
     return (;proposal, M)
 end
