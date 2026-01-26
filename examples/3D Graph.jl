@@ -6,7 +6,7 @@ function isingfunc(dr, c1, c2)
 end
 
 
-g3d = ii.IsingGraph(80,80,10, type = Continuous, periodic = (:x,:y))
+g3d = ii.IsingGraph(20,20,10, type = Continuous, periodic = (:x,:y))
 g3d.default_algorithm = Metropolis()
 setdist!(g3d, (2.0, 1.0, 1.0))
 
@@ -22,6 +22,7 @@ g3d.hamiltonian = Ising(g3d)
 # # h[4].c[] = 1/(2*2500)
 
 w = interface(g3d)
+createProcess(g3d)
 
 
 # # pause(g3d)
