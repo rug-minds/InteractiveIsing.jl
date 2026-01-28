@@ -13,7 +13,6 @@ function newmakie(makietype, args...)
     display(scr, f)
     f
 end
-
 # Weight function variant 1
 function weightfunc1(dr,c1,c2)
     prefac = 1
@@ -22,7 +21,6 @@ function weightfunc1(dr,c1,c2)
     # Always positive coupling (ferromagnetic)
     return prefac / norm2(d)
 end
-
 function weightfunc2(dr, c1, c2)
     d = delta(c1, c2)
     dx, dy, dz = d  # 先解包
@@ -39,7 +37,6 @@ function weightfunc2(dr, c1, c2)
     prefac = 1
     return prefac / physical_dr2
 end
-
 function weightfunc3(dr, c1, c2)
     d = delta(c1, c2)
     dx, dy, dz = d  # 先解包
@@ -56,7 +53,6 @@ function weightfunc3(dr, c1, c2)
     # prefac = 1
     return prefac / physical_dr2
 end
-
 function weightfunc_angle_anti(dr, c1, c2)
     d = delta(c1, c2)
     dx, dy, dz = d  # 先解包
@@ -75,7 +71,6 @@ function weightfunc_angle_anti(dr, c1, c2)
 
     return prefac / r^3
 end
-
 function weightfunc_angle_ferro(dr, c1, c2)
     d = delta(c1, c2)
     dx, dy, dz = d  # 先解包
@@ -94,7 +89,6 @@ function weightfunc_angle_ferro(dr, c1, c2)
 
     return abs(prefac) / r^3
 end
-
 # Shell-based coupling + dipolar coupling
 function weightfunc_shell(dr, c1, c2, ax, ay, az, csr, lambda1, lambda2)
     dx, dy, dz = delta(c1, c2)
@@ -194,23 +188,26 @@ end
 ###     \  /
 ###      \/
 
-# struct TrianglePulseA end
-
-@ProcessAlgorithm function TrianglePulseA(pulse::P, M, x, y, hamiltonian) where P
-    pulse_val = pulse[algo_call_number(args)]
-    hamiltonian.b[] = pulse_val
-    push!(x, pulse_val)
-    push!(y, M[])
-    return (;)
+struct TrianglePulseA{T} <: ProcessAlgorithm
+    amp::T
+    numpulses::Int
+    point_repeat::Int
 end
 
-function Processes.prepare(::TrianglePulseA, args)
-    (;amp, numpulses, rise_point) = args
+
+function Processes.prepare(tp::TrianglePulseA, args)
+    amp = tp.amp
+    numpulses = tp.numpulses
+    point_repeat = tp.point_repeat
+
     steps = num_calls(args)
-    first  = LinRange(0, amp, round(Int,rise_point))
-    second = LinRange(amp, 0, round(Int,rise_point))
-    third  = LinRange(0, -amp, round(Int,rise_point))
-    fourth = LinRange(-amp, 0, round(Int,rise_point))
+
+    num_samples = steps/point_repeat
+
+    first  = LinRange(0, amp, round(Int,num_samples/(4*numpulses)))
+    second = LinRange(amp, 0, round(Int,num_samples/(4*numpulses)))
+    third  = LinRange(0, -amp, round(Int,num_samples/(4*numpulses)))
+    fourth = LinRange(-amp, 0, round(Int,num_samples/(4*numpulses)))
 
     pulse = vcat(first, second, third, fourth)
     pulse = repeat(pulse, numpulses)
@@ -229,17 +226,58 @@ function Processes.prepare(::TrianglePulseA, args)
     processsizehint!(args, x)
     processsizehint!(args, y)
 
-    return (;pulse, x, y)
+    step = 1
+
+    return (;pulse, x, y, step)
 end
+
+function Processes.step!(::TrianglePulseA, context::C) where C
+    (;pulse, M, x, y, hamiltonian, step) = context
+    pulse_val = pulse[step]
+    hamiltonian.b[] = pulse_val
+    push!(x, pulse_val)
+    push!(y, M[])
+    return (;step = step + 1)
+end
+
+# function Processes.prepare(tp::TrianglePulseA, args)
+#     (;amp, numpulses, rise_point) = args
+#     steps = num_calls(args)
+#     first  = LinRange(0, amp, round(Int,rise_point))
+#     second = LinRange(amp, 0, round(Int,rise_point))
+#     third  = LinRange(0, -amp, round(Int,rise_point))
+#     fourth = LinRange(-amp, 0, round(Int,rise_point))
+
+#     pulse = vcat(first, second, third, fourth)
+#     pulse = repeat(pulse, numpulses)
+
+#     if steps < length(pulse)
+#         "Wrong length"
+#     else
+#         fix_num = num_calls(args) - length(pulse)
+#         fix_arr = zeros(Int, fix_num)
+#         pulse   = vcat(pulse, fix_arr)
+#     end
+
+#     # Predefine storage arrays
+#     x = Float32[]
+#     y = Float32[]
+#     processsizehint!(args, x)
+#     processsizehint!(args, y)
+
+#     return (;pulse, x, y)
+# end
+
+
 
 ### struct end: TrianglePulseA
 ##################################################################################
 
 
 
-xL = 20  # Length in the x-dimension
-yL = 20  # Length in the y-dimension
-zL = 20   # Length in the z-dimension
+xL = 10  # Length in the x-dimension
+yL = 10  # Length in the y-dimension
+zL = 10   # Length in the z-dimension
 g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
@@ -305,18 +343,26 @@ Temperature=1
 temp(g,Temperature)
 
 ### Run simulation process
-fullsweep = xL*yL*zL
-Time_fctr = 1
-SpeedRate = Int(Time_fctr*fullsweep)
+# Time_fctr = 1
+# SpeedRate = Int(Time_fctr*fullsweep)
 ### risepoint and Amptitude are factors from pulse
-risepoint=500
-Amptitude =10
-PulseN = 2
-Pulsetime = (PulseN * 4 + 10) * risepoint * SpeedRate
+# risepoint=500
+# Amptitude =10
+# PulseN = 2
+# Pulsetime = (PulseN * 4 + 10) * risepoint * SpeedRate
 
-createProcess(g, Metropolis())
-# compalgo = CompositeAlgorithm((Metropolis, TrianglePulseA), (1, SpeedRate))
-# createProcess(g, compalgo, lifetime =Pulsetime, amp = Amptitude, numpulses = PulseN, rise_point=risepoint)
+# createProcess(g)
+# compalgo = CompositeAlgorithm((g.default_algorithm, TrianglePulseA), (1, SpeedRate))
+fullsweep = xL*yL*zL
+time_fctr = 1
+pulsetime = 1000000
+relaxtime = 100000
+point_repeat = time_fctr*fullsweep
+pulse = TrianglePulseA(30, 2, point_repeat)
+metropolis = g.default_algorithm
+pulse_part = CompositeAlgorithm((metropolis, pulse), (1, point_repeat))
+Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime))
+createProcess(g, Pulse_and_Relax, lifetime = 1)
 # ### estimate time
 # est_remaining(process(g))
 # # Wait until it is done
