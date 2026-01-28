@@ -194,7 +194,6 @@ struct TrianglePulseA{T} <: ProcessAlgorithm
     point_repeat::Int
 end
 
-
 function Processes.prepare(tp::TrianglePulseA, args)
     amp = tp.amp
     numpulses = tp.numpulses
@@ -239,37 +238,6 @@ function Processes.step!(::TrianglePulseA, context::C) where C
     push!(y, M[])
     return (;step = step + 1)
 end
-
-# function Processes.prepare(tp::TrianglePulseA, args)
-#     (;amp, numpulses, rise_point) = args
-#     steps = num_calls(args)
-#     first  = LinRange(0, amp, round(Int,rise_point))
-#     second = LinRange(amp, 0, round(Int,rise_point))
-#     third  = LinRange(0, -amp, round(Int,rise_point))
-#     fourth = LinRange(-amp, 0, round(Int,rise_point))
-
-#     pulse = vcat(first, second, third, fourth)
-#     pulse = repeat(pulse, numpulses)
-
-#     if steps < length(pulse)
-#         "Wrong length"
-#     else
-#         fix_num = num_calls(args) - length(pulse)
-#         fix_arr = zeros(Int, fix_num)
-#         pulse   = vcat(pulse, fix_arr)
-#     end
-
-#     # Predefine storage arrays
-#     x = Float32[]
-#     y = Float32[]
-#     processsizehint!(args, x)
-#     processsizehint!(args, y)
-
-#     return (;pulse, x, y)
-# end
-
-
-
 ### struct end: TrianglePulseA
 ##################################################################################
 
@@ -363,6 +331,8 @@ metropolis = g.default_algorithm
 pulse_part = CompositeAlgorithm((metropolis, pulse), (1, point_repeat))
 Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime))
 createProcess(g, Pulse_and_Relax, lifetime = 1)
+
+
 # ### estimate time
 # est_remaining(process(g))
 # # Wait until it is done
