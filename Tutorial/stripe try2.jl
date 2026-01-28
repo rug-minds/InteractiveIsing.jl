@@ -191,19 +191,13 @@ end
 struct TrianglePulseA{T} <: ProcessAlgorithm
     amp::T
     numpulses::Int
-    point_repeat::Int
 end
 
 function Processes.prepare(tp::TrianglePulseA, args)
     amp = tp.amp
     numpulses = tp.numpulses
-    point_repeat = tp.point_repeat
-
     steps = num_calls(args)
-    @show steps
-
     num_samples = steps/(4*numpulses)
-
     first  = LinRange(0, amp, round(Int,num_samples))
     second = LinRange(amp, 0, round(Int,num_samples))
     third  = LinRange(0, -amp, round(Int,num_samples))
@@ -232,7 +226,7 @@ function Processes.prepare(tp::TrianglePulseA, args)
 end
 
 function Processes.step!(::TrianglePulseA, context::C) where C
-    (;pulse, M, x, y, hamiltonian, step) = context
+    (;pulse, step, x, y, hamiltonian, M ) = context
     pulse_val = pulse[step]
     hamiltonian.b[] = pulse_val
     push!(x, pulse_val)
@@ -241,6 +235,80 @@ function Processes.step!(::TrianglePulseA, context::C) where C
 end
 ### struct end: TrianglePulseA
 ##################################################################################
+
+##################################################################################
+### struct start: SinPulseA (simple sine waveform)
+### Run with SinPulseA
+###  /\
+### /  \    _____
+###     \  /
+###      \/
+
+struct SinPulseA{T} <: ProcessAlgorithm
+    amp::T
+    numpulses::Int
+end
+    
+function Processes.prepare(tp::SinPulseA, args)
+    amp = tp.amp
+    numpulses = tp.numpulses
+    steps = num_calls(args)
+    max_theta = 2*pi * numpulses
+
+    theta = LinRange(0, max_theta, round(Int,steps))
+    sins = amp .* sin.(theta)
+
+    # Predefine storage arrays
+    x = Float32[]
+    y = Float32[]
+    processsizehint!(x, args)
+    processsizehint!(y, args)
+
+    step = 1
+
+    return (;sins, x, y, step)
+end
+
+function Processes.step!(::SinPulseA, context::C) where C
+    (;sins, step, x, y, hamiltonian, M ) = context
+    pulse_val = sins[step]
+    hamiltonian.b[] = pulse_val
+    push!(x, pulse_val)
+    push!(y, M)
+    return (;step = step + 1)
+end
+### struct end: SinPulseA
+##################################################################################
+
+
+
+##################################################################################
+### struct start: TemAnealingA (simple sine waveform)
+### Run with TemAnealingA
+###  /\
+### /  \    _____
+###     \  /
+###      \/
+
+struct LinAnealingA{T} <: ProcessAlgorithm
+    start_T::T
+    stop_T::T
+end
+    
+function Processes.prepare(tp::LinAnealingA, args)
+    n_calls = num_calls(args)
+    dT = (tp.stop_T - tp.start_T) / n_calls
+    (;current_T = tp.start_T, dT)
+end
+
+function Processes.step!(::LinAnealingA, context::C) where C
+    (;current_T, dT, graph) = context
+    temp(graph, current_T)
+    return (;current_T = current_T + dT)
+end
+### struct end: TemAnealingA
+##################################################################################
+
 
 
 
@@ -324,13 +392,23 @@ temp(g,Temperature)
 # compalgo = CompositeAlgorithm((g.default_algorithm, TrianglePulseA), (1, SpeedRate))
 fullsweep = xL*yL*zL
 time_fctr = 1
+anneal_time = fullsweep*1000
 pulsetime = fullsweep*100000
 relaxtime = fullsweep*100000
 point_repeat = time_fctr*fullsweep
-pulse = TrianglePulseA(30, 2, point_repeat)
+pulse1 = TrianglePulseA(30, 2)
+pulse2 = SinPulseA(30, 2)
 metropolis = g.default_algorithm
-pulse_part = CompositeAlgorithm((metropolis, pulse), (1, point_repeat))
-Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse, :M, :hamiltonian))
+pulse_part1 = CompositeAlgorithm((metropolis, pulse1), (1, point_repeat))
+pulse_part2 = CompositeAlgorithm((metropolis, pulse2), (1, point_repeat))
+anneal_part = CompositeAlgorithm((metropolis, LinAnealingA(10f0, 0.1f0)), (1, point_repeat))
+# Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse, :M, :hamiltonian))
+# Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
+Pulse_and_Relax = Routine((anneal_part, pulse_part1, pulse_part2, metropolis), (anneal_time, pulsetime, pulsetime, relaxtime), 
+    Route(metropolis, pulse1, :hamiltonian, :M), 
+    Route(metropolis, pulse2, :hamiltonian, :M),
+    Route(metropolis, anneal_part, :isinggraph))
+
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 
 
