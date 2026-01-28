@@ -20,7 +20,7 @@ function Processes.step!(::Metropolis, context::C) where {C}
 end
 
 function Processes.prepare(::Metropolis, context::Cont) where Cont
-    @show typeof(context)
+    # @show typeof(context)
     
     (;isinggraph, state, hamiltonian) = context
 

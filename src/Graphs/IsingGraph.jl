@@ -96,7 +96,7 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
         #Temp            
         1f0,
         # Default algorithm
-        LayeredMetropolis(),
+        IsingMetropolis(),
         #Hamiltonians
         Ising(precision, _datalen),
         #Layers
