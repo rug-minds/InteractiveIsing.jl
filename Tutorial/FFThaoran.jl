@@ -1,5 +1,4 @@
 using FFTW
-using LinearAlgebra
 using GLMakie
 
 """
@@ -22,14 +21,14 @@ function depolar_from_Pz(Pz;
     kx = 2π .* FFTW.fftfreq(Nx, 1.0)
     ky = 2π .* FFTW.fftfreq(Ny, 1.0)
 
-    lambda = 5.0        # screening length
+    lambda = 1        # screening length
     kappa  = 1.0 / lambda
 
     Keff = Array{Float64}(undef, Nx, Ny)
     @inbounds for i in 1:Nx, j in 1:Ny
-        Keff[i,j] = sqrt(Keff[i,j]^2 + kappa^2)
+        k2 = kx[i]^2 + ky[j]^2
+        Keff[i,j] = sqrt(k2 + kappa^2)   # 或者不加 screening 就是 sqrt(k2)
     end
-
 
     # ----- build charge sheets sigma(x,y; sheet) and their z positions -----
     # We'll store sheets in 3rd dimension
@@ -125,7 +124,7 @@ function depolar_from_Pz(Pz;
         Ez[:,:,Nz] .= -(phi[:,:,Nz] .- phi[:,:,Nz-1]) ./ dz
         # central inside
         for iz in 2:(Nz-1)
-            Ez[:,:,iz] .= -(phi[:,:,iz+1] .- phi[:,:,iz-1]) ./ (2dz)
+            Ez[:,:,iz] .= -(phi[:,:,iz+1] .- phi[:,:,iz-1]) ./ (2 * dz)
         end
     end
 
@@ -133,11 +132,13 @@ function depolar_from_Pz(Pz;
 end
 
 
-Nx, Ny, Nz = 40, 40, 8
+Nx, Ny, Nz = 10, 10, 10
 
 s = ones(Float64, Nx, Ny, Nz)
-s[:, :, 1] .= rand(0:1, Nx, Ny)
-s[:, :, Nz] .= rand(0:1, Nx, Ny)
+# s[5,5,8] = -1.0
+# s[2:4,2:4,:] .= -1.0
+s[:, :, 1]  .= rand([-1.0, 1.0], Nx, Ny)
+s[:, :, Nz] .= rand([-1.0, 1.0], Nx, Ny)
 
 Pz = s  # p0=1
 
@@ -161,7 +162,7 @@ ax = Axis3(fig[1,1],
 vol = volume!(
     ax,
     Ez,                  # 3D array
-    algorithm = :mip,    # maximum intensity projection
+    algorithm = :absorption,    # maximum intensity projection
     colormap = :balance
 )
 

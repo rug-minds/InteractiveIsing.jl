@@ -468,5 +468,57 @@ function run_test()
     println("="^60)
 end
 
+# 在 run_test() 中添加
+function test_energy_components()
+    Nx, Ny, Nz = 8, 8, 5
+    state = initialize_depol_mc(Nx, Ny, Nz)
+    
+    ix, iy, iz = 4, 4, 3
+    
+    # 计算各项
+    affected = state.flip_map[iz]
+    current_spin = state.spins[ix, iy, iz]
+    DPz = -2.0 * current_spin
+    
+    delta_sigma_k = zeros(ComplexF64, Nx, Ny, length(affected))
+    
+    for (idx, (sheet_s, coeff)) in enumerate(affected)
+        Delta_sigma_s = coeff * DPz
+        for i in 1:Nx, j in 1:Ny
+            phase = -im * (state.kx[i] * (ix - 1) + state.ky[j] * (iy - 1))
+            delta_sigma_k[i,j,idx] = Delta_sigma_s * exp(phase)
+        end
+    end
+    
+    DH_cross = 0.0
+    DH_self = 0.0
+    
+    for i in 1:Nx, j in 1:Ny
+        sheet_indices = [s for (s, _) in affected]
+        K_sub = state.K_kernel[i, j, sheet_indices, sheet_indices]
+        sig_current = state.sigma_k[i, j, sheet_indices]
+        dsig = delta_sigma_k[i, j, :]
+        
+        DH_cross += real(dot(dsig, K_sub * sig_current))
+        DH_self += real(dot(dsig, K_sub * dsig))
+    end
+    
+    Nxy = Nx * Ny
+    DH_cross /= Nxy
+    DH_self /= Nxy
+    
+    DH_total = DH_cross + 0.5 * DH_self
+    
+    println("Cross term (P): $DH_cross")
+    println("Self term: $(0.5 * DH_self)")
+    println("Total ΔH: $DH_total")
+    println("Ratio ΔH/P: $(DH_total / DH_cross)")
+    println("Is ΔH ≈ 2P? $(abs(DH_total - 2*DH_cross) < 1e-10)")
+end
+
+# test_energy_components()
+
+
+
 # Uncomment to run test
-# run_test()
+run_test()
