@@ -21,8 +21,15 @@ end
 
 function Processes.prepare(::Metropolis, context::Cont) where Cont
     # @show typeof(context)
-    
-    (;isinggraph, state, hamiltonian) = context
+    @show context
+    @show Processes.get_subcontexts(getcontext(context))
+    (;structure) = context
+    state = InteractiveIsing.state(structure)
+    hamiltonian = structure.hamiltonian
+    adj = InteractiveIsing.adj(structure)
+    self = structure.self
+    isinggraph = structure
+
 
     rng = Random.MersenneTwister()
 
@@ -30,7 +37,7 @@ function Processes.prepare(::Metropolis, context::Cont) where Cont
     proposer = get_proposer(isinggraph)
     proposal = FlipProposal{:s, :j, statetype(proposer)}(0, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
     M = sum(state)
-    return (;hamiltonian, proposer, rng, proposal, M)
+    return (;hamiltonian, proposer, rng, proposal, M, isinggraph, state, adj, self)
 end
 
 # function Processes.prepare(::Metropolis, context::Cont) where Cont

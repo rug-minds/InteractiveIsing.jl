@@ -200,13 +200,14 @@ function Processes.prepare(tp::TrianglePulseA, args)
     point_repeat = tp.point_repeat
 
     steps = num_calls(args)
+    @show steps
 
-    num_samples = steps/point_repeat
+    num_samples = steps/(4*numpulses)
 
-    first  = LinRange(0, amp, round(Int,num_samples/(4*numpulses)))
-    second = LinRange(amp, 0, round(Int,num_samples/(4*numpulses)))
-    third  = LinRange(0, -amp, round(Int,num_samples/(4*numpulses)))
-    fourth = LinRange(-amp, 0, round(Int,num_samples/(4*numpulses)))
+    first  = LinRange(0, amp, round(Int,num_samples))
+    second = LinRange(amp, 0, round(Int,num_samples))
+    third  = LinRange(0, -amp, round(Int,num_samples))
+    fourth = LinRange(-amp, 0, round(Int,num_samples))
 
     pulse = vcat(first, second, third, fourth)
     pulse = repeat(pulse, numpulses)
@@ -222,8 +223,8 @@ function Processes.prepare(tp::TrianglePulseA, args)
     # Predefine storage arrays
     x = Float32[]
     y = Float32[]
-    processsizehint!(args, x)
-    processsizehint!(args, y)
+    processsizehint!(x, args)
+    processsizehint!(y, args)
 
     step = 1
 
@@ -235,7 +236,7 @@ function Processes.step!(::TrianglePulseA, context::C) where C
     pulse_val = pulse[step]
     hamiltonian.b[] = pulse_val
     push!(x, pulse_val)
-    push!(y, M[])
+    push!(y, M)
     return (;step = step + 1)
 end
 ### struct end: TrianglePulseA
@@ -323,13 +324,13 @@ temp(g,Temperature)
 # compalgo = CompositeAlgorithm((g.default_algorithm, TrianglePulseA), (1, SpeedRate))
 fullsweep = xL*yL*zL
 time_fctr = 1
-pulsetime = 1000000
-relaxtime = 100000
+pulsetime = fullsweep*100000
+relaxtime = fullsweep*100000
 point_repeat = time_fctr*fullsweep
 pulse = TrianglePulseA(30, 2, point_repeat)
 metropolis = g.default_algorithm
 pulse_part = CompositeAlgorithm((metropolis, pulse), (1, point_repeat))
-Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime))
+Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse, :M, :hamiltonian))
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 
 
