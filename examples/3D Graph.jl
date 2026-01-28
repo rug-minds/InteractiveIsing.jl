@@ -21,8 +21,9 @@ g3d.hamiltonian = Ising(g3d)
 # # refresh(g3d)
 # # h[4].c[] = 1/(2*2500)
 
-w = interface(g3d)
+# w = interface(g3d)
 createProcess(g3d)
+interface(g3d)
 
 
 # # pause(g3d)

@@ -4,48 +4,51 @@ struct Metropolis <: MCAlgorithm
     track_sj::Bool
 end
 
-Metropolis() = Metropolis(false, false)
+Metropolis(;tracked = false) = Metropolis(tracked, tracked)
 
-# IsingMetropolis = SimpleAlgo(Metropolis(), Destructure())
-IsingMetropolis = Metropolis()
+function IsingMetropolis(;tracked = false)
+    destr = DestructureInput()
+    metro = Metropolis(tracked = tracked)
+    SimpleAlgo(tuple(metro), destr, Share(destr, metro))
+end
 
-const MetropolisStandard = Metropolis(false, false)
-const MetropolisTracked = Metropolis(true, true)
-
+MetropolisTracked() = Metropolis(tracked = true)
 
 # @inline function (::Metropolis)(context::As) where As
-@ProcessAlgorithm function Metropolis(rng, context::C) where {C}
+function Processes.step!(::Metropolis, context::C) where {C}
     @inline Metropolis_step(context)
 end
 
-# function Processes.prepare(::Metropolis, context::Cont) where Cont
-#     (;isinggraph, state, hamiltonian) = context
-
-#     rng = Random.MersenneTwister()
-
-#     hamiltonian = init!(hamiltonian, isinggraph)
-#     proposer = get_proposer(isinggraph)
-#     proposal = FlipProposal{:s, :j, statetype(proposer)}(0, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
-#     M = sum(state)
-#     return (;hamiltonian, proposer, rng, proposal, M)
-# end
-
 function Processes.prepare(::Metropolis, context::Cont) where Cont
-    (;isinggraph) = context
+    @show typeof(context)
+    
+    (;isinggraph, state, hamiltonian) = context
 
     rng = Random.MersenneTwister()
-
-    hamiltonian = isinggraph.hamiltonian
-    state = InteractiveIsing.state(isinggraph)
-    adj = InteractiveIsing.adj(isinggraph)
-    self = isinggraph.self
 
     hamiltonian = init!(hamiltonian, isinggraph)
     proposer = get_proposer(isinggraph)
     proposal = FlipProposal{:s, :j, statetype(proposer)}(0, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
     M = sum(state)
-    return (;rng, isinggraph, state, adj, self, hamiltonian, proposer, proposal, M)
+    return (;hamiltonian, proposer, rng, proposal, M)
 end
+
+# function Processes.prepare(::Metropolis, context::Cont) where Cont
+#     (;isinggraph) = context
+
+#     rng = Random.MersenneTwister()
+
+#     hamiltonian = isinggraph.hamiltonian
+#     state = InteractiveIsing.state(isinggraph)
+#     adj = InteractiveIsing.adj(isinggraph)
+#     self = isinggraph.self
+
+#     hamiltonian = init!(hamiltonian, isinggraph)
+#     proposer = get_proposer(isinggraph)
+#     proposal = FlipProposal{:s, :j, statetype(proposer)}(0, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
+#     M = sum(state)
+#     return (;rng, isinggraph, state, adj, self, hamiltonian, proposer, proposal, M)
+# end
 
 
 

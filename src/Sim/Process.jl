@@ -3,11 +3,10 @@ function createProcess(g::IsingGraph, func = nothing; run = true, threaded = tru
         func = get(args, :algorithm, g.default_algorithm)
     end
     # destructed_graph = Destructure(g)
+    algo = IsingMetropolis()
+    # algo = SimpleAlgo(tuple(func))
 
-    # algo = SimpleAlgo(tuple(func), destructed_graph, Share(destructed_graph, func))
-    algo = SimpleAlgo(tuple(func))
-
-    process = Process(algo, Input(func, :isinggraph => g) ; lifetime)
+    process = Process(algo, Input(algo, structure = g) ; lifetime)
     
     ps = processes(g)
     push!(ps, process)
