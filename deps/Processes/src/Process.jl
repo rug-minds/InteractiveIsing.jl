@@ -48,6 +48,8 @@ function Process(func, inputs_overrides...; lifetime = Indefinite(), timeout = 1
     # if !(func isa ProcessLoopAlgorithm)
     #     func = SimpleAlgo(func)
     # end
+    @show named_inputs
+    @show named_overrides
 
     # tf = TaskData(func, (func, args) -> args, (func, args) -> nothing, args, (;), (), rt)
     td = TaskData(func; lifetime, overrides = named_overrides, inputs = named_inputs)
