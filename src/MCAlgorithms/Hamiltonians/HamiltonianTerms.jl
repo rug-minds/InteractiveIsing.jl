@@ -28,15 +28,6 @@ Base.:+(h1::Hamiltonian, h2::Hamiltonian) = HamiltonianTerms((h1, h2))
 Base.:+(h1::Hamiltonian, h2::HamiltonianTerms) = HamiltonianTerms((h1, hamiltonians(h2)...))
 Base.:+(h1::HamiltonianTerms, h2::Hamiltonian) = HamiltonianTerms((hamiltonians(h1)..., h2))
 
-# @generated function paramnames(h::Union{Type{<:HamiltonianTerms{Hs}}, HamiltonianTerms{Hs}}) where Hs
-#     names = Symbol[]
-#     # _paramnames = tuple(Iterators.Flatten(fieldnames.(Hs.parameters)...)...)
-#     for h in Hs.parameters
-#         push!(names, fieldnames(h)...)
-#     end
-#     return :($(tuple(names...)))
-# end
-
 function setparam(ham::Hamiltonian, field, paramtensor)
     fnames = paramnames(ham)
     found = findfirst(x->x==field, fnames)

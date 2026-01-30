@@ -6,29 +6,29 @@ function isingfunc(dr, c1, c2)
 end
 
 
-g3d = ii.IsingGraph(80,80,10, type = Continuous, periodic = (:x,:y))
-# g3d.default_algorithm = Metropolis()
-setdist!(g3d, (2.0, 1.0, 1.0))
+g = ii.IsingGraph(80,80,10, type = Continuous, periodic = (:x,:y))
+# g.default_algorithm = Metropolis()
+setdist!(g, (2.0, 1.0, 1.0))
 
 wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=2
-# println(@report_opt genAdj!(g3d, wg) )
-genAdj!(g3d, wg)
+# println(@report_opt genAdj!(g, wg) )
+genAdj!(g, wg)
 
-# homogeneousself!(g3d, 0.5f0)
+# homogeneousself!(g, 0.5f0)
 
-g3d.hamiltonian = Ising(g3d) 
-# h = g3d.hamiltonian = Ising(g3d) + Quartic(g3d) + DepolField(g3d, top_layers = 2, zfunc = z -> 3/z, NN = 2) + Sextic(g3d)
-# # refresh(g3d)
+g.hamiltonian = Ising(g) 
+# h = g.hamiltonian = Ising(g) + Quartic(g) + DepolField(g, top_layers = 2, zfunc = z -> 3/z, NN = 2) + Sextic(g)
+# # refresh(g)
 # # h[4].c[] = 1/(2*2500)
 
-# w = interface(g3d)
-createProcess(g3d)
-interface(g3d)
+# w = interface(g)
+# createProcess(g)
+# interface(g)
 
 
-# # pause(g3d)
-# # args = fetch(g3d)
-# args = ii.prepare(Metropolis(), (;g = g3d))
+# # pause(g)
+# # args = fetch(g)
+# args = ii.prepare(Metropolis(), (;g = g))
 # dr = FlipProposal(:s, j = 1 => -1f0)
 
 
@@ -39,12 +39,12 @@ interface(g3d)
 
 # dr = FlipProposal(:s, j = 1 => -1f0)
 
-# h = g3d.hamiltonian
+# h = g.hamiltonian
 
 # hargs = (;args..., s = args.gstate, w = args.gadj, self = args.self, delta_1 = dr, h...)
 
 # ii.ΔH(ising, hargs, dr)
-# ii.ΔH(g3d.hamiltonian, hargs, dr)
+# ii.ΔH(g.hamiltonian, hargs, dr)
 
 # pr = Base.eval(ii.generated_func_calls.args[1])
 # ii.generate_block(pr, hargs, (;j = 1))

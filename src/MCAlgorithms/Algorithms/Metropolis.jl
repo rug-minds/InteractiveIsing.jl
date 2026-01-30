@@ -78,7 +78,7 @@ end
         M += @inline delta(proposal)
     end
 
-    context = @inline viewmerge(context, (;proposal, M))
+    context = @inline inject(context, (;proposal, M))
     @inline update!(Metropolis(), hamiltonian, context)
     return (;proposal, M)
 end

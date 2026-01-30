@@ -1,5 +1,7 @@
 include("Utils.jl")
 include("IndexManipulation.jl")
+include("TypeDef.jl")
+include("Constructors.jl")
 include("ParamTensor.jl")
 include("SparseVal.jl")
 export Parameters, getparam, setparam!, _setparam!

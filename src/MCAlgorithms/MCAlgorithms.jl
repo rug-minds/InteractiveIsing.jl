@@ -1,14 +1,12 @@
-# module MCAlgorithms  
-    using LoopVectorization, SparseArrays, MacroTools, RuntimeGeneratedFunctions
-    export build_H
+using LoopVectorization, SparseArrays, MacroTools
+export build_H
 
-    abstract type MCAlgorithm <: ProcessAlgorithm end
-    
-  
-    
+abstract type MCAlgorithm <: ProcessAlgorithm end
 
-    include("Utils.jl")
-    include("Algorithms/Algorithms.jl")
-    include("Hamiltonians/Hamiltonians.jl")
 
-# end
+
+
+include("Utils.jl")
+include("Algorithms/Algorithms.jl")
+include("Hamiltonians/Hamiltonians.jl")
+

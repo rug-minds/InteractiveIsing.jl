@@ -405,9 +405,9 @@ anneal_part = CompositeAlgorithm((metropolis, LinAnealingA(10f0, 0.1f0)), (1, po
 # Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse, :M, :hamiltonian))
 # Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
 Pulse_and_Relax = Routine((anneal_part, pulse_part1, pulse_part2, metropolis), (anneal_time, pulsetime, pulsetime, relaxtime), 
-    Route(metropolis, pulse1, :hamiltonian, :M), 
-    Route(metropolis, pulse2, :hamiltonian, :M),
-    Route(metropolis, anneal_part, :isinggraph))
+    Share(metropolis, pulse1), 
+    Share(metropolis, pulse2),
+    Share(metropolis, anneal_part))
 
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 

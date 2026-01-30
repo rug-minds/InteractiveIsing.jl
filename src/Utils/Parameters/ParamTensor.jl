@@ -1,81 +1,5 @@
 export ParamTensor, isinactive, isactive, toggle, default, getvalfield, setvalfield!, homogeneousval, description, toggle
-"""
-A value for the parameters of a Hamiltonian
-It holds a description and a value of type t
-It also stores wether it's active and if not a fallback value
-    so that functions can be compiled with the default value inlined
-    to save runtime when the parameter is inactive
-    E.g. a parameter might be a vector, but if it's inactive
-    the whole vector can be set to a constant value, so that
-    memory does not need to be accessed.
-"""
-abstract type AbstractParamTensor{T, Default, Active, N} <: AbstractArray{T,N} end
-mutable struct ParamTensor{T, Default, Active, AT, N} <: AbstractParamTensor{T, Default, Active, N}
-    const val::AT
-    size::NTuple{N, Int}
-    description::String
-end
 
-# Special Cases:
-# Vector like but same value everywhere
-const HomogeneousParamTensor{T, D, Active, N} = ParamTensor{T, D, Active, <:AbstractArray{T,0} , N}
-# Scalar Like/Reflike
-const ScalarParamTensor{T, D, Active} = ParamTensor{T, D, Active, <:AbstractArray{T,0}, 0}
-# Either, but inlined static value
-const StaticParamTensor{T, D, N} = ParamTensor{T, D, false, <:AbstractArray{T,N}, N}
-
-
-function ParamTensor(val::T, default = nothing; size = nothing, active = false, description = "") where T
-    # # If val is vector type, default value must be eltype, 
-    # # otherwise it must be the same type
-    # DIMS = nothing
-    # if val isa AbstractArray
-    #    DIMS = length(Base.size(val))
-    # else
-    #     DIMS = 0
-    # end    
-    
-    value = val
-    if T <: Array #
-        et = eltype(T)
-        default = default == nothing ? et(1) : convert(eltype(T), default)
-    else
-        default = default == nothing ? T(1) : convert(T, default)
-        value = fill(val)
-        et = T
-    end
-
-    isnothing(size) && (size = Base.size(value))
-    DIMS = length(size)
-    return ParamTensor{et, default, active, typeof(value), DIMS}(value, size, description)
-end
-
-# ParamTensor{T, Default, Active, RD}(description::String = "") where {T, Default, Active, RD} = 
-#     ParamTensor{T, Default, Active, RD, (val isa AbstractArray ? length(size(val)) : 1)}(nothing, nothing, description)
-
-ScalarParam(val::Real; description = "") = ScalarParam(typeof(val), val; description = description)
-# ScalarParam(T::Type, val::Real; description = "") = ParamTensor{T, T(val), true, Array{T,0}, 0}(fill(val), (), description)
-ScalarParam(T::Type, val::Real; active = true, description = "") = ParamTensor(fill(convert(T,val)), convert(T,val); active, size = tuple(), description = description)
-
-
-"""
-Stores a homogeneous value for vector like ParamTensors
-"""
-function HomogeneousParam(val::Real, size::Integer...; default = val, active = true, description = "")
-    @assert !isempty(size) "HomogeneousParam requires size arguments"
-    return ParamTensor(fill(val), default; size, active, description = description)
-end
-
-function StaticParam(val, size...; description = "")
-    return ParamTensor(zeros(typeof(val), size...), val, active = false, description = description)
-end
-
-# From other ParamTensors
-function ParamTensor(p::ParamTensor, default = nothing , active::Bool = nothing)
-    isnothing(active) && (active = isactive(p))
-    isnothing(default) && (default = default(p))
-    return ParamTensor(p.val, default; active, description = p.description)
-end
 
 """
 ParamTensor: Active -> Static
@@ -149,19 +73,11 @@ For getting and setting fields of the value of a ParamTensor
 getvalfield(p::ParamTensor, field) = getfield(p.val, field)
 setvalfield!(p::ParamTensor, field, val) = setfield!(p.val, field, val)
 
-
-#Vector Like ParamTensors
-# @inline @generated function Base.getindex(p::ParamTensor{T}) where T <: AbstractArray
-#     @assert !isactive(p) || ishomogeneous(p) "Cannot index an active parameter with []"
-#     getval = isstatic(p) ? :(p.val[]) : :(default(p))
-#     return :($(getval)::eltype(T))
-# end
 @inline function Base.getindex(p::ParamTensor{T}) where T
     @assert !isactive(p) || ishomogeneous(p) "Cannot index an active parameter with []"
     getval = isstatic(p) ? default(p) : p.val[]
     return getval::T
 end
-
 
 @inline function Base.getindex(p::ParamTensor{T}, idx::Integer) where T
     if ishomogeneous(p)
@@ -215,11 +131,13 @@ Base.materialize!(p::ParamTensor{T}, a::Base.Broadcast.Broadcasted{<:Any}) where
 Base.splice!(p::ParamTensor{T}, idx...) where T = splice!(p.val, idx...)
 Base.push!(p::ParamTensor{T}, val) where T = push!(p.val, val)
 
+
 function sethomogeneoustensor(p::ParamTensor{T}, val) where T
     val = convert(T, val)
     size = Base.size(p)
     HomogeneousParam(val, size..., default = default(p), active = true, description = p.description)
 end
+
 function removehomogeneousval(p::ParamTensor{T}, def = default(p)) where T
     def = convert(T, def)
     ParamTensor(fill(p[], size(p)...), def; active = true, description = p.description)
@@ -233,9 +151,6 @@ LoopVectorization.check_args(p::ParamTensor{T,A,B,V}) where {T,A,B,V <: DenseArr
 @inline LayoutPointers.memory_reference(p::ParamTensor{T,A,B,V}) where {T,A,B,V <: DenseArray} = LayoutPointers.memory_reference(p.val)
 @inline LayoutPointers.stridedpointer_preserve(p::ParamTensor{T,A,B,V}) where {T,A,B,V <: DenseArray} = LayoutPointers.stridedpointer_preserve(p.val)
 Base.strides(p::ParamTensor{T,A,B,V}) where {T,A,B,V <: DenseArray} = strides(p.val)
-# Base.IndexStyle(::Type{<:ParamTensor}) = IndexLinear()
-# Base.BroadcastStyle(::Type{ParamTensor{T,A,B,C,D}}) where {T<:AbstractArray,A,B,C,D} = Broadcast.ArrayStyle{ParamTensor}()
-# Base.BroadcastStyle(::Type{ParamTensor{T,A,B,C,D}}) where {T,A,B,C,D} = Broadcast.Style{ParamTensor}()
 
 
 vec_val_eltype(r::Real) = typeof(r)

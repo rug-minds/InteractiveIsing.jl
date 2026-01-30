@@ -43,6 +43,9 @@ Lux = "b2108857-7c20-44ae-9111-449ecde12c47"
 [extensions]
 LearningExt = "Lux"
 
+[compat]
+FFTW = "1.10.0"
+
 [extras]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
