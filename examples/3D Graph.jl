@@ -1,4 +1,5 @@
 using InteractiveIsing, JET, BenchmarkTools
+using InteractiveIsing.Processes
 import InteractiveIsing as ii
 
 function isingfunc(dr, c1, c2)
@@ -16,7 +17,13 @@ genAdj!(g, wg)
 
 # homogeneousself!(g, 0.5f0)
 
-g.hamiltonian = Ising(g) 
+g.hamiltonian = h = Ising(g) + CoulombHamiltonian2(g, 1f0)
+interface(g)
+algo = Processes.CompositeAlgorithm((Metropolis(), Recalc()), (1,200),  Processes.DestructureInput(), Share(DestructureInput(), Metropolis()), Share(Metropolis(), Recalc()))
+
+createProcess(g, algo)
+
+
 # h = g.hamiltonian = Ising(g) + Quartic(g) + DepolField(g, top_layers = 2, zfunc = z -> 3/z, NN = 2) + Sextic(g)
 # # refresh(g)
 # # h[4].c[] = 1/(2*2500)

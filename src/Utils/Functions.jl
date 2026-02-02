@@ -12,16 +12,6 @@ end
 end
 
 @inline function coordToIdx(coords::NTuple{N,T1}, size::NTuple{N,T2}) where {N, T1<: Integer, T2 <: Integer}
-    # Convert
-    # coords = T1.(coords)
-    # size = T1.(size)
-    
-    # idx = T1(1)
-    # for i in 1:N
-    #     this_strides = size[1:i-1]::NTuple{i-1, T1}
-    #     idx += convert(T1, (coords[i] - 1) * prod(this_strides))
-    # end
-    # return convert(T1, idx)
     return convert(T1, LinearIndices(size)[coords...])
 end
 
@@ -36,16 +26,6 @@ end
 
 #TODO Check this one
 @inline function idxToCoord(idx::IT, size::NTuple{DIMS,T}) where {DIMS,T, IT <: Integer}
-    # idx = convert(T, idx)
-    # if DIMS == 2
-    #     len = size[1]
-    #     return (T((idx - 1) % len + 1), T((idx - 1) ÷ len + 1))
-    # elseif DIMS == 3
-    #     len = size[1]
-    #     wid = size[2]
-    #     #(i,j,k)
-    #     return (T((idx - 1) % len + 1), T((idx - 1) ÷ len % wid + 1), T((idx - 1) ÷ (len * wid) + 1))
-    # end
     return Base.convert.(IT, CartesianIndices(size)[idx].I)
 end
 

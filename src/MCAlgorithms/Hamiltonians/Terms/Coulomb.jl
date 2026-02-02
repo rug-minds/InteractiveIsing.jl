@@ -1,5 +1,5 @@
 # TODO: We need a conversion factor from dipole to charge
-
+export CoulombHamiltonian, CoulombHamiltonian2, init!, recalc!, ΔH, update!
 """
 """
 struct CoulombHamiltonian{T,PT} <: Hamiltonian
@@ -98,20 +98,25 @@ function recalc!(c::CoulombHamiltonian)
 end
 
 
-struct CoulombHamiltonian2{T,PT,P2}
-    σ::Array{T,3}                 # optional, can keep if you want
-    σhat::Array{Complex{T},3}      # complex charges buffer (real in practice)
-    uhat::Array{Complex{T},3}
-    u::Array{T,3}
+struct CoulombHamiltonian2{T,PT,PxyT,PiT,N} <: Hamiltonian
+    size::NTuple{N,Int}
+    σ::Array{T,3}                 # real charges
+    σhat::Array{Complex{T},3}     # rfft(σ) over (x,y)
+    uhat::Array{Complex{T},3}     # spectral potential (same size as σhat)
+    u::Array{T,3}                 # real potential
     ϵ::PT
 
-    Pxy::P2                       # plan_fft! for 2D slices
-    iPxy::P2                      # plan_ifft! for 2D slices
+    Pxy::PxyT                     # plan_rfft for 2D slices
+    iPxy::PiT                     # plan_irfft for 2D slices
     kx::Vector{T}
     ky::Vector{T}
+    zf::Vector{Complex{T}}        # forward recursion scratch
+    zb::Vector{Complex{T}}        # backward recursion scratch
 end
 
-function CoulombHamiltonian2(g::AbstractIsingGraph, eps::T) where {T}
+Base.size(c::CoulombHamiltonian2) = c.size
+
+function CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real)
     gdims = size(g[1])                 # (Nx,Ny,Nz-1)
     etype = eltype(g)
 
@@ -121,49 +126,51 @@ function CoulombHamiltonian2(g::AbstractIsingGraph, eps::T) where {T}
     dims = (Nx, Ny, Nz)
 
     σ    = zeros(etype, dims...)
-    σhat = zeros(Complex{etype}, dims...)
-    uhat = zeros(Complex{etype}, dims...)
+    Nxh  = Nx ÷ 2 + 1
+    σhat = zeros(Complex{etype}, Nxh, Ny, Nz)
+    uhat = zeros(Complex{etype}, Nxh, Ny, Nz)
     u    = zeros(etype, dims...)
+    zf   = Vector{Complex{etype}}(undef, Nz)
+    zb   = Vector{Complex{etype}}(undef, Nz)
 
     # FFT plans (bind to representative slices)
-    sh = @view σhat[:,:,1]
+    s  = @view σ[:,:,1]
     uh = @view uhat[:,:,1]
 
-    Pxy  = plan_fft!(sh;  flags=FFTW.MEASURE)
-    iPxy = plan_ifft!(uh; flags=FFTW.MEASURE)
+    Pxy  = plan_rfft(s, (1,2);  flags=FFTW.MEASURE)
+    iPxy = plan_irfft(uh, Nx, (1,2); flags=FFTW.MEASURE)
 
     # k-vectors (FFT ordering)
-    kx = Vector{etype}(undef, Nx)
+    kx = Vector{etype}(undef, Nxh)
     ky = Vector{etype}(undef, Ny)
 
-    @inbounds for i in 1:Nx
+    twoπ = etype(2) * etype(π)
+    @inbounds for i in 1:Nxh
         ii = i - 1
-        kx[i] = 2T(π) * (ii <= Nx ÷ 2 ? ii : ii - Nx) / Nx
+        kx[i] = twoπ * ii / Nx
     end
     @inbounds for j in 1:Ny
         jj = j - 1
-        ky[j] = 2T(π) * (jj <= Ny ÷ 2 ? jj : jj - Ny) / Ny
+        ky[j] = twoπ * (jj <= Ny ÷ 2 ? jj : jj - Ny) / Ny
     end
 
     ϵ = StaticParam(eps)
 
-    return CoulombHamiltonian{etype,typeof(ϵ),typeof(Pxy)}(
-        σ, σhat, uhat, u, ϵ,
+    return CoulombHamiltonian2{etype,typeof(ϵ),typeof(Pxy),typeof(iPxy),length(size(g))}(
+        size(g), σ, σhat, uhat, u, ϵ,
         Pxy, iPxy,
-        kx, ky
+        kx, ky, zf, zb
     )
 end
 
 function init!(c::CoulombHamiltonian2, g::AbstractIsingGraph)
     σ    = c.σ
-    σhat = c.σhat
 
     Nx, Ny, Nz = size(σ)
     Nz_dip = Nz - 1
 
     # zero charge buffers
     fill!(σ, zero(eltype(σ)))
-    fill!(σhat, zero(eltype(σhat)))
 
     # accumulate bound charges from dipoles
     @inbounds for z in 1:Nz_dip
@@ -174,64 +181,452 @@ function init!(c::CoulombHamiltonian2, g::AbstractIsingGraph)
             σ[i,j,z+1] += v
         end
     end
-
-    # write real charges into complex buffer (imag = 0)
-    @inbounds for z in 1:Nz, j in 1:Ny, i in 1:Nx
-        σhat[i,j,z] = complex(σ[i,j,z], zero(eltype(σ)))
-    end
-
+    recalc!(c)
     return c
 end
-
+using Tullio
 function recalc!(c::CoulombHamiltonian2{T}) where {T}
     σhat = c.σhat
     uhat = c.uhat
     u    = c.u
+    zf   = c.zf
+    zb   = c.zb
 
-    Nx, Ny, Nz = size(σhat)
+    Nx, Ny, Nz = size(u)
+    Nxh = size(σhat, 1)
 
-    # 1) FFT x,y in-place for each z: σhat[:,:,z] := FFT(σhat[:,:,z])
+    # 1) rFFT x,y for each z: σhat[:,:,z] := rfft(σ[:,:,z])
     @inbounds for z in 1:Nz
         sh = @view σhat[:,:,z]
-        c.Pxy * sh
+        s  = @view c.σ[:,:,z]
+        mul!(sh, c.Pxy, s)
     end
 
     # 2) z-coupling in Fourier domain
     # uhat[ix,iy,z] = Σ_zp exp(-k|z-zp|)/(2k) * σhat[ix,iy,zp]
-    @inbounds for iy in 1:Ny
-        ky = c.ky[iy]
-        for ix in 1:Nx
-            kx = c.kx[ix]
-            k  = hypot(kx, ky)
-
-            if k == 0
-                for z in 1:Nz
-                    uhat[ix,iy,z] = 0
+    @inbounds begin
+        fill!((@view uhat[1,1,:]), zero(Complex{T}))
+        for iy in 1:Ny
+            ky = c.ky[iy]
+            for ix in 1:Nxh
+                if ix == 1 && iy == 1
+                    continue
                 end
-                continue
-            end
+                kx = c.kx[ix]
+                k  = hypot(kx, ky)
 
-            inv2k = inv(2k)
+                inv2k = inv(2k)
+                e = exp(-k)
 
-            # NOTE: still O(Nz^2). Allocation-free, but can be sped up a lot (see below).
-            for z in 1:Nz
-                s = zero(Complex{T})
-                for zp in 1:Nz
-                    s += (exp(-k * abs(z - zp)) * inv2k) * σhat[ix,iy,zp]
+                zf[1] = σhat[ix,iy,1]
+                @inbounds for z in 2:Nz
+                    zf[z] = σhat[ix,iy,z] + e * zf[z-1]
                 end
-                uhat[ix,iy,z] = s
+                zb[Nz] = σhat[ix,iy,Nz]
+                @inbounds for z in (Nz-1):-1:1
+                    zb[z] = σhat[ix,iy,z] + e * zb[z+1]
+                end
+                
+                @inbounds for z in 1:Nz
+                    uhat[ix,iy,z] = (zf[z] + zb[z] - σhat[ix,iy,z]) * inv2k
+                end
             end
         end
     end
 
-    # 3) inverse FFT x,y in-place for each z, copy real part into u
+    # 3) inverse rFFT x,y for each z, write directly into u
     @inbounds for z in 1:Nz
         uh = @view uhat[:,:,z]
-        c.iPxy * uh
-        for j in 1:Ny, i in 1:Nx
-            u[i,j,z] = real(uh[i,j])
-        end
+        uz = @view u[:,:,z]
+        mul!(uz, c.iPxy, uh)
     end
 
     return u
 end
+
+function mygemmavx!(C, A, B)
+    @turbo for m ∈ axes(A, 1), n ∈ axes(B, 2)
+        Cmn = zero(eltype(C))
+        for k ∈ axes(A, 2)
+            Cmn += A[m, k] * B[k, n]
+        end
+        C[m, n] = Cmn
+    end
+end
+
+# struct Coulomb3{T,PT,PxyT,PiT,N} <: Hamiltonian
+#     size::NTuple{N,Int}
+#     σ::Array{T,3}                 # real charges
+#     σhat::Array{Complex{T},3}     # rfft(σ) over (x,y)
+#     uhat::Array{Complex{T},3}     # spectral potential
+#     u::Array{T,3}                 # real potential
+#     ϵ::PT
+
+#     Pxy::PxyT                     # plan_rfft for 2D slices
+#     iPxy::PiT                     # plan_irfft for 2D slices
+#     kx::Vector{T}
+#     ky::Vector{T}
+#     gk::Array{T,4}                # full precomputed kernel in k-space
+# end
+
+# Base.size(c::Coulomb3) = c.size
+
+# function Coulomb3(g::AbstractIsingGraph, eps::Real)
+#     gdims = size(g[1])
+#     etype = eltype(g)
+
+#     Nx, Ny, Nz_dip = gdims
+#     Nz = Nz_dip + 1
+
+#     dims = (Nx, Ny, Nz)
+
+#     σ    = zeros(etype, dims...)
+#     Nxh  = Nx ÷ 2 + 1
+#     σhat = zeros(Complex{etype}, Nxh, Ny, Nz)
+#     uhat = zeros(Complex{etype}, Nxh, Ny, Nz)
+#     u    = zeros(etype, dims...)
+
+#     s  = @view σ[:,:,1]
+#     uh = @view uhat[:,:,1]
+
+#     Pxy  = plan_rfft(s, (1,2);  flags=FFTW.MEASURE)
+#     iPxy = plan_irfft(uh, Nx, (1,2); flags=FFTW.MEASURE)
+
+#     kx = Vector{etype}(undef, Nxh)
+#     ky = Vector{etype}(undef, Ny)
+
+#     twoπ = etype(2) * etype(π)
+#     @inbounds for i in 1:Nxh
+#         ii = i - 1
+#         kx[i] = twoπ * ii / Nx
+#     end
+#     @inbounds for j in 1:Ny
+#         jj = j - 1
+#         ky[j] = twoπ * (jj <= Ny ÷ 2 ? jj : jj - Ny) / Ny
+#     end
+
+#     gk = Array{etype}(undef, Nxh, Ny, Nz, Nz)
+#     @inbounds for iy in 1:Ny
+#         kyv = ky[iy]
+#         for ix in 1:Nxh
+#             kxv = kx[ix]
+#             k = hypot(kxv, kyv)
+#             if k == 0
+#                 for z in 1:Nz, zp in 1:Nz
+#                     gk[ix,iy,z,zp] = zero(etype)
+#                 end
+#                 continue
+#             end
+#             inv2k = inv(2k)
+#             for z in 1:Nz, zp in 1:Nz
+#                 gk[ix,iy,z,zp] = exp(-k * abs(z - zp)) * inv2k
+#             end
+#         end
+#     end
+
+#     ϵ = StaticParam(eps)
+
+#     return Coulomb3{etype,typeof(ϵ),typeof(Pxy),typeof(iPxy),length(size(g))}(
+#         size(g), σ, σhat, uhat, u, ϵ,
+#         Pxy, iPxy,
+#         kx, ky, gk
+#     )
+# end
+
+# function init!(c::Coulomb3, g::AbstractIsingGraph)
+#     σ = c.σ
+
+#     Nx, Ny, Nz = size(σ)
+#     Nz_dip = Nz - 1
+
+#     fill!(σ, zero(eltype(σ)))
+
+#     @inbounds for z in 1:Nz_dip
+#         dip = state(g)[:,:,z]
+#         for j in 1:Ny, i in 1:Nx
+#             v = dip[i,j]
+#             σ[i,j,z]   -= v
+#             σ[i,j,z+1] += v
+#         end
+#     end
+
+#     return c
+# end
+
+# function recalc!(c::Coulomb3{T}) where {T}
+#     σhat = c.σhat
+#     uhat = c.uhat
+#     u    = c.u
+#     gk   = c.gk
+
+#     Nx, Ny, Nz = size(u)
+#     Nxh = size(σhat, 1)
+
+#     @inbounds for z in 1:Nz
+#         sh = @view σhat[:,:,z]
+#         s  = @view c.σ[:,:,z]
+#         mul!(sh, c.Pxy, s)
+#     end
+
+#     @inbounds begin
+#         fill!(@view uhat[1,1,:], zero(Complex{T}))
+#         for iy in 1:Ny
+#             for ix in 1:Nxh
+#                 if ix == 1 && iy == 1
+#                     continue
+#                 end
+#                 for z in 1:Nz
+#                     s = zero(Complex{T})
+#                     @simd for zp in 1:Nz
+#                         s += gk[ix,iy,z,zp] * σhat[ix,iy,zp]
+#                     end
+#                     uhat[ix,iy,z] = s
+#                 end
+#             end
+#         end
+#     end
+
+#     @inbounds for z in 1:Nz
+#         uh = @view uhat[:,:,z]
+#         uz = @view u[:,:,z]
+#         mul!(uz, c.iPxy, uh)
+#     end
+
+#     return u
+# end
+
+# function ΔH(c::Coulomb3{T,N}, params, proposal) where {T,N}
+#     lattice_size = size(c)
+#     spin_idx = at_idx(proposal)
+#     spin_coord1 = idxToCoord(spin_idx, lattice_size)
+#     spin_coord2 = (spin_coord1[1], spin_coord1[2], spin_coord1[3] + 1)
+#     Δcharge1 = -delta(proposal)
+#     Δcharge2 = delta(proposal)
+
+#     ΔE1 = Δcharge1 * c.u[spin_coord1...]
+#     ΔE2 = Δcharge2 * c.u[spin_coord2...]
+#     return ΔE1 + ΔE2
+# end
+
+# update!(::Metropolis, c::Coulomb3{T}, context) where {T} = begin
+#     (;proposal) = context
+#     if isaccepted(proposal)
+#         spin_idx = at_idx(proposal)
+#         spin_coord1 = idxToCoord(spin_idx, size(c))
+#         spin_coord2 = (spin_coord1[1], spin_coord1[2], spin_coord1[3] + 1)
+#         Δcharge1 = -delta(proposal)
+#         Δcharge2 = delta(proposal)
+
+#         c.σ[spin_coord1...] += Δcharge1
+#         c.σ[spin_coord2...] += Δcharge2
+#         recalc!(c)
+#     end
+# end
+
+# struct Coulomb4{T,PT,PxyT,PiT,N} <: Hamiltonian
+#     size::NTuple{N,Int}
+#     σ::Array{T,3}                 # real charges
+#     σhat::Array{Complex{T},3}     # rfft(σ) over (x,y)
+#     uhat::Array{Complex{T},3}     # spectral potential
+#     u::Array{T,3}                 # real potential
+#     ϵ::PT
+
+#     Pxy::PxyT                     # plan_rfft for 2D slices
+#     iPxy::PiT                     # plan_irfft for 2D slices
+#     kx::Vector{T}
+#     ky::Vector{T}
+#     zdist::Matrix{Int}            # |z-zp| lookup
+#     zpow::Vector{T}               # exp(-k*|Δz|) powers
+# end
+
+# Base.size(c::Coulomb4) = c.size
+
+# function Coulomb4(g::AbstractIsingGraph, eps::Real)
+#     gdims = size(g[1])
+#     etype = eltype(g)
+
+#     Nx, Ny, Nz_dip = gdims
+#     Nz = Nz_dip + 1
+
+#     dims = (Nx, Ny, Nz)
+
+#     σ    = zeros(etype, dims...)
+#     Nxh  = Nx ÷ 2 + 1
+#     σhat = zeros(Complex{etype}, Nxh, Ny, Nz)
+#     uhat = zeros(Complex{etype}, Nxh, Ny, Nz)
+#     u    = zeros(etype, dims...)
+
+#     s  = @view σ[:,:,1]
+#     uh = @view uhat[:,:,1]
+
+#     Pxy  = plan_rfft(s, (1,2);  flags=FFTW.MEASURE)
+#     iPxy = plan_irfft(uh, Nx, (1,2); flags=FFTW.MEASURE)
+
+#     kx = Vector{etype}(undef, Nxh)
+#     ky = Vector{etype}(undef, Ny)
+
+#     twoπ = etype(2) * etype(π)
+#     @inbounds for i in 1:Nxh
+#         ii = i - 1
+#         kx[i] = twoπ * ii / Nx
+#     end
+#     @inbounds for j in 1:Ny
+#         jj = j - 1
+#         ky[j] = twoπ * (jj <= Ny ÷ 2 ? jj : jj - Ny) / Ny
+#     end
+
+#     zdist = Matrix{Int}(undef, Nz, Nz)
+#     @inbounds for z in 1:Nz, zp in 1:Nz
+#         zdist[z,zp] = abs(z - zp)
+#     end
+#     zpow = Vector{etype}(undef, Nz)
+
+#     ϵ = StaticParam(eps)
+
+#     return Coulomb4{etype,typeof(ϵ),typeof(Pxy),typeof(iPxy),length(size(g))}(
+#         size(g), σ, σhat, uhat, u, ϵ,
+#         Pxy, iPxy,
+#         kx, ky, zdist, zpow
+#     )
+# end
+
+# function init!(c::Coulomb4, g::AbstractIsingGraph)
+#     σ = c.σ
+
+#     Nx, Ny, Nz = size(σ)
+#     Nz_dip = Nz - 1
+
+#     fill!(σ, zero(eltype(σ)))
+
+#     @inbounds for z in 1:Nz_dip
+#         dip = state(g)[:,:,z]
+#         for j in 1:Ny, i in 1:Nx
+#             v = dip[i,j]
+#             σ[i,j,z]   -= v
+#             σ[i,j,z+1] += v
+#         end
+#     end
+
+#     return c
+# end
+
+# function recalc!(c::Coulomb4{T}) where {T}
+#     σhat = c.σhat
+#     uhat = c.uhat
+#     u    = c.u
+#     zdist = c.zdist
+#     zpow  = c.zpow
+
+#     Nx, Ny, Nz = size(u)
+#     Nxh = size(σhat, 1)
+
+#     @inbounds for z in 1:Nz
+#         sh = @view σhat[:,:,z]
+#         s  = @view c.σ[:,:,z]
+#         mul!(sh, c.Pxy, s)
+#     end
+
+#     @inbounds begin
+#         fill!(@view uhat[1,1,:], zero(Complex{T}))
+#         for iy in 1:Ny
+#             ky = c.ky[iy]
+#             for ix in 1:Nxh
+#                 if ix == 1 && iy == 1
+#                     continue
+#                 end
+#                 kx = c.kx[ix]
+#                 k  = hypot(kx, ky)
+
+#                 inv2k = inv(2k)
+#                 e = exp(-k)
+#                 zpow[1] = one(T)
+#                 for d in 2:Nz
+#                     zpow[d] = zpow[d-1] * e
+#                 end
+
+#                 for z in 1:Nz
+#                     s = zero(Complex{T})
+#                     @simd for zp in 1:Nz
+#                         s += (zpow[zdist[z,zp] + 1] * inv2k) * σhat[ix,iy,zp]
+#                     end
+#                     uhat[ix,iy,z] = s
+#                 end
+#             end
+#         end
+#     end
+
+#     @inbounds for z in 1:Nz
+#         uh = @view uhat[:,:,z]
+#         uz = @view u[:,:,z]
+#         mul!(uz, c.iPxy, uh)
+#     end
+
+#     return u
+# end
+
+# function ΔH(c::Coulomb4{T,N}, params, proposal) where {T,N}
+#     lattice_size = size(c)
+#     spin_idx = at_idx(proposal)
+#     spin_coord1 = idxToCoord(spin_idx, lattice_size)
+#     spin_coord2 = (spin_coord1[1], spin_coord1[2], spin_coord1[3] + 1)
+#     Δcharge1 = -delta(proposal)
+#     Δcharge2 = delta(proposal)
+
+#     ΔE1 = Δcharge1 * c.u[spin_coord1...]
+#     ΔE2 = Δcharge2 * c.u[spin_coord2...]
+#     return ΔE1 + ΔE2
+# end
+
+# update!(::Metropolis, c::Coulomb4{T}, context) where {T} = begin
+#     (;proposal) = context
+#     if isaccepted(proposal)
+#         spin_idx = at_idx(proposal)
+#         spin_coord1 = idxToCoord(spin_idx, size(c))
+#         spin_coord2 = (spin_coord1[1], spin_coord1[2], spin_coord1[3] + 1)
+#         Δcharge1 = -delta(proposal)
+#         Δcharge2 = delta(proposal)
+
+#         c.σ[spin_coord1...] += Δcharge1
+#         c.σ[spin_coord2...] += Δcharge2
+#         recalc!(c)
+#     end
+# end
+
+# function ΔH(c::CoulombHamiltonian2{T,N}, params, proposal) where {T,N}
+#     # println("Calculating ΔH for CoulombHamiltonian2 ")
+#     lattice_size = size(c)
+#     spin_idx = at_idx(proposal)
+#     spin_coord1 = idxToCoord(spin_idx, lattice_size)
+#     spin_coord2 = (spin_coord1[1], spin_coord1[2], spin_coord1[3] + 1)
+#     Δcharge1 = -delta(proposal)
+#     Δcharge2 = delta(proposal)
+
+#     ΔE1 = Δcharge1 * c.u[spin_coord1...]
+#     ΔE2 = Δcharge2 * c.u[spin_coord2...]
+#     return ΔE1 + ΔE2
+# end
+
+# update!(::Metropolis, c::CoulombHamiltonian2{T}, context) where {T} = begin
+#     (;proposal) = context
+#     if isaccepted(proposal)
+#         spin_idx = at_idx(proposal)
+#         spin_coord1 = idxToCoord(spin_idx, size(c))
+#         spin_coord2 = (spin_coord1[1], spin_coord1[2], spin_coord1[3] + 1)
+#         Δcharge1 = -delta(proposal)
+#         Δcharge2 = delta(proposal)
+
+#         c.σ[spin_coord1...] += Δcharge1
+#         c.σ[spin_coord2...] += Δcharge2
+#         # recalc!(c)
+#     end
+# end
+
+# export Recalc
+
+# struct Recalc <: ProcessAlgorithm end
+
+# function Processes.step!(::Recalc, context)
+#     c = context.hamiltonian[3]
+#     recalc!(c)
+#     return
+# endu
