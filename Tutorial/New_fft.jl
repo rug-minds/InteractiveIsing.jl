@@ -126,7 +126,8 @@ function weightfunc_shell(dr, c1, c2, ax, ay, az, csr, lambda1, lambda2)
     end
 
     Jsr = csr * prefac_sr
-    return Jdip + Jsr
+    # return Jdip + Jsr
+    return Jsr
 end
 
 # Skymion-like coupling
@@ -320,6 +321,16 @@ function Processes.step!(::ValueLogger, context::C) where C
     return (;)
 end
 
+##################################################################################
+struct Recalc <: Processes.ProcessAlgorithm 
+    i::Int
+end
+function Processes.step!(r::Recalc, context)
+    (;hamiltonian) = context
+    recalc!(hamiltonian[r.i])
+    return (;)
+end
+##################################################################################
 
 xL = 20  # Length in the x-dimension
 yL = 20  # Length in the y-dimension
@@ -361,15 +372,12 @@ Layer_Dep = 1
 Cdep=120
 Cz = 0.1
 lambda = 0.1
-# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(64,64,3)) + Quartic(g) + Sextic(g)
-# refresh(g)
+g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 1)
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(20,20,4)) + Quartic(g) + Sextic(g)
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((z-1)/lambda) , NN=8)
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz , NN=20)
-# refresh(g)
-
-g.hamiltonian = Ising(g)
-refresh(g)
+# refresh(g
+# g.hamiltonian = Ising(g)
 
 ### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic
@@ -395,6 +403,7 @@ pulse3 = Unique(SinPulseA(3, 1))
 
 Anealing1 = LinAnealingA(2f0, 1f0)
 metropolis = g.default_algorithm
+metropolis = CompositeAlgorithm((metropolis, Recalc(3)), (1,200))
 
 pulse_part1 = CompositeAlgorithm((metropolis, pulse1), (1, point_repeat))
 pulse_part2 = CompositeAlgorithm((metropolis, pulse2, ), (1, point_repeat))
@@ -408,6 +417,7 @@ Pulse_and_Relax = Routine((metropolis, pulse_part1, pulse_part2, metropolis, ann
     Route(Metropolis(), pulse1, :hamiltonian, :M), 
     Route(Metropolis(), pulse2, :hamiltonian, :M),
     Route(Metropolis(), Anealing1, :isinggraph),
+    Route(Metropolis(), Recalc(3), :hamiltonian),
     )
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 
