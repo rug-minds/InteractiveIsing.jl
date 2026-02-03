@@ -355,9 +355,6 @@ genAdj!(g, wg5)
 a1, b1, c1 = 0, 0, 0 
 Ex = range(-1.0, 1.0, length=1000)
 Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
-# inlineplot() do 
-#     lines(Ex, Ey)
-# end
 
 ### Set hamiltonian with selfenergy and depolarization field
 Layer_Dep = 1
@@ -366,7 +363,6 @@ Cz = 0.1
 lambda = 0.1
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(64,64,3)) + Quartic(g) + Sextic(g)
 # refresh(g)
-
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(20,20,4)) + Quartic(g) + Sextic(g)
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((z-1)/lambda) , NN=8)
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz , NN=20)
@@ -387,53 +383,65 @@ Temperature=1
 temp(g,Temperature)
 
 ### Run simulation process
-# Time_fctr = 1
-# SpeedRate = Int(Time_fctr*fullsweep)
-### risepoint and Amptitude are factors from pulse
-# risepoint=500
-# Amptitude =10
-# PulseN = 2
-# Pulsetime = (PulseN * 4 + 10) * risepoint * SpeedRate
-
-# createProcess(g)
-# compalgo = CompositeAlgorithm((g.default_algorithm, TrianglePulseA), (1, SpeedRate))
 fullsweep = xL*yL*zL
 time_fctr = 1
 anneal_time = fullsweep*5000
 pulsetime = fullsweep*5000
 relaxtime = fullsweep*1000
 point_repeat = time_fctr*fullsweep
-pulse1 = TrianglePulseA(30, 2)
-pulse2 = SinPulseA(30, 2)
+pulse1 = TrianglePulseA(2, 1)
+pulse2 = SinPulseA(2, 1)
+pulse3 = Unique(SinPulseA(3, 1))
+
+Anealing1 = LinAnealingA(2f0, 1f0)
 metropolis = g.default_algorithm
 
 pulse_part1 = CompositeAlgorithm((metropolis, pulse1), (1, point_repeat))
-pulse_part2 = CompositeAlgorithm((metropolis, pulse2), (1, point_repeat))
-anneal_part = CompositeAlgorithm((metropolis, LinAnealingA(10f0, 0.1f0)), (1, point_repeat))
+pulse_part2 = CompositeAlgorithm((metropolis, pulse2, ), (1, point_repeat))
+
+anneal_part1 = CompositeAlgorithm((metropolis, Anealing1), (1, point_repeat))
+
 # Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse, :M, :hamiltonian))
 # Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
-Pulse_and_Relax = Routine((anneal_part, pulse_part1, pulse_part2, metropolis), (anneal_time, pulsetime, pulsetime, relaxtime), 
-    Route(metropolis, pulse1, :hamiltonian, :M), 
-    Route(metropolis, pulse2, :hamiltonian, :M),
-    Route(metropolis, anneal_part, :isinggraph))
-
+Pulse_and_Relax = Routine((metropolis, pulse_part1, pulse_part2, metropolis, anneal_part1), 
+    (relaxtime, pulsetime, pulsetime, relaxtime, anneal_time), 
+    Route(Metropolis(), pulse1, :hamiltonian, :M), 
+    Route(Metropolis(), pulse2, :hamiltonian, :M),
+    Route(Metropolis(), Anealing1, :isinggraph),
+    )
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 
-getcontext(g)
+# getcontext(g)
 # getcontext(g)[pulse1]
 
 ### estimate time
-est_remaining(process(g))
+# est_remaining(process(g))
 # Wait until it is done
 c = process(g) |> fetch # If you want to close ctr+c
 # args = process(g) |> getcontext
 # EnergyG= args.all_Es;
-voltage= c[pulse2].x
-Pr= c[pulse2].y
+voltage1= c[pulse1].x
+Pr1= c[pulse1].y
 
-w2=newmakie(lines, voltage, Pr)
-w3=newmakie(lines,Pr)
+Voltage2 = c[pulse2].x
+Pr2 = c[pulse2].y
 
+w2=newmakie(lines, voltage1, Pr1)
+w3=newmakie(lines,Pr1)
+
+w4=newmakie(lines, Voltage2, Pr2)
+w5=newmakie(lines,Pr2)
+
+
+# show_connections(g,1,1,1)
+# visualize_connections(g)
+
+# # inlineplot() do 
+# #     lines(voltage, Pr)
+# # end
+# # inlineplot() do 
+# #     lines(Pr)
+# # end
 # # inlineplot() do 
 # #     lines(Ex, Ey)
 # # end
@@ -443,17 +451,3 @@ w3=newmakie(lines,Pr)
 # lines!(ax, voltage, Pr)
 # # save("D:/Code/data/shell/stripes with skymions/axayaz_1.5_1.5_1_T$(Temperature)_Amp$(Amptitude)_Speed$(Time_fctr)_80_20_20.png", figPr)
 # save("D:/Code/data/shell/stripes with skymions/thickness/z=1.png", figPr)
-
-# # inlineplot() do 
-# #     lines(voltage, Pr)
-# # end
-# # inlineplot() do 
-# #     lines(Pr)
-# # end
-
-w2=newmakie(lines, voltage, Pr)
-w3=newmakie(lines,Pr)
-
-
-# show_connections(g,1,1,1)
-# visualize_connections(g)
