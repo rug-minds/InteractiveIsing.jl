@@ -285,10 +285,6 @@ end
 ##################################################################################
 ### struct start: TemAnealingA (simple sine waveform)
 ### Run with TemAnealingA
-###  /\
-### /  \    _____
-###     \  /
-###      \/
 
 struct LinAnealingA{T} <: ProcessAlgorithm
     start_T::T
@@ -302,19 +298,32 @@ function Processes.prepare(tp::LinAnealingA, args)
 end
 
 function Processes.step!(::LinAnealingA, context::C) where C
-    (;current_T, dT, graph) = context
-    temp(graph, current_T)
+    (;current_T, dT, isinggraph) = context
+    temp(isinggraph, current_T)
     return (;current_T = current_T + dT)
 end
 ### struct end: TemAnealingA
 ##################################################################################
 
+struct ValueLogger{Name} <: ProcessAlgorithm end
+ValueLogger(name) = ValueLogger{Symbol(name)}()
+
+function Processes.prepare(::ValueLogger, args)
+    values = Float32[]
+    processsizehint!(values, args)
+    (;values)
+end
+
+function Processes.step!(::ValueLogger, context::C) where C
+    (;values, value) = context
+    push!(values, value)
+    return (;)
+end
 
 
-
-xL = 10  # Length in the x-dimension
-yL = 10  # Length in the y-dimension
-zL = 10   # Length in the z-dimension
+xL = 20  # Length in the x-dimension
+yL = 20  # Length in the y-dimension
+zL = 20   # Length in the z-dimension
 g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
@@ -392,34 +401,45 @@ temp(g,Temperature)
 # compalgo = CompositeAlgorithm((g.default_algorithm, TrianglePulseA), (1, SpeedRate))
 fullsweep = xL*yL*zL
 time_fctr = 1
-anneal_time = fullsweep*1000
-pulsetime = fullsweep*100000
-relaxtime = fullsweep*100000
+anneal_time = fullsweep*5000
+pulsetime = fullsweep*5000
+relaxtime = fullsweep*1000
 point_repeat = time_fctr*fullsweep
 pulse1 = TrianglePulseA(30, 2)
+tpulse2 = TrianglePulseA(30, 40)
+MLogger1 = ValueLogger(:M)
+MLogger2 = Unique(ValueLogger(:M))
+TempLogger = ValueLogger(:T)
 pulse2 = SinPulseA(30, 2)
+pulse3 = Unique(SinPulseA(30, 2))
+Anealing = LinAnealingA(5f0, 1f0)
 metropolis = g.default_algorithm
+
 pulse_part1 = CompositeAlgorithm((metropolis, pulse1), (1, point_repeat))
-pulse_part2 = CompositeAlgorithm((metropolis, pulse2), (1, point_repeat))
-anneal_part = CompositeAlgorithm((metropolis, LinAnealingA(10f0, 0.1f0)), (1, point_repeat))
+pulse_part2 = CompositeAlgorithm((metropolis, pulse2, ), (1, point_repeat))
+anneal_part = CompositeAlgorithm((metropolis, Anealing, MLogger), (1, point_repeat, 100))
+
 # Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse, :M, :hamiltonian))
 # Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
-Pulse_and_Relax = Routine((anneal_part, pulse_part1, pulse_part2, metropolis), (anneal_time, pulsetime, pulsetime, relaxtime), 
-    Route(metropolis, pulse1, :hamiltonian, :M), 
-    Route(metropolis, pulse2, :hamiltonian, :M),
-    Route(metropolis, anneal_part, :isinggraph))
-
+Pulse_and_Relax = Routine((anneal_part, metropolis, pulse_part1, pulse_part2, metropolis), (anneal_time,relaxtime, pulsetime, pulsetime, relaxtime), 
+    Route(Metropolis(), pulse1, :hamiltonian, :M), 
+    Route(Metropolis(), pulse2, :hamiltonian, :M),
+    Route(Metropolis(), Anealing, :isinggraph),
+    Route(Metropolis(), MLogger, :M => :value)
+    )
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 
+getcontext(g)
+# getcontext(g)[pulse1]
 
-# ### estimate time
-# est_remaining(process(g))
-# # Wait until it is done
-# args = process(g) |> fetch # If you want to close ctr+c
-# # args = process(g) |> getcontext
-# # EnergyG= args.all_Es;
-# voltage= args.Metropolis.x
-# Pr= args.Metropolis.y;
+### estimate time
+est_remaining(process(g))
+# Wait until it is done
+c = process(g) |> fetch # If you want to close ctr+c
+# args = process(g) |> getcontext
+# EnergyG= args.all_Es;
+voltage= c[pulse2].x
+Pr= c[pulse2].y
 
 
 # # inlineplot() do 
