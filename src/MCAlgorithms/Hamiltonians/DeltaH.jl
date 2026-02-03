@@ -1,4 +1,10 @@
 
+const ΔH_expr = Dict{Type, Expr}()
+get_ΔH_expr(::Type{H}) where {H} = ΔH_expr[Base.typename(H).wrapper]
+get_ΔH_expr(h::H) where {H} = get_ΔH_expr(H)
+gen_ΔH_expr = nothing
+generated_func_calls = nothing
+
 """
 Takes a hamiltonian H, a FlipProposal, idx_symbol: idx_value -> statevalue
     to generate the change in energy due to the FlipProposal

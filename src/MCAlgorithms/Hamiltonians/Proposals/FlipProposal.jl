@@ -103,10 +103,3 @@ end
 function wrap_in_call(exprs, func::Symbol, args...)
     return Expr.(Ref(:call), Ref(func), exprs, Ref.(args)...)
 end
-
-
-const ΔH_expr = Dict{Type, Expr}()
-get_ΔH_expr(::Type{H}) where {H} = ΔH_expr[Base.typename(H).wrapper]
-get_ΔH_expr(h::H) where {H} = get_ΔH_expr(H)
-gen_ΔH_expr = nothing
-generated_func_calls = nothing

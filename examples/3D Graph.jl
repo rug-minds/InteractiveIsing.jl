@@ -17,6 +17,13 @@ genAdj!(g, wg)
 
 # homogeneousself!(g, 0.5f0)
 
+struct Recalc <: Processes.ProcessAlgorithm end
+function Processes.step!(::Recalc, context)
+    (;hamiltonian) = context
+    @show typeof(hamiltonian)
+    recalc!(hamiltonian[3])
+end
+
 g.hamiltonian = h = Ising(g) + CoulombHamiltonian2(g, 1f0)
 interface(g)
 algo = Processes.CompositeAlgorithm((Metropolis(), Recalc()), (1,200),  Processes.DestructureInput(), Share(DestructureInput(), Metropolis()), Share(Metropolis(), Recalc()))

@@ -254,6 +254,21 @@ function mygemmavx!(C, A, B)
     end
 end
 
+function ΔH(c::CoulombHamiltonian2{T,N}, params, proposal) where {T,N}
+    # println("Calculating ΔH for CoulombHamiltonian2 ")
+    lattice_size = size(c)
+    spin_idx = at_idx(proposal)
+    spin_coord1 = idxToCoord(spin_idx, lattice_size)
+    spin_coord2 = (spin_coord1[1], spin_coord1[2], spin_coord1[3] + 1)
+    Δcharge1 = -delta(proposal)
+    Δcharge2 = delta(proposal)
+
+    ΔE1 = Δcharge1 * c.u[spin_coord1...]
+    ΔE2 = Δcharge2 * c.u[spin_coord2...]
+    return ΔE1 + ΔE2
+end
+
+
 # struct Coulomb3{T,PT,PxyT,PiT,N} <: Hamiltonian
 #     size::NTuple{N,Int}
 #     σ::Array{T,3}                 # real charges
@@ -592,19 +607,6 @@ end
 #     end
 # end
 
-# function ΔH(c::CoulombHamiltonian2{T,N}, params, proposal) where {T,N}
-#     # println("Calculating ΔH for CoulombHamiltonian2 ")
-#     lattice_size = size(c)
-#     spin_idx = at_idx(proposal)
-#     spin_coord1 = idxToCoord(spin_idx, lattice_size)
-#     spin_coord2 = (spin_coord1[1], spin_coord1[2], spin_coord1[3] + 1)
-#     Δcharge1 = -delta(proposal)
-#     Δcharge2 = delta(proposal)
-
-#     ΔE1 = Δcharge1 * c.u[spin_coord1...]
-#     ΔE2 = Δcharge2 * c.u[spin_coord2...]
-#     return ΔE1 + ΔE2
-# end
 
 # update!(::Metropolis, c::CoulombHamiltonian2{T}, context) where {T} = begin
 #     (;proposal) = context

@@ -60,7 +60,7 @@ You can merge into the view to update the context:
 
 Names are derived from the registry:
 
-- Scoped algorithms carry a stable name (see `ScopedAlgorithm`).
+- Scoped algorithms carry a stable name (see `IdentifiableAlgo`).
 - When you call `view(pc, instance)`, the registry is consulted to resolve the
   instance to its scoped name.
 - Routes can alias variable names, which become the user-facing keys in the view.

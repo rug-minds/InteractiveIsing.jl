@@ -398,16 +398,17 @@ relaxtime = fullsweep*100000
 point_repeat = time_fctr*fullsweep
 pulse1 = TrianglePulseA(30, 2)
 pulse2 = SinPulseA(30, 2)
+lin_annealing = LinAnealingA(10f0, 0.1f0)
 metropolis = g.default_algorithm
 pulse_part1 = CompositeAlgorithm((metropolis, pulse1), (1, point_repeat))
 pulse_part2 = CompositeAlgorithm((metropolis, pulse2), (1, point_repeat))
-anneal_part = CompositeAlgorithm((metropolis, LinAnealingA(10f0, 0.1f0)), (1, point_repeat))
+anneal_part = CompositeAlgorithm((metropolis, lin_annealing), (1, point_repeat))
 # Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse, :M, :hamiltonian))
 # Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
 Pulse_and_Relax = Routine((anneal_part, pulse_part1, pulse_part2, metropolis), (anneal_time, pulsetime, pulsetime, relaxtime), 
-    Share(metropolis, pulse1), 
-    Share(metropolis, pulse2),
-    Share(metropolis, anneal_part))
+    Share(Metropolis(), pulse1), 
+    Share(Metropolis(), pulse2),
+    Share(Metropolis(), lin_annealing))
 
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 
