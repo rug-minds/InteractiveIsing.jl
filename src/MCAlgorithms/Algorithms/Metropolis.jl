@@ -21,8 +21,7 @@ end
 
 function Processes.prepare(::Metropolis, context::Cont) where Cont
     # @show typeof(context)
-    @show context
-    @show Processes.get_subcontexts(getcontext(context))
+
     (;structure) = context
     state = InteractiveIsing.state(structure)
     hamiltonian = structure.hamiltonian
@@ -78,7 +77,9 @@ end
         M += @inline delta(proposal)
     end
 
-    context = @inline viewmerge(context, (;proposal, M))
+    context = @inline inject(context, (;proposal, M))
+    
     @inline update!(Metropolis(), hamiltonian, context)
+
     return (;proposal, M)
 end

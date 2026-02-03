@@ -403,27 +403,20 @@ anneal_time = fullsweep*5000
 pulsetime = fullsweep*5000
 relaxtime = fullsweep*1000
 point_repeat = time_fctr*fullsweep
-pulse1 = TrianglePulseA(5, 2)
-# tpulse2 = TrianglePulseA(30, 40)
-# MLogger1 = ValueLogger(:M)
-# MLogger2 = Unique(ValueLogger(:M))
-# TempLogger = ValueLogger(:T)
-pulse2 = SinPulseA(5, 2)
-pulse3 = Unique(SinPulseA(3, 2))
-Anealing = LinAnealingA(5f0, 1f0)
+pulse1 = TrianglePulseA(30, 2)
+pulse2 = SinPulseA(30, 2)
 metropolis = g.default_algorithm
 
 pulse_part1 = CompositeAlgorithm((metropolis, pulse1), (1, point_repeat))
-pulse_part2 = CompositeAlgorithm((metropolis, pulse2, ), (1, point_repeat))
-anneal_part = CompositeAlgorithm((metropolis, Anealing), (1, point_repeat))
-
+pulse_part2 = CompositeAlgorithm((metropolis, pulse2), (1, point_repeat))
+anneal_part = CompositeAlgorithm((metropolis, LinAnealingA(10f0, 0.1f0)), (1, point_repeat))
 # Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse, :M, :hamiltonian))
 # Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
-Pulse_and_Relax = Routine((anneal_part, metropolis, pulse_part1, pulse_part2, metropolis), (anneal_time,relaxtime, pulsetime, pulsetime, relaxtime), 
-    Route(Metropolis(), pulse1, :hamiltonian, :M), 
-    Route(Metropolis(), pulse2, :hamiltonian, :M),
-    Route(Metropolis(), Anealing, :isinggraph),
-    )
+Pulse_and_Relax = Routine((anneal_part, pulse_part1, pulse_part2, metropolis), (anneal_time, pulsetime, pulsetime, relaxtime), 
+    Route(metropolis, pulse1, :hamiltonian, :M), 
+    Route(metropolis, pulse2, :hamiltonian, :M),
+    Route(metropolis, anneal_part, :isinggraph))
+
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 
 getcontext(g)

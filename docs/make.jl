@@ -20,8 +20,12 @@ makedocs(sitename="InteractiveIsing Documentation",
                 "Processes" => "man/Processes.md",
                 "Windows" => "man/Windows.md",
                 "Topology" => "man/Topology.md",
+            ],
+            "Developer" => [
+                "Registry and Scoping" => "dev/Registry.md",
+                "Scoped Algorithms" => "dev/IdentifiableAlgos.md",
+                "Context" => "dev/Context.md",
             ]
- 
         ]
         )
 

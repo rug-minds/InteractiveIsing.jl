@@ -22,3 +22,12 @@ function Base.rand(rng::AbstractRNG, proposer::IsingGraphProposer)
     proposal_state = @inline inline_layer_dispatch(layer -> randstate(rng, layer, oldstate), layer_idx, proposer.layers)
     return FlipProposal{:s, :j, statetype(proposer)}(j, oldstate, proposal_state, layer_idx, false)
 end
+
+function Base.rand(proposer::IsingGraphProposer)
+    j = rand(proposer.iterator)
+    oldstate = proposer.state[j]::statetype(proposer)
+    range_ends = range_end.(proposer.layers)
+    layer_idx = tuple_searchsortedfirst(range_ends, j)
+    proposal_state = @inline inline_layer_dispatch(layer -> randstate(rng, layer, oldstate), layer_idx, proposer.layers)
+    return FlipProposal{:s, :j, statetype(proposer)}(j, oldstate, proposal_state, layer_idx, false)
+end

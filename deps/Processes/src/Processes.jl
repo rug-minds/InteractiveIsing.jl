@@ -11,13 +11,15 @@ module Processes
 
     abstract type ProcessAlgorithm end
     abstract type ProcessLoopAlgorithm <: ProcessAlgorithm end # Algorithms that can be inlined in processloop
-    abstract type ComplexLoopAlgorithm <: ProcessLoopAlgorithm end # Algorithms that have multiple functions and intervals
+    abstract type LoopAlgorithm <: ProcessLoopAlgorithm end # Algorithms that have multiple functions and intervals
 
     abstract type AbstractOption end
     abstract type ProcessState <: AbstractOption end
 
     abstract type AbstractContext end
     abstract type AbstractSubContext end
+
+    abstract type AbstractRegistry end
 
     export ProcessAlgorithm, ProcessState
 
@@ -42,8 +44,9 @@ module Processes
 
     include("AbstractProcesses.jl")
 
-    include("ThinContainers.jl")
-    include("Scoped/Scoped.jl")
+    include("Matching.jl")
+    include("Identifiable/Identifiable.jl")
+
     include("Registry/Registry.jl")
     include("Context/Context.jl")
 
