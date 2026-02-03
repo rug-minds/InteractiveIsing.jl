@@ -368,9 +368,7 @@ lambda = 0.1
 # refresh(g)
 
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(20,20,4)) + Quartic(g) + Sextic(g)
-
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((z-1)/lambda) , NN=8)
-
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz , NN=20)
 # refresh(g)
 
@@ -405,19 +403,19 @@ anneal_time = fullsweep*5000
 pulsetime = fullsweep*5000
 relaxtime = fullsweep*1000
 point_repeat = time_fctr*fullsweep
-pulse1 = TrianglePulseA(30, 2)
-tpulse2 = TrianglePulseA(30, 40)
-MLogger1 = ValueLogger(:M)
-MLogger2 = Unique(ValueLogger(:M))
-TempLogger = ValueLogger(:T)
-pulse2 = SinPulseA(30, 2)
-pulse3 = Unique(SinPulseA(30, 2))
+pulse1 = TrianglePulseA(5, 2)
+# tpulse2 = TrianglePulseA(30, 40)
+# MLogger1 = ValueLogger(:M)
+# MLogger2 = Unique(ValueLogger(:M))
+# TempLogger = ValueLogger(:T)
+pulse2 = SinPulseA(5, 2)
+pulse3 = Unique(SinPulseA(3, 2))
 Anealing = LinAnealingA(5f0, 1f0)
 metropolis = g.default_algorithm
 
 pulse_part1 = CompositeAlgorithm((metropolis, pulse1), (1, point_repeat))
 pulse_part2 = CompositeAlgorithm((metropolis, pulse2, ), (1, point_repeat))
-anneal_part = CompositeAlgorithm((metropolis, Anealing, MLogger), (1, point_repeat, 100))
+anneal_part = CompositeAlgorithm((metropolis, Anealing), (1, point_repeat))
 
 # Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse, :M, :hamiltonian))
 # Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
@@ -425,7 +423,6 @@ Pulse_and_Relax = Routine((anneal_part, metropolis, pulse_part1, pulse_part2, me
     Route(Metropolis(), pulse1, :hamiltonian, :M), 
     Route(Metropolis(), pulse2, :hamiltonian, :M),
     Route(Metropolis(), Anealing, :isinggraph),
-    Route(Metropolis(), MLogger, :M => :value)
     )
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 
@@ -441,6 +438,8 @@ c = process(g) |> fetch # If you want to close ctr+c
 voltage= c[pulse2].x
 Pr= c[pulse2].y
 
+w2=newmakie(lines, voltage, Pr)
+w3=newmakie(lines,Pr)
 
 # # inlineplot() do 
 # #     lines(Ex, Ey)
@@ -455,14 +454,12 @@ Pr= c[pulse2].y
 # # inlineplot() do 
 # #     lines(voltage, Pr)
 # # end
-
-
 # # inlineplot() do 
 # #     lines(Pr)
 # # end
 
-# w2=newmakie(lines, voltage, Pr)
-# w3=newmakie(lines,Pr)
+w2=newmakie(lines, voltage, Pr)
+w3=newmakie(lines,Pr)
 
 
 # show_connections(g,1,1,1)
