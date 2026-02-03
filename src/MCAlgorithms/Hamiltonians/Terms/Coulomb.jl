@@ -156,11 +156,13 @@ function CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real)
 
     ϵ = StaticParam(eps)
 
-    return CoulombHamiltonian2{etype,typeof(ϵ),typeof(Pxy),typeof(iPxy),length(size(g))}(
+    c = CoulombHamiltonian2{etype,typeof(ϵ),typeof(Pxy),typeof(iPxy),length(size(g))}(
         size(g), σ, σhat, uhat, u, ϵ,
         Pxy, iPxy,
         kx, ky, zf, zb
     )
+    init!(c, g)
+    c
 end
 
 function init!(c::CoulombHamiltonian2, g::AbstractIsingGraph)
