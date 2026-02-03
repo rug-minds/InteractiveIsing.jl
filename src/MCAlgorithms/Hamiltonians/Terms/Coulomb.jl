@@ -186,7 +186,7 @@ function init!(c::CoulombHamiltonian2, g::AbstractIsingGraph)
     recalc!(c)
     return c
 end
-using Tullio
+
 function recalc!(c::CoulombHamiltonian2{T}) where {T}
     σhat = c.σhat
     uhat = c.uhat
@@ -260,14 +260,14 @@ function ΔH(c::CoulombHamiltonian2{T,N}, params, proposal) where {T,N}
     # println("Calculating ΔH for CoulombHamiltonian2 ")
     lattice_size = size(c)
     spin_idx = at_idx(proposal)
-    spin_coord1 = idxToCoord(spin_idx, lattice_size)
-    spin_coord2 = (spin_coord1[1], spin_coord1[2], spin_coord1[3] + 1)
-    Δcharge1 = -delta(proposal)
-    Δcharge2 = delta(proposal)
+    charge_coord_below = idxToCoord(spin_idx, lattice_size)
+    charge_coord_above = (charge_coord_below[1], charge_coord_below[2], charge_coord_below[3] + 1)
+    Δcharge_below = -delta(proposal)
+    Δcharge_above = delta(proposal)
 
-    ΔE1 = Δcharge1 * c.u[spin_coord1...]
-    ΔE2 = Δcharge2 * c.u[spin_coord2...]
-    return ΔE1 + ΔE2
+    ΔE_below = 2*Δcharge_below * c.u[charge_coord_below...]
+    ΔE_above = 2*Δcharge_above * c.u[charge_coord_above...]
+    return ΔE_below + ΔE_above
 end
 
 
