@@ -51,12 +51,12 @@ identity for matching and registry lookups.
 
 Key functions used throughout Processes:
 
-- `getname(sa::IdentifiableAlgo)` / `getname(::Type{<:IdentifiableAlgo})`
-- `getalgorithm(sa::IdentifiableAlgo)` / `getfunc(sa::IdentifiableAlgo)`
+- `getkey(sa::IdentifiableAlgo)` / `getkey(::Type{<:IdentifiableAlgo})`
+- `getalgo(sa::IdentifiableAlgo)` / `getalgo(sa::IdentifiableAlgo)`
 - `id(sa::IdentifiableAlgo)` / `hasid(sa::IdentifiableAlgo)`
 - `isdefault(sa::IdentifiableAlgo)`
 - `changename(sa::IdentifiableAlgo, newname::Symbol)`
-- `replacecontextname(sa::IdentifiableAlgo, name_replacement::Pair)`
+- `replacecontextkeys(sa::IdentifiableAlgo, name_replacement::Pair)`
 - `IdentifiableAlgo_label(sa::IdentifiableAlgo)` (for display)
 
 Note: matching is centered on `isinstance` and thincontainer unwrapping rather than
