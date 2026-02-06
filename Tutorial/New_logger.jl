@@ -64,6 +64,7 @@ function weightfunc_angle_anti(dr, c1, c2)
     rz = az*dz
 
     r2 = rx^2 + ry^2 + rz^2
+
     r  = sqrt(r2)
 
     cosθ = rz / r              # 与 z 轴夹角的 cos
@@ -321,7 +322,7 @@ g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
 #### Weight function setup (Connection setup)
 #### Set the distance scaling
-setdist!(g, (1.0,1.0,1.0))
+setdist!(g, (1.0,1.0,10.0))
 
 ### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
 wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 0.3, 0.1, 0.5) NN = 3
