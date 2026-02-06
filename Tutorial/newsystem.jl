@@ -320,6 +320,19 @@ function Processes.step!(::ValueLogger, context::C) where C
     return (;)
 end
 
+struct PolTracker{T} <: ProcessAlgorithm end
+function prepare(::PolTracker, context)
+    (;isinggraph) = context
+    initial = sum(state(isinggraph))
+    (;pols = Float32[initial])
+end
+function step!(::PolTracker, context)
+    (;proposal, pols) = context
+    push!(pols, delta(proposal))
+    return (;)
+end
+
+
 
 xL = 20  # Length in the x-dimension
 yL = 20  # Length in the y-dimension

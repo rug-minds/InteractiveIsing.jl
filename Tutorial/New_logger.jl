@@ -216,15 +216,15 @@ function Processes.prepare(tp::TrianglePulseA, args)
 
     # Predefine storage arrays
     step = 1
-    return (;pulse, x, y, step)
+    return (;pulse, step, pulseval = pulse[1])
 end
 
 function Processes.step!(::TrianglePulseA, context::C) where C
     (;pulse, step, hamiltonian) = context
-    pulse_val = pulse[step]
-    hamiltonian.b[] = pulse_val
+    pulseval = pulse[step]
+    hamiltonian.b[] = pulseval
 
-    return (;step = step + 1)
+    return (;step = step + 1, pulseval)
 end
 ### struct end: TrianglePulseA
 ##################################################################################
@@ -247,24 +247,16 @@ function Processes.prepare(tp::SinPulseA, args)
     theta = LinRange(0, max_theta, round(Int,steps))
     sins = amp .* sin.(theta)
 
-    # Predefine storage arrays
-    x = Float32[]
-    y = Float32[]
-    processsizehint!(x, args)
-    processsizehint!(y, args)
-
     step = 1
 
-    return (;sins, x, y, step)
+    return (;sins, step, pulseval = sins[1])
 end
 
 function Processes.step!(::SinPulseA, context::C) where C
-    (;sins, step, x, y, hamiltonian, M ) = context
+    (;sins, step, hamiltonian) = context
     pulse_val = sins[step]
     hamiltonian.b[] = pulse_val
-    push!(x, pulse_val)
-    push!(y, M)
-    return (;step = step + 1)
+    return (;step = step + 1, pulseval = pulse_val)
 end
 ### struct end: SinPulseA
 ##################################################################################
@@ -376,17 +368,18 @@ metropolis = g.default_algorithm
 
 #
 M_logger = ValueLogger(:M)
-Pulse_logger1 = ValueLogger(:pulse)
-Pulse_logger2 = ValueLogger(:pulse)
+Pulse_logger = ValueLogger(:pulse)
+# Pulse_logger2 = ValueLogger(:pulse)
 
 metropolis = CompositeAlgorithm((metropolis, M_logger, Recalc(3)), (1, fullsweep, 200))
 
-pulse_part1 = CompositeAlgorithm((metropolis, pulse1, Pulse_logger1), (1, point_repeat, fullsweep))
+pulse_part1 = CompositeAlgorithm((metropolis, pulse1, Pulse_logger), (1, point_repeat, fullsweep))
 
-pulse_part2 = CompositeAlgorithm((metropolis, pulse2, Pulse_logger2), (1, point_repeat, fullsweep))
+pulse_part2 = CompositeAlgorithm((metropolis, pulse2, Pulse_logger), (1, point_repeat, fullsweep))
 
-anneal_part1 = CompositeAlgorithm((metropolis, Anealing1, M_logger), (1, point_repeat, fullsweep))
+anneal_part1 = CompositeAlgorithm((metropolis, Anealing1, Pulse_logger), (1, point_repeat, fullsweep))
 
+relax_part = CompositeAlgorithm((metropolis, Pulse_logger), (1, fullsweep))
 # Pulse_and_Relax = Routine((pulse_part1, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian))
 # Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
 # Pulse_and_Relax = Routine((metropolis, pulse_part1, pulse_part2, metropolis, anneal_part1), 
@@ -398,11 +391,11 @@ anneal_part1 = CompositeAlgorithm((metropolis, Anealing1, M_logger), (1, point_r
 #     )
 # createProcess(g, Pulse_and_Relax, lifetime = 1)
 
-Pulse_and_Relax = Routine((pulse_part1, metropolis, ), 
+Pulse_and_Relax = Routine((pulse_part1, relax_part, ), 
     (pulsetime, relaxtime), 
     Route(Metropolis(), pulse1, :hamiltonian, :M),     
     Route(Metropolis(), M_logger, :M => :value), 
-    Route(Metropolis(), M_logger, :M => :value), 
+    Route(pulse1, Pulse_logger, :pulseval => :value), 
     Route(Metropolis(), Recalc(3), :hamiltonian),
     Route(DestructureInput(), Metropolis(), :isinggraph => :structure) # THIS ONE WILL BE REMOVED LATER
     )
@@ -415,8 +408,8 @@ createProcess(g, Pulse_and_Relax, lifetime = 1)
 # est_remaining(process(g))
 # Wait until it is done
 c = process(g) |> fetch # If you want to close ctr+c
-voltage1= c[pulse1].x
-Pr1= c[pulse1].y
+voltage1= c[Pulse_logger].values
+Pr1= c[M_logger].values
 
 # Voltage2 = c[pulse2].x
 # Pr2 = c[pulse2].y
