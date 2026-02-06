@@ -433,9 +433,9 @@ Copy over the state to the right position, except the adjacency matrix
 iterator(layer::AbstractIsingLayer) = startidx(layer):endidx(layer)
 iterator(g::IsingGraph) = 1:(nStates(g))
 
-# LayerTopology
+# AbstractLayerTopology
 @inline periodic(layer::AbstractIsingLayer) = periodic(top(layer))
-@inline setPeriodic!(layer::AbstractIsingLayer, periodic) = top!(layer, LayerTopology(top(layer); periodic))
+@inline setPeriodic!(layer::AbstractIsingLayer, periodic) = top!(layer, AbstractLayerTopology(top(layer); periodic))
 
 # TODO: Change this
 @inline dist(layer::AbstractIsingLayer, coords...) = dist(top(layer), coords...)

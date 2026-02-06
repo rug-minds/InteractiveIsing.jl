@@ -5,7 +5,7 @@ struct Coordinate{N,T} <: Base.AbstractCartesianIndex{N} # N dimensional coordin
     top::T
     coords::CartesianIndex{N}
 
-    function Coordinate(top::LayerTopology, n::Integer...; check = true)
+    function Coordinate(top::AbstractLayerTopology, n::Integer...; check = true)
         dims = length(size(top))
         @assert length(n) == dims "Number of coordinates $(length(n)) must match topology dimensions $dims"
 
@@ -24,7 +24,7 @@ end
 
 Coordinate(top, t::Tuple) = Coordinate(top, t...)
 Coordinate(top, ci::CartesianIndex) = Coordinate(top, ci.I...)
-Coordinate(top::LayerTopology, i::Int) = Coordinate(top, CartesianIndices(size(top))[i])
+Coordinate(top::AbstractLayerTopology, i::Int) = Coordinate(top, CartesianIndices(size(top))[i])
 Base.convert(::Type{<:CartesianIndex}, c::Coordinate) = c.coords
 
 offset(c::Coordinate, deltas...; check = false) = Coordinate(c.top, ntuple(i->c.coords[i]+deltas[i], length(c))...; check = false)
@@ -48,7 +48,7 @@ function delta(c1::Coordinate, c2::Coordinate)
     DeltaCoordinate(c1, ntuple(i->c2.coords[i]-c1.coords[i], length(c1.coords)), top = c1.top)
 end
 
-function delta(top::LayerTopology, ci1::CartesianIndex, ci2::CartesianIndex)
+function delta(top::AbstractLayerTopology, ci1::CartesianIndex, ci2::CartesianIndex)
     DeltaCoordinate(Coordinate(top, ci1), ntuple(i->ci2[i]-ci1[i], length(ci1)), top = top)
 end
 

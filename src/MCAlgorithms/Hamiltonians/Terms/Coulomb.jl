@@ -104,8 +104,11 @@ struct CoulombHamiltonian2{T,PT,PxyT,PiT,N} <: Hamiltonian
     σhat::Array{Complex{T},3}     # rfft(σ) over (x,y)
     uhat::Array{Complex{T},3}     # spectral potential (same size as σhat)
     u::Array{T,3}                 # real potential
-    ϵ::PT
+    scaling::PT
     screening::T
+    ax::T
+    ay::T
+    az::T
 
     Pxy::PxyT                     # plan_rfft for 2D slices
     iPxy::PiT                     # plan_irfft for 2D slices
@@ -117,9 +120,15 @@ end
 
 Base.size(c::CoulombHamiltonian2) = c.size
 
-function CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
+function CoulombHamiltonian2(
+    g::AbstractIsingGraph,
+    scaling::Real = 1.f0;
+    screening = 0.0
+)
     gdims = size(g[1])                 # (Nx,Ny,Nz-1)
     etype = eltype(g)
+
+    ax, ay, az = lattice_constants(top(g[1]))
 
     Nx, Ny, Nz_dip = gdims
     Nz = Nz_dip + 1                    # charge planes
@@ -146,25 +155,28 @@ function CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening 
     ky = Vector{etype}(undef, Ny)
 
     twoπ = etype(2) * etype(π)
+    ax = eltype(ax)
+    ay = eltype(ay)
+    az = eltype(az)
     @inbounds for i in 1:Nxh
         ii = i - 1
-        kx[i] = twoπ * ii / Nx
+        kx[i] = twoπ * ii / (Nx * ax)
     end
     @inbounds for j in 1:Ny
         jj = j - 1
-        ky[j] = twoπ * (jj <= Ny ÷ 2 ? jj : jj - Ny) / Ny
+        ky[j] = twoπ * (jj <= Ny ÷ 2 ? jj : jj - Ny) / (Ny * ay)
     end
 
-    eps = eltype(g)(eps)
-    ϵ = StaticParam(eps)
+    scaling = eltype(g)(scaling)
+    scaling = StaticParam(scaling)
 
     # clamp screening between 0 and 1
     screening = clamp(screening, 0.0, 1.0)
 
-    c = CoulombHamiltonian2{etype,typeof(ϵ),typeof(Pxy),typeof(iPxy),length(size(g))}(
-        size(g), σ, σhat, uhat, u, ϵ, screening,
-        Pxy, iPxy,
-        kx, ky, zf, zb
+    c = CoulombHamiltonian2{etype,typeof(scaling),typeof(Pxy),typeof(iPxy),length(size(g))}(
+        size(g), σ, σhat, uhat, u, scaling, screening,
+        ax, ay, az,
+        Pxy, iPxy, kx, ky, zf, zb
     )
     init!(c, g)
     c
@@ -185,13 +197,19 @@ function init!(c::CoulombHamiltonian2, g::AbstractIsingGraph)
         dip = state(g)[:,:,z]    # assumed Array{T,2}
         for j in 1:Ny, i in 1:Nx
             v = dip[i,j]
-            v = v*c.ϵ[] # Scaling factor dipole to charge
-            if z == 1 || z == Nz_dip
-                # Screening
-                v = v * (1 - c.screening)
+            v = v * c.scaling[] # Scaling factor dipole to charge
+            if z == 1
+                vscreened = v * (1 - c.screening)
+                σ[i,j,z]   -= vscreened
+                σ[i,j,z+1] += v
+            elseif z == Nz_dip
+                vscreened = v * (1 - c.screening)
+                σ[i,j,z]   -= v
+                σ[i,j,z+1] += vscreened
+            else
+                σ[i,j,z]   -= v
+                σ[i,j,z+1] += v
             end
-            σ[i,j,z]   -= v
-            σ[i,j,z+1] += v
         end
     end
     recalc!(c)
@@ -229,7 +247,7 @@ function recalc!(c::CoulombHamiltonian2{T}) where {T}
                 k  = hypot(kx, ky)
 
                 inv2k = inv(2k)
-                e = exp(-k)
+                e = exp(-k * c.az)
 
                 zf[1] = σhat[ix,iy,1]
                 @inbounds for z in 2:Nz
@@ -276,9 +294,31 @@ function ΔH(c::CoulombHamiltonian2{T,N}, params, proposal) where {T,N}
     Δcharge_below = -delta(proposal)
     Δcharge_above = delta(proposal)
 
-    ΔE_below = 2*Δcharge_below * c.u[charge_coord_below...]
-    ΔE_above = 2*Δcharge_above * c.u[charge_coord_above...]
+    ΔE_below = Δcharge_below * c.u[charge_coord_below...]
+    ΔE_above = Δcharge_above * c.u[charge_coord_above...]
     return ΔE_below + ΔE_above
+end
+
+update!(::Metropolis, c::CoulombHamiltonian2{T}, context) where {T} = begin
+    (;proposal) = context
+    if isaccepted(proposal)
+        spin_idx = at_idx(proposal)
+        spin_coord1 = idxToCoord(spin_idx, size(c))
+        spin_coord2 = (spin_coord1[1], spin_coord1[2], spin_coord1[3] + 1)
+        Δcharge1 = -delta(proposal)
+        Δcharge2 = delta(proposal)
+
+        # Take into account boundary screening
+        if spin_coord1[3] == 1
+            Δcharge1 *= (1 - c.screening)
+        elseif spin_coord1[3] == size(c, 3) - 1
+            Δcharge2 *= (1 - c.screening)
+        end
+
+        c.σ[spin_coord1...] += Δcharge1
+        c.σ[spin_coord2...] += Δcharge2
+        # recalc!(c)
+    end
 end
 
 

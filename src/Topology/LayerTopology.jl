@@ -1,49 +1,5 @@
-using LinearAlgebra
 
-export PeriodicityType, Periodic, NonPeriodic, PartPeriodic
-export periodic, periodicaxes
-abstract type PeriodicityType end
-struct Periodic <: PeriodicityType end
-struct PartPeriodic{T} <: PeriodicityType end
-parts(P::Type{<:PartPeriodic{Parts}}) where {Parts} = Parts
-parts(p::PartPeriodic) = parts(typeof(p))
-
-struct NonPeriodic <: PeriodicityType end
-
-const part_periodic_map = Dict(
-    :x => 1,
-    :y => 2,
-    :z => 3
-)
-
-map_pp_f(i::Integer) = i
-map_pp_f(symb::Symbol) = part_periodic_map[symb]
-
-
-function PartPeriodic(args...) 
-    # assert only has a combination of x y and z
-    @assert all(x -> x in (:x, :y, :z), args) || all(x -> x isa Integer && 1 <= x , args) "PartPeriodic only takes a combination of :x, :y, :z or integers"
-    args = tuple(map(map_pp_f, args)...)
-    return PartPeriodic{args}
-end
-
-periodic(p::PeriodicityType, symb::Symbol) = periodic(p, Val(symb))
-periodic(p::PeriodicityType, dim::Int) = periodic(p, Val(dim))
-
-@generated function periodic(P::PartPeriodic{Parts}, ::Val{dim}) where {Parts,dim}
-    if dim isa Symbol
-        dim = map_pp_f(dim)
-    end
-    found = findfirst(x -> x == dim, Parts)
-    return :($(!isnothing(found)))
-end
-
-
-periodic(P::Periodic, ::Val{symb}) where symb = true
-periodic(P::NonPeriodic, ::Val{symb}) where symb = false
-periodicaxes(P::PartPeriodic{Parts}, dims) where {Parts} = Parts
-periodicaxes(P::Periodic, dims) = ntuple(i -> i, dims)
-periodicaxes(P::NonPeriodic, dims) = tuple()
+export LatticeType, Square, Rectangular, Oblique, Hexagonal, Rhombic, AnyLattice
 
 
 
@@ -55,87 +11,11 @@ struct Hexagonal <: LatticeType end
 struct Rhombic <: LatticeType end
 struct AnyLattice <: LatticeType end
 
-export LatticeType, Square, Rectangular, Oblique, Hexagonal, Rhombic, AnyLattice
 
-struct GenericTopology{U} <: LayerTopology{U,0} end
-
-ndims(lt::LayerTopology) = length(size(lt))
-ndims(lt::Type{<:LayerTopology{U,DIM}}) where {U,DIM} = DIM
-
-@inline periodic(lt::LayerTopology{U}, symb) where U = periodic(U(), symb)
-@inline periodicaxes(lt::LayerTopology{U}) where U = periodicaxes(U(), length(size(lt)))
-@inline periodicaxes(lt::Type{<:LayerTopology{U,DIM}}) where {U,DIM} = periodicaxes(U(), DIM)
-
-@inline @generated function whichperiodic(lt::LayerTopology)
-    periodic = fill(false, ndims(lt))
-    for ax in periodicaxes(lt)
-        periodic[ax] = true
-    end
-    periodic = tuple(periodic...)
-    return :($periodic)
-end
-
-struct SquareTopology{U,DIMS, P <: AbstractFloat} <: LayerTopology{U, DIMS}
-    size::NTuple{DIMS,Int}
-    ds::MVector{DIMS, P}
-end
-
-function SquareTopology(size = tuple(); ds = tuple(fill(1.0, length(size))...), periodic::Union{Bool, <:Tuple, Nothing} = true)
-        U = nothing
-
-        @assert periodic == true ? !isempty(size) : true "Size must be given if periodic is true"
-        @assert length(ds) == length(size) "ds must be same length as size" 
-
-        if periodic isa Bool
-            U = periodic ? Periodic : NonPeriodic
-        elseif isnothing(periodic)
-            U = Periodic
-        else
-            U = PartPeriodic(periodic...) 
-        end
-        DIMS = length(size)
-        SquareTopology{U, DIMS, eltype(ds)}(size, tuple(ds...))
-end
-
-setdist!(lt::SquareTopology{U,DIMS,P}, ds::NTuple{DIMS,P}) where {U,DIMS,P} = begin lt.ds .= ds; lt end
-
-function (lt::SquareTopology{Periodic})(d::DeltaCoordinate)
-    @assert length(d) == length(size(lt))
-    function get_taurus_dist(di, size_i)
-        di = abs(di)
-        if di > size_i/2
-            di -= size_i
-        end
-        return di
-    end
-    DeltaCoordinate(ntuple(i -> get_taurus_dist(d.deltas[i], size(lt,i)), Val(length(d.deltas)))...)
-end
-
-function (lt::SquareTopology{NonPeriodic})(d::DeltaCoordinate)
-    return d
-end
-
-function Base.in(coord, lt::SquareTopology{NonPeriodic})
-    all(1 .<= coord .<= size(lt))
-end
-
-Base.in(coord, lt::SquareTopology{Periodic}) = true
-
-function Base.in(coord, lt::SquareTopology{P}) where {P <: PartPeriodic}
-    _isin = true
-    for (i,isperiodic) in enumerate(whichperiodic(lt))
-        if !_isin
-            break
-        end
-        if isperiodic
-            continue
-        end
-        _isin &= (1 <= coord[i] <= size(lt,i))
-    end
-    _isin
-end
-
-mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: LayerTopology{U, Dim} 
+"""
+General non-square layer topology
+"""
+mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: AbstractLayerTopology{U, Dim} 
     # layer::Union{Nothing, AbstractIsingGraph}
     pvecs::NTuple{Dim, SVector{Dim, Precision}}
     covecs::NTuple{Dim, SVector{Dim, Precision}}
@@ -237,27 +117,18 @@ mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: LayerTopo
     end
 end
 
-function coordwalk(lt::LayerTopology{U}, coords...) where U
-    if U isa Periodic
-        return ((coords[i] - 1) % size(lt, i) + 1 for i in 1:length(coords))
-    else
-        @assert all(1 .<= coords .<= size(lt)) "Coordinate out of bounds"
-        return coords
-    end
-end
-export coordwalk
 
-LatticeTopology(tp::LayerTopology; periodic::Bool) = LayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2]; periodic)
-LatticeTopology(tp::LayerTopology, pt::Type{<:PeriodicityType}) = LayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2], periodic = pt == Periodic ? true : false)
+LatticeTopology(tp::AbstractLayerTopology; periodic::Bool) = AbstractLayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2]; periodic)
+LatticeTopology(tp::AbstractLayerTopology, pt::Type{<:PeriodicityType}) = AbstractLayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2], periodic = pt == Periodic ? true : false)
 
 # changePeriodicity = 
-export LayerTopology
+export AbstractLayerTopology
 
-periodic(top::LayerTopology{T,U}) where {T,U} = T
-latticetype(top::LayerTopology{T,U}) where {T,U} = U
+periodic(top::AbstractLayerTopology{T,U}) where {T,U} = T
+latticetype(top::AbstractLayerTopology{T,U}) where {T,U} = U
 export periodic, latticetype
 @setterGetter LatticeTopology size
-Base.size(top::LayerTopology) = top.size
+Base.size(top::AbstractLayerTopology) = top.size
 Base.size(top, i) = top.size[i]
 
 function pos(i,j, pvecs)
@@ -269,164 +140,164 @@ export pos
 
 ###### Square Lattice
 ##########
-function dist(top::LayerTopology, coords::T...) where T
-    @inline sqrt(dist2(top, coords...))
-end
-
-# function dist(top::SquareTopology{P, 2}, i1, j1, i2, j2) where P
-   
+# function dist(top::AbstractLayerTopology, coords::T...) where T
+#     @inline sqrt(dist2(top, coords...))
 # end
 
-function dist2(top::SquareTopology{P, 2}, i1, j1, i2, j2) where P
-    di = abs(i1 - i2)
-    dj = abs(j1 - j2)
-    if periodic(top, :x) 
-        if di > size(top,1)/2
-            di -= size(top,1)
-        end
-    end
-    if periodic(top, :y)
-        if dj > size(top,2)/2
-            dj -= size(top,2)
-        end
-    end
+# # function dist(top::SquareTopology{P, 2}, i1, j1, i2, j2) where P
+   
+# # end
 
-    return di^2 + dj^2
-end
+# function dist2(top::SquareTopology{P, 2}, i1, j1, i2, j2) where P
+#     di = abs(i1 - i2)
+#     dj = abs(j1 - j2)
+#     if periodic(top, :x) 
+#         if di > size(top,1)/2
+#             di -= size(top,1)
+#         end
+#     end
+#     if periodic(top, :y)
+#         if dj > size(top,2)/2
+#             dj -= size(top,2)
+#         end
+#     end
 
-dist2(top::SquareTopology{P, 3}, (i1,j1,k1)::Tuple,(i2,j2,k2)::Tuple) where P = dist2(top, i1,j1,k1,i2,j2,k2)
+#     return di^2 + dj^2
+# end
 
-function dist2(top::SquareTopology{P,3}, i1,j1,k1,i2,j2,k2) where P
-    di = abs(i1 - i2)
-    dj = abs(j1 - j2)
-    dk = abs(k1 - k2)
-    if periodic(top, :x)
-        if di > size(top,1)/2
-            di -= size(top,1)
-        end
-    end
-    if periodic(top, :y)
-        if dj > size(top,2)/2
-            dj -= size(top,2)
-        end
-    end
-    if periodic(top, :z)
-        if dk > size(top,3)/2
-            dk -= size(top,3)
-        end
-    end
+# dist2(top::SquareTopology{P, 3}, (i1,j1,k1)::Tuple,(i2,j2,k2)::Tuple) where P = dist2(top, i1,j1,k1,i2,j2,k2)
+
+# function dist2(top::SquareTopology{P,3}, i1,j1,k1,i2,j2,k2) where P
+#     di = abs(i1 - i2)
+#     dj = abs(j1 - j2)
+#     dk = abs(k1 - k2)
+#     if periodic(top, :x)
+#         if di > size(top,1)/2
+#             di -= size(top,1)
+#         end
+#     end
+#     if periodic(top, :y)
+#         if dj > size(top,2)/2
+#             dj -= size(top,2)
+#         end
+#     end
+#     if periodic(top, :z)
+#         if dk > size(top,3)/2
+#             dk -= size(top,3)
+#         end
+#     end
     
 
-    return di^2 + dj^2 + dk^2
-end
+#     return di^2 + dj^2 + dk^2
+# end
 
-# If only two given must be indexes of the same layer (or in 1D case idx = i)
-function dist2(top::LayerTopology, idx1::Integer, idx2::Integer)
-    coords1 = idxToCoord(Int32(idx1), size(top))
-    coords2 = idxToCoord(Int32(idx2), size(top))
+# # If only two given must be indexes of the same layer (or in 1D case idx = i)
+# function dist2(top::AbstractLayerTopology, idx1::Integer, idx2::Integer)
+#     coords1 = idxToCoord(Int32(idx1), size(top))
+#     coords2 = idxToCoord(Int32(idx2), size(top))
 
-    return @inline dist2(top, coords1..., coords2...)
-end
+#     return @inline dist2(top, coords1..., coords2...)
+# end
 
-function dist2(top::LayerTopology, coords1::Tuple, coords2::Tuple)
-    return @inline dist2(top, coords1..., coords2...)
-end
+# function dist2(top::AbstractLayerTopology, coords1::Tuple, coords2::Tuple)
+#     return @inline dist2(top, coords1..., coords2...)
+# end
 
-function dist(top::LayerTopology, idx1::Integer, idx2::Integer)
-    return sqrt(dist2(top, idx1, idx2))
-end
+# function dist(top::AbstractLayerTopology, idx1::Integer, idx2::Integer)
+#     return sqrt(dist2(top, idx1, idx2))
+# end
 
-function dist(top::LayerTopology, coords1::Tuple, coords2::Tuple)
-    return sqrt(dist2(top, coords1, coords2))
-end
+# function dist(top::AbstractLayerTopology, coords1::Tuple, coords2::Tuple)
+#     return sqrt(dist2(top, coords1, coords2))
+# end
 
-export dist2, dist
+# export dist2, dist
 
-function getDistFunc(top::LT) where {LT <: LayerTopology}
-    return (i1,j1,i2,j2) -> dist(top, i1,j1,i2,j2)
-end
-  export getDistFunc
+# function getDistFunc(top::LT) where {LT <: AbstractLayerTopology}
+#     return (i1,j1,i2,j2) -> dist(top, i1,j1,i2,j2)
+# end
+#   export getDistFunc
 
 
-function (lt::LayerTopology)(y,x)
-    point = TwoVec(y,x)
-    comp1 = point ⋅ covecs(lt)[1]
-    comp2 = point ⋅ covecs(lt)[2]
+# function (lt::AbstractLayerTopology)(y,x)
+#     point = TwoVec(y,x)
+#     comp1 = point ⋅ covecs(lt)[1]
+#     comp2 = point ⋅ covecs(lt)[2]
 
-    return (comp1, comp2)
-end
+#     return (comp1, comp2)
+# end
 
-function latToPoint(layer, i::Integer, j::Integer)
-    tp = top(layer)
-    zag = i ÷ 2
-    zig = i - zag
-    zagvec = TwoVec(pvecs(tp)[1][1], -pvecs(tp)[1][2])
-    return zig*pvecs(tp)[1] + zag*zagvec + j*pvecs(tp)[2]
-end
-export latToPoint
+# function latToPoint(layer, i::Integer, j::Integer)
+#     tp = top(layer)
+#     zag = i ÷ 2
+#     zig = i - zag
+#     zagvec = TwoVec(pvecs(tp)[1][1], -pvecs(tp)[1][2])
+#     return zig*pvecs(tp)[1] + zag*zagvec + j*pvecs(tp)[2]
+# end
+# export latToPoint
 
-function dx(lt, per::Val{false}, coords1::Tuple, coords2::Tuple)
-    return abs(coords2[1] - coords1[1])
-end
+# function dx(lt, per::Val{false}, coords1::Tuple, coords2::Tuple)
+#     return abs(coords2[1] - coords1[1])
+# end
 
-function dx(lt, per::Val{true}, coords1::Tuple, coords2::Tuple)
-    di = coords2[1] - coords1[1]
-    if di > size(lt,1)/2
-        di -= size(lt,1)
-    end
-    return di
-end
+# function dx(lt, per::Val{true}, coords1::Tuple, coords2::Tuple)
+#     di = coords2[1] - coords1[1]
+#     if di > size(lt,1)/2
+#         di -= size(lt,1)
+#     end
+#     return di
+# end
 
-function dy(lt, per::Val{false}, coords1::Tuple, coords2::Tuple)
-    return abs(coords2[1] - coords1[1])
-end
+# function dy(lt, per::Val{false}, coords1::Tuple, coords2::Tuple)
+#     return abs(coords2[1] - coords1[1])
+# end
 
-function dy(lt, per::Val{true}, coords1::Tuple, coords2::Tuple)
-    dj = coords2[2] - coords1[2]
-    if dj > size(lt,2)/2
-        dj -= size(lt,2)
-    end
-    return dj
-end
+# function dy(lt, per::Val{true}, coords1::Tuple, coords2::Tuple)
+#     dj = coords2[2] - coords1[2]
+#     if dj > size(lt,2)/2
+#         dj -= size(lt,2)
+#     end
+#     return dj
+# end
 
-function dz(lt, per::Val{false}, coords1::Tuple, coords2::Tuple)
-    return abs(coords2[3] - coords1[3])
-end
+# function dz(lt, per::Val{false}, coords1::Tuple, coords2::Tuple)
+#     return abs(coords2[3] - coords1[3])
+# end
 
-function dz(lt, per::Val{true}, coords1::Tuple, coords2::Tuple)
-    dk = coords2[3] - coords1[3]
-    if dk > size(lt,3)/2
-        dk -= size(lt,3)
-    end
-    return dk
-end
+# function dz(lt, per::Val{true}, coords1::Tuple, coords2::Tuple)
+#     dk = coords2[3] - coords1[3]
+#     if dk > size(lt,3)/2
+#         dk -= size(lt,3)
+#     end
+#     return dk
+# end
 
-dxdy(lt::SquareTopology{P,2}, coords1::Tuple, coords2::Tuple) where P = (dx(lt, Val(periodic(lt,:x)), coords1, coords2), dy(lt, Val(periodic(lt,:y)), coords1, coords2))
+# dxdy(lt::SquareTopology{P,2}, coords1::Tuple, coords2::Tuple) where P = (dx(lt, Val(periodic(lt,:x)), coords1, coords2), dy(lt, Val(periodic(lt,:y)), coords1, coords2))
 
-dxdydz(lt::SquareTopology{P,3}, coords1::Tuple, coords2::Tuple) where P = (dx(lt, Val(periodic(lt,:x)), coords1, coords2), dy(lt, Val(periodic(lt,:y)), coords1, coords2), dz(lt, Val(periodic(lt,:z)), coords1, coords2))
+# dxdydz(lt::SquareTopology{P,3}, coords1::Tuple, coords2::Tuple) where P = (dx(lt, Val(periodic(lt,:x)), coords1, coords2), dy(lt, Val(periodic(lt,:y)), coords1, coords2), dz(lt, Val(periodic(lt,:z)), coords1, coords2))
 
-export dy, dx, dxdy
+# export dy, dx, dxdy
 
-function lat_mod_or_in(::P, coord::Integer, coordsize::Integer) where P <: PeriodicityType
-    if P == Periodic
-        return latmod(coord, coordsize)
-    elseif P == NonPeriodic
-        return inlat(coord, coordsize)
-    end
-end
+# function lat_mod_or_in(::P, coord::Integer, coordsize::Integer) where P <: PeriodicityType
+#     if P == Periodic
+#         return latmod(coord, coordsize)
+#     elseif P == NonPeriodic
+#         return inlat(coord, coordsize)
+#     end
+# end
 
-function lat_mod_or_in(top::LayerTopology{P,N}, coord::NTuple{N,Int32}, size::NTuple{N,Int32}) where {P<:PeriodicityType,N}
-    return ((lat_mod_or_in(coordperiodicity(top, coord_symbs[i]), coord[i], size[i]) for i in 1:N)...,)
-end
+# function lat_mod_or_in(top::AbstractLayerTopology{P,N}, coord::NTuple{N,Int32}, size::NTuple{N,Int32}) where {P<:PeriodicityType,N}
+#     return ((lat_mod_or_in(coordperiodicity(top, coord_symbs[i]), coord[i], size[i]) for i in 1:N)...,)
+# end
 
-function coordperiodicity(top::LayerTopology{Periodic}, symb)
-    return Periodic
-end
+# function coordperiodicity(top::AbstractLayerTopology{Periodic}, symb)
+#     return Periodic
+# end
 
-function coordperiodicity(top::LayerTopology{NonPeriodic}, symb)
-    return NonPeriodic
-end
+# function coordperiodicity(top::AbstractLayerTopology{NonPeriodic}, symb)
+#     return NonPeriodic
+# end
 
-function coordperiodicity(top::LayerTopology{PartPeriodic{Parts}}, symb) where {Parts}
-    return symb in Parts ? Periodic : NonPeriodic
-end
+# function coordperiodicity(top::AbstractLayerTopology{PartPeriodic{Parts}}, symb) where {Parts}
+#     return symb in Parts ? Periodic : NonPeriodic
+# end
