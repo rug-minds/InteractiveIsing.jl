@@ -105,6 +105,7 @@ struct CoulombHamiltonian2{T,PT,PxyT,PiT,N} <: Hamiltonian
     uhat::Array{Complex{T},3}     # spectral potential (same size as σhat)
     u::Array{T,3}                 # real potential
     ϵ::PT
+    screening:T
 
     Pxy::PxyT                     # plan_rfft for 2D slices
     iPxy::PiT                     # plan_irfft for 2D slices
@@ -116,7 +117,7 @@ end
 
 Base.size(c::CoulombHamiltonian2) = c.size
 
-function CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real)
+function CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
     gdims = size(g[1])                 # (Nx,Ny,Nz-1)
     etype = eltype(g)
 
@@ -154,10 +155,11 @@ function CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real)
         ky[j] = twoπ * (jj <= Ny ÷ 2 ? jj : jj - Ny) / Ny
     end
 
+    eps = eltype(g)(eps)
     ϵ = StaticParam(eps)
 
     c = CoulombHamiltonian2{etype,typeof(ϵ),typeof(Pxy),typeof(iPxy),length(size(g))}(
-        size(g), σ, σhat, uhat, u, ϵ,
+        size(g), σ, σhat, uhat, u, ϵ, screening,
         Pxy, iPxy,
         kx, ky, zf, zb
     )
@@ -176,9 +178,15 @@ function init!(c::CoulombHamiltonian2, g::AbstractIsingGraph)
 
     # accumulate bound charges from dipoles
     @inbounds for z in 1:Nz_dip
+        
         dip = state(g)[:,:,z]    # assumed Array{T,2}
         for j in 1:Ny, i in 1:Nx
             v = dip[i,j]
+            v = v*c.ϵ # Scaling factor dipole to charge
+            if z == 1 || z == Nz_dip
+                # Screening
+                v = v * (1 - c.screening)
+            end
             σ[i,j,z]   -= v
             σ[i,j,z+1] += v
         end
