@@ -2,32 +2,7 @@ function createProcess(g::IsingGraph, func = nothing; run = true, threaded = tru
     if isnothing(func)
         func = get(args, :algorithm, g.default_algorithm)
     end
-    # destructed_graph = Destructure(g)
-    # algo = IsingMetropolis()
-    # algo = SimpleAlgo(tuple(func))
-    targetalgo = func
-    if func isa Processes.LoopAlgorithm
-        
-        flat_algos, _ = Processes.flatten_loopalgorithms(func)
-        for algo in flat_algos
-            @show algo
-            if Processes.match(algo, Processes.TypeMatcher(Metropolis))
-                targetalgo = algo
-                @show targetalgo
-                break
-            end
-        end
-    end
-    #     for algo in func
-    #         # if Processes.match(algo, Metropolis()) || Processes.match(algo, Metropolis)
-    #         if Processes.match(algo, Processes.TypeMatcher{Metropolis}())
-    #             targetalgo = algo
-    #             @show targetalgo
-    #             break
-    #         end
-    #     end
-    # end
-    process = Process(targetalgo, Input(targetalgo, structure = g); lifetime)
+    process = Process(func, Input(DestructureInput(), structure = g); lifetime)
     
     ps = processes(g)
     push!(ps, process)

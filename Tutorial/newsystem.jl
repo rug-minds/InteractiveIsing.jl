@@ -328,7 +328,6 @@ g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
 # Launch interactive visualization (idle until createProcess(...) later)
-interface(g)
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
 
@@ -369,7 +368,6 @@ lambda = 0.1
 # refresh(g)
 
 g.hamiltonian = Ising(g)
-refresh(g)
 
 ### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic
@@ -408,8 +406,14 @@ Pulse_and_Relax = Routine((metropolis, pulse_part1, pulse_part2, metropolis, ann
     Route(Metropolis(), pulse1, :hamiltonian, :M), 
     Route(Metropolis(), pulse2, :hamiltonian, :M),
     Route(Metropolis(), Anealing1, :isinggraph),
+    Route(DestructureInput(), Metropolis(), :isinggraph => :structure) # THIS ONE WILL BE REMOVED LATER
     )
+
+
+p = Process(Pulse_and_Relax, Input(DestructureInput(), structure = g); lifetime = 1)
+
 createProcess(g, Pulse_and_Relax, lifetime = 1)
+# interface(g)
 
 # getcontext(g)
 # getcontext(g)[pulse1]
