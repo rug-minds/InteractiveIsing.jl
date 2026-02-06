@@ -19,7 +19,7 @@ Common constructors and helpers:
 
 - `IdentifiableAlgo(f, name::Symbol, id = nothing)`: wrap `f` with explicit name/id.
   If `f` is already scoped, it is re-scoped to the new name.
-- `Autoname(f, i::Int, prefix = "", id = nothing)`: generate a name like
+- `Autokey(f, i::Int, prefix = "", id = nothing)`: generate a name like
   `$(prefix)$(nameof(typeof(f)))_$(i)` and keep the optional `id`.
 - `DefaultScope(f, prefix = "")`: name like `$(prefix)$(nameof(typeof(f)))_0` and
   set `id = :default`.
