@@ -46,16 +46,16 @@ Collect all pairs from all hamiltonian terms
     return :(pairs($(tuple_exp)))
 end
 
-function _paramnames(h::Type{<:Hamiltonian}, all_names = Symbol[])
+function _paramnames(h::Type{<:Hamiltonian}, all_keys = Symbol[])
     for h in getHS(h)
         if h <: AbstractHamiltonianTerms
-            _paramnames(h, all_names)
+            _paramnames(h, all_keys)
         else
             fnames = fieldnames(h)
             ftypes = fieldtypes(h)
             for (idx, name) in enumerate(fnames)
                 if ftypes[idx] <: ParamTensor
-                    push!(all_names, name)
+                    push!(all_keys, name)
                 end
             end
         end
@@ -67,13 +67,13 @@ end
     """
     @generated function paramnames(h::Union{Hamiltonian, AbstractHamiltonianTerms})
         h = getHS(h)
-        all_names = Symbol[]
+        all_keys = Symbol[]
         _fieldnames = fieldnames.(h)
         _fieldtypes = fieldtypes.(h)
         for i in eachindex(_fieldnames)
-            _paramnames(h[i], all_names)
+            _paramnames(h[i], all_keys)
         end
-        paramtensor_params = (all_names...,)
+        paramtensor_params = (all_keys...,)
         return (:($paramtensor_params))
     end
 

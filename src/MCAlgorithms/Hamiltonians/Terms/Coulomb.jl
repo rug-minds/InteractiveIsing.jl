@@ -259,7 +259,8 @@ function recalc!(c::CoulombHamiltonian2{T}) where {T}
                 end
                 
                 @inbounds for z in 1:Nz
-                    uhat[ix,iy,z] = (zf[z] + zb[z] - σhat[ix,iy,z]) * inv2k
+                    # Use convention E = -1/2 Σ σ_i u_i, so u = -Kσ
+                    uhat[ix,iy,z] = -(zf[z] + zb[z] - σhat[ix,iy,z]) * inv2k
                 end
             end
         end
