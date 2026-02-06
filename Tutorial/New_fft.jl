@@ -357,8 +357,8 @@ Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
 
 ### Set hamiltonian with selfenergy and depolarization field
 # CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
-g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 1, screening = 0.1)
-# refresh(g)
+g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 1, screening = 0.5)
+refresh(g)
 
 ### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic
@@ -368,7 +368,7 @@ g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 1, screening = 0.1)
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 homogeneousself!(g,a1)
 
-Temperature=0.1
+Temperature=0.5
 temp(g,Temperature)
 
 ### Run simulation process
@@ -378,13 +378,13 @@ anneal_time = fullsweep*5000
 pulsetime = fullsweep*5000
 relaxtime = fullsweep*5000
 point_repeat = time_fctr*fullsweep
-pulse1 = TrianglePulseA(2, 2)
+pulse1 = TrianglePulseA(5, 2)
 pulse2 = SinPulseA(20, 1)
 pulse3 = Unique(SinPulseA(5, 1))
 
 Anealing1 = LinAnealingA(2f0, 1f0)
 metropolis = g.default_algorithm
-metropolis = CompositeAlgorithm((metropolis, Recalc(3)), (1,100))
+metropolis = CompositeAlgorithm((metropolis, Recalc(3)), (1,200))
 
 pulse_part1 = CompositeAlgorithm((metropolis, pulse1), (1, point_repeat))
 pulse_part2 = CompositeAlgorithm((metropolis, pulse2, ), (1, point_repeat))
@@ -416,15 +416,15 @@ createProcess(g, Pulse_and_Relax, lifetime = 1)
 ### estimate time
 # est_remaining(process(g))
 # Wait until it is done
-# c = process(g) |> fetch # If you want to close ctr+c
-# voltage1= c[pulse1].x
-# Pr1= c[pulse1].y
+c = process(g) |> fetch # If you want to close ctr+c
+voltage1= c[pulse1].x
+Pr1= c[pulse1].y
 
-# # Voltage2 = c[pulse2].x
-# # Pr2 = c[pulse2].y
+# Voltage2 = c[pulse2].x
+# Pr2 = c[pulse2].y
 
-# w2=newmakie(lines, voltage1, Pr1)
-# w3=newmakie(lines,Pr1)
+w2=newmakie(lines, voltage1, Pr1)
+w3=newmakie(lines,Pr1)
 
 # w4=newmakie(lines, Voltage2, Pr2)
 # w5=newmakie(lines,Pr2)
