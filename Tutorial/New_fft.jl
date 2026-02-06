@@ -334,7 +334,7 @@ end
 
 xL = 20  # Length in the x-dimension
 yL = 20  # Length in the y-dimension
-zL = 20   # Length in the z-dimension
+zL = 10   # Length in the z-dimension
 g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
@@ -344,7 +344,6 @@ g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
 
 #### Weight function setup (Connection setup)
-
 #### Set the distance scaling
 setdist!(g, (1.0,1.0,1.0))
 
@@ -355,7 +354,7 @@ setdist!(g, (1.0,1.0,1.0))
 # wg3 = @WG weightfunc_angle_anti NN = 3
 # wg4 = @WG weightfunc_angle_ferro NN = 3
 ### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
-wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 2, 2, 1, 0.3, 0.1, 0.5) NN = 3
+wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 0.5, 0.1, 0.5) NN = 3
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
@@ -368,10 +367,6 @@ Ex = range(-1.0, 1.0, length=1000)
 Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
 
 ### Set hamiltonian with selfenergy and depolarization field
-Layer_Dep = 1
-Cdep=120
-Cz = 0.1
-lambda = 0.1
 g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 1)
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(20,20,4)) + Quartic(g) + Sextic(g)
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((z-1)/lambda) , NN=8)
@@ -395,29 +390,37 @@ fullsweep = xL*yL*zL
 time_fctr = 1
 anneal_time = fullsweep*5000
 pulsetime = fullsweep*5000
-relaxtime = fullsweep*1000
+relaxtime = fullsweep*5000
 point_repeat = time_fctr*fullsweep
-pulse1 = TrianglePulseA(2, 1)
-pulse2 = SinPulseA(2, 1)
-pulse3 = Unique(SinPulseA(3, 1))
+pulse1 = TrianglePulseA(2, 2)
+pulse2 = SinPulseA(20, 1)
+pulse3 = Unique(SinPulseA(5, 1))
 
 Anealing1 = LinAnealingA(2f0, 1f0)
 metropolis = g.default_algorithm
-metropolis = CompositeAlgorithm((metropolis, Recalc(3)), (1,200))
+metropolis = CompositeAlgorithm((metropolis, Recalc(3)), (1,100))
 
 pulse_part1 = CompositeAlgorithm((metropolis, pulse1), (1, point_repeat))
 pulse_part2 = CompositeAlgorithm((metropolis, pulse2, ), (1, point_repeat))
 
 anneal_part1 = CompositeAlgorithm((metropolis, Anealing1), (1, point_repeat))
 
-# Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse, :M, :hamiltonian))
+# Pulse_and_Relax = Routine((pulse_part1, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian))
 # Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
-Pulse_and_Relax = Routine((metropolis, pulse_part1, pulse_part2, metropolis, anneal_part1), 
-    (relaxtime, pulsetime, pulsetime, relaxtime, anneal_time), 
+# Pulse_and_Relax = Routine((metropolis, pulse_part1, pulse_part2, metropolis, anneal_part1), 
+#     (relaxtime, pulsetime, pulsetime, relaxtime, anneal_time), 
+#     Route(Metropolis(), pulse1, :hamiltonian, :M), 
+#     Route(Metropolis(), pulse2, :hamiltonian, :M),
+#     Route(Metropolis(), Anealing1, :isinggraph),
+#     Route(Metropolis(), Recalc(3), :hamiltonian),
+#     )
+# createProcess(g, Pulse_and_Relax, lifetime = 1)
+
+Pulse_and_Relax = Routine((pulse_part1, metropolis, ), 
+    (pulsetime, relaxtime), 
     Route(Metropolis(), pulse1, :hamiltonian, :M), 
-    Route(Metropolis(), pulse2, :hamiltonian, :M),
-    Route(Metropolis(), Anealing1, :isinggraph),
     Route(Metropolis(), Recalc(3), :hamiltonian),
+    Route(DestructureInput(), Metropolis(), :isinggraph => :structure) # THIS ONE WILL BE REMOVED LATER
     )
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 
@@ -427,18 +430,18 @@ createProcess(g, Pulse_and_Relax, lifetime = 1)
 ### estimate time
 # est_remaining(process(g))
 # Wait until it is done
-c = process(g) |> fetch # If you want to close ctr+c
-voltage1= c[pulse1].x
-Pr1= c[pulse1].y
+# c = process(g) |> fetch # If you want to close ctr+c
+# voltage1= c[pulse1].x
+# Pr1= c[pulse1].y
 
-Voltage2 = c[pulse2].x
-Pr2 = c[pulse2].y
+# # Voltage2 = c[pulse2].x
+# # Pr2 = c[pulse2].y
 
-w2=newmakie(lines, voltage1, Pr1)
-w3=newmakie(lines,Pr1)
+# w2=newmakie(lines, voltage1, Pr1)
+# w3=newmakie(lines,Pr1)
 
-w4=newmakie(lines, Voltage2, Pr2)
-w5=newmakie(lines,Pr2)
+# w4=newmakie(lines, Voltage2, Pr2)
+# w5=newmakie(lines,Pr2)
 
 
 # show_connections(g,1,1,1)
