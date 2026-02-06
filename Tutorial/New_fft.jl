@@ -129,7 +129,6 @@ function weightfunc_shell(dr, c1, c2, ax, ay, az, csr, lambda1, lambda2)
     # return Jdip + Jsr
     return Jsr
 end
-
 # Skymion-like coupling
 function weightfunc_skymion(dr,c1,c2)
     d = delta(c1, c2)
@@ -305,22 +304,18 @@ function Processes.step!(::LinAnealingA, context::C) where C
 end
 ### struct end: TemAnealingA
 ##################################################################################
-
 struct ValueLogger{Name} <: ProcessAlgorithm end
 ValueLogger(name) = ValueLogger{Symbol(name)}()
-
 function Processes.prepare(::ValueLogger, args)
     values = Float32[]
     processsizehint!(values, args)
     (;values)
 end
-
 function Processes.step!(::ValueLogger, context::C) where C
     (;values, value) = context
     push!(values, value)
     return (;)
 end
-
 ##################################################################################
 struct Recalc <: Processes.ProcessAlgorithm 
     i::Int
@@ -347,14 +342,8 @@ g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 #### Set the distance scaling
 setdist!(g, (1.0,1.0,1.0))
 
-# wg1 = @WG weightfunc_xy_dilog_antiferro NN = (2,2,2)
-# wg1 = @WG weightfunc1
-# wg1 = @WG weightfunc1
-# wg2 = @WG weightfunc2 NN = (2,2,2)
-# wg3 = @WG weightfunc_angle_anti NN = 3
-# wg4 = @WG weightfunc_angle_ferro NN = 3
 ### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
-wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 0.5, 0.1, 0.5) NN = 3
+wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 0.7, 0.1, 0.5) NN = 3
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
@@ -367,12 +356,9 @@ Ex = range(-1.0, 1.0, length=1000)
 Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
 
 ### Set hamiltonian with selfenergy and depolarization field
-g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 1)
-# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(20,20,4)) + Quartic(g) + Sextic(g)
-# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((z-1)/lambda) , NN=8)
-# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz , NN=20)
-# refresh(g
-# g.hamiltonian = Ising(g)
+# CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
+g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 1, screening = 0.1)
+# refresh(g)
 
 ### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic
@@ -382,7 +368,7 @@ g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 1)
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 homogeneousself!(g,a1)
 
-Temperature=1
+Temperature=0.1
 temp(g,Temperature)
 
 ### Run simulation process
