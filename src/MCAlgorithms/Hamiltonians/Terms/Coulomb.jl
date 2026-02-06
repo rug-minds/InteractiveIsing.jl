@@ -217,6 +217,7 @@ function init!(c::CoulombHamiltonian2, g::AbstractIsingGraph)
 end
 
 function recalc!(c::CoulombHamiltonian2{T}) where {T}
+    σ    = c.σ
     σhat = c.σhat
     uhat = c.uhat
     u    = c.u
@@ -224,30 +225,30 @@ function recalc!(c::CoulombHamiltonian2{T}) where {T}
     zb   = c.zb
 
     Nx, Ny, Nz = size(u)
-    Nxh = size(σhat, 1)
+    Nxh        = size(σhat, 1)
 
     # 1) rFFT x,y for each z: σhat[:,:,z] := rfft(σ[:,:,z])
     @inbounds for z in 1:Nz
-        sh = @view σhat[:,:,z]
-        s  = @view c.σ[:,:,z]
+        s  = @view σ[:, :, z]
+        sh = @view σhat[:, :, z]
         mul!(sh, c.Pxy, s)
     end
 
-    # 2) z-coupling in Fourier domain
-    # uhat[ix,iy,z] = Σ_zp exp(-k|z-zp|)/(2k) * σhat[ix,iy,zp]
+    # 2) z-coupling in Fourier domain for k>0 modes
+    #    uhat[ix,iy,z] = Σ_zp exp(-k|z-zp|)/(2k) * σhat[ix,iy,zp]
     @inbounds begin
-        fill!((@view uhat[1,1,:]), zero(Complex{T}))
+        fill!((@view uhat[1,1,:]), zero(Complex{T}))   # k=0 模式稍后单独处理
         for iy in 1:Ny
             ky = c.ky[iy]
             for ix in 1:Nxh
                 if ix == 1 && iy == 1
-                    continue
+                    continue                         # (kx,ky) = (0,0) 留给专门的 k=0 处理
                 end
                 kx = c.kx[ix]
                 k  = hypot(kx, ky)
 
                 inv2k = inv(2k)
-                e = exp(-k * c.az)
+                e     = exp(-k * c.az)
 
                 zf[1] = σhat[ix,iy,1]
                 @inbounds for z in 2:Nz
@@ -257,7 +258,7 @@ function recalc!(c::CoulombHamiltonian2{T}) where {T}
                 @inbounds for z in (Nz-1):-1:1
                     zb[z] = σhat[ix,iy,z] + e * zb[z+1]
                 end
-                
+
                 @inbounds for z in 1:Nz
                     uhat[ix,iy,z] = (zf[z] + zb[z] - σhat[ix,iy,z]) * inv2k
                 end
@@ -265,10 +266,26 @@ function recalc!(c::CoulombHamiltonian2{T}) where {T}
         end
     end
 
-    # 3) inverse rFFT x,y for each z, write directly into u
+    # 3) k=0 模式的 z 方向卷积：G0(z,z') ~ -|z-z'|/2（差一个常数对 ΔH 无影响）
+    @inbounds begin
+        sh0 = @view σhat[1,1,:]    # (kx,ky) = (0,0) 的面电荷谱
+        uh0 = @view uhat[1,1,:]
+
+        for z in 1:Nz
+            acc = zero(Complex{T})
+            for zp in 1:Nz
+                # 物理距离 |z-z'| * az，对 kernel 取 -|z-z'|/2
+                dist = T(abs(z - zp)) * c.az
+                acc += (dist * T(-0.5)) * sh0[zp]
+            end
+            uh0[z] = acc
+        end
+    end
+
+    # 4) inverse rFFT x,y for each z, write directly into u
     @inbounds for z in 1:Nz
-        uh = @view uhat[:,:,z]
-        uz = @view u[:,:,z]
+        uh = @view uhat[:, :, z]
+        uz = @view u[:, :, z]
         mul!(uz, c.iPxy, uh)
     end
 
@@ -302,22 +319,27 @@ end
 update!(::Metropolis, c::CoulombHamiltonian2{T}, context) where {T} = begin
     (;proposal) = context
     if isaccepted(proposal)
+        # 和 ΔH 一样，用自旋所在的 dipole 坐标推两层电荷平面
         spin_idx = at_idx(proposal)
-        spin_coord1 = idxToCoord(spin_idx, size(c))
-        spin_coord2 = (spin_coord1[1], spin_coord1[2], spin_coord1[3] + 1)
-        Δcharge1 = -delta(proposal)
-        Δcharge2 = delta(proposal)
+        coord_below = idxToCoord(spin_idx, size(c))
+        coord_above = (coord_below[1], coord_below[2], coord_below[3] + 1)
 
-        # Take into account boundary screening
-        if spin_coord1[3] == 1
-            Δcharge1 *= (1 - c.screening)
-        elseif spin_coord1[3] == size(c, 3) - 1
-            Δcharge2 *= (1 - c.screening)
+        # dipole → charge 的缩放也要加进来
+        Δq_below = -delta(proposal) * c.scaling[]
+        Δq_above =  delta(proposal) * c.scaling[]
+
+        # 表面 screening：z=1 和 z=Nz 的电荷需要乘 (1-screening)
+        Nz = size(c.σ, 3)   # 真实电荷平面的层数（比 dipole 多 1 层）
+        if coord_below[3] == 1
+            Δq_below *= (1 - c.screening)
+        end
+        if coord_above[3] == Nz
+            Δq_above *= (1 - c.screening)
         end
 
-        c.σ[spin_coord1...] += Δcharge1
-        c.σ[spin_coord2...] += Δcharge2
-        # recalc!(c)
+        c.σ[coord_below...] += Δq_below
+        c.σ[coord_above...] += Δq_above
+        # 场的重算交给外面的 Recalc 进程周期性处理
     end
 end
 
