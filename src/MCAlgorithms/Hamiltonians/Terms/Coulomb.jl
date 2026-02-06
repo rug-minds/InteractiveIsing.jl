@@ -185,7 +185,7 @@ function init!(c::CoulombHamiltonian2, g::AbstractIsingGraph)
         dip = state(g)[:,:,z]    # assumed Array{T,2}
         for j in 1:Ny, i in 1:Nx
             v = dip[i,j]
-            v = v*c.ϵ # Scaling factor dipole to charge
+            v = v*c.ϵ[] # Scaling factor dipole to charge
             if z == 1 || z == Nz_dip
                 # Screening
                 v = v * (1 - c.screening)
