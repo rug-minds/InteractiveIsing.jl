@@ -155,9 +155,9 @@ function CoulombHamiltonian2(
     ky = Vector{etype}(undef, Ny)
 
     twoπ = etype(2) * etype(π)
-    ax = eltype(ax)
-    ay = eltype(ay)
-    az = eltype(az)
+    ax = eltype(g)(ax)
+    ay = eltype(g)(ay)
+    az = eltype(g)(az)
     @inbounds for i in 1:Nxh
         ii = i - 1
         kx[i] = twoπ * ii / (Nx * ax)
