@@ -105,7 +105,7 @@ struct CoulombHamiltonian2{T,PT,PxyT,PiT,N} <: Hamiltonian
     uhat::Array{Complex{T},3}     # spectral potential (same size as σhat)
     u::Array{T,3}                 # real potential
     ϵ::PT
-    screening:T
+    screening::T
 
     Pxy::PxyT                     # plan_rfft for 2D slices
     iPxy::PiT                     # plan_irfft for 2D slices
@@ -157,6 +157,9 @@ function CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening 
 
     eps = eltype(g)(eps)
     ϵ = StaticParam(eps)
+
+    # clamp screening between 0 and 1
+    screening = clamp(screening, 0.0, 1.0)
 
     c = CoulombHamiltonian2{etype,typeof(ϵ),typeof(Pxy),typeof(iPxy),length(size(g))}(
         size(g), σ, σhat, uhat, u, ϵ, screening,
