@@ -64,7 +64,6 @@ function weightfunc_angle_anti(dr, c1, c2)
     rz = az*dz
 
     r2 = rx^2 + ry^2 + rz^2
-
     r  = sqrt(r2)
 
     cosθ = rz / r              # 与 z 轴夹角的 cos
@@ -207,13 +206,9 @@ function Processes.prepare(tp::TrianglePulseA, args)
     pulse = vcat(first, second, third, fourth)
     pulse = repeat(pulse, numpulses)
 
-    if steps < length(pulse)
-        "Wrong length"
-    else
-        fix_num = num_calls(args) - length(pulse)
-        fix_arr = zeros(Int, fix_num)
-        pulse   = vcat(pulse, fix_arr)
-    end
+    fix_num = num_calls(args) - length(pulse)
+    fix_arr = zeros(Int, fix_num)
+    pulse   = vcat(pulse, fix_arr)
 
     # Predefine storage arrays
     step = 1
@@ -247,12 +242,9 @@ function Processes.prepare(tp::SinPulseA, args)
 
     theta = LinRange(0, max_theta, round(Int,steps))
     sins = amp .* sin.(theta)
-
     step = 1
-
     return (;sins, step, pulseval = sins[1])
 end
-
 function Processes.step!(::SinPulseA, context::C) where C
     (;sins, step, hamiltonian) = context
     pulse_val = sins[step]
@@ -309,9 +301,9 @@ function Processes.step!(r::Recalc, context)
 end
 ##################################################################################
 
-xL = 20  # Length in the x-dimension
-yL = 20  # Length in the y-dimension
-zL = 10   # Length in the z-dimension
+xL = 80  # Length in the x-dimension
+yL = 80  # Length in the y-dimension
+zL = 20   # Length in the z-dimension
 g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
@@ -319,27 +311,28 @@ II.makie_markersize[] = 0.3
 interface(g)
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
+# a1, b1, c1 = -20, 16, 0 
+a1, b1, c1 = 0, 0, 0 
+Ex = range(-1.0, 1.0, length=1000)
+Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
 
 #### Weight function setup (Connection setup)
 #### Set the distance scaling
-setdist!(g, (1.0,1.0,10.0))
+setdist!(g, (1.0,1.0,1.0))
 
 ### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
-wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 0.3, 0.1, 0.5) NN = 3
+wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 1, 0.1, 0.1) NN = 3
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
 
 genAdj!(g, wg5)
 
-# a1, b1, c1 = -20, 16, 0 
-a1, b1, c1 = 0, 0, 0 
-Ex = range(-1.0, 1.0, length=1000)
-Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
+
 
 ### Set hamiltonian with selfenergy and depolarization field
 # CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
-g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 1, screening = 0.1)
+g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 4, screening = 0.1)
 refresh(g)
 
 ### Use ii. to check if the terms are correct
@@ -350,7 +343,7 @@ refresh(g)
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 homogeneousself!(g,a1)
 
-Temperature=0.5
+Temperature=1
 temp(g,Temperature)
 
 ### Run simulation process
@@ -360,7 +353,7 @@ anneal_time = fullsweep*5000
 pulsetime = fullsweep*5000
 relaxtime = fullsweep*5000
 point_repeat = time_fctr*fullsweep
-pulse1 = TrianglePulseA(5, 2)
+pulse1 = TrianglePulseA(20, 2)
 pulse2 = SinPulseA(20, 1)
 pulse3 = Unique(SinPulseA(5, 1))
 
@@ -416,11 +409,10 @@ Pr1= c[M_logger].values
 # Pr2 = c[pulse2].y
 
 w2=newmakie(lines, voltage1, Pr1)
-w3=newmakie(lines,Pr1)
+w3=newmakie(lines, Pr1)
 
 # w4=newmakie(lines, Voltage2, Pr2)
 # w5=newmakie(lines,Pr2)
-
 
 # show_connections(g,1,1,1)
 # visualize_connections(g)
