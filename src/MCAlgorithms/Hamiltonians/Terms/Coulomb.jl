@@ -1,5 +1,5 @@
 # TODO: We need a conversion factor from dipole to charge
-export CoulombHamiltonian, CoulombHamiltonian2, init!, recalc!, ΔH, update!
+export CoulombHamiltonian, CoulombHamiltonian2, init!, recalc!, recalcnew, ΔH, update!
 """
 """
 struct CoulombHamiltonian{T,PT} <: Hamiltonian
@@ -116,6 +116,10 @@ struct CoulombHamiltonian2{T,PT,PxyT,PiT,N} <: Hamiltonian
     ky::Vector{T}
     zf::Vector{Complex{T}}        # forward recursion scratch
     zb::Vector{Complex{T}}        # backward recursion scratch
+    inv2k::Matrix{T}              # precomputed 1/(2k) for each (kx,ky)
+    ez::Matrix{T}                 # precomputed exp(-k*az) for each (kx,ky)
+    zf_threads::Vector{Vector{Complex{T}}}  # per-thread forward recursion scratch
+    zb_threads::Vector{Vector{Complex{T}}}  # per-thread backward recursion scratch
 end
 
 Base.size(c::CoulombHamiltonian2) = c.size
@@ -167,6 +171,24 @@ function CoulombHamiltonian2(
         ky[j] = twoπ * (jj <= Ny ÷ 2 ? jj : jj - Ny) / (Ny * ay)
     end
 
+    inv2k = zeros(etype, Nxh, Ny)
+    ez    = zeros(etype, Nxh, Ny)
+    @inbounds for iy in 1:Ny
+        kyv = ky[iy]
+        for ix in 1:Nxh
+            if ix == 1 && iy == 1
+                continue
+            end
+            kv = hypot(kx[ix], kyv)
+            inv2k[ix, iy] = inv(etype(2) * kv)
+            ez[ix, iy] = exp(-kv * az)
+        end
+    end
+
+    nthreads = Threads.nthreads()
+    zf_threads = [Vector{Complex{etype}}(undef, Nz) for _ in 1:nthreads]
+    zb_threads = [Vector{Complex{etype}}(undef, Nz) for _ in 1:nthreads]
+
     scaling = eltype(g)(scaling)
     scaling = StaticParam(scaling)
 
@@ -176,7 +198,7 @@ function CoulombHamiltonian2(
     c = CoulombHamiltonian2{etype,typeof(scaling),typeof(Pxy),typeof(iPxy),length(size(g))}(
         size(g), σ, σhat, uhat, u, scaling, screening,
         ax, ay, az,
-        Pxy, iPxy, kx, ky, zf, zb
+        Pxy, iPxy, kx, ky, zf, zb, inv2k, ez, zf_threads, zb_threads
     )
     init!(c, g)
     c
@@ -270,6 +292,65 @@ function recalc!(c::CoulombHamiltonian2{T}) where {T}
     @inbounds for z in 1:Nz
         uh = @view uhat[:,:,z]
         uz = @view u[:,:,z]
+        mul!(uz, c.iPxy, uh)
+    end
+
+    return u
+end
+
+function recalcnew(c::CoulombHamiltonian2{T}) where {T}
+    σhat = c.σhat
+    uhat = c.uhat
+    u    = c.u
+
+    Nx, Ny, Nz = size(u)
+    Nxh = size(σhat, 1)
+
+    # 1) rFFT x,y for each z: σhat[:,:,z] := rfft(σ[:,:,z])
+    @inbounds for z in 1:Nz
+        sh = @view σhat[:, :, z]
+        s  = @view c.σ[:, :, z]
+        mul!(sh, c.Pxy, s)
+    end
+
+    # 2) z-coupling in Fourier domain, threaded by spectral mode
+    @inbounds begin
+        fill!((@view uhat[1, 1, :]), zero(Complex{T}))
+        nmodes = Nxh * Ny
+        Threads.@threads for mode in 1:nmodes
+            iy = ((mode - 1) ÷ Nxh) + 1
+            ix = mode - (iy - 1) * Nxh
+            if ix == 1 && iy == 1
+                continue
+            end
+
+            inv2k = c.inv2k[ix, iy]
+            e = c.ez[ix, iy]
+
+            tid = Threads.threadid()
+            zf = c.zf_threads[tid]
+            zb = c.zb_threads[tid]
+
+            zf[1] = σhat[ix, iy, 1]
+            for z in 2:Nz
+                zf[z] = σhat[ix, iy, z] + e * zf[z - 1]
+            end
+
+            zb[Nz] = σhat[ix, iy, Nz]
+            for z in (Nz - 1):-1:1
+                zb[z] = σhat[ix, iy, z] + e * zb[z + 1]
+            end
+
+            for z in 1:Nz
+                uhat[ix, iy, z] = -(zf[z] + zb[z] - σhat[ix, iy, z]) * inv2k
+            end
+        end
+    end
+
+    # 3) inverse rFFT x,y for each z, write directly into u
+    @inbounds for z in 1:Nz
+        uh = @view uhat[:, :, z]
+        uz = @view u[:, :, z]
         mul!(uz, c.iPxy, uh)
     end
 

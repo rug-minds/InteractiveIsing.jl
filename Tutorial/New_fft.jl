@@ -415,7 +415,7 @@ createProcess(g, Pulse_and_Relax, lifetime = 1)
 
 ### estimate time
 # est_remaining(process(g))
-# Wait until it is done
+#  until it is done
 c = process(g) |> fetch # If you want to close ctr+c
 voltage1= c[pulse1].x
 Pr1= c[pulse1].y

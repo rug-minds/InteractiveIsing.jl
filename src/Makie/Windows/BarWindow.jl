@@ -70,7 +70,7 @@ function BarWindow(func; fps = 30, lifetime, kwargs...)
         newest_obs[1] = xob
         newest_obs[2] = yob
          
-        spawntask!(process)
+        makeloop!(process)
         start.(w.timers)
         push!(w[:lines], lines!(w[:ax], xob, yob))
     end
@@ -110,6 +110,6 @@ function BarWindow(func; fps = 30, lifetime, kwargs...)
         end
     end
 
-    spawntask!(process) 
+    makeloop!(process) 
     return w
 end
