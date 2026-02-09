@@ -2,7 +2,7 @@ function prepare(pack::PackagedAlgo, context)
     allfuncs = getalgos(pack)
     all_algos = getalgos(pack)
     contextview = view(context, pack, inject = (;))
-    context = UnrollReplace(context, all_algos...) do context, algo
+    context = unrollreplace(context, all_algos...) do context, algo
         prepare(algo, context)
     end
 end
@@ -38,9 +38,10 @@ Base.@constprop :aggressive @inline function _comp_dispatch(pa::PackagedAlgo{T,I
     return @inline _comp_dispatch(pa, context, algoidx + 1, this_inc, gethead(funcs), gettail(funcs))
 end
 
-function cleanup(pa::PackagedAlgo)
+function cleanup(pa::PackagedAlgo, context::AbstractContext)
     all_algos = getalgos(pa)
-    context = UnrollReplace(context, all_algos...) do context, algo
-        cleanup(algo, context)
+    context = unrollreplace(context, all_algos...) do context, algo
+        @inline cleanup(algo, context)
     end
+    return context
 end

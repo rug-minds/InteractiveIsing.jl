@@ -1,8 +1,3 @@
-########################################
-##### Process Entity Interface #####
-########################################
-
-
 """
 Macro to define a ProcessAlgorithm from a function definition.
     This creates a struct of the function name subtype of ProcessAlgorithm,

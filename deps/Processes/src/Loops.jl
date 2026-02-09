@@ -32,7 +32,6 @@ end
     return @inline cleanup(func, context)
 end
 
-cleanup(::Any, context) = (;)
 
 resuming(::Any) = false
 
@@ -63,13 +62,13 @@ end
 """
 Run a single function in a loop for a given number of times
 """
-Base.@constprop :aggressive function processloop(process::AbstractProcess, func::F, context::C, r::Repeat) where {F, C}
+Base.@constprop :aggressive function processloop(process::AbstractProcess, algo::F, context::C, r::Repeat) where {F, C}
     @DebugMode "Running process loop for $repeats times from thread $(Threads.threadid())"
     @inline before_while(process)
     start_idx = loopidx(process)
     
     if resuming(process)
-        context = @inline resume_step!(func, context)
+        context = @inline resume_step!(algo, context)
         start_idx += 1
     end
 
@@ -77,69 +76,13 @@ Base.@constprop :aggressive function processloop(process::AbstractProcess, func:
         if !run(process)
             break
         end
-        context = @inline step!(func, context)
+        context = @inline step!(algo, context)
         @inline inc!(process)
 
         # if isthreaded(p) || isasync(p)
         #     GC.safepoint()
         # end
     end
-    return @inline after_while(process, func, context)
+    return @inline after_while(process, algo, context)
 end
 
-"""
-Generated process loop that inlines the step! expression when available.
-"""
-@inline @generated function generated_processloop(process::AbstractProcess, func::F, context::C, r::Repeat) where {F, C}
-    # step_expr = try
-    #     step!_expr(F, C)
-    # catch
-    #     :(context = @inline step!(func, context); context)
-    # end
-    # step_expr = step!_expr(F, C, :func)
-    algo_name = gensym(:algo)
-    step_expr = step!_expr(F, C, algo_name)
-
-    return quote
-        # println("Running generated process loop for $repeats times from thread $(Threads.threadid())")
-        @inline before_while(process)
-        start_idx = loopidx(process)
-        
-        if @inline resuming(process)
-            context = @inline resume_step!(func, context)
-            start_idx += 1
-        end
-
-        for _ in start_idx:repeats(r)
-            if !run(process)
-                break
-            end
-            $(algo_name) = func
-            $(step_expr)
-            @inline inc!(process)
-        end
-        return @inline after_while(process, func, context)
-    end
-end
-
-
-
-"""
-Generated process loop that inlines the step! expression when available.
-"""
-@generated function generated_processloop(process::AbstractProcess, func::F, context::C, ::Indefinite) where {F, C}
-    step_expr = step!_expr(F, C, :func)
-    return quote
-        println("Running generated process loop indefinitely from thread $(Threads.threadid())")
-        @inline before_while(process)
-        if resuming(process)
-            context = @inline resume_step!(func, context)
-        end
-
-        while run(process)
-            $(step_expr)
-            @inline inc!(process)
-        end
-        return @inline after_while(process, func, context)
-    end
-end

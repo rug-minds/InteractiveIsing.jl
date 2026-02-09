@@ -53,8 +53,9 @@ module Processes
     include("ProcessStatus.jl")
     include("Interface.jl")
     
-    include("ProcessStates/ProcessStates.jl")
-    include("ProcessAlgorithms.jl")
+    include("ProcessEntities/ProcessEntities.jl")
+    # include("ProcessStates/ProcessStates.jl")
+    # include("ProcessAlgorithms.jl")
 
     include("LoopAlgorithms/LoopAlgorithms.jl")
     include("Packaging/Packaging.jl")
@@ -63,6 +64,8 @@ module Processes
     include("TotalInc.jl")
     include("Tools.jl")
     include("Saving.jl")
+
+    include("GeneratedCode/GeneratedCode.jl")
 
 
 end

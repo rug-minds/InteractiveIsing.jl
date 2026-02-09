@@ -12,9 +12,9 @@ function Share(algo1, algo2; directional::Bool=false)
 end
 
 function to_sharedcontext(reg::NameSpaceRegistry, s::Share)
-    names = (static_find_name(reg, s.algo1), static_find_name(reg, s.algo2))
+    names = (static_findkey(reg, s.algo1), static_findkey(reg, s.algo2))
     if any(isnothing, names)
-        available = all_names(reg)
+        available = all_keys(reg)
         available_str = isempty(available) ? "<none>" : join(string.(available), ", ")
         msg = "Share references algo(s) not found in registry.\n" *
               "Requested: " * string(s.algo1) * " (type: " * string(typeof(s.algo1)) * "), " *

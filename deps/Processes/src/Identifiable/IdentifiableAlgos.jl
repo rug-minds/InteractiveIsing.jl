@@ -10,8 +10,11 @@ The type with which this gets registered in the registry
 """
 registry_entrytype(::Type{<:IdentifiableAlgo{T}}) where {T} = T
 
-match_id(sa::IdentifiableAlgo) = id(sa)
-match_id(::Union{T,Type{T}}) where {T<:IdentifiableAlgo} = id(T)
+# match_id(sa::IdentifiableAlgo) = id(sa)
+# match_id(::Union{T,Type{T}}) where {T<:IdentifiableAlgo} = id(T)
+
+match_by(sa::IdentifiableAlgo) = id(sa)
+match_by(::Union{T,Type{T}}) where {T<:IdentifiableAlgo} = id(T)
 
 id(sa::IdentifiableAlgo{F, Id}) where {F, Id} = Id
 id(sat::Type{<:IdentifiableAlgo{F, Id}}) where {F, Id} = Id
@@ -21,6 +24,9 @@ setid(sa::SA, newid) where {SA<:IdentifiableAlgo} = setparameter(sa, 2, newid)
 algoname(sa::IdentifiableAlgo{F, Id, Aliases, AlgoName}) where {F, Id, Aliases, AlgoName} = AlgoName == Symbol() ? nothing : AlgoName
 
 varaliases(sa::Union{IdentifiableAlgo{F, Id, Aliases}, Type{<:IdentifiableAlgo{F, Id, Aliases}}}) where {F, Id, Aliases} = Aliases
+
+getvaraliases(sa::Union{IdentifiableAlgo{F, Id, Aliases}, Type{<:IdentifiableAlgo{F, Id, Aliases}}}) where {F, Id, Aliases} = Aliases
+# setvaraliases(sa::IdentifiableAlgo{F, Id, Aliases}, newaliases) where {F, Id, Aliases} = setparameter(sa, 3, newaliases)
 
 algotype(::Union{IdentifiableAlgo{F}, Type{<:IdentifiableAlgo{F}}}) where {F} = F
 
@@ -61,7 +67,7 @@ function replacecontextkeys(a::IdentifiableAlgo{F, Id, Aliases, AlgoName, OldKey
     return a
 end
 
-function setaliases(sa::IdentifiableAlgo{F, Id, Aliases}, newaliases) where {F, Id, Aliases}
+function setvaraliases(sa::IdentifiableAlgo{F, Id, Aliases}, newaliases) where {F, Id, Aliases}
     setparameter(sa, 3, newaliases)
 end
 
