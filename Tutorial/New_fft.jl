@@ -384,7 +384,7 @@ pulse3 = Unique(SinPulseA(5, 1))
 
 Anealing1 = LinAnealingA(2f0, 1f0)
 metropolis = g.default_algorithm
-metropolis = CompositeAlgorithm((metropolis, Recalc(3)), (1,200))
+metropolis = CompositeAlgorithm((metropolis, Recalc(3)), (1,20))
 
 pulse_part1 = CompositeAlgorithm((metropolis, pulse1), (1, point_repeat))
 pulse_part2 = CompositeAlgorithm((metropolis, pulse2, ), (1, point_repeat))
