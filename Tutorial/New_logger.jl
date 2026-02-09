@@ -206,32 +206,21 @@ function Processes.prepare(tp::TrianglePulseA, args)
     pulse = vcat(first, second, third, fourth)
     pulse = repeat(pulse, numpulses)
 
-    if steps < length(pulse)
-        "Wrong length"
-    else
-        fix_num = num_calls(args) - length(pulse)
-        fix_arr = zeros(Int, fix_num)
-        pulse   = vcat(pulse, fix_arr)
-    end
+    fix_num = num_calls(args) - length(pulse)
+    fix_arr = zeros(Int, fix_num)
+    pulse   = vcat(pulse, fix_arr)
 
     # Predefine storage arrays
-    x = Float32[]
-    y = Float32[]
-    processsizehint!(x, args)
-    processsizehint!(y, args)
-
     step = 1
-
-    return (;pulse, x, y, step)
+    return (;pulse, step, pulseval = pulse[1])
 end
 
 function Processes.step!(::TrianglePulseA, context::C) where C
-    (;pulse, step, x, y, hamiltonian, M ) = context
-    pulse_val = pulse[step]
-    hamiltonian.b[] = pulse_val
-    push!(x, pulse_val)
-    push!(y, M)
-    return (;step = step + 1)
+    (;pulse, step, hamiltonian) = context
+    pulseval = pulse[step]
+    hamiltonian.b[] = pulseval
+
+    return (;step = step + 1, pulseval)
 end
 ### struct end: TrianglePulseA
 ##################################################################################
@@ -239,10 +228,6 @@ end
 ##################################################################################
 ### struct start: SinPulseA (simple sine waveform)
 ### Run with SinPulseA
-###  /\
-### /  \    _____
-###     \  /
-###      \/
 
 struct SinPulseA{T} <: ProcessAlgorithm
     amp::T
@@ -257,35 +242,21 @@ function Processes.prepare(tp::SinPulseA, args)
 
     theta = LinRange(0, max_theta, round(Int,steps))
     sins = amp .* sin.(theta)
-
-    # Predefine storage arrays
-    x = Float32[]
-    y = Float32[]
-    processsizehint!(x, args)
-    processsizehint!(y, args)
-
     step = 1
-
-    return (;sins, x, y, step)
+    return (;sins, step, pulseval = sins[1])
 end
-
 function Processes.step!(::SinPulseA, context::C) where C
-    (;sins, step, x, y, hamiltonian, M ) = context
+    (;sins, step, hamiltonian) = context
     pulse_val = sins[step]
     hamiltonian.b[] = pulse_val
-    push!(x, pulse_val)
-    push!(y, M)
-    return (;step = step + 1)
+    return (;step = step + 1, pulseval = pulse_val)
 end
 ### struct end: SinPulseA
 ##################################################################################
 
-
-
 ##################################################################################
 ### struct start: TemAnealingA (simple sine waveform)
 ### Run with TemAnealingA
-
 struct LinAnealingA{T} <: ProcessAlgorithm
     start_T::T
     stop_T::T
@@ -302,7 +273,8 @@ function Processes.step!(::LinAnealingA, context::C) where C
     temp(isinggraph, current_T)
     return (;current_T = current_T + dT)
 end
-### struct end: TemAnealingA
+##################################################################################
+
 ##################################################################################
 struct ValueLogger{Name} <: ProcessAlgorithm end
 ValueLogger(name) = ValueLogger{Symbol(name)}()
@@ -317,6 +289,8 @@ function Processes.step!(::ValueLogger, context::C) where C
     return (;)
 end
 ##################################################################################
+
+##################################################################################
 struct Recalc <: Processes.ProcessAlgorithm 
     i::Int
 end
@@ -327,9 +301,9 @@ function Processes.step!(r::Recalc, context)
 end
 ##################################################################################
 
-xL = 20  # Length in the x-dimension
-yL = 20  # Length in the y-dimension
-zL = 10   # Length in the z-dimension
+xL = 80  # Length in the x-dimension
+yL = 80  # Length in the y-dimension
+zL = 20   # Length in the z-dimension
 g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
@@ -337,27 +311,28 @@ II.makie_markersize[] = 0.3
 interface(g)
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
+# a1, b1, c1 = -20, 16, 0 
+a1, b1, c1 = 0, 0, 0 
+Ex = range(-1.0, 1.0, length=1000)
+Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
 
 #### Weight function setup (Connection setup)
 #### Set the distance scaling
 setdist!(g, (1.0,1.0,1.0))
 
 ### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
-wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 0.7, 0.1, 0.5) NN = 3
+wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 1, 0.1, 0.1) NN = 3
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
 
 genAdj!(g, wg5)
 
-# a1, b1, c1 = -20, 16, 0 
-a1, b1, c1 = 0, 0, 0 
-Ex = range(-1.0, 1.0, length=1000)
-Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
+
 
 ### Set hamiltonian with selfenergy and depolarization field
 # CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
-g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 1, screening = 0.5)
+g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 4, screening = 0.1)
 refresh(g)
 
 ### Use ii. to check if the terms are correct
@@ -368,7 +343,7 @@ refresh(g)
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 homogeneousself!(g,a1)
 
-Temperature=0.5
+Temperature=1
 temp(g,Temperature)
 
 ### Run simulation process
@@ -378,19 +353,27 @@ anneal_time = fullsweep*5000
 pulsetime = fullsweep*5000
 relaxtime = fullsweep*5000
 point_repeat = time_fctr*fullsweep
-pulse1 = TrianglePulseA(5, 2)
+pulse1 = TrianglePulseA(20, 2)
 pulse2 = SinPulseA(20, 1)
 pulse3 = Unique(SinPulseA(5, 1))
 
 Anealing1 = LinAnealingA(2f0, 1f0)
 metropolis = g.default_algorithm
-metropolis = CompositeAlgorithm((metropolis, Recalc(3)), (1,200))
 
-pulse_part1 = CompositeAlgorithm((metropolis, pulse1), (1, point_repeat))
-pulse_part2 = CompositeAlgorithm((metropolis, pulse2, ), (1, point_repeat))
+#
+M_logger = ValueLogger(:M)
+Pulse_logger = ValueLogger(:pulse)
+# Pulse_logger2 = ValueLogger(:pulse)
 
-anneal_part1 = CompositeAlgorithm((metropolis, Anealing1), (1, point_repeat))
+metropolis = CompositeAlgorithm((metropolis, M_logger, Recalc(3)), (1, fullsweep, 200))
 
+pulse_part1 = CompositeAlgorithm((metropolis, pulse1, Pulse_logger), (1, point_repeat, fullsweep))
+
+pulse_part2 = CompositeAlgorithm((metropolis, pulse2, Pulse_logger), (1, point_repeat, fullsweep))
+
+anneal_part1 = CompositeAlgorithm((metropolis, Anealing1, Pulse_logger), (1, point_repeat, fullsweep))
+
+relax_part = CompositeAlgorithm((metropolis, Pulse_logger), (1, fullsweep))
 # Pulse_and_Relax = Routine((pulse_part1, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian))
 # Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
 # Pulse_and_Relax = Routine((metropolis, pulse_part1, pulse_part2, metropolis, anneal_part1), 
@@ -402,9 +385,11 @@ anneal_part1 = CompositeAlgorithm((metropolis, Anealing1), (1, point_repeat))
 #     )
 # createProcess(g, Pulse_and_Relax, lifetime = 1)
 
-Pulse_and_Relax = Routine((pulse_part1, metropolis, ), 
+Pulse_and_Relax = Routine((pulse_part1, relax_part, ), 
     (pulsetime, relaxtime), 
-    Route(Metropolis(), pulse1, :hamiltonian, :M), 
+    Route(Metropolis(), pulse1, :hamiltonian, :M),     
+    Route(Metropolis(), M_logger, :M => :value), 
+    Route(pulse1, Pulse_logger, :pulseval => :value), 
     Route(Metropolis(), Recalc(3), :hamiltonian),
     Route(DestructureInput(), Metropolis(), :isinggraph => :structure) # THIS ONE WILL BE REMOVED LATER
     )
@@ -415,20 +400,19 @@ createProcess(g, Pulse_and_Relax, lifetime = 1)
 
 ### estimate time
 # est_remaining(process(g))
-#  until it is done
+# Wait until it is done
 c = process(g) |> fetch # If you want to close ctr+c
-voltage1= c[pulse1].x
-Pr1= c[pulse1].y
+voltage1= c[Pulse_logger].values
+Pr1= c[M_logger].values
 
 # Voltage2 = c[pulse2].x
 # Pr2 = c[pulse2].y
 
 w2=newmakie(lines, voltage1, Pr1)
-w3=newmakie(lines,Pr1)
+w3=newmakie(lines, Pr1)
 
 # w4=newmakie(lines, Voltage2, Pr2)
 # w5=newmakie(lines,Pr2)
-
 
 # show_connections(g,1,1,1)
 # visualize_connections(g)

@@ -2,8 +2,8 @@ export CI
 const CI = CartesianIndex
 
 
-dist(top::LayerTopology, ci1::CartesianIndex, ci2::CartesianIndex) = sqrt(dist2(top, ci1, ci2))
-dist2(top::LayerTopology, ci1::CartesianIndex, ci2::CartesianIndex) = dist2(top, Coordinate(top, ci1), Coordinate(top, ci2))    
+dist(top::AbstractLayerTopology, ci1::CartesianIndex, ci2::CartesianIndex) = sqrt(dist2(top, ci1, ci2))
+dist2(top::AbstractLayerTopology, ci1::CartesianIndex, ci2::CartesianIndex) = dist2(top, Coordinate(top, ci1), Coordinate(top, ci2))    
 
 dist(c1::Coordinate, c2::Coordinate) = sqrt(dist2(c1,c2))
 function dist2(c1::Coordinate, c2::Coordinate) 
@@ -11,6 +11,7 @@ function dist2(c1::Coordinate, c2::Coordinate)
     return dist2(c1.top, c1,c2)
 end
 
+dist(top::SquareTopology, c1::Coordinate, c2::Coordinate) = sqrt(dist2(top, c1, c2))
 function dist2(top::SquareTopology, c1::Coordinate, c2::Coordinate)
     ps = whichperiodic(top)
     total = 0.

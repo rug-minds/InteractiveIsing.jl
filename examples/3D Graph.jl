@@ -20,15 +20,35 @@ genAdj!(g, wg)
 struct Recalc <: Processes.ProcessAlgorithm end
 function Processes.step!(::Recalc, context)
     (;hamiltonian) = context
-    @show typeof(hamiltonian)
     recalc!(hamiltonian[3])
+    return (;)
 end
 
+struct PolTracker{T} <: ProcessAlgorithm end
+PolTracker() = PolTracker{Float32}()
+function Processes.prepare(::PolTracker, context)
+    (;isinggraph) = context
+    initial = sum(state(isinggraph))
+
+    (;pols = Float32[initial])
+end
+function Processes.step!(::PolTracker, context)
+    (;proposal, pols) = context
+    push!(pols, delta(proposal))
+    return (;)
+end
+
+
 g.hamiltonian = h = Ising(g) + CoulombHamiltonian2(g, 1f0)
-interface(g)
-algo = Processes.CompositeAlgorithm((Metropolis(), Recalc()), (1,200),  Processes.DestructureInput(), Share(DestructureInput(), Metropolis()), Share(Metropolis(), Recalc()))
+algo = Processes.CompositeAlgorithm((Metropolis(), Recalc(), PolTracker()), (1,200, 1),  
+    Processes.DestructureInput(), 
+    Route(DestructureInput(), Metropolis(), :isinggraph => :structure), 
+    Share(Metropolis(), Recalc()), 
+    Share(Metropolis(), PolTracker())
+    )
 
 createProcess(g, algo)
+interface(g)
 
 
 # h = g.hamiltonian = Ising(g) + Quartic(g) + DepolField(g, top_layers = 2, zfunc = z -> 3/z, NN = 2) + Sextic(g)

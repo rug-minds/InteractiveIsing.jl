@@ -7,3 +7,7 @@ Manifest.toml
 
 /docs/build
 .vscode/settings.json
+
+# Windows "Mark of the Web" (Zone.Identifier) ADS metadata can show up as
+# real files on non-NTFS filesystems after extracting/copying archives.
+*:Zone.Identifier*

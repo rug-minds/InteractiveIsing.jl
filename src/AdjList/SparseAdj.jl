@@ -25,8 +25,6 @@ function genLayerConnections(layer::AbstractIsingLayer{T,D}, wg) where {T,D}
 
     _NN = getNN(wg)
 
-    
-    
     # Either global NN is given, or a tuple of NN for each dimension
     @assert (_NN isa Integer || length(_NN) == D )
     
@@ -46,7 +44,9 @@ function genLayerConnections(layer::AbstractIsingLayer{T,D}, wg) where {T,D}
     # Conn_idxs, conn_i,j,k,...
     # conns = ntuple(i -> Prealloc(Int32, blocksize::Int32), D)
     # conn_idxs = Prealloc(Int32, blocksize)
-    _fillSparseVecs(layer, row_idxs, col_idxs, weights, top(layer), wg)
+    topology = top(layer)
+    @show topology
+    _fillSparseVecs(layer, row_idxs, col_idxs, weights, topology, wg)
     
 
     # append!(row_idxs, col_idxs)

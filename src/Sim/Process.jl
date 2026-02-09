@@ -2,10 +2,7 @@ function createProcess(g::IsingGraph, func = nothing; run = true, threaded = tru
     if isnothing(func)
         func = get(args, :algorithm, g.default_algorithm)
     end
-    # destructed_graph = Destructure(g)
-    # algo = IsingMetropolis()
-    # algo = SimpleAlgo(tuple(func))
-    process = Process(func, Input(func, structure = g); lifetime)
+    process = Process(func, Input(DestructureInput(), structure = g); lifetime)
     
     ps = processes(g)
     push!(ps, process)

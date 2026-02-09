@@ -68,7 +68,7 @@ function async_lines_window(func; fps = 30, lifetime, kwargs...)
         newest_obs[1] = xob
         newest_obs[2] = yob
          
-        Processes.spawntask!(process)
+        Processes.makeloop!(process)
         start.(w.timers)
         push!(w[:lines], lines!(w[:ax], xob, yob))
     end
@@ -108,7 +108,7 @@ function async_lines_window(func; fps = 30, lifetime, kwargs...)
         end
     end
 
-    Processes.spawntask!(process) 
+    Processes.makeloop!(process) 
     return w
 end
 
@@ -189,7 +189,7 @@ function sync_lines_window(proc1, func; fps = 30, lifetime, kwargs...)
         newest_obs[1] = xob
         newest_obs[2] = yob
          
-        Processes.spawntask!(process)
+        Processes.makeloop!(process)
         start.(w.timers)
         push!(w[:lines], lines!(w[:ax], xob, yob))
     end
@@ -229,6 +229,6 @@ function sync_lines_window(proc1, func; fps = 30, lifetime, kwargs...)
         end
     end
 
-    Processes.spawntask!(process) 
+    Processes.makeloop!(process) 
     return w
 end

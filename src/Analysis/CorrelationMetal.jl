@@ -47,7 +47,7 @@
 #     end
 
 #     # Get the topology for the graph
-#     topology = LayerTopology(top(layer), periodicity)
+#     topology = AbstractLayerTopology(top(layer), periodicity)
 
 #     # What is the maximum disrtance that is sampled
 #     max_dist = dist(1,1, size(corrsCPU)[1:2]..., topology)
