@@ -32,19 +32,19 @@ function Processes.prepare(::PolTracker, context)
 
     (;pols = Float32[initial])
 end
+
 function Processes.step!(::PolTracker, context)
     (;proposal, pols) = context
     push!(pols, delta(proposal))
     return (;)
 end
 
-
+# isingmetro = InteractiveIsing.IsingMetropolis()
+isingmetro = g.default_algorithm
 g.hamiltonian = h = Ising(g) + CoulombHamiltonian2(g, 1f0)
-algo = Processes.CompositeAlgorithm((Metropolis(), Recalc(), PolTracker()), (1,200, 1),  
-    Processes.DestructureInput(), 
-    Route(DestructureInput(), Metropolis(), :isinggraph => :structure), 
-    Share(Metropolis(), Recalc()), 
-    Share(Metropolis(), PolTracker())
+algo = Processes.CompositeAlgorithm((isingmetro, Recalc(), PolTracker()), (1, 200, 1),  
+    Share(isingmetro, Recalc()), 
+    Share(isingmetro, PolTracker())
     )
 
 createProcess(g, algo)

@@ -1,8 +1,10 @@
 function createProcess(g::IsingGraph, func = nothing; run = true, threaded = true, lifetime = nothing, args...)
     if isnothing(func)
-        func = get(args, :algorithm, g.default_algorithm)
+        # func = get(args, :algorithm, g.default_algorithm)
+        func = g.default_algorithm
     end
-    process = Process(func, Input(DestructureInput(), structure = g); lifetime)
+    # process = Process(func, Input(DestructureInput(), structure = g); lifetime)
+    process = Process(func, Input(g.default_algorithm, structure = g); lifetime)
     
     ps = processes(g)
     push!(ps, process)

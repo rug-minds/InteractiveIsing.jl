@@ -9,7 +9,7 @@ Metropolis(;tracked = false) = Metropolis(tracked, tracked)
 function IsingMetropolis(;tracked = false)
     destr = DestructureInput()
     metro = Metropolis(tracked = tracked)
-    SimpleAlgo(tuple(metro), destr, Share(destr, metro))
+    package(SimpleAlgo(tuple(metro), destr), Route(destr, metro, :isinggraph => :structure))
 end
 
 MetropolisTracked() = Metropolis(tracked = true)
@@ -21,8 +21,8 @@ end
 
 function Processes.prepare(::Metropolis, context::Cont) where Cont
     # @show typeof(context)
-
     (;structure) = context
+
     state = InteractiveIsing.state(structure)
     hamiltonian = structure.hamiltonian
     adj = InteractiveIsing.adj(structure)

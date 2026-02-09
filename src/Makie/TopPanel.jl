@@ -22,7 +22,9 @@ function topPanel(window)
         push!(last_two_updates, sum(li))
         push!(times, time_ns())
 
-        delta = last_two_updates[2] == 0 ? 0 : last_two_updates[2] - last_two_updates[1]
+        prev = last_two_updates[1]
+        curr = last_two_updates[2]
+        delta = curr >= prev ? Int(curr - prev) : 0
         push!(update_deltas, delta)
         a = avg(update_deltas)
         ups[] = a / (times[end] - times[1]) * 1e9  # Convert to seconds
