@@ -299,7 +299,7 @@ function recalc!(c::CoulombHamiltonian2{T}) where {T}
             for zp in 1:Nz
                 # 物理距离 |z-z'| * az，对 kernel 取 -|z-z'|/2
                 dist = T(abs(z - zp)) * c.az
-                acc += (dist * T(-0.5)) * sh0[zp]
+                acc += (dist * T(0.5)) * sh0[zp]
             end
             uh0[z] = acc
         end
@@ -390,11 +390,11 @@ function ΔH(c::CoulombHamiltonian2{T,N}, params, proposal) where {T,N}
     spin_idx = at_idx(proposal)
     charge_coord_below = idxToCoord(spin_idx, lattice_size)
     charge_coord_above = (charge_coord_below[1], charge_coord_below[2], charge_coord_below[3] + 1)
-    Δcharge_below = -delta(proposal)
-    Δcharge_above = delta(proposal)
+    Δcharge_below = -delta(proposal)*c.scaling[]
+    Δcharge_above = delta(proposal)*c.scaling[]
 
-    ΔE_below = Δcharge_below * c.u[charge_coord_below...]
-    ΔE_above = Δcharge_above * c.u[charge_coord_above...]
+    ΔE_below = -Δcharge_below * c.u[charge_coord_below...]
+    ΔE_above = -Δcharge_above * c.u[charge_coord_above...]
     return ΔE_below + ΔE_above
 end
 

@@ -360,7 +360,7 @@ metropolis = g.default_algorithm
 M_Logger = ValueLogger(:M)
 # Pulse_logger = ValueLogger(:pulse)
 B_Logger = ValueLogger(:b)
-# Pulse_logger2 = ValueLogger(:pulse)
+
 
 
 
@@ -369,18 +369,6 @@ Metro_and_recal = CompositeAlgorithm((metropolis, Recalc(3), M_Logger, B_Logger)
 pulse_part1 = CompositeAlgorithm((Metro_and_recal, pulse1), (1, point_repeat))
 pulse_part2 = CompositeAlgorithm((Metro_and_recal, pulse2, ), (1, point_repeat))
 anneal_part1 = CompositeAlgorithm((Metro_and_recal, Anealing1), (1, point_repeat))
-
-# relax_part = CompositeAlgorithm((Metro_and_recal), (1, fullsweep))
-# Pulse_and_Relax = Routine((pulse_part1, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian))
-# Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
-# Pulse_and_Relax = Routine((metropolis, pulse_part1, pulse_part2, metropolis, anneal_part1), 
-#     (relaxtime, pulsetime, pulsetime, relaxtime, anneal_time), 
-#     Route(Metropolis(), pulse1, :hamiltonian, :M), 
-#     Route(Metropolis(), pulse2, :hamiltonian, :M),
-#     Route(Metropolis(), Anealing1, :isinggraph),
-#     Route(Metropolis(), Recalc(3), :hamiltonian),
-#     )
-# createProcess(g, Pulse_and_Relax, lifetime = 1)
 
 Pulse_and_Relax = Routine((pulse_part1, Metro_and_recal), 
     (pulsetime, relaxtime), 
