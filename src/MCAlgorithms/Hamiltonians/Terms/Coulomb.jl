@@ -315,64 +315,64 @@ function recalc!(c::CoulombHamiltonian2{T}) where {T}
     return u
 end
 
-function recalcnew(c::CoulombHamiltonian2{T}) where {T}
-    σhat = c.σhat
-    uhat = c.uhat
-    u    = c.u
+# function recalcnew(c::CoulombHamiltonian2{T}) where {T}
+#     σhat = c.σhat
+#     uhat = c.uhat
+#     u    = c.u
 
-    Nx, Ny, Nz = size(u)
-    Nxh = size(σhat, 1)
+#     Nx, Ny, Nz = size(u)
+#     Nxh = size(σhat, 1)
 
-    # 1) rFFT x,y for each z: σhat[:,:,z] := rfft(σ[:,:,z])
-    @inbounds for z in 1:Nz
-        sh = @view σhat[:, :, z]
-        s  = @view c.σ[:, :, z]
-        mul!(sh, c.Pxy, s)
-    end
+#     # 1) rFFT x,y for each z: σhat[:,:,z] := rfft(σ[:,:,z])
+#     @inbounds for z in 1:Nz
+#         sh = @view σhat[:, :, z]
+#         s  = @view c.σ[:, :, z]
+#         mul!(sh, c.Pxy, s)
+#     end
 
-    # 2) z-coupling in Fourier domain, threaded by spectral mode
-    @inbounds begin
-        fill!((@view uhat[1, 1, :]), zero(Complex{T}))
-        nmodes = Nxh * Ny
-        Threads.@threads for mode in 1:nmodes
-            iy = ((mode - 1) ÷ Nxh) + 1
-            ix = mode - (iy - 1) * Nxh
-            if ix == 1 && iy == 1
-                continue
-            end
+#     # 2) z-coupling in Fourier domain, threaded by spectral mode
+#     @inbounds begin
+#         fill!((@view uhat[1, 1, :]), zero(Complex{T}))
+#         nmodes = Nxh * Ny
+#         Threads.@threads for mode in 1:nmodes
+#             iy = ((mode - 1) ÷ Nxh) + 1
+#             ix = mode - (iy - 1) * Nxh
+#             if ix == 1 && iy == 1
+#                 continue
+#             end
 
-            inv2k = c.inv2k[ix, iy]
-            e = c.ez[ix, iy]
+#             inv2k = c.inv2k[ix, iy]
+#             e = c.ez[ix, iy]
 
-            tid = Threads.threadid()
-            zf = c.zf_threads[tid]
-            zb = c.zb_threads[tid]
+#             tid = Threads.threadid()
+#             zf = c.zf_threads[tid]
+#             zb = c.zb_threads[tid]
 
-            zf[1] = σhat[ix, iy, 1]
-            for z in 2:Nz
-                zf[z] = σhat[ix, iy, z] + e * zf[z - 1]
-            end
+#             zf[1] = σhat[ix, iy, 1]
+#             for z in 2:Nz
+#                 zf[z] = σhat[ix, iy, z] + e * zf[z - 1]
+#             end
 
-            zb[Nz] = σhat[ix, iy, Nz]
-            for z in (Nz - 1):-1:1
-                zb[z] = σhat[ix, iy, z] + e * zb[z + 1]
-            end
+#             zb[Nz] = σhat[ix, iy, Nz]
+#             for z in (Nz - 1):-1:1
+#                 zb[z] = σhat[ix, iy, z] + e * zb[z + 1]
+#             end
 
-            for z in 1:Nz
-                uhat[ix, iy, z] = -(zf[z] + zb[z] - σhat[ix, iy, z]) * inv2k
-            end
-        end
-    end
+#             for z in 1:Nz
+#                 uhat[ix, iy, z] = -(zf[z] + zb[z] - σhat[ix, iy, z]) * inv2k
+#             end
+#         end
+#     end
 
-    # 3) inverse rFFT x,y for each z, write directly into u
-    @inbounds for z in 1:Nz
-        uh = @view uhat[:, :, z]
-        uz = @view u[:, :, z]
-        mul!(uz, c.iPxy, uh)
-    end
+#     # 3) inverse rFFT x,y for each z, write directly into u
+#     @inbounds for z in 1:Nz
+#         uh = @view uhat[:, :, z]
+#         uz = @view u[:, :, z]
+#         mul!(uz, c.iPxy, uh)
+#     end
 
-    return u
-end
+#     return u
+# end
 
 function mygemmavx!(C, A, B)
     @turbo for m ∈ axes(A, 1), n ∈ axes(B, 2)

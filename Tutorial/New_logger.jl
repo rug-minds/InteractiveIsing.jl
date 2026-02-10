@@ -298,7 +298,7 @@ end
 xL = 30  # Length in the x-dimension
 yL = 30  # Length in the y-dimension
 zL = 10   # Length in the z-dimension
-g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
+g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y), set = (-2,2))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
 # Launch interactive visualization (idle until createProcess(...) later)

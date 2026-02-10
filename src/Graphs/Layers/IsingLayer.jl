@@ -162,24 +162,6 @@ end
 topology(l::IsingLayer) = l.top
 export topology
 
-# Extend show for IsingLayer, showing the layer idx, and the size of the layer
-function Base.show(io::IO, layer::IsingLayer{A,B}) where {A,B}
-    showstr = "$A IsingLayer $(layeridx(layer)) with size $(size(layer)) and stateset $(stateset(layer))\n"
-    if coords(layer) != nothing
-        showstr *= " at coordinates $(coords(layer))"
-    end
-    print(io, showstr, "\n")
-    println(io, " with connections:")
-    for key in keys(connections(layer))
-        println(io, "\tConnected to layer $(key[2]) using ")
-        println("\t", (connections(layer)[key]))
-    end
-    print(io, " and $(ndefect(layer)) defects")
-    return
-end
-
-# SHOW THE TYPE
-Base.show(io::IO, layertype::Type{IsingLayer{A,B}}) where {A,B} = print(io, "$A IsingLayer")
 
 
 ## ACCESSORS
@@ -570,3 +552,23 @@ export statetype, setstatetype
     state(layer)[:] .= rand(layer, nStates(layer))
 end
 export initstate!
+
+
+# Extend show for IsingLayer, showing the layer idx, and the size of the layer
+function Base.show(io::IO, layer::IsingLayer{A,B}) where {A,B}
+    showstr = "$A IsingLayer $(layeridx(layer)) with size $(size(layer)) and stateset $(stateset(layer))\n"
+    if coords(layer) != nothing
+        showstr *= " at coordinates $(coords(layer))"
+    end
+    print(io, showstr, "\n")
+    println(io, " with connections:")
+    for key in keys(connections(layer))
+        println(io, "\tConnected to layer $(key[2]) using ")
+        println("\t", (connections(layer)[key]))
+    end
+    print(io, " and $(ndefect(layer)) defects")
+    return
+end
+
+# SHOW THE TYPE
+Base.show(io::IO, layertype::Type{IsingLayer{A,B}}) where {A,B} = print(io, "$A IsingLayer")
