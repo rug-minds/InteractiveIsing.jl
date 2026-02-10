@@ -38,14 +38,16 @@ end
 const PottsGraph{T, M, L}  = IsingGraph{T, M, L, 2}
 const GlauberGraph{T, M, L} =IsingGraph{T, M, L, 3}
 
-
+"""
+Single layer constructor
+"""
 function IsingGraph(dims::Int...; 
                     periodic = nothing, 
-                    sets = nothing, 
+                    set = nothing, 
                     weights::Union{Nothing,WeightGenerator} = nothing,
                     type = Continuous,
                     kwargs...)
-    single_layer = Layer(dims...; stateset = sets, stype = type, weights, periodic, kwargs...)
+    single_layer = Layer(dims...; set, stype = type, weights, periodic, kwargs...)
     IsingGraph(single_layer; kwargs...)
 end
 
