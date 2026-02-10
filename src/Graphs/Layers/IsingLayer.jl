@@ -37,7 +37,7 @@ function IsingLayer(
             start::Int;
             stype = Discrete(), 
             precision = Float32,
-            set = convert.(eltype(g),(-1,1)), 
+            set = convert.(precision, (-1.,1.)), 
             name = "Layer $idx", 
             # traits = (;StateType = StateType, StateSet = set, Indices = (start:(start+length*width-1)), Hamiltonians = (Ising,)),
             traits = (;),
@@ -48,6 +48,9 @@ function IsingLayer(
             periodic::Union{Nothing,Bool,Tuple} = true,
             kwargs...
         )
+        if !isnothing(g)
+            set = convert.(eltype(g), set)
+        end
 
         if !isnothing(wg)
             connections[idx=>idx] = wg

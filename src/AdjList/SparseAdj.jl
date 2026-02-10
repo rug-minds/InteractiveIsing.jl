@@ -31,6 +31,8 @@ function genLayerConnections(layer::AbstractIsingLayer{T,D}, wg) where {T,D}
     _NNt = nothing
     if _NN isa Integer # all dimensions same NN
         _NNt = ntuple(i -> _NN, D)
+    else
+        _NNt = _NN
     end
 
     blocksize = Int32(prod(2 .* _NNt .+ 1) - 1)
