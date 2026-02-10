@@ -358,7 +358,6 @@ Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
 ### Set hamiltonian with selfenergy and depolarization field
 # CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
 g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 1, screening = 0.5)
-refresh(g)
 
 ### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic
@@ -384,12 +383,12 @@ pulse3 = Unique(SinPulseA(5, 1))
 
 Anealing1 = LinAnealingA(2f0, 1f0)
 metropolis = g.default_algorithm
-metropolis = CompositeAlgorithm((metropolis, Recalc(3)), (1,20))
+Metro_and_recal = CompositeAlgorithm((metropolis, Recalc(3)), (1,200))
 
-pulse_part1 = CompositeAlgorithm((metropolis, pulse1), (1, point_repeat))
-pulse_part2 = CompositeAlgorithm((metropolis, pulse2, ), (1, point_repeat))
+pulse_part1 = CompositeAlgorithm((Metro_and_recal, pulse1), (1, point_repeat))
+pulse_part2 = CompositeAlgorithm((Metro_and_recal, pulse2, ), (1, point_repeat))
 
-anneal_part1 = CompositeAlgorithm((metropolis, Anealing1), (1, point_repeat))
+anneal_part1 = CompositeAlgorithm((Metro_and_recal, Anealing1), (1, point_repeat))
 
 # Pulse_and_Relax = Routine((pulse_part1, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian))
 # Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
@@ -401,12 +400,11 @@ anneal_part1 = CompositeAlgorithm((metropolis, Anealing1), (1, point_repeat))
 #     Route(Metropolis(), Recalc(3), :hamiltonian),
 #     )
 # createProcess(g, Pulse_and_Relax, lifetime = 1)
-
-Pulse_and_Relax = Routine((pulse_part1, metropolis, ), 
+Pulse_and_Relax = Routine((pulse_part1, Metro_and_recal, ), 
     (pulsetime, relaxtime), 
-    Route(Metropolis(), pulse1, :hamiltonian, :M), 
-    Route(Metropolis(), Recalc(3), :hamiltonian),
-    Route(DestructureInput(), Metropolis(), :isinggraph => :structure) # THIS ONE WILL BE REMOVED LATER
+    Route(metropolis, pulse1, :hamiltonian, :M), 
+    Route(metropolis, Recalc(3), :hamiltonian),
+    # Route(DestructureInput(), Metropolis(), :isinggraph => :structure) # THIS ONE WILL BE REMOVED LATER
     )
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 

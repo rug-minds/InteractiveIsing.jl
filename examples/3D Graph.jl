@@ -7,7 +7,7 @@ function isingfunc(dr, c1, c2)
 end
 
 
-g = ii.IsingGraph(80,80,10, type = Continuous, periodic = (:x,:y))
+g = ii.IsingGraph(30,30,10, type = Continuous, periodic = (:x,:y))
 # g.default_algorithm = Metropolis()
 setdist!(g, (2.0, 1.0, 1.0))
 
@@ -17,10 +17,12 @@ genAdj!(g, wg)
 
 # homogeneousself!(g, 0.5f0)
 
-struct Recalc <: Processes.ProcessAlgorithm end
-function Processes.step!(::Recalc, context)
+struct Recalc <: Processes.ProcessAlgorithm 
+    i::Int
+end
+function Processes.step!(r::Recalc, context)
     (;hamiltonian) = context
-    recalc!(hamiltonian[3])
+    recalc!(hamiltonian[r.i])
     return (;)
 end
 
@@ -42,17 +44,21 @@ end
 # isingmetro = InteractiveIsing.IsingMetropolis()
 isingmetro = g.default_algorithm
 g.hamiltonian = h = Ising(g) + CoulombHamiltonian2(g, 1f0)
-algo = Processes.CompositeAlgorithm((isingmetro, Recalc(), PolTracker()), (1, 200, 1),  
-    Share(isingmetro, Recalc()), 
+# algo = Processes.CompositeAlgorithm((isingmetro, Recalc(), PolTracker()), (1, 200, 10000),  
+#     Share(isingmetro, Recalc()), 
+#     Share(isingmetro, PolTracker())
+#     )
+algo = Processes.CompositeAlgorithm((isingmetro, Recalc(3), PolTracker()), (1, 200, 1),  
+    Share(isingmetro, Recalc(3)),
     Share(isingmetro, PolTracker())
     )
 
-createProcess(g, algo)
+createProcess(g, algo, Input(PolTracker, isinggraph = g))
 interface(g)
 
 
 # h = g.hamiltonian = Ising(g) + Quartic(g) + DepolField(g, top_layers = 2, zfunc = z -> 3/z, NN = 2) + Sextic(g)
-# # refresh(g)
+# # reprepare(g)
 # # h[4].c[] = 1/(2*2500)
 
 # w = interface(g)

@@ -123,10 +123,6 @@ function Processes.reprepare(g::IsingGraph; kwargs...)
     end
     return
 end
-function refresh(g; kwargs...)
-    @warn "refresh is deprecated, use reprepare instead"
-    Processes.reprepare(g; kwargs...)
-end
 
 export reprepare
 

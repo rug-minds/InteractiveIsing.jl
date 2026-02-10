@@ -333,7 +333,7 @@ genAdj!(g, wg5)
 ### Set hamiltonian with selfenergy and depolarization field
 # CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
 g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 4, screening = 0.1)
-refresh(g)
+reprepare(g)
 
 ### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic

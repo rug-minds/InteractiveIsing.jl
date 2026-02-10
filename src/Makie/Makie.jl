@@ -71,12 +71,12 @@ function _interface(g, createview = singleView; kwargs...)
     createview(ml, g)
 end
 
-function closeinterface()
-    mlref = simulation[].ml
-    deconstruct(mlref[])
-    reset!(mlref)
-    simulation[].ml[] = SimLayout(Figure())
-end
+# function closeinterface()
+#     mlref = simulation[].ml
+#     deconstruct(mlref[])
+#     reset!(mlref)
+#     simulation[].ml[] = SimLayout(Figure())
+# end
 
 getml() = simulation[].ml[]
 export getml

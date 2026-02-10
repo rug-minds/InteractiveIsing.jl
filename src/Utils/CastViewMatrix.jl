@@ -16,3 +16,4 @@ Base.eltype(m::CastViewMatrix{In, Out}) where {In,Out} = Out
 Base.IteratorSize(::Type{CastViewMatrix}) = Base.HasLength()
 Base.iterate(m::CastViewMatrix, i=1) = i > length(m) ? nothing : (m[i], i+1)
 CastViewMatrix(t::DataType, data, range ,len, wid) = CastViewMatrix{eltype(data), t}(data, range, (len, wid))
+CastViewMatrix(t::DataType, data::AbstractArray, range, len, wid) = CastViewMatrix{eltype(data), t}(vec(data), range, (len, wid))
