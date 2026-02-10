@@ -23,7 +23,7 @@ function weightfunc(dx,dy,dz)
 end
 
 
-wg = @WG "(dx,dy,dz) -> weightfunc(dx,dy,dz)" NN = (1,1,3)
+wg = @WG (dx,dy,dz) -> weightfunc(dx,dy,dz) NN = (1,1,3)
 
 genAdj!(g[1], wg)
 createProcess(g)

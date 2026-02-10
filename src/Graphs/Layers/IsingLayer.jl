@@ -159,7 +159,7 @@ end
 @inline range_end(lt::Type{<:IsingLayer{A,B,C,D,E}}) where {A,B,C,D,E} = last(E)
 @inline range_end(l::IsingLayer) = @inline range_end(typeof(l))
 
-topology(l::IsingLayer) = layer(l).top
+topology(l::IsingLayer) = l.top
 export topology
 
 # Extend show for IsingLayer, showing the layer idx, and the size of the layer
