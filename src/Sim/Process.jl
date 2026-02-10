@@ -4,6 +4,7 @@ function createProcess(g::IsingGraph, func = nothing, inputs...; metropolis = g.
         func = g.default_algorithm
     end
     
+    func = deepcopy(func)
     # process = Process(func, Input(DestructureInput(), structure = g); lifetime)
     process = Process(func, Input(metropolis, structure = g), inputs...; lifetime)
     
