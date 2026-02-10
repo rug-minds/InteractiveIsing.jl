@@ -51,7 +51,10 @@ function IsingLayer(
         if !isnothing(g)
             set = convert.(eltype(g), set)
         end
-
+        if isnothing(set) #TODO FIX THIS
+            set = precision.((-1., 1.))
+        end
+        
         if !isnothing(wg)
             connections[idx=>idx] = wg
         end
@@ -64,7 +67,6 @@ function IsingLayer(
         isnothing(periodic) && (periodic = true)
         top = SquareTopology(lsize; periodic)
         graphidxs = start:(start+reduce(*, lsize)-1)
-        set = convert.(precision, set)
 
         layer = IsingLayer{stype, set, dims, lsize, graphidxs, typeof(top), precision, adjtype}(
             # Graph

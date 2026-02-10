@@ -43,7 +43,7 @@ Single layer constructor
 """
 function IsingGraph(dims::Int...; 
                     periodic = nothing, 
-                    set = nothing, 
+                    set = (-1f0, 1f0), 
                     weights::Union{Nothing,WeightGenerator} = nothing,
                     type = Continuous,
                     kwargs...)
