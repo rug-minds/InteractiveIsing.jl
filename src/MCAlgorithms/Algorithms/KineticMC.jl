@@ -144,7 +144,7 @@ end
 struct KineticMC <: MCAlgorithm end
 export KineticMC
 
-function Processes.prepare(::KineticMC, args::As) where As
+function Processes.init(::KineticMC, args::As) where As
     (;g) = args
     gstate = g.state
     gadj = g.adj

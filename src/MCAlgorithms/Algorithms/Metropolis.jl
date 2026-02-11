@@ -19,7 +19,7 @@ function Processes.step!(::Metropolis, context::C) where {C}
     @inline Metropolis_step(context)
 end
 
-function Processes.prepare(::Metropolis, context::Cont) where Cont
+function Processes.init(::Metropolis, context::Cont) where Cont
     # @show typeof(context)
     (;structure) = context
 
@@ -39,7 +39,7 @@ function Processes.prepare(::Metropolis, context::Cont) where Cont
     return (;hamiltonian, proposer, rng, proposal, M, isinggraph, state, adj, self)
 end
 
-# function Processes.prepare(::Metropolis, context::Cont) where Cont
+# function Processes.init(::Metropolis, context::Cont) where Cont
 #     (;isinggraph) = context
 
 #     rng = Random.MersenneTwister()

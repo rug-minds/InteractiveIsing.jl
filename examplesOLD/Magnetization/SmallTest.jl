@@ -10,7 +10,7 @@ function incs_per_sec(p::Process)
 end
 
 # Runs one time at the beginning
-function Processes.prepare(::CalcSusceptibility, args)
+function Processes.init(::CalcSusceptibility, args)
     M2s = Int[]
     processsizehint!(args, M2s)
     return (;M2s)

@@ -16,7 +16,7 @@ export gatherSusceptibility
 
 struct Susceptibility end
 
-function Processes.prepare(::Susceptibility, args)
+function Processes.init(::Susceptibility, args)
     magnetizations = []
     processsizehint!(args, magnetizations)
     return (;magnetizations)

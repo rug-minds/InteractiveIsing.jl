@@ -43,7 +43,7 @@ interface(g)
 
 # struct TrianglePulseB end
 
-# function Processes.prepare(::TrianglePulseB, args)
+# function Processes.init(::TrianglePulseB, args)
 #     (;lifetime, amp, numpulses) = args
 #     max_z = size(g[1], 3)
 

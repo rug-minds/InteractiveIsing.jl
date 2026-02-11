@@ -28,7 +28,7 @@ end
 
 struct PolTracker{T} <: ProcessAlgorithm end
 PolTracker() = PolTracker{Float32}()
-function Processes.prepare(::PolTracker, context)
+function Processes.init(::PolTracker, context)
     (;isinggraph) = context
     initial = sum(state(isinggraph))
 
@@ -68,7 +68,7 @@ interface(g)
 
 # # pause(g)
 # # args = fetch(g)
-# args = ii.prepare(Metropolis(), (;g = g))
+# args = ii.init(Metropolis(), (;g = g))
 # dr = FlipProposal(:s, j = 1 => -1f0)
 
 

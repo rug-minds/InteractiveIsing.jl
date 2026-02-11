@@ -30,7 +30,7 @@ setparam!(g[1], :b, 0, true)
 
 struct TrianglePulseB end
 
-function Processes.prepare(::TrianglePulseB, args)
+function Processes.init(::TrianglePulseB, args)
     (;amp, numpulses) = args
 
     steps = num_calls(args)

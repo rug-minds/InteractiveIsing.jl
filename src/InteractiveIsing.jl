@@ -32,7 +32,7 @@ include("../deps/Processes/src/Processes.jl")
 
 using .Processes
 export Processes
-import .Processes: prepare
+import .Processes: init
 
 @debug "Loading PrecompileTools and Revise"
 

@@ -45,7 +45,7 @@ end
 
 g.hamiltonian = NIsing(g)
 
-as = prepare(II.MetropolisNew(), (;g))
+as = init(II.MetropolisNew(), (;g))
 
 as = (;as..., newstate = II.SparseVal(-as.gstate[1], 1, length(as.gstate)))
 as.gstate .= (rand(length(as.gstate)) ./ 10)

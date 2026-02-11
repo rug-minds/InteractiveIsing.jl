@@ -95,12 +95,12 @@ end
         throw(ArgumentError("This algorithm did not define a required derived Hamiltonian."))
     end
 
-    # function Processes.prepare(::Type{Algo}, g; kwargs...) where {Algo <: MCAlgorithm}
+    # function Processes.init(::Type{Algo}, g; kwargs...) where {Algo <: MCAlgorithm}
     #     args_algo = (;_prepare(Algo, g; kwargs...)...)
 
     #     return args_algo
     # end
 
-    # function Processes.prepare(::Algo, @specialize(args)) where {Algo <: MCAlgorithm}
+    # function Processes.init(::Algo, @specialize(args)) where {Algo <: MCAlgorithm}
     #     return (;_prepare(Algo, args)...)
     # end

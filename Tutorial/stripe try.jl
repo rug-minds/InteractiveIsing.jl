@@ -203,7 +203,7 @@ end
     push!(x, pulse_val)
     push!(y, M[])
 end
-function Processes.prepare(::TrianglePulseA, args)
+function Processes.init(::TrianglePulseA, args)
     (;amp, numpulses, rise_point) = args
     steps = num_calls(args)
 

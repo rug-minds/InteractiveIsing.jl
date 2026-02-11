@@ -1,8 +1,8 @@
 struct SweepMetropolis <: MCAlgorithm end
 export SweepMetropolis
 
-function Processes.prepare(::SweepMetropolis, @specialize(args))
-    return (;latidx = Ref(1), prepare(Metropolis(), args)...)
+function Processes.init(::SweepMetropolis, @specialize(args))
+    return (;latidx = Ref(1), init(Metropolis(), args)...)
 end
 
 @inline function (::SweepMetropolis)(@specialize(args))
@@ -25,15 +25,15 @@ function ΔH_1(i, gstate, newstate, oldstate, gadj, gparams, lmeta)
     return (oldstate-newstate) * cum
 end
 
-function Processes.prepare(::CheckeredSweepMetropolis, @specialize(args))
-    # Prepare two checkerboards
+function Processes.init(::CheckeredSweepMetropolis, @specialize(args))
+    # Init two checkerboards
     (;g) = args
     first = [i for i in 1:length(g.state) if checkerboard_lat(i, size(g[1],1), false)]
     second = [i for i in 1:length(g.state) if checkerboard_lat(i, size(g[1],1), true)]
     # vcat
     checkerboards = vcat(first, second)
 
-    (;checkerboards, prepare(SweepMetropolis(), args)..., ΔH = ΔH_1)
+    (;checkerboards, init(SweepMetropolis(), args)..., ΔH = ΔH_1)
 end
 
 function (::CheckeredSweepMetropolis)(@specialize(args))

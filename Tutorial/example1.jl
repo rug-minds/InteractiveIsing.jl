@@ -82,7 +82,7 @@ end
 ###     \  /
 ###      \/
 struct TrianglePulseA end
-function Processes.prepare(::TrianglePulseA, args)
+function Processes.init(::TrianglePulseA, args)
     (;amp, numpulses, rise_point) = args
     steps = num_calls(args)
 

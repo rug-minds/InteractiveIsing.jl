@@ -25,7 +25,7 @@ end
 
 struct PolTracker{T} <: ProcessAlgorithm end
 PolTracker() = PolTracker{Float32}()
-function Processes.prepare(::PolTracker, context)
+function Processes.init(::PolTracker, context)
     (;isinggraph) = context
     initial = sum(state(isinggraph))
 

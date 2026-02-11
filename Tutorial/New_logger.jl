@@ -192,7 +192,7 @@ struct TrianglePulseA{T} <: ProcessAlgorithm
     amp::T
     numpulses::Int
 end
-function Processes.prepare(tp::TrianglePulseA, args)
+function Processes.init(tp::TrianglePulseA, args)
     amp = tp.amp
     numpulses = tp.numpulses
     steps = num_calls(args)
@@ -231,7 +231,7 @@ struct SinPulseA{T} <: ProcessAlgorithm
     amp::T
     numpulses::Int
 end    
-function Processes.prepare(tp::SinPulseA, args)
+function Processes.init(tp::SinPulseA, args)
     amp = tp.amp
     numpulses = tp.numpulses
     steps = num_calls(args)
@@ -258,7 +258,7 @@ struct LinAnealingA{T} <: ProcessAlgorithm
     start_T::T
     stop_T::T
 end  
-function Processes.prepare(tp::LinAnealingA, args)
+function Processes.init(tp::LinAnealingA, args)
     n_calls = num_calls(args)
     dT = (tp.stop_T - tp.start_T) / n_calls
     (;current_T = tp.start_T, dT)
@@ -273,7 +273,7 @@ end
 ##################################################################################
 struct ValueLogger{Name} <: ProcessAlgorithm end
 ValueLogger(name) = ValueLogger{Symbol(name)}()
-function Processes.prepare(::ValueLogger, args)
+function Processes.init(::ValueLogger, args)
     values = Float32[]
     processsizehint!(values, args)
     (;values)

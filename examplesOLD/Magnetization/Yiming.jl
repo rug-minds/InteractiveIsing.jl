@@ -7,7 +7,7 @@ function incs_per_sec(p::Process)
 end
 
 # Runs one time at the beginning
-function Processes.prepare(::CalcSusceptibility, args)
+function Processes.init(::CalcSusceptibility, args)
     M1s = Float64[]  # Store normalized magnetization for each sweep
     M2s = Float64[]  # Store squared normalized magnetization for each sweep
     processsizehint!(args, M1s) 

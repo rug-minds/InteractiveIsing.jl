@@ -8,7 +8,7 @@ function Fib(args)
     push!(fiblist, fiblist[end] + fiblist[end-1])
 end
 
-function InteractiveIsing.prepare(::Type{Fib}, args)
+function InteractiveIsing.init(::Type{Fib}, args)
     return (;fiblist = [0, 1])
 end
 
@@ -19,7 +19,7 @@ function Luc(args)
     push!(luclist, luclist[end] + luclist[end-1])
 end
 
-function InteractiveIsing.prepare(::Type{Luc}, args)
+function InteractiveIsing.init(::Type{Luc}, args)
     return (;luclist = [2, 1])
 end
 
@@ -28,7 +28,7 @@ FibLucComp = CompositeAlgorithm( (Fib, Luc), (1,2) )
 ###
 struct FibLuc end
 
-InteractiveIsing.prepare(::Type{FibLuc}, args) = (;fiblist = [0, 1], luclist = [2, 1])
+InteractiveIsing.init(::Type{FibLuc}, args) = (;fiblist = [0, 1], luclist = [2, 1])
 
 function FibLuc(args)
     (;process) = args
@@ -40,7 +40,7 @@ end
 
 struct FibLucTrig{Intervals} end
 
-function InteractiveIsing.prepare(::Type{FibLucTrig{Intervals}}, args) where Intervals
+function InteractiveIsing.init(::Type{FibLucTrig{Intervals}}, args) where Intervals
     (;runtime) = args
     rpts = InteractiveIsing.repeats(runtime)
     triggers = ((InteractiveIsing.InitTriggerList(interval) for interval in Intervals)...,)

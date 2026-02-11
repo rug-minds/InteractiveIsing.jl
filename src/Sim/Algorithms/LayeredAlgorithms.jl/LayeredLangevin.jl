@@ -5,7 +5,7 @@ function get_args(::typeof(layeredLangevin))
     return (:g, :gstate, :gadj, :gparams, :iterator, :rng, :gstype, :ΔEFunc)
 end
 
-function Processes.prepare(::typeof(layeredLangevin), g; kwargs...)
+function Processes.init(::typeof(layeredLangevin), g; kwargs...)
     resize!(llangevin_prealloc, length(state(g)))
     def_kwargs = pairs((;g,
                         gstate = state(g),
