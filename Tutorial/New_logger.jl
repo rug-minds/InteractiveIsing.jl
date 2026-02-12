@@ -1,6 +1,7 @@
 using InteractiveIsing, GLMakie, FileIO, CairoMakie
 using InteractiveIsing.Processes
-import InteractiveIsing as II
+using Random
+import InteractiveIsing as ii
 
 ## Utility functions for experiments
 ### Use ii. to check if the terms are correct
@@ -298,7 +299,7 @@ end
 xL = 30  # Length in the x-dimension
 yL = 30  # Length in the y-dimension
 zL = 10   # Length in the z-dimension
-g = IsingGraph(xL, yL, zL, stype = Continuous(), periodic = (:x,:y), set = (-2,2))
+g = IsingGraph(xL, yL, zL, stype = Continuous(), periodic = (:x,:y), set = (-1,1))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
 # Launch interactive visualization (idle until createProcess(...) later)
@@ -319,7 +320,6 @@ wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 1, 0.1, 0.1) NN = 
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
-
 genAdj!(g, wg5)
 
 
@@ -364,18 +364,21 @@ B_Logger = ValueLogger(:b)
 
 
 
-Metro_and_recal = CompositeAlgorithm((metropolis, Recalc(3), M_Logger, B_Logger), (1,200, fullsweep, fullsweep))
+Metro_and_recal = CompositeAlgorithm(metropolis, Recalc(3), M_Logger, B_Logger, (1,100, fullsweep, fullsweep), 
+    Route(metropolis => M_Logger, :M => :value), 
+    Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
+    Route(metropolis => Recalc(3), :hamiltonian))
 
-pulse_part1 = CompositeAlgorithm((Metro_and_recal, pulse1), (1, point_repeat))
-pulse_part2 = CompositeAlgorithm((Metro_and_recal, pulse2, ), (1, point_repeat))
-anneal_part1 = CompositeAlgorithm((Metro_and_recal, Anealing1), (1, point_repeat))
+pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, (1, point_repeat))
+pulse_part2 = CompositeAlgorithm(Metro_and_recal, pulse2, (1, point_repeat))
+anneal_part1 = CompositeAlgorithm(Metro_and_recal, Anealing1, (1, point_repeat))
 
-Pulse_and_Relax = Routine((pulse_part1, Metro_and_recal), 
+Pulse_and_Relax = Routine(pulse_part1, Metro_and_recal, 
     (pulsetime, relaxtime), 
-    Route(metropolis, pulse1, :hamiltonian, :M),     
-    Route(metropolis, M_Logger, :M => :value), 
-    Route(metropolis, B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
-    Route(metropolis, Recalc(3), :hamiltonian),
+    Route(metropolis => pulse1, :hamiltonian, :M),     
+    Route(metropolis => M_Logger, :M => :value), 
+    Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
+    Route(metropolis => Recalc(3), :hamiltonian),
     )
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 
@@ -385,15 +388,15 @@ createProcess(g, Pulse_and_Relax, lifetime = 1)
 ### estimate time
 # est_remaining(process(g))
 # Wait until it is done
-c = process(g) |> fetch # If you want to close ctr+c
-voltage1= c[B_Logger].values
-Pr1= c[M_Logger].values
+# c = process(g) |> fetch # If you want to close ctr+c
+# voltage1= c[B_Logger].values
+# Pr1= c[M_Logger].values
 
-# Voltage2 = c[pulse2].x
-# Pr2 = c[pulse2].y
+# # Voltage2 = c[pulse2].x
+# # Pr2 = c[pulse2].y
 
-w2=newmakie(lines, voltage1, Pr1)
-w3=newmakie(lines, Pr1)
+# w2=newmakie(lines, voltage1, Pr1)
+# w3=newmakie(lines, Pr1)
 
 # w4=newmakie(lines, Voltage2, Pr2)
 # w5=newmakie(lines,Pr2)

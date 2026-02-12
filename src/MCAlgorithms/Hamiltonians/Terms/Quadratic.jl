@@ -7,6 +7,7 @@ struct Quadratic <: Hamiltonian end
 
 Quadratic(type, len) = Quadratic()
 
+ΔH_paramrefs(::Quadratic) = @ParameterRefs (s[i]*w[i,j]*s[j] + self[j]*s[j]^2)
 
 ΔH_expr[Quadratic] = :(s[i]*w[i,j]*s[j] + self[j]*s[j]^2)
 

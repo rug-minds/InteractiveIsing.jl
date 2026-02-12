@@ -29,6 +29,8 @@ module Processes
 
 
     include("AbstractProcesses.jl")
+    include("ProcessEntities/ProcessEntities.jl")
+
 
     include("Matching.jl")
     include("Identifiable/Identifiable.jl")
@@ -60,7 +62,6 @@ module Processes
     include("ProcessStatus.jl")
     include("Interface.jl")
     
-    include("ProcessEntities/ProcessEntities.jl")
     # include("ProcessStates/ProcessStates.jl")
     # include("ProcessAlgorithms.jl")
 
@@ -109,11 +110,11 @@ module Processes
             Ldup = Unique(Luc)
 
 
-            FibLuc = CompositeAlgorithm( (Fib(), Fib, Luc), (1,1,2), Route(Fib(), Luc, :fiblist))
+            FibLuc = CompositeAlgorithm( Fib(), Fib, Luc, (1,1,2), Route(Fib() => Luc, :fiblist))
 
-            C = Routine((Fib, Fib(), FibLuc), (10,20,30))
+            C = Routine(Fib, Fib(), FibLuc, (10,20,30))
 
-            FFluc = CompositeAlgorithm( (FibLuc, Fdup, Fib, Ldup), (10,5,2,1), Route(Fdup, Ldup, :fiblist), Share(Fib, Ldup))
+            FFluc = CompositeAlgorithm( FibLuc, Fdup, Fib, Ldup, (10,5,2,1), Route(Fdup => Ldup, :fiblist), Share(Fib, Ldup))
 
             pfu = Process(FFluc)
             pcu = Process(C)

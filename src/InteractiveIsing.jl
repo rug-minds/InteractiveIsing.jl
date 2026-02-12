@@ -152,30 +152,30 @@ include("Barebones.jl")
 @debug "InteractiveIsing module load complete"
 
 # PRECOMPILATION FUNCTION FOR FAST USAGE
-@setup_workload begin
-    GC.enable(false)
+# @setup_workload begin
+#     GC.enable(false)
 
-    @compile_workload begin
-        cg1 = IsingGraph(20, 20, type = Discrete)
-        cg3d = IsingGraph(20, 20, 20, type = Continuous)
+#     @compile_workload begin
+#         cg1 = IsingGraph(20, 20, type = Discrete)
+#         cg3d = IsingGraph(20, 20, 20, type = Continuous)
         
-        cwg = @WG (dr) -> 1 NN=1
-        genAdj!(cg1[1], cwg)
-        createProcess(cg1, lifetime = 10)
-        quit(cg1)
-        interface(cg1)
-        # closeinterface()
+#         cwg = @WG (dr) -> 1 NN=1
+#         genAdj!(cg1[1], cwg)
+#         createProcess(cg1, lifetime = 10)
+#         quit(cg1)
+#         interface(cg1)
+#         # closeinterface()
   
-        interface(cg3d)
-        # closeinterface()   
-        genAdj!(cg3d[1], cwg)
-        createProcess(cg3d, lifetime = 10)
-        fetch(process(cg3d))
-        quit(cg3d)
+#         interface(cg3d)
+#         # closeinterface()   
+#         genAdj!(cg3d[1], cwg)
+#         createProcess(cg3d, lifetime = 10)
+#         fetch(process(cg3d))
+#         quit(cg3d)
         
-        GC.enable(true)
-    end
-end
+#         GC.enable(true)
+#     end
+# end
 
 
 

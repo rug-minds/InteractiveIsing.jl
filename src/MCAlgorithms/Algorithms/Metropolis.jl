@@ -9,7 +9,7 @@ Metropolis(;tracked = false) = Metropolis(tracked, tracked)
 function IsingMetropolis(;tracked = false)
     destr = DestructureInput()
     metro = Metropolis(tracked = tracked)
-    package(SimpleAlgo(tuple(metro), destr), Route(destr, metro, :isinggraph => :structure))
+    package(SimpleAlgo(metro, destr, Route(destr => metro, :isinggraph => :structure)))
 end
 
 MetropolisTracked() = Metropolis(tracked = true)
@@ -27,16 +27,17 @@ function Processes.init(::Metropolis, context::Cont) where Cont
     hamiltonian = structure.hamiltonian
     adj = InteractiveIsing.adj(structure)
     self = structure.self
-    isinggraph = structure
 
 
     rng = Random.MersenneTwister()
 
-    hamiltonian = init!(hamiltonian, isinggraph)
-    proposer = get_proposer(isinggraph)
+    hamiltonian = init!(hamiltonian, structure)
+    proposer = get_proposer(structure)
     proposal = FlipProposal{:s, :j, statetype(proposer)}(0, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
     M = sum(state)
-    return (;hamiltonian, proposer, rng, proposal, M, isinggraph, state, adj, self)
+
+    returnargs = (;hamiltonian, proposer, rng, proposal, M, isinggraph = structure, state, adj, self)
+    return returnargs
 end
 
 # function Processes.init(::Metropolis, context::Cont) where Cont
@@ -71,7 +72,6 @@ end
     # ΔE = @inline deltafunc((;context..., newstate), (;j))
 
     ΔE = @inline ΔH(hamiltonian, (;self = self, s = state, w = adj, hamiltonian...), proposal)
-
     if (@inline (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-β*ΔE)))
         proposal = @inline accept(state, proposal)
         M += @inline delta(proposal)

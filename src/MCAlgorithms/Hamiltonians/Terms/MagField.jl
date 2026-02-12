@@ -25,6 +25,7 @@ end
     return (oldstate[j] - newstate[j])*b[j]
 end
 
+ΔH_paramrefs(::MagField) = @ParameterRefs b[j]*s[j]
 # H_expr(::Union{MagField, Type{<:MagField}}) = :(b[j]*s[j])
 ΔH_expr[MagField] = :(b[j]*s[j])
 

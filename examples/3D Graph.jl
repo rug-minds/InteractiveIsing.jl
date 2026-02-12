@@ -48,13 +48,13 @@ g.hamiltonian = h = Ising(g) + CoulombHamiltonian2(g, 1f0)
 #     Share(isingmetro, Recalc()), 
 #     Share(isingmetro, PolTracker())
 #     )
-algo = Processes.CompositeAlgorithm((isingmetro, Recalc(3), PolTracker()), (1, 200, 1),  
+algo = Processes.CompositeAlgorithm(isingmetro, Recalc(3), PolTracker(), (1, 100, 1),  
     Share(isingmetro, Recalc(3)),
     Share(isingmetro, PolTracker())
     )
 
-createProcess(g, algo, Input(PolTracker, isinggraph = g))
-interface(g)
+createProcess(g, algo, Input(PolTracker(), isinggraph = g))
+# interface(g)
 
 
 # h = g.hamiltonian = Ising(g) + Quartic(g) + DepolField(g, top_layers = 2, zfunc = z -> 3/z, NN = 2) + Sextic(g)

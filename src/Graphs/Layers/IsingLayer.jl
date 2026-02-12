@@ -51,8 +51,10 @@ function IsingLayer(
         if !isnothing(g)
             set = convert.(eltype(g), set)
         end
-        if isnothing(set) #TODO FIX THIS
-            set = precision.((-1., 1.))
+        if !isnothing(set) #TODO FIX THIS
+            set = precision.(set)
+        else
+            set = convert.(precision, (-1.,1.)) 
         end
         
         if !isnothing(wg)
