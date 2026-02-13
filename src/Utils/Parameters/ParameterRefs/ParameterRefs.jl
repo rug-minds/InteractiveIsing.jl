@@ -21,7 +21,17 @@ issparse : Says wether the ref points to a sparse structure
 @generated function (::AbstractParameterRef)(freeindices) ?
 expand_exp ?
 """
-
+#### OVERALL FUNCTIONS
+Base.:-(apr::AbstractParameterRef) = setF(apr, -)
+Base.sqrt(apr::AbstractParameterRef) = setF(apr, sqrt)
+Base.log(apr::AbstractParameterRef) = setF(apr, log)
+Base.exp(apr::AbstractParameterRef) = setF(apr, exp)
+Base.:^(apr::AbstractParameterRef, power::Real) = setF(apr, PartialF(^, nothing, power))
+Base.:^(power::Real, apr::AbstractParameterRef) = setF(apr, PartialF(^, power, nothing))
+Base.:/(apr::AbstractParameterRef, factor::Real) = setF(apr, PartialF(/, nothing, factor))
+Base.:/(factor::Real, apr::AbstractParameterRef) = setF(apr, PartialF(/, factor, nothing))
+Base.:*(apr::AbstractParameterRef, factor::Real) = setF(apr, PartialF(*, nothing, factor))
+Base.:*(factor::Real, apr::AbstractParameterRef) = setF(apr, PartialF(*, factor, nothing))
 
 type_apply(f, apr::Type{<:AbstractParameterRef}) = f(apr())
 Base.iterate(apr::AbstractParameterRef, state = 1) = iterate(get_prefs(apr), state)
@@ -88,6 +98,9 @@ getF(::Type{PR}) where PR<:AbstractParameterRef = getF(PR())
 
 remF(pr::AbstractParameterRef) = setF(pr, identity)
 
+"""
+Wraps a function around an expression that can be interpolated
+"""
 function wrapF(apr::AbstractParameterRef, exp = :(@$))
     F = getF(apr)
     if F == identity
@@ -113,16 +126,7 @@ function flatprefs(apr::AbstractParameterRef, paramrefs = ParameterRef[])
     return tuple(paramrefs...)
 end
 
-#### OVERALL FUNCTIONS
-Base.sqrt(apr::AbstractParameterRef) = setF(apr, sqrt)
-Base.log(apr::AbstractParameterRef) = setF(apr, log)
-Base.exp(apr::AbstractParameterRef) = setF(apr, exp)
-Base.:^(apr::AbstractParameterRef, power::Real) = setF(apr, PartialF(^, nothing, power))
-Base.:^(power::Real, apr::AbstractParameterRef) = setF(apr, PartialF(^, power, nothing))
-Base.:/(apr::AbstractParameterRef, factor::Real) = setF(apr, PartialF(/, nothing, factor))
-Base.:/(factor::Real, apr::AbstractParameterRef) = setF(apr, PartialF(/, factor, nothing))
-Base.:*(apr::AbstractParameterRef, factor::Real) = setF(apr, PartialF(*, nothing, factor))
-Base.:*(factor::Real, apr::AbstractParameterRef) = setF(apr, PartialF(*, factor, nothing))
+
 
 
 #Expression stuff

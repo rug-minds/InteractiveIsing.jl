@@ -16,11 +16,7 @@ Pairs gives an iterator over the ParamTensor fields of the Hamiltonian
     return :(pairs($(tuple_exp)))
 end
 
-abstract type AbstractHamiltonianTerms{HS} <: Hamiltonian end
-# Base.pairs(ht::AbstractHamiltonianTerms) = pairs(merge(pairs.(getfield(ht, :hs))...))
-getHS(::Type{<:AbstractHamiltonianTerms{HS}}) where {HS} = HS
-getHS(::AbstractHamiltonianTerms{HS}) where {HS} = HS
-getHS(h::Type{<:Hamiltonian}) = (h,)
+
 
 H_types(t::Type{<:Hamiltonian}) = tuple(getHS(t).parameters...)
 H_types(h::Hamiltonian) = H_types(typeof(h))

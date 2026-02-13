@@ -1,6 +1,6 @@
 ## GAUSSIAN BERNOULLI
 export GaussianBernoulli
-struct GaussianBernoulli <: Hamiltonian end
+struct GaussianBernoulli <: HamiltonianTerm end
 
 params(::Type{GaussianBernoulli}, GraphType::Type) = GatherHamiltonianParams(
                                 (:σ, Vector{GraphType}, GraphType(1), "Standard Deviation"), 

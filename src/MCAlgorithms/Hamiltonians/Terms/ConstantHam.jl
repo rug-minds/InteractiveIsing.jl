@@ -1,4 +1,4 @@
-struct ExampleHamiltonian{T} <: Hamiltonian
+struct ExampleHamiltonian{T} <: HamiltonianTerm
     value::T
 end
 

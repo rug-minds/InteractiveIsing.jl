@@ -1,5 +1,5 @@
 export DepolField
-struct DepolField{PV <: ParamTensor, CV <: ParamTensor, F, SP, T} <: Hamiltonian 
+struct DepolField{PV <: ParamTensor, CV <: ParamTensor, F, SP, T} <: HamiltonianTerm 
     dpf::PV
     c::CV
     zfunc::F
@@ -108,9 +108,9 @@ end
     
 # end
 
-@ParameterRefs function deltaH(::DepolField)
-    return (dpf[j]/c[])*(sn[j]-s[j])
-end
+# @ParameterRefs function deltaH(::DepolField)
+#     return (dpf[j]/c[])*(sn[j]-s[j])
+# end
 
 function Base.show(io::IO, ::MIME"text/plain", dpf::DepolField)
     println(io, "DepolField Hamiltonian")

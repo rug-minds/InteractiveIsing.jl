@@ -2,7 +2,7 @@
 export CoulombHamiltonian, CoulombHamiltonian2, init!, recalc!, recalcnew, ΔH, update!
 """
 """
-struct CoulombHamiltonian{T,PT} <: Hamiltonian
+struct CoulombHamiltonian{T,PT} <: HamiltonianTerm
     σ::Array{T}                # Charges of the particles
     σhat::Array{Complex{T}}    # Fourier transformed charges
     uhat::Array{Complex{T}}   # Fourier transformed potentials
@@ -98,7 +98,7 @@ function recalc!(c::CoulombHamiltonian)
 end
 
 
-struct CoulombHamiltonian2{T,PT,PxyT,PiT,N} <: Hamiltonian
+struct CoulombHamiltonian2{T,PT,PxyT,PiT,N} <: HamiltonianTerm
     size::NTuple{N,Int}
     σ::Array{T,3}                 # real charges
     σhat::Array{Complex{T},3}     # rfft(σ) over (x,y)

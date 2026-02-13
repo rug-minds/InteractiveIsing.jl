@@ -70,8 +70,12 @@ end
     # β = one(Ttype)/T
     
     # ΔE = @inline deltafunc((;context..., newstate), (;j))
+    # @show proposal
+    # sleep(0.5)
+    # ΔE = @inline ΔH(hamiltonian, (;self = self, s = state, w = adj, hamiltonian...), proposal)
+    ΔE = @inline calculate(ΔH(), hamiltonian, (;self = self, s = state, w = adj, hamiltonian...), proposal)
+    
 
-    ΔE = @inline ΔH(hamiltonian, (;self = self, s = state, w = adj, hamiltonian...), proposal)
     if (@inline (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-β*ΔE)))
         proposal = @inline accept(state, proposal)
         M += @inline delta(proposal)

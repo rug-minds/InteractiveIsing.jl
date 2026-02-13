@@ -3,7 +3,7 @@ H = Σ_i b_i s_i
 
 The magnetic field part of the Ising Hamiltonian
 """
-struct MagField{PV <: ParamTensor} <: Hamiltonian 
+struct MagField{PV <: ParamTensor} <: HamiltonianTerm
     b::PV
 end
 
@@ -14,19 +14,22 @@ MagField(type, len, active = false) = MagField(ParamTensor(zeros(type, len), typ
 
 params(::Type{MagField}) = HamiltonianParams((:b, Vector{GraphType}, GraphType(0), "Magnetic Field"))
 
-@ParameterRefs function deltaH(::MagField)
-    return (s[j] - sn[j])*b[j]
+@Auto_ΔH function ΔH(::MagField, hargs, proposal)
+    return :(-b[j]*s[j])
 end
 
-@NewParameterRefs function newDeltaH(args, ::MagField)
-    (;b) = args.hamiltonian
-    (;oldstate, newstate) = args
+# @ParameterRefs function deltaH(::MagField)
+#     return (s[j] - sn[j])*b[j]
+# end
 
-    return (oldstate[j] - newstate[j])*b[j]
-end
+# @NewParameterRefs function newDeltaH(args, ::MagField)
+#     (;b) = args.hamiltonian
+#     (;oldstate, newstate) = args
 
-ΔH_paramrefs(::MagField) = @ParameterRefs b[j]*s[j]
-# H_expr(::Union{MagField, Type{<:MagField}}) = :(b[j]*s[j])
-ΔH_expr[MagField] = :(b[j]*s[j])
+#     return (oldstate[j] - newstate[j])*b[j]
+# end
 
+# ΔH_paramrefs(::MagField) = @ParameterRefs b[j]*s[j]
+# # H_expr(::Union{MagField, Type{<:MagField}}) = :(b[j]*s[j])
+# ΔH_expr[MagField] = :(b[j]*s[j])
 

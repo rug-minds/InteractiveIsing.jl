@@ -82,6 +82,26 @@ function to_delta_exp(expr, deltas::Union{FlipProposal, Type{<:FlipProposal}}...
     end, expr)
 end
 
+@inline @generated function to_delta_exp_static(expr, deltas::Union{FlipProposal, Type{<:FlipProposal}}...)
+    # Kwargs are given as s = ()
+    return MacroTools.postwalk(x -> begin
+        for (didx, d) in enumerate(deltas)
+            s = getsymb(d)
+            si = getindex_symb(d)
+
+            if @capture(x, symb_[idx_])
+                    # println("Matched: ", x, " with symb: ", symb, " idx: ", idx)
+                    if s == symb && si == idx
+                        # println("Replacing ", x, " with delta view")
+                        x = :($(Symbol("delta_", didx))[$si]- $symb[$si])
+                    end
+            end
+        end
+        # println("Returning x: ", x)
+        return x
+    end, expr)
+end
+
 """
 From a set of FlipProposals, get the indexes that are fixed by them
 TODO: This doesn't need to find unique ones
