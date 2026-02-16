@@ -11,7 +11,7 @@ function Processes.step!(::InlineFib, context)
     return (;)
 end
 
-function Processes.prepare(::InlineFib, context)
+function Processes.init(::InlineFib, context)
     fiblist = Int[0, 1]
     processsizehint!(fiblist, context)
     return (;fiblist)
@@ -23,7 +23,7 @@ function Processes.step!(::InlineLuc, context)
     return (;)
 end
 
-function Processes.prepare(::InlineLuc, context)
+function Processes.init(::InlineLuc, context)
     luclist = Int[2, 1]
     processsizehint!(luclist, context)
     return (;luclist)
@@ -48,7 +48,7 @@ function inline_bmark(ip::Processes.InlineProcess, trials = 5)
     for _ in 1:trials
         @inline reset!(ip)
         start_ns = time_ns()
-        @inline run!(ip,)
+        @inline run(ip)
         elapsed = (time_ns() - start_ns) / 1e9
         push!(runtimes, elapsed)
     end
@@ -66,7 +66,7 @@ end
 
 @testset "InlineProcess benchmark" begin
     n = 100_000
-    fibluc = Processes.CompositeAlgorithm((InlineFib, InlineLuc), (1, 1))
+    fibluc = Processes.CompositeAlgorithm( InlineFib, InlineLuc , (1, 1))
     ip = Processes.InlineProcess(fibluc; repeats = n)
     
     println("Benchmarking InlineProcess with $n repeats...")

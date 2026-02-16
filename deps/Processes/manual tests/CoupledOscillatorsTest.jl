@@ -19,15 +19,15 @@ end
     return (;phase_a, phase_b)
 end
 
-function Processes.prepare(::OscillatorA, input)
+function Processes.init(::OscillatorA, input)
     return (;phase = 0.0, freq = 1.0, dt = 0.05)
 end
 
-function Processes.prepare(::OscillatorB, input)
+function Processes.init(::OscillatorB, input)
     return (;phase = 1.0, freq = 0.9, dt = 0.05)
 end
 
-function Processes.prepare(::Coupling, input)
+function Processes.init(::Coupling, input)
     return (;strength = 0.1)
 end
 
@@ -37,3 +37,9 @@ Coupled = CompositeAlgorithm((OscillatorA, OscillatorB, Coupling), (1, 1, 1),
 
 p = Process(Coupled, lifetime = 40)
 start(p)
+fetch(p)
+
+# c = p.context
+# reg = getregistry(c)
+# coup = reg[3][1]
+# scv = view(c, coup)

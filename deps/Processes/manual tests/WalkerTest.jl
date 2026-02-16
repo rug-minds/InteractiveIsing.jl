@@ -5,14 +5,15 @@ import Processes as ps
 
 struct Walker <: ProcessAlgorithm end
 
-function Walker(state, momentum, dt)
+function Processes.step!(::Walker, context::C) where C
+    (;state, momentum, dt) = context
     println("State is now $state")
     println("pushing : $(momentum) * dt)")
     push!(state, state[end] + momentum * dt)
     return (;momentum)
 end
 
-function Processes.prepare(::Walker, input::A) where A
+function Processes.init(::Walker, input::A) where A
     (;dt) = input
 
     state = Float64[1.0]
@@ -38,12 +39,12 @@ function Processes.step!(::InsertNoise, context::C) where C
     return (;targetnum)
 end
 
-function Processes.prepare(::InsertNoise, input::A) where A
+function Processes.init(::InsertNoise, input::A) where A
     rng = MersenneTwister(1234)
     return (;rng)
 end
 
-RandomWalker = CompositeAlgorithm((Walker, InsertNoise), (1,2), Route(Walker, InsertNoise, :momentum => :targetnum, :dt => :scale))
+RandomWalker = CompositeAlgorithm(Walker, InsertNoise, (1,2), Route(Walker => InsertNoise, :momentum => :targetnum, :dt => :scale))
 # RandomWalker = CompositeAlgorithm((Walker, InsertNoise), (1,2))
 p = Process(RandomWalker, lifetime = 10, Input(Walker, :dt => 0.01))
-run!(p)
+run(p)

@@ -1,28 +1,36 @@
 #AlgoTracker
 export inc!, nextalgo!, intervals, interval
 export CompositeAlgorithm
-struct CompositeAlgorithm{T, Intervals, NSR, O, id, CustomName} <: LoopAlgorithm
+struct CompositeAlgorithm{T, Intervals, S , O, id} <: LoopAlgorithm
     funcs::T
-    inc::Base.RefValue{Int} # To track the intervals
-    registry::NSR
+    states::S
     options::O
+    inc::Base.RefValue{Int} # To track the intervals
 end
 
 getmultipliers_from_specification_num(::Type{<:CompositeAlgorithm}, specification_num) = 1 ./(Float64.(specification_num))
 
-
-function CompositeAlgorithm(funcs::NTuple{N, Any}, 
-                            intervals::NTuple{N, Real} = ntuple(_ -> 1, N), 
-                            options::Union{Share, Route, ProcessState}...; id = nothing, customname = Symbol()) where {N}
-    (;functuple, registry, options) = setup(CompositeAlgorithm, funcs, intervals, options...)
-    if all(x -> x == 1, intervals)
-        intervals = RepeatOne() # Set to simpleAlgo
-    end
-    if any(x -> x isa CompositeAlgorithm, functuple) # Flatten nested composites
-        functuple, intervals = flatten_comp_funcs(functuple, intervals)    
-    end
-    CompositeAlgorithm{typeof(functuple), intervals, typeof(registry), typeof(options), nothing, customname}(functuple, Ref(1), registry, options)
+CompositeAlgorithm(args...) = parse_la_input(CompositeAlgorithm, args...)
+function LoopAlgorithm(::Type{CompositeAlgorithm}, funcs::F, states::Tuple, options::Tuple, intervals; id = uuid4()) where F
+    return CompositeAlgorithm{typeof(funcs), intervals, typeof(states), typeof(options), id}(funcs, states, options, Ref(1))
 end
+
+# function CompositeAlgorithm(funcs::NTuple{N, Any}, 
+#                             intervals::NTuple{N, Real} = ntuple(_ -> 1, N), 
+#                             options::Union{Share, Route, ProcessState, Type{<:ProcessState}}...; id = nothing, customname = Symbol()) where {N}
+#     (;functuple, registry, options) = setup(CompositeAlgorithm, funcs, intervals, options...)
+#     if all(x -> x == 1, intervals)
+#         intervals = RepeatOne() # Set to simpleAlgo
+#     end
+#     if any(x -> x isa CompositeAlgorithm, functuple) # Flatten nested composites
+#         functuple, intervals = flatten_comp_funcs(functuple, intervals)    
+#     end
+
+#     if intervals isa Tuple
+#         intervals = Int.(intervals)
+#     end
+#     CompositeAlgorithm{typeof(functuple), intervals, typeof(registry), typeof(options), nothing, customname}(functuple, Ref(1), registry, options)
+# end
 
 function newfuncs(ca::CompositeAlgorithm, funcs)
     # CompositeAlgorithm{typeof(funcs), intervals(ca), typeof(ca.registry), typeof(ca.options)}(funcs, ca.inc, ca.registry , ca.options)
@@ -39,8 +47,8 @@ getoptions(ca::CompositeAlgorithm) = ca.options
 getid(ca::Union{CompositeAlgorithm{T,I,NSR,O,id}, Type{<:CompositeAlgorithm{T,I,NSR,O,id}}}) where {T,I,NSR,O,id} = id
 setid(ca::CA, id = uuid4()) where CA = setparameter(ca, 5, id)
 
-setname(ca::CA, name::Symbol) where CA <: CompositeAlgorithm = setparameter(ca, 6, name)
-getname(ca::Union{CompositeAlgorithm{T,I,NSR,O,id,CustomName}, Type{<:CompositeAlgorithm{T,I,NSR,O,id,CustomName}}}) where {T,I,NSR,O,id,CustomName} = CustomName
+# setname(ca::CA, name::Symbol) where CA <: CompositeAlgorithm = setparameter(ca, 6, name)
+# getname(ca::Union{CompositeAlgorithm{T,I,NSR,O,id,CustomName}, Type{<:CompositeAlgorithm{T,I,NSR,O,id,CustomName}}}) where {T,I,NSR,O,id,CustomName} = CustomName
 
 interval(ca::Union{CompositeAlgorithm{T,I}, Type{<:CompositeAlgorithm{T,I}}}, idx) where {T,I} = I[idx]
 
@@ -51,7 +59,7 @@ interval(ca::Union{CompositeAlgorithm{T,I}, Type{<:CompositeAlgorithm{T,I}}}, id
 
 @inline functypes(ca::Union{CompositeAlgorithm{T,I}, Type{<:CompositeAlgorithm{T,I}}}) where {T,I} = tuple(T.parameters...)
 @inline getalgotype(::Union{CompositeAlgorithm{T,I}, Type{<:CompositeAlgorithm{T,I}}}, idx) where {T,I} = T.parameters[idx]
-@inline numfuncs(::Union{CompositeAlgorithm{T,I}, Type{<:CompositeAlgorithm{T,I}}}) where {T,I} = length(T.parameters)
+@inline numalgos(::Union{CompositeAlgorithm{T,I}, Type{<:CompositeAlgorithm{T,I}}}) where {T,I} = length(T.parameters)
 
 
 @inline function intervals(ca::Union{CompositeAlgorithm{T,I}, Type{<:CompositeAlgorithm{T,I}}}) where {T,I}
@@ -61,6 +69,8 @@ interval(ca::Union{CompositeAlgorithm{T,I}, Type{<:CompositeAlgorithm{T,I}}}, id
         return ntuple(_ -> 1, length(T.parameters))
     end
 end
+@inline intervals(ca::Union{CompositeAlgorithm, Type{<:CompositeAlgorithm}}, ::Val{Idx}) where Idx = intervals(ca)[Idx]
+
 get_this_interval(args) = interval(getalgo(args.process), algoidx(args))
 
 function setintervals(ca::C, new_intervals) where {C<:CompositeAlgorithm}
@@ -72,9 +82,6 @@ function setinterval(ca::C, idx::Int, new_interval) where {C<:CompositeAlgorithm
     new_intervals = ntuple(i -> i == idx ? new_interval : interval(ca, i), length(ca.funcs))
     setparameter(ca, 2, new_intervals)
 end
-
-
-
 
 
 #######################################
@@ -107,6 +114,7 @@ function reset!(ca::CompositeAlgorithm)
     ca.inc[] = 1
     reset!.(ca.funcs)
 end
+
 
 # Change the names
 setnames(ca::CompositeAlgorithm{T,Int}, names::NTuple{N, Symbol}) where {T,N} = CompositeAlgorithm{T,Int,names}(ca.funcs, ca.inc, ca.flags)

@@ -12,7 +12,7 @@ using Processes
         return (; state = new_state, velocity = new_vel)
     end
 
-    function Processes.prepare(::Oscillator, context)
+    function Processes.init(::Oscillator, context)
         (; dt) = context
         trajectory = Float64[1.0]
         processsizehint!(trajectory, context)
@@ -25,12 +25,12 @@ using Processes
         return (; velocity)
     end
 
-    function Processes.prepare(::DampedFollower, _context)
+    function Processes.init(::DampedFollower, _context)
         return (; damp = 0.05)
     end
 
     shared_algo = CompositeAlgorithm(
-        (Oscillator, DampedFollower),
+        Oscillator, DampedFollower,
         (1, 1),
         Share(Oscillator, DampedFollower),
     )

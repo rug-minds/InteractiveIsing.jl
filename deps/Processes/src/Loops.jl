@@ -3,7 +3,7 @@ const start_finished = Ref(false)
 @inline function before_while(p::AbstractProcess)
     start_finished[] = true
     p.threadid = Threads.threadid()
-    @atomic p.paused = false
+    # @atomic p.paused = false
     # _runtimelisteners = runtimelisteners(p)
     # start(_runtimelisteners)
     # start.(get_linked_processes(p)) # TODO OBSOLETE?
@@ -20,7 +20,7 @@ end
     # close(_runtimelisteners)
     # close.(get_linked_processes(p)) # TODO OBSOLETE?
     if !shouldrun(p) || lifetime(p) isa Indefinite # If user interrupted, or lifetime is indefinite
-        Processes.context(context(p, context))
+        Processes.context(p, context)
         return context
     else
         # return cleanup(getalgo(p), context)
@@ -35,7 +35,15 @@ end
 end
 
 
-resuming(::Any) = false
+# resuming(::Any) = false
+# function resuming(p::Process)
+#     if p.paused
+#         @atomic p.paused = false
+#         return true
+#     else
+#         return false
+#     end
+# end
 
 
 """
@@ -47,12 +55,14 @@ Run a single function in a loop indefinitely
     # end
 
     @inline before_while(process)
-    if resuming(process)
-        context = @inline resume_step!(func, context)
-    end
+
+    # if resuming(process)
+    #     context = @inline resume_step!(func, context)
+    # end
 
     while shouldrun(process)
         context = @inline step!(func, context)
+        @inline tick!(process)
         @inline inc!(process) 
         # if isthreaded(p) || isasync(p)
         #     GC.safepoint()
@@ -69,16 +79,17 @@ Base.@constprop :aggressive function processloop(process::AbstractProcess, algo:
     @inline before_while(process)
     start_idx = loopidx(process)
     
-    if resuming(process)
-        context = @inline resume_step!(algo, context)
-        start_idx += 1
-    end
+    # if resuming(process)
+    #     context = @inline resume_step!(algo, context)
+    #     start_idx += 1
+    # end
 
     for _ in start_idx:repeats(r)
         if !shouldrun(process)
             break
         end
         context = @inline step!(algo, context)
+        @inline tick!(process)
         @inline inc!(process)
 
         # if isthreaded(p) || isasync(p)

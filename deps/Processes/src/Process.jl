@@ -1,4 +1,5 @@
-export Process, getallocator, getnewallocator, getcontext
+export Process, getallocator, getnewallocator, getcontext, getticks
+
 
 mutable struct Process{F} <: AbstractProcess
     id::UUID
@@ -6,7 +7,8 @@ mutable struct Process{F} <: AbstractProcess
     taskdata::TaskData{F}
     timeout::Float64
     task::Union{Nothing, Task}
-    loopidx::UInt   
+    loopidx::UInt # To track the current loop index for resuming
+    tickidx::UInt # To track ticks for performance monitoring
     # To make sure other processes don't interfere
     lock::ReentrantLock 
     @atomic shouldrun::Bool
@@ -14,7 +16,7 @@ mutable struct Process{F} <: AbstractProcess
     starttime ::Union{Nothing, Float64, UInt64}
     endtime::Union{Nothing, Float64, UInt64}
     # linked_processes::Vector{Process} # Maybe do only with UUIDs for flexibility
-    allocator::Allocator
+    # allocator::Allocator
     rls::RuntimeListeners
     threadid::Int
 end
@@ -29,13 +31,19 @@ Set value of run of a process, denoting wether it should run or not
 """
 shouldrun(p::Process, val) = @atomic p.shouldrun = val
 
+# Loop counting
+looptick!(p::Process) = p.tickidx += 1
+tick!(p::Process) = p.tickidx += 1
+getticks(p::Process) = p.tickidx
+reset_ticks!(p::Process) = p.tickidx = 1
 
-function Process(func::Union{ProcessAlgorithm, LoopAlgorithm}, inputs_overrides...; lifetime = Indefinite(), timeout = 1.0)
+
+function Process(func::Union{ProcessAlgorithm, LoopAlgorithm}, inputs_overrides...; context = nothing, lifetime = Indefinite(), timeout = 1.0)
 
     # Wrap in a LoopAlgorithm to get all
     # features
     if !(func isa LoopAlgorithm)
-        func = SimpleAlgo(tuple(func))
+        func = SimpleAlgo(func)
     end
     
     if lifetime isa Integer
@@ -48,21 +56,29 @@ function Process(func::Union{ProcessAlgorithm, LoopAlgorithm}, inputs_overrides.
         end
     end
 
+    empty_context = ProcessContext(func)
+    reg = getregistry(empty_context)
+
     inputs = filter(x -> x isa Input, inputs_overrides)
     overrides = filter(x -> x isa Override, inputs_overrides)
 
-    named_inputs = to_named(func, inputs...)
-    named_overrides = to_named(func, overrides...)
+    # TODO: Should they already be converted to NamedInput/NamedOverride before passing to taskdata?
+    named_inputs = to_named(reg, inputs...)
+    named_overrides = to_named(reg, overrides...)
     @DebugMode "Named_inputs: $(named_inputs)"
     @DebugMode "Named overrides: $(named_overrides)"
 
-  
+    # func = update_keys(func, reg)
     td = TaskData(func; lifetime, overrides = named_overrides, inputs = named_inputs)
 
-    # context = init_context(td)
+    context = init_context(td)
 
-    context = prepare_context(td)
-    p = Process(uuid1(), context, td, timeout, nothing, UInt(1), Threads.ReentrantLock(), false, false, nothing, nothing, Arena(), RuntimeListeners(), 0)
+    if isnothing(context)
+         context = init_context(td)
+    end
+    # p = Process(uuid1(), context, td, timeout, nothing, UInt(1), UInt(1), Threads.ReentrantLock(), false, true, nothing, nothing, Arena(), RuntimeListeners(), 0)
+    p = Process(uuid1(), context, td, timeout, nothing, UInt(1), UInt(1), Threads.ReentrantLock(), false, true, nothing, nothing, RuntimeListeners(), 0)
+
     register_process!(p)
     @DebugMode "Created process with id $(p.id), now preparing data"
     
@@ -168,12 +184,11 @@ function makeloop!(p::Process; threaded = true)
     @atomic p.shouldrun = true
 
     context = merge_into_globals(p.context, (;process = p))
-    spawnloop(p, p.taskdata.func, context, lifetime(p))
-    # if threaded
-    #     p.task = spawnloop(p, p.taskdata.func, context, lifetime(p))
-    # else
-    #     p.task = @async runloop(p, p.taskdata.func, context, lifetime(p))
-    # end
+    if threaded
+        p.task = spawnloop(p, p.taskdata.func, context, lifetime(p))
+    else
+        p.task = @async runloop(p, p.taskdata.func, context, lifetime(p))
+    end
     return p
 end
 
@@ -182,9 +197,13 @@ Reset process to initial state
 """
 function reset!(p::Process)
     reset_loopidx!(p)
+    reset_ticks!(p)
     @atomic p.paused = false
     @atomic p.shouldrun = true
     reset_times!(p)
+    algo = getalgo(p.taskdata)
+    reset!(algo)
+    return p
 end
 
 ### LINKING

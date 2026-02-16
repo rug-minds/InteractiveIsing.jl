@@ -15,6 +15,7 @@ function TaskData(algo; overrides = tuple(), inputs = tuple(), lifetime = Indefi
         algo = algo()
     end
     c = ProcessContext(algo; globals = (;lifetime, algo))
+    algo = update_keys(algo, getregistry(c))
     # TaskData(algo, args, (;), overrides, lifetime, Ref(true))
     if !(inputs isa Tuple)
         # println("Making inputs a tuple")
@@ -55,7 +56,7 @@ loopdispatch(tf::TaskData) = tf.lifetime
 
 function sametask(t1,t2)
     checks = (t1.func == t2.func,
-    # t1.prepare == t2.prepare,
+    # t1.init == t2.init,
     # t1.cleanup == t2.cleanup,
     t1.inputs == t2.inputs,
     t1.overrides == t2.overrides,

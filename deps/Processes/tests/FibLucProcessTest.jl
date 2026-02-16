@@ -10,7 +10,7 @@ function Processes.step!(::RunFib, context)
     return (;)
 end
 
-function Processes.prepare(::RunFib, context)
+function Processes.init(::RunFib, context)
     fiblist = Int[0, 1]
     processsizehint!(fiblist, context)
     return (;fiblist)
@@ -22,7 +22,7 @@ function Processes.step!(::RunLuc, context)
     return (;)
 end
 
-function Processes.prepare(::RunLuc, context)
+function Processes.init(::RunLuc, context)
     luclist = Int[2, 1]
     processsizehint!(luclist, context)
     return (;luclist)
@@ -30,9 +30,9 @@ end
 
 @testset "Process run fills context" begin
     n = 50_000
-    fibluc = Processes.CompositeAlgorithm((RunFib, RunLuc), (1, 2))
+    fibluc = Processes.CompositeAlgorithm( RunFib, RunLuc , (1, 2))
     p = Processes.Process(fibluc; lifetime = n)
-    Processes.run!(p)
+    Processes.run(p)
     ctx = fetch(p)
 
     fib_ctx = ctx[RunFib]

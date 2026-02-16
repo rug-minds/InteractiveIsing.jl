@@ -16,7 +16,7 @@ end
     return (;position, history)
 end
 
-function Processes.prepare(::Tick, input)
+function Processes.init(::Tick, input)
     return (;)
 end
 
@@ -30,5 +30,4 @@ Runner = SimpleAlgo((Tick,), destr, Share(destr, Tick))
 r = getregistry(Runner)
 
 p = Process(Runner)
-@show p.context
 # start(p)

@@ -1,15 +1,23 @@
+export Logger
+include("IsBitsStorage.jl")
+include("RunFuncs.jl")
+
 """
 Log a variable
 """
-struct Logger{T} <: ProcessAlgorithm end
+struct Logger{T, Name} <: ProcessAlgorithm end
 
-function Processes.prepare(::Logger{T}, context) where T
+Logger(name::Symbol, T) = Logger{T, name}()
+
+function Processes.init(::Logger{T}, context) where T
+    println("RUNNING")
     log = Vector{T}()
     processsizehint!(log, context)
     return (;log)
 end
 function Processes.step!(::Logger{T}, context) where T
     (;log, value) = context
+
     push!(log, value)
     return (;)
 end
@@ -20,7 +28,7 @@ Apply a function
 struct Apply{F} <: ProcessAlgorithm
     f::F
 end
-function Processes.prepare(a::Apply{F}, context) where F
+function Processes.init(a::Apply{F}, context) where F
     (;target) = context
     return (;target = a.f(target))
 end
@@ -29,7 +37,7 @@ struct Interactive{T, id} <: ProcessAlgorithm
     channel_size::Int
     isbitsptr::IsBitsPtr{Channel{T}, id}
 end
-function Processes.prepare(I::Interactive{T}, context) where T
+function Processes.init(I::Interactive{T}, context) where T
     channel = Channel{T}(I.channel_size)
     
     return (;channel)

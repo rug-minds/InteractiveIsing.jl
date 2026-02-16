@@ -3,13 +3,13 @@ So that warnings are only printed once per type per session
 """
 const warnset = Set{Any}()
 """
-Fallback prepare
+Fallback init
 """
-function prepare(t::T, c::Any) where T
+function init(t::T, c::Any) where T
     # @show T
     # @show c
     if !in(T, warnset)
-        @warn "No prepare function defined for var $t with type $T, returning empty context"
+        @warn "No init function defined for var $t with type $T, returning empty context"
         push!(warnset, T)
     end
     (;)
@@ -18,7 +18,7 @@ end
 """
 previously prepare_args
 """
-function prepare_context(algo::F, c::ProcessContext, overrides_and_inputs::Union{NamedInput, NamedOverride}...; lifetime = Indefinite()) where {F}
+function init_context(algo::F, c::ProcessContext, overrides_and_inputs::Union{NamedInput, NamedOverride}...; lifetime = Indefinite()) where {F}
     inputs = filter(x -> x isa NamedInput, overrides_and_inputs)
     overrides = filter(x -> x isa NamedOverride, overrides_and_inputs)
     
@@ -27,17 +27,12 @@ function prepare_context(algo::F, c::ProcessContext, overrides_and_inputs::Union
     @DebugMode "Preparing context for algo $(algo) with input context $input_context"
     @DebugMode "Overrides are $overrides"
 
-    prepared_context = prepare(algo, input_context)
-    @DebugMode "Prepared in prepare_context context is $prepared_context"
+    prepared_context = init(algo, input_context)
+    @DebugMode "Prepared in init_context context is $prepared_context"
 
     overridden_context = merge(prepared_context, overrides...)
 
     return overridden_context
-end
-
-@inline function init_context(td::TaskData)
-    func = getalgo(td)
-    ProcessContext(func, globals = (;lifetime = getlifetime(td), algo = func))
 end
 
 @inline function init_context(p::AbstractProcess)
@@ -47,21 +42,20 @@ end
     return c
 end
 
-
 """
-Prepare context from TaskData
+Init context from TaskData
 """
-function prepare_context(td::TD) where {TD<:TaskData}
+function init_context(td::TD) where {TD<:TaskData}
     lifetime = getlifetime(td)
     overrides = getoverrides(td)
     inputs = getinputs(td)
     empty_c = getcontext(td)
     
-    return prepare_context(td.func, empty_c, overrides..., inputs...; lifetime = lifetime)
+    return init_context(td.func, empty_c, overrides..., inputs...; lifetime = lifetime)
 end
 
 function makecontext(p::AbstractProcess)
-    prepare_context(taskdata(p))
+    init_context(taskdata(p))
 end
 
 function makecontext!(p::AbstractProcess)

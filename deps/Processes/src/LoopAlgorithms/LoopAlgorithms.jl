@@ -4,15 +4,12 @@ include("CompositeAlgorithms.jl")
 include("SimpleAlgo.jl")
 include("Routines.jl")
 include("Setup.jl")
-include("Prepare.jl")
+include("Init.jl")
 include("Interface.jl")
 include("Step.jl")
 include("GeneratedStep.jl")
 include("Fusing/Fusing.jl")
-include("IsBitsStorage.jl")
-include("Widgets/Widgets.jl")
-
-
+include("Flatten.jl")
 include("Showing.jl")
 
 
