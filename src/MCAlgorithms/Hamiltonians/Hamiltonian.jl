@@ -16,11 +16,7 @@ Pairs gives an iterator over the ParamTensor fields of the Hamiltonian
     return :(pairs($(tuple_exp)))
 end
 
-abstract type AbstractHamiltonianTerms{HS} <: Hamiltonian end
-# Base.pairs(ht::AbstractHamiltonianTerms) = pairs(merge(pairs.(getfield(ht, :hs))...))
-getHS(::Type{<:AbstractHamiltonianTerms{HS}}) where {HS} = HS
-getHS(::AbstractHamiltonianTerms{HS}) where {HS} = HS
-getHS(h::Type{<:Hamiltonian}) = (h,)
+
 
 H_types(t::Type{<:Hamiltonian}) = tuple(getHS(t).parameters...)
 H_types(h::Hamiltonian) = H_types(typeof(h))
@@ -95,12 +91,12 @@ end
         throw(ArgumentError("This algorithm did not define a required derived Hamiltonian."))
     end
 
-    # function Processes.prepare(::Type{Algo}, g; kwargs...) where {Algo <: MCAlgorithm}
+    # function Processes.init(::Type{Algo}, g; kwargs...) where {Algo <: MCAlgorithm}
     #     args_algo = (;_prepare(Algo, g; kwargs...)...)
 
     #     return args_algo
     # end
 
-    # function Processes.prepare(::Algo, @specialize(args)) where {Algo <: MCAlgorithm}
+    # function Processes.init(::Algo, @specialize(args)) where {Algo <: MCAlgorithm}
     #     return (;_prepare(Algo, args)...)
     # end

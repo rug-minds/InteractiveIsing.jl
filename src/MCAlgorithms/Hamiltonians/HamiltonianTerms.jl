@@ -41,7 +41,7 @@ export setparam
 
 function paramactivation!(g::AbstractIsingGraph, param::Symbol, activation::Bool)
     g.hamiltonian = paramactivation(g.hamiltonian, param, activation)
-    refresh(g)
+    reprepare(g)
 end
 
 function h_param(g::AbstractIsingGraph, param::Symbol)

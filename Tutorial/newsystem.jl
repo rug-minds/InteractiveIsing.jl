@@ -193,7 +193,7 @@ struct TrianglePulseA{T} <: ProcessAlgorithm
     numpulses::Int
 end
 
-function Processes.prepare(tp::TrianglePulseA, args)
+function Processes.init(tp::TrianglePulseA, args)
     amp = tp.amp
     numpulses = tp.numpulses
     steps = num_calls(args)
@@ -249,7 +249,7 @@ struct SinPulseA{T} <: ProcessAlgorithm
     numpulses::Int
 end
     
-function Processes.prepare(tp::SinPulseA, args)
+function Processes.init(tp::SinPulseA, args)
     amp = tp.amp
     numpulses = tp.numpulses
     steps = num_calls(args)
@@ -291,7 +291,7 @@ struct LinAnealingA{T} <: ProcessAlgorithm
     stop_T::T
 end
     
-function Processes.prepare(tp::LinAnealingA, args)
+function Processes.init(tp::LinAnealingA, args)
     n_calls = num_calls(args)
     dT = (tp.stop_T - tp.start_T) / n_calls
     (;current_T = tp.start_T, dT)
@@ -308,7 +308,7 @@ end
 struct ValueLogger{Name} <: ProcessAlgorithm end
 ValueLogger(name) = ValueLogger{Symbol(name)}()
 
-function Processes.prepare(::ValueLogger, args)
+function Processes.init(::ValueLogger, args)
     values = Float32[]
     processsizehint!(values, args)
     (;values)
@@ -321,7 +321,7 @@ function Processes.step!(::ValueLogger, context::C) where C
 end
 
 struct PolTracker{T} <: ProcessAlgorithm end
-function prepare(::PolTracker, context)
+function init(::PolTracker, context)
     (;isinggraph) = context
     initial = sum(state(isinggraph))
     (;pols = Float32[initial])
@@ -374,11 +374,11 @@ Cdep=120
 Cz = 0.1
 lambda = 0.1
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(64,64,3)) + Quartic(g) + Sextic(g)
-# refresh(g)
+# reprepare(g)
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(20,20,4)) + Quartic(g) + Sextic(g)
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((z-1)/lambda) , NN=8)
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz , NN=20)
-# refresh(g)
+# reprepare(g)
 
 g.hamiltonian = Ising(g)
 

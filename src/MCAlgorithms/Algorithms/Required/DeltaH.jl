@@ -11,7 +11,7 @@
 
 # const check_empty = Ref(false)
 
-# # prepare(::Type{Δi_H}) = nothing
+# # init(::Type{Δi_H}) = nothing
 
 # # TODO: Remove export
 # export H_expr

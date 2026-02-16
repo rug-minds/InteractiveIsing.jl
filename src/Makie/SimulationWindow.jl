@@ -2,7 +2,7 @@ function simwindow(g)
     w = new_window(;window_type = :Simulation, title = "Simulation", objectptr = g)
     w[:layout] = SimLayout(w.f)
     w[:graph] = g
-    println("Graph: ", graph(w))
+    println("Showing Graph: ", graph(w))
 
     w[:layer_idx] = Observable(1)
     w[:polling_rate] = 10

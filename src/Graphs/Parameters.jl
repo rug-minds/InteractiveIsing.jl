@@ -10,7 +10,7 @@ function changeactivation!(g, param, activate)
     old_active = isactive(getparam(g, param))
     g.params = changeactivation(g.params, param, activate)
     if old_active != activate
-        refresh(g)
+        reprepare(g)
     end
     return g.params
 end
@@ -22,7 +22,7 @@ function setglobal!(g::AbstractIsingGraph, param, val)
     old_default = default(pval)
     g.params = Parameters(param = ParamTensor(pval, val, false); get_nt(g.params)...)
     if old_default != val
-        refresh(g)
+        reprepare(g)
     end
     return g.params[param]
 end

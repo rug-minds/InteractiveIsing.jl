@@ -9,7 +9,7 @@ Metropolis(;tracked = false) = Metropolis(tracked, tracked)
 function IsingMetropolis(;tracked = false)
     destr = DestructureInput()
     metro = Metropolis(tracked = tracked)
-    SimpleAlgo(tuple(metro), destr, Share(destr, metro))
+    package(SimpleAlgo(metro, destr, Route(destr => metro, :isinggraph => :structure)))
 end
 
 MetropolisTracked() = Metropolis(tracked = true)
@@ -19,27 +19,28 @@ function Processes.step!(::Metropolis, context::C) where {C}
     @inline Metropolis_step(context)
 end
 
-function Processes.prepare(::Metropolis, context::Cont) where Cont
+function Processes.init(::Metropolis, context::Cont) where Cont
     # @show typeof(context)
-
     (;structure) = context
+
     state = InteractiveIsing.state(structure)
     hamiltonian = structure.hamiltonian
     adj = InteractiveIsing.adj(structure)
     self = structure.self
-    isinggraph = structure
 
 
     rng = Random.MersenneTwister()
 
-    hamiltonian = init!(hamiltonian, isinggraph)
-    proposer = get_proposer(isinggraph)
+    hamiltonian = init!(hamiltonian, structure)
+    proposer = get_proposer(structure)
     proposal = FlipProposal{:s, :j, statetype(proposer)}(0, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
     M = sum(state)
-    return (;hamiltonian, proposer, rng, proposal, M, isinggraph, state, adj, self)
+
+    returnargs = (;hamiltonian, proposer, rng, proposal, M, isinggraph = structure, state, adj, self)
+    return returnargs
 end
 
-# function Processes.prepare(::Metropolis, context::Cont) where Cont
+# function Processes.init(::Metropolis, context::Cont) where Cont
 #     (;isinggraph) = context
 
 #     rng = Random.MersenneTwister()
@@ -69,8 +70,11 @@ end
     # β = one(Ttype)/T
     
     # ΔE = @inline deltafunc((;context..., newstate), (;j))
-
-    ΔE = @inline ΔH(hamiltonian, (;self = self, s = state, w = adj, hamiltonian...), proposal)
+    # @show proposal
+    # sleep(0.5)
+    # ΔE = @inline ΔH(hamiltonian, (;self = self, s = state, w = adj, hamiltonian...), proposal)
+    ΔE = @inline calculate(ΔH(), hamiltonian, (;self = self, s = state, w = adj, hamiltonian...), proposal)
+    
 
     if (@inline (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-β*ΔE)))
         proposal = @inline accept(state, proposal)

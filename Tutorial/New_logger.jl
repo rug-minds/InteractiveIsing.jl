@@ -1,6 +1,7 @@
 using InteractiveIsing, GLMakie, FileIO, CairoMakie
 using InteractiveIsing.Processes
-import InteractiveIsing as II
+using Random
+import InteractiveIsing as ii
 
 ## Utility functions for experiments
 ### Use ii. to check if the terms are correct
@@ -192,8 +193,7 @@ struct TrianglePulseA{T} <: ProcessAlgorithm
     amp::T
     numpulses::Int
 end
-
-function Processes.prepare(tp::TrianglePulseA, args)
+function Processes.init(tp::TrianglePulseA, args)
     amp = tp.amp
     numpulses = tp.numpulses
     steps = num_calls(args)
@@ -214,7 +214,6 @@ function Processes.prepare(tp::TrianglePulseA, args)
     step = 1
     return (;pulse, step, pulseval = pulse[1])
 end
-
 function Processes.step!(::TrianglePulseA, context::C) where C
     (;pulse, step, hamiltonian) = context
     pulseval = pulse[step]
@@ -232,9 +231,8 @@ end
 struct SinPulseA{T} <: ProcessAlgorithm
     amp::T
     numpulses::Int
-end
-    
-function Processes.prepare(tp::SinPulseA, args)
+end    
+function Processes.init(tp::SinPulseA, args)
     amp = tp.amp
     numpulses = tp.numpulses
     steps = num_calls(args)
@@ -260,14 +258,12 @@ end
 struct LinAnealingA{T} <: ProcessAlgorithm
     start_T::T
     stop_T::T
-end
-    
-function Processes.prepare(tp::LinAnealingA, args)
+end  
+function Processes.init(tp::LinAnealingA, args)
     n_calls = num_calls(args)
     dT = (tp.stop_T - tp.start_T) / n_calls
     (;current_T = tp.start_T, dT)
 end
-
 function Processes.step!(::LinAnealingA, context::C) where C
     (;current_T, dT, isinggraph) = context
     temp(isinggraph, current_T)
@@ -278,7 +274,7 @@ end
 ##################################################################################
 struct ValueLogger{Name} <: ProcessAlgorithm end
 ValueLogger(name) = ValueLogger{Symbol(name)}()
-function Processes.prepare(::ValueLogger, args)
+function Processes.init(::ValueLogger, args)
     values = Float32[]
     processsizehint!(values, args)
     (;values)
@@ -291,20 +287,19 @@ end
 ##################################################################################
 
 ##################################################################################
-struct Recalc <: Processes.ProcessAlgorithm 
-    i::Int
-end
-function Processes.step!(r::Recalc, context)
+struct Recalc{I} <: Processes.ProcessAlgorithm end
+Recalc(i) = Recalc{Int(i)}()
+function Processes.step!(r::Recalc{I}, context) where I
     (;hamiltonian) = context
-    recalc!(hamiltonian[r.i])
+    recalc!(hamiltonian[I])
     return (;)
 end
 ##################################################################################
 
-xL = 80  # Length in the x-dimension
-yL = 80  # Length in the y-dimension
-zL = 20   # Length in the z-dimension
-g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
+xL = 30  # Length in the x-dimension
+yL = 30  # Length in the y-dimension
+zL = 10   # Length in the z-dimension
+g = IsingGraph(xL, yL, zL, stype = Continuous(), periodic = (:x,:y), set = (-1,1))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
 # Launch interactive visualization (idle until createProcess(...) later)
@@ -325,7 +320,6 @@ wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 1, 0.1, 0.1) NN = 
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
-
 genAdj!(g, wg5)
 
 
@@ -333,7 +327,9 @@ genAdj!(g, wg5)
 ### Set hamiltonian with selfenergy and depolarization field
 # CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
 g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 4, screening = 0.1)
-refresh(g)
+
+# Only necessary if the Hamiltonian has non-local terms that need to be recalculated after each spin flip.
+# reprepare(g)
 
 ### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic
@@ -361,37 +357,28 @@ Anealing1 = LinAnealingA(2f0, 1f0)
 metropolis = g.default_algorithm
 
 #
-M_logger = ValueLogger(:M)
-Pulse_logger = ValueLogger(:pulse)
-# Pulse_logger2 = ValueLogger(:pulse)
+M_Logger = ValueLogger(:M)
+# Pulse_logger = ValueLogger(:pulse)
+B_Logger = ValueLogger(:b)
 
-metropolis = CompositeAlgorithm((metropolis, M_logger, Recalc(3)), (1, fullsweep, 200))
 
-pulse_part1 = CompositeAlgorithm((metropolis, pulse1, Pulse_logger), (1, point_repeat, fullsweep))
 
-pulse_part2 = CompositeAlgorithm((metropolis, pulse2, Pulse_logger), (1, point_repeat, fullsweep))
 
-anneal_part1 = CompositeAlgorithm((metropolis, Anealing1, Pulse_logger), (1, point_repeat, fullsweep))
+Metro_and_recal = CompositeAlgorithm(metropolis, Recalc(3), M_Logger, B_Logger, (1,100, fullsweep, fullsweep), 
+    Route(metropolis => M_Logger, :M => :value), 
+    Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
+    Route(metropolis => Recalc(3), :hamiltonian))
 
-relax_part = CompositeAlgorithm((metropolis, Pulse_logger), (1, fullsweep))
-# Pulse_and_Relax = Routine((pulse_part1, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian))
-# Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
-# Pulse_and_Relax = Routine((metropolis, pulse_part1, pulse_part2, metropolis, anneal_part1), 
-#     (relaxtime, pulsetime, pulsetime, relaxtime, anneal_time), 
-#     Route(Metropolis(), pulse1, :hamiltonian, :M), 
-#     Route(Metropolis(), pulse2, :hamiltonian, :M),
-#     Route(Metropolis(), Anealing1, :isinggraph),
-#     Route(Metropolis(), Recalc(3), :hamiltonian),
-#     )
-# createProcess(g, Pulse_and_Relax, lifetime = 1)
+pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, (1, point_repeat))
+pulse_part2 = CompositeAlgorithm(Metro_and_recal, pulse2, (1, point_repeat))
+anneal_part1 = CompositeAlgorithm(Metro_and_recal, Anealing1, (1, point_repeat))
 
-Pulse_and_Relax = Routine((pulse_part1, relax_part, ), 
+Pulse_and_Relax = Routine(pulse_part1, Metro_and_recal, 
     (pulsetime, relaxtime), 
-    Route(Metropolis(), pulse1, :hamiltonian, :M),     
-    Route(Metropolis(), M_logger, :M => :value), 
-    Route(pulse1, Pulse_logger, :pulseval => :value), 
-    Route(Metropolis(), Recalc(3), :hamiltonian),
-    Route(DestructureInput(), Metropolis(), :isinggraph => :structure) # THIS ONE WILL BE REMOVED LATER
+    Route(metropolis => pulse1, :hamiltonian, :M),     
+    Route(metropolis => M_Logger, :M => :value), 
+    Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
+    Route(metropolis => Recalc(3), :hamiltonian),
     )
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 
@@ -401,21 +388,18 @@ createProcess(g, Pulse_and_Relax, lifetime = 1)
 ### estimate time
 # est_remaining(process(g))
 # Wait until it is done
-c = process(g) |> fetch # If you want to close ctr+c
-voltage1= c[Pulse_logger].values
-Pr1= c[M_logger].values
+# c = process(g) |> fetch # If you want to close ctr+c
+# voltage1= c[B_Logger].values
+# Pr1= c[M_Logger].values
 
-# Voltage2 = c[pulse2].x
-# Pr2 = c[pulse2].y
+# # Voltage2 = c[pulse2].x
+# # Pr2 = c[pulse2].y
 
-w2=newmakie(lines, voltage1, Pr1)
-w3=newmakie(lines, Pr1)
+# w2=newmakie(lines, voltage1, Pr1)
+# w3=newmakie(lines, Pr1)
 
 # w4=newmakie(lines, Voltage2, Pr2)
 # w5=newmakie(lines,Pr2)
-
-# show_connections(g,1,1,1)
-# visualize_connections(g)
 
 # # inlineplot() do 
 # #     lines(voltage, Pr)

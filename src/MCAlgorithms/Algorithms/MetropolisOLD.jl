@@ -27,7 +27,7 @@ function example_ising(i, gstate, newstate, oldstate, gadj, gparams, lt)
     return (oldstate-newstate) * cumsum
 end
 
-function Processes.prepare(::MetropolisOLD, args::As) where As
+function Processes.init(::MetropolisOLD, args::As) where As
     (;g) = args
     gstate = g.state
     gadj = g.adj

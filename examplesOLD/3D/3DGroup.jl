@@ -23,7 +23,7 @@ function weightfunc(dx,dy,dz)
 end
 
 
-wg = @WG "(dx,dy,dz) -> weightfunc(dx,dy,dz)" NN = (1,1,3)
+wg = @WG (dx,dy,dz) -> weightfunc(dx,dy,dz) NN = (1,1,3)
 
 genAdj!(g[1], wg)
 createProcess(g)
@@ -43,7 +43,7 @@ interface(g)
 
 # struct TrianglePulseB end
 
-# function Processes.prepare(::TrianglePulseB, args)
+# function Processes.init(::TrianglePulseB, args)
 #     (;lifetime, amp, numpulses) = args
 #     max_z = size(g[1], 3)
 

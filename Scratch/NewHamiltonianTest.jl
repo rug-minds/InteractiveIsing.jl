@@ -79,7 +79,7 @@ quit(g)
 # reduce = @ParameterRefs (sn_j-s_j)'
 # together = @ParameterRefs (s_i*w_ij)*(sn_j-s_j)
 
-# as = (;prepare(MetropolisNew(), (;g))..., newstate = II.NewState(-state(g)[2]))
+# as = (;init(MetropolisNew(), (;g))..., newstate = II.NewState(-state(g)[2]))
 # contract(as; j = Int32(2))
 # reduce(as; j = Int32(2))
 

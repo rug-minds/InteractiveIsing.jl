@@ -16,6 +16,7 @@ end
 
 function Base.rand(rng::AbstractRNG, proposer::IsingGraphProposer)
     j = rand(rng, proposer.iterator)
+
     oldstate = proposer.state[j]::statetype(proposer)
     range_ends = range_end.(proposer.layers)
     layer_idx = tuple_searchsortedfirst(range_ends, j)

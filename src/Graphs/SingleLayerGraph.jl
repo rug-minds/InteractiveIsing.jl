@@ -19,7 +19,7 @@ state(g::SingleLayerGraph) = reshape(g.state, size(layer(g)))
 genAdj!(g::SingleLayerGraph, wg; kwargs...) = genAdj!(layer(g), wg; kwargs...)
 topology(g::SingleLayerGraph) = topology(layer(g))
 settopology!(g::SingleLayerGraph, top::AbstractLayerTopology) = layer(g).top = top
-setdist!(g::SingleLayerGraph, ds::NTuple{N,Float64}) where N = setdist!(topology(layer(g)), ds)
+setdist!(g::SingleLayerGraph, ds::NTuple{N,Float64}) where N = setdist!(topology(g), ds)
 setdist!(g::SingleLayerGraph, ds...) = setdist!(topology(layer(g)), ds)
 
 

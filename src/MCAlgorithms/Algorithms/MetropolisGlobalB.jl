@@ -29,7 +29,7 @@ function GlobalBH(i, s, newstate, oldstate, wij, B)
     return (oldstate-newstate) * (cumsum + B[])
 end
 
-function Processes.prepare(::MetropolisGB, @specialize(args))
+function Processes.init(::MetropolisGB, @specialize(args))
     (;g) = args
     s = g.state
     wij = g.adj

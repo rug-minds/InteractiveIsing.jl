@@ -6,7 +6,7 @@ export overlayNoise!, resetstate!, activateone!
 Set spins either to a value or clamp them
 """
 #Clean this up
-# TODO: Shouldn't always refresh sim if the iterator didn't change
+# TODO: Shouldn't always reprepare sim if the iterator didn't change
 function setSpins!(g::AbstractIsingGraph{T}, idxs::Union{AbstractArray{<:Integer}, AbstractArray{<:Integer}, <:UnitRange, AbstractArray{<:CartesianIndex}}, val, clamp::Bool = false) where T
     hasdefects_before = hasDefects(graph(g))
 
@@ -15,7 +15,7 @@ function setSpins!(g::AbstractIsingGraph{T}, idxs::Union{AbstractArray{<:Integer
 
     hasdefects_after = hasDefects(graph(g))
     if hasdefects_before != hasdefects_after
-        refresh(graph(g))
+        reprepare(graph(g))
     end
 
     # Set the spins
@@ -48,7 +48,7 @@ function setSpins!(g::AbstractIsingGraph{T}, idx::Integer, val::Real, clamp::Boo
     hasdefects_after = hasDefects(graph(g))
 
     if hasdefects_before != hasdefects_after
-        refresh(graph(g))
+        reprepare(graph(g))
     end
 
     @inbounds state(g)[idx] = val
@@ -62,7 +62,7 @@ function setDefects!(g, val, idxs)
     hasdefects_after = hasDefects(graph(g))
     
     if hasdefects_before != hasdefects_after
-        refresh(graph(g))
+        reprepare(graph(g))
     end
 
     return idxs
@@ -76,7 +76,7 @@ function resetDefects!(g::AbstractIsingGraph)
     setDefects!(g, false, graphidxs(g))
     hasdefects_after = hasDefects(g)
     if hasdefects_before != hasdefects_after
-        refresh(g)
+        reprepare(g)
     end
 end
 

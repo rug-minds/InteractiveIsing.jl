@@ -3,7 +3,7 @@ using InteractiveIsing, Processes
 
 struct CalcSusceptibility <: ProcessAlgorithm end
 
-function Processes.prepare(::CalcSusceptibility, args)
+function Processes.init(::CalcSusceptibility, args)
     M2s = Int[]
     processsizehint!(args, M2s)
     (;M2s)

@@ -7,7 +7,7 @@ function topPanel(window)
 
     fps = round(Int,1/getinterval(window))
     last_two_updates = CircularBuffer{UInt}(2)
-    push!(last_two_updates, sum(loopidx.(processes(g))));
+    push!(last_two_updates, sum(getticks.(processes(g))))
 
     update_deltas = AverageCircular(Int, fps)
     times = CircularBuffer{UInt}(fps)
@@ -18,11 +18,13 @@ function topPanel(window)
     upsps = window[:upsps] = Observable(0.)
 
     pushmainfunc!(window, (window) -> begin
-        li = loopidx.(processes(g))
+        li = getticks.(processes(g))
         push!(last_two_updates, sum(li))
         push!(times, time_ns())
 
-        delta = last_two_updates[2] == 0 ? 0 : last_two_updates[2] - last_two_updates[1]
+        prev = last_two_updates[1]
+        curr = last_two_updates[2]
+        delta = curr >= prev ? Int(curr - prev) : 0
         push!(update_deltas, delta)
         a = avg(update_deltas)
         ups[] = a / (times[end] - times[1]) * 1e9  # Convert to seconds

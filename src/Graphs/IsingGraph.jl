@@ -38,14 +38,16 @@ end
 const PottsGraph{T, M, L}  = IsingGraph{T, M, L, 2}
 const GlauberGraph{T, M, L} =IsingGraph{T, M, L, 3}
 
-
+"""
+Single layer constructor
+"""
 function IsingGraph(dims::Int...; 
                     periodic = nothing, 
-                    sets = nothing, 
+                    set = (-1f0, 1f0), 
                     weights::Union{Nothing,WeightGenerator} = nothing,
                     type = Continuous,
                     kwargs...)
-    single_layer = Layer(dims...; stateset = sets, stype = type, weights, periodic, kwargs...)
+    single_layer = Layer(dims...; set, stype = type, weights, periodic, kwargs...)
     IsingGraph(single_layer; kwargs...)
 end
 
@@ -251,7 +253,7 @@ export nstates
     g.adj = adj
     # Add callbacks field to graph, which is a Dict{typeof(<:Function), Vector{Function}}
     # And create a setterGetter macro that includes the callbacks
-    refresh(g)
+    reprepare(g)
     return adj
 end
 set_adj!(g::IsingGraph, vecs::Tuple) = adj(g, sparse(vecs..., nStates(g), nStates(g)))
@@ -431,15 +433,15 @@ end
 ### SELF ENERGY
 @inline function activateself!(g)
     g.self = activate(g.self) # Ensure self is active
-    refresh(g)
+    reprepare(g)
 end
 @inline function disableself!(g)
     g.self = deactivate(g.self) # Ensure self is inactive
-    refresh(g)
+    reprepare(g)
 end
 @inline function homogeneousself!(g, val = 1)
     g.self = sethomogeneoustensor(g.self, val) # Set self to zero
-    refresh(g)
+    reprepare(g)
 end
 export activateself!, disableself!, homogeneousself!
 

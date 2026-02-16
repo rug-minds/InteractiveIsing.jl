@@ -59,7 +59,7 @@ setB!(g[3], z_bias)
 function updateRBM end
 using LoopVectorization, StatsBase, Random
 
-function InteractiveIsing.prepare(::typeof(updateRBM), g; kwargs...)
+function InteractiveIsing.init(::typeof(updateRBM), g; kwargs...)
     def_kwargs = pairs((;g,
                         gstate = state(g),
                         gadj = adj(g),

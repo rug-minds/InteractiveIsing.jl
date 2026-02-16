@@ -124,7 +124,9 @@ function midPanel(window)
 
             # push!(obs_funcs, ob_pair.links...)
 
-            mp[:temptext] = lift(x -> "T: $x", window[:gtemp])
+            # mp[:temptext] = lift(x -> "T: $x", window[:gtemp])
+            mp[:temptext] = lift(x -> "T: $(round(x, digits=2))", window[:gtemp])
+
 
             mp[:templabel] = Label(rightpanel[1,1], mp[:temptext], fontsize = 18)
         

@@ -85,6 +85,10 @@ getexpr(aep::AssignmentExprPrepare) = aep.expr
 
 Base.iterate(a::AssignmentExprPrepare, state = 1) = state == 2 ? nothing : (a, state+1)
 
+"""
+From a parameterref, get the expression to assign it to a local variable, and the name of that variable. 
+    This is used for generating the ΔH expressions, where we need to assign the parameterrefs to temporary variables in order to apply the delta rules
+"""
 function get_assignments(apr::AbstractParameterRef, args, filled_idxs = nothing)
     if isa(apr, ParameterRef)
         lidxs = loop_idxs(apr, filled_idxs)

@@ -31,6 +31,8 @@ function genLayerConnections(layer::AbstractIsingLayer{T,D}, wg) where {T,D}
     _NNt = nothing
     if _NN isa Integer # all dimensions same NN
         _NNt = ntuple(i -> _NN, D)
+    else
+        _NNt = _NN
     end
 
     blocksize = Int32(prod(2 .* _NNt .+ 1) - 1)
@@ -45,7 +47,7 @@ function genLayerConnections(layer::AbstractIsingLayer{T,D}, wg) where {T,D}
     # conns = ntuple(i -> Prealloc(Int32, blocksize::Int32), D)
     # conn_idxs = Prealloc(Int32, blocksize)
     topology = top(layer)
-    @show topology
+    # @show topology
     _fillSparseVecs(layer, row_idxs, col_idxs, weights, topology, wg)
     
 
@@ -62,49 +64,37 @@ end
 From a generator that returns (i, j, idx) for the connections
     fill the row_idxs, col_idxs, and weights
 """ 
-function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_idxs, weights, topology, wg::WG, conns...) where {T,WG}
+function _fillSparseVecs(layer::AbstractIsingLayer{T,2}, row_idxs::Vector, col_idxs, weights, topology, wg::WG) where {T,WG}
     NN = getNN(wg, length(size(layer)))
     @assert (NN isa Integer || length(NN) == 2)
-
-    conn_idxs, conn_is, conn_js = conns
+    NNt = NN isa Integer ? (NN, NN) : NN
+    LI = LinearIndices(size(layer))
 
     for col_idx in Int32(1):nstates(layer)
-        vert_i, vert_j = idxToCoord(col_idx, glength(layer))
-        getConnIdxs!(topology, col_idx, vert_i, vert_j, size(layer), NNi, NNj, conn_idxs, conn_is, conn_js)
-        
-        @fastmath for conn_num in eachindex(conn_is)
-            conn_i = conn_is[conn_num]
-            conn_j = conn_js[conn_num]
-            conn_idx = conn_idxs[conn_num]
+        coords_spin = Coordinate(topology, col_idx)
+        for j in -NNt[2]:NNt[2]
+            for i in -NNt[1]:NNt[1]
+                (i == 0 && j == 0) && continue
 
-            c1 = Coordinate(vert_i, vert_j)
-            c2 = Coordinate(conn_i, conn_j)
+                coords_conn = offset(coords_spin, i, j)
+                if !(in(coords_conn, topology))
+                    continue
+                end
 
-            dr = dist(topology, c1, c2)
+                dr = dist(topology, coords_spin, coords_conn)
+                weight = eltype(layer)((wg(;dr, c1 = coords_spin, c2 = coords_conn)))
 
-            weight = eltype(layer)((wg(;dr, c1, c2)))
+                if !(weight == 0 || isnan(weight))
+                    g_col_idx = idxLToG(col_idx, layer)
+                    conn_idx = LI[convert(CartesianIndex, coords_conn)]
+                    g_conn_idx = idxLToG(conn_idx, layer)
 
-            if !(weight == 0 || isnan(weight))
-                g_col_idx     = idxLToG(col_idx, layer)
-                g_conn_idx    = idxLToG(conn_idx, layer)
-
-                push!(row_idxs, g_conn_idx)
-                push!(col_idxs, g_col_idx)
-                push!(weights, weight)
+                    push!(row_idxs, g_conn_idx)
+                    push!(col_idxs, g_col_idx)
+                    push!(weights, weight)
+                end
             end
-
-            reset!(conn_is)
-            reset!(conn_js)
-            reset!(conn_idxs)
         end
-        
-
-        # if SelfType(wg) == Self()
-        #     weight = getSelfWeight(wg, y = vert_i, x = vert_j;z)
-        #     push!(row_idxs, col_idx)
-        #     push!(col_idxs, col_idx)
-        #     push!(weights, weight)
-        # end
     end
 end
 

@@ -24,7 +24,7 @@ function TrianglePulseProc(args)
     push!(x, pulse[triggeridx(triggers)])
 end
 
-function InteractiveIsing.prepare(::TrianglePulseProc, args)
+function InteractiveIsing.init(::TrianglePulseProc, args)
     (;amp, triggers, npulse) = args
     
     steps = maxsteps(triggers)

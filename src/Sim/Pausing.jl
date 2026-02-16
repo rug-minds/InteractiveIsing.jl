@@ -70,10 +70,14 @@ Quit sim and block until all processes are terminated
 #     pause.(processes(sim))
 # end
 
-function Processes.quit(g::IsingGraph)
+function quit(g::IsingGraph)
+    @warn "quit is deprecated, use close instead"
+    close(g)
+end
+function Processes.close(g::IsingGraph)
     for process in reverse(processes(g))
         try 
-            quit(process)
+            close(process)
         catch
             if isdone(process)
                 deleteat!(processes(g), findfirst(isequal(process), processes(g)))
@@ -87,12 +91,12 @@ function Processes.pause(g::IsingGraph)
     pause.(processes(g))
 end
 
-Processes.unpause(g::IsingGraph) = restart(g)
+unpause(g::IsingGraph) = run.(processes(g))
 
 # For broadcasting
 Processes.pause(::Nothing) = nothing
 Processes.quit(::Nothing) = nothing
-Processes.unpause(::Nothing) = nothing
+unpause(::Nothing) = nothing
 
 
 export quitSim, quit, pause, unpause
@@ -110,16 +114,17 @@ export restart
 """
 Keep the keywords and recompile the processes
 """
-function Processes.refresh(g::IsingGraph; kwargs...)
+function Processes.reprepare(g::IsingGraph; kwargs...)
     _processes = processes(g)
     for process in _processes
         if isrunning(process)
-            refresh(process)
+            reprepare(process)
         end
     end
     return
 end
-export refresh
+
+export reprepare
 
 # """
 # Reset the keywords to the standard values, and restart the processes

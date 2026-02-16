@@ -1,8 +1,8 @@
-@inline function func_tuple_unroll(fs, args::Union{Nothing, Tuple})
+@inline function func_tuple_unroll(fs::Fs, args::Union{Nothing, Tuple}) where Fs
     tuple(_func_tuple_unroll(gethead(fs), gettail(fs), args)...)
 end
 
-@inline function _func_tuple_unroll(fhead, ftail, args)
+@inline function _func_tuple_unroll(fhead::F, ftail, args) where F
     if isnothing(args)
         if isempty(ftail)
            return (fhead(),)
