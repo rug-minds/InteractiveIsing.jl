@@ -11,7 +11,7 @@ Sextic(g::AbstractIsingGraph, val = 1) = Sextic(ScalarParam(eltype(g), val; desc
 #     return :(sc[]*self[j]*s[j]^6)
 # end
 
-function ΔH(::Quartic, hargs, proposal)
+function ΔH(::Sextic, hargs, proposal)
     s = hargs.s
     self = hargs.self
     j = at_idx(proposal)
