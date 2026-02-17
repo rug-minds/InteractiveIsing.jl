@@ -14,13 +14,31 @@ Quadratic(type, len) = Quadratic()
 #     return :(s[i]*w[i,j]*-s[j] + self[j]*s[j]^2)
 # end
 
-const quadratic_exp = Ref(Expr(:block))
-@generated function ΔH(::Quadratic, hargs, proposal)
-    exp = to_delta_exp(:(s[i]*w[i,j]*-s[j] + self[j]*s[j]^2), proposal)
-    proposalname = :proposal
-    global quadratic_exp[] = quote
-            hargs = (; hargs..., delta_1 = $proposalname)
-            @ParameterRefs($exp)(hargs; j = getidx($proposalname))
+# const quadratic_exp = Ref(Expr(:block))
+# @generated function ΔH(::Quadratic, hargs, proposal)
+#     exp = to_delta_exp(:(s[i]*w[i,j]*-s[j] + self[j]*s[j]^2), proposal)
+#     proposalname = :proposal
+#     global quadratic_exp[] = quote
+#             hargs = (; hargs..., delta_1 = $proposalname)
+#             @ParameterRefs($exp)(hargs; j = getidx($proposalname))
+#     end
+#     return quadratic_exp[]
+# end 
+
+function ΔH(::Quadratic, hargs, proposal)
+    s = hargs.s
+    wij = hargs.w
+    self = hargs.self
+    j = at_idx(proposal)
+    cum = zero(eltype(s))
+    @turbo for ptr in nzrange(wij, j)
+        i = wij.rowval[ptr]
+        w = wij.nzval[ptr]
+        cum += w*s[i]
     end
-    return quadratic_exp[]
-end 
+
+    ising_energy = cum*(s[j] - to_val(proposal))
+
+    return ising_energy + self[j]*(to_val(proposal)^2 - s[j]^2)
+
+end
