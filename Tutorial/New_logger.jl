@@ -301,7 +301,7 @@ yL = 30  # Length in the y-dimension
 zL = 10   # Length in the z-dimension
 g = IsingGraph(xL, yL, zL, stype = Continuous(), periodic = (:x,:y), set = (-1,1))
 # Visual marker size (tune for clarity vs performance)
-II.makie_markersize[] = 0.3
+ii.makie_markersize[] = 0.3
 # Launch interactive visualization (idle until createProcess(...) later)
 interface(g)
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
@@ -316,7 +316,7 @@ Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
 setdist!(g, (1.0,1.0,1.0))
 
 ### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
-wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 1, 0.1, 0.1) NN = 3
+wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 2, 0.1, 0.1) NN = 3
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG weightfunc1 NN = (2,2,2)
 # wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
@@ -326,7 +326,7 @@ genAdj!(g, wg5)
 
 ### Set hamiltonian with selfenergy and depolarization field
 # CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
-g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 4, screening = 0.1)
+g.hamiltonian = Ising(g) + CoulombHamiltonian(g, scaling = 1.0, screening = 1)
 
 # Only necessary if the Hamiltonian has non-local terms that need to be recalculated after each spin flip.
 # reprepare(g)
@@ -364,11 +364,7 @@ B_Logger = ValueLogger(:b)
 
 
 
-Metro_and_recal = CompositeAlgorithm(metropolis, Recalc(3), M_Logger, B_Logger, (1,100, fullsweep, fullsweep), 
-    Route(metropolis => M_Logger, :M => :value), 
-    Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
-    Route(metropolis => Recalc(3), :hamiltonian))
-
+Metro_and_recal = CompositeAlgorithm(metropolis, Recalc(3), M_Logger, B_Logger, (1,100, fullsweep, fullsweep))
 pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, (1, point_repeat))
 pulse_part2 = CompositeAlgorithm(Metro_and_recal, pulse2, (1, point_repeat))
 anneal_part1 = CompositeAlgorithm(Metro_and_recal, Anealing1, (1, point_repeat))
@@ -385,18 +381,17 @@ createProcess(g, Pulse_and_Relax, lifetime = 1)
 # getcontext(g)
 # getcontext(g)[pulse1]
 
-### estimate time
-# est_remaining(process(g))
+
 # Wait until it is done
-# c = process(g) |> fetch # If you want to close ctr+c
-# voltage1= c[B_Logger].values
-# Pr1= c[M_Logger].values
+c = process(g) |> fetch # If you want to close ctr+c
+voltage1= c[B_Logger].values
+Pr1= c[M_Logger].values
 
 # # Voltage2 = c[pulse2].x
 # # Pr2 = c[pulse2].y
 
-# w2=newmakie(lines, voltage1, Pr1)
-# w3=newmakie(lines, Pr1)
+w2=newmakie(lines, voltage1, Pr1)
+w3=newmakie(lines, Pr1)
 
 # w4=newmakie(lines, Voltage2, Pr2)
 # w5=newmakie(lines,Pr2)
