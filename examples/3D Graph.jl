@@ -46,7 +46,7 @@ end
 # g.hamiltonian = h = Ising(g) 
 isingmetro = InteractiveIsing.IsingMetropolis()
 isingmetro = g.default_algorithm
-g.hamiltonian = h = Ising(g) + CoulombHamiltonian(g, 1f0, screening = 4f0);
+g.hamiltonian = h = Ising(g) + CoulombHamiltonian(g, 2f0, screening = 20f0);
 reprepare(g)
 # g.hamiltonian = h = Ising(g) + Quartic(g)
 # algo = Processes.CompositeAlgorithm((isingmetro, Recalc(), PolTracker()), (1, 200, 10000),  
