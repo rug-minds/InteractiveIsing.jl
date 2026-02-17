@@ -126,9 +126,9 @@ function weightfunc_shell(dr, c1, c2, ax, ay, az, csr, lambda1, lambda2)
     end
 
     Jsr = csr * prefac_sr
-    return Jdip + Jsr
+    # return Jdip + Jsr
+    return Jsr
 end
-
 # Skymion-like coupling
 function weightfunc_skymion(dr,c1,c2)
     d = delta(c1, c2)
@@ -192,7 +192,6 @@ struct TrianglePulseA{T} <: ProcessAlgorithm
     amp::T
     numpulses::Int
 end
-
 function Processes.init(tp::TrianglePulseA, args)
     amp = tp.amp
     numpulses = tp.numpulses
@@ -206,49 +205,65 @@ function Processes.init(tp::TrianglePulseA, args)
     pulse = vcat(first, second, third, fourth)
     pulse = repeat(pulse, numpulses)
 
-    if steps < length(pulse)
-        "Wrong length"
-    else
-        fix_num = num_calls(args) - length(pulse)
-        fix_arr = zeros(Int, fix_num)
-        pulse   = vcat(pulse, fix_arr)
-    end
+    fix_num = num_calls(args) - length(pulse)
+    fix_arr = zeros(Int, fix_num)
+    pulse   = vcat(pulse, fix_arr)
 
     # Predefine storage arrays
-    x = Float32[]
-    y = Float32[]
-    processsizehint!(x, args)
-    processsizehint!(y, args)
-
     step = 1
-
-    return (;pulse, x, y, step)
+    return (;pulse, step, pulseval = pulse[1])
 end
-
 function Processes.step!(::TrianglePulseA, context::C) where C
-    (;pulse, step, x, y, hamiltonian, M ) = context
-    pulse_val = pulse[step]
-    hamiltonian.b[] = pulse_val
-    push!(x, pulse_val)
-    push!(y, M)
-    return (;step = step + 1)
+    (;pulse, step, hamiltonian) = context
+    pulseval = pulse[step]
+    hamiltonian.b[] = pulseval
+
+    return (;step = step + 1, pulseval)
 end
 ### struct end: TrianglePulseA
 ##################################################################################
 
 ##################################################################################
+### struct start: BiasA (stable bias)
+### Run with BiasA 
+### 
+### _____
+###      
+
+struct BiasA{T} <: ProcessAlgorithm
+    amp::T
+end
+function Processes.init(tp::BiasA, args)
+    amp = tp.amp
+    steps = num_calls(args)
+    bias  = ones(round(Int, steps)) .* amp
+
+    fix_num = num_calls(args) - length(bias)
+    fix_arr = zeros(Int, fix_num)
+    bias   = vcat(bias, fix_arr)
+
+    # Predefine storage arrays
+    step = 1
+    return (;bias, step, pulseval = bias[1])
+end
+function Processes.step!(::BiasA, context::C) where C
+    (;bias, step, hamiltonian) = context
+    pulseval = bias[step]
+    hamiltonian.b[] = pulseval
+    return (;step = step + 1, pulseval)
+end
+### struct end: BiasA
+##################################################################################
+
+
+##################################################################################
 ### struct start: SinPulseA (simple sine waveform)
 ### Run with SinPulseA
-###  /\
-### /  \    _____
-###     \  /
-###      \/
 
 struct SinPulseA{T} <: ProcessAlgorithm
     amp::T
     numpulses::Int
-end
-    
+end    
 function Processes.init(tp::SinPulseA, args)
     amp = tp.amp
     numpulses = tp.numpulses
@@ -257,25 +272,14 @@ function Processes.init(tp::SinPulseA, args)
 
     theta = LinRange(0, max_theta, round(Int,steps))
     sins = amp .* sin.(theta)
-
-    # Predefine storage arrays
-    x = Float32[]
-    y = Float32[]
-    processsizehint!(x, args)
-    processsizehint!(y, args)
-
     step = 1
-
-    return (;sins, x, y, step)
+    return (;sins, step, pulseval = sins[1])
 end
-
 function Processes.step!(::SinPulseA, context::C) where C
-    (;sins, step, x, y, hamiltonian, M ) = context
+    (;sins, step, hamiltonian) = context
     pulse_val = sins[step]
     hamiltonian.b[] = pulse_val
-    push!(x, pulse_val)
-    push!(y, M)
-    return (;step = step + 1)
+    return (;step = step + 1, pulseval = pulse_val)
 end
 ### struct end: SinPulseA
 ##################################################################################
@@ -285,106 +289,79 @@ end
 ##################################################################################
 ### struct start: TemAnealingA (simple sine waveform)
 ### Run with TemAnealingA
-
 struct LinAnealingA{T} <: ProcessAlgorithm
     start_T::T
     stop_T::T
-end
-    
+end  
 function Processes.init(tp::LinAnealingA, args)
     n_calls = num_calls(args)
     dT = (tp.stop_T - tp.start_T) / n_calls
     (;current_T = tp.start_T, dT)
 end
-
 function Processes.step!(::LinAnealingA, context::C) where C
     (;current_T, dT, isinggraph) = context
     temp(isinggraph, current_T)
     return (;current_T = current_T + dT)
 end
-### struct end: TemAnealingA
 ##################################################################################
 
+##################################################################################
 struct ValueLogger{Name} <: ProcessAlgorithm end
 ValueLogger(name) = ValueLogger{Symbol(name)}()
-
 function Processes.init(::ValueLogger, args)
     values = Float32[]
     processsizehint!(values, args)
     (;values)
 end
-
 function Processes.step!(::ValueLogger, context::C) where C
     (;values, value) = context
     push!(values, value)
     return (;)
 end
+##################################################################################
 
-struct PolTracker{T} <: ProcessAlgorithm end
-function init(::PolTracker, context)
-    (;isinggraph) = context
-    initial = sum(state(isinggraph))
-    (;pols = Float32[initial])
-end
-function step!(::PolTracker, context)
-    (;proposal, pols) = context
-    push!(pols, delta(proposal))
+##################################################################################
+struct Recalc{I} <: Processes.ProcessAlgorithm end
+Recalc(i) = Recalc{Int(i)}()
+function Processes.step!(r::Recalc{I}, context) where I
+    (;hamiltonian) = context
+    recalc!(hamiltonian[I])
     return (;)
 end
+##################################################################################
 
-
-
-xL = 20  # Length in the x-dimension
-yL = 20  # Length in the y-dimension
-zL = 20   # Length in the z-dimension
+xL = 30  # Length in the x-dimension
+yL = 30  # Length in the y-dimension
+zL = 10   # Length in the z-dimension
 g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
 # Launch interactive visualization (idle until createProcess(...) later)
+interface(g)
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
-
-
-#### Weight function setup (Connection setup)
-
-#### Set the distance scaling
-setdist!(g, (1.0,1.0,1.0))
-
-# wg1 = @WG weightfunc_xy_dilog_antiferro NN = (2,2,2)
-# wg1 = @WG weightfunc1
-# wg1 = @WG weightfunc1
-# wg2 = @WG weightfunc2 NN = (2,2,2)
-# wg3 = @WG weightfunc_angle_anti NN = 3
-# wg4 = @WG weightfunc_angle_ferro NN = 3
-### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
-wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 2, 2, 1, 0.3, 0.1, 0.5) NN = 3
-# wg1 = @WG weightfunc1 NN = (2,2,2)
-# wg1 = @WG weightfunc1 NN = (2,2,2)
-# wg1 = @WG (dr,c1,c2) -> weightfunc_xy_antiferro(dr, c1, c2, 2, 2, 2) NN = (2,2,2)
-
-genAdj!(g, wg5)
 
 # a1, b1, c1 = -20, 16, 0 
 a1, b1, c1 = 0, 0, 0 
 Ex = range(-1.0, 1.0, length=1000)
 Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
 
+#### Weight function setup (Connection setup)
+#### Set the distance scaling
+setdist!(g, (1.0,1.0,1.0))
+
+### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
+wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 1, 0.1, 0.1) NN = 3
+genAdj!(g, wg5)
+
+
+
 ### Set hamiltonian with selfenergy and depolarization field
-Layer_Dep = 1
-Cdep=120
-Cz = 0.1
-lambda = 0.1
-# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(64,64,3)) + Quartic(g) + Sextic(g)
-# reprepare(g)
-# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(20,20,4)) + Quartic(g) + Sextic(g)
-# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((z-1)/lambda) , NN=8)
-# g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz , NN=20)
+# CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
+g.hamiltonian = Ising(g) + CoulombHamiltonian(g, 3, screening = 0.0001)
+
+# Only necessary if the Hamiltonian has non-local terms that need to be recalculated after each spin flip.
 # reprepare(g)
 
-g.hamiltonian = Ising(g)
-
-### Use ii. to check if the terms are correct
-### Now the H is written like H_self + H_quartic
-### Which is Jii*Si^2 + Qc*Jii*Si^4 wichi means Jii=a, Qc*Jii=b in a*Si^2 + b*Si^4
 
 ### Set Jii
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
@@ -395,38 +372,58 @@ temp(g,Temperature)
 
 ### Run simulation process
 fullsweep = xL*yL*zL
-time_fctr = 1
-anneal_time = fullsweep*5000
-pulsetime = fullsweep*5000
-relaxtime = fullsweep*1000
+time_fctr = 0.5
+num_sweep = 5000
+anneal_time = fullsweep*2*num_sweep
+pulsetime = fullsweep*1/2*num_sweep
+relaxtime = fullsweep*1/4*num_sweep
 point_repeat = time_fctr*fullsweep
-pulse1 = TrianglePulseA(2, 1)
-pulse2 = SinPulseA(2, 1)
-pulse3 = Unique(SinPulseA(3, 1))
+pulse1 = TrianglePulseA(20, 2)
+pulse2 = SinPulseA(20, 1)
+pulse3 = Unique(SinPulseA(5, 1))
 
-Anealing1 = LinAnealingA(2f0, 1f0)
+
+bias1= BiasA(0.1)
+
+Anealing1 = LinAnealingA(5f0, 0f0)
 metropolis = g.default_algorithm
 
-pulse_part1 = CompositeAlgorithm((metropolis, pulse1), (1, point_repeat))
-pulse_part2 = CompositeAlgorithm((metropolis, pulse2, ), (1, point_repeat))
+#
+M_Logger = ValueLogger(:M)
+# Pulse_logger = ValueLogger(:pulse)
+B_Logger = ValueLogger(:b)
 
-anneal_part1 = CompositeAlgorithm((metropolis, Anealing1), (1, point_repeat))
 
-# Pulse_and_Relax = Routine((pulse_part, metropolis), (pulsetime, relaxtime), Route(Metropolis(), pulse, :M, :hamiltonian))
-# Pulse_and_Relax = Routine((pulse_part1, pulse_part2, metropolis), (pulsetime, pulsetime, relaxtime), Route(Metropolis(), pulse1, :M, :hamiltonian), Route(Metropolis(), pulse2, :M, :hamiltonian))
-Pulse_and_Relax = Routine((metropolis, pulse_part1, pulse_part2, metropolis, anneal_part1), 
-    (relaxtime, pulsetime, pulsetime, relaxtime, anneal_time), 
-    Route(Metropolis(), pulse1, :hamiltonian, :M), 
-    Route(Metropolis(), pulse2, :hamiltonian, :M),
-    Route(Metropolis(), Anealing1, :isinggraph),
-    Route(DestructureInput(), Metropolis(), :isinggraph => :structure) # THIS ONE WILL BE REMOVED LATER
+
+Metro_and_recal = CompositeAlgorithm(metropolis, Recalc(3), M_Logger, B_Logger, (1,1000, fullsweep, fullsweep))
+
+pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, (1, point_repeat))
+pulse_part2 = CompositeAlgorithm(Metro_and_recal, pulse2, (1, point_repeat))
+anneal_part1 = CompositeAlgorithm(Metro_and_recal, Anealing1, (1, point_repeat))
+bias_part1 = CompositeAlgorithm(Metro_and_recal, bias1, (1, point_repeat))
+
+Anealing_step = Routine(anneal_part1,
+    (anneal_time,), 
+    Route(metropolis => Anealing1, :isinggraph),     
+    Route(metropolis => M_Logger, :M => :value), 
+    Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
+    Route(metropolis => Recalc(3), :hamiltonian),
     )
 
 
-p = Process(Pulse_and_Relax, Input(DestructureInput(), structure = g); lifetime = 1)
+# Bias_test = Routine(bias_part1,
+#     (pulsetime,), 
+#     Route(metropolis => bias1, :hamiltonian, :M),     
+#     Route(metropolis => M_Logger, :M => :value), 
+#     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
+#     Route(metropolis => Recalc(3), :hamiltonian),
+#     )
 
-createProcess(g, Pulse_and_Relax, lifetime = 1)
-# interface(g)
+
+createProcess(g, Anealing_step, lifetime = 1)
+
+
+# createProcess(g, Pulse_and_Relax, lifetime = 1)
 
 # getcontext(g)
 # getcontext(g)[pulse1]
@@ -435,21 +432,17 @@ createProcess(g, Pulse_and_Relax, lifetime = 1)
 # est_remaining(process(g))
 # Wait until it is done
 c = process(g) |> fetch # If you want to close ctr+c
-voltage1= c[pulse1].x
-Pr1= c[pulse1].y
+voltage1= c[B_Logger].values
+Pr1= c[M_Logger].values
 
-Voltage2 = c[pulse2].x
-Pr2 = c[pulse2].y
+# Voltage2 = c[pulse2].x
+# Pr2 = c[pulse2].y
 
 w2=newmakie(lines, voltage1, Pr1)
-w3=newmakie(lines,Pr1)
+w3=newmakie(lines, Pr1)
 
-w4=newmakie(lines, Voltage2, Pr2)
-w5=newmakie(lines,Pr2)
-
-
-# show_connections(g,1,1,1)
-# visualize_connections(g)
+# w4=newmakie(lines, Voltage2, Pr2)
+# w5=newmakie(lines,Pr2)
 
 # # inlineplot() do 
 # #     lines(voltage, Pr)
@@ -460,9 +453,3 @@ w5=newmakie(lines,Pr2)
 # # inlineplot() do 
 # #     lines(Ex, Ey)
 # # end
-
-# figPr = Figure()
-# ax = Axis(figPr[1, 1])
-# lines!(ax, voltage, Pr)
-# # save("D:/Code/data/shell/stripes with skymions/axayaz_1.5_1.5_1_T$(Temperature)_Amp$(Amptitude)_Speed$(Time_fctr)_80_20_20.png", figPr)
-# save("D:/Code/data/shell/stripes with skymions/thickness/z=1.png", figPr)
