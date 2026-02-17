@@ -37,7 +37,7 @@ function ΔH(::Quadratic, hargs, proposal)
         cum += w*s[i]
     end
 
-    ising_energy = cum*(s[j] - to_val(proposal))
+    ising_energy = cum*(s[j] - to_val(proposal)) # s - to_val because of the - sign
 
     return ising_energy + self[j]*(to_val(proposal)^2 - s[j]^2)
 
