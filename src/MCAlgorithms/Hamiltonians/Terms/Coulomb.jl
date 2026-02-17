@@ -1,5 +1,5 @@
 # TODO: We need a conversion factor from dipole to charge
-export CoulombHamiltonian, init!, init_tridiag!, recalc!, recalcnew, ΔH, update!
+export CoulombHamiltonian, init!, precompute_du_self!, recalc!, recalcnew, ΔH, update!
 
 function mygemmavx!(C, A, B)
     @turbo for m ∈ axes(A, 1), n ∈ axes(B, 2)
@@ -17,33 +17,20 @@ struct CoulombHamiltonian{T,PT,PxyT,PiT,N} <: HamiltonianTerm
     uhat::Array{Complex{T},3}     # spectral potential (same size as σhat)
     u::Array{T,3}                 # real potential
     scaling::PT
-    screening::T
+    screen_top::T
+    screen_bot::T
     ax::T
     ay::T
     az::T
+    ϵ::T
+    du_self::Array{T,1}           # per-layer unit charge-pair field jump du[z+1]-du[z]
 
     Pxy::PxyT                     # plan_rfft for 2D slices
     iPxy::PiT                     # plan_irfft for 2D slices
-    kx::Vector{T}
-    ky::Vector{T}
-    zf::Vector{Complex{T}}        # forward recursion scratch
-    zb::Vector{Complex{T}}        # backward recursion scratch
-    inv2k::Matrix{T}              # precomputed 1/(2k) for each (kx,ky)
-    ez::Matrix{T}                 # precomputed exp(-k*az) for each (kx,ky)
-    zf_threads::Matrix{Complex{T}}  # per-thread forward recursion scratch (Nz x nthreads)
-    zb_threads::Matrix{Complex{T}}  # per-thread backward recursion scratch (Nz x nthreads)
-
-    tri_cp::Matrix{T}             # precomputed Thomas c' (Nz x (Nxh*Ny))
-    tri_invden::Matrix{T}         # precomputed 1/den (Nz x (Nxh*Ny))
-    tri_rhsfac::Base.RefValue{T}            # -1/ϵ  (RHS prefactor)
-    tri_a_int::Base.RefValue{T}             # interior sub-diagonal coefficient
-    tri_c_bc::Base.RefValue{T}              # boundary super-diagonal coefficient
-    tri_ϵ::Base.RefValue{T}
-    tri_C0::Base.RefValue{T}
-    tri_CN::Base.RefValue{T}
-    tri_κ::Base.RefValue{T}
-    tri_ready::Base.RefValue{Bool}
-    tri_k0_neumann::Base.RefValue{Bool}
+    
+    mod_upperd::Array{T, 3}       # Thomas algorithm modified upper diagonal (cp), size (Nxh, Ny, Nz)
+    inv_den::Array{T, 3}
+    dp_scratch::Array{Complex{T}, 3}       # Thomas algorithm forward sweep scratch space
 end
 
 Base.size(c::CoulombHamiltonian) = c.size
@@ -51,7 +38,9 @@ Base.size(c::CoulombHamiltonian) = c.size
 function CoulombHamiltonian(
     g::AbstractIsingGraph,
     scaling::Real = 1.f0;
-    screening = 0.0
+    screening = Inf32,
+    screen_len_top = screening,
+    screen_len_bot = screening
 )
     gdims = size(g[1])                 # (Nx,Ny,Nz-1)
     etype = eltype(g)
@@ -67,9 +56,7 @@ function CoulombHamiltonian(
     Nxh  = Nx ÷ 2 + 1
     σhat = zeros(Complex{etype}, Nxh, Ny, Nz)
     uhat = zeros(Complex{etype}, Nxh, Ny, Nz)
-    u    = zeros(etype, dims...)
-    zf   = Vector{Complex{etype}}(undef, Nz)
-    zb   = Vector{Complex{etype}}(undef, Nz)
+
 
     # FFT plans (bind to representative slices)
     s  = @view σ[:,:,1]
@@ -78,133 +65,30 @@ function CoulombHamiltonian(
     Pxy  = plan_rfft(s, (1,2);  flags=FFTW.MEASURE)
     iPxy = plan_irfft(uh, Nx, (1,2); flags=FFTW.MEASURE)
 
-    # k-vectors (FFT ordering)
-    kx = Vector{etype}(undef, Nxh)
-    ky = Vector{etype}(undef, Ny)
-
     twoπ = etype(2) * etype(π)
     ax = eltype(g)(ax)
     ay = eltype(g)(ay)
     az = eltype(g)(az)
-    @inbounds for i in 1:Nxh
-        ii = i - 1
-        kx[i] = twoπ * ii / (Nx * ax)
-    end
-    @inbounds for j in 1:Ny
-        jj = j - 1
-        ky[j] = twoπ * (jj <= Ny ÷ 2 ? jj : jj - Ny) / (Ny * ay)
-    end
 
-    inv2k = zeros(etype, Nxh, Ny)
-    ez    = zeros(etype, Nxh, Ny)
-    @inbounds for iy in 1:Ny
-        kyv = ky[iy]
-        for ix in 1:Nxh
-            if ix == 1 && iy == 1
-                continue
-            end
-            kv = hypot(kx[ix], kyv)
-            inv2k[ix, iy] = inv(etype(2) * kv)
-            ez[ix, iy] = exp(-kv * az)
-        end
-    end
-
-    nthreads = Threads.maxthreadid()
-    zf_threads = Matrix{Complex{etype}}(undef, Nz, nthreads)
-    zb_threads = Matrix{Complex{etype}}(undef, Nz, nthreads)
-    nmodes = Nxh * Ny
-    tri_cp = Matrix{etype}(undef, Nz, nmodes)
-    tri_invden = Matrix{etype}(undef, Nz, nmodes)
+    # Precompute Thomas algorithm factors for each (kx,ky) mode
+    mod_upperd = zeros(etype, Nxh, Ny, Nz) # modified upper diagonal
+    inv_den = zeros(etype, Nxh, Ny, Nz)    # inverse of main diagonal after forward elimination
+    dp_scratch = zeros(Complex{etype}, Nxh, Ny, Nz) # scratch space for forward sweep
+    du_self = zeros(etype, Nz_dip)
 
     scaling = eltype(g)(scaling)
     scaling = StaticParam(scaling)
 
-    # clamp screening between 0 and 1
-    # screening = clamp(screening, 0.0, 1.0)
-
-    c = CoulombHamiltonian{etype,typeof(scaling),typeof(Pxy),typeof(iPxy),length(size(g))}(
-        size(g), σ, σhat, uhat, u, scaling, screening,
-        ax, ay, az,
-        Pxy, iPxy, kx, ky, zf, zb, inv2k, ez, zf_threads, zb_threads,
-        tri_cp, tri_invden,
-        Ref(zero(etype)), Ref(zero(etype)), Ref(zero(etype)),
-        Ref(zero(etype)), Ref(zero(etype)), Ref(zero(etype)), Ref(zero(etype)),
-        Ref(false), Ref(false)
+    c = CoulombHamiltonian{etype, typeof(scaling), typeof(Pxy), typeof(iPxy), 3}(
+        dims, σ, σhat, uhat, zeros(etype, dims...), scaling, screen_len_top, screen_len_bot, ax, ay, az, 1f0, du_self,
+        Pxy, iPxy,
+        mod_upperd,
+        inv_den,
+        dp_scratch
     )
     init!(c, g)
-    init_tridiag!(c)
-    c
-end
-
-function init_tridiag!(
-    c::CoulombHamiltonian{T};
-    ϵ::T = one(T),
-    C0::T = c.screening,
-    CN::T = c.screening,
-    κ::T = zero(T),
-) where {T}
-    Nx, Ny, Nz = size(c.u)
-    Nxh = size(c.σhat, 1)
-
-    inv_az  = inv(c.az)
-    inv_az2 = inv_az * inv_az
-    α0      = C0 / ϵ
-    αN      = CN / ϵ
-    κ2      = κ * κ
-    tiny    = eps(T)
-
-    a_int = -inv_az2
-    c_int = -inv_az2
-    c_bc  = -2 * inv_az2
-    b_mid = 2 * inv_az2 + κ2
-    b_lo  = b_mid + 2 * α0 * inv_az
-    b_hi  = b_mid + 2 * αN * inv_az
-
-    mode = 0
-    @inbounds for iy in 1:Ny
-        ky2 = c.ky[iy] * c.ky[iy]
-        for ix in 1:Nxh
-            mode += 1
-            k2 = c.kx[ix] * c.kx[ix] + ky2
-
-            den = b_lo + k2
-            if abs(den) <= tiny
-                den += tiny
-            end
-            invden = inv(den)
-            c.tri_invden[1, mode] = invden
-            c.tri_cp[1, mode] = c_bc * invden
-
-            for z in 2:(Nz-1)
-                den = (b_mid + k2) - a_int * c.tri_cp[z-1, mode]
-                if abs(den) <= tiny
-                    den += tiny
-                end
-                invden = inv(den)
-                c.tri_invden[z, mode] = invden
-                c.tri_cp[z, mode] = c_int * invden
-            end
-
-            if Nz > 1
-                den = (b_hi + k2) - c_bc * c.tri_cp[Nz-1, mode]
-                if abs(den) <= tiny
-                    den += tiny
-                end
-                c.tri_invden[Nz, mode] = inv(den)
-            end
-        end
-    end
-    c.tri_rhsfac[] = -inv(ϵ)
-    c.tri_a_int[] = a_int
-    c.tri_c_bc[] = c_bc
-    c.tri_ϵ[] = ϵ
-    c.tri_C0[] = C0
-    c.tri_CN[] = CN
-    c.tri_κ[] = κ
-    c.tri_ready[] = true
-    c.tri_k0_neumann[] = iszero(κ) && iszero(C0) && iszero(CN)
-  
     return c
+   
 end
 
 function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
@@ -227,198 +111,210 @@ function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
             σ[i,j,z+1] += v
         end
     end
-    # recalc!(c)
+    precompute_solve_factors!(c)
+    precompute_du_self!(c)
     recalc!(c)
+
     return c
 end
 
-function recalc!(c::CoulombHamiltonian{T}) where {T}
-    σ    = c.σ
-    σhat = c.σhat
-    uhat = c.uhat
-    u    = c.u
-    zf   = c.zf
-    zb   = c.zb
 
-    Nx, Ny, Nz = size(u)
-    Nxh        = size(σhat, 1)
+function compute_ktilde2(c::CoulombHamiltonian{T}, nx, ny) where {T}
+    ax = c.ax
+    ay = c.ay
 
-    # 1) rFFT x,y for each z: σhat[:,:,z] := rfft(σ[:,:,z])
-    @inbounds for z in 1:Nz
-        s  = @view σ[:, :, z]
-        sh = @view σhat[:, :, z]
-        mul!(sh, c.Pxy, s)
-    end
+    Nx = c.size[1]
+    Ny = c.size[2]
+    twopi = T(2) * T(π)
+    # Map FFT indices to signed mode indices: 0,1,...,N/2, -(N/2-1),..., -1
+    mx = nx - 1 # FFT index to mode index
+    my = (ny-1 <= Ny÷2) ? (ny-1) : (ny-1 - Ny)
 
-    # 2) z-coupling in Fourier domain for k>0 modes
-    #    uhat[ix,iy,z] = Σ_zp exp(-k|z-zp|)/(2k) * σhat[ix,iy,zp]
-    @inbounds begin
-        fill!((@view uhat[1,1,:]), zero(Complex{T}))   # k=0 模式稍后单独处理
-        for iy in 1:Ny
-            ky = c.ky[iy]
-            for ix in 1:Nxh
-                if ix == 1 && iy == 1
-                    continue                         # (kx,ky) = (0,0) 留给专门的 k=0 处理
-                end
-                kx = c.kx[ix]
-                k  = hypot(kx, ky)
+    kx = twopi * mx / (Nx * ax)
+    ky = twopi * my / (Ny * ay)
 
-                inv2k = inv(2k)
-                e     = exp(-k * c.az)
-
-                zf[1] = σhat[ix,iy,1]
-                @inbounds for z in 2:Nz
-                    zf[z] = σhat[ix,iy,z] + e * zf[z-1]
-                end
-                zb[Nz] = σhat[ix,iy,Nz]
-                @inbounds for z in (Nz-1):-1:1
-                    zb[z] = σhat[ix,iy,z] + e * zb[z+1]
-                end
-
-                @inbounds for z in 1:Nz
-                    # Use convention E = -1/2 Σ σ_i u_i, so u = -Kσ
-                    uhat[ix,iy,z] = -(zf[z] + zb[z] - σhat[ix,iy,z]) * inv2k
-                end
-            end
-        end
-    end
-
-    # 3) k=0 模式的 z 方向卷积：G0(z,z') ~ -|z-z'|/2（差一个常数对 ΔH 无影响）
-    @inbounds begin
-        sh0 = @view σhat[1,1,:]    # (kx,ky) = (0,0) 的面电荷谱
-        uh0 = @view uhat[1,1,:]
-
-        for z in 1:Nz
-            acc = zero(Complex{T})
-            for zp in 1:Nz
-                # 物理距离 |z-z'| * az，对 kernel 取 -|z-z'|/2
-                dist = T(abs(z - zp)) * c.az
-                acc += (dist * T(0.5)) * sh0[zp]
-            end
-            uh0[z] = acc
-        end
-    end
-
-    # 4) inverse rFFT x,y for each z, write directly into u
-    @inbounds for z in 1:Nz
-        uh = @view uhat[:, :, z]
-        uz = @view u[:, :, z]
-        mul!(uz, c.iPxy, uh)
-    end
-
-    return u
+    kxt = 2 * sin(0.5 * kx * ax) / ax
+    kyt = 2 * sin(0.5 * ky * ay) / ay
+    return kxt^2 + kyt^2
 end
 
-function tridiag_recalc!(c::CoulombHamiltonian{T},   
-    ϵ::T = one(T),
-    C0::T = c.screening,
-    CN::T = c.screening,
-    λ::T = zero(T)) where {T}
+"""
+Precompute Thomas-factorization-like arrays for each (kx,ky) mode.
+
+    We store:
+    invden[kx,ky,n] = 1 / den_n
+    m_upper[kx,ky,n] = c'_n  (modified upper); m_upper[:,:,Nz] = 0
+
+    System per mode:
+    (α_bot - c) ϕ̂₁ +      ϕ̂₂           = ŝ₁
+        ϕ̂ₙ₋₁  - c ϕ̂ₙ + ϕ̂ₙ₊₁         = ŝₙ   (2..Nz-1)
+        ϕ̂Nz-1 + (α_top - c) ϕ̂Nz         = ŝNz
+
+    where c = 2 + k̃² * az², α_bot = 1 - az/λbot, α_top = 1 - az/λtop.
+"""
+function precompute_solve_factors!(ch::CoulombHamiltonian{T}) where T
+    m_upper = ch.mod_upperd #modified upper diagonal,
+    invden = ch.inv_den
+    Nx, _, _ = size(ch.σ)
+    Nxh, Ny, Nz = size(invden)
+    az = ch.az
+    # ϵ = ch.ϵ
+    screen_top = ch.screen_top # λ_top
+    screen_bot = ch.screen_bot # λ_bot
+    
+    α_bot = 1 - az/screen_bot
+    α_top = 1 - az/screen_top
+
+    az2 = az^2
+
+    @inbounds for ny in 1:Ny, nx in 1:Nxh
+        c = 2 + compute_ktilde2(ch, nx, ny)* az2
+
+        diag1 = α_bot - c # Row 1 diagonal
+        d = -c #Interior diagonal
+        diagN = α_top - c # Row N diagonal
+
+        # Store factors for Thomas algorithm
+
+        # First row
+        invden[nx, ny, 1] = inv(diag1)
+        m_upper[nx,ny,1] = inv(diag1) # m_upper1 = u1/diag1, u1 = 1 for all modes
+
+        # Interior rows
+        for nz in 2:(Nz-1)
+            den = d - m_upper[nx,ny,nz-1] #den_n = diag_n - l_n * m_upper_{n-1}
+            invden[nx, ny, nz] = inv(den)
+            m_upper[nx,ny,nz] = invden[nx, ny, nz] #m_upper_n = u_n / den_n, u_n = 1 for all modes
+        end
+
+        # Last row
+        invden[nx, ny, Nz] = inv(diagN - m_upper[nx,ny,Nz-1]) # invden_N = 1/(diagN - l_N * m_upper_{N-1}), l_N = 1 for all modes
+        m_upper[nx,ny,Nz] = zero(T) # m_upperN = 0 since there is no upper diagonal in the last row
+        
+    end
 
     return nothing
 end
 
-# function recalc_tridiag!(
-#     c::CoulombHamiltonian{T};
-#     ϵ::T = one(T),
-#     C0::T = c.screening,
-#     CN::T = c.screening,
-#     κ::T = zero(T),
-# ) where {T}
-#     σ    = c.σ
-#     σhat = c.σhat
-#     uhat = c.uhat
-#     u    = c.u
+function precompute_du_self!(c::CoulombHamiltonian{T}) where {T}
+    Nx, Ny, Nz = size(c.σ)
+    Nxh = size(c.σhat, 1)
+    invden = c.inv_den
+    m_upper = c.mod_upperd
+    scale = -(c.az^2) / c.ϵ
 
-#     _, Ny, Nz = size(u)
-#     Nxh        = size(σhat, 1)
+    σtmp = zeros(T, Nx, Ny, Nz)
+    σhat_tmp = similar(c.σhat)
+    uhat_tmp = similar(c.uhat)
+    utmp = zeros(T, Nx, Ny, Nz)
+    dptmp = similar(c.dp_scratch)
 
-#     # 1) rFFT in (x,y) for each z-plane.
-#     @inbounds for z in 1:Nz
-#         s  = @view σ[:, :, z]
-#         sh = @view σhat[:, :, z]
-#         mul!(sh, c.Pxy, s)
-#     end
+    fill!(c.du_self, zero(T))
 
-#     if !c.tri_ready[] || c.tri_ϵ[] != ϵ || c.tri_C0[] != C0 || c.tri_CN[] != CN || c.tri_κ[] != κ
-#         init_tridiag!(c; ϵ = ϵ, C0 = C0, CN = CN, κ = κ)
-#     end
+    @inbounds for z in 1:(Nz-1)
+        σtmp[1,1,z] = -one(T)
+        σtmp[1,1,z+1] = one(T)
 
-#     dp = c.zb
-#     rhsfac = c.tri_rhsfac[]
-#     a_int = c.tri_a_int[]
-#     c_bc = c.tri_c_bc[]
-#     tri_cp = c.tri_cp
-#     tri_invden = c.tri_invden
-#     k0_neumann = c.tri_k0_neumann[]
+        for zz in 1:Nz
+            s = @view σtmp[:, :, zz]
+            sh = @view σhat_tmp[:, :, zz]
+            mul!(sh, c.Pxy, s)
+        end
 
-#     # For pure Neumann BCs at k=0, enforce compatibility and fix gauge.
-#     if k0_neumann
-#         sh0 = @view σhat[1, 1, :]
-#         qsum = zero(Complex{T})
-#         @inbounds for z in 1:Nz
-#             qsum += sh0[z]
-#         end
-#         if qsum != zero(Complex{T})
-#             qcorr = qsum / T(Nz)
-#             @inbounds for z in 1:Nz
-#                 sh0[z] -= qcorr
-#             end
-#         end
-#     end
+        for ny in 1:Ny, nx in 1:Nxh
+            if !isfinite(invden[nx, ny, 1]) || !isfinite(invden[nx, ny, Nz])
+                uhat_tmp[nx, ny, :] .= zero(Complex{T})
+                continue
+            end
 
-#     mode = 0
-#     if Nz == 1
-#         @inbounds for iy in 1:Ny
-#             for ix in 1:Nxh
-#                 mode += 1
-#                 uhat[ix, iy, 1] = (rhsfac * σhat[ix, iy, 1]) * tri_invden[1, mode]
-#             end
-#         end
-#     else
-#         @inbounds for iy in 1:Ny
-#             for ix in 1:Nxh
-#                 mode += 1
+            dptmp[nx, ny, 1] = (scale * σhat_tmp[nx, ny, 1]) * invden[nx, ny, 1]
+            for nz in 2:Nz
+                dptmp[nx, ny, nz] = (scale * σhat_tmp[nx, ny, nz] - dptmp[nx, ny, nz-1]) * invden[nx, ny, nz]
+            end
 
-#                 dp[1] = (rhsfac * σhat[ix, iy, 1]) * tri_invden[1, mode]
+            uhat_tmp[nx, ny, Nz] = dptmp[nx, ny, Nz]
+            for nz in (Nz-1):-1:1
+                uhat_tmp[nx, ny, nz] = dptmp[nx, ny, nz] - m_upper[nx, ny, nz] * uhat_tmp[nx, ny, nz+1]
+            end
+        end
 
-#                 # interior rows
-#                 for z in 2:(Nz-1)
-#                     dp[z] = (rhsfac * σhat[ix, iy, z] - a_int * dp[z-1]) * tri_invden[z, mode]
-#                 end
+        for zz in 1:Nz
+            uh = @view uhat_tmp[:, :, zz]
+            uview = @view utmp[:, :, zz]
+            mul!(uview, c.iPxy, uh)
+        end
 
-#                 dp[Nz] = (rhsfac * σhat[ix, iy, Nz] - c_bc * dp[Nz-1]) * tri_invden[Nz, mode]
+        c.du_self[z] = utmp[1,1,z+1] - utmp[1,1,z]
 
-#                 # backward substitution
-#                 uhat[ix, iy, Nz] = dp[Nz]
-#                 for z in (Nz-1):-1:1
-#                     uhat[ix, iy, z] = dp[z] - tri_cp[z, mode] * uhat[ix, iy, z+1]
-#                 end
-#             end
-#         end
-#     end
+        σtmp[1,1,z] = zero(T)
+        σtmp[1,1,z+1] = zero(T)
+    end
 
-#     if k0_neumann
-#         uh0 = @view uhat[1, 1, :]
-#         u0mean = zero(Complex{T})
-#         @inbounds for z in 1:Nz
-#             u0mean += uh0[z]
-#         end
-#         u0mean /= T(Nz)
-#         @inbounds for z in 1:Nz
-#             uh0[z] -= u0mean
-#         end
-#     end
+    return c.du_self
+end
 
-#     # 3) inverse rFFT in (x,y) for each z-plane.
-#     @inbounds for z in 1:Nz
-#         uh = @view uhat[:, :, z]
-#         uz = @view u[:, :, z]
-#         mul!(uz, c.iPxy, uh)
-#     end
+"""
+Solve for all modes for a single timestep, reusing precomputed factors.
+Then perform inverse FFT to get real-space potential.
 
-#     return u
-# end
+Inputs:
+  ŝ[kx,ky,n]  (ComplexF64): RHS = -(az^2/ε) σ̂
+Precomputed:
+  invden[kx,ky,n] (Float64)
+  cp[kx,ky,n]     (Float64)
+Output:
+  ϕ̂[kx,ky,n] (ComplexF64)
+  u[kx,ky,n] (Float64)
+
+This does:
+  forward: dp[n] = (ŝ[n] - dp[n-1]) * invden[n]
+  backward: ϕ̂[n] = dp[n] - cp[n] * ϕ̂[n+1]
+"""
+
+function recalc!(c::CoulombHamiltonian{T}) where {T}
+    uhat = c.uhat
+    sigma_hat = c.σhat
+    sigma = c.σ
+    Nx, Ny, Nz = size(uhat)
+    Nxh = size(sigma_hat, 1)
+    invden = c.inv_den
+    m_upper = c.mod_upperd
+    dp_scratch = c.dp_scratch
+    u = c.u
+    az2 = c.az^2
+
+    # Calculate sigma_hat from sigma (rFFT in x,y)
+    @inbounds for z in 1:Nz
+        s  = @view sigma[:, :, z]
+        sh = @view sigma_hat[:, :, z]
+        mul!(sh, c.Pxy, s)
+    end
+
+    @inbounds for ny in 1:Ny, nx in 1:Nxh
+        scale = -az2 / c.ϵ
+        dp_scratch[nx,ny,1] = (scale * sigma_hat[nx,ny,1]) * invden[nx,ny,1]
+
+        # Forward sweep
+        for nz in 2:Nz
+            dp_scratch[nx,ny,nz] = (scale * sigma_hat[nx,ny,nz] - dp_scratch[nx,ny,nz-1]) * invden[nx,ny,nz]
+        end
+
+        # Backward substitution
+        uhat[nx,ny,Nz] = dp_scratch[nx,ny,Nz]
+        for nz in (Nz-1):-1:1
+            uhat[nx,ny,nz] = dp_scratch[nx,ny,nz] - m_upper[nx,ny,nz] * uhat[nx,ny,nz+1]
+        end
+    end
+
+    # Inverse rFFT in x,y for each z-plane
+    @inbounds for z in 1:Nz
+        uh = @view uhat[:, :, z]
+        uview = @view u[:, :, z]
+        mul!(uview, c.iPxy, uh)
+    end
+
+    return u
+end
 
 function ΔH(c::CoulombHamiltonian{T,N}, params, proposal) where {T,N}
     # println("Calculating ΔH for CoulombHamiltonian ")
@@ -429,9 +325,18 @@ function ΔH(c::CoulombHamiltonian{T,N}, params, proposal) where {T,N}
     Δcharge_below = -delta(proposal)*c.scaling[]
     Δcharge_above = delta(proposal)*c.scaling[]
 
-    ΔE_below = -Δcharge_below * c.u[charge_coord_below...]
-    ΔE_above = -Δcharge_above * c.u[charge_coord_above...]
-    return ΔE_below + ΔE_above
+    # Linear term from the existing potential at the two updated charge planes.
+    ΔE_below = Δcharge_below * c.u[charge_coord_below...]
+    ΔE_above = Δcharge_above * c.u[charge_coord_above...]
+
+    # Quadratic self term for the local charge-pair update.
+    # du_self[z] is precomputed for a unit pair at planes (z, z+1), so this
+    # scales with the actual move amplitude as (Δq)^2.
+    z = charge_coord_below[3]
+    Δq = Δcharge_above
+    ΔE_self = (T(0.5) * (Δq^2)) * c.du_self[z]
+
+    return ΔE_below + ΔE_above + ΔE_self
 end
 
 update!(::Metropolis, c::CoulombHamiltonian{T}, context) where {T} = begin
