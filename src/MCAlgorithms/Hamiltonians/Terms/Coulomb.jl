@@ -1,5 +1,5 @@
 # TODO: We need a conversion factor from dipole to charge
-export CoulombHamiltonian, init!, recalc!, recalcnew, ΔH, update!
+export CoulombHamiltonian, init!, init_tridiag!, recalc!, recalcnew, ΔH, update!
 
 function mygemmavx!(C, A, B)
     @turbo for m ∈ axes(A, 1), n ∈ axes(B, 2)
@@ -30,8 +30,20 @@ struct CoulombHamiltonian{T,PT,PxyT,PiT,N} <: HamiltonianTerm
     zb::Vector{Complex{T}}        # backward recursion scratch
     inv2k::Matrix{T}              # precomputed 1/(2k) for each (kx,ky)
     ez::Matrix{T}                 # precomputed exp(-k*az) for each (kx,ky)
-    zf_threads::Vector{Vector{Complex{T}}}  # per-thread forward recursion scratch
-    zb_threads::Vector{Vector{Complex{T}}}  # per-thread backward recursion scratch
+    zf_threads::Matrix{Complex{T}}  # per-thread forward recursion scratch (Nz x nthreads)
+    zb_threads::Matrix{Complex{T}}  # per-thread backward recursion scratch (Nz x nthreads)
+
+    tri_cp::Matrix{T}             # precomputed Thomas c' (Nz x (Nxh*Ny))
+    tri_invden::Matrix{T}         # precomputed 1/den (Nz x (Nxh*Ny))
+    tri_rhsfac::Base.RefValue{T}            # -1/ϵ  (RHS prefactor)
+    tri_a_int::Base.RefValue{T}             # interior sub-diagonal coefficient
+    tri_c_bc::Base.RefValue{T}              # boundary super-diagonal coefficient
+    tri_ϵ::Base.RefValue{T}
+    tri_C0::Base.RefValue{T}
+    tri_CN::Base.RefValue{T}
+    tri_κ::Base.RefValue{T}
+    tri_ready::Base.RefValue{Bool}
+    tri_k0_neumann::Base.RefValue{Bool}
 end
 
 Base.size(c::CoulombHamiltonian) = c.size
@@ -97,23 +109,102 @@ function CoulombHamiltonian(
         end
     end
 
-    nthreads = Threads.nthreads()
-    zf_threads = [Vector{Complex{etype}}(undef, Nz) for _ in 1:nthreads]
-    zb_threads = [Vector{Complex{etype}}(undef, Nz) for _ in 1:nthreads]
+    nthreads = Threads.maxthreadid()
+    zf_threads = Matrix{Complex{etype}}(undef, Nz, nthreads)
+    zb_threads = Matrix{Complex{etype}}(undef, Nz, nthreads)
+    nmodes = Nxh * Ny
+    tri_cp = Matrix{etype}(undef, Nz, nmodes)
+    tri_invden = Matrix{etype}(undef, Nz, nmodes)
 
     scaling = eltype(g)(scaling)
     scaling = StaticParam(scaling)
 
     # clamp screening between 0 and 1
-    screening = clamp(screening, 0.0, 1.0)
+    # screening = clamp(screening, 0.0, 1.0)
 
     c = CoulombHamiltonian{etype,typeof(scaling),typeof(Pxy),typeof(iPxy),length(size(g))}(
         size(g), σ, σhat, uhat, u, scaling, screening,
         ax, ay, az,
-        Pxy, iPxy, kx, ky, zf, zb, inv2k, ez, zf_threads, zb_threads
+        Pxy, iPxy, kx, ky, zf, zb, inv2k, ez, zf_threads, zb_threads,
+        tri_cp, tri_invden,
+        Ref(zero(etype)), Ref(zero(etype)), Ref(zero(etype)),
+        Ref(zero(etype)), Ref(zero(etype)), Ref(zero(etype)), Ref(zero(etype)),
+        Ref(false), Ref(false)
     )
     init!(c, g)
+    init_tridiag!(c)
     c
+end
+
+function init_tridiag!(
+    c::CoulombHamiltonian{T};
+    ϵ::T = one(T),
+    C0::T = c.screening,
+    CN::T = c.screening,
+    κ::T = zero(T),
+) where {T}
+    Nx, Ny, Nz = size(c.u)
+    Nxh = size(c.σhat, 1)
+
+    inv_az  = inv(c.az)
+    inv_az2 = inv_az * inv_az
+    α0      = C0 / ϵ
+    αN      = CN / ϵ
+    κ2      = κ * κ
+    tiny    = eps(T)
+
+    a_int = -inv_az2
+    c_int = -inv_az2
+    c_bc  = -2 * inv_az2
+    b_mid = 2 * inv_az2 + κ2
+    b_lo  = b_mid + 2 * α0 * inv_az
+    b_hi  = b_mid + 2 * αN * inv_az
+
+    mode = 0
+    @inbounds for iy in 1:Ny
+        ky2 = c.ky[iy] * c.ky[iy]
+        for ix in 1:Nxh
+            mode += 1
+            k2 = c.kx[ix] * c.kx[ix] + ky2
+
+            den = b_lo + k2
+            if abs(den) <= tiny
+                den += tiny
+            end
+            invden = inv(den)
+            c.tri_invden[1, mode] = invden
+            c.tri_cp[1, mode] = c_bc * invden
+
+            for z in 2:(Nz-1)
+                den = (b_mid + k2) - a_int * c.tri_cp[z-1, mode]
+                if abs(den) <= tiny
+                    den += tiny
+                end
+                invden = inv(den)
+                c.tri_invden[z, mode] = invden
+                c.tri_cp[z, mode] = c_int * invden
+            end
+
+            if Nz > 1
+                den = (b_hi + k2) - c_bc * c.tri_cp[Nz-1, mode]
+                if abs(den) <= tiny
+                    den += tiny
+                end
+                c.tri_invden[Nz, mode] = inv(den)
+            end
+        end
+    end
+    c.tri_rhsfac[] = -inv(ϵ)
+    c.tri_a_int[] = a_int
+    c.tri_c_bc[] = c_bc
+    c.tri_ϵ[] = ϵ
+    c.tri_C0[] = C0
+    c.tri_CN[] = CN
+    c.tri_κ[] = κ
+    c.tri_ready[] = true
+    c.tri_k0_neumann[] = iszero(κ) && iszero(C0) && iszero(CN)
+  
+    return c
 end
 
 function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
@@ -134,21 +225,10 @@ function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
             v = v * c.scaling[] # Scaling factor dipole to charge
             σ[i,j,z]   -= v
             σ[i,j,z+1] += v
-            # if z == 1
-            #     vscreened = v * (1 - c.screening)
-            #     σ[i,j,z]   -= vscreened
-            #     σ[i,j,z+1] += v
-            # elseif z == Nz_dip
-            #     vscreened = v * (1 - c.screening)
-            #     σ[i,j,z]   -= v
-            #     σ[i,j,z+1] += vscreened
-            # else
-            #     σ[i,j,z]   -= v
-            #     σ[i,j,z+1] += v
-            # end
         end
     end
-    recalc!(c)
+    # recalc!(c)
+    recalc_tridiag!(c)
     return c
 end
 
@@ -220,6 +300,108 @@ function recalc!(c::CoulombHamiltonian{T}) where {T}
     end
 
     # 4) inverse rFFT x,y for each z, write directly into u
+    @inbounds for z in 1:Nz
+        uh = @view uhat[:, :, z]
+        uz = @view u[:, :, z]
+        mul!(uz, c.iPxy, uh)
+    end
+
+    return u
+end
+
+function recalc_tridiag!(
+    c::CoulombHamiltonian{T};
+    ϵ::T = one(T),
+    C0::T = c.screening,
+    CN::T = c.screening,
+    κ::T = zero(T),
+) where {T}
+    σ    = c.σ
+    σhat = c.σhat
+    uhat = c.uhat
+    u    = c.u
+
+    _, Ny, Nz = size(u)
+    Nxh        = size(σhat, 1)
+
+    # 1) rFFT in (x,y) for each z-plane.
+    @inbounds for z in 1:Nz
+        s  = @view σ[:, :, z]
+        sh = @view σhat[:, :, z]
+        mul!(sh, c.Pxy, s)
+    end
+
+    if !c.tri_ready[] || c.tri_ϵ[] != ϵ || c.tri_C0[] != C0 || c.tri_CN[] != CN || c.tri_κ[] != κ
+        init_tridiag!(c; ϵ = ϵ, C0 = C0, CN = CN, κ = κ)
+    end
+
+    dp = c.zb
+    rhsfac = c.tri_rhsfac[]
+    a_int = c.tri_a_int[]
+    c_bc = c.tri_c_bc[]
+    tri_cp = c.tri_cp
+    tri_invden = c.tri_invden
+    k0_neumann = c.tri_k0_neumann[]
+
+    # For pure Neumann BCs at k=0, enforce compatibility and fix gauge.
+    if k0_neumann
+        sh0 = @view σhat[1, 1, :]
+        qsum = zero(Complex{T})
+        @inbounds for z in 1:Nz
+            qsum += sh0[z]
+        end
+        if qsum != zero(Complex{T})
+            qcorr = qsum / T(Nz)
+            @inbounds for z in 1:Nz
+                sh0[z] -= qcorr
+            end
+        end
+    end
+
+    mode = 0
+    if Nz == 1
+        @inbounds for iy in 1:Ny
+            for ix in 1:Nxh
+                mode += 1
+                uhat[ix, iy, 1] = (rhsfac * σhat[ix, iy, 1]) * tri_invden[1, mode]
+            end
+        end
+    else
+        @inbounds for iy in 1:Ny
+            for ix in 1:Nxh
+                mode += 1
+
+                dp[1] = (rhsfac * σhat[ix, iy, 1]) * tri_invden[1, mode]
+
+                # interior rows
+                for z in 2:(Nz-1)
+                    dp[z] = (rhsfac * σhat[ix, iy, z] - a_int * dp[z-1]) * tri_invden[z, mode]
+                end
+
+                dp[Nz] = (rhsfac * σhat[ix, iy, Nz] - c_bc * dp[Nz-1]) * tri_invden[Nz, mode]
+
+                # backward substitution
+                uhat[ix, iy, Nz] = dp[Nz]
+                for z in (Nz-1):-1:1
+                    uhat[ix, iy, z] = dp[z] - tri_cp[z, mode] * uhat[ix, iy, z+1]
+                end
+            end
+        end
+    end
+
+    if k0_neumann
+        uh0 = @view uhat[1, 1, :]
+        u0mean = zero(Complex{T})
+        @inbounds for z in 1:Nz
+            u0mean += uh0[z]
+        end
+        u0mean /= T(Nz)
+        @inbounds for z in 1:Nz
+            uh0[z] -= u0mean
+        end
+    end
+
+    # 3) inverse rFFT in (x,y) for each z-plane.
     @inbounds for z in 1:Nz
         uh = @view uhat[:, :, z]
         uz = @view u[:, :, z]

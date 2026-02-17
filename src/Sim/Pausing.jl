@@ -87,6 +87,10 @@ function Processes.close(g::IsingGraph)
     deleteat!(processes(g), 1:length(processes(g)))
 end
 
+function Processes.run(g::IsingGraph)
+    run.(processes(g))
+end
+
 function Processes.pause(g::IsingGraph)
     pause.(processes(g))
 end

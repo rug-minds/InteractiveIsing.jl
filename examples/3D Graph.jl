@@ -24,7 +24,7 @@ struct Recalc <: Processes.ProcessAlgorithm
 end
 function Processes.step!(r::Recalc, context)
     (;hamiltonian) = context
-    recalc!(hamiltonian[r.i])
+    ii.recalc_tridiag!(hamiltonian[r.i])
     return (;)
 end
 
@@ -46,7 +46,7 @@ end
 # g.hamiltonian = h = Ising(g) 
 isingmetro = InteractiveIsing.IsingMetropolis()
 isingmetro = g.default_algorithm
-g.hamiltonian = h = Ising(g) + CoulombHamiltonian2(g, 4f0);
+g.hamiltonian = h = Ising(g) + CoulombHamiltonian(g, 1f0, screening = 0.5f0);
 # algo = Processes.CompositeAlgorithm((isingmetro, Recalc(), PolTracker()), (1, 200, 10000),  
 #     Share(isingmetro, Recalc()), 
 #     Share(isingmetro, PolTracker())
