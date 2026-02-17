@@ -73,7 +73,7 @@ function to_delta_exp(expr, deltas::Union{FlipProposal, Type{<:FlipProposal}}...
                     # println("Matched: ", x, " with symb: ", symb, " idx: ", idx)
                     if s == symb && si == idx
                         # println("Replacing ", x, " with delta view")
-                        x = :($symb[$si]-$(Symbol("delta_", didx))[$si])
+                        x = :($(Symbol("delta_", didx))[$si] - $symb[$si])
                     end
             end
         end

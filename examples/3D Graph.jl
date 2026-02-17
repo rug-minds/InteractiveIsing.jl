@@ -22,11 +22,11 @@ interface(g)
 struct Recalc <: Processes.ProcessAlgorithm 
     i::Int
 end
-function Processes.step!(r::Recalc, context)
-    (;hamiltonian) = context
-    ii.recalc_tridiag!(hamiltonian[r.i])
-    return (;)
-end
+# function Processes.step!(r::Recalc, context)
+#     (;hamiltonian) = context
+#     ii.recalc_tridiag!(hamiltonian[r.i])
+#     return (;)
+# end
 
 struct PolTracker{T} <: ProcessAlgorithm end
 PolTracker() = PolTracker{Float32}()
@@ -46,7 +46,8 @@ end
 # g.hamiltonian = h = Ising(g) 
 isingmetro = InteractiveIsing.IsingMetropolis()
 isingmetro = g.default_algorithm
-g.hamiltonian = h = Ising(g) + CoulombHamiltonian(g, 1f0, screening = 0.5f0);
+# g.hamiltonian = h = Ising(g) + CoulombHamiltonian(g, 1f0, screening = 0.5f0);
+g.hamiltonian = h = Ising(g) + Quartic(g)
 # algo = Processes.CompositeAlgorithm((isingmetro, Recalc(), PolTracker()), (1, 200, 10000),  
 #     Share(isingmetro, Recalc()), 
 #     Share(isingmetro, PolTracker())
@@ -56,7 +57,7 @@ algo = Processes.CompositeAlgorithm(isingmetro, Recalc(3), PolTracker(), (1, 100
     Share(isingmetro, PolTracker())
     )
 
-createProcess(g, algo, Input(PolTracker(), isinggraph = g))
+# createProcess(g, algo, Input(PolTracker(), isinggraph = g))
 # # interface(g)
 
 

@@ -228,7 +228,7 @@ function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
         end
     end
     # recalc!(c)
-    recalc_tridiag!(c)
+    recalc!(c)
     return c
 end
 
@@ -309,107 +309,116 @@ function recalc!(c::CoulombHamiltonian{T}) where {T}
     return u
 end
 
-function recalc_tridiag!(
-    c::CoulombHamiltonian{T};
+function tridiag_recalc!(c::CoulombHamiltonian{T},   
     ϵ::T = one(T),
     C0::T = c.screening,
     CN::T = c.screening,
-    κ::T = zero(T),
-) where {T}
-    σ    = c.σ
-    σhat = c.σhat
-    uhat = c.uhat
-    u    = c.u
+    λ::T = zero(T)) where {T}
 
-    _, Ny, Nz = size(u)
-    Nxh        = size(σhat, 1)
-
-    # 1) rFFT in (x,y) for each z-plane.
-    @inbounds for z in 1:Nz
-        s  = @view σ[:, :, z]
-        sh = @view σhat[:, :, z]
-        mul!(sh, c.Pxy, s)
-    end
-
-    if !c.tri_ready[] || c.tri_ϵ[] != ϵ || c.tri_C0[] != C0 || c.tri_CN[] != CN || c.tri_κ[] != κ
-        init_tridiag!(c; ϵ = ϵ, C0 = C0, CN = CN, κ = κ)
-    end
-
-    dp = c.zb
-    rhsfac = c.tri_rhsfac[]
-    a_int = c.tri_a_int[]
-    c_bc = c.tri_c_bc[]
-    tri_cp = c.tri_cp
-    tri_invden = c.tri_invden
-    k0_neumann = c.tri_k0_neumann[]
-
-    # For pure Neumann BCs at k=0, enforce compatibility and fix gauge.
-    if k0_neumann
-        sh0 = @view σhat[1, 1, :]
-        qsum = zero(Complex{T})
-        @inbounds for z in 1:Nz
-            qsum += sh0[z]
-        end
-        if qsum != zero(Complex{T})
-            qcorr = qsum / T(Nz)
-            @inbounds for z in 1:Nz
-                sh0[z] -= qcorr
-            end
-        end
-    end
-
-    mode = 0
-    if Nz == 1
-        @inbounds for iy in 1:Ny
-            for ix in 1:Nxh
-                mode += 1
-                uhat[ix, iy, 1] = (rhsfac * σhat[ix, iy, 1]) * tri_invden[1, mode]
-            end
-        end
-    else
-        @inbounds for iy in 1:Ny
-            for ix in 1:Nxh
-                mode += 1
-
-                dp[1] = (rhsfac * σhat[ix, iy, 1]) * tri_invden[1, mode]
-
-                # interior rows
-                for z in 2:(Nz-1)
-                    dp[z] = (rhsfac * σhat[ix, iy, z] - a_int * dp[z-1]) * tri_invden[z, mode]
-                end
-
-                dp[Nz] = (rhsfac * σhat[ix, iy, Nz] - c_bc * dp[Nz-1]) * tri_invden[Nz, mode]
-
-                # backward substitution
-                uhat[ix, iy, Nz] = dp[Nz]
-                for z in (Nz-1):-1:1
-                    uhat[ix, iy, z] = dp[z] - tri_cp[z, mode] * uhat[ix, iy, z+1]
-                end
-            end
-        end
-    end
-
-    if k0_neumann
-        uh0 = @view uhat[1, 1, :]
-        u0mean = zero(Complex{T})
-        @inbounds for z in 1:Nz
-            u0mean += uh0[z]
-        end
-        u0mean /= T(Nz)
-        @inbounds for z in 1:Nz
-            uh0[z] -= u0mean
-        end
-    end
-
-    # 3) inverse rFFT in (x,y) for each z-plane.
-    @inbounds for z in 1:Nz
-        uh = @view uhat[:, :, z]
-        uz = @view u[:, :, z]
-        mul!(uz, c.iPxy, uh)
-    end
-
-    return u
+    return nothing
 end
+
+# function recalc_tridiag!(
+#     c::CoulombHamiltonian{T};
+#     ϵ::T = one(T),
+#     C0::T = c.screening,
+#     CN::T = c.screening,
+#     κ::T = zero(T),
+# ) where {T}
+#     σ    = c.σ
+#     σhat = c.σhat
+#     uhat = c.uhat
+#     u    = c.u
+
+#     _, Ny, Nz = size(u)
+#     Nxh        = size(σhat, 1)
+
+#     # 1) rFFT in (x,y) for each z-plane.
+#     @inbounds for z in 1:Nz
+#         s  = @view σ[:, :, z]
+#         sh = @view σhat[:, :, z]
+#         mul!(sh, c.Pxy, s)
+#     end
+
+#     if !c.tri_ready[] || c.tri_ϵ[] != ϵ || c.tri_C0[] != C0 || c.tri_CN[] != CN || c.tri_κ[] != κ
+#         init_tridiag!(c; ϵ = ϵ, C0 = C0, CN = CN, κ = κ)
+#     end
+
+#     dp = c.zb
+#     rhsfac = c.tri_rhsfac[]
+#     a_int = c.tri_a_int[]
+#     c_bc = c.tri_c_bc[]
+#     tri_cp = c.tri_cp
+#     tri_invden = c.tri_invden
+#     k0_neumann = c.tri_k0_neumann[]
+
+#     # For pure Neumann BCs at k=0, enforce compatibility and fix gauge.
+#     if k0_neumann
+#         sh0 = @view σhat[1, 1, :]
+#         qsum = zero(Complex{T})
+#         @inbounds for z in 1:Nz
+#             qsum += sh0[z]
+#         end
+#         if qsum != zero(Complex{T})
+#             qcorr = qsum / T(Nz)
+#             @inbounds for z in 1:Nz
+#                 sh0[z] -= qcorr
+#             end
+#         end
+#     end
+
+#     mode = 0
+#     if Nz == 1
+#         @inbounds for iy in 1:Ny
+#             for ix in 1:Nxh
+#                 mode += 1
+#                 uhat[ix, iy, 1] = (rhsfac * σhat[ix, iy, 1]) * tri_invden[1, mode]
+#             end
+#         end
+#     else
+#         @inbounds for iy in 1:Ny
+#             for ix in 1:Nxh
+#                 mode += 1
+
+#                 dp[1] = (rhsfac * σhat[ix, iy, 1]) * tri_invden[1, mode]
+
+#                 # interior rows
+#                 for z in 2:(Nz-1)
+#                     dp[z] = (rhsfac * σhat[ix, iy, z] - a_int * dp[z-1]) * tri_invden[z, mode]
+#                 end
+
+#                 dp[Nz] = (rhsfac * σhat[ix, iy, Nz] - c_bc * dp[Nz-1]) * tri_invden[Nz, mode]
+
+#                 # backward substitution
+#                 uhat[ix, iy, Nz] = dp[Nz]
+#                 for z in (Nz-1):-1:1
+#                     uhat[ix, iy, z] = dp[z] - tri_cp[z, mode] * uhat[ix, iy, z+1]
+#                 end
+#             end
+#         end
+#     end
+
+#     if k0_neumann
+#         uh0 = @view uhat[1, 1, :]
+#         u0mean = zero(Complex{T})
+#         @inbounds for z in 1:Nz
+#             u0mean += uh0[z]
+#         end
+#         u0mean /= T(Nz)
+#         @inbounds for z in 1:Nz
+#             uh0[z] -= u0mean
+#         end
+#     end
+
+#     # 3) inverse rFFT in (x,y) for each z-plane.
+#     @inbounds for z in 1:Nz
+#         uh = @view uhat[:, :, z]
+#         uz = @view u[:, :, z]
+#         mul!(uz, c.iPxy, uh)
+#     end
+
+#     return u
+# end
 
 function ΔH(c::CoulombHamiltonian{T,N}, params, proposal) where {T,N}
     # println("Calculating ΔH for CoulombHamiltonian ")

@@ -7,6 +7,13 @@ end
 Sextic(g::AbstractIsingGraph, val = 1) = Sextic(ScalarParam(eltype(g), val; description = "Sextic Coefficient"))
 
 # ΔH_expr[Sextic] = :(sc[]*self[j]*s[j]^6)
-@inline @Auto_ΔH function ΔH(::Sextic, hargs, proposal)
-    return :(sc[]*self[j]*s[j]^6)
+# @inline @Auto_ΔH function ΔH(::Sextic, hargs, proposal)
+#     return :(sc[]*self[j]*s[j]^6)
+# end
+
+function ΔH(::Quartic, hargs, proposal)
+    s = hargs.s
+    self = hargs.self
+    j = at_idx(proposal)
+    return hargs.sc[]*self[j]*(to_val(proposal)^6 - s[j]^6)
 end
