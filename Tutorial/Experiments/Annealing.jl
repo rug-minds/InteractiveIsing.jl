@@ -357,7 +357,7 @@ genAdj!(g, wg5)
 
 ### Set hamiltonian with selfenergy and depolarization field
 # CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
-g.hamiltonian = Ising(g) + CoulombHamiltonian(g, 3, screening = 0.0001)
+g.hamiltonian = Ising(g) + CoulombHamiltonian(g, 3, screening = 5)
 
 # Only necessary if the Hamiltonian has non-local terms that need to be recalculated after each spin flip.
 # reprepare(g)
@@ -374,7 +374,7 @@ temp(g,Temperature)
 fullsweep = xL*yL*zL
 time_fctr = 0.5
 num_sweep = 5000
-anneal_time = fullsweep*2*num_sweep
+anneal_time = fullsweep*1*num_sweep
 pulsetime = fullsweep*1/2*num_sweep
 relaxtime = fullsweep*1/4*num_sweep
 point_repeat = time_fctr*fullsweep
@@ -385,7 +385,8 @@ pulse3 = Unique(SinPulseA(5, 1))
 
 bias1= BiasA(0.1)
 
-Anealing1 = LinAnealingA(5f0, 0f0)
+Anealing1 = LinAnealingA(3f0, 0f0)
+Anealing2 = LinAnealingA(0f0, 3f0)
 metropolis = g.default_algorithm
 
 #
@@ -400,11 +401,13 @@ Metro_and_recal = CompositeAlgorithm(metropolis, Recalc(3), M_Logger, B_Logger, 
 pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, (1, point_repeat))
 pulse_part2 = CompositeAlgorithm(Metro_and_recal, pulse2, (1, point_repeat))
 anneal_part1 = CompositeAlgorithm(Metro_and_recal, Anealing1, (1, point_repeat))
+anneal_part2 = CompositeAlgorithm(Metro_and_recal, Anealing2, (1, point_repeat))
 bias_part1 = CompositeAlgorithm(Metro_and_recal, bias1, (1, point_repeat))
 
-Anealing_step = Routine(anneal_part1,
-    (anneal_time,), 
-    Route(metropolis => Anealing1, :isinggraph),     
+Anealing_step = Routine(anneal_part1, anneal_part2,
+    (anneal_time,anneal_time), 
+    Route(metropolis => Anealing1, :isinggraph), 
+    Route(metropolis => Anealing2, :isinggraph),        
     Route(metropolis => M_Logger, :M => :value), 
     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
     Route(metropolis => Recalc(3), :hamiltonian),
