@@ -60,7 +60,7 @@ macro Auto_ΔH(exp)
             end
         end
     end
-    println(q)
+    # println(q)
     esc(q)
 end
 
