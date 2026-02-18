@@ -65,7 +65,7 @@ function CoulombHamiltonian(
     Pxy  = plan_rfft(s, (1,2);  flags=FFTW.MEASURE)
     iPxy = plan_irfft(uh, Nx, (1,2); flags=FFTW.MEASURE)
 
-    twoπ = etype(2) * etype(π)
+    # twoπ = etype(2) * etype(π)
     ax = eltype(g)(ax)
     ay = eltype(g)(ay)
     az = eltype(g)(az)
@@ -76,8 +76,9 @@ function CoulombHamiltonian(
     dp_scratch = zeros(Complex{etype}, Nxh, Ny, Nz) # scratch space for forward sweep
     du_self = zeros(etype, Nz_dip)
 
-    scaling = eltype(g)(scaling)
-    scaling = StaticParam(scaling)
+    scaling = eltype(g)(scaling)/az # Convert from dipole moment to charge (assumes unit lattice spacing in z)
+                                    # Assuming Pz = scaling * Δz
+    scaling = StaticParam(scaling) 
 
     c = CoulombHamiltonian{etype, typeof(scaling), typeof(Pxy), typeof(iPxy), 3}(
         dims, σ, σhat, uhat, zeros(etype, dims...), scaling, screen_len_top, screen_len_bot, ax, ay, az, 1f0, du_self,
@@ -167,6 +168,8 @@ function precompute_solve_factors!(ch::CoulombHamiltonian{T}) where T
 
     az2 = az^2
 
+    
+
     @inbounds for ny in 1:Ny, nx in 1:Nxh
         c = 2 + compute_ktilde2(ch, nx, ny)* az2
 
@@ -177,8 +180,21 @@ function precompute_solve_factors!(ch::CoulombHamiltonian{T}) where T
         # Store factors for Thomas algorithm
 
         # First row
-        invden[nx, ny, 1] = inv(diag1)
-        m_upper[nx,ny,1] = inv(diag1) # m_upper1 = u1/diag1, u1 = 1 for all modes
+
+        if nx == 1 && ny == 1
+            if screen_bot == Inf && screen_top == Inf
+                # (0,0) mode: pin φ̂₁ = 0 to fix the gauge (removes singular
+                # null-space of the Neumann Laplacian).  Physical observables
+                # depend only on potential *differences*, so the constant is
+                # irrelevant while the z-varying part (depolarisation field)
+                # is preserved.
+                invden[1, 1, 1] = zero(T)
+                m_upper[1, 1, 1] = zero(T)
+            end
+        else
+            invden[nx, ny, 1] = inv(diag1)
+            m_upper[nx,ny,1] = inv(diag1) # m_upper1 = u1/diag1, u1 = 1 for all modes
+        end
 
         # Interior rows
         for nz in 2:(Nz-1)
