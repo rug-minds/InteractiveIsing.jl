@@ -35,8 +35,9 @@ function Processes.init(::Metropolis, context::Cont) where Cont
     proposer = get_proposer(structure)
     proposal = FlipProposal{:s, :j, statetype(proposer)}(0, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
     M = sum(state)
+    ΔE = zero(eltype(state))
 
-    returnargs = (;hamiltonian, proposer, rng, proposal, M, isinggraph = structure, state, adj, self)
+    returnargs = (;hamiltonian, proposer, rng, proposal, M, ΔE, isinggraph = structure, state, adj, self)
     return returnargs
 end
 
@@ -85,5 +86,5 @@ end
     
     @inline update!(Metropolis(), hamiltonian, context)
 
-    return (;proposal, M)
+    return (;proposal, M, ΔE)
 end
