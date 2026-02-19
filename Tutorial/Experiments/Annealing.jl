@@ -7,12 +7,24 @@ import InteractiveIsing as II
 ### Now the H is written like H_self + H_quartic
 ### Which is Jii*Si^2 + Qc*Jii*Si^4 wichi means Jii=a, Qc*Jii=b in a*Si^2 + b*Si^4
 
-function newmakie(makietype, args...)
-    f = makietype(args...)
+function newmakie(makietype, args...; kwargs...)
+    f = makietype(args...; kwargs...)
     scr = GLMakie.Screen()
     display(scr, f)
     f
 end
+
+function makieaxis(axisfunc, modifiers...)
+    f = Figure()
+    ax = axisfunc(f[1, 1])
+    for mod in modifiers
+        mod(ax)
+    end
+    scr = GLMakie.Screen()
+    display(scr, f)
+    f
+end
+
 # Weight function variant 1
 function weightfunc1(dr,c1,c2)
     prefac = 1
@@ -224,6 +236,22 @@ end
 ##################################################################################
 
 ##################################################################################
+### struct start: Snapshot (simple four-segment triangular waveform)
+struct Snapshot{DataType, Name} <: ProcessAlgorithm end
+
+function Processes.step!(::Snapshot{DT, Name}, context::C) where {DT, Name, C}
+    (;data) = context
+    saveimg(data)
+end
+
+function saveimg(g::IsingGraph)
+    ######
+end
+### struct end: Snapshot
+##################################################################################
+
+
+##################################################################################
 ### struct start: BiasA (stable bias)
 ### Run with BiasA 
 ### 
@@ -357,22 +385,22 @@ genAdj!(g, wg5)
 
 ### Set hamiltonian with selfenergy and depolarization field
 # CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
-g.hamiltonian = Ising(g) + CoulombHamiltonian(g, 3, screening = 5)
-
+g.hamiltonian = Ising(g) + CoulombHamiltonian(g, 3, screening =2.8)
+g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 # Only necessary if the Hamiltonian has non-local terms that need to be recalculated after each spin flip.
 # reprepare(g)
 
 
 ### Set Jii
-g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
-homogeneousself!(g,a1)
 
+homogeneousself!(g,a1)
+g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 Temperature=1
 temp(g,Temperature)
 
 ### Run simulation process
 fullsweep = xL*yL*zL
-time_fctr = 0.5
+time_fctr = 1
 num_sweep = 5000
 anneal_time = fullsweep*1*num_sweep
 pulsetime = fullsweep*1/2*num_sweep
@@ -393,24 +421,34 @@ metropolis = g.default_algorithm
 M_Logger = ValueLogger(:M)
 # Pulse_logger = ValueLogger(:pulse)
 B_Logger = ValueLogger(:b)
+T_Logger = ValueLogger(:T)
 
 
 
-Metro_and_recal = CompositeAlgorithm(metropolis, Recalc(3), M_Logger, B_Logger, (1,1000, fullsweep, fullsweep))
-
-pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, (1, point_repeat))
-pulse_part2 = CompositeAlgorithm(Metro_and_recal, pulse2, (1, point_repeat))
-anneal_part1 = CompositeAlgorithm(Metro_and_recal, Anealing1, (1, point_repeat))
-anneal_part2 = CompositeAlgorithm(Metro_and_recal, Anealing2, (1, point_repeat))
-bias_part1 = CompositeAlgorithm(Metro_and_recal, bias1, (1, point_repeat))
-
-Anealing_step = Routine(anneal_part1, anneal_part2,
-    (anneal_time,anneal_time), 
-    Route(metropolis => Anealing1, :isinggraph), 
-    Route(metropolis => Anealing2, :isinggraph),        
+Metro_and_recal = CompositeAlgorithm(metropolis, Recalc(3), M_Logger, B_Logger, T_Logger, 
+    (1,1000, fullsweep, fullsweep, fullsweep),
     Route(metropolis => M_Logger, :M => :value), 
     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
     Route(metropolis => Recalc(3), :hamiltonian),
+    Route(metropolis => T_Logger, :isinggraph => :value, transform = temp)
+    )
+
+
+pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, (1, point_repeat))
+pulse_part2 = CompositeAlgorithm(Metro_and_recal, pulse2, (1, point_repeat))
+anneal_part1 = CompositeAlgorithm(Metro_and_recal, Anealing1, 
+    (1, point_repeat),
+    Route(metropolis => Anealing1, :isinggraph), 
+    )
+anneal_part2 = CompositeAlgorithm(Metro_and_recal, Anealing2, 
+    (1, point_repeat),
+    Route(metropolis => Anealing2, :isinggraph),  
+    )
+bias_part1 = CompositeAlgorithm(Metro_and_recal, bias1, (1, point_repeat))
+
+Anealing_step = Routine(
+    anneal_part1, anneal_part2,
+    (anneal_time,anneal_time),     
     )
 
 
@@ -437,14 +475,13 @@ createProcess(g, Anealing_step, lifetime = 1)
 c = process(g) |> fetch # If you want to close ctr+c
 voltage1= c[B_Logger].values
 Pr1= c[M_Logger].values
+Temp1 = c[T_Logger].values
 
-# Voltage2 = c[pulse2].x
-# Pr2 = c[pulse2].y
 
-w2=newmakie(lines, voltage1, Pr1)
-w3=newmakie(lines, Pr1)
 
-# w4=newmakie(lines, Voltage2, Pr2)
+f2 = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax,voltage1, Pr1))
+f3 = makieaxis(f -> Axis(f[1, 1], xlabel = "Step",ylabel = "Pr"), ax -> lines!(ax,Pr1))
+f4 = makieaxis(f -> Axis(f[1, 1], xlabel = "Temperature", ylabel = "Pr"), ax -> lines!(ax,Temp1, Pr1))
 # w5=newmakie(lines,Pr2)
 
 # # inlineplot() do 
