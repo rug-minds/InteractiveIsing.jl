@@ -14,6 +14,18 @@ function newmakie(makietype, args...)
     display(scr, f)
     f
 end
+
+function makieaxis(axisfunc, modifiers...)
+    f = Figure()
+    ax = axisfunc(f[1, 1])
+    for mod in modifiers
+        mod(ax)
+    end
+    scr = GLMakie.Screen()
+    display(scr, f)
+    f
+end
+
 # Weight function variant 1
 function weightfunc1(dr,c1,c2)
     prefac = 1
@@ -389,9 +401,6 @@ anneal_part1 = CompositeAlgorithm(Metro_and_recal, Anealing1, (1, point_repeat))
 Pulse_and_Relax = Routine(pulse_part1, Metro_and_recal, 
     (pulsetime, relaxtime), 
     Route(metropolis => pulse1, :hamiltonian, :M),     
-    Route(metropolis => M_Logger, :M => :value), 
-    Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
-    Route(metropolis => Recalc(3), :hamiltonian),
     )
 createProcess(g, Pulse_and_Relax, lifetime = 1)
 
@@ -411,6 +420,7 @@ Pr1= -c[M_Logger].values
 w2=newmakie(lines, voltage1, Pr1)
 w3=newmakie(lines, Pr1)
 
+f = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax,voltage1, Pr1))
 # w4=newmakie(lines, Voltage2, Pr2)
 # w5=newmakie(lines,Pr2)
 

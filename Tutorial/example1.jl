@@ -4,8 +4,19 @@ import InteractiveIsing as II
 
 ## Utility functions for experiments
 
-function newmakie(makietype, args...)
+function newmakie(makietype, args...;)
     f = makietype(args...)
+    scr = GLMakie.Screen()
+    display(scr, f)
+    f
+end
+
+function makieaxis(modifiers...; axtype = Axis)
+    f = Figure()
+    ax = axtype(f[1, 1])
+    for mod in modifiers
+        mod(ax)
+    end
     scr = GLMakie.Screen()
     display(scr, f)
     f
@@ -193,10 +204,6 @@ est_remaining(process(g))
 
 # Wait until it is done
 args = process(g) |> fetch # If you want to close ctr+c
-# args = process(g) |> getcontext
-# EnergyG= args.all_Es;
-voltage= args.x
-Pr= args.y;
 
 # w1=newmakie(lines, Pr, EnergyG)
 # inlineplot() do 
@@ -205,7 +212,7 @@ Pr= args.y;
 w2=newmakie(lines, voltage, Pr)
 w3=newmakie(lines,Pr)
 
-
+f = makieaxis(ax -> lines!(ax, voltage, Pr, xlabel = "Temp"))
 
 
 # show_connections(g[1],1,1,1)
