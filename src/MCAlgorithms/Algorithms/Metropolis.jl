@@ -16,7 +16,25 @@ MetropolisTracked() = Metropolis(tracked = true)
 
 # @inline function (::Metropolis)(context::As) where As
 function Processes.step!(::Metropolis, context::C) where {C}
-    @inline Metropolis_step(context)
+    (;rng, isinggraph, state, adj, self, hamiltonian, proposer, proposal, M) = context
+
+    proposal = @inline rand(rng, proposer)::FlipProposal{:s, :j, statetype(proposer)}
+
+    Ttype = eltype(isinggraph)
+    β = one(Ttype)/(@inline temp(isinggraph))    
+
+    ΔE = @inline calculate(ΔH(), hamiltonian, (;self = self, s = state, w = adj, hamiltonian...), proposal)
+    
+    if (@inline (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-β*ΔE)))
+        proposal = @inline accept(state, proposal)
+        M += @inline delta(proposal)
+    end
+
+    context = @inline inject(context, (;proposal, M))
+    
+    @inline update!(Metropolis(), hamiltonian, context)
+
+    return (;proposal, M, ΔE)
 end
 
 function Processes.init(::Metropolis, context::Cont) where Cont
@@ -60,31 +78,6 @@ end
 
 
 
-@inline function Metropolis_step(context::C) where C
-    (;rng, isinggraph, state, adj, self, hamiltonian, proposer, proposal, M) = context
-
-    proposal = @inline rand(rng, proposer)::FlipProposal{:s, :j, statetype(proposer)}
-    # proposal = FlipProposal{:s, :j, statetype(proposer)}(1, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
-
-    Ttype = eltype(isinggraph)
-    β = one(Ttype)/(@inline temp(isinggraph))
-    # β = one(Ttype)/T
+# @inline function Metropolis_step(context::C) where C
     
-    # ΔE = @inline deltafunc((;context..., newstate), (;j))
-    # @show proposal
-    # sleep(0.5)
-    # ΔE = @inline ΔH(hamiltonian, (;self = self, s = state, w = adj, hamiltonian...), proposal)
-    ΔE = @inline calculate(ΔH(), hamiltonian, (;self = self, s = state, w = adj, hamiltonian...), proposal)
-    
-
-    if (@inline (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-β*ΔE)))
-        proposal = @inline accept(state, proposal)
-        M += @inline delta(proposal)
-    end
-
-    context = @inline inject(context, (;proposal, M))
-    
-    @inline update!(Metropolis(), hamiltonian, context)
-
-    return (;proposal, M, ΔE)
-end
+# end
