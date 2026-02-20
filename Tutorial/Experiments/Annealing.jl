@@ -2,6 +2,12 @@ using InteractiveIsing, GLMakie, FileIO, CairoMakie
 using InteractiveIsing.Processes
 import InteractiveIsing as II
 
+using Dates
+using DataFrames
+using XLSX
+using Random
+using StatsBase
+
 ## Utility functions for experiments
 ### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic
@@ -361,31 +367,38 @@ end
 xL = 30  # Length in the x-dimension
 yL = 30  # Length in the y-dimension
 zL = 10   # Length in the z-dimension
-g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y))
+g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y), set = (-1.5,1.5))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
 # Launch interactive visualization (idle until createProcess(...) later)
 interface(g)
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
-# a1, b1, c1 = -20, 16, 0 
-a1, b1, c1 = 0, 0, 0 
-Ex = range(-1.0, 1.0, length=1000)
-Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
+JIsing = 1.0
 
 #### Weight function setup (Connection setup)
 #### Set the distance scaling
 setdist!(g, (1.0,1.0,1.0))
 
 ### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
-wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, 1, 0.1, 0.1) NN = 3
+wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, JIsing, 0.1, 0.1) NN = 3
 genAdj!(g, wg5)
 
-
-
+# a1, b1, c1 = -20, 16, 0 
+a1, c1 = -2, 10
+b1 =-(a1+3*c1)/2
+Ex = range(-1.5, 1.5, length=1000)
+Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
+f1=newmakie(lines, Ex, Ey);
+E_barrier= abs(a1 * 1^2 + b1 * 1^4 .+ c1 * 1^6)
+println("E_barrier = ", E_barrier)
+Epp_1 = 2a1 + 12b1 + 30c1   # Ey''(1)
+println("Ey''(1) = ", Epp_1)
+Scale =1 
+Screening=0
 ### Set hamiltonian with selfenergy and depolarization field
 # CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
-g.hamiltonian = Ising(g) + CoulombHamiltonian(g, 3, screening =2.8)
+g.hamiltonian = Ising(g) + CoulombHamiltonian(g, Scale, screening = Screening) + Quartic(g) + Sextic(g)
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 # Only necessary if the Hamiltonian has non-local terms that need to be recalculated after each spin flip.
 # reprepare(g)
@@ -393,28 +406,42 @@ g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
 ### Set Jii
 
-homogeneousself!(g,a1)
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
-Temperature=1
-temp(g,Temperature)
+homogeneousself!(g,a1)
+### Set Qc*Jii
+g.hamiltonian[4].qc[] = b1/a1
+### Set Sc*Jii
+g.hamiltonian[5].sc[] = c1/a1
+g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
+Temp_aneal = 6f0
+
+Temperature = Temp_aneal
+temp(g, Temperature)
 
 ### Run simulation process
 fullsweep = xL*yL*zL
 time_fctr = 1
-num_sweep = 5000
-anneal_time = fullsweep*1*num_sweep
-pulsetime = fullsweep*1/2*num_sweep
-relaxtime = fullsweep*1/4*num_sweep
+Steps_1 = 100000
+anneal_time = fullsweep*1*Steps_1
+pulsetime = fullsweep*1/2*Steps_1
+relaxtime = fullsweep*1/4*Steps_1
 point_repeat = time_fctr*fullsweep
-pulse1 = TrianglePulseA(20, 2)
-pulse2 = SinPulseA(20, 1)
+
+Amp1 = 20
+Amp2 = 20
+Bias1 = 0.1
+
+
+
+pulse1 = TrianglePulseA(Amp1, 2)
+pulse2 = SinPulseA(Amp2, 1)
 pulse3 = Unique(SinPulseA(5, 1))
 
 
-bias1= BiasA(0.1)
+bias1 = BiasA(Bias1)
 
-Anealing1 = LinAnealingA(3f0, 0f0)
-Anealing2 = LinAnealingA(0f0, 3f0)
+Anealing1 = LinAnealingA(Temp_aneal, 0f0)
+Anealing2 = LinAnealingA(0f0, Temp_aneal)
 metropolis = g.default_algorithm
 
 #
@@ -479,17 +506,106 @@ Temp1 = c[T_Logger].values
 
 
 
-f2 = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax,voltage1, Pr1))
-f3 = makieaxis(f -> Axis(f[1, 1], xlabel = "Step",ylabel = "Pr"), ax -> lines!(ax,Pr1))
+# f2 = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax,voltage1, Pr1))
+# f3 = makieaxis(f -> Axis(f[1, 1], xlabel = "Step",ylabel = "Pr"), ax -> lines!(ax,Pr1))
 f4 = makieaxis(f -> Axis(f[1, 1], xlabel = "Temperature", ylabel = "Pr"), ax -> lines!(ax,Temp1, Pr1))
-# w5=newmakie(lines,Pr2)
 
-# # inlineplot() do 
-# #     lines(voltage, Pr)
-# # end
-# # inlineplot() do 
-# #     lines(Pr)
-# # end
-# # inlineplot() do 
-# #     lines(Ex, Ey)
-# # end
+
+# ----- Save last figure (w2) + export data & parameters to Excel -----
+# Choose output directory (edit this path as needed)
+outdir = raw"C:\Users\P317151\Documents\data\Model_V1.0\20260217\Annealing\Scale = 1"
+mkpath(outdir)
+
+date_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
+
+base_name = string(
+    "Scale=", round(Scale, digits=4),
+    "_Screening=", round(Screening, digits=4),
+    "_Steps_1=", round(Steps_1, digits=4),
+    "_Eb=", round(E_barrier, digits=4),
+    "_Epp=", round(Epp_1, digits=4),
+    "_Temp_aneal=", round(Temp_aneal, digits=4),
+    "_", date_str
+)
+
+png_path  = joinpath(outdir, base_name * ".png")
+xlsx_path = joinpath(outdir, base_name * ".xlsx")
+
+# save figure of (voltage1, Pr1)
+try
+    save(png_path, f4)
+    println("Saved figure: ", png_path)
+catch err
+    @warn "Failed to save figure" err
+end
+
+# ---------- Pr distribution histogram (new figure) ----------
+P = state(g[])
+v = vec(P)
+
+bins = -1.5:0.05:1.5
+h = fit(Histogram, v, bins)
+density = h.weights ./ sum(h.weights)
+
+fig_dist = Figure()
+ax_dist = Axis(fig_dist[1, 1], xlabel="P", ylabel="Probability")
+barplot!(ax_dist,
+    h.edges[1][1:end-1],
+    density;
+    width = step(bins)
+)
+
+# Save distribution figure
+png_path_dist = joinpath(outdir, base_name * "_Pr_distribution.png")
+try
+    save(png_path_dist, fig_dist)
+    println("Saved Pr distribution figure: ", png_path_dist)
+catch err
+    @warn "Failed to save Pr distribution figure" err
+end
+
+
+# Sheet 1: voltage1 & Pr1
+# ensure same length
+n = min(length(voltage1), length(Pr1))
+df_series = DataFrame(voltage = Float64.(voltage1[1:n]), Pr = Float64.(Pr1[1:n]))
+
+# Sheet 2: Pr distribution
+# bin_left: left edge, bin_center: center, probability: density
+bin_left = Float64.(h.edges[1][1:end-1])
+bin_center = bin_left .+ step(bins)/2
+
+df_dist = DataFrame(
+    bin_left   = bin_left,
+    bin_center = bin_center,
+    prob       = Float64.(density),
+    counts     = Float64.(h.weights)
+)
+
+
+# Sheet 3: parameters
+params = DataFrame(
+    key = String[
+        "JIsing","a1","b1","c1","E_barrier","Eypp_1","xL","yL","zL","Scale","Screening","Steps_1","time_fctr",
+        "anneal_time","pulsetime","relaxtime","point_repeat","Amp1","Amp2"
+    ],
+    value = Any[
+        JIsing, a1, b1, c1, E_barrier, Epp_1, xL, yL, zL, Scale, Screening, Steps_1, time_fctr,
+        anneal_time, pulsetime, relaxtime, point_repeat, Amp1, Amp2
+    ]
+)
+
+
+XLSX.openxlsx(xlsx_path, mode="w") do xf
+    # 用默认 Sheet1 当 series，避免多一个空 sheet
+    xf[1].name = "series"
+    XLSX.writetable!(xf["series"], collect(eachcol(df_series)), names(df_series))
+    # Distribution sheet
+    XLSX.addsheet!(xf, "Pr_distribution")
+    XLSX.writetable!(xf["Pr_distribution"], collect(eachcol(df_dist)), names(df_dist))
+    # 再新增 params
+    XLSX.addsheet!(xf, "params")
+    XLSX.writetable!(xf["params"], collect(eachcol(params)), names(params))
+end
+println("Saved Excel: ", xlsx_path)
+# ----- End export -----
