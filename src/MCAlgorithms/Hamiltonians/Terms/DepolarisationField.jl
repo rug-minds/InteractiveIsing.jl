@@ -16,7 +16,6 @@ function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1/prod(si
     # fv = sparse(genLayerConnections(g[1], wg)..., nstates(g[1]), nstates(g[1]))
     
     dpf = DepolField(pv, cv, Int32(top_layers), Int32(bottom_layers), size(g[1]))
-    return dpf
     init!(dpf, g)
     return dpf
 end
@@ -85,7 +84,8 @@ end
 
 # ΔH_expr[DepolField] = :( (dpf[j]/c[])*(s[j]) )
 
-function ΔH(dpf::DepolField, params, proposal)
+# function ΔH(dpf::DepolField, params, proposal)
+function calculate(::ΔH, dpf::DepolField, hargs, proposal)
     (;s, self, c) = params
     j = getidx(proposal)
     base_term = 1/2*c[]*dpf.dpf[j]
