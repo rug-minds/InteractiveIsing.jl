@@ -91,7 +91,7 @@ function CoulombHamiltonian(
         inv_den,
         dp_scratch,
         recalc,
-        Ref(0)
+        Ref(1)
     )
     init!(c, g)
     return c

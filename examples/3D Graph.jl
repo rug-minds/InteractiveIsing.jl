@@ -9,7 +9,7 @@ end
 
 g = ii.IsingGraph(100,100,10, type = Continuous, periodic = (:x,:y))
 # g.default_algorithm = Metropolis()
-setdist!(g, (1.0, 1.0, 100.0))
+setdist!(g, (1.0, 10.0, 20.0))
 
 wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=3
 # println(@report_opt genAdj!(g, wg) )
@@ -39,12 +39,7 @@ isingmetro = InteractiveIsing.IsingMetropolis()
 isingmetro = g.default_algorithm
 g.hamiltonian = h = Ising(g) + CoulombHamiltonian(g, 2f0, screening = 20f0, recalc = 200);
 reprepare(g)
-# g.hamiltonian = h = Ising(g) + Quartic(g)
-# algo = Processes.CompositeAlgorithm((isingmetro, Recalc(), PolTracker()), (1, 200, 10000),  
-#     Share(isingmetro, Recalc()), 
-#     Share(isingmetro, PolTracker())
-#     )
-algo = Processes.CompositeAlgorithm(isingmetro, PolTracker(), (1, 1),  
+eAlgorithm(isingmetro, PolTracker(), (1, 1),  
     Share(isingmetro, PolTracker())
     )
 
