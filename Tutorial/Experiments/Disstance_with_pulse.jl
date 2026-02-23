@@ -439,7 +439,7 @@ mkpath(outdir)
 function run_simu!(g; X_dis, Y_dis, Z_dis, Scale, Screening, Amp1, Temp=0.3, time_fctr=1, Steps_1=4000)
     # ----- Hamiltonian -----
     setdist!(g, (X_dis,Y_dis,Z_dis))
-    g.hamiltonian = Ising(g) + CoulombHamiltonian(g, Scale, screening = Screening) + Quartic(g) + Sextic(g)
+    g.hamiltonian = Ising(g) + CoulombHamiltonian(g, Scale, screening = Screening, recalc = 1000) + Quartic(g) + Sextic(g)
     g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
     # Landau/self terms
@@ -463,11 +463,10 @@ function run_simu!(g; X_dis, Y_dis, Z_dis, Scale, Screening, Amp1, Temp=0.3, tim
     relax_time = 1/2*time_fctr*fullsweep*Steps_1
     point_repeat = fullsweep*time_fctr
 
-    Metro_and_recal = CompositeAlgorithm(metropolis, Recalc(3), M_Logger, B_Logger,
-        (1, 1000, point_repeat, point_repeat),
+    Metro_and_recal = CompositeAlgorithm(metropolis, M_Logger, B_Logger,
+        (1, point_repeat, point_repeat),
         Route(metropolis => M_Logger, :M => :value),
         Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
-        Route(metropolis => Recalc(3), :hamiltonian),
     )
 
     pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, (1, point_repeat))

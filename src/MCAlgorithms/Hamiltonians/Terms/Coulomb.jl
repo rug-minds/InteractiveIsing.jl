@@ -31,6 +31,9 @@ struct CoulombHamiltonian{T,PT,PxyT,PiT,N} <: HamiltonianTerm
     mod_upperd::Array{T, 3}       # Thomas algorithm modified upper diagonal (cp), size (Nxh, Ny, Nz)
     inv_den::Array{T, 3}
     dp_scratch::Array{Complex{T}, 3}       # Thomas algorithm forward sweep scratch space
+
+    recalc_steps::Int
+    recalc_tracker::Base.RefValue{Int} # Counter to track when to recalculate potential (for external coupling)
 end
 
 Base.size(c::CoulombHamiltonian) = c.size
@@ -40,12 +43,13 @@ function CoulombHamiltonian(
     scaling::Real = 1.f0;
     screening = Inf32,
     screen_len_top = screening,
-    screen_len_bot = screening
+    screen_len_bot = screening,
+    recalc = 1
 )
     gdims = size(g[1])                 # (Nx,Ny,Nz-1)
     etype = eltype(g)
 
-    ax, ay, az = lattice_constants(top(g[1]))
+    ax, ay, az = etype.(lattice_constants(top(g[1])))
 
     Nx, Ny, Nz_dip = gdims
     Nz = Nz_dip + 1                    # charge planes
@@ -85,7 +89,9 @@ function CoulombHamiltonian(
         Pxy, iPxy,
         mod_upperd,
         inv_den,
-        dp_scratch
+        dp_scratch,
+        recalc,
+        Ref(0)
     )
     init!(c, g)
     return c
@@ -380,4 +386,8 @@ update!(::Metropolis, c::CoulombHamiltonian{T}, context) where {T} = begin
         c.σ[coord_above...] += Δq_above
         # 场的重算交给外面的 Recalc 进程周期性处理
     end
+    if c.recalc_tracker[] == c.recalc_steps
+        recalc!(c)
+    end
+    c.recalc_tracker[] = mod1(c.recalc_tracker[] + 1, c.recalc_steps)
 end
