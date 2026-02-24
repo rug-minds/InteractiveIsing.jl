@@ -100,7 +100,7 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
         # Default algorithm
         IsingMetropolis(),
         #Hamiltonians
-        Ising(precision, _datalen),
+        Quadratic(),
         #Layers
         Dict{Pair, Int32}(),
         #Emitter
@@ -111,7 +111,6 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
         layers
     )
 
-
     # Set Graph refs
     g.defects.graph = g
     for layer in g.layers
@@ -121,6 +120,8 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
     end
 
     initRandomState(g)
+    g.hamiltonian = Ising(g)
+
     # cb = x -> layerIdx(sim(x))
     # set_listener_callback!(g, cb)
     # println("cb: ", cb)
@@ -325,6 +326,8 @@ function process(g::IsingGraph)
     end
     return ps[end]
 end
+
+Processes.context(g::IsingGraph) = context(process(g))
 export process
 
 
