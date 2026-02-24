@@ -7,25 +7,8 @@ struct Quadratic <: HamiltonianTerm end
 
 Quadratic(type, len) = Quadratic()
 
-# ΔH_paramrefs(::Quadratic) = @ParameterRefs (s[i]*w[i,j]*s[j] + self[j]*s[j]^2)
-
-
-# @inline @Auto_ΔH function ΔH(::Quadratic, hargs, proposal)
-#     return :(s[i]*w[i,j]*-s[j] + self[j]*s[j]^2)
-# end
-
-# const quadratic_exp = Ref(Expr(:block))
-# @generated function ΔH(::Quadratic, hargs, proposal)
-#     exp = to_delta_exp(:(s[i]*w[i,j]*-s[j] + self[j]*s[j]^2), proposal)
-#     proposalname = :proposal
-#     global quadratic_exp[] = quote
-#             hargs = (; hargs..., delta_1 = $proposalname)
-#             @ParameterRefs($exp)(hargs; j = getidx($proposalname))
-#     end
-#     return quadratic_exp[]
-# end 
-
-function ΔH(::Quadratic, hargs, proposal)
+# function ΔH(::Quadratic, hargs, proposal)
+function calculate(::ΔH, hterm::Quadratic, hargs, proposal)
     s = hargs.s
     wij = hargs.w
     self = hargs.self
@@ -41,4 +24,20 @@ function ΔH(::Quadratic, hargs, proposal)
 
     return ising_energy + self[j]*(to_val(proposal)^2 - s[j]^2)
 
+end
+
+# function dH(::Quadratic, hargs, s_idx)
+function calculate(::dH, hterm::Quadratic, hargs, s_idx)
+    s = hargs.s
+    wij = hargs.w
+    self = hargs.self
+    cum = zero(eltype(s))
+    @turbo for ptr in nzrange(wij, s_idx)
+        i = wij.rowval[ptr]
+        w = wij.nzval[ptr]
+        cum += w*s[i]
+    end
+    ising_energy = -cum
+
+    return ising_energy + 2*self[s_idx]*s[s_idx]
 end

@@ -1,3 +1,4 @@
+include("Utils.jl")
 include("LayerDefects.jl")
 
 include("IsingLayer.jl")
@@ -6,4 +7,4 @@ include("LayerArchitecture.jl")
 
 include("Parameters.jl")
 include("Sampling.jl")
-include("InlineLayerDispatch.jl")
+# include("InlineLayerDispatch.jl")

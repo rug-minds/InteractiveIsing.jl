@@ -26,5 +26,7 @@ include("Printing.jl")
 include("FunctionTuple.jl")
 include("TupleBinarySearch.jl")
 include("Unroll.jl")
+include("SparseVal.jl")
+include("Macros.jl")
 
 include("Parameters/Parameters.jl")

@@ -1,6 +1,5 @@
 export ParamTensor, isinactive, isactive, toggle, default, getvalfield, setvalfield!, homogeneousval, description, toggle
 
-
 """
 ParamTensor: Active -> Static
 """
@@ -81,7 +80,12 @@ end
 
 @inline function Base.getindex(p::ParamTensor{T}, idx::Integer) where T
     if ishomogeneous(p)
-        @boundscheck 0 < idx <= prod(size(p))
+        @boundscheck begin 
+            check = 0 < idx <= prod(size(p))
+            if !check
+                throw(BoundsError(p, idx))
+            end
+        end
         retval = p.val[]
     elseif isstatic(p)
         @boundscheck checkbounds(p.val, idx)
@@ -92,10 +96,28 @@ end
     return retval::T
 end
 
+@inline function Base.getindex(p::ParamTensor{T}, idxs::Integer...) where T
+    if ishomogeneous(p)
+        @boundscheck begin 
+            check = all((0 < idxs[i] <= size(p, i) for i in 1:length(idxs)))
+            if !check
+                throw(BoundsError(p, idxs))
+            end
+        end
+        retval = p.val[]
+    elseif isstatic(p)
+        @boundscheck checkbounds(p.val, idxs...)
+        retval = default(p)
+    else
+        retval = p.val[idxs...]
+    end
+    return retval::T
+end
+
 @inline function Base.getindex(p::ParamTensor{T}, idx::UnitRange) where T
     if ishomogeneous(p)
-        @boundscheck 0 < first(idx) <= last(idx) <= prod(size(p))
-        return fill(p.val[], size(p))::Vector{T}
+        @boundscheck (0 < first(idx) <= last(idx) <= prod(size(p))) || throw(BoundsError(p, idx))
+        return fill(p.val[], length(idx))::Vector{T}
     elseif isstatic(p)
         @boundscheck checkbounds(p.val, idx)
         return fill(default(p), length(idx))::Vector{T}
@@ -124,8 +146,8 @@ end
 Base.dotview(p::ParamTensor{T}, i...) where T = Base.dotview(p.val, i...)
 Base.materialize!(p::ParamTensor{T}, a::Base.Broadcast.Broadcasted{<:Any}) where T = Base.materialize!(p.val, a)
 
-@inline Base.lastindex(p::ParamTensor{T}) where T = lastindex(p.val)
-@inline Base.firstindex(p::ParamTensor{T}) where T = firstindex(p.val)
+@inline Base.lastindex(p::ParamTensor{T}) where T = ishomogeneous(p) ? prod(size(p)) : lastindex(p.val)
+@inline Base.firstindex(p::ParamTensor{T}) where T = 1
 # @inline Base.eachindex(p::ParamTensor{T}) where T = eachindex(p.val)
 @inline Base.eltype(p::ParamTensor{T}) where T = T
 Base.splice!(p::ParamTensor{T}, idx...) where T = splice!(p.val, idx...)
@@ -205,20 +227,26 @@ function Base.show(io::IO, ::MIME"text/plain", p::ParamTensor{T}) where T
     println(io, "$(p.description) with value: ")
     if isscalar(p)
         print(io, "$(p.val[])")
+    elseif ishomogeneous(p)
+        show(io, MIME"text/plain"(), fill(p.val[], size(p)...))
+    elseif isstatic(p)
+        show(io, MIME"text/plain"(), fill(default(p), size(p)...))
     else
-        print(io, p[1:end])
+        show(io, MIME"text/plain"(), p.val)
     end
 end
 
 function Base.show(io::IO, ::MIME"text/plain", p::ParamTensor{T}) where {T <: AbstractVector}
-    if ishomogeneous(p)
-        l = length(p.val)
-        println(io, "$(l)-element $(eltype(p.val)) constant parameter")
-        print(io, "Value: $(p.homogeneousval[])")
+    print(io, (isactive(p) ? "Active " : "Inactive "))
+    ishomogeneous(p) && print(io, "Homogeneous ")
+    println(io, "$(p.description) with value: ")
+    if isscalar(p)
+        print(io, "$(p.val[])")
+    elseif ishomogeneous(p)
+        show(io, MIME"text/plain"(), fill(p.val[], size(p)...))
+    elseif isstatic(p)
+        show(io, MIME"text/plain"(), fill(default(p), size(p)...))
     else
-        println(io, (isactive(p) ? "Active " : "Inactive "))
-        println(io, "$(p.description) with vector value.")
-        println(io, "Defaulting to: $(default(p))")
-        display(p.val)
+        show(io, MIME"text/plain"(), p.val)
     end
 end

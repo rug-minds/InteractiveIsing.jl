@@ -1,4 +1,5 @@
 export Clamping
+
 """
 Clamping Hamiltonian for Equilibrium Propagation
 H = β/2 *(s_i - y_i)^2
@@ -10,16 +11,22 @@ struct Clamping{PBeta, BY} <: Hamiltonian
     y::BY
 end
 Clamping(g::AbstractIsingGraph, β = 1) = Clamping(ScalarParam(eltype(g), β; description = "Clamping Factor"), VectorParam(eltype(g), length(g); description = "Targets"))
+Base.Expr(::Clamping) = :(-1/2*β*(s[j]^2)-y[j]*s[j])
 
 params(::Type{Clamping}, GraphType) = GatherHamiltonianParams((:β, GraphType, GraphType(0), "Clamping Factor"), (:y, Vector{GraphType}, GraphType(0), "Targets"))
 
-@Auto_ΔH function ΔH(::Clamping, hargs, proposal)
-    return :(-1/2*β[]*(s[j]^2)-y[j]*s[j])
+
+# function ΔH(::Clamping, hargs, proposal)
+function calculate(::ΔH, hterm::Clamping, hargs, proposal)
+    s = hargs.s
+    β = hargs.β
+    y = hargs.y
+    j = at_idx(proposal)
+    return -1/2*β[]*(to_val(proposal)^2 - s[j]^2) - y[j]*(to_val(proposal) - s[j])
 end
 
-# function Δi_H(::Type{Clamping})
-#     collect_expr = :()
-#     return_expr = :(β*((sn_i^2-s_i^2)/2+y_i*(s_i-sn_i)))
-#     return HExpression(collect_expr, return_expr) 
-# end
-
+function calculate(::dH, hterm::Clamping, hargs, s_idx)
+    β = hargs.β
+    y = hargs.y
+    return -β[]*hargs.s[s_idx] - y[s_idx]
+end

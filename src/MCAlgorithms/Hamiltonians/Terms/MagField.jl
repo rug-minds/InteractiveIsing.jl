@@ -9,28 +9,25 @@ end
 
 MagField{PV}(g::AbstractIsingGraph) where PV <: ParamTensor = MagField{PV}(PV())
 
-MagField(g::AbstractIsingGraph) = MagField(eltype(g), statelen(g))
+HomogeneousMagField(g::AbstractIsingGraph, val = zero(eltype(g))) = MagField(HomogeneousParam(val, size(g)...; description = "Magnetic Field"))
+MagField(g::AbstractIsingGraph, active::Bool) = MagField(eltype(g), statelen(g), active)
 MagField(type, len, active = false) = MagField(ParamTensor(zeros(type, len), type |> zero; active, description = "Magnetic Field"))
 
 params(::Type{MagField}) = HamiltonianParams((:b, Vector{GraphType}, GraphType(0), "Magnetic Field"))
 
+# function ΔH(::MagField, hargs, proposal)
+function calculate(::ΔH, hterm::MagField, hargs, proposal)
+    s = hargs.s
+    b = hargs.b
+    j = at_idx(proposal)
+    return b[j]*(to_val(proposal) - s[j])
+end
 
-# TODO CHECK SIGN
-# @Auto_ΔH function ΔH(::MagField, hargs, proposal)
-#     return :(-b[j]*s[j])
-# end
-
-const magfield_exp = Ref(Expr(:block))
-@generated function ΔH(::MagField, hargs, proposal)
-    exp = to_delta_exp(:(-(b[j]) * s[j]), proposal)
-    proposalname = :proposal
-    global magfield_exp[] = quote
-            hargs = (; hargs..., delta_1 = $proposalname)
-            @ParameterRefs($exp)(hargs; j = getidx($proposalname))
-    end
-    return magfield_exp[]
-end 
-
+# function dH(::MagField, hargs, s_idx)
+function calculate(::dH, hterm::MagField, hargs, s_idx)
+    b = hargs.b
+    return -b[s_idx]
+end
 
  
 

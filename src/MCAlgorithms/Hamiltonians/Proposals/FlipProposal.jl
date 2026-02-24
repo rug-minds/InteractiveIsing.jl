@@ -29,14 +29,6 @@ at_idx(r::FlipProposal) = r.at_idx
 from_val(r::FlipProposal) = r.from_val
 to_val(r::FlipProposal) = r.to_val
 
-# function FlipProposal(s::Symbol; kwargs...) 
-#     @assert length(kwargs) == 1 "FlipProposal requires exactly one index => value pair"
-#     for (k,p) in kwargs
-#         @assert p isa Pair{Int, T} where T "FlipProposal index-value pair must be of the form Int => T"
-#         return FlipProposal{s, k, typeof(p[2])}(p[1], p[2])
-#     end
-# end
-
 Base.size(r::FlipProposal) = (1,)
 Base.length(r::FlipProposal) = 1
 Base.eltype(r::FlipProposal{S, Idx, T}) where {S, Idx, T} = T

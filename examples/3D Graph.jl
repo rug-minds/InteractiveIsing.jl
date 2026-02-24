@@ -3,7 +3,7 @@ using InteractiveIsing.Processes
 import InteractiveIsing as ii
 
 function isingfunc(dr, c1, c2)
-    return dr
+    return 1/dr
 end
 
 
@@ -37,13 +37,21 @@ end
 # g.hamiltonian = h = Ising(g) 
 isingmetro = InteractiveIsing.IsingMetropolis()
 isingmetro = g.default_algorithm
-g.hamiltonian = h = Ising(g) + CoulombHamiltonian(g, 2f0, screening = 20f0, recalc = 200);
+algo = ii.IsingLangevin()
+# g.hamiltonian = h = Ising(g) + CoulombHamiltonian(g, 2f0, screening = 20f0, recalc = 200);
+g.hamiltonian = h = Ising(g, :homogeneous_b)
 reprepare(g)
-eAlgorithm(isingmetro, PolTracker(), (1, 1),  
-    Share(isingmetro, PolTracker())
-    )
+# CompositeAlgorithm(isingmetro, PolTracker(), (1, 1),  
+#     Share(isingmetro, PolTracker())
+#     )
 
-createProcess(g, algo, Input(PolTracker(), isinggraph = g))
+createProcess(g, algo, dynamics = algo)
+
+
+
+
+
+# createProcess(g, algo, Input(PolTracker(), isinggraph = g))
 
 # using Random
 # proposer = ii.get_proposer(g)

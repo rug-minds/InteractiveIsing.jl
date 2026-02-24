@@ -14,6 +14,28 @@ end
 
 MetropolisTracked() = Metropolis(tracked = true)
 
+function Processes.init(::Metropolis, context::Cont) where Cont
+    # @show typeof(context)
+    (;structure) = context
+
+    state = InteractiveIsing.state(structure)
+    hamiltonian = structure.hamiltonian
+    adj = InteractiveIsing.adj(structure)
+    self = structure.self
+
+
+    rng = Random.MersenneTwister()
+
+    hamiltonian = init!(hamiltonian, structure)
+    proposer = get_proposer(structure)
+    proposal = FlipProposal{:s, :j, statetype(proposer)}(0, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
+    M = sum(state)
+    ΔE = zero(eltype(state))
+
+    returnargs = (;hamiltonian, proposer, rng, proposal, M, ΔE, isinggraph = structure, state, adj, self)
+    return returnargs
+end
+
 # @inline function (::Metropolis)(context::As) where As
 function Processes.step!(::Metropolis, context::C) where {C}
     (;rng, isinggraph, state, adj, self, hamiltonian, proposer, proposal, M) = context
@@ -35,28 +57,6 @@ function Processes.step!(::Metropolis, context::C) where {C}
     @inline update!(Metropolis(), hamiltonian, context)
 
     return (;proposal, M, ΔE)
-end
-
-function Processes.init(::Metropolis, context::Cont) where Cont
-    # @show typeof(context)
-    (;structure) = context
-
-    state = InteractiveIsing.state(structure)
-    hamiltonian = structure.hamiltonian
-    adj = InteractiveIsing.adj(structure)
-    self = structure.self
-
-
-    rng = Random.MersenneTwister()
-
-    hamiltonian = init!(hamiltonian, structure)
-    proposer = get_proposer(structure)
-    proposal = FlipProposal{:s, :j, statetype(proposer)}(0, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
-    M = sum(state)
-    ΔE = zero(eltype(state))
-
-    returnargs = (;hamiltonian, proposer, rng, proposal, M, ΔE, isinggraph = structure, state, adj, self)
-    return returnargs
 end
 
 # function Processes.init(::Metropolis, context::Cont) where Cont

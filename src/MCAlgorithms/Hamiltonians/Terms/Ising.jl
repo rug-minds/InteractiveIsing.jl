@@ -1,5 +1,12 @@
 const Ising{PV} = HamiltonianTerms(Quadratic, MagField{PV})
-Ising(g::AbstractIsingGraph, active = true) = Ising(eltype(g), statelen(g), active)
-Ising(type, len, active = false) = HamiltonianTerms(Quadratic(), MagField(type, len, active))
+
+function Ising(g::AbstractIsingGraph, type::Symbol = :inactive_b)
+    if type == :homogeneous_b
+        return HamiltonianTerms(Quadratic(), HomogeneousMagField(g))
+    end
+    b_active = type == :active_b
+
+    HamiltonianTerms(Quadratic(), MagField(g, b_active))
+end
 
 export Ising

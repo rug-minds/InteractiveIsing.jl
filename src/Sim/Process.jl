@@ -1,4 +1,4 @@
-function createProcess(g::IsingGraph, func = nothing, inputs...; metropolis = g.default_algorithm, run = true, threaded = true, lifetime = nothing, args...)
+function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.default_algorithm, lifetime = nothing, args...)
     if isnothing(func)
         # func = get(args, :algorithm, g.default_algorithm)
         func = g.default_algorithm
@@ -6,11 +6,11 @@ function createProcess(g::IsingGraph, func = nothing, inputs...; metropolis = g.
     
     func = deepcopy(func)
     # process = Process(func, Input(DestructureInput(), structure = g); lifetime)
-    process = Process(func, Input(metropolis, structure = g), inputs...; lifetime)
+    process = Process(func, Input(dynamics, structure = g), inputs...; lifetime)
     
     ps = processes(g)
     push!(ps, process)
-    start(process; threaded)
+    run(process)
 
     return process
 end

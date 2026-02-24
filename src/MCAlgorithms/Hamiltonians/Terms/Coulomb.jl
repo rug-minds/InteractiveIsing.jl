@@ -338,7 +338,8 @@ function recalc!(c::CoulombHamiltonian{T}) where {T}
     return u
 end
 
-function ΔH(c::CoulombHamiltonian{T,N}, params, proposal) where {T,N}
+# function ΔH(c::CoulombHamiltonian{T,N}, params, proposal) where {T,N}
+function calculate(::ΔH, c::CoulombHamiltonian{T,N}, hargs, proposal) where {T,N}
     # println("Calculating ΔH for CoulombHamiltonian ")
     lattice_size = size(c)
     spin_idx = at_idx(proposal)

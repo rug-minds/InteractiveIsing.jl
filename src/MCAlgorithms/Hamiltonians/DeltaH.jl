@@ -1,14 +1,9 @@
-abstract type HamiltonianCalulation end
-struct ΔH <: HamiltonianCalulation end
-# function ΔH(hterm::Hamiltonian, hargs, proposal)
-#     error("No ΔH method defined for $(typeof(hterm)). Consider defining one or using parameterrefs to automatically generate ΔH.")
-# end
 
-const ΔH_expr = Dict{Type, Expr}()
-get_ΔH_expr(::Type{H}) where {H} = ΔH_expr[Base.typename(H).wrapper]
-get_ΔH_expr(h::H) where {H} = get_ΔH_expr(H)
-gen_ΔH_expr = nothing
-generated_func_calls = nothing
+# const ΔH_expr = Dict{Type, Expr}()
+# get_ΔH_expr(::Type{H}) where {H} = ΔH_expr[Base.typename(H).wrapper]
+# get_ΔH_expr(h::H) where {H} = get_ΔH_expr(H)
+# gen_ΔH_expr = nothing
+# generated_func_calls = nothing
 
 """
 Opt in flag to use paramref system
@@ -17,19 +12,19 @@ Opt in flag to use paramref system
 """
 For auto generated ΔH, this function returns the parameterrefs to be used in the generated ΔH expression
 """
-@inline ΔH_paramrefs(::Any) = nothing
+# @inline ΔH_paramrefs(::Any) = nothing
 
 @inline function calculate(::ΔH, hterm::HamiltonianTerm, hargs, proposal)
     return ΔH(hterm, hargs, proposal)
 end
 
-Base.@propagate_inbounds function calculate(::ΔH, HTS::AbstractHamiltonianTerms, hargs, proposal)
-    ΔH_total = zero(eltype(hargs.s))
-    ΔH_total = @inline unrollreplace(ΔH_total, HTS...) do Htot, hamiltonian
-        Htot = Htot + @inline calculate(ΔH(), hamiltonian, hargs, proposal)
-    end
-    return ΔH_total
-end
+# Base.@propagate_inbounds function calculate(::ΔH, HTS::AbstractHamiltonianTerms, hargs, proposal)
+#     ΔH_total = zero(eltype(hargs.s))
+#     ΔH_total = @inline unrollreplace(ΔH_total, HTS...) do Htot, hamiltonian
+#         Htot = Htot + @inline calculate(ΔH(), hamiltonian, hargs, proposal)
+#     end
+#     return ΔH_total
+# end
 
 """
 From a function ΔH(::HamilTonianTermType, hargs, proposal)
