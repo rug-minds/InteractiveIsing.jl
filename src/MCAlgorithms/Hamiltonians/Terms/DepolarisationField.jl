@@ -11,6 +11,8 @@ struct DepolField{PV <: ParamTensor, CV <: ParamTensor, F, T, R} <: HamiltonianT
     surface_NxNy::Int
 end
 
+Base.Expr(::DepolField) = :( -(dpf[j]/(surface_NxNy * c[]))*(s[j]) )
+
 function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1f0, zfunc = z -> exp(-(min(abs(z-1), abs(z-size(g[1],3))))))
     pv = HomogeneousParam(eltype(g)(0), length(state(g[1])), description = "Depolarisation Field")
     cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
@@ -87,7 +89,7 @@ function update!(::Metropolis, dpf::DepolField, context)
     return 
 end
 
-# ΔH_expr[DepolField] = :( (dpf[j]/c[])*(s[j]) )
+# ΔH_expr[DepolField] = 
 
 # function ΔH(dpf::DepolField, params, proposal)
 function calculate(::ΔH, dpf::DepolField, hargs, proposal)
@@ -97,7 +99,7 @@ function calculate(::ΔH, dpf::DepolField, hargs, proposal)
     D = dpf.dpf[]/dpf.surface_NxNy
     M = dpf.M[]
     ΔD = zero(T)
-    if j ∈ dpf
+    if j ∈ dpf # In surface
         z = layers_deep(j, dpf)
         ΔD = -T(dpf.zfunc(z)) * ΔM / dpf.surface_NxNy
     end
