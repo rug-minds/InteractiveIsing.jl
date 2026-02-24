@@ -2,20 +2,20 @@ export DepolField
 struct DepolField{PV <: ParamTensor, CV <: ParamTensor, F, T} <: HamiltonianTerm 
     dpf::PV
     c::CV
-    # zfunc::F
+    zfunc::F
     # field_adj::SP
     top_layers::Int32
     bottom_layers::Int32
     size::T
 end
 
-function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers))
+function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers), zfunc = z -> e^-(abs(min(abs(z-1), abs(z-size(g[1]))))))
     pv = HomogeneousParam(eltype(g)(0), length(state(g[1])), description = "Depolarisation Field")
     cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
     # wg = @WG (dr) -> 1/dr^3 NN = NN
     # fv = sparse(genLayerConnections(g[1], wg)..., nstates(g[1]), nstates(g[1]))
     
-    dpf = DepolField(pv, cv, Int32(top_layers), Int32(bottom_layers), size(g[1]))
+    dpf = DepolField(pv, cv, zfunc, Int32(top_layers), Int32(bottom_layers), size(g[1]))
     init!(dpf, g)
     return dpf
 end
