@@ -9,7 +9,7 @@ struct DepolField{PV <: ParamTensor, CV <: ParamTensor, F, T} <: HamiltonianTerm
     size::T
 end
 
-function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers), zfunc = z -> e^-(abs(min(abs(z-1), abs(z-size(g[1]))))))
+function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers), zfunc = z -> exp(-(abs(min(abs(z-1), abs(z-size(g[1])))))))
     pv = HomogeneousParam(eltype(g)(0), length(state(g[1])), description = "Depolarisation Field")
     cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
     # wg = @WG (dr) -> 1/dr^3 NN = NN
