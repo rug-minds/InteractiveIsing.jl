@@ -3,6 +3,12 @@ using InteractiveIsing.Processes
 using Random
 import InteractiveIsing as II
 
+using Dates
+using DataFrames
+using XLSX
+using Random
+using StatsBase
+
 ## Utility functions for experiments
 ### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic
@@ -299,6 +305,101 @@ end
 ##################################################################################
 
 ##################################################################################
+struct ImageCapture{Name,F} <: ProcessAlgorithm
+    min::F
+    max::F
+    # filepath::Symbol
+end
+
+# fix: store (min,max) in the right order
+# ImageCapture(name, min, max; filepath = pwd()) = ImageCapture{Symbol(name), typeof(min)}(min, max, Symbol(filepath))
+ImageCapture(name, min, max) = ImageCapture{Symbol(name), typeof(min)}(min, max)
+
+function Processes.init(ic::ImageCapture, input)
+    (;filepath) = input
+    (;callnum = 1, filepath)
+end
+
+function Processes.step!(ic::ImageCapture, context::C) where C
+    (;array, filepath, callnum) = context
+
+    A = array
+    if !(A isa AbstractArray{<:Real,3})
+        @warn "ImageCapture expects a 3D numeric array" typeof(A)
+        return (;)
+    end
+
+    CairoMakie.activate!()
+
+    A = Float32.(A)
+    nx, ny, nz = size(A)
+
+    n = nx * ny * nz
+    xs = Vector{Float32}(undef, n)
+    ys = Vector{Float32}(undef, n)
+    zs = Vector{Float32}(undef, n)
+    cs = Vector{Float32}(undef, n)
+
+    k = 1
+    @inbounds for z in 1:nz, y in 1:ny, x in 1:nx
+        xs[k] = x
+        ys[k] = y
+        zs[k] = z
+        cs[k] = A[x, y, z]
+        k += 1
+    end
+
+    cmin = ic.min
+    cmax = ic.max
+    if cmin > cmax
+        cmin, cmax = cmax, cmin
+    end
+
+    # use a simple explicit colormap (avoid relying on cgrad availability)
+    cmap = [:red, :black]
+
+    fig = Figure(size = (1000, 800))
+    ax = Axis3(
+        fig[1, 1];
+        xlabel = "x", ylabel = "y", zlabel = "z",
+        aspect = (1, 1, 1),
+        azimuth = 1.15,
+        elevation = 0.35,
+        title = "3D state"
+    )
+
+    scatter!(ax, xs, ys, zs;
+        color = cs,
+        colormap = cmap,
+        colorrange = (cmin, cmax),
+        markersize = 10
+    )
+
+    Colorbar(fig[1, 2]; colormap = cmap, colorrange = (cmin, cmax), label = "value")
+
+    # outdir = ic.filepath |> string
+    outdir = filepath
+    mkpath(outdir)
+    path = joinpath(outdir, "capture3d_$(callnum)_" * Dates.format(Dates.now(), "yyyymmdd_HHMMSS") * ".png")
+
+    try
+        save(path, fig)
+    catch err
+        @warn "Failed to save 3D capture image" err
+    finally
+        # avoid accumulating figures in a long-running process
+        try
+            close(fig)
+        catch
+        end
+    end
+
+    return (;callnum = callnum + 1)
+end
+##################################################################################
+
+
+##################################################################################
 struct Recalc{I} <: Processes.ProcessAlgorithm end
 Recalc(i) = Recalc{Int(i)}()
 function Processes.step!(r::Recalc{I}, context) where I
@@ -340,7 +441,7 @@ genAdj!(g, wg5)
 
 
 # CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
-g.hamiltonian = Ising(g) + CoulombHamiltonian(g, 1, screening = 0) + Quartic(g) + Sextic(g)
+g.hamiltonian = Ising(g) + CoulombHamiltonian(g, 1, screening = 0, recalc = 1000) + Quartic(g) + Sextic(g)
 
 # g.hamiltonian = Ising(g) + DepolField(g, c=0.0001/(2 * xL * yL), top_layers=1, bottom_layers=1, zfunc = z -> 0.3/z) + Quartic(g) + Sextic(g)
 
@@ -370,11 +471,14 @@ temp(g,Temperature)
 ### Run simulation process
 fullsweep = xL*yL*zL
 time_fctr = 1
-anneal_time = fullsweep*5000
-pulsetime = fullsweep*1000
-relaxtime = fullsweep*1000
+anneal_time = time_fctr*fullsweep*5000
+pulsetime = time_fctr*fullsweep*1000
+relaxtime = time_fctr*fullsweep*1000
+nrepeats = 2
+capture_interval = pulsetime/(nrepeats*4) # capture every segment of the pulse
+
 point_repeat = time_fctr*fullsweep
-pulse1 = TrianglePulseA(20, 2)
+pulse1 = TrianglePulseA(20, nrepeats)
 pulse2 = SinPulseA(20, 1)
 pulse3 = Unique(SinPulseA(5, 1))
 
@@ -385,24 +489,30 @@ metropolis = g.default_algorithm
 M_Logger = ValueLogger(:M)
 # Pulse_logger = ValueLogger(:pulse)
 B_Logger = ValueLogger(:b)
+Graph_Logger = ImageCapture(:Graph,-1.5,1.5)
+# Graph_Logger = ImageCapture(:Graph,-1.5,1.5, filepath = raw"C:\Users\P317151\Documents\data\Model_V1.0\20260217\Pulse sweep\Diff_distance")
 
 
 
 
-Metro_and_recal = CompositeAlgorithm(metropolis, Recalc(3), M_Logger, B_Logger, (1,100, fullsweep, fullsweep), 
+Metro_and_recal = CompositeAlgorithm(metropolis, M_Logger, B_Logger, (1, point_repeat , point_repeat), 
     Route(metropolis => M_Logger, :M => :value), 
     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
-    Route(metropolis => Recalc(3), :hamiltonian))
+    )
 
-pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, (1, point_repeat))
-pulse_part2 = CompositeAlgorithm(Metro_and_recal, pulse2, (1, point_repeat))
+pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, Graph_Logger, (1, point_repeat, capture_interval), 
+    Route(metropolis => Graph_Logger, :state => :array)
+    )
+pulse_part2 = CompositeAlgorithm(Metro_and_recal, pulse2, Graph_Logger, (1, point_repeat, capture_interval))
 anneal_part1 = CompositeAlgorithm(Metro_and_recal, Anealing1, (1, point_repeat))
 
 Pulse_and_Relax = Routine(pulse_part1, Metro_and_recal, 
     (pulsetime, relaxtime), 
-    Route(metropolis => pulse1, :hamiltonian, :M),     
+    Route(metropolis => pulse1, :hamiltonian, :M),
     )
-createProcess(g, Pulse_and_Relax, lifetime = 1)
+createProcess(g, Pulse_and_Relax, lifetime = 1, 
+    Input(Graph_Logger, filepath = raw"C:\Users\P317151\Documents\data\Model_V1.0\20260217\Pulse sweep\Diff_distance")
+    )
 
 # getcontext(g)
 # getcontext(g)[pulse1]
