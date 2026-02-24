@@ -45,7 +45,7 @@ function Processes.step!(::Metropolis, context::C) where {C}
     Ttype = eltype(isinggraph)
     β = one(Ttype)/(@inline temp(isinggraph))    
 
-    ΔE = @inline calculate(ΔH(), hamiltonian, (;self = self, s = state, w = adj, hamiltonian...), proposal)
+    ΔE = @inline calculate(ΔH(), hamiltonian, (;self = self, s = state, w = adj, M, hamiltonian...), proposal)
     
     if (@inline (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-β*ΔE)))
         proposal = @inline accept(state, proposal)

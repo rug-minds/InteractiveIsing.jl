@@ -585,7 +585,8 @@ Amp1 = 20
 T = 1
 
 # g.hamiltonian = Ising(g) + CoulombHamiltonian(g, Scale, screening = Screening, recalc = 1000) + Quartic(g) + Sextic(g)
-g.hamiltonian = Ising(g, :homogeneous_b) + DepolField(g) + Quartic(g) + Sextic(g)
+g.hamiltonian = Ising(g, :homogeneous_b) + DepolField(g, c = 0.4) + Quartic(g) + Sextic(g)
+# g.hamiltonian = Ising(g, :homogeneous_b) + Quartic(g) + Sextic(g)
 
 # DepolField caches need re-init when the Hamiltonian is replaced
 
