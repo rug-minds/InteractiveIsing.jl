@@ -9,7 +9,7 @@ struct DepolField{PV <: ParamTensor, CV <: ParamTensor, F, T} <: HamiltonianTerm
     size::T
 end
 
-function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers), zfunc = z -> exp(-(abs(min(abs(z-1), abs(z-size(g[1])))))))
+function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1/prod(size(g[1])[1:end-1])*(top_layers+bottom_layers), zfunc = z -> exp(-(min(abs(z-1), abs(z-size(g[1],3))))))
     pv = HomogeneousParam(eltype(g)(0), length(state(g[1])), description = "Depolarisation Field")
     cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
     # wg = @WG (dr) -> 1/dr^3 NN = NN
@@ -112,14 +112,3 @@ end
 # @ParameterRefs function deltaH(::DepolField)
 #     return (dpf[j]/c[])*(sn[j]-s[j])
 # end
-
-function Base.show(io::IO, ::MIME"text/plain", dpf::DepolField)
-    println(io, "DepolField Hamiltonian")
-    println(io, "  top_layers: $(dpf.top_layers)")
-    println(io, "  bottom_layers: $(dpf.bottom_layers)")
-    println(io, "  size: $(dpf.size)")
-    println(io, "  field_adj: $(size(dpf.field_adj)) sparse matrix with $(nnz(dpf.field_adj)) nonzeros")
-    println(io, "  dpf: ", dpf.dpf)
-    println(io, "  c: ", dpf.c)
-    print(io, "  field_c: ", dpf.field_c)
-end
