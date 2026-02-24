@@ -20,7 +20,7 @@ function calculate(::ΔH, hterm::MagField, hargs, proposal)
     s = hargs.s
     b = hargs.b
     j = at_idx(proposal)
-    return b[j]*(to_val(proposal) - s[j])
+    return -b[j]*(to_val(proposal) - s[j])
 end
 
 # function dH(::MagField, hargs, s_idx)
