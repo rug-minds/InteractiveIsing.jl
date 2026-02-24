@@ -441,12 +441,11 @@ genAdj!(g, wg5)
 
 
 # CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
-g.hamiltonian = Ising(g) + CoulombHamiltonian(g, 1, screening = 0, recalc = 1000) + Quartic(g) + Sextic(g)
+g.hamiltonian = Ising(g, :homogeneous_b) + CoulombHamiltonian(g, 1, screening = 0, recalc = 1000) + Quartic(g) + Sextic(g)
 
 # g.hamiltonian = Ising(g) + DepolField(g, c=0.0001/(2 * xL * yL), top_layers=1, bottom_layers=1, zfunc = z -> 0.3/z) + Quartic(g) + Sextic(g)
 
-# Only necessary if the Hamiltonian has non-local terms that need to be recalculated after each spin flip.
-reprepare(g)
+
 
 ### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic
@@ -457,13 +456,14 @@ reprepare(g)
 # homogeneousself!(g,a1)
 
 ### Set Jii
-g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 homogeneousself!(g,a1)
 ### Set Qc*Jii
 g.hamiltonian[4].qc[] = b1/a1
 ### Set Sc*Jii
 g.hamiltonian[5].sc[] = c1/a1
 
+# Only necessary if the Hamiltonian has non-local terms that need to be recalculated after each spin flip.
+reprepare(g)
 
 Temperature=1
 temp(g,Temperature)
@@ -511,7 +511,7 @@ Pulse_and_Relax = Routine(pulse_part1, Metro_and_recal,
     Route(metropolis => pulse1, :hamiltonian, :M),
     )
 createProcess(g, Pulse_and_Relax, lifetime = 1, 
-    Input(Graph_Logger, filepath = raw"C:\Users\P317151\Documents\data\Model_V1.0\20260217\Pulse sweep\Diff_distance")
+    Input(Graph_Logger, filepath = raw"D:\Code\data\20260224\Diff_distance")
     )
 
 # getcontext(g)
