@@ -71,12 +71,13 @@ function init!(dpf::DepolField, g)
     return dpf
 end
 
-function update!(::Metropolis, dpf::DepolField, params)
-    (;j, proposal) = params
+function update!(::Metropolis, dpf::DepolField, context)
+    (;proposal) = context
     if isaccepted(proposal)
+        j = at_idx(proposal)
         if j ∈ dpf
             z = layers_deep(j, dpf)
-            dpf.dpf[j] -= dpf.zfunc(z)*delta(proposal)
+            dpf.dpf[] -= dpf.zfunc(z) * delta(proposal)
         end
     end
     return 
@@ -86,29 +87,36 @@ end
 
 # function ΔH(dpf::DepolField, params, proposal)
 function calculate(::ΔH, dpf::DepolField, hargs, proposal)
-    (;s, self, c) = params
-    j = getidx(proposal)
-    base_term = 1/2*c[]*dpf.dpf[j]
-    if j ∈ dpf # If in the surface
-                # Also compute the effect of changhing the field
-        # field_delta = zero(eltype(s))
-        # @turbo for ptr in nzrange(dpf.field_adj, j)
-        #     i = dpf.field_adj.rowval[ptr]
-        #     w_ij = dpf.field_adj.nzval[ptr]
-        #     field_delta += w_ij * s[i]
-        # end
-        # z = layers_deep(j, dpf)
-        # base_term -= dpf.zfunc(z)*field_delta
-        base_term *= 2
+    j = at_idx(proposal)
+    if !(j ∈ dpf)
+        return zero(eltype(hargs.s))
     end
 
-    return base_term * (s[j] - proposal[])
+    T = eltype(hargs.s)
+    z = layers_deep(j, dpf)
+    ΔD = -T(dpf.zfunc(z)) * delta(proposal)
+    D = dpf.dpf[]
+    c = hargs.c[]
+    return (D * ΔD + T(0.5) * (ΔD^2)) / c
 end
 
-# function ΔH(dpf::DepolField, g::PottsGraph, args, proposal)
-    
-# end
 
-# @ParameterRefs function deltaH(::DepolField)
-#     return (dpf[j]/c[])*(sn[j]-s[j])
+# function calculate(::ΔH, dpf::DepolField, hargs, proposal)
+#     (;s, self, c) = hargs
+#     j = getidx(proposal)
+#     base_term = 1/2*c[]*dpf.dpf[j]
+#     if j ∈ dpf # If in the surface
+#                 # Also compute the effect of changhing the field
+#         # field_delta = zero(eltype(s))
+#         # @turbo for ptr in nzrange(dpf.field_adj, j)
+#         #     i = dpf.field_adj.rowval[ptr]
+#         #     w_ij = dpf.field_adj.nzval[ptr]
+#         #     field_delta += w_ij * s[i]
+#         # end
+#         # z = layers_deep(j, dpf)
+#         # base_term -= dpf.zfunc(z)*field_delta
+#         base_term *= 2
+#     end
+
+#     return base_term * (s[j] - proposal[])
 # end
