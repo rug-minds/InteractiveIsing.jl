@@ -585,8 +585,7 @@ Amp1 = 20
 T = 1
 
 # g.hamiltonian = Ising(g) + CoulombHamiltonian(g, Scale, screening = Screening, recalc = 1000) + Quartic(g) + Sextic(g)
-g.hamiltonian = Ising(g) + DepolField(g) + Quartic(g) + Sextic(g)
-g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
+g.hamiltonian = Ising(g, :homogeneous_b) + DepolField(g) + Quartic(g) + Sextic(g)
 
 # DepolField caches need re-init when the Hamiltonian is replaced
 
@@ -598,7 +597,7 @@ reprepare(g)
 homogeneousself!(g, a1)
 g.hamiltonian[4].qc[] = b1 / a1
 g.hamiltonian[5].sc[] = c1 / a1
-g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
+# g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
 # Temperature init
 temp(g, Temp)
