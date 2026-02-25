@@ -80,7 +80,7 @@ function CoulombHamiltonian(
     dp_scratch = zeros(Complex{etype}, Nxh, Ny, Nz) # scratch space for forward sweep
     du_self = zeros(etype, Nz_dip)
 
-    scaling = eltype(g)(scaling)/az # Convert from dipole moment to charge (assumes unit lattice spacing in z)
+    scaling = eltype(g)(scaling) # Convert from dipole moment to charge (assumes unit lattice spacing in z)
                                     # Assuming Pz = scaling * Δz
     scaling = StaticParam(scaling) 
 
