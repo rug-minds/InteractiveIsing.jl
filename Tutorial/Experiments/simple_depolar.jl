@@ -148,8 +148,74 @@ function weightfunc_shell(dr, c1, c2, ax, ay, az, csr, lambda1, lambda2)
     # return Jsr
 end
 
+function weightfunc_shell_plus_dipolar(dr, c1, c2,
+                                       ax, ay, az,
+                                       J1, λ1, λ2;
+                                       Adip = 0.03*J1,
+                                       λscr = 3.0,
+                                       dip_from_shell = 4,
+                                       Nz = nothing,
+                                       top_layers = 1,
+                                       bottom_layers = 1,
+                                       α_surf = 0.2)
+
+    dx, dy, dz = delta(c1, c2)
+
+    # absolute z coordinates
+    z1 = c1[3]
+    z2 = c2[3]
+
+    # --- short-range shells ---
+    s = dx*dx + dy*dy + dz*dz
+    k1 = J1
+    k2 = λ1 * k1
+    k3 = λ2 * k2
+
+    Jsr = if s == 1
+        k1
+    elseif s == 2
+        k2
+    elseif s == 3
+        k3
+    else
+        0.0
+    end
+
+    # only add dipolar beyond shell cutoff
+    if s < dip_from_shell
+        return Jsr
+    end
+
+    # --- dipolar ---
+    rx, ry, rz = ax*dx, ay*dy, az*dz
+    r2 = rx^2 + ry^2 + rz^2
+    if r2 == 0
+        return 0.0
+    end
+    r = sqrt(r2)
+
+    cosθ = rz / r
+    ang  = -1 + 3*cosθ^2
+    Jdip = Adip * ang / r^3 * exp(-r/λscr)
+
+    # --- surface scaling (only on Jdip) ---
+    if Nz !== nothing
+        in_surface1 = (z1 <= top_layers)
+        in_surface2 = (z2 > Nz - bottom_layers)
+
+        if in_surface1 || in_surface2 ||
+           (z2 <= top_layers) || (z1 > Nz - bottom_layers)
+
+            Jdip *= α_surf
+        end
+    end
+
+    return Jsr + Jdip
+end
+
 function weightfunc_shell_with_dipolar(dr, c1, c2, ax, ay, az, csr, lambda1, lambda2)
     dx, dy, dz = delta(c1, c2)
+
     k1  = 1.0
     k2  = lambda1 * k1
     k3  = lambda2 * k2
@@ -534,25 +600,17 @@ function Processes.step!(ic::ImageCapture, context::C) where C
 end
 ##################################################################################
 
-
 ## Setup g outside of process 
-xL = 30  # Length in the x-dimension
-yL = 30  # Length in the y-dimension
-zL = 20   # Length in the z-dimension
+xL = 10  # Length in the x-dimension
+yL = 10  # Length in the y-dimension
+zL = 10   # Length in the z-dimension
 g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y), set = (-1.5,1.5))
 # Visual marker size (tune for clarity vs performance)
 II.makie_markersize[] = 0.3
 # Launch interactive visualization (idle until createProcess(...) later)
 interface(g)
-g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
 JIsing = 1.0
-
-#### Weight function setup (Connection setup)
-
-### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
-wg1 = @WG (dr,c1,c2) -> weightfunc_shell_with_dipolar(dr, c1, c2, 1, 1, 1, JIsing, 0.1, 0.1) NN = 3
-genAdj!(g, wg1)
 
 
 # Function with g inside
@@ -567,46 +625,52 @@ println("E_barrier = ", E_barrier)
 Epp_1 = 2a1 + 12b1 + 30c1   # Ey''(1)
 println("Ey''(1) = ", Epp_1)
 
+#### Weight function setup (Connection setup)
+### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
+wg1 = @WG (dr,c1,c2) -> weightfunc_shell_with_dipolar(dr, c1, c2, 1, 1, 1, JIsing, 0.1, 0.1) NN = 3
+wg2 = @WG (dr,c1,c2) -> weightfunc_shell_plus_dipolar(dr, c1, c2, 1, 1, 1, JIsing, 0.1, 0.1; Adip=0.03*JIsing, λscr=3.0, dip_from_shell=4, Nz=zL, top_layers=1, bottom_layers=1, α_surf=0.1) NN = 3
+genAdj!(g, wg2)
 
-
-# Output directory for the whole sweep
-outdir = raw"C:\Users\P317151\Documents\data\Model_V1.0\20260217\Simplified alg"
+# Output directory for the whole sweep, setup the func for multi simulation
+outdir = raw"D:\Code\data\20260224\old depolar_new wg"
 mkpath(outdir)
 
 # Run a sweep without re-running the first two setup cells.
 # This cell will reconfigure the Hamiltonian, run the process, and SAVE (PNG + XLSX) for each Cdep.
 
-function run_simu!(g; xL = xL, yL = yL, zL = zL, Layer_Dep = 1, Cdep = 0.1, Temp = 0.3, time_fctr = 1, Steps_1 = 4000)
+function run_simu!(g; Cdep = 0.1, Temp = 0.3, time_fctr = 3, Steps_1 = 4000)
     # g.hamiltonian = Ising(g) + CoulombHamiltonian(g, Scale, screening = Screening, recalc = 1000) + Quartic(g) + Sextic(g)
-    g.hamiltonian = Ising(g) + DepolField(g, c = Cdep / (2 * Layer_Dep * xL * yL * zL), top_layers = Layer_Dep, bottom_layers = Layer_Dep) + Quartic(g) + Sextic(g)
-    g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
+    g.hamiltonian = Ising(g, :homogeneous_b) + DepolField(g, c = Cdep) + Quartic(g) + Sextic(g)
 
     # DepolField caches need re-init when the Hamiltonian is replaced
 
     reprepare(g)
 
-
-
     # Landau/self terms
     homogeneousself!(g, a1)
     g.hamiltonian[4].qc[] = b1 / a1
     g.hamiltonian[5].sc[] = c1 / a1
-    g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
     # Temperature init
     temp(g, Temp)
 
     # ----- Pulse algorithm -----
-    pulse1 = TrianglePulseA(Amp1, 2)
+    nrepeats = 2
+    pulse1 = TrianglePulseA(Amp1, nrepeats)
     metropolis = g.default_algorithm
 
+    
     M_Logger = ValueLogger(:M)
     B_Logger = ValueLogger(:b)
+    Graph_Logger = ImageCapture(:graph,-1.5,1.5)
+
 
     fullsweep = xL * yL * zL
     pulse_time = time_fctr * fullsweep * Steps_1
     relax_time = 0.5 * time_fctr * fullsweep * Steps_1
     point_repeat = fullsweep * time_fctr
+    capture_interval1 = pulse_time/(nrepeats*4)
+    capture_interval2 = relax_time/2
 
     Metro_and_recal = CompositeAlgorithm(metropolis, M_Logger, B_Logger,
         (1, point_repeat, point_repeat),
@@ -614,14 +678,20 @@ function run_simu!(g; xL = xL, yL = yL, zL = zL, Layer_Dep = 1, Cdep = 0.1, Temp
         Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
     )
 
-    pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, (1, point_repeat))
+    pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, Graph_Logger, (1, point_repeat, capture_interval1),
+        Route(metropolis => Graph_Logger, :state=> :array),
+    )
 
-    Pulse_and_Relax = Routine(pulse_part1, Metro_and_recal,
+    relax_part1 = CompositeAlgorithm(Metro_and_recal, Graph_Logger, (1,  capture_interval2),
+        Route(metropolis => Graph_Logger, :state=> :array),
+    )
+
+    Pulse_and_Relax = Routine(pulse_part1, relax_part1,
         (pulse_time, relax_time),
         Route(metropolis => pulse1, :hamiltonian, :M),
     )
 
-    createProcess(g, Pulse_and_Relax, lifetime = 1)
+    createProcess(g, Pulse_and_Relax, lifetime = 1, Input(Graph_Logger, filepath = raw"D:\Code\data\20260224\old depolar_new wg\capture"))
     c = process(g) |> fetch
 
     Voltage1 = c[B_Logger].values
@@ -630,11 +700,7 @@ function run_simu!(g; xL = xL, yL = yL, zL = zL, Layer_Dep = 1, Cdep = 0.1, Temp
     # ============ SAVE (PNG + XLSX) ============
     date_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
     base_name = string(
-        "X", round(xL, digits = 4),
-        "_Y=", round(yL, digits = 4),
-        "_Z=", round(zL, digits = 4),
         "_Cdep=", round(Cdep, digits = 6),
-        "_Layer_dep=", round(Layer_Dep, digits = 4),
         "_Temp=", round(Temp, digits = 4),
         "_timefctr=", round(time_fctr, digits = 4),
         "_Steps_1=", round(Steps_1, digits = 4),
@@ -690,11 +756,11 @@ function run_simu!(g; xL = xL, yL = yL, zL = zL, Layer_Dep = 1, Cdep = 0.1, Temp
 
     params = DataFrame(
         key = String[
-            "JIsing","a1","b1","c1","E_barrier","Eypp_1","xL","yL","zL","Cdep","Layer_dep","Steps_1","time_fctr",
+            "JIsing","a1","b1","c1","E_barrier","Eypp_1","xL","yL","zL","Cdep","Steps_1","time_fctr",
             "pulse_time","relax_time","point_repeat","Temp_init"
         ],
         value = Any[
-            JIsing, a1, b1, c1, E_barrier, Epp_1, xL, yL, zL, Cdep, Layer_Dep, Steps_1, time_fctr,
+            JIsing, a1, b1, c1, E_barrier, Epp_1, xL, yL, zL, Cdep, Steps_1, time_fctr,
             pulse_time, relax_time, point_repeat, Temp
         ]
     )
@@ -715,17 +781,20 @@ function run_simu!(g; xL = xL, yL = yL, zL = zL, Layer_Dep = 1, Cdep = 0.1, Temp
     return (; Cdep = Float64(Cdep), png1_path, png2_path, png_path_dist, xlsx_path)
 end
 
+
 # ---- parameters to sweep ----
-Layer_Dep = 1
-Amp1 = 20
+Amp1 = 30
 T = 1
-Cdep_values = (0.1, 1.0, 2.0, 10.0, 100.0, 1000.0, 10000.0)
+# Cdep_values = 0.1,0.5,1,2,5,10,100,500,1000,10000
+Cdep_values = 1
+
 
 # ---- loop over Cdep_values ----
 results = Dict{Float64, Any}()
 for Cdep in Cdep_values
     @info "Running sweep" Cdep
-    res = run_simu!(g; Layer_Dep = Layer_Dep, Cdep = Float64(Cdep), Temp = T, time_fctr = 1, Steps_1 = 4000)
+    res = run_simu!(g; Cdep = Float64(Cdep), Temp = T, time_fctr = 1, Steps_1 = 4000)
     results[Float64(Cdep)] = res
 end
+
 println("Done. Available keys(Cdep) = ", collect(keys(results)))

@@ -544,7 +544,6 @@ g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y), set = (-1.5,
 II.makie_markersize[] = 0.3
 # Launch interactive visualization (idle until createProcess(...) later)
 interface(g)
-g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
 JIsing = 1.0
 
