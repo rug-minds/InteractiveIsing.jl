@@ -11,16 +11,12 @@ Quartic(g::AbstractIsingGraph, val = 1) = Quartic(ScalarParam(eltype(g), val; de
 # end
 
 # function ΔH(::Quartic, hargs, proposal)
-function calculate(::ΔH, hterm::Quartic, hargs, proposal)
-    s = hargs.s
-    self = hargs.self
+function calculate(::ΔH, hterm::Quartic, state, proposal)
     j = at_idx(proposal)
-    return hargs.qc[]*self[j]*(to_val(proposal)^4 - s[j]^4)
+    return hterm.qc[]*hterm.self[j]*(to_val(proposal)^4 - state[j]^4)
 end
 
 # function dH(::Quartic, hargs, s_idx)
-function calculate(::dH, hterm::Quartic, hargs, s_idx)
-    s = hargs.s
-    self = hargs.self
-    return 4*hargs.qc[]*self[s_idx]*s[s_idx]^3
+function calculate(::dH, hterm::Quartic, state, s_idx)
+    return 4*hterm.qc[]*hterm.self[s_idx]*state[s_idx]^3
 end

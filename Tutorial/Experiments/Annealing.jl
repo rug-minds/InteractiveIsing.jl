@@ -401,7 +401,7 @@ Screening=0
 g.hamiltonian = Ising(g) + CoulombHamiltonian(g, Scale, screening = Screening) + Quartic(g) + Sextic(g)
 g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 # Only necessary if the Hamiltonian has non-local terms that need to be recalculated after each spin flip.
-# reprepare(g)
+# reinit(g)
 
 
 ### Set Jii

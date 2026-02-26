@@ -365,15 +365,15 @@ Cdep=120
 Cz = 0.1
 lambda = 0.1
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(64,64,3)) + Quartic(g) + Sextic(g)
-# reprepare(g)
+# reinit(g)
 
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((-z-1)/lambda) , NN=(20,20,4)) + Quartic(g) + Sextic(g)
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz/exp((z-1)/lambda) , NN=8)
 # g.hamiltonian = Ising(g) + DepolField(g, c=Cdep/(2*Layer_Dep*xL*yL*zL), top_layers=Layer_Dep, bottom_layers=Layer_Dep, zfunc = z -> Cz , NN=20)
-# reprepare(g)
+# reinit(g)
 
 g.hamiltonian = Ising(g)
-reprepare(g)
+reinit(g)
 
 ### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic

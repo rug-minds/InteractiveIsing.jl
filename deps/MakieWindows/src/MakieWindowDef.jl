@@ -128,7 +128,7 @@ end
 Creates a new Makie window with a figure and a screen
 It also registers the window in the windows dictionary
 """
-function new_window(;window_type = :Any, objectptr = nothing, reprepare_rate = 30, polling_rate = 10, kwargs...)
+function new_window(;window_type = :Any, objectptr = nothing, reinit_rate = 30, polling_rate = 10, kwargs...)
     f, screen, window_open = empty_window(;kwargs...)
     u1 = uuid1()
     mainfuncs = tuple()
@@ -136,7 +136,7 @@ function new_window(;window_type = :Any, objectptr = nothing, reprepare_rate = 3
         for f in mainfuncs
             f()
         end
-    end, 0., interval = 1/reprepare_rate)
+    end, 0., interval = 1/reinit_rate)
     d = Dict{Symbol, Any}(:window_open => window_open)
     w = MakieWindow{window_type, typeof(objectptr)}(u1, f, screen, maintimer, mainfuncs, PTimer[], PolledObservable[], (;), d, objectptr)
     w[:polling_rate] = polling_rate

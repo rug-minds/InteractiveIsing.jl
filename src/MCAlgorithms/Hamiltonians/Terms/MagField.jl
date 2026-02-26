@@ -16,17 +16,14 @@ MagField(type, len, active = false) = MagField(ParamTensor(zeros(type, len), typ
 params(::Type{MagField}) = HamiltonianParams((:b, Vector{GraphType}, GraphType(0), "Magnetic Field"))
 
 # function ΔH(::MagField, hargs, proposal)
-function calculate(::ΔH, hterm::MagField, hargs, proposal)
-    s = hargs.s
-    b = hargs.b
+function calculate(::ΔH, hterm::MagField, state, proposal)
     j = at_idx(proposal)
-    return -b[j]*(to_val(proposal) - s[j])
+    return -hterm.b[j]*(to_val(proposal) - state[j])
 end
 
 # function dH(::MagField, hargs, s_idx)
-function calculate(::dH, hterm::MagField, hargs, s_idx)
-    b = hargs.b
-    return -b[s_idx]
+function calculate(::dH, hterm::MagField, state, s_idx)
+    return -hterm.b[s_idx]
 end
 
  

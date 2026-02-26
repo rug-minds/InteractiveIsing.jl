@@ -20,7 +20,6 @@ mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers, N}
     default_algorithm::ProcessAlgorithm
     hamiltonian::Hamiltonian
     
-
     # Connection between layers, Could be useful to track for faster removing of layers
     layerconns::Dict{Set, Int32}
     # params::Parameters #TODO: Make this a custom type?
@@ -100,7 +99,7 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
         # Default algorithm
         IsingMetropolis(),
         #Hamiltonians
-        Quadratic(),
+        EmptyHamiltonian(),
         #Layers
         Dict{Pair, Int32}(),
         #Emitter
@@ -254,7 +253,7 @@ export nstates
     g.adj = adj
     # Add callbacks field to graph, which is a Dict{typeof(<:Function), Vector{Function}}
     # And create a setterGetter macro that includes the callbacks
-    reprepare(g)
+    reinit(g)
     return adj
 end
 set_adj!(g::IsingGraph, vecs::Tuple) = adj(g, sparse(vecs..., nStates(g), nStates(g)))
@@ -436,15 +435,16 @@ end
 ### SELF ENERGY
 @inline function activateself!(g)
     g.self = activate(g.self) # Ensure self is active
-    reprepare(g)
+    reinit(g)
 end
+
 @inline function disableself!(g)
     g.self = deactivate(g.self) # Ensure self is inactive
-    reprepare(g)
+    reinit(g)
 end
 @inline function homogeneousself!(g, val = 1)
     g.self = sethomogeneoustensor(g.self, val) # Set self to zero
-    reprepare(g)
+    reinit(g)
 end
 export activateself!, disableself!, homogeneousself!
 

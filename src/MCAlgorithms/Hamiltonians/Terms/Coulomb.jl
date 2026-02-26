@@ -12,9 +12,9 @@ function mygemmavx!(C, A, B)
 end
 struct CoulombHamiltonian{T,PT,PxyT,PiT,N} <: HamiltonianTerm
     size::NTuple{N,Int}
-    σ::Array{T,3}                 # real charges
-    σhat::Array{Complex{T},3}     # rfft(σ) over (x,y)
-    uhat::Array{Complex{T},3}     # spectral potential (same size as σhat)
+    ρ::Array{T,3}                 # real charges
+    ρhat::Array{Complex{T},3}     # rfft(ρ) over (x,y)
+    uhat::Array{Complex{T},3}     # spectral potential (same size as ρhat)
     u::Array{T,3}                 # real potential
     scaling::PT
     screen_top::T
@@ -56,14 +56,14 @@ function CoulombHamiltonian(
 
     dims = (Nx, Ny, Nz)
 
-    σ    = zeros(etype, dims...)
+    ρ    = zeros(etype, dims...)
     Nxh  = Nx ÷ 2 + 1
-    σhat = zeros(Complex{etype}, Nxh, Ny, Nz)
+    ρhat = zeros(Complex{etype}, Nxh, Ny, Nz)
     uhat = zeros(Complex{etype}, Nxh, Ny, Nz)
 
 
     # FFT plans (bind to representative slices)
-    s  = @view σ[:,:,1]
+    s  = @view ρ[:,:,1]
     uh = @view uhat[:,:,1]
 
     Pxy  = plan_rfft(s, (1,2);  flags=FFTW.MEASURE)
@@ -80,12 +80,12 @@ function CoulombHamiltonian(
     dp_scratch = zeros(Complex{etype}, Nxh, Ny, Nz) # scratch space for forward sweep
     du_self = zeros(etype, Nz_dip)
 
-    scaling = eltype(g)(scaling) # Convert from dipole moment to charge (assumes unit lattice spacing in z)
+    scaling = eltype(g)(scaling)/az # Convert from dipole moment to charge (assumes unit lattice spacing in z)
                                     # Assuming Pz = scaling * Δz
     scaling = StaticParam(scaling) 
 
     c = CoulombHamiltonian{etype, typeof(scaling), typeof(Pxy), typeof(iPxy), 3}(
-        dims, σ, σhat, uhat, zeros(etype, dims...), scaling, screen_len_top, screen_len_bot, ax, ay, az, 1f0, du_self,
+        dims, ρ, ρhat, uhat, zeros(etype, dims...), scaling, screen_len_top, screen_len_bot, ax, ay, az, 1f0, du_self,
         Pxy, iPxy,
         mod_upperd,
         inv_den,
@@ -99,13 +99,13 @@ function CoulombHamiltonian(
 end
 
 function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
-    σ    = c.σ
+    ρ    = c.ρ
 
-    Nx, Ny, Nz = size(σ)
+    Nx, Ny, Nz = size(ρ)
     Nz_dip = Nz - 1
 
     # zero charge buffers
-    fill!(σ, zero(eltype(σ)))
+    fill!(ρ, zero(eltype(ρ)))
 
     # accumulate bound charges from dipoles
     @inbounds for z in 1:Nz_dip
@@ -114,8 +114,8 @@ function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
         @inbounds for j in 1:Ny, i in 1:Nx
             v = dip[i,j]
             v = v * c.scaling[] # Scaling factor dipole to charge
-            σ[i,j,z]   -= v
-            σ[i,j,z+1] += v
+            ρ[i,j,z]   -= v
+            ρ[i,j,z+1] += v
         end
     end
     precompute_solve_factors!(c)
@@ -162,7 +162,7 @@ Precompute Thomas-factorization-like arrays for each (kx,ky) mode.
 function precompute_solve_factors!(ch::CoulombHamiltonian{T}) where T
     m_upper = ch.mod_upperd #modified upper diagonal,
     invden = ch.inv_den
-    Nx, _, _ = size(ch.σ)
+    Nx, _, _ = size(ch.ρ)
     Nxh, Ny, Nz = size(invden)
     az = ch.az
     # ϵ = ch.ϵ
@@ -219,14 +219,14 @@ function precompute_solve_factors!(ch::CoulombHamiltonian{T}) where T
 end
 
 function precompute_du_self!(c::CoulombHamiltonian{T}) where {T}
-    Nx, Ny, Nz = size(c.σ)
-    Nxh = size(c.σhat, 1)
+    Nx, Ny, Nz = size(c.ρ)
+    Nxh = size(c.ρhat, 1)
     invden = c.inv_den
     m_upper = c.mod_upperd
     scale = -(c.az^2) / c.ϵ
 
-    σtmp = zeros(T, Nx, Ny, Nz)
-    σhat_tmp = similar(c.σhat)
+    ρtmp = zeros(T, Nx, Ny, Nz)
+    ρhat_tmp = similar(c.ρhat)
     uhat_tmp = similar(c.uhat)
     utmp = zeros(T, Nx, Ny, Nz)
     dptmp = similar(c.dp_scratch)
@@ -234,12 +234,12 @@ function precompute_du_self!(c::CoulombHamiltonian{T}) where {T}
     fill!(c.du_self, zero(T))
 
     @inbounds for z in 1:(Nz-1)
-        σtmp[1,1,z] = -one(T)
-        σtmp[1,1,z+1] = one(T)
+        ρtmp[1,1,z] = -one(T)
+        ρtmp[1,1,z+1] = one(T)
 
         for zz in 1:Nz
-            s = @view σtmp[:, :, zz]
-            sh = @view σhat_tmp[:, :, zz]
+            s = @view ρtmp[:, :, zz]
+            sh = @view ρhat_tmp[:, :, zz]
             mul!(sh, c.Pxy, s)
         end
 
@@ -249,9 +249,9 @@ function precompute_du_self!(c::CoulombHamiltonian{T}) where {T}
                 continue
             end
 
-            dptmp[nx, ny, 1] = (scale * σhat_tmp[nx, ny, 1]) * invden[nx, ny, 1]
+            dptmp[nx, ny, 1] = (scale * ρhat_tmp[nx, ny, 1]) * invden[nx, ny, 1]
             for nz in 2:Nz
-                dptmp[nx, ny, nz] = (scale * σhat_tmp[nx, ny, nz] - dptmp[nx, ny, nz-1]) * invden[nx, ny, nz]
+                dptmp[nx, ny, nz] = (scale * ρhat_tmp[nx, ny, nz] - dptmp[nx, ny, nz-1]) * invden[nx, ny, nz]
             end
 
             uhat_tmp[nx, ny, Nz] = dptmp[nx, ny, Nz]
@@ -268,8 +268,8 @@ function precompute_du_self!(c::CoulombHamiltonian{T}) where {T}
 
         c.du_self[z] = utmp[1,1,z+1] - utmp[1,1,z]
 
-        σtmp[1,1,z] = zero(T)
-        σtmp[1,1,z+1] = zero(T)
+        ρtmp[1,1,z] = zero(T)
+        ρtmp[1,1,z+1] = zero(T)
     end
 
     return c.du_self
@@ -280,7 +280,7 @@ Solve for all modes for a single timestep, reusing precomputed factors.
 Then perform inverse FFT to get real-space potential.
 
 Inputs:
-  ŝ[kx,ky,n]  (ComplexF64): RHS = -(az^2/ε) σ̂
+  ŝ[kx,ky,n]  (ComplexF64): RHS = -(az^2/ε) ρ̂
 Precomputed:
   invden[kx,ky,n] (Float64)
   cp[kx,ky,n]     (Float64)
@@ -295,30 +295,30 @@ This does:
 
 function recalc!(c::CoulombHamiltonian{T}) where {T}
     uhat = c.uhat
-    sigma_hat = c.σhat
-    sigma = c.σ
+    rho_hat = c.ρhat
+    rho = c.ρ
     Nx, Ny, Nz = size(uhat)
-    Nxh = size(sigma_hat, 1)
+    Nxh = size(rho_hat, 1)
     invden = c.inv_den
     m_upper = c.mod_upperd
     dp_scratch = c.dp_scratch
     u = c.u
     az2 = c.az^2
 
-    # Calculate sigma_hat from sigma (rFFT in x,y)
+    # Calculate rho_hat from rho (rFFT in x,y)
     @inbounds for z in 1:Nz
-        s  = @view sigma[:, :, z]
-        sh = @view sigma_hat[:, :, z]
+        s  = @view rho[:, :, z]
+        sh = @view rho_hat[:, :, z]
         mul!(sh, c.Pxy, s)
     end
 
     @inbounds for ny in 1:Ny, nx in 1:Nxh
         scale = -az2 / c.ϵ
-        dp_scratch[nx,ny,1] = (scale * sigma_hat[nx,ny,1]) * invden[nx,ny,1]
+        dp_scratch[nx,ny,1] = (scale * rho_hat[nx,ny,1]) * invden[nx,ny,1]
 
         # Forward sweep
         for nz in 2:Nz
-            dp_scratch[nx,ny,nz] = (scale * sigma_hat[nx,ny,nz] - dp_scratch[nx,ny,nz-1]) * invden[nx,ny,nz]
+            dp_scratch[nx,ny,nz] = (scale * rho_hat[nx,ny,nz] - dp_scratch[nx,ny,nz-1]) * invden[nx,ny,nz]
         end
 
         # Backward substitution
@@ -339,8 +339,7 @@ function recalc!(c::CoulombHamiltonian{T}) where {T}
 end
 
 # function ΔH(c::CoulombHamiltonian{T,N}, params, proposal) where {T,N}
-function calculate(::ΔH, c::CoulombHamiltonian{T,N}, hargs, proposal) where {T,N}
-    # println("Calculating ΔH for CoulombHamiltonian ")
+function calculate(::ΔH, c::CoulombHamiltonian{T,N}, state, proposal) where {T,N}
     lattice_size = size(c)
     spin_idx = at_idx(proposal)
     charge_coord_below = idxToCoord(spin_idx, lattice_size)
@@ -375,16 +374,9 @@ update!(::Metropolis, c::CoulombHamiltonian{T}, context) where {T} = begin
         Δq_above =  delta(proposal) * c.scaling[]
 
         # 表面 screening：z=1 和 z=Nz 的电荷需要乘 (1-screening)
-        Nz = size(c.σ, 3)   # 真实电荷平面的层数（比 dipole 多 1 层）
-        # if coord_below[3] == 1
-        #     Δq_below *= (1 - c.screening)
-        # end
-        # if coord_above[3] == Nz
-        #     Δq_above *= (1 - c.screening)
-        # end
 
-        c.σ[coord_below...] += Δq_below
-        c.σ[coord_above...] += Δq_above
+        c.ρ[coord_below...] += Δq_below
+        c.ρ[coord_above...] += Δq_above
         # 场的重算交给外面的 Recalc 进程周期性处理
     end
     if c.recalc_tracker[] == c.recalc_steps

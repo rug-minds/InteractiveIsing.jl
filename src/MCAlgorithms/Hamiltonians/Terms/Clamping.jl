@@ -17,16 +17,11 @@ params(::Type{Clamping}, GraphType) = GatherHamiltonianParams((:β, GraphType, G
 
 
 # function ΔH(::Clamping, hargs, proposal)
-function calculate(::ΔH, hterm::Clamping, hargs, proposal)
-    s = hargs.s
-    β = hargs.β
-    y = hargs.y
+function calculate(::ΔH, hterm::Clamping, state, proposal)
     j = at_idx(proposal)
-    return -1/2*β[]*(to_val(proposal)^2 - s[j]^2) - y[j]*(to_val(proposal) - s[j])
+    return -1/2*hterm.β[]*(to_val(proposal)^2 - state[j]^2) - hterm.y[j]*(to_val(proposal) - state[j])
 end
 
-function calculate(::dH, hterm::Clamping, hargs, s_idx)
-    β = hargs.β
-    y = hargs.y
-    return -β[]*hargs.s[s_idx] - y[s_idx]
+function calculate(::dH, hterm::Clamping, state, s_idx)
+    return -hterm.β[]*state[s_idx] - hterm.y[s_idx]
 end

@@ -597,7 +597,7 @@ homogeneousself!(g, a1)
 g.hamiltonian[4].qc[] = b1 / a1
 g.hamiltonian[5].sc[] = c1 / a1
 
-reprepare(g)
+reinit(g)
 # Temperature init
 temp(g, Temp)
 

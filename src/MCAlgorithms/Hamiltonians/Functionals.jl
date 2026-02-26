@@ -1,12 +1,13 @@
-abstract type AbstractHamiltonianFunctional end
+abstract type AbstractLinearFunctional end
 
-struct ΔH <: AbstractHamiltonianFunctional end
-struct dH <: AbstractHamiltonianFunctional end
+struct ΔH <: AbstractLinearFunctional end
+struct dH <: AbstractLinearFunctional end
 
-@inline function calculate(hF::AbstractHamiltonianFunctional, hts::HTS, hargs::HArgs, args...) where {HTS <: AbstractHamiltonianTerms, HArgs}
-    total = zero(eltype(hargs.s))
+## TODO: Whatever state is, needs to implement eltype
+@inline function calculate(hF::AbstractLinearFunctional, hts::HTS, state, args...) where {HTS <: AbstractHamiltonianTerms}
+    total = zero(eltype(state))
     total = @inline unrollreplace(total, hts...) do ftotal, hamiltonian
-        ftotal = ftotal + @inline calculate(hF, hamiltonian, hargs, args...)
+        ftotal = ftotal + @inline calculate(hF, hamiltonian, state, args...)
     end
     return total    
 end

@@ -167,7 +167,7 @@ temp(g,1)
 
 g.hamiltonian = Ising(g) + DepolField(g, c=0.0001/(2 * xL * yL), top_layers=1, bottom_layers=1, zfunc = z -> 0.3/z) + Quartic(g) + Sextic(g)
 h = g.hamiltonian
-reprepare(g)
+reinit(g)
 
 
 # g.hamiltonian = Ising(g) + DepolField(g, c=300, top_layers=1, bottom_layers=1) + Quartic(g) + Sextic(g)

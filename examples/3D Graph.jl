@@ -40,7 +40,7 @@ isingmetro = g.default_algorithm
 algo = ii.IsingLangevin()
 # g.hamiltonian = h = Ising(g) + CoulombHamiltonian(g, 2f0, screening = 20f0, recalc = 200);
 g.hamiltonian = h = Ising(g, :homogeneous_b)
-reprepare(g)
+reinit(g)
 # CompositeAlgorithm(isingmetro, PolTracker(), (1, 1),  
 #     Share(isingmetro, PolTracker())
 #     )

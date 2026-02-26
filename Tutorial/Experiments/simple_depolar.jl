@@ -644,7 +644,7 @@ function run_simu!(g; Cdep = 0.1, Temp = 0.3, time_fctr = 3, Steps_1 = 4000)
 
     # DepolField caches need re-init when the Hamiltonian is replaced
 
-    reprepare(g)
+    reinit(g)
 
     # Landau/self terms
     homogeneousself!(g, a1)
