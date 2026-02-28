@@ -28,21 +28,15 @@ function Processes.init(::Metropolis, context::Cont) where Cont
     # proposal = FlipProposal{:s, :j, statetype(proposer)}(0, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
     proposal = @inline rand(rng, proposer)
 
-    M = nothing
-    if structure isa AbstractIsingGraph # Hacky, change later in favor of new system when prepare step is implemented
-        M = sum(state)
-    end
-
-    M = sum(state)
     ΔE = zero(eltype(state))
 
-    returnargs = (;structure, hamiltonian, proposer, rng, proposal, M, ΔE, state, adj, self)
+    returnargs = (;structure, hamiltonian, proposer, rng, proposal, ΔE, state, adj, self)
     return returnargs
 end
 
 # @inline function (::Metropolis)(context::As) where As
 function Processes.step!(metro::Metropolis, context::C) where {C}
-    (;rng, structure, state, hamiltonian, proposer, proposal, M) = context
+    (;rng, structure, state, hamiltonian, proposer, proposal) = context
 
     proposal = @inline rand(rng, proposer)
     Ttype = eltype(structure)
@@ -53,16 +47,11 @@ function Processes.step!(metro::Metropolis, context::C) where {C}
     
     if (@inline (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-β*ΔE)))
         proposal = @inline accept(state, proposal)
-        if haskey(context, :M)
-            M += @inline delta(proposal)
-        end
     end
 
-    context = @inline inject(context, (;proposal, M))
+    context = @inline inject(context, (;proposal))
     @inline update!(metro, hamiltonian, context)
-
-    return (;proposal, M, ΔE)
- 
+    return (;proposal, ΔE)
 end
 
 # function Processes.init(::Metropolis, context::Cont) where Cont
