@@ -101,16 +101,8 @@ ltf_exp = nothing
     return ltf_exp
 end
 
-"""
-From the set of Hamiltonians, directly get a paramtensor from an underlying Hamiltonian
-"""
-# function Base.getproperty(h::HamiltonianTerms, paramname::Symbol)
-#     # constant propagation flag:
-#     if paramname == :hamiltonians
-#         return getfield(h, :hs)
-#     end
-#     getparam(h, Val(paramname))
-# end
+@inline Base.map(f, hts::HamiltonianTerms) = @inline map(f, hamiltonians(hts))
+
 @inline @generated function Base.getproperty(h::HamiltonianTerms{HS}, paramname::Symbol) where HS
     args = (;)
     for (hidx, H) in enumerate(HS.parameters)
@@ -186,10 +178,11 @@ update!_expr = quote end
     # names = paramnames(hts)
     num_h = numhamiltonians(hts)
     global update!_expr = quote
-        $([:(update!(algo, hamiltonians(hts)[$i]::$(Hs.parameters[i]), args)) for i in 1:num_h]...)
+        $([:(@inline update!(algo, hamiltonians(hts)[$i]::$(Hs.parameters[i]), args)) for i in 1:num_h]...)
     end
     return update!_expr
 end
+
 
 @inline function init!(hts::HamiltonianTerms{Hs}, g) where Hs
     @inline init!.(hamiltonians(hts), Ref(g))

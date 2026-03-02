@@ -433,7 +433,7 @@ end
 
 function Processes.step!(::LoggerRef{T}, context::C) where {T, C}
     (;log, value) = context
-    push!(log, value)
+    push!(log, value[])
     return (;)
 end
 
@@ -605,54 +605,3 @@ context = getcontext(p)
 # code = @code_typed Processes.generated_processloop(p, f, context, Processes.Repeat(1))
 # save_code(code, "generated_processloop.jl")
 # save_llvm(Processes.generated_processloop, p, f, context, Processes.Repeat(1), filename = "generated_processloop.ll")
-
-
-# # Extra version
-# Metro_and_recal_extra = CompositeAlgorithm(metropolis, M_Integrator_extra, ExtraM_Logger, B_Logger, (1, 1, point_repeat, point_repeat), 
-#     Route(metropolis => M_Integrator_extra, :proposal => :Δvalue, transform = x -> @inline accepteddelta(x)),
-#     Route(M_Integrator_extra => ExtraM_Logger, :total => :value),
-#     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
-#     )
-
-
-
-# pulse_part1_extra = CompositeAlgorithm(Metro_and_recal_extra, pulse1, (1, point_repeat), 
-#     Route(metropolis => pulse1, :hamiltonian),
-#     )
-
-# Pulse_and_Relax_extra = Routine(pulse_part1_extra, Metro_and_recal_extra, 
-#     (pulsetime, relaxtime)    )
-
-# p_extra = createProcess(g, Pulse_and_Relax_extra, lifetime = 1, 
-#     Input(ExtraM_Logger, initialvalue = sum(g.state))
-#     )
-
-# Ref pack version
-
-# Make package
-using UUIDs
-T = Float32
-LoggerRef(T; name = uuid4()) = LoggerRef{T, name}()
-IntegratorRef(T; name = uuid4()) = IntegratorRef{T, name}()
-
-inte = IntegratorRef(T, name = :I)
-loggi = LoggerRef(T, name = :L)
-c = CompositeAlgorithm(inte, loggi, (1, point_repeat), Route(inte => loggi, :value => :value))
-pack_ref = package(c)
-
-
-Metro_and_recal_pack_ref = CompositeAlgorithm(metropolis, pack_ref , B_Logger, (1, 1, point_repeat), 
-    Route(metropolis => pack_ref, :proposal => :Δvalue, transform = proposal -> accepteddelta(proposal)), 
-    Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
-    )
-
-pulse_part1_pack_ref = CompositeAlgorithm(Metro_and_recal_pack_ref, pulse1, (1, point_repeat),
-    Route(metropolis => pulse1, :hamiltonian),
-    )
-
-Pulse_and_Relax_pack_ref = Routine(pulse_part1_pack_ref, Metro_and_recal_pack_ref, 
-    (pulsetime, relaxtime)    )
-p_pack_ref = createProcess(g, Pulse_and_Relax_pack_ref, lifetime = 1, 
-    Input(pack_ref, initialvalue = sum(g.state))
-)
-
