@@ -200,7 +200,7 @@ function genLayerConnections(layer1::AbstractIsingLayer{T1,2}, layer2::AbstractI
 end
 export genLayerConnections
 
-
+# TODO: OLD
 """
 Give preallocated vectors for row_idxs, col_idxs, and weights
     fills them with the connections withing between two layers

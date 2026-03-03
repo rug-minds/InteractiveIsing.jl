@@ -1,4 +1,4 @@
-using Finch
+export show_connections, show_relative_connections
 
 """
 Get a list of the coordinates of the outgoing connections of a node in a graph.
@@ -47,4 +47,3 @@ show_relative_connections(g, i, j) = show_relative_connections(g, coordToIdx(Int
 show_relative_connections(g, i, j, k) = show_relative_connections(g, coordToIdx(Int32.((i, j, k)), size(g)))
 
 
-export show_connections, show_relative_connections, to_finch_sparse, finch_row_contraction, finch_row_sws

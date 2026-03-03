@@ -64,7 +64,7 @@ macro WG(func, kwargs...)
 end
 
 
-function (wg::WeightGenerator)(;dr, c1 = nothing, c2 = nothing)
+function (wg::WeightGenerator)(;dr::DR, c1 = nothing, c2 = nothing) where DR
     return @inline wg.func(dr, c1, c2)
 end
 

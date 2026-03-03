@@ -45,7 +45,8 @@ reinit(g)
 #     Share(isingmetro, PolTracker())
 #     )
 
-createProcess(g, algo, dynamics = algo)
+# createProcess(g, algo, dynamics = algo)
+createProcess(g)
 
 
 

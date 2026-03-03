@@ -26,6 +26,8 @@ include("Printing.jl")
 include("FunctionTuple.jl")
 include("TupleBinarySearch.jl")
 include("Unroll.jl")
+include("LoopVectorization.jl")
+include("Fills/Fills.jl")
 include("SparseVal.jl")
 include("Macros.jl")
 

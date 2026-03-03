@@ -19,3 +19,6 @@ generated_processloop_pack.jl
 generated_processloop.ll
 generated_processloop.jl
 generated_processloop_pack.ll
+
+# Local large dataset
+etc/sparse_50k.jld2

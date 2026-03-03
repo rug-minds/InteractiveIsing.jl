@@ -45,11 +45,11 @@ Base.size(c::Coordinate{N}) where N = (length(c),)
 
 function delta(c1::Coordinate, c2::Coordinate)
     @assert c1.top == c2.top "Coordinates must belong to the same topology"
-    DeltaCoordinate(c1, ntuple(i->c2.coords[i]-c1.coords[i], length(c1.coords)), top = c1.top)
+    DeltaCoordinate(c1, ntuple(i->c2.coords[i]-c1.coords[i], length(c1.coords)))
 end
 
 function delta(top::AbstractLayerTopology, ci1::CartesianIndex, ci2::CartesianIndex)
-    DeltaCoordinate(Coordinate(top, ci1), ntuple(i->ci2[i]-ci1[i], length(ci1)), top = top)
+    DeltaCoordinate(Coordinate(top, ci1), ntuple(i->ci2[i]-ci1[i], length(ci1)))
 end
 
 coord(x...) = Coordinate(x...)
@@ -57,7 +57,6 @@ coord(x...) = Coordinate(x...)
 struct DeltaCoordinate{N,T} <: AbstractVector{Int} # N dimensional coordinate difference
     start::Coordinate{N,T}
     deltas::NTuple{N, Int}
-    top::T
 end
 
 Base.getindex(dc::DeltaCoordinate, i::Int) = dc.deltas[i]
@@ -65,20 +64,22 @@ Base.iterate(dc::DeltaCoordinate, state = 1) = iterate(dc.deltas, state)
 Base.length(dc::DeltaCoordinate{N}) where N = N
 Base.size(dc::DeltaCoordinate{N}) where N = (N,)
 Base.size(dc::DeltaCoordinate, i::Int) = size(dc)[i]
+top(dc::DeltaCoordinate) = top(dc.start)
 
-function DeltaCoordinate(c1::Coordinate, ds; top = SquareTopology(periodic=false))
-    axisisperiodic = whichperiodic(c1.top)
+function DeltaCoordinate(c1::Coordinate, ds)
+    tp = top(c1)
+    axisisperiodic = whichperiodic(tp)
     # Get the shortest ds
     ds = ntuple(i -> axisisperiodic[i] ? begin
             d = ds[i]
-            halfsize = div(size(c1.top)[i], 2)
+            halfsize = div(size(tp)[i], 2)
             if abs(d) > halfsize
-                d - sign(d) * size(c1.top)[i]
+                d - sign(d) * size(tp)[i]
             else
                 d
             end
         end : ds[i], length(ds))
-    DeltaCoordinate{length(ds), typeof(top)}(c1, ds, top)
+    DeltaCoordinate{length(ds), typeof(tp)}(c1, ds)
 end
 
 LinearAlgebra.norm(dc::DeltaCoordinate) = sqrt(norm2(dc))
@@ -86,4 +87,3 @@ norm2(dc::DeltaCoordinate) = sum(x -> x^2, dc.deltas)
 function Base.:^(dc::DeltaCoordinate, p::Integer)
     return sum(x -> x^p, dc.deltas)
 end
-

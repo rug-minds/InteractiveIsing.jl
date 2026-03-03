@@ -4,10 +4,15 @@ struct DefectState{S,D,H}
     local_hamiltonian::H
 end
 
-# Local Hamiltonian Traits
+# Local (Spin site) Hamiltonian Traits
 localhamiltonian(::Quadratic) = true
 localhamiltonian(::Quartic) = true
 localhamiltonian(::Sextic) = true
 localhamiltonian(::Hamiltonian) = false
 
-struct HoppingProposer end
+struct DefectProposer <: AbstractProposer end
+struct DefectProposal <: AbstractProposal
+    proposedstate::DefectState
+end
+
+

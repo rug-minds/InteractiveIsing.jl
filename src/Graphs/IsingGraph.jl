@@ -22,10 +22,6 @@ mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers, N}
     
     # Connection between layers, Could be useful to track for faster removing of layers
     layerconns::Dict{Set, Int32}
-    # params::Parameters #TODO: Make this a custom type?
-
-    # For notifying simulations or other things
-    # emitter::Emitter
 
     defects::GraphDefects
     # d::GraphData{T} #Other stuff. Maybe just make this a dict?
@@ -45,8 +41,9 @@ function IsingGraph(dims::Int...;
                     set = (-1f0, 1f0), 
                     weights::Union{Nothing,WeightGenerator} = nothing,
                     type = Continuous,
+                    adj = nothing,
                     kwargs...)
-    single_layer = Layer(dims...; set, stype = type, weights, periodic, kwargs...)
+    single_layer = Layer(dims...;set, stype = type, weights, periodic, kwargs...)
     IsingGraph(single_layer; kwargs...)
 end
 
@@ -58,7 +55,7 @@ Default initializer for IsingGraphs
     or
     (Layer1, Weightgenerator12, Layer2, Layer3, WeightGenerator34)
 """
-function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerator}...; precision = Float32, kwargs...)
+function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerator}...; precision = Float32, adj = nothing, kwargs...)
     layers_props = tuple((layers_or_wgs[i] for i in eachindex(layers_or_wgs) if isa(layers_or_wgs[i], LayerProperties))...)
 
     # Fill the weight generator list
@@ -89,10 +86,14 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
     self = StaticParam(0f0, _datalen, description = "Self Connections")
 
 
+    if isnothing(adj)
+        adj = SparseMatrixCSC{precision,intprecision(precision)}(undef,_datalen,_datalen)
+    end
+
     g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(layers), 1}(
         # sim,
         zeros(precision, _datalen),
-        SparseMatrixCSC{precision,intprecision(precision)}(undef,_datalen,_datalen),
+        adj,
         self,
         #Temp            
         1f0,

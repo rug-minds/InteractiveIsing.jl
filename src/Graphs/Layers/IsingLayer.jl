@@ -444,23 +444,23 @@ export setPeriodic!
 """
 Go from a local idx of layer to idx of the underlying graph
 """
-@inline function idxLToG(idx::Integer, layer::IsingLayer)
+@inline function idxLToG(idx::Integer, layer::L) where L<:IsingLayer
     return Int32(startidx(layer) + idx - 1)
 end
 
 """
 Go from a local matrix indexing of layer to idx of the underlying graph
 """
-@inline function idxLToG(i::Integer, j::Integer, layer::IsingLayer)
+@inline function idxLToG(i::Integer, j::Integer, layer::L) where L<:IsingLayer
     return Int32(startidx(layer) + coordToIdx(i,j, glength(layer)) - 1)
 end
 
-idxLToG(tup::Tuple, layer) = idxLToG(tup[1], tup[2], layer)
+@inline idxLToG(tup::Tuple, layer::L) where L<:IsingLayer = idxLToG(tup[1], tup[2], layer)
 
 """
 Go from graph idx to idx of layer
 """
-@inline function idxGToL(idx::Integer, layer::IsingLayer)
+@inline function idxGToL(idx::Integer, layer::L) where L<:IsingLayer
     return Int32(idx + 1 - startidx(layer))
 end
 export idxLToG, idxGToL
