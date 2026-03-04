@@ -6,18 +6,42 @@ function isingfunc(dr, c1, c2)
     return 1/dr
 end
 
+wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=(3,3,2)
 
-g = ii.IsingGraph(100,100,10, type = Continuous, periodic = (:x,:y), self = :homogeneous)
-# g.default_algorithm = Metropolis()
-setdist!(g, (1.0, 10.0, 20.0))
+g = ii.IsingGraph(100,100,10, 
+        Continuous(), 
+        wg, 
+        LatticeConstants(1.0, 1.0, 20.), 
+        periodic = (:x,:y), 
+        self = :homogeneous)
 
-wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=3
-# println(@report_opt genAdj!(g, wg) )
-genAdj!(g, wg)
+
+# _NNt = ii.getNN(wg, 3)
+# nstates = 100000
+# blocksize = Int32(prod(2 .* _NNt .+ 1) - 1)
+# n_conns = nstates*blocksize
+
+
+# layer = g[1].data
+# precision = Float32
+# row_idxs = Int32[]
+# col_idxs = Int32[]
+# weights = Float32[]
+# sizehint!(row_idxs, n_conns)
+# sizehint!(col_idxs, n_conns)
+# sizehint!(weights, n_conns)
+# (begin empty!(row_idxs); empty!(col_idxs); empty!(weights) end)
+# topo = ii.top(layer)
+# # @code_warntype ii._fillSparseVecs(layer, precision, row_idxs, col_idxs, weights, topo, wg)
+# # @benchmark ii._fillSparseVecs(layer, precision, row_idxs, col_idxs, weights, topo, wg) setup = (begin empty!(row_idxs); empty!(col_idxs); empty!(weights) end)
+# @benchmark ii._fillSparseVecsNew(layer, precision, row_idxs, col_idxs, weights, topo, wg) setup = (begin empty!(row_idxs); empty!(col_idxs); empty!(weights) end)
+# ii._fillSparseVecs(layer, precision, row_idxs, col_idxs, weights, topo, wg)
+# ii._fillSparseVecsNew(layer, precision, row_idxs, col_idxs, weights, topo, wg)
+# copy_row_idxs = copy(row_idxs)
+# copy_col_idxs = copy(col_idxs)
+# copy_weights = copy(weights)
 
 interface(g)
-# createProcess(g)
-# homogeneousself!(g, 0.5f0)
 
 struct PolTracker{T} <: ProcessAlgorithm end
 PolTracker() = PolTracker{Float32}()

@@ -5,7 +5,7 @@ struct Sextic{S, PV <: ParamTensor} <: HamiltonianTerm
 end
 
 # Sextic holds a 0-dimensional (e.g. scalar) ParamTensor
-Sextic(g::AbstractIsingGraph, val = 1) = Sextic(g.self, ScalarParam(eltype(g), val; description = "Sextic Coefficient"))
+Sextic(g::AbstractIsingGraph, val = 1) = Sextic(g.adj.diag, ScalarParam(eltype(g), val; description = "Sextic Coefficient"))
 
 # ΔH_expr[Sextic] = :(sc[]*self[j]*s[j]^6)
 # @inline @Auto_ΔH function ΔH(::Sextic, hargs, proposal)

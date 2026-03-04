@@ -240,12 +240,29 @@ Base.adjoint(A::UndirectedAdjacency) = A # Undirected adjacency is symmetric, so
     return sparse(out_rows, out_cols, out_vals, m, n)
 end
 
+function Base.summary(io::IO, A::UndirectedAdjacency)
+    m, n = size(A)
+    shown = _sparse_with_diag(A)
+    xnnz = nnz(shown)
+    print(io, m, "×", n, " ", typeof(A), " with ", xnnz, " stored ",
+        xnnz == 1 ? "entry" : "entries")
+    if separate_diagonal(A)
+        print(io, " (diagonal stored separately)")
+    end
+end
+
 function Base.show(io::IO, A::UndirectedAdjacency)
-    show(io, _sparse_with_diag(A))
+    shown = _sparse_with_diag(A)
+    print(io, "UndirectedAdjacency(")
+    show(io, shown)
+    print(io, ")")
 end
 
 function Base.show(io::IO, ::MIME"text/plain", A::UndirectedAdjacency)
-    show(io, MIME"text/plain"(), _sparse_with_diag(A))
+    shown = _sparse_with_diag(A)
+    summary(io, A)
+    print(io, ":\n")
+    Base.print_array(io, shown)
 end
 
 function Base.copy(A::UndirectedAdjacency)

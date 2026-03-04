@@ -48,51 +48,9 @@ using PrecompileTools
 #Temps
 using SparseArrays, StaticArrays, LoopVectorization
 
-
-export AbstractIsingGraph
-abstract type AbstractIsingGraph{T} end
-abstract type AbstractIsingLayer{T,DIMS} end
-abstract type AbstractLayerProperties end
-
-
-
-# Restart MCMC loop to define new Hamiltonian function
-# Is needed for fast execution if part of hamiltonian doesn't need to be checked
-# Should be in IsingSim.jl
-
-@debug "Including Utils"
+include("TypeDefs.jl")
 include("Utils/Utils.jl")
-@debug "Utils loaded"
 
-
-### DECLARED TYPES
-@debug "Forward declaring types"
-# @ForwardDeclare IsingGraph "Graphs/IsingGraph.jl"
-# @ForwardDeclare IsingLayer "Graphs/Layers/IsingLayer.jl"
-# @ForwardDeclare LayerProperties "Graphs/Layers/IsingLayer.jl"
-# @ForwardDeclare Parameters "Graphs"
-# @ForwardDeclare IsingSim "Sim"  # Commented out because IsingSim struct is commented out in source
-# @ForwardDeclare SimLayout "Makie/SimLayout.jl"
-abstract type AbstractSimLayout end
-@debug "Forward declarations complete"
-
-abstract type StateType end
-struct Discrete <: StateType end
-struct Continuous <: StateType end
-struct Static <: StateType end #
-
-# Base.isless(::Type{Continuous}, ::Type{Discrete}) = true
-# Base.isless(::Type{Discrete}, ::Type{Continuous}) = false
-
-# Base.isless(::Type{Discrete}, ::Type{Static}) = true
-# Base.isless(::Type{Static}, ::Type{Discrete}) = false
-
-# Base.isless(::Type{Continuous}, ::Type{Static}) = true
-# Base.isless(::Type{Static}, ::Type{Continuous}) = false
-
-# Base.isless(::Type{<:StateType}, ::Type{<:StateType}) = false
-    
-export Discrete, Continuous, Static
 
 # Global RNG for module
 const rng = MersenneTwister()
@@ -140,14 +98,9 @@ include("Makie/Makie.jl")
 include("GPlotting.jl")
 @debug "GPlotting loaded"
 
-@debug "Including Barebones"
-include("Barebones.jl")
-@debug "Barebones loaded"
-
-
-# @debug "Creating CompositeAlgorithm"
-# const ca1 = CompositeAlgorithm((LayeredMetropolis, Metropolis), (1,2))
-# @debug "CompositeAlgorithm created"
+# @debug "Including Barebones"
+# include("Barebones.jl")
+# @debug "Barebones loaded"
 
 @debug "InteractiveIsing module load complete"
 

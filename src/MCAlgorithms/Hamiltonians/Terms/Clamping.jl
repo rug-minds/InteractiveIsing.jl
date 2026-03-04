@@ -10,8 +10,7 @@ struct Clamping{PBeta, BY} <: Hamiltonian
     β::PBeta
     y::BY
 end
-Clamping(g::AbstractIsingGraph, β = 1) = Clamping(ScalarParam(eltype(g), β; description = "Clamping Factor"), VectorParam(eltype(g), length(g); description = "Targets"))
-Base.Expr(::Clamping) = :(-1/2*β*(s[j]^2)-y[j]*s[j])
+Clamping(g::AbstractIsingGraph, β = one(eltype(g)), y = zeros(eltype(g), nstatess(g))) = Clamping(Ref(β), y)
 
 params(::Type{Clamping}, GraphType) = GatherHamiltonianParams((:β, GraphType, GraphType(0), "Clamping Factor"), (:y, Vector{GraphType}, GraphType(0), "Targets"))
 
@@ -19,9 +18,10 @@ params(::Type{Clamping}, GraphType) = GatherHamiltonianParams((:β, GraphType, G
 # function ΔH(::Clamping, hargs, proposal)
 function calculate(::ΔH, hterm::Clamping, state, proposal)
     j = at_idx(proposal)
-    return -1/2*hterm.β[]*(to_val(proposal)^2 - state[j]^2) - hterm.y[j]*(to_val(proposal) - state[j])
+    newstate = to_val(proposal)
+    return hterm.β[]/2*(newstate^2 - state[j]^2 - 2*hterm.y[j]*(newstate - state[j]))
 end
 
 function calculate(::dH, hterm::Clamping, state, s_idx)
-    return -hterm.β[]*state[s_idx] - hterm.y[s_idx]
+    return hterm.β[]*(state[s_idx] - hterm.y[s_idx])
 end

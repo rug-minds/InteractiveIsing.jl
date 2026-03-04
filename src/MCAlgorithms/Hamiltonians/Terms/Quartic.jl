@@ -5,7 +5,7 @@ struct Quartic{S, PV <: ParamTensor} <: HamiltonianTerm
 end
 
 # Quartic holds a 0-dimensional (e.g. scalar) ParamTensor
-Quartic(g::AbstractIsingGraph, val = 1) = Quartic(g.self, ScalarParam(eltype(g), val; description = "Quartic Coefficient"))
+Quartic(g::AbstractIsingGraph, val = 1) = Quartic(g.adj.diag, ScalarParam(eltype(g), val; description = "Quartic Coefficient"))
 
 # @inline @Auto_ΔH function ΔH(::Quartic, hargs, proposal)
 #     return :(qc[]*self[j]*s[j]^4)

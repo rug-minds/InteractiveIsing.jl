@@ -13,7 +13,7 @@ Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val),
 
 
 export Coords
-struct IsingLayerData{StateType, StateSet, Dim, Size, PtrRange, Top} 
+struct IsingLayerData{StateType, StateSet, Dim, Size, PtrRange, Top} <: AbstractLayerData{Dim}
     # Reference to the graph holding it    
     # Can be nothing so that saving is easier
     name::String
@@ -28,9 +28,40 @@ struct IsingLayerData{StateType, StateSet, Dim, Size, PtrRange, Top}
     top::Top   
 end
 
+"""
+Simple Constructor
+"""
+function IsingLayerData(size::Tuple, statetype, stateset, wg::Union{WeightGenerator, Nothing}, topology, coords = Coords(nothing))
+    IsingLayerData{statetype, stateset, length(size), size, 1:prod(size), typeof(topology)}(
+        "Layer 1",
+        (;StateType = statetype, StateSet = stateset, Dim = length(size), Size = size, PtrRange = 1:prod(size), Top = typeof(topology)),
+        coords,
+        Base.RefValue{Union{WeightGenerator, Nothing}}(wg),
+        Dict{Pair{Int32,Int32}, Any}(),
+        topology
+    )
+end
+
+"""
+Offset the stateindex range, and set the stateset to be compatible with the precision
+"""
+function fix_layerdata(ild::IsingLayerData{ST,SS,Dim,Size,PtrRange,Top}, precision, offset) where {ST,SS,Dim,Size,PtrRange,Top}
+    newset = convert.(precision, stateset(ild))
+    newrange = (1+offset):(offset + prod(size(ild)))
+    return IsingLayerData{ST, newset, Dim, Size, newrange, Top}(
+        name(ild),
+        traits(ild),
+        ild.coords,
+        ild.weightgenerator,
+        connections(ild),
+        top(ild)
+    )
+end
+
+
 function IsingLayerData(
             lsize,
-            idx, 
+            idx, #TODO REMOVE
             start::Int;
             stype = Discrete(), 
             precision = Float32,
@@ -91,7 +122,8 @@ end
 @inline coords(layer::IsingLayerData) = layer.coords.cs
 @inline setcoords!(layer::IsingLayerData; x = 0, y = 0, z = 0) = (layer.coords.cs = Int32.((y,x,z)))
 @inline setcoords!(layer::IsingLayerData, val) = (layer.coords.cs = Int32.((val,val,val)))
-destructor(layer::IsingLayerData) = nothing
+@inline Base.size(layer::IsingLayerData) = layerparams(layer, :Size)
+@inline Base.length(layer::IsingLayerData) = prod(size(layer))
 
 @inline function layerparams(lt::Type{<:IsingLayerData}, ::Val{S}) where S
     ps = parameters(lt)
@@ -126,6 +158,7 @@ end
 @inline range(l::IsingLayerData) = range(typeof(l))
 @inline range_end(lt::Type{<:IsingLayerData{A,B,C,D,E}}) where {A,B,C,D,E} = last(E)
 @inline range_end(l::IsingLayerData) = range_end(typeof(l))
+@inline Base.parentindices(l::IsingLayerData) = (range(l),)
 
 get_weightgenerator(layer::IsingLayerData) = layer.weightgenerator[]
 
@@ -168,6 +201,7 @@ end
 @inline range(layer::IsingLayer) = range(data(layer))
 @inline range_end(lt::Type{<:IsingLayer}) = range_end(layerdatatype(lt))
 @inline range_end(layer::IsingLayer) = range_end(data(layer))
+@inline Base.parentindices(layer::IsingLayer) = parentindices(data(layer))
 
 @inline name(layer::IsingLayer) = name(data(layer))
 @inline traits(layer::IsingLayer) = traits(data(layer))
@@ -187,20 +221,20 @@ Base.CartesianIndices(l::IsingLayer) = CartesianIndices(size(l))
 
 
 get_weightgenerator(layer::IsingLayer) = get_weightgenerator(data(layer))
-struct LayerProperties <: AbstractLayerProperties
-    size::Tuple
-    kwargs::NamedTuple
-end
+# struct LayerProperties <: AbstractLayerProperties
+#     size::Tuple
+#     kwargs::NamedTuple
+# end
 
-datalen(lp::LayerProperties) = prod(lp.size)
+# datalen(lp::LayerProperties) = prod(lp.size)
 
-function Layer(dims...; kwargs...)
-    LayerProperties(tuple(dims...), (;kwargs...))
-end
+# function Layer(dims...; kwargs...)
+#     LayerProperties(tuple(dims...), (;kwargs...))
+# end
 
-export Layer
+# export Layer
 
-IsingLayer(g, idx, startidx, lp::LayerProperties) = IsingLayerData(lp.size, idx, startidx; lp.kwargs...)
+# IsingLayer(g, idx, startidx, lp::LayerProperties) = IsingLayerData(lp.size, idx, startidx; lp.kwargs...)
 
 export IsingLayer
 export topology
@@ -507,33 +541,26 @@ export initstate!
 
 
 function Base.show(io::IO, layer::IsingLayer)
-    print(
-        io,
-        statetype(layer),
-        " IsingLayer(",
-        layeridx(layer),
-        ") size=",
-        size(layer),
-        " stateset=",
-        stateset(layer)
-    )
-
+    print(io, statetype(layer), " IsingLayer ", layeridx(layer), " with size ", size(layer), " and stateset ", stateset(layer))
     layer_coords = coords(layer)
     if !isnothing(layer_coords)
-        print(io, " coords=", layer_coords)
+        print(io, " at coordinates ", layer_coords)
+    end
+    print(io, "\n\n with connections:")
+    for key in keys(connections(layer))
+        print(io, "\n\tConnected to layer ", key[2], " using ")
+        print(io, "\n\t", connections(layer)[key])
     end
 
-    print(io, " connections=", length(connections(layer)))
-    if !isnothing(graph(layer))
-        # Avoid display-time crashes if defects are not initialized.
-        ndef = try
-            ndefect(layer)
-        catch
-            nothing
-        end
-        if !isnothing(ndef)
-            print(io, " defects=", ndef)
-        end
+    ndef = try
+        ndefect(layer)
+    catch
+        nothing
+    end
+    if isnothing(ndef)
+        print(io, "\n and 0 defects")
+    else
+        print(io, "\n and ", ndef, " defects")
     end
 end
 

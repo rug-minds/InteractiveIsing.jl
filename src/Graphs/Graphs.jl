@@ -1,5 +1,6 @@
 export AbstractIsingGraph, IsingGraph, CIsingGraph, coordToIdx, idxToCoord, ising_it, setSpins!, addDefects!, remDefects!, addDefect!, remDefect!, 
-    connIdx, connW, initSqAdj, HFunc, HWeightedFunc, HMagFunc, HWMagFunc, setGHFunc!, gwidth, glength
+    connIdx, connW, initSqAdj, HFunc, HWeightedFunc, HMagFunc, HWMagFunc, setGHFunc!, gwidth, glength,
+    StatePartition, partition_index, partition_value, partition_dispatch
 
 # Aliases
 const Edge = Pair{Int32,Int32}
@@ -16,6 +17,7 @@ end
 
 export reshapeView
 
+include("Utils.jl")
 include("Data.jl")
 include("GraphDefects.jl")
 include("Parameters.jl")
@@ -23,7 +25,9 @@ include("IsingGraph.jl")
 
 
 include("Layers/Layers.jl")
+include("StatePartition.jl")
 include("SingleLayerGraph.jl")
+include("Constructors.jl")
 
 include("SetEls.jl")
 

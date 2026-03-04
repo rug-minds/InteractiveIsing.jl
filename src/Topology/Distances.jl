@@ -4,11 +4,10 @@ const CI = CartesianIndex
 dist(top::AbstractLayerTopology, ci1::CartesianIndex, ci2::CartesianIndex) = sqrt(dist2(top, ci1, ci2))
 dist2(top::AbstractLayerTopology, ci1::CartesianIndex, ci2::CartesianIndex) = dist2(top, Coordinate(top, ci1), Coordinate(top, ci2))    
 
-dist(c1::C1, c2::C2) where {C1<:Coordinate, C2<:Coordinate} = sqrt(dist2(c1,c2))
-function dist2(c1::C1, c2::C2) where {C1<:Coordinate, C2<:Coordinate}
-    @assert c1.top == c2.top "Coordinates must belong to the same topology"
-    return dist2(c1.top, c1,c2)
-end
+dist(c1::C1, c2::C2) where {C1<:Coordinate, C2<:Coordinate} =
+    throw(ArgumentError("dist(c1, c2) requires topology context. Use dist(topology, c1, c2)."))
+dist2(c1::C1, c2::C2) where {C1<:Coordinate, C2<:Coordinate} =
+    throw(ArgumentError("dist2(c1, c2) requires topology context. Use dist2(topology, c1, c2)."))
 
 dist(top::SquareTopology, c1::C1, c2::C2) where {C1<:Coordinate, C2<:Coordinate} = sqrt(dist2(top, c1, c2))
 function dist2(top::SquareTopology, c1::C1, c2::C2) where {C1<:Coordinate, C2<:Coordinate}
