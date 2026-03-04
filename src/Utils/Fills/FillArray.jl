@@ -61,15 +61,6 @@ Base.iterate(fa::FillArray{T}, state=1) where T = state > length(fa) ? nothing :
 LoopVectorization.check_args(::FillArray) = true
 _SAI_FA.dense_dims(::Type{<:FillArray{T,N}}) where {T,N} = ntuple(_ -> _SAI_FA.static(true), N)
 
-# ── turbo_getindex compute-op path ────────────────────────────────────────────
-# FillArray returns the same value for every index, so ignore j entirely.
-# This avoids going through stridedpointer (which fails for zero-stride arrays)
-# and lets LLVM DCE the index chain.
-@inline turbo_getindex(fa::FillArray, j::Integer) = fa.val[]
-@inline turbo_getindex(fa::FillArray, j::AbstractSIMD) = fa.val[]
-@inline turbo_getindex(fa::FillArray, j::VecUnroll) = fa.val[]
-@inline turbo_getindex(fa::FillArray, j) = fa.val[]
-
 @inline function LayoutPointers.memory_reference(fa::FillArray{T}) where T
     p = Ptr{T}(pointer_from_objref(fa.val))
     return p, fa.val

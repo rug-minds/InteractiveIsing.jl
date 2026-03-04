@@ -8,12 +8,12 @@ intprecision(::Type{Float32}) = Int32
 intprecision(::Type{Float64}) = Int64
 
 # Ising Graph Representation and functions
-mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers, N} <: AbstractIsingGraph{T}
+mutable struct IsingGraph{T <: AbstractFloat, M, Layers, N} <: AbstractIsingGraph{T}
     # Vertices and edges
     state::AbstractArray{T,N}
     # Adjacency Matrix
     adj::M
-    self::AbstractArray{T,1} # Diagonal of adj stored as a separate array for efficiency
+    # self::AbstractArray{T,1} # Diagonal of adj stored as a separate array for efficiency
     
     temp::T
 
@@ -30,8 +30,8 @@ mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers, N}
     layers::Layers
 end
 
-const PottsGraph{T, M, L}  = IsingGraph{T, M, L, 2}
-const GlauberGraph{T, M, L} =IsingGraph{T, M, L, 3}
+# const PottsGraph{T, M, L}  =    IsingGraph{T, M, L, 2}
+# const GlauberGraph{T, M, L} =   IsingGraph{T, M, L, 3}
 
 """
 Single layer constructor
@@ -58,6 +58,10 @@ Default initializer for IsingGraphs
 function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerator}...; precision = Float32, adj = nothing, kwargs...)
     layers_props = tuple((layers_or_wgs[i] for i in eachindex(layers_or_wgs) if isa(layers_or_wgs[i], LayerProperties))...)
 
+
+    selftype = get(kwargs, :self, false)
+
+
     # Fill the weight generator list
     layer_idx = 0
     wgs = []
@@ -83,18 +87,29 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
     _datalen = l_startidx - 1
     
 
-    self = StaticParam(0f0, _datalen, description = "Self Connections")
+    # self = StaticParam(0f0, _datalen, description = "Self Connections")
 
 
     if isnothing(adj)
-        adj = SparseMatrixCSC{precision,intprecision(precision)}(undef,_datalen,_datalen)
-    end
+        connections = SparseMatrixCSC{precision,intprecision(precision)}(undef,_datalen,_datalen)
+        if selftype == :homogeneous
+            self = FillArray(zero(precision), _datalen)
+        elseif selftype == false
+            self = StaticFill(zero(precision), _datalen)
+        elseif selftype == true
+            self = zeros(precision, _datalen)
+        else
+            error("Invalid self type. Must be :homogeneous, true, or false.")
+        end
 
-    g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(layers), 1}(
+        # self = homogeneousself ? FillArray(0f0, _datalen) : StaticFill(0f0, _datalen)
+        adj = UndirectedAdjacency(connections, self)
+    end
+    g = IsingGraph{precision, typeof(adj), typeof(layers), 1}(
         # sim,
         zeros(precision, _datalen),
         adj,
-        self,
+        # self,
         #Temp            
         1f0,
         # Default algorithm
@@ -111,14 +126,22 @@ function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerato
         layers
     )
 
+
+    #TODO DEAD
     # Set Graph refs
     g.defects.graph = g
+    cols = Int[]
+    rows = Int[]
+    vals = precision[]
     for layer in g.layers
-        layer.graph = g
         # println("Making weights for layer ", layer)
-        genAdj!(layer, get_weightgenerator(layer))
+        # genAdj!(layer, get_weightgenerator(layer))
+        layer_cols, layer_rows, layer_vals = gen_connections(layer, get_weightgenerator(layer))
+        cols = vcat(cols, layer_cols)
+        rows = vcat(rows, layer_rows)
+        vals = vcat(vals, layer_vals)
     end
-
+    g.adj = UndirectedAdjacency(g.adj, cols, rows, vals)
     initRandomState(g)
     g.hamiltonian = Ising(g)
 
@@ -240,7 +263,7 @@ export coords
 @inline clamprange!(g::IsingGraph, clamp, idxs) = setrange!(defects(g), clamp, idxs)
 export clamprange!
 
-@setterGetter IsingGraph adj params
+@setterGetter IsingGraph adj params layers
 # @inline params(g::IsingGraph) = g.params
 export params
 @inline nStates(g::IsingGraph) = length(state(g))::Int
@@ -249,15 +272,15 @@ export params
 export nstates
 
 @inline adj(g::IsingGraph) = g.adj
-@inline function adj(g::IsingGraph, adj)
-    @assert adj.m == adj.n == length(state(g))
+@inline function adj!(g::IsingGraph, adj)
+    @assert size(adj, 1) == length(state(g)) && size(adj, 2) == length(state(g))
     g.adj = adj
     # Add callbacks field to graph, which is a Dict{typeof(<:Function), Vector{Function}}
     # And create a setterGetter macro that includes the callbacks
     reinit(g)
     return adj
 end
-set_adj!(g::IsingGraph, vecs::Tuple) = adj(g, sparse(vecs..., nStates(g), nStates(g)))
+set_adj!(g::IsingGraph, vecs::Tuple) = adj!(g, UndirectedAdjacency(g.adj, vecs...))
 export adj
 
 # @forwardfields IsingGraph GraphData d
@@ -281,8 +304,8 @@ end
 layeridxs(g::IsingGraph) = UnitRange{Int32}[graphidxs(unshuffled(layers(g))[i]) for i in 1:length(g)]
 @inline spinidx2layer_i_index(g, idx) = internal_idx(spinidx2layer(g, idx))
 @inline layer(g::IsingGraph, idx) = g.layers[idx]
-@inline Base.getindex(g::IsingGraph, idx) = g.layers[idx]
-@inline Base.getindex(g::IsingGraph) = g.layers[1]
+@inline Base.getindex(g::IsingGraph, idx) = IsingLayer(g, idx)
+@inline Base.getindex(g::IsingGraph) = IsingLayer(g, 1)
 @inline Base.length(g::IsingGraph) = length(g.layers)
 @inline Base.lastindex(g::IsingGraph) = length(g)
 Base.view(g::IsingGraph, idx) = view(g.layers, idx)
@@ -290,6 +313,8 @@ Base.view(g::IsingGraph, idx) = view(g.layers, idx)
 Base.get!(g::IsingGraph, s, d) = get!(g.addons, s, d)
 Base.get(g::IsingGraph, s) = get(g.addons, s)
 Base.get(g::IsingGraph, s, d) = get(g.addons, s, d)
+
+@inline layers(g::IsingGraph) = ntuple(i -> IsingLayer(g, i), length(g.layers))
 
 # Don't overload!
 @inline getstate(g::IsingGraph) = g.state

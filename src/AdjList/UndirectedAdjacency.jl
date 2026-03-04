@@ -32,6 +32,17 @@ function UndirectedAdjacency(ua::UndirectedAdjacency, diag::D = nothing; fastwri
 end
 
 """
+Give the columns rows and values of a new sparse matrix with the same topology as an existing UndirectedAdjacency, create a new UndirectedAdjacency with the new weights
+    This is useful for efficiently updating the weights of an existing adjacency without changing the topology
+    If fastwrite is true, a new indexmap will be created for the new adjacency, otherwise it will be set to nothing
+"""
+function UndirectedAdjacency(ua::UndirectedAdjacency{Tv, Ti, D, I}, cols, rows, vals) where {Tv, Ti, D, I}
+    sp_new = sparse(rows, cols, vals, size(ua.sp)...)
+    indexmap_new = fastwrite(ua) ? map_topology(sp_new) : nothing
+    return UndirectedAdjacency{Tv, Ti, D, I}(sp_new, ua.diag, indexmap_new)
+end
+
+"""
 Map the topology of a sparse matrix to a dictionary for fast access
     Returns a Dict mapping (row, col) pairs to the index in the sparse matrix's storage
     This allows O(1) access to the nonzero entries of the sparse matrix
@@ -91,12 +102,88 @@ end
     A.sp[col, row] = value # Ensure symmetry
 end
 
-@inline function Base.getindex(A::UndirectedAdjacency, row::Ti, col::Ti) where {Ti}
+@inline function Base.getindex(A::UndirectedAdjacency, row::Ti, col::Ti) where {Ti <: Integer}
     if separate_diagonal(A) && row == col
         return A.diag[row]
     end
-    getindex(A.sp, row, col) # This will return zero for non-existent edges due to the sparse matrix structure  
+    if fastwrite(A)
+        if haskey(A.indexmap, row => col)
+            idx = A.indexmap[row => col]
+            return A.sp.nzval[idx]
+        else
+            return zero(eltype(A.sp.nzval)) # Return zero for non-existent edges due to the sparse matrix structure
+        end
+    else
+        return A.sp[row, col]
+    end
 end
+
+@inline function _sparse_slice(A::UndirectedAdjacency{Tv, Ti}, rows::AbstractVector{<:Integer}, cols::AbstractVector{<:Integer}) where {Tv, Ti}
+    sub = A.sp[rows, cols]
+    if !separate_diagonal(A)
+        return sub
+    end
+
+    sub_rows, sub_cols, sub_vals = findnz(sub)
+    out_rows = Ti[]
+    out_cols = Ti[]
+    out_vals = Tv[]
+    sizehint!(out_rows, length(sub_rows))
+    sizehint!(out_cols, length(sub_cols))
+    sizehint!(out_vals, length(sub_vals))
+
+    # Keep only non-diagonal sparse entries from `sp`; diagonal is sourced from `diag`.
+    for k in eachindex(sub_vals)
+        r = sub_rows[k]
+        c = sub_cols[k]
+        if rows[r] != cols[c]
+            push!(out_rows, Ti(r))
+            push!(out_cols, Ti(c))
+            push!(out_vals, Tv(sub_vals[k]))
+        end
+    end
+
+    col_positions = Dict{Int, Vector{Int}}()
+    for (c, gidx) in pairs(cols)
+        positions = get!(col_positions, Int(gidx), Int[])
+        push!(positions, c)
+    end
+
+    # Inject separated diagonal only for selected (row, col) pairs where global idx matches.
+    for (r, gidx) in pairs(rows)
+        diag_cols = get(col_positions, Int(gidx), nothing)
+        diag_cols === nothing && continue
+        dval = Tv(A.diag[gidx])
+        iszero(dval) && continue
+        for c in diag_cols
+            push!(out_rows, Ti(r))
+            push!(out_cols, Ti(c))
+            push!(out_vals, dval)
+        end
+    end
+
+    return sparse(out_rows, out_cols, out_vals, length(rows), length(cols))
+end
+
+@inline Base.getindex(A::UndirectedAdjacency, rows::AbstractVector{<:Integer}, cols::AbstractVector{<:Integer}) = _sparse_slice(A, rows, cols)
+@inline Base.getindex(A::UndirectedAdjacency, ::Colon, cols::AbstractVector{<:Integer}) = _sparse_slice(A, axes(A, 1), cols)
+@inline Base.getindex(A::UndirectedAdjacency, rows::AbstractVector{<:Integer}, ::Colon) = _sparse_slice(A, rows, axes(A, 2))
+@inline Base.getindex(A::UndirectedAdjacency, ::Colon, ::Colon) = _sparse_slice(A, axes(A, 1), axes(A, 2))
+
+@inline function Base.getindex(A::UndirectedAdjacency, rows::AbstractVector{<:Integer}, col::Integer)
+    sub = _sparse_slice(A, rows, (col:col))
+    r, _, v = findnz(sub)
+    return sparsevec(r, v, length(rows))
+end
+
+@inline function Base.getindex(A::UndirectedAdjacency, row::Integer, cols::AbstractVector{<:Integer})
+    sub = _sparse_slice(A, (row:row), cols)
+    _, c, v = findnz(sub)
+    return sparsevec(c, v, length(cols))
+end
+
+@inline Base.getindex(A::UndirectedAdjacency, ::Colon, col::Integer) = getindex(A, axes(A, 1), col)
+@inline Base.getindex(A::UndirectedAdjacency, row::Integer, ::Colon) = getindex(A, row, axes(A, 2))
 
 #Forward sparse methods:
 Base.size(A::UndirectedAdjacency) = size(A.sp)
@@ -108,17 +195,77 @@ SparseArrays.getnzval(A::UndirectedAdjacency) = SparseArrays.getnzval(A.sp)
 SparseArrays.sparse(A::UndirectedAdjacency) = A.sp
 SparseArrays.nzrange(A::UndirectedAdjacency, col::Int) = nzrange(A.sp, col)
 SparseArrays.nonzeros(A::UndirectedAdjacency) = nonzeros(A.sp)
+SparseArrays.findnz(A::UndirectedAdjacency) = findnz(A.sp)
 Base.transpose(A::UndirectedAdjacency) = A # Undirected adjacency is symmetric, so transpose is the same
 Base.adjoint(A::UndirectedAdjacency) = A # Undirected adjacency is symmetric, so adjoint is the same
+
+@inline function _sparse_with_diag(A::UndirectedAdjacency{Tv, Ti}) where {Tv, Ti}
+    if !separate_diagonal(A)
+        return A.sp
+    end
+
+    m, n = size(A.sp)
+    sp_rows, sp_cols, sp_vals = findnz(A.sp)
+
+    out_rows = Ti[]
+    out_cols = Ti[]
+    out_vals = Tv[]
+    sizehint!(out_rows, length(sp_rows))
+    sizehint!(out_cols, length(sp_cols))
+    sizehint!(out_vals, length(sp_vals))
+
+    # Keep all off-diagonal sparse entries from sp.
+    for k in eachindex(sp_vals)
+        r = sp_rows[k]
+        c = sp_cols[k]
+        if r != c
+            push!(out_rows, r)
+            push!(out_cols, c)
+            push!(out_vals, sp_vals[k])
+        end
+    end
+
+    # Inject diagonal from separated storage.
+    diag_len = min(m, length(A.diag))
+    for i in 1:diag_len
+        d = A.diag[i]
+        if !iszero(d)
+            ii = Ti(i)
+            push!(out_rows, ii)
+            push!(out_cols, ii)
+            push!(out_vals, Tv(d))
+        end
+    end
+
+    return sparse(out_rows, out_cols, out_vals, m, n)
+end
+
+function Base.show(io::IO, A::UndirectedAdjacency)
+    show(io, _sparse_with_diag(A))
+end
+
+function Base.show(io::IO, ::MIME"text/plain", A::UndirectedAdjacency)
+    show(io, MIME"text/plain"(), _sparse_with_diag(A))
+end
+
 function Base.copy(A::UndirectedAdjacency)
     indexmap = fastwrite(A) ? copy(A.indexmap) : nothing
     diag = separate_diagonal(A) ? copy(A.diag) : nothing
     UndirectedAdjacency(copy(A.sp), diag, indexmap)
 end
 
-@inline function weighted_neighbors_sum(node_idx, adj::UA, nodes::AV) where {UA <: UndirectedAdjacency, AV<:AbstractVector}
-    @inline column_contraction(node_idx, nodes, adj.sp)
+@inline function weighted_neighbors_sum(node_idx, adj::UA, nodevals::AV; transform::F = identity, transform_weight::FW = identity) where {UA <: UndirectedAdjacency, AV<:AbstractArray, F, FW}
+    total = @inline column_contraction(node_idx, nodevals, adj.sp; transform, transform_weight)
+    if !separate_diagonal(adj) # Subtract self-loop contribution if diagonal is not separate
+        self_weight = adj.sp[node_idx, node_idx]
+        self_value = @inline getindex(nodevals, node_idx)
+        total -= @inline transform_weight(self_weight) * transform(self_value)
+    end
+    return total
 end
 
-
-
+@inline function weighted_self(node_idx, adj::UA, nodevals::AV; transform::F = identity, transform_weight::FW = identity) where {UA <: UndirectedAdjacency, AV<:AbstractVector, F, FW}
+    self_weight = @inline adj[node_idx, node_idx]
+    self_value = @inline getindex(nodevals, node_idx)
+    return transform_weight(self_weight) * transform(self_value)
+end

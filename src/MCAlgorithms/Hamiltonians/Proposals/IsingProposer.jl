@@ -11,8 +11,8 @@ statetype(::IsingGraphProposer{I,L,S}) where {I,L,S} = eltype(S)
 
 function get_proposer(g::AbstractIsingGraph)
     iterator = ising_it(g)
-    layers = g.layers
-    return IsingGraphProposer(iterator, layers, g.state)
+    _layers = layers(g)
+    return IsingGraphProposer(iterator, _layers, g.state)
 end
 
 @inline function Base.rand(rng::AbstractRNG, proposer::IsingGraphProposer)
@@ -20,7 +20,7 @@ end
 
     oldstate = proposer.state[j]::statetype(proposer)
     layer_idx = spin_idx_to_layer_idx(j, proposer.layers)
-    proposal_state = @inline inline_layer_dispatch(layer -> randstate(rng, layer, oldstate), layer_idx, proposer.layers)
+    proposal_state = @inline inline_layer_dispatch(layer -> (@inline randstate(rng, layer, oldstate)), layer_idx, proposer.layers)
     return FlipProposal{:s, :j, statetype(proposer)}(j, oldstate, proposal_state, layer_idx, false)::FlipProposal{:s, :j, statetype(proposer)}
 end
 

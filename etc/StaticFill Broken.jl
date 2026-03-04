@@ -68,10 +68,13 @@ LoopVectorization.can_turbo(::typeof(turbo_getindex), ::Val{2}) = true
 
 @inline function column_contraction(v::AbstractVector{T}, sp::SparseMatrixCSC{T}, i) where {T}
     tot = zero(T)
+    rowval = SparseArrays.getrowval(sp)
+    nzval = SparseArrays.getnzval(sp)
     @turbo for ptr in nzrange(sp, i)
-        j = sp.rowval[ptr]
-        wij = sp.nzval[ptr]
-        tot += wij * turbo_getindex(v, j)
+        j = rowval[ptr]
+        wij = nzval[ptr]
+        v = turbo_getindex(v, j)
+        tot += wij * v
     end
     return tot
 end

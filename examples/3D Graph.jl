@@ -7,7 +7,7 @@ function isingfunc(dr, c1, c2)
 end
 
 
-g = ii.IsingGraph(100,100,10, type = Continuous, periodic = (:x,:y))
+g = ii.IsingGraph(100,100,10, type = Continuous, periodic = (:x,:y), self = :homogeneous)
 # g.default_algorithm = Metropolis()
 setdist!(g, (1.0, 10.0, 20.0))
 
@@ -39,8 +39,8 @@ isingmetro = InteractiveIsing.IsingMetropolis()
 isingmetro = g.default_algorithm
 algo = ii.IsingLangevin()
 # g.hamiltonian = h = Ising(g) + CoulombHamiltonian(g, 2f0, screening = 20f0, recalc = 200);
-g.hamiltonian = h = Ising(g, :homogeneous_b)
-reinit(g)
+g.hamiltonian = h = Ising(g, b = :homogeneous)
+# reinit(g)
 # CompositeAlgorithm(isingmetro, PolTracker(), (1, 1),  
 #     Share(isingmetro, PolTracker())
 #     )

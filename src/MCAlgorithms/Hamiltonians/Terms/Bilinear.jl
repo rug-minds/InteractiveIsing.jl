@@ -8,18 +8,12 @@ end
 Bilinear(g::AbstractIsingGraph) = Bilinear(g.adj)
 
 # function ΔH(::Bilinear, hargs, proposal)
-function calculate(::ΔH, hterm::Bilinear, state, proposal)
+@inline function calculate(::ΔH, hterm::BL, state::S, proposal) where {BL<:Bilinear, S}
     s = state
     wij = hterm.adj
     j = at_idx(proposal)
-    cum = zero(eltype(s))
-    @turbo for ptr in nzrange(wij, j)
-        i = wij.rowval[ptr]
-        w = wij.nzval[ptr]
-        cum += w*s[i]
-    end
-
-    ising_energy = cum*(s[j] - to_val(proposal)) # s - to_val because of the - sign
+    total = @inline weighted_neighbors_sum(j, wij, s)
+    ising_energy = total*(s[j] - to_val(proposal)) # s - s' because of the - sign
 
     return ising_energy
 end
@@ -29,9 +23,11 @@ function calculate(::dH, hterm::Bilinear, state, s_idx)
     s = state
     wij = hterm.adj
     cum = zero(eltype(s))
+    rowval = SparseArrays.getrowval(wij)
+    nzval = SparseArrays.getnzval(wij)
     @turbo for ptr in nzrange(wij, s_idx)
-        i = wij.rowval[ptr]
-        w = wij.nzval[ptr]
+        i = rowval[ptr]
+        w = nzval[ptr]
         cum += w*s[i]
     end
     ising_energy = -cum

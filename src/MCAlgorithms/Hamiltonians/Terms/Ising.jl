@@ -1,10 +1,10 @@
 const Ising{PV} = HamiltonianTerms(Quadratic, Bilinear, MagField{PV})
 
-function Ising(g::AbstractIsingGraph, type::Symbol = :inactive_b)
-    if type == :homogeneous_b
+function Ising(g::AbstractIsingGraph; b = :inactive)
+    if b == :homogeneous
         return HamiltonianTerms(Quadratic(g), Bilinear(g), HomogeneousMagField(g))
     end
-    b_active = type == :active_b
+    b_active = b == :active
 
     HamiltonianTerms(Quadratic(g), Bilinear(g), MagField(g, b_active))
 end
