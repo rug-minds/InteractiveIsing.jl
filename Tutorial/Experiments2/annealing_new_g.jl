@@ -397,259 +397,281 @@ function Processes.step!(r::Recalc{I}, context) where I
 end
 ##################################################################################
 
-xL = 30  # Length in the x-dimension
-yL = 30  # Length in the y-dimension
+
+##################################################################################
+struct ImageCapture{Name,F} <: ProcessAlgorithm
+    min::F
+    max::F
+    # filepath::Symbol
+end
+
+# fix: store (min,max) in the right order
+# ImageCapture(name, min, max; filepath = pwd()) = ImageCapture{Symbol(name), typeof(min)}(min, max, Symbol(filepath))
+ImageCapture(name, min, max) = ImageCapture{Symbol(name), typeof(min)}(min, max)
+
+function Processes.init(ic::ImageCapture, input)
+    (;filepath) = input
+    (;callnum = 1, filepath)
+end
+
+function Processes.step!(ic::ImageCapture, context::C) where C
+    (;array, filepath, callnum) = context
+
+    A = array
+    if !(A isa AbstractArray{<:Real,3})
+        @warn "ImageCapture expects a 3D numeric array" typeof(A)
+        return (;)
+    end
+
+    CairoMakie.activate!()
+
+    A = Float32.(A)
+    nx, ny, nz = size(A)
+
+    n = nx * ny * nz
+    xs = Vector{Float32}(undef, n)
+    ys = Vector{Float32}(undef, n)
+    zs = Vector{Float32}(undef, n)
+    cs = Vector{Float32}(undef, n)
+
+    k = 1
+    @inbounds for z in 1:nz, y in 1:ny, x in 1:nx
+        xs[k] = x
+        ys[k] = y
+        zs[k] = z
+        cs[k] = A[x, y, z]
+        k += 1
+    end
+
+    cmin = ic.min
+    cmax = ic.max
+    if cmin > cmax
+        cmin, cmax = cmax, cmin
+    end
+
+    # use a simple explicit colormap (avoid relying on cgrad availability)
+    cmap = [:red, :black]
+
+    fig = Figure(size = (1000, 800))
+    ax = Axis3(
+        fig[1, 1];
+        xlabel = "x", ylabel = "y", zlabel = "z",
+        aspect = (1, 1, 1),
+        azimuth = 1.15,
+        elevation = 0.35,
+        title = "3D state"
+    )
+
+    scatter!(ax, xs, ys, zs;
+        color = cs,
+        colormap = cmap,
+        colorrange = (cmin, cmax),
+        markersize = 10
+    )
+
+    Colorbar(fig[1, 2]; colormap = cmap, colorrange = (cmin, cmax), label = "value")
+
+    # outdir = ic.filepath |> string
+    outdir = filepath
+    mkpath(outdir)
+    path = joinpath(outdir, "capture3d_$(callnum)_" * Dates.format(Dates.now(), "yyyymmdd_HHMMSS") * ".png")
+
+    try
+        save(path, fig)
+    catch err
+        @warn "Failed to save 3D capture image" err
+    finally
+        # avoid accumulating figures in a long-running process
+        try
+            close(fig)
+        catch
+        end
+    end
+
+    return (;callnum = callnum + 1)
+end
+##################################################################################
+
+xL = 50  # Length in the x-dimension
+yL = 50  # Length in the y-dimension
 zL = 10   # Length in the z-dimension
-g = IsingGraph(xL, yL, zL, stype = Continuous(),periodic = (:x,:y), set = (-1.5,1.5))
-# Visual marker size (tune for clarity vs performance)
-II.makie_markersize[] = 0.3
-# Launch interactive visualization (idle until createProcess(...) later)
-interface(g)
-g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
 JIsing = 1.0
-
-#### Weight function setup (Connection setup)
-#### Set the distance scaling
-setdist!(g, (1.0,1.0,1.0))
-
 ### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
 wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, JIsing, 0.1, 0.1) NN = 3
-genAdj!(g, wg5)
 
-# a1, b1, c1 = -20, 16, 0 
 a1, c1 = -2, 10
 b1 =-(a1+3*c1)/2
 Ex = range(-1.5, 1.5, length=1000)
 Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
-f1=newmakie(lines, Ex, Ey);
+# f1=newmakie(lines, Ex, Ey);
 E_barrier= abs(a1 * 1^2 + b1 * 1^4 .+ c1 * 1^6)
 println("E_barrier = ", E_barrier)
 Epp_1 = 2a1 + 12b1 + 30c1   # Ey''(1)
 println("Ey''(1) = ", Epp_1)
-Scale =1 
-Screening=0
-### Set hamiltonian with selfenergy and depolarization field
-# CoulombHamiltonian2(g::AbstractIsingGraph, eps::Real = 1.f0; screening = 0.0)
-g.hamiltonian = Ising(g) + CoulombHamiltonian(g, Scale, screening = Screening) + Quartic(g) + Sextic(g)
-g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
-# Only necessary if the Hamiltonian has non-local terms that need to be recalculated after each spin flip.
+
+# Output directory for the whole sweep
+outdir = raw"C:\Users\P317151\Documents\data\Model_V1.1\Anealing check"
+mkpath(outdir)
+
+# Run a sweep without re-running the first two setup cells.
+# This cell will reconfigure the Hamiltonian, run the process, and SAVE (PNG + XLSX) for each Screening.
+
+# function run_one_screening!(g; Scale, Screening, Temp_aneal=6f0, time_fctr=30, Steps_1=6000)
+# ---- parameters to sweep ----
+Scale = 2
+Screening_values = 15   # <-- change range here
+Temp_aneal=6f0
+time_fctr=30
+Steps_1=6000
+
+g = II.IsingGraph(xL, yL, zL, 
+        Continuous(), 
+        wg5, 
+        LatticeConstants(1.0, 1.0, 1.0),
+        Ising(b=:homogeneous) + CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + Quartic() + Sextic(), 
+        StateSet(-1.5f0, 1.5f0),
+        periodic = (:x,:y), 
+        self = :homogeneous)
+
+adj(g)[1,1] = a1
+g.hamiltonian[5].c[] = b1
+g.hamiltonian[6].c[] = c1
+
+interface(g)
+
 # reinit(g)
 
+# Temperature init
+temp(g, Temp_aneal)
 
-### Set Jii
-
-g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
-homogeneousself!(g,a1)
-### Set Qc*Jii
-g.hamiltonian[4].qc[] = b1/a1
-### Set Sc*Jii
-g.hamiltonian[5].sc[] = c1/a1
-g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
-Temp_aneal = 6f0
-
-Temperature = Temp_aneal
-temp(g, Temperature)
-
-### Run simulation process
-fullsweep = xL*yL*zL
-time_fctr = 100
-Steps_1 = 6000
-anneal_time = fullsweep*1*Steps_1
-pulsetime = fullsweep*1/2*Steps_1
-relaxtime = fullsweep*1/4*Steps_1
-point_repeat = fullsweep*time_fctr
-
-Amp1 = 20
-Amp2 = 20
-Bias1 = 0.1
-
-
-
-pulse1 = TrianglePulseA(Amp1, 2)
-pulse2 = SinPulseA(Amp2, 1)
-pulse3 = Unique(SinPulseA(5, 1))
-
-
-bias1 = BiasA(Bias1)
-
-Anealing1 = LinAnealingA(Temp_aneal, 0f0)
-Anealing2 = LinAnealingA(0f0, Temp_aneal)
+# ----- Annealing algorithm -----
 AnealingB = LinAnealingB(Temp_aneal, 0f0)
 metropolis = g.default_algorithm
 
-#
 M_Logger = ValueLogger(:M)
-# Pulse_logger = ValueLogger(:pulse)
 B_Logger = ValueLogger(:b)
 T_Logger = ValueLogger(:T)
 
+fullsweep = xL*yL*zL
+anneal_time = time_fctr*fullsweep*Steps_1
+point_repeat = fullsweep*time_fctr
 
-
-Metro_and_recal = CompositeAlgorithm(metropolis, Recalc(3), M_Logger, B_Logger, T_Logger, 
-    (1,1000, point_repeat, point_repeat, point_repeat),
-    Route(metropolis => M_Logger, :M => :value), 
-    Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
-    Route(metropolis => Recalc(3), :hamiltonian),
+Metro_and_recal = CompositeAlgorithm(metropolis, M_Logger, B_Logger, T_Logger,
+    (1, point_repeat, point_repeat, point_repeat),
+    Route(metropolis => M_Logger, :M => :value),
+    Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
     Route(metropolis => T_Logger, :isinggraph => :value, transform = temp)
-    )
+)
 
-
-pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, (1, point_repeat))
-pulse_part2 = CompositeAlgorithm(Metro_and_recal, pulse2, (1, point_repeat))
-anneal_part1 = CompositeAlgorithm(Metro_and_recal, Anealing1, 
+anneal_partB = CompositeAlgorithm(Metro_and_recal, AnealingB,
     (1, point_repeat),
-    Route(metropolis => Anealing1, :isinggraph), 
-    )
-anneal_part2 = CompositeAlgorithm(Metro_and_recal, Anealing2, 
-    (1, point_repeat),
-    Route(metropolis => Anealing2, :isinggraph),  
-    )
-anneal_partB = CompositeAlgorithm(Metro_and_recal, AnealingB, 
-    (1, point_repeat),
-    Route(metropolis => AnealingB, :isinggraph),  
-    )
+    Route(metropolis => AnealingB, :isinggraph),
+)
 
-bias_part1 = CompositeAlgorithm(Metro_and_recal, bias1, (1, point_repeat))
-
-# Anealing_step = Routine(
-#     anneal_part1, anneal_part2,
-#     (anneal_time,anneal_time),     
-#     )
-
-Anealing_step = Routine(
-    anneal_partB,
-    (anneal_time,),     
-    )
-
-# Bias_test = Routine(bias_part1,
-#     (pulsetime,), 
-#     Route(metropolis => bias1, :hamiltonian, :M),     
-#     Route(metropolis => M_Logger, :M => :value), 
-#     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
-#     Route(metropolis => Recalc(3), :hamiltonian),
-#     )
-
+Anealing_step = Routine(anneal_partB, (anneal_time,))
 
 createProcess(g, Anealing_step, lifetime = 1)
+c = process(g) |> fetch
 
+voltage1 = c[B_Logger].values
+Pr1      = c[M_Logger].values
+Temp1    = c[T_Logger].values
 
-# createProcess(g, Pulse_and_Relax, lifetime = 1)
+# # ============ SAVE (PNG + XLSX) ============
+# date_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
+# base_name = string(
+#     "Scale=", round(Scale, digits=4),
+#     "_Screening=", round(Screening, digits=4),
+#     "_timefctr=", round(time_fctr, digits=4),
+#     "_Steps_1=", round(Steps_1, digits=4),
+#     "_Eb=", round(E_barrier, digits=4),
+#     "_Epp=", round(Epp_1, digits=4),
+#     "_Temp_aneal=", round(Temp_aneal, digits=4),
+#     "_", date_str
+# )
 
-# getcontext(g)
-# getcontext(g)[pulse1]
+# png_path  = joinpath(outdir, base_name * ".png")
+# xlsx_path = joinpath(outdir, base_name * ".xlsx")
 
-### estimate time
-# est_remaining(process(g))
-# Wait until it is done
-c = process(g) |> fetch # If you want to close ctr+c
-voltage1= c[B_Logger].values
-Pr1= c[M_Logger].values
-Temp1 = c[T_Logger].values
+# # Figure: Temperature vs Pr
+# fTPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Temperature", ylabel = "Pr"), ax -> lines!(ax, Temp1, Pr1))
+# try
+#     save(png_path, fTPr)
+#     println("Saved figure: ", png_path)
+# catch err
+#     @warn "Failed to save figure" err
+# end
 
+# # Pr distribution histogram
+# P = state(g[])
+# v = vec(P)
+# bins = -1.5:0.05:1.5
+# h = fit(Histogram, v, bins)
+# density = h.weights ./ sum(h.weights)
 
+# fig_dist = Figure()
+# ax_dist = Axis(fig_dist[1, 1], xlabel="P", ylabel="Probability")
+# barplot!(ax_dist, h.edges[1][1:end-1], density; width = step(bins))
 
-# f2 = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax,voltage1, Pr1))
-# f3 = makieaxis(f -> Axis(f[1, 1], xlabel = "Step",ylabel = "Pr"), ax -> lines!(ax,Pr1))
-f4 = makieaxis(f -> Axis(f[1, 1], xlabel = "Temperature", ylabel = "Pr"), ax -> lines!(ax,Temp1, Pr1))
+# png_path_dist = joinpath(outdir, base_name * "_Pr_distribution.png")
+# try
+#     save(png_path_dist, fig_dist)
+#     println("Saved Pr distribution figure: ", png_path_dist)
+# catch err
+#     @warn "Failed to save Pr distribution figure" err
+# end
 
+# # Excel: series + distribution + params
+# n = min(length(Temp1), length(Pr1))
+# df_series = DataFrame(Temp1 = Float64.(Temp1[1:n]), Pr = Float64.(Pr1[1:n]))
 
-# ----- Save last figure (w2) + export data & parameters to Excel -----
-# Choose output directory (edit this path as needed)
-outdir = raw"C:\Users\P317151\Documents\data\Model_V1.0\20260217\Annealing\Scale = 1"
-mkpath(outdir)
+# bin_left = Float64.(h.edges[1][1:end-1])
+# bin_center = bin_left .+ step(bins)/2
+# df_dist = DataFrame(
+#     bin_left   = bin_left,
+#     bin_center = bin_center,
+#     prob       = Float64.(density),
+#     counts     = Float64.(h.weights)
+# )
 
-date_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
+# params = DataFrame(
+#     key = String[
+#         "JIsing","a1","b1","c1","E_barrier","Eypp_1","xL","yL","zL","Scale","Screening","Steps_1","time_fctr",
+#         "anneal_time","point_repeat","Temp_aneal"
+#     ],
+#     value = Any[
+#         JIsing, a1, b1, c1, E_barrier, Epp_1, xL, yL, zL, Scale, Screening, Steps_1, time_fctr,
+#         anneal_time, point_repeat, Temp_aneal
+#     ]
+# )
 
-base_name = string(
-    "Scale=", round(Scale, digits=4),
-    "_Screening=", round(Screening, digits=4),
-    "_timefctr=", round(time_fctr, digits=4),
-    "_Steps_1=", round(Steps_1, digits=4),
-    "_Eb=", round(E_barrier, digits=4),
-    "_Epp=", round(Epp_1, digits=4),
-    "_Temp_aneal=", round(Temp_aneal, digits=4),
-    "_", date_str
-)
+# XLSX.openxlsx(xlsx_path, mode="w") do xf
+#     xf[1].name = "series"
+#     XLSX.writetable!(xf["series"], collect(eachcol(df_series)), names(df_series))
 
-png_path  = joinpath(outdir, base_name * ".png")
-xlsx_path = joinpath(outdir, base_name * ".xlsx")
+#     XLSX.addsheet!(xf, "Pr_distribution")
+#     XLSX.writetable!(xf["Pr_distribution"], collect(eachcol(df_dist)), names(df_dist))
 
-# save figure of (voltage1, Pr1)
-try
-    save(png_path, f4)
-    println("Saved figure: ", png_path)
-catch err
-    @warn "Failed to save figure" err
-end
+#     XLSX.addsheet!(xf, "params")
+#     XLSX.writetable!(xf["params"], collect(eachcol(params)), names(params))
+# end
+# println("Saved Excel: ", xlsx_path)
 
-# ---------- Pr distribution histogram (new figure) ----------
-P = state(g[])
-v = vec(P)
+    # # Return only small metadata to avoid memory blow-up
+    # return (; Screening = Float64(Screening), png_path, png_path_dist, xlsx_path)
+# end
 
-bins = -1.5:0.05:1.5
-h = fit(Histogram, v, bins)
-density = h.weights ./ sum(h.weights)
+# # ---- parameters to sweep ----
+# Scale = 2
+# Screening_values = 15   # <-- change range here
 
-fig_dist = Figure()
-ax_dist = Axis(fig_dist[1, 1], xlabel="P", ylabel="Probability")
-barplot!(ax_dist,
-    h.edges[1][1:end-1],
-    density;
-    width = step(bins)
-)
+# # ---- loop over Screening ----
+# results = Dict{Float64, Any}()
+# for Screening in Screening_values
+#     @info "Running sweep" Screening
+#     res = run_one_screening!(g; Scale=Scale, Screening=Float64(Screening))
+#     results[Float64(Screening)] = res
+# end
 
-# Save distribution figure
-png_path_dist = joinpath(outdir, base_name * "_Pr_distribution.png")
-try
-    save(png_path_dist, fig_dist)
-    println("Saved Pr distribution figure: ", png_path_dist)
-catch err
-    @warn "Failed to save Pr distribution figure" err
-end
-
-
-# Sheet 1: voltage1 & Pr1
-# ensure same length
-n = min(length(voltage1), length(Pr1))
-df_series = DataFrame(Temp1 = Float64.(Temp1[1:n]), Pr = Float64.(Pr1[1:n]))
-
-# Sheet 2: Pr distribution
-# bin_left: left edge, bin_center: center, probability: density
-bin_left = Float64.(h.edges[1][1:end-1])
-bin_center = bin_left .+ step(bins)/2
-
-df_dist = DataFrame(
-    bin_left   = bin_left,
-    bin_center = bin_center,
-    prob       = Float64.(density),
-    counts     = Float64.(h.weights)
-)
-
-
-# Sheet 3: parameters
-params = DataFrame(
-    key = String[
-        "JIsing","a1","b1","c1","E_barrier","Eypp_1","xL","yL","zL","Scale","Screening","Steps_1","time_fctr",
-        "anneal_time","pulsetime","relaxtime","point_repeat","Amp1","Amp2"
-    ],
-    value = Any[
-        JIsing, a1, b1, c1, E_barrier, Epp_1, xL, yL, zL, Scale, Screening, Steps_1, time_fctr,
-        anneal_time, pulsetime, relaxtime, point_repeat, Amp1, Amp2
-    ]
-)
-
-
-XLSX.openxlsx(xlsx_path, mode="w") do xf
-    # 用默认 Sheet1 当 series，避免多一个空 sheet
-    xf[1].name = "series"
-    XLSX.writetable!(xf["series"], collect(eachcol(df_series)), names(df_series))
-    # Distribution sheet
-    XLSX.addsheet!(xf, "Pr_distribution")
-    XLSX.writetable!(xf["Pr_distribution"], collect(eachcol(df_dist)), names(df_dist))
-    # 再新增 params
-    XLSX.addsheet!(xf, "params")
-    XLSX.writetable!(xf["params"], collect(eachcol(params)), names(params))
-end
-println("Saved Excel: ", xlsx_path)
-# ----- End export -----
+println("Done. Available keys(Screening) = ", collect(keys(results)))
