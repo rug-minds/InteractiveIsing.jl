@@ -38,7 +38,7 @@ end
 
 Base.size(c::CoulombHamiltonian) = c.size
 
-function CoulombHamiltonian(;
+@inline function CoulombHamiltonian(;
     scaling::Real = 1.f0,
     screening = Inf32,
     screen_len_top = screening,
@@ -85,7 +85,7 @@ function CoulombHamiltonian(;
     )
 end
 
-function CoulombHamiltonian(
+@inline function CoulombHamiltonian(
     g::AbstractIsingGraph,
     scaling::Real = 1.f0;
     screening = Inf32,
@@ -105,7 +105,7 @@ function CoulombHamiltonian(
     )
 end
 
-function reconstruct(c::CoulombHamiltonian, g::AbstractIsingGraph)
+@inline function reconstruct(c::CoulombHamiltonian, g::AbstractIsingGraph)
     gdims = size(g[1])                 # (Nx,Ny,Nz-1)
     etype = eltype(g)
 
@@ -397,7 +397,7 @@ function recalc!(c::CoulombHamiltonian{T}) where {T}
 end
 
 # function ΔH(c::CoulombHamiltonian{T,N}, params, proposal) where {T,N}
-function calculate(::ΔH, c::CoulombHamiltonian{T,N}, state, proposal) where {T,N}
+@inline function calculate(::ΔH, c::CoulombHamiltonian{T,N}, state, proposal) where {T,N}
     lattice_size = size(c)
     spin_idx = at_idx(proposal)
     charge_coord_below = idxToCoord(spin_idx, lattice_size)

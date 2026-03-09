@@ -8,24 +8,22 @@ struct Quadratic{T, S} <: HamiltonianTerm
     self::S
 end
 
-Quadratic() = Quadratic(StaticFill(1.0), nothing)
-function Quadratic(c; self = nothing)
+@inline Quadratic() = Quadratic(StaticFill(1.0), nothing)
+@inline function Quadratic(c; self = nothing)
     if isnothing(self)
         return Quadratic(StaticFill(c), nothing)
     else
         Quadratic(StaticFill(c), self)
     end
 end
-Quadratic(g::AbstractIsingGraph) = reconstruct(Quadratic(), g)
-reconstruct(q::Quadratic, g::AbstractIsingGraph) = Quadratic(q.c, adj(g).diag)
+@inline Quadratic(g::AbstractIsingGraph) = reconstruct(Quadratic(), g)
+@inline reconstruct(q::Quadratic, g::AbstractIsingGraph) = Quadratic(map(eltype(g),q.c), adj(g).diag)
 
-function calculate(::ΔH, hterm::Q, state, proposal) where Q <: Quadratic
+@inline function calculate(::ΔH, hterm::Q, state, proposal) where Q <: Quadratic
     j = at_idx(proposal)
-
-    return hterm.self[j]*(to_val(proposal)^2 - state[j]^2)
+    return hterm.c[]*hterm.self[j]*(to_val(proposal)^2 - state[j]^2)
 end
 
-function calculate(::dH, hterm::Quadratic, state, s_idx)
-
+@inline function calculate(::dH, hterm::Quadratic, state, s_idx)
     return 2*hterm.c[]*hterm.self[s_idx]*state[s_idx]
 end

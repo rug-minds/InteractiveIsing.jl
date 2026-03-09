@@ -54,6 +54,7 @@ Base.similar(fa::FillArray{T,N}, ::Type{S}, dims::Dims) where {T,N,S} = Array{S}
 Base.strides(::FillArray{T,N}) where {T,N} = ntuple(_ -> 0, N)
 @inline Base.pointer(fa::FillArray{T}) where T = Ptr{T}(pointer_from_objref(fa.val))
 
+@inline Base.map(f, fa::FillArray{T}) where T = FillArray(f(fa.val[]), size(fa))
 Base.iterate(fa::FillArray{T}, state=1) where T = state > length(fa) ? nothing : (fa.val[], state + 1)
 
 # ── LoopVectorization / @turbo integration ────────────────────────────────────

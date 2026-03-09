@@ -3,7 +3,7 @@ For initialization
 """
 struct EmptyHamiltonian <: HamiltonianTerm end
 
-reconstruct(ham::Hamiltonian, g::AbstractIsingGraph) = ham
-reconstruct(::EmptyHamiltonian, g::AbstractIsingGraph) = EmptyHamiltonian()
+@inline reconstruct(ham::Hamiltonian, g::AbstractIsingGraph) = ham
+@inline reconstruct(::EmptyHamiltonian, g::AbstractIsingGraph) = EmptyHamiltonian()
 
 export reconstruct

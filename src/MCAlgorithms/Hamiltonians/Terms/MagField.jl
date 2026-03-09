@@ -7,20 +7,20 @@ struct MagField{PV <: ParamTensor} <: HamiltonianTerm
     b::PV
 end
 
-function MagField(; active = false, val = 0f0, homogeneous = false)
+@inline function MagField(; active = false, val = 0f0, homogeneous = false)
     if homogeneous
         return MagField(HomogeneousParam(val, 0; active, description = "Magnetic Field"))
     end
     return MagField(typeof(val), 0, active)
 end
 
-MagField{PV}(g::AbstractIsingGraph) where PV <: ParamTensor = MagField{PV}(PV())
+@inline MagField{PV}(g::AbstractIsingGraph) where PV <: ParamTensor = MagField{PV}(PV())
 
-HomogeneousMagField(g::AbstractIsingGraph, val = zero(eltype(g))) = reconstruct(MagField(active = true, val = val, homogeneous = true), g)
-MagField(g::AbstractIsingGraph, active::Bool) = reconstruct(MagField(active = active, val = zero(eltype(g))), g)
-MagField(type, len, active = false) = MagField(ParamTensor(zeros(type, len), type |> zero; active, description = "Magnetic Field"))
+@inline HomogeneousMagField(g::AbstractIsingGraph, val = zero(eltype(g))) = reconstruct(MagField(active = true, val = val, homogeneous = true), g)
+@inline MagField(g::AbstractIsingGraph, active::Bool) = reconstruct(MagField(active = active, val = zero(eltype(g))), g)
+@inline MagField(type, len, active = false) = MagField(ParamTensor(zeros(type, len), type |> zero; active, description = "Magnetic Field"))
 
-function reconstruct(hterm::MagField, g::AbstractIsingGraph)
+@inline function reconstruct(hterm::MagField, g::AbstractIsingGraph)
     T = eltype(g)
     len = statelen(g)
 
@@ -52,13 +52,13 @@ end
 params(::Type{MagField}) = HamiltonianParams((:b, Vector{GraphType}, GraphType(0), "Magnetic Field"))
 
 # function ΔH(::MagField, hargs, proposal)
-function calculate(::ΔH, hterm::MagField, state, proposal)
+@inline function calculate(::ΔH, hterm::MagField, state, proposal)
     j = at_idx(proposal)
     return -hterm.b[j]*(to_val(proposal) - state[j])
 end
 
 # function dH(::MagField, hargs, s_idx)
-function calculate(::dH, hterm::MagField, state, s_idx)
+@inline function calculate(::dH, hterm::MagField, state, s_idx)
     return -hterm.b[s_idx]
 end
 

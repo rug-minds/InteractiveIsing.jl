@@ -1,7 +1,7 @@
 ## GAUSSIAN BERNOULLI
 export GaussianBernoulli
 struct GaussianBernoulli <: HamiltonianTerm end
-reconstruct(hterm::GaussianBernoulli, g::AbstractIsingGraph) = hterm
+@inline reconstruct(hterm::GaussianBernoulli, g::AbstractIsingGraph) = hterm
 
 # params(::Type{GaussianBernoulli}, GraphType::Type) = GatherHamiltonianParams(
 #                                 (:σ, Vector{GraphType}, GraphType(1), "Standard Deviation"), 
@@ -17,7 +17,7 @@ reconstruct(hterm::GaussianBernoulli, g::AbstractIsingGraph) = hterm
 
 
 # function ΔH(::GaussianBernoulli, hargs, proposal)
-function calculate(::ΔH, hterm::GaussianBernoulli, hargs, proposal)
+@inline function calculate(::ΔH, hterm::GaussianBernoulli, hargs, proposal)
     s = hargs.s
     w = hargs.w
     self = hargs.self
@@ -37,7 +37,7 @@ function calculate(::ΔH, hterm::GaussianBernoulli, hargs, proposal)
 end
 
 # function dH(::GaussianBernoulli, hargs, s_idx)
-function calculate(::dH, hterm::GaussianBernoulli, hargs, s_idx)
+@inline function calculate(::dH, hterm::GaussianBernoulli, hargs, s_idx)
     s = hargs.s
     w = hargs.w
     self = hargs.self

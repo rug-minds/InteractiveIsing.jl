@@ -4,11 +4,11 @@ struct Sextic{S, PV <: ParamTensor} <: HamiltonianTerm
     c::PV
 end
 
-Sextic(val::Real = 1) = Sextic(nothing, ScalarParam(val; description = "Sextic Coefficient"))
+@inline Sextic(val::Real = 1) = Sextic(nothing, ScalarParam(val; description = "Sextic Coefficient"))
 
 # Sextic holds a 0-dimensional (e.g. scalar) ParamTensor
-Sextic(g::AbstractIsingGraph, val = 1) = reconstruct(Sextic(val), g)
-function reconstruct(hterm::Sextic, g::AbstractIsingGraph)
+@inline Sextic(g::AbstractIsingGraph, val = 1) = reconstruct(Sextic(val), g)
+@inline function reconstruct(hterm::Sextic, g::AbstractIsingGraph)
     T = eltype(g)
     c = ParamTensor(
         fill(convert(T, hterm.c[])),
@@ -26,12 +26,12 @@ end
 # end
 
 # function ΔH(::Sextic, hargs, proposal)
-function calculate(::ΔH, hterm::Sextic, state, proposal)
+@inline function calculate(::ΔH, hterm::Sextic, state, proposal)
     j = at_idx(proposal)
     return hterm.c[]*hterm.self[j]*(to_val(proposal)^6 - state[j]^6)
 end
 
 # function dH(::Sextic, hargs, s_idx)
-function calculate(::dH, hterm::Sextic, state, s_idx)
+@inline function calculate(::dH, hterm::Sextic, state, s_idx)
     return 6*hterm.c[]*hterm.self[s_idx]*state[s_idx]^5
 end

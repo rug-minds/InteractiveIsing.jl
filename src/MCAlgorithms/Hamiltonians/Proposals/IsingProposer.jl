@@ -31,3 +31,5 @@ function Base.rand(proposer::IsingGraphProposer)
     proposal_state = @inline inline_layer_dispatch(layer -> randstate(rng, layer, oldstate), layer_idx, proposer.layers)
     return FlipProposal{:s, :j, statetype(proposer)}(j, oldstate, proposal_state, layer_idx, false)
 end
+
+random_proposal(g::AbstractIsingGraph) = rand(MersenneTwister(), get_proposer(g))

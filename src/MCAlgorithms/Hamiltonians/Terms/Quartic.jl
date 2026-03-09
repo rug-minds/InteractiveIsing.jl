@@ -4,11 +4,11 @@ struct Quartic{S, PV <: ParamTensor} <: HamiltonianTerm
     c::PV
 end
 
-Quartic(val::Real = 1) = Quartic(nothing, ScalarParam(val; description = "Quartic Coefficient"))
+@inline Quartic(val::Real = 1) = Quartic(nothing, ScalarParam(val; description = "Quartic Coefficient"))
 
 # Quartic holds a 0-dimensional (e.g. scalar) ParamTensor
-Quartic(g::AbstractIsingGraph, val = 1) = reconstruct(Quartic(val), g)
-function reconstruct(hterm::Quartic, g::AbstractIsingGraph)
+@inline Quartic(g::AbstractIsingGraph, val = 1) = reconstruct(Quartic(val), g)
+@inline function reconstruct(hterm::Quartic, g::AbstractIsingGraph)
     T = eltype(g)
     c = ParamTensor(
         fill(convert(T, hterm.c[])),
@@ -25,12 +25,12 @@ end
 # end
 
 # function ΔH(::Quartic, hargs, proposal)
-function calculate(::ΔH, hterm::Quartic, state, proposal)
+@inline function calculate(::ΔH, hterm::Quartic, state, proposal)
     j = at_idx(proposal)
     return hterm.c[]*hterm.self[j]*(to_val(proposal)^4 - state[j]^4)
 end
 
 # function dH(::Quartic, hargs, s_idx)
-function calculate(::dH, hterm::Quartic, state, s_idx)
+@inline function calculate(::dH, hterm::Quartic, state, s_idx)
     return 4*hterm.c[]*hterm.self[s_idx]*state[s_idx]^3
 end

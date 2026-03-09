@@ -20,29 +20,35 @@ Two integration paths:
    constant is returned; after inlining, LLVM can DCE the entire index chain.
    Use this for literal-speed sparse/indirect @turbo loops.
 """
-struct StaticFill{Val, T, N, S} <: AbstractArray{T,N}
-    size::S
+struct StaticFill{Val, T, N} <: AbstractArray{T,N}
+    size::NTuple{N, Int}
 
     function StaticFill(val::T) where T
-        new{val, T, 0, Tuple{}}(())
+        new{val, T, 0}(())
     end
 
     function StaticFill(val::T, size::Int...) where T
-        new{val, T, length(size), Tuple{Vararg{Int, length(size)}}}(size)
+        new{val, T, length(size)}(size)
     end
 end
 
+StaticFill(val::T, size::Tuple{}) where T = StaticFill(val)
+
 # -- Base AbstractArray interface ----------------------------------------------
 
-Base.size(sf::StaticFill) = sf.size
-Base.length(sf::StaticFill) = prod(sf.size)
+@inline Base.size(sf::StaticFill) = sf.size
+@inline Base.length(sf::StaticFill) = prod(sf.size)
 
-@inline function Base.getindex(sf::StaticFill{Val, T, N}, idx::Integer) where {Val, T, N}
+@inline Base.getindex(::StaticFill{Val, T, 0}) where {Val, T} = Val::T
+
+@inline Base.map(f, sf::StaticFill{Val, T, N}) where {Val, T, N} = StaticFill(f(Val), size(sf))
+
+@inline Base.@propagate_inbounds function Base.getindex(sf::StaticFill{Val, T, N}, idx::Integer) where {Val, T, N}
     @boundscheck checkbounds(sf, idx)
     return Val::T
 end
 
-@inline function Base.getindex(sf::StaticFill{Val, T, N}, idxs::Integer...) where {Val, T, N}
+@inline Base.@propagate_inbounds function Base.getindex(sf::StaticFill{Val, T, N}, idxs::Integer...) where {Val, T, N}
     @boundscheck checkbounds(sf, idxs...)
     return Val::T
 end
@@ -50,10 +56,10 @@ end
 @inline Base.setindex!(::StaticFill, val, idx...) =
     throw(ArgumentError("Cannot set value of a StaticFill, it is immutable"))
 
-Base.IndexStyle(::Type{<:StaticFill}) = IndexLinear()
-Base.similar(sf::StaticFill{V,T,N}, ::Type{S}, dims::Dims) where {V,T,N,S} = Array{S}(undef, dims)
+@inline Base.IndexStyle(::Type{<:StaticFill}) = IndexLinear()
+@inline Base.similar(sf::StaticFill{V,T,N}, ::Type{S}, dims::Dims) where {V,T,N,S} = Array{S}(undef, dims)
 
-Base.iterate(sf::StaticFill{Val,T}, state=1) where {Val,T} =
+@inline Base.iterate(sf::StaticFill{Val,T}, state=1) where {Val,T} =
     state > length(sf) ? nothing : (Val::T, state + 1)
 
 # -- LoopVectorization / @turbo: direct v[j] path (FastRange) -----------------
@@ -61,7 +67,7 @@ Base.iterate(sf::StaticFill{Val,T}, state=1) where {Val,T} =
 # FastRange{T}(val, Zero) is special-cased by LV's GroupedStridedPointers:
 # vload computes val + 0*(index+offset) which fast-math folds to val.
 
-LoopVectorization.check_args(::StaticFill) = true
+@inline LoopVectorization.check_args(::StaticFill) = true
 
 @inline function LayoutPointers.stridedpointer_preserve(sf::StaticFill{V,T,N}) where {V,T,N}
     LayoutPointers.FastRange{T}(T(V), StaticInt{0}()), nothing
