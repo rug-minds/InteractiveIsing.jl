@@ -18,7 +18,6 @@ end
 export reshapeView
 
 include("Utils.jl")
-include("Data.jl")
 include("GraphDefects.jl")
 include("Parameters.jl")
 include("IsingGraph.jl")

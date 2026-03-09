@@ -10,7 +10,20 @@ struct Clamping{PBeta, BY} <: Hamiltonian
     β::PBeta
     y::BY
 end
-Clamping(g::AbstractIsingGraph, β = one(eltype(g)), y = zeros(eltype(g), nstatess(g))) = Clamping(Ref(β), y)
+Clamping(β::Real = 1f0, y::AbstractVector = Float32[]) = Clamping(Ref(β), y)
+function Clamping(g::AbstractIsingGraph, β = one(eltype(g)), y = nothing)
+    isnothing(y) && (y = zeros(eltype(g), nstates(g)))
+    return reconstruct(Clamping(β, y), g)
+end
+function reconstruct(hterm::Clamping, g::AbstractIsingGraph)
+    T = eltype(g)
+    ynew = zeros(T, nstates(g))
+    copylen = min(length(hterm.y), length(ynew))
+    if copylen > 0
+        @inbounds ynew[1:copylen] .= convert.(T, hterm.y[1:copylen])
+    end
+    return Clamping(Ref(convert(T, hterm.β[])), ynew)
+end
 
 params(::Type{Clamping}, GraphType) = GatherHamiltonianParams((:β, GraphType, GraphType(0), "Clamping Factor"), (:y, Vector{GraphType}, GraphType(0), "Targets"))
 

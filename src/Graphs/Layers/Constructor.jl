@@ -86,10 +86,5 @@ function parse_isinglayer(args...; periodic = true)
     return IsingLayerData(size, stype, stateset, weightgen, topology, coords)
 end
 
-remove_parsed_args(args, last_parsed_idx::Int) = args[(last_parsed_idx+1):end]
-remove_parsed_args(args, ::Nothing) = error("Attempted to remove parsed args, but no args were parsed.")
 
-function remove_optional_parsed_arg(args, parsed_idx)
-    isnothing(parsed_idx) ? args : args[setdiff(1:length(args), parsed_idx)]
-end
 

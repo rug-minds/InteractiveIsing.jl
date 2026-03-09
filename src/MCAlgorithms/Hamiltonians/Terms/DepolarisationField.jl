@@ -13,16 +13,54 @@ end
 
 Base.Expr(::DepolField) = :( -(dpf[j]/(surface_NxNy * c[]))*(s[j]) )
 
+function DepolField(; top_layers = 1, bottom_layers = top_layers, c = 1f0, zfunc = z -> exp(-abs(z - 1)))
+    T = typeof(c)
+    pv = HomogeneousParam(zero(T), 0, description = "Depolarisation Field")
+    cv = ScalarParam(T, c; description = "Depolarisation Field")
+    return DepolField(
+        pv,
+        cv,
+        zfunc,
+        Int32(top_layers),
+        Int32(bottom_layers),
+        (1, 1, 1),
+        Ref(zero(T)),
+        1,
+    )
+end
+
 function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1f0, zfunc = z -> exp(-(min(abs(z-1), abs(z-size(g[1],3))))))
-    pv = HomogeneousParam(eltype(g)(0), length(state(g[1])), description = "Depolarisation Field")
-    cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
-    # wg = @WG (dr) -> 1/dr^3 NN = NN
-    # fv = sparse(genLayerConnections(g[1], wg)..., nstates(g[1]), nstates(g[1]))
-    NxNy = prod(size(g[1])[1:end-1])
-    surface_NxNy = (bottom_layers+top_layers)*NxNy
-    dpf = DepolField(pv, cv, zfunc, Int32(top_layers), Int32(bottom_layers), size(g[1]), Ref(eltype(g)(sum(state(g[1])))), surface_NxNy)
-    init!(dpf, g)
-    return dpf
+    return reconstruct(
+        DepolField(; top_layers, bottom_layers, c, zfunc),
+        g,
+    )
+end
+
+function reconstruct(dpf::DepolField, g::AbstractIsingGraph)
+    T = eltype(g)
+    pv = HomogeneousParam(T(0), length(state(g[1])); description = description(dpf.dpf))
+    cv = ParamTensor(
+        fill(convert(T, dpf.c[])),
+        convert(T, default(dpf.c));
+        active = isactive(dpf.c),
+        size = tuple(),
+        description = description(dpf.c),
+    )
+    nxny = prod(size(g[1])[1:end-1])
+    surface_NxNy = (dpf.bottom_layers + dpf.top_layers) * nxny
+
+    rebound = DepolField(
+        pv,
+        cv,
+        dpf.zfunc,
+        Int32(dpf.top_layers),
+        Int32(dpf.bottom_layers),
+        size(g[1]),
+        Ref(T(sum(state(g[1])))),
+        surface_NxNy,
+    )
+    init!(rebound, g)
+    return rebound
 end
 
 Base.CartesianIndices(df::DepolField) = CartesianIndices(df.size)

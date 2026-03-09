@@ -1,11 +1,14 @@
 """
 Multi Layer Constructor
 """
-function IsingGraph(layers::IsingLayerData...;
+function IsingGraph(layers::Union{IsingLayerData, Hamiltonian}...;
     precision = Float32, 
     adj = nothing,
     self = :nothing # :nothing, :homogeneous, :full
     )
+
+    #Parse hamiltonian and filter
+    ham, layers = type_parse(Hamiltonian, layers...; default = Ising(), error = false)
 
     lengths = map(l -> length(l), layers)
     total_length = sum(lengths)
@@ -48,7 +51,7 @@ function IsingGraph(layers::IsingLayerData...;
         # Default Algo
         IsingMetropolis(),
         #Hamiltonians
-        EmptyHamiltonian(),
+        ham,
         #Defects
         GraphDefects(nothing),
         Dict{Symbol, Any}(),
@@ -56,7 +59,7 @@ function IsingGraph(layers::IsingLayerData...;
     )
     g.defects.graph = g
     initRandomState(g)
-    g.hamiltonian = Ising(g)
+    g.hamiltonian = reconstruct(ham, g)
     return g
 end
 
@@ -64,6 +67,9 @@ end
 Single Layer Constructor
 """
 function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, self = :nothing)
+    ham, args = type_parse(Hamiltonian, args...; default = Ising(), error = false)
+
     layer = parse_isinglayer(size1, args...; periodic = periodic)
-    return IsingGraph(layer; precision, adj, self )
+
+    return IsingGraph(ham, layer; precision, adj, self )
 end

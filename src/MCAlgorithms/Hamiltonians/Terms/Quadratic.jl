@@ -7,7 +7,9 @@ struct Quadratic{S} <: HamiltonianTerm
     self::S
 end
 
-Quadratic(g::AbstractIsingGraph) = Quadratic(g.adj.diag)
+Quadratic() = Quadratic(nothing)
+Quadratic(g::AbstractIsingGraph) = reconstruct(Quadratic(), g)
+reconstruct(::Quadratic, g::AbstractIsingGraph) = Quadratic(adj(g).diag)
 
 function calculate(::ΔH, hterm::Quadratic, state, proposal)
     j = at_idx(proposal)

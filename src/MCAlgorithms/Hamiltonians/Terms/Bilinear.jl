@@ -5,7 +5,9 @@ struct Bilinear{A} <: HamiltonianTerm
     adj::A
 end
 
-Bilinear(g::AbstractIsingGraph) = Bilinear(g.adj)
+Bilinear() = Bilinear(nothing)
+Bilinear(g::AbstractIsingGraph) = reconstruct(Bilinear(), g)
+reconstruct(::Bilinear, g::AbstractIsingGraph) = Bilinear(adj(g))
 
 # function ΔH(::Bilinear, hargs, proposal)
 @inline function calculate(::ΔH, hterm::BL, state::S, proposal) where {BL<:Bilinear, S}

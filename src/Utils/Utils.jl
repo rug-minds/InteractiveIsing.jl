@@ -29,6 +29,7 @@ include("Unroll.jl")
 include("LoopVectorization.jl")
 include("Fills/Fills.jl")
 include("SparseVal.jl")
+include("TypeParsing.jl")
 include("Macros.jl")
 
 include("Parameters/Parameters.jl")

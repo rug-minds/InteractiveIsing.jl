@@ -7,11 +7,47 @@ struct MagField{PV <: ParamTensor} <: HamiltonianTerm
     b::PV
 end
 
+function MagField(; active = false, val = 0f0, homogeneous = false)
+    if homogeneous
+        return MagField(HomogeneousParam(val, 0; active, description = "Magnetic Field"))
+    end
+    return MagField(typeof(val), 0, active)
+end
+
 MagField{PV}(g::AbstractIsingGraph) where PV <: ParamTensor = MagField{PV}(PV())
 
-HomogeneousMagField(g::AbstractIsingGraph, val = zero(eltype(g))) = MagField(HomogeneousParam(val, size(g)...; description = "Magnetic Field"))
-MagField(g::AbstractIsingGraph, active::Bool) = MagField(eltype(g), statelen(g), active)
+HomogeneousMagField(g::AbstractIsingGraph, val = zero(eltype(g))) = reconstruct(MagField(active = true, val = val, homogeneous = true), g)
+MagField(g::AbstractIsingGraph, active::Bool) = reconstruct(MagField(active = active, val = zero(eltype(g))), g)
 MagField(type, len, active = false) = MagField(ParamTensor(zeros(type, len), type |> zero; active, description = "Magnetic Field"))
+
+function reconstruct(hterm::MagField, g::AbstractIsingGraph)
+    T = eltype(g)
+    len = statelen(g)
+
+    if ishomogeneous(hterm.b)
+        bnew = HomogeneousParam(
+            convert(T, hterm.b[]),
+            len;
+            default = convert(T, default(hterm.b)),
+            active = isactive(hterm.b),
+            description = description(hterm.b),
+        )
+        return MagField(bnew)
+    end
+
+    vals = zeros(T, len)
+    copylen = min(length(hterm.b), len)
+    if copylen > 0
+        @inbounds vals[1:copylen] .= convert.(T, hterm.b[1:copylen])
+    end
+    bnew = ParamTensor(
+        vals,
+        convert(T, default(hterm.b));
+        active = isactive(hterm.b),
+        description = description(hterm.b),
+    )
+    return MagField(bnew)
+end
 
 params(::Type{MagField}) = HamiltonianParams((:b, Vector{GraphType}, GraphType(0), "Magnetic Field"))
 
@@ -42,4 +78,3 @@ end
 # ΔH_paramrefs(::MagField) = @ParameterRefs b[j]*s[j]
 # # H_expr(::Union{MagField, Type{<:MagField}}) = :(b[j]*s[j])
 # ΔH_expr[MagField] = :(b[j]*s[j])
-

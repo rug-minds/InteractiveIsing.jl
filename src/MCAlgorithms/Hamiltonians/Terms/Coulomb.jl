@@ -38,6 +38,53 @@ end
 
 Base.size(c::CoulombHamiltonian) = c.size
 
+function CoulombHamiltonian(;
+    scaling::Real = 1.f0,
+    screening = Inf32,
+    screen_len_top = screening,
+    screen_len_bot = screening,
+    recalc = 1
+)
+    T = promote_type(typeof(float(scaling)), typeof(float(screen_len_top)), typeof(float(screen_len_bot)), Float32)
+    dims = (1, 1, 2)
+    Nx, Ny, Nz = dims
+    Nxh = Nx ÷ 2 + 1
+
+    ρ = zeros(T, dims...)
+    ρhat = zeros(Complex{T}, Nxh, Ny, Nz)
+    uhat = zeros(Complex{T}, Nxh, Ny, Nz)
+
+    s = @view ρ[:, :, 1]
+    uh = @view uhat[:, :, 1]
+    Pxy = plan_rfft(s, (1, 2); flags = FFTW.MEASURE)
+    iPxy = plan_irfft(uh, Nx, (1, 2); flags = FFTW.MEASURE)
+
+    scaling_pt = StaticParam(convert(T, scaling))
+
+    return CoulombHamiltonian{T, typeof(scaling_pt), typeof(Pxy), typeof(iPxy), 3}(
+        dims,
+        ρ,
+        ρhat,
+        uhat,
+        zeros(T, dims...),
+        scaling_pt,
+        convert(T, screen_len_top),
+        convert(T, screen_len_bot),
+        one(T),
+        one(T),
+        one(T),
+        one(T),
+        zeros(T, Nz - 1),
+        Pxy,
+        iPxy,
+        zeros(T, Nxh, Ny, Nz),
+        zeros(T, Nxh, Ny, Nz),
+        zeros(Complex{T}, Nxh, Ny, Nz),
+        recalc,
+        Ref(1),
+    )
+end
+
 function CoulombHamiltonian(
     g::AbstractIsingGraph,
     scaling::Real = 1.f0;
@@ -46,6 +93,19 @@ function CoulombHamiltonian(
     screen_len_bot = screening,
     recalc = 1
 )
+    return reconstruct(
+        CoulombHamiltonian(;
+            scaling,
+            screening,
+            screen_len_top,
+            screen_len_bot,
+            recalc,
+        ),
+        g,
+    )
+end
+
+function reconstruct(c::CoulombHamiltonian, g::AbstractIsingGraph)
     gdims = size(g[1])                 # (Nx,Ny,Nz-1)
     etype = eltype(g)
 
@@ -80,22 +140,20 @@ function CoulombHamiltonian(
     dp_scratch = zeros(Complex{etype}, Nxh, Ny, Nz) # scratch space for forward sweep
     du_self = zeros(etype, Nz_dip)
 
-    scaling = eltype(g)(scaling)/az # Convert from dipole moment to charge (assumes unit lattice spacing in z)
-                                    # Assuming Pz = scaling * Δz
-    scaling = StaticParam(scaling) 
+    physical_scaling = etype(c.scaling[] * c.az)
+    scaling_pt = StaticParam(physical_scaling / az) # Convert from dipole moment to charge
 
-    c = CoulombHamiltonian{etype, typeof(scaling), typeof(Pxy), typeof(iPxy), 3}(
-        dims, ρ, ρhat, uhat, zeros(etype, dims...), scaling, screen_len_top, screen_len_bot, ax, ay, az, 1f0, du_self,
+    rebound = CoulombHamiltonian{etype, typeof(scaling_pt), typeof(Pxy), typeof(iPxy), 3}(
+        dims, ρ, ρhat, uhat, zeros(etype, dims...), scaling_pt, etype(c.screen_top), etype(c.screen_bot), ax, ay, az, etype(1), du_self,
         Pxy, iPxy,
         mod_upperd,
         inv_den,
         dp_scratch,
-        recalc,
+        c.recalc_steps,
         Ref(1)
     )
-    init!(c, g)
-    return c
-   
+    init!(rebound, g)
+    return rebound
 end
 
 function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)

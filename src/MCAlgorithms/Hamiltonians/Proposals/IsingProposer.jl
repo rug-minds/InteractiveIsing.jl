@@ -20,7 +20,7 @@ end
 
     oldstate = proposer.state[j]::statetype(proposer)
     layer_idx = spin_idx_to_layer_idx(j, proposer.layers)
-    proposal_state = @inline inline_layer_dispatch(layer -> (@inline randstate(rng, layer, oldstate)), layer_idx, proposer.layers)
+    proposal_state = @inline w(layer -> (@inline randstate(rng, layer, oldstate)), layer_idx, proposer.layers)
     return FlipProposal{:s, :j, statetype(proposer)}(j, oldstate, proposal_state, layer_idx, false)::FlipProposal{:s, :j, statetype(proposer)}
 end
 
