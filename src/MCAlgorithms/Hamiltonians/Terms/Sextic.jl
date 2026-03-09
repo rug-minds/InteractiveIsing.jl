@@ -28,10 +28,10 @@ end
 # function ΔH(::Sextic, hargs, proposal)
 function calculate(::ΔH, hterm::Sextic, state, proposal)
     j = at_idx(proposal)
-    return hterm.sc[]*hterm.self[j]*(to_val(proposal)^6 - state[j]^6)
+    return hterm.c[]*hterm.self[j]*(to_val(proposal)^6 - state[j]^6)
 end
 
 # function dH(::Sextic, hargs, s_idx)
 function calculate(::dH, hterm::Sextic, state, s_idx)
-    return 6*hterm.sc[]*hterm.self[s_idx]*state[s_idx]^5
+    return 6*hterm.c[]*hterm.self[s_idx]*state[s_idx]^5
 end
