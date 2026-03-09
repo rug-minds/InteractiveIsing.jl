@@ -492,6 +492,14 @@ function Processes.step!(ic::ImageCapture, context::C) where C
 end
 ##################################################################################
 
+function IntegrateAndLog(type = Float64, loginterval = 1)
+    integrator = Integrator(type, name = :integrate_and_log)
+    logger = Logger(type, name = :integrate_and_log)
+    c = CompositeAlgorithm(integrator, logger, (1, loginterval), Route(integrator => logger, :total => :value, transform = x -> x[]))
+    pack = package(c)
+end
+
+
 xL = 50  # Length in the x-dimension
 yL = 50  # Length in the y-dimension
 zL = 10   # Length in the z-dimension
@@ -529,7 +537,7 @@ g = II.IsingGraph(xL, yL, zL,
         Continuous(), 
         wg5, 
         LatticeConstants(1.0, 1.0, 1.0),
-        Ising(b=:homogeneous) + CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + Quartic() + Sextic(), 
+        Ising(b=:homogeneous) + CoulombHamiltonian(scaling = Scale, screening = Screening_values, recalc = 1000) + Quartic() + Sextic(), 
         StateSet(-1.5f0, 1.5f0),
         periodic = (:x,:y), 
         self = :homogeneous)
@@ -549,20 +557,25 @@ temp(g, Temp_aneal)
 AnealingB = LinAnealingB(Temp_aneal, 0f0)
 metropolis = g.default_algorithm
 
-M_Logger = ValueLogger(:M)
-B_Logger = ValueLogger(:b)
-T_Logger = ValueLogger(:T)
-
 fullsweep = xL*yL*zL
 anneal_time = time_fctr*fullsweep*Steps_1
 point_repeat = fullsweep*time_fctr
 
-Metro_and_recal = CompositeAlgorithm(metropolis, M_Logger, B_Logger, T_Logger,
-    (1, point_repeat, point_repeat, point_repeat),
-    Route(metropolis => M_Logger, :M => :value),
+M_Integrate_and_Logger = IntegrateAndLog(Float32, point_repeat)
+# M_Logger = ValueLogger(:M)
+B_Logger = ValueLogger(:b)
+T_Logger = ValueLogger(:T)
+
+
+
+Metro_and_recal = CompositeAlgorithm(metropolis, M_Integrate_and_Logger, B_Logger, T_Logger,
+    (1, 1, point_repeat, point_repeat),
+    Route(metropolis => M_Integrate_and_Logger, :proposal => :Δvalue, transform = proposal -> accepteddelta(proposal)),
     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
     Route(metropolis => T_Logger, :isinggraph => :value, transform = temp)
 )
+
+
 
 anneal_partB = CompositeAlgorithm(Metro_and_recal, AnealingB,
     (1, point_repeat),
