@@ -3,15 +3,21 @@ H = self[i]*s[i]
 
 The Quadratic self energy part of the Ising Hamiltonian
 """
-struct Quadratic{T, N} <: HamiltonianTerm 
+struct Quadratic{T, S} <: HamiltonianTerm 
     c::T
-    self::AbstractArray{T,N}
+    self::S
 end
 
 Quadratic() = Quadratic(StaticFill(1.0), nothing)
-Quadratic(c, self = nothing) = Quadratic(fill(c, size(self)), self)
+function Quadratic(c; self = nothing)
+    if isnothing(self)
+        return Quadratic(StaticFill(c), nothing)
+    else
+        Quadratic(StaticFill(c), self)
+    end
+end
 Quadratic(g::AbstractIsingGraph) = reconstruct(Quadratic(), g)
-reconstruct(::Quadratic, g::AbstractIsingGraph) = Quadratic(adj(g).diag)
+reconstruct(q::Quadratic, g::AbstractIsingGraph) = Quadratic(q.c, adj(g).diag)
 
 function calculate(::ΔH, hterm::Quadratic, state, proposal)
     j = at_idx(proposal)

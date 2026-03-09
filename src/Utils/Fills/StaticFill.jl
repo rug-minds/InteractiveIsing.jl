@@ -20,15 +20,15 @@ Two integration paths:
    constant is returned; after inlining, LLVM can DCE the entire index chain.
    Use this for literal-speed sparse/indirect @turbo loops.
 """
-struct StaticFill{Val, T, N} <: AbstractArray{T,N}
-    size::NTuple{N, Int}
+struct StaticFill{Val, T, N, S} <: AbstractArray{T,N}
+    size::S
 
     function StaticFill(val::T) where T
-        new{val, T, 0}(())
+        new{val, T, 0, Tuple{}}(())
     end
 
     function StaticFill(val::T, size::Int...) where T
-        new{val, T, length(size)}(size)
+        new{val, T, length(size), Tuple{Vararg{Int, length(size)}}}(size)
     end
 end
 

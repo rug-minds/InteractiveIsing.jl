@@ -17,7 +17,6 @@ g = ii.IsingGraph(100,100,10,
         periodic = (:x,:y), 
         self = :homogeneous)
 
-
 interface(g)
 createProcess(g)
 
