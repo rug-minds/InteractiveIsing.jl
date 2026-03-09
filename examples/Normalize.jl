@@ -25,6 +25,7 @@ genAdj!(g, wg)
 
 adj = g.adj
 newadj = normalize_adj_by_average_col(adj, 1f0)
+g.adj = newadj
 
 @show adj[:,1]
 @show newadj[:,1]
