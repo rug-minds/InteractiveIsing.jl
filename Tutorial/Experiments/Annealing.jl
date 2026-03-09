@@ -334,10 +334,43 @@ function Processes.init(tp::LinAnealingA, args)
 end
 function Processes.step!(::LinAnealingA, context::C) where C
     (;current_T, dT, isinggraph) = context
-    temp(isinggraph, current_T)
+    temp(isinggraph, max(current_T, 0))
     return (;current_T = current_T + dT)
 end
 ##################################################################################
+
+##################################################################################
+### struct start: LinAnealingB (simple sine waveform)
+### Run with LinAnealingB
+struct LinAnealingB{T} <: ProcessAlgorithm
+    start_T::T
+    stop_T::T
+end
+function Processes.init(tp::LinAnealingB, args)
+    start_T = tp.start_T
+    stop_T = tp.stop_T
+    steps = num_calls(args)
+    num_samples = steps/2
+    first  = LinRange(start_T, stop_T, round(Int,num_samples))
+    second = LinRange(stop_T, start_T, round(Int,num_samples))
+
+    tem_pulse = vcat(first, second)
+
+    # Predefine storage arrays
+    step = 1
+    return (;tem_pulse, step, temval = tem_pulse[1])
+end
+function Processes.step!(::LinAnealingB, context::C) where C
+    (;tem_pulse, step, isinggraph) = context
+
+    temval = tem_pulse[step]
+
+    temp(isinggraph, max(temval, 0))
+
+    return (;step = step + 1, temval)
+end
+##################################################################################
+
 
 ##################################################################################
 struct ValueLogger{Name} <: ProcessAlgorithm end
@@ -420,12 +453,12 @@ temp(g, Temperature)
 
 ### Run simulation process
 fullsweep = xL*yL*zL
-time_fctr = 1
-Steps_1 = 100000
+time_fctr = 100
+Steps_1 = 6000
 anneal_time = fullsweep*1*Steps_1
 pulsetime = fullsweep*1/2*Steps_1
 relaxtime = fullsweep*1/4*Steps_1
-point_repeat = time_fctr*fullsweep
+point_repeat = fullsweep*time_fctr
 
 Amp1 = 20
 Amp2 = 20
@@ -442,6 +475,7 @@ bias1 = BiasA(Bias1)
 
 Anealing1 = LinAnealingA(Temp_aneal, 0f0)
 Anealing2 = LinAnealingA(0f0, Temp_aneal)
+AnealingB = LinAnealingB(Temp_aneal, 0f0)
 metropolis = g.default_algorithm
 
 #
@@ -453,7 +487,7 @@ T_Logger = ValueLogger(:T)
 
 
 Metro_and_recal = CompositeAlgorithm(metropolis, Recalc(3), M_Logger, B_Logger, T_Logger, 
-    (1,1000, fullsweep, fullsweep, fullsweep),
+    (1,1000, point_repeat, point_repeat, point_repeat),
     Route(metropolis => M_Logger, :M => :value), 
     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]), 
     Route(metropolis => Recalc(3), :hamiltonian),
@@ -471,13 +505,22 @@ anneal_part2 = CompositeAlgorithm(Metro_and_recal, Anealing2,
     (1, point_repeat),
     Route(metropolis => Anealing2, :isinggraph),  
     )
-bias_part1 = CompositeAlgorithm(Metro_and_recal, bias1, (1, point_repeat))
-
-Anealing_step = Routine(
-    anneal_part1, anneal_part2,
-    (anneal_time,anneal_time),     
+anneal_partB = CompositeAlgorithm(Metro_and_recal, AnealingB, 
+    (1, point_repeat),
+    Route(metropolis => AnealingB, :isinggraph),  
     )
 
+bias_part1 = CompositeAlgorithm(Metro_and_recal, bias1, (1, point_repeat))
+
+# Anealing_step = Routine(
+#     anneal_part1, anneal_part2,
+#     (anneal_time,anneal_time),     
+#     )
+
+Anealing_step = Routine(
+    anneal_partB,
+    (anneal_time,),     
+    )
 
 # Bias_test = Routine(bias_part1,
 #     (pulsetime,), 
@@ -521,6 +564,7 @@ date_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
 base_name = string(
     "Scale=", round(Scale, digits=4),
     "_Screening=", round(Screening, digits=4),
+    "_timefctr=", round(time_fctr, digits=4),
     "_Steps_1=", round(Steps_1, digits=4),
     "_Eb=", round(E_barrier, digits=4),
     "_Epp=", round(Epp_1, digits=4),
@@ -568,7 +612,7 @@ end
 # Sheet 1: voltage1 & Pr1
 # ensure same length
 n = min(length(voltage1), length(Pr1))
-df_series = DataFrame(voltage = Float64.(voltage1[1:n]), Pr = Float64.(Pr1[1:n]))
+df_series = DataFrame(Temp1 = Float64.(Temp1[1:n]), Pr = Float64.(Pr1[1:n]))
 
 # Sheet 2: Pr distribution
 # bin_left: left edge, bin_center: center, probability: density
