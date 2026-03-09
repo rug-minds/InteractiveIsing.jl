@@ -1,23 +1,29 @@
 export Sextic
-struct Sextic{S, PV <: ParamTensor} <: HamiltonianTerm 
+struct Sextic{S, PV} <: HamiltonianTerm 
     self::S
     c::PV
 end
 
-@inline Sextic(val::Real = 1) = Sextic(nothing, ScalarParam(val; description = "Sextic Coefficient"))
+@inline Sextic(val::Real = 1; self = nothing) = Sextic(self, FillArray(val))
 
 # Sextic holds a 0-dimensional (e.g. scalar) ParamTensor
 @inline Sextic(g::AbstractIsingGraph, val = 1) = reconstruct(Sextic(val), g)
 @inline function reconstruct(hterm::Sextic, g::AbstractIsingGraph)
     T = eltype(g)
-    c = ParamTensor(
-        fill(convert(T, hterm.c[])),
-        convert(T, default(hterm.c));
-        active = isactive(hterm.c),
-        size = tuple(),
-        description = description(hterm.c),
-    )
-    return Sextic(g.adj.diag, c)
+    c = map(eltype(g), hterm.c)
+    if isnothing(hterm.self)
+        return Sextic(g.adj.diag, c)
+    elseif hterm.self == :homogeneous
+        return Sextic(FillArray(one(T), size(g.adj.diag)), c)
+    end
+    # c = ParamTensor(
+    #     fill(convert(T, hterm.c[])),
+    #     convert(T, default(hterm.c));
+    #     active = isactive(hterm.c),
+    #     size = tuple(),
+    #     description = description(hterm.c),
+    # )
+    # return Sextic(g.adj.diag, c)
 end
 
 # ΔH_expr[Sextic] = :(sc[]*self[j]*s[j]^6)

@@ -13,7 +13,7 @@ g = ii.IsingGraph(100,100,10,
         wg, 
         LatticeConstants(1.0, 1.0, 20.),
         StateSet(-1.5f0, 1.5f0),
-        Ising(b = :homogeneous) + Clamping(1f0),
+        Ising(b = :homogeneous) + Clamping(1f0)+ Quartic() + Sextic(),
         periodic = (:x,:y), 
         self = :homogeneous)
 

@@ -23,11 +23,15 @@ struct FillArray{T, N} <: AbstractArray{T,N}
 end
 
 FillArray(val::T, size::Int...) where T = FillArray{T, length(size)}(Ref(val), size)
+FillArray(val::T, size::NTuple{N,Int}) where {T,N} = FillArray{T, N}(Ref(val), size)
+FillArray(val::T, ::Tuple{}) where T = FillArray(val)
 
 # ── Base AbstractArray interface ──────────────────────────────────────────────
 
 Base.size(fa::FillArray) = fa.size
 Base.length(fa::FillArray) = prod(fa.size)
+
+@inline Base.getindex(fa::FillArray{T,0}) where T = fa.val[]
 
 @inline function Base.getindex(fa::FillArray{T}, idx::Integer) where T
     @boundscheck checkbounds(fa, idx)
