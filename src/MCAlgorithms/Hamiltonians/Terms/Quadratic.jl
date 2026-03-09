@@ -9,6 +9,7 @@ struct Quadratic{T, N} <: HamiltonianTerm
 end
 
 Quadratic() = Quadratic(StaticFill(1.0), nothing)
+Quadratic(c, self = nothing) = Quadratic(fill(c, size(self)), self)
 Quadratic(g::AbstractIsingGraph) = reconstruct(Quadratic(), g)
 reconstruct(::Quadratic, g::AbstractIsingGraph) = Quadratic(adj(g).diag)
 

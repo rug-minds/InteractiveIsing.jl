@@ -23,13 +23,14 @@ Two integration paths:
 struct StaticFill{Val, T, N} <: AbstractArray{T,N}
     size::NTuple{N, Int}
 
+    function StaticFill(val::T) where T
+        new{val, T, 0}(())
+    end
+
     function StaticFill(val::T, size::Int...) where T
         new{val, T, length(size)}(size)
     end
 end
-
-# Explicit scalar default: `StaticFill(val)` -> 0-dimensional fill.
-StaticFill(val::T) where T = StaticFill{val, T, 0}(())
 
 # -- Base AbstractArray interface ----------------------------------------------
 
