@@ -19,7 +19,7 @@ end
 Quadratic(g::AbstractIsingGraph) = reconstruct(Quadratic(), g)
 reconstruct(q::Quadratic, g::AbstractIsingGraph) = Quadratic(q.c, adj(g).diag)
 
-function calculate(::ΔH, hterm::Quadratic, state, proposal)
+function calculate(::ΔH, hterm::Q, state, proposal) where Q <: Quadratic
     j = at_idx(proposal)
 
     return hterm.self[j]*(to_val(proposal)^2 - state[j]^2)
@@ -27,5 +27,5 @@ end
 
 function calculate(::dH, hterm::Quadratic, state, s_idx)
 
-    return 2*hterm.self[s_idx]*state[s_idx]
+    return 2*hterm.c[]*hterm.self[s_idx]*state[s_idx]
 end
