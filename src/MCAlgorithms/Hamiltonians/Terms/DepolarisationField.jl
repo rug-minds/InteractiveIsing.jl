@@ -13,16 +13,54 @@ end
 
 Base.Expr(::DepolField) = :( -(dpf[j]/(surface_NxNy * c[]))*(s[j]) )
 
+function DepolField(; top_layers = 1, bottom_layers = top_layers, c = 1f0, zfunc = z -> exp(-abs(z - 1)))
+    T = typeof(c)
+    pv = HomogeneousParam(zero(T), 0, description = "Depolarisation Field")
+    cv = ScalarParam(T, c; description = "Depolarisation Field")
+    return DepolField(
+        pv,
+        cv,
+        zfunc,
+        Int32(top_layers),
+        Int32(bottom_layers),
+        (1, 1, 1),
+        Ref(zero(T)),
+        1,
+    )
+end
+
 function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1f0, zfunc = z -> exp(-(min(abs(z-1), abs(z-size(g[1],3))))))
-    pv = HomogeneousParam(eltype(g)(0), length(state(g[1])), description = "Depolarisation Field")
-    cv = ScalarParam(eltype(g), c; description = "Depolarisation Field")
-    # wg = @WG (dr) -> 1/dr^3 NN = NN
-    # fv = sparse(genLayerConnections(g[1], wg)..., nstates(g[1]), nstates(g[1]))
-    NxNy = prod(size(g[1])[1:end-1])
-    surface_NxNy = (bottom_layers+top_layers)*NxNy
-    dpf = DepolField(pv, cv, zfunc, Int32(top_layers), Int32(bottom_layers), size(g[1]), Ref(eltype(g)(sum(state(g[1])))), surface_NxNy)
-    init!(dpf, g)
-    return dpf
+    return reconstruct(
+        DepolField(; top_layers, bottom_layers, c, zfunc),
+        g,
+    )
+end
+
+function reconstruct(dpf::DepolField, g::AbstractIsingGraph)
+    T = eltype(g)
+    pv = HomogeneousParam(T(0), length(state(g[1])); description = description(dpf.dpf))
+    cv = ParamTensor(
+        fill(convert(T, dpf.c[])),
+        convert(T, default(dpf.c));
+        active = isactive(dpf.c),
+        size = tuple(),
+        description = description(dpf.c),
+    )
+    nxny = prod(size(g[1])[1:end-1])
+    surface_NxNy = (dpf.bottom_layers + dpf.top_layers) * nxny
+
+    rebound = DepolField(
+        pv,
+        cv,
+        dpf.zfunc,
+        Int32(dpf.top_layers),
+        Int32(dpf.bottom_layers),
+        size(g[1]),
+        Ref(T(sum(state(g[1])))),
+        surface_NxNy,
+    )
+    init!(rebound, g)
+    return rebound
 end
 
 Base.CartesianIndices(df::DepolField) = CartesianIndices(df.size)
@@ -76,6 +114,21 @@ function init!(dpf::DepolField, g)
     return dpf
 end
 
+function calculate(::ΔH, dpf::DepolField, state, proposal)
+    j = at_idx(proposal)
+    T = eltype(state)
+    ΔM = delta(proposal)
+    D = dpf.dpf[]/dpf.surface_NxNy
+    M = dpf.M[]
+    ΔD = zero(T)
+    if j ∈ dpf # In surface
+        z = layers_deep(j, dpf)
+        ΔD = -T(dpf.zfunc(z)) * ΔM / dpf.surface_NxNy
+    end
+    c = dpf.c[]
+    return -(D * ΔM + M * ΔD + ΔD * ΔM) / c
+end
+
 function update!(::Metropolis, dpf::DepolField, context)
     (;proposal) = context
     if isaccepted(proposal)
@@ -88,56 +141,3 @@ function update!(::Metropolis, dpf::DepolField, context)
     end
     return 
 end
-
-# ΔH_expr[DepolField] = 
-
-# function ΔH(dpf::DepolField, params, proposal)
-function calculate(::ΔH, dpf::DepolField, hargs, proposal)
-    j = at_idx(proposal)
-    T = eltype(hargs.s)
-    ΔM = delta(proposal)
-    D = dpf.dpf[]/dpf.surface_NxNy
-    M = dpf.M[]
-    ΔD = zero(T)
-    if j ∈ dpf # In surface
-        z = layers_deep(j, dpf)
-        ΔD = -T(dpf.zfunc(z)) * ΔM / dpf.surface_NxNy
-    end
-    c = hargs.c[]
-    return -(D * ΔM + M * ΔD + ΔD * ΔM) / c
-end
-
-# function calculate(::ΔH, dpf::DepolField, hargs, proposal)
-#     j = at_idx(proposal)
-#     if !(j ∈ dpf)
-#         return zero(eltype(hargs.s))
-#     end
-
-#     T = eltype(hargs.s)
-#     z = layers_deep(j, dpf)
-#     ΔD = -T(dpf.zfunc(z)) * delta(proposal)
-#     D = dpf.dpf[]
-#     c = hargs.c[]
-#     return (D * ΔD + T(0.5) * (ΔD^2)) / c
-# end
-
-
-# function calculate(::ΔH, dpf::DepolField, hargs, proposal)
-#     (;s, self, c) = hargs
-#     j = getidx(proposal)
-#     base_term = 1/2*c[]*dpf.dpf[j]
-#     if j ∈ dpf # If in the surface
-#                 # Also compute the effect of changhing the field
-#         # field_delta = zero(eltype(s))
-#         # @turbo for ptr in nzrange(dpf.field_adj, j)
-#         #     i = dpf.field_adj.rowval[ptr]
-#         #     w_ij = dpf.field_adj.nzval[ptr]
-#         #     field_delta += w_ij * s[i]
-#         # end
-#         # z = layers_deep(j, dpf)
-#         # base_term -= dpf.zfunc(z)*field_delta
-#         base_term *= 2
-#     end
-
-#     return base_term * (s[j] - proposal[])
-# end

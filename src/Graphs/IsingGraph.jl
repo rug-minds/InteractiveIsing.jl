@@ -8,211 +8,26 @@ intprecision(::Type{Float32}) = Int32
 intprecision(::Type{Float64}) = Int64
 
 # Ising Graph Representation and functions
-mutable struct IsingGraph{T <: AbstractFloat, M <: AbstractMatrix{T}, Layers, N} <: AbstractIsingGraph{T}
+mutable struct IsingGraph{T <: AbstractFloat, M, Layers, N} <: AbstractIsingGraph{T}
     # Vertices and edges
     state::AbstractArray{T,N}
     # Adjacency Matrix
     adj::M
-    self::AbstractArray{T,1} # Diagonal of adj stored as a separate array for efficiency
+    # self::AbstractArray{T,1} # Diagonal of adj stored as a separate array for efficiency
     
     temp::T
 
     default_algorithm::ProcessAlgorithm
     hamiltonian::Hamiltonian
     
-
     # Connection between layers, Could be useful to track for faster removing of layers
-    layerconns::Dict{Set, Int32}
-    # params::Parameters #TODO: Make this a custom type?
-
-    # For notifying simulations or other things
-    # emitter::Emitter
+    # layerconns::Dict{Set, Int32}
 
     defects::GraphDefects
     # d::GraphData{T} #Other stuff. Maybe just make this a dict?
     addons::Dict{Symbol, Any}
 
     layers::Layers
-end
-
-const PottsGraph{T, M, L}  = IsingGraph{T, M, L, 2}
-const GlauberGraph{T, M, L} =IsingGraph{T, M, L, 3}
-
-"""
-Single layer constructor
-"""
-function IsingGraph(dims::Int...; 
-                    periodic = nothing, 
-                    set = (-1f0, 1f0), 
-                    weights::Union{Nothing,WeightGenerator} = nothing,
-                    type = Continuous,
-                    kwargs...)
-    single_layer = Layer(dims...; set, stype = type, weights, periodic, kwargs...)
-    IsingGraph(single_layer; kwargs...)
-end
-
-
-"""
-Default initializer for IsingGraphs
-    Give layers in the following format:
-    (Layer1, Layer2, ...)
-    or
-    (Layer1, Weightgenerator12, Layer2, Layer3, WeightGenerator34)
-"""
-function IsingGraph(layers_or_wgs::Union{AbstractLayerProperties, WeightGenerator}...; precision = Float32, kwargs...)
-    layers_props = tuple((layers_or_wgs[i] for i in eachindex(layers_or_wgs) if isa(layers_or_wgs[i], LayerProperties))...)
-
-    # Fill the weight generator list
-    layer_idx = 0
-    wgs = []
-    for l_or_wgs in layers_or_wgs
-        if l_or_wgs isa WeightGenerator
-            push!(wgs, (layer_idx => layer_idx + 1 , l_or_wgs))
-        else
-            layer_idx += 1
-        end 
-    end
-
-    # Initialize layers 
-    l_startidx = 1
-    layers = ntuple(i -> begin
-        l = IsingLayer(nothing, i, l_startidx, layers_props[i])
-        l_datalen = datalen(layers_props[i])
-        l_startidx += l_datalen
-        l
-    end,
-    length(layers_props))
-    
-
-    _datalen = l_startidx - 1
-    
-
-    self = StaticParam(0f0, _datalen, description = "Self Connections")
-
-
-    g = IsingGraph{precision, SparseMatrixCSC{precision,Int32}, typeof(layers), 1}(
-        # sim,
-        zeros(precision, _datalen),
-        SparseMatrixCSC{precision,intprecision(precision)}(undef,_datalen,_datalen),
-        self,
-        #Temp            
-        1f0,
-        # Default algorithm
-        IsingMetropolis(),
-        #Hamiltonians
-        Quadratic(),
-        #Layers
-        Dict{Pair, Int32}(),
-        #Emitter
-        # Emitter(Observable[]),
-        #Defects
-        GraphDefects(nothing),
-        Dict{Symbol, Any}(),
-        layers
-    )
-
-    # Set Graph refs
-    g.defects.graph = g
-    for layer in g.layers
-        layer.graph = g
-        # println("Making weights for layer ", layer)
-        genAdj!(layer, get_weightgenerator(layer))
-    end
-
-    initRandomState(g)
-    g.hamiltonian = Ising(g)
-
-    # cb = x -> layerIdx(sim(x))
-    # set_listener_callback!(g, cb)
-    # println("cb: ", cb)
-
-    return g
-end
-
-function makelayers(g, arcs)
-    return ntuple(i -> IsingLayer(g, arcs[i]), length(arcs))
-end
-
-nlayers(g::IsingGraph) = length(g.layers)
-
-"""
-The user gives:
-    [(length, width, height, type), ...]
-    where type = Continuous or Discrete
-    this puts the data in the correct format
-"""
-function decode_architecture(arcs)
-    num_layers = length(arcs)
-    architecture = []
-    # for layer in arcs
-    #     # If last is a state type, just push
-    #     if layer[end] isa Type && layer[end] <: StateType
-    #         if length(layer) == 3
-    #             push!(architecture, (layer[1:2]..., nothing, layer[3]))
-    #         else
-    #             push!(architecture, (layer..., Continuous()))
-    #         end
-    #     else # add default state type
-    #         if length(layer) == 2
-    #             push!(architecture, (layer..., nothing, Continuous()))
-    #         else
-    #             push!(architecture, (layer..., Continuous()))
-    #         end
-    #     end
-    # end
-    return architecture
-end
-
-"""
-User gives, for discrete: (s1,s2,s3,...)
-For continuous: (s1,s2) which are the intervals
-"""
-function decode_statesets(sets, numlayers, precision)
-     # Create the sets for each layer
-    if isnothing(sets) # Just make some sets
-        sets = repeat([convert.(precision,(-1,1))], numlayers)
-    else # Correct the given sets
-        sets = map(x->convert.(precision, x), sets)
-        if length(sets) < numlayers
-            lengthdiff = numlayers - length(sets)
-            for _ in 1:lengthdiff # If less sets than layers, add default set
-                push!(sets, convert.(precision,(-1,1)))
-            end
-        else
-            sets = sets[1:numlayers]
-        end
-    end
-    return sets
-end
-
-function arch_to_datalen(architecture, idx = length(architecture))
-    total = 0
-    for layer in architecture[1:idx]
-        prod = 1
-        for dim in 1:3
-            if !isnothing(layer[dim]) && layer[dim] isa Real
-                prod *= layer[dim]
-            end
-        end
-        total += prod
-    end
-    return total
-end
-
-function arch_to_startidxs(architecture)
-    startidxs = Int32[1]
-    total = 1
-    for layer in architecture
-        prod = 1
-        for dim in 1:3
-            if !isnothing(layer[dim]) && layer[dim] isa Real
-                prod *= layer[dim]
-            end
-        end
-        total += prod
-        push!(startidxs, total)
-    end
-    return startidxs
 end
 
 Base.eltype(::IsingGraph{T}) where T = T
@@ -240,7 +55,7 @@ export coords
 @inline clamprange!(g::IsingGraph, clamp, idxs) = setrange!(defects(g), clamp, idxs)
 export clamprange!
 
-@setterGetter IsingGraph adj params
+@setterGetter IsingGraph adj params layers
 # @inline params(g::IsingGraph) = g.params
 export params
 @inline nStates(g::IsingGraph) = length(state(g))::Int
@@ -249,15 +64,15 @@ export params
 export nstates
 
 @inline adj(g::IsingGraph) = g.adj
-@inline function adj(g::IsingGraph, adj)
-    @assert adj.m == adj.n == length(state(g))
+@inline function adj!(g::IsingGraph, adj)
+    @assert size(adj, 1) == length(state(g)) && size(adj, 2) == length(state(g))
     g.adj = adj
     # Add callbacks field to graph, which is a Dict{typeof(<:Function), Vector{Function}}
     # And create a setterGetter macro that includes the callbacks
-    reprepare(g)
+    reinit(g)
     return adj
 end
-set_adj!(g::IsingGraph, vecs::Tuple) = adj(g, sparse(vecs..., nStates(g), nStates(g)))
+set_adj!(g::IsingGraph, vecs::Tuple) = adj!(g, UndirectedAdjacency(g.adj, vecs...))
 export adj
 
 # @forwardfields IsingGraph GraphData d
@@ -281,8 +96,8 @@ end
 layeridxs(g::IsingGraph) = UnitRange{Int32}[graphidxs(unshuffled(layers(g))[i]) for i in 1:length(g)]
 @inline spinidx2layer_i_index(g, idx) = internal_idx(spinidx2layer(g, idx))
 @inline layer(g::IsingGraph, idx) = g.layers[idx]
-@inline Base.getindex(g::IsingGraph, idx) = g.layers[idx]
-@inline Base.getindex(g::IsingGraph) = g.layers[1]
+@inline Base.getindex(g::IsingGraph, idx) = IsingLayer(g, idx)
+@inline Base.getindex(g::IsingGraph) = IsingLayer(g, 1)
 @inline Base.length(g::IsingGraph) = length(g.layers)
 @inline Base.lastindex(g::IsingGraph) = length(g)
 Base.view(g::IsingGraph, idx) = view(g.layers, idx)
@@ -290,6 +105,8 @@ Base.view(g::IsingGraph, idx) = view(g.layers, idx)
 Base.get!(g::IsingGraph, s, d) = get!(g.addons, s, d)
 Base.get(g::IsingGraph, s) = get(g.addons, s)
 Base.get(g::IsingGraph, s, d) = get(g.addons, s, d)
+
+@inline layers(g::IsingGraph) = ntuple(i -> IsingLayer(g, i), length(g.layers))
 
 # Don't overload!
 @inline getstate(g::IsingGraph) = g.state
@@ -436,15 +253,16 @@ end
 ### SELF ENERGY
 @inline function activateself!(g)
     g.self = activate(g.self) # Ensure self is active
-    reprepare(g)
+    reinit(g)
 end
+
 @inline function disableself!(g)
     g.self = deactivate(g.self) # Ensure self is inactive
-    reprepare(g)
+    reinit(g)
 end
 @inline function homogeneousself!(g, val = 1)
     g.self = sethomogeneoustensor(g.self, val) # Set self to zero
-    reprepare(g)
+    reinit(g)
 end
 export activateself!, disableself!, homogeneousself!
 

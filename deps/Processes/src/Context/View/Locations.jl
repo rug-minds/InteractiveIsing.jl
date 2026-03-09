@@ -93,12 +93,31 @@ end
 ########### Getting Properties  ###########
 ###########################################
 
-@inline Base.keys(scv::SCV) where SCV <: SubContextView = propertynames(@inline get_all_locations(scv))
-@inline Base.propertynames(scv::SCV) where SCV <: SubContextView = propertynames(@inline get_all_locations(scv))
-@inline Base.haskey(scv::SCV, name::Symbol) where SCV <: SubContextView = haskey(scv, Val(name))
+@inline Base.keys(scv::SCV) where SCV <: SubContextView = @inline propertynames(@inline get_all_locations(scv))
+@inline Base.propertynames(scv::SCV) where SCV <: SubContextView = @inline propertynames(@inline get_all_locations(scv))
+@inline Base.haskey(scv::SCV, name::Symbol) where SCV <: SubContextView = @inline haskey(get_all_locations(scv), name)
 @inline getregistry(scv::SCV) where SCV <: SubContextView = getregistry(getcontext(scv))
 @inline getproperty_fromsubcontext(scv::SCV, subcontextname::Symbol, varname::Symbol) where SCV <: SubContextView = @inline getproperty(getproperty(getcontext(scv), subcontextname), varname)
 @inline getinjected(scv::SCV, key) where SCV <: SubContextView = getproperty(getinjected(scv), key)
+@inline function Base.get(scv::SCV, name::Symbol, default) where SCV <: SubContextView
+    if haskey(scv, name)
+        return getproperty(scv, Val(name))
+    else
+        return default
+    end
+end
+
+@inline Base.@constprop :aggressive Base.getproperty(sct::SubContextView, v::Symbol) = getproperty(sct, Val(v))
+
+# """
+# Equivalent to getproperty(sct, Val(name)), but allows for inlining and constant propagation on the name argument
+# """
+# function Base.getproperty(sct::SubContextView, symb::S) where S <: Symbol
+#     locations = get_all_locations(sct)
+#     subcontext_name = algo_to_subcontext_names(sct, symb)
+#     varlocation = @inline getproperty(locations, subcontext_name)
+#     return @inline getproperty(sct, varlocation)
+# end
 
 const getprop_expr = Ref(Expr(:block))
 @inline @generated function Base.getproperty(sct::SCV, vl::Union{VarLocation{:subcontext}, VarLocation{:local}}) where SCV <: SubContextView
@@ -138,7 +157,6 @@ end
     return :( $has_key )
 end
 
-@inline Base.@constprop :aggressive Base.getproperty(sct::SubContextView, v::Symbol) = getproperty(sct, Val(v))
 @inline @generated function Base.getproperty(sct::SubContextView{CType, SubKey}, v::Val{key}) where {CType, SubKey, key}    
 
     locations = get_all_locations(sct)

@@ -3,7 +3,7 @@
 # =#
 export SingleLayerGraph, layer, state, size, topology, settopology!, genAdj!, setdist!
 
-const SingleLayerGraph{T<:AbstractFloat, M<:AbstractMatrix{T}} = IsingGraph{T,M,<:Tuple{<:AbstractIsingLayer}}
+const SingleLayerGraph{T<:AbstractFloat, M<:AbstractMatrix{T}} = IsingGraph{T,M,<:Tuple{<:IsingLayerData}}
 
 layer(g::SingleLayerGraph) = g[1]
 Base.CartesianIndices(g::SingleLayerGraph) = CartesianIndices(layer(g))

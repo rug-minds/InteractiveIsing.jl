@@ -53,7 +53,7 @@ function PackagedAlgo(comp::CompositeAlgorithm, name="")
 end
 
 
-Base.getindex(ca::PackagedAlgo, i) = getalgos(ca)[i]
+@inline Base.getindex(ca::PackagedAlgo, i) = getalgos(ca)[i]
 
 function Autokey(pa::PackagedAlgo, i::Int, prefix = Symbol())
     nameof = getname(pa) == Symbol() ? :PackagedAlgo : getname(pa)
@@ -67,9 +67,8 @@ end
 ####### Properties/Traits #######
 #################################
 
-@inline inc(ca::PackagedAlgo) = ca.inc[]
-@inline inc!(ca::PackagedAlgo) = (ca.inc[] += 1)
 @inline intervals(ca::Union{PackagedAlgo{T,I},Type{<:PackagedAlgo{T,I}}}) where {T,I} = I
+
 @inline interval(ca::Union{PackagedAlgo{T,I},Type{<:PackagedAlgo{T,I}}}, i) where {T,I} = intervals(ca)[i]
 @inline getalgotype(::Union{PackagedAlgo{T,I}, Type{<:PackagedAlgo{T,I}}}, idx) where {T,I} = T.parameters[idx]
 @inline numalgos(ca::Union{PackagedAlgo{T,I}, Type{<:PackagedAlgo{T,I}}}) where {T,I} = length(T.parameters)
@@ -83,9 +82,15 @@ end
 @inline match_by(::Union{Type{<:PackagedAlgo{T,I,NSR,id,CustomName,ContextKey}}, PackagedAlgo{T,I,NSR,id,CustomName,ContextKey}}) where {T,I,NSR,id,CustomName,ContextKey} = id
 @inline registry_entrytype(::Type{<:PackagedAlgo}) = PackagedAlgo
 
-reset!(ca::PackagedAlgo) = (ca.inc[] = 1; reset!.(ca.funcs))
+@inline reset!(ca::PackagedAlgo) = (ca.inc[] = 1; reset!.(ca.funcs))
 
 get_processentities(ca::PackagedAlgo) = getentries(getregistry(ca))
+
+@inline inc(ca::PackagedAlgo) = ca.inc[]
+@inline @generated function inc!(ca::PackagedAlgo)
+    _lcm = lcm(intervals(ca)...)
+    return :(ca.inc[] = mod1(ca.inc[] + 1, $_lcm))
+end
 ########################################
 ####### Identifiable Interface  ########
 ########################################

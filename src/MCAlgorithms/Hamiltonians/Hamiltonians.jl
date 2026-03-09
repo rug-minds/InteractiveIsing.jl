@@ -6,6 +6,7 @@ include("Interface.jl")
 include("Proposals/Proposals.jl")
 include("Hamiltonian.jl")
 include("HamiltonianTerms.jl")
+include("Show.jl")
 
 include("Functionals.jl")
 

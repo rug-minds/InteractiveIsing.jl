@@ -13,27 +13,55 @@ Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val),
 
 
 export Coords
-mutable struct IsingLayer{StateType, StateSet, Dim, Size, PtrRange, Top, Precision, AdjType} <: AbstractIsingLayer{StateType, Dim}
+struct IsingLayerData{StateType, StateSet, Dim, Size, PtrRange, Top} <: AbstractLayerData{Dim}
     # Reference to the graph holding it    
     # Can be nothing so that saving is easier
-    graph::Union{Nothing, IsingGraph{Precision, AdjType}}
     name::String
-    # Idx of the layer in the graph
-    const idx::Int
     # TRAITS, Not used?
     traits::NamedTuple
     coords::Coords{Tuple{Int32,Int32,Int32}}
+    weightgenerator::Base.RefValue{Union{WeightGenerator, Nothing}}
+
     # Keeps track of the connected layers
     connections::Dict{Pair{Int32,Int32}, Any} 
     # A layer can hold its own timers (WHY)
-    const timers::Vector{PTimer}
-    const top::Top   
+    top::Top   
 end
 
-function IsingLayer(
-            g::Union{Nothing, IsingGraph},
+"""
+Simple Constructor
+"""
+function IsingLayerData(size::Tuple, statetype, stateset, wg::Union{WeightGenerator, Nothing}, topology, coords = Coords(nothing))
+    IsingLayerData{statetype, stateset, length(size), size, 1:prod(size), typeof(topology)}(
+        "Layer 1",
+        (;StateType = statetype, StateSet = stateset, Dim = length(size), Size = size, PtrRange = 1:prod(size), Top = typeof(topology)),
+        coords,
+        Base.RefValue{Union{WeightGenerator, Nothing}}(wg),
+        Dict{Pair{Int32,Int32}, Any}(),
+        topology
+    )
+end
+
+"""
+Offset the stateindex range, and set the stateset to be compatible with the precision
+"""
+function fix_layerdata(ild::IsingLayerData{ST,SS,Dim,Size,PtrRange,Top}, precision, offset) where {ST,SS,Dim,Size,PtrRange,Top}
+    newset = convert.(precision, stateset(ild))
+    newrange = (1+offset):(offset + prod(size(ild)))
+    return IsingLayerData{ST, newset, Dim, Size, newrange, Top}(
+        name(ild),
+        traits(ild),
+        ild.coords,
+        ild.weightgenerator,
+        connections(ild),
+        top(ild)
+    )
+end
+
+
+function IsingLayerData(
             lsize,
-            idx, 
+            idx, #TODO REMOVE
             start::Int;
             stype = Discrete(), 
             precision = Float32,
@@ -44,13 +72,10 @@ function IsingLayer(
             coords = Coords(nothing), 
             adjtype = SparseMatrixCSC{precision,Int32},
             wg::Union{WeightGenerator, Nothing} = nothing,
-            connections = Dict{Pair{Integer,Integer}, WeightGenerator}(), 
+            connections = Dict{Pair{Int32,Int32}, Any}(), 
             periodic::Union{Nothing,Bool,Tuple} = true,
             kwargs...
         )
-        if !isnothing(g)
-            set = convert.(eltype(g), set)
-        end
         if !isnothing(set) #TODO FIX THIS
             set = precision.(set)
         else
@@ -70,58 +95,37 @@ function IsingLayer(
         top = SquareTopology(lsize; periodic)
         graphidxs = start:(start+reduce(*, lsize)-1)
 
-        layer = IsingLayer{stype, set, dims, lsize, graphidxs, typeof(top), precision, adjtype}(
-            # Graph
-            g,
+        layer = IsingLayerData{stype, set, dims, lsize, graphidxs, typeof(top)}(
             # Name
             name,
-            # Layer idx
-            idx,
             # Traits
             traits,
             #Coordinates
             coords,
+            # WeightGenerator
+            Base.RefValue{Union{WeightGenerator, Nothing}}(wg),
             # Connections
             connections,
-            # PTimers
-            Vector{PTimer}(),
+
             # Topology
             top
         )
         return layer
 end
 
-# convert(::Type{<:IsingLayer}, g::SingleLayerGraph) = g[1]
-# layer(l::IsingLayer) = l
-# layer(g::AbstractIsingGraph) = g[1]
-Base.LinearIndices(l::IsingLayer) = LinearIndices(size(l))
-Base.CartesianIndices(l::IsingLayer) = CartesianIndices(size(l))
 
+@inline name(layer::IsingLayerData) = layer.name
+@inline traits(layer::IsingLayerData) = layer.traits
+@inline connections(layer::IsingLayerData) = layer.connections
+@inline top(layer::IsingLayerData) = layer.top
+@inline topology(layer::IsingLayerData) = top(layer)
+@inline coords(layer::IsingLayerData) = layer.coords.cs
+@inline setcoords!(layer::IsingLayerData; x = 0, y = 0, z = 0) = (layer.coords.cs = Int32.((y,x,z)))
+@inline setcoords!(layer::IsingLayerData, val) = (layer.coords.cs = Int32.((val,val,val)))
+@inline Base.size(layer::IsingLayerData) = layerparams(layer, :Size)
+@inline Base.length(layer::IsingLayerData) = prod(size(layer))
 
-get_weightgenerator(layer::IsingLayer) = get(layer.connections, layer.idx => layer.idx, nothing)
-struct LayerProperties <: AbstractLayerProperties
-    size::Tuple
-    kwargs::NamedTuple
-end
-
-datalen(lp::LayerProperties) = prod(lp.size)
-
-function Layer(dims...; kwargs...)
-    LayerProperties(tuple(dims...), (;kwargs...))
-end
-
-export Layer
-
-IsingLayer(g, idx, startidx, lp::LayerProperties) = IsingLayer(g, lp.size, idx, startidx; lp.kwargs...)
-
-export IsingLayer
-
-"""
-Two IsingLayers are equivalent when
-"""
-equiv(i1::Type{IsingLayer{A,B,T1,Top1}}, i2::Type{IsingLayer{E,F,T2,Top2}}) where {A,B,E,F,T1,T2,Top1,Top2} = A == E && B == F
-
-@inline function layerparams(lt::Type{<:IsingLayer}, ::Val{S}) where S
+@inline function layerparams(lt::Type{<:IsingLayerData}, ::Val{S}) where S
     ps = parameters(lt)
     idx = nothing
     if S == :StateType
@@ -136,37 +140,103 @@ equiv(i1::Type{IsingLayer{A,B,T1,Top1}}, i2::Type{IsingLayer{E,F,T2,Top2}}) wher
         idx = 5    
     elseif S == :Tpt
         idx = 6
-    elseif S == :Precision
-        idx = 7
-    elseif S == :AdjType
-        idx = 8
     end
     return ps[idx]
 end
 
-@inline layerparams(l::IsingLayer, s) = layerparams(typeof(l), Val(s))
+@inline layerparams(l::IsingLayerData, s::Symbol) = layerparams(typeof(l), Val(s))
 
-function destructor(layer::IsingLayer)
-    close.(timers(layer))
+@inline stateset(lt::Type{<:IsingLayerData{A,B}}) where {A,B} = B   
+@inline stateset(l::IsingLayerData) = stateset(typeof(l))
+@inline stateset_end(lt::Type{<:IsingLayerData{A,B}}) where {A,B} = last(B)
+@inline stateset_end(l::IsingLayerData) = stateset_end(typeof(l))
+
+@inline statetype(lt::Type{<:IsingLayerData{A}}) where {A} = A
+@inline statetype(l::IsingLayerData) = statetype(typeof(l))
+
+@inline range(lt::Type{<:IsingLayerData{A,B,C,D,E}}) where {A,B,C,D,E} = E
+@inline range(l::IsingLayerData) = range(typeof(l))
+@inline range_end(lt::Type{<:IsingLayerData{A,B,C,D,E}}) where {A,B,C,D,E} = last(E)
+@inline range_end(l::IsingLayerData) = range_end(typeof(l))
+@inline Base.parentindices(l::IsingLayerData) = (range(l),)
+
+get_weightgenerator(layer::IsingLayerData) = layer.weightgenerator[]
+
+
+"""
+View like struct for layer data and isinggraph
+"""
+struct IsingLayer{StateType, Dim, Data, Graph} <: AbstractIsingLayer{StateType, Dim}
+    data::Data
+    graph::Graph
+    idx::Int
 end
 
+@inline function IsingLayer(data::D, graph::G, idx::Integer) where {D<:IsingLayerData, G}
+    IsingLayer{statetype(D), layerparams(D, Val(:Dim)), D, G}(data, graph, Int(idx))
+end
 
-@setterGetter IsingLayer coords size idx graph
+@inline data(layer::IsingLayer) = layer.data
+@inline graph(layer::IsingLayer) = layer.graph
+@inline layeridx(layer::IsingLayer) = layer.idx
+@inline internal_idx(layer::IsingLayer) = layeridx(layer)
 
-@inline stateset(lt::Type{<:IsingLayer{A,B}}) where {A,B} = B   
-@inline stateset(l::IsingLayer) = @inline stateset(typeof(l))
-@inline stateset_end(lt::Type{<:IsingLayer{A,B}}) where {A,B} = last(B)
-@inline stateset_end(l::IsingLayer) = @inline stateset_end(typeof(l))
+@inline layerdatatype(::Type{<:IsingLayer{A,B,Data,Graph}}) where {A,B,Data,Graph} = Data
+@inline layerdatatype(layer::IsingLayer) = layerdatatype(typeof(layer))
 
-@inline statetype(lt::Type{<:IsingLayer{A}}) where {A} = A
-@inline statetype(l::IsingLayer) = @inline statetype(typeof(l))
+@inline function layerparams(lt::Type{<:IsingLayer}, ::Val{S}) where S
+    layerparams(layerdatatype(lt), Val(S))
+end
+@inline layerparams(layer::IsingLayer, s::Symbol) = layerparams(data(layer), s)
 
-@inline range(lt::Type{<:IsingLayer{A,B,C,D,E}}) where {A,B,C,D,E} = E
-@inline range(l::IsingLayer) = @inline range(typeof(l))
-@inline range_end(lt::Type{<:IsingLayer{A,B,C,D,E}}) where {A,B,C,D,E} = last(E)
-@inline range_end(l::IsingLayer) = @inline range_end(typeof(l))
+@inline stateset(lt::Type{<:IsingLayer}) = stateset(layerdatatype(lt))
+@inline stateset(layer::IsingLayer) = stateset(data(layer))
+@inline stateset_end(lt::Type{<:IsingLayer}) = stateset_end(layerdatatype(lt))
+@inline stateset_end(layer::IsingLayer) = stateset_end(data(layer))
 
-topology(l::IsingLayer) = l.top
+@inline statetype(lt::Type{<:IsingLayer}) = statetype(layerdatatype(lt))
+@inline statetype(layer::IsingLayer) = statetype(data(layer))
+
+@inline range(lt::Type{<:IsingLayer}) = range(layerdatatype(lt))
+@inline range(layer::IsingLayer) = range(data(layer))
+@inline range_end(lt::Type{<:IsingLayer}) = range_end(layerdatatype(lt))
+@inline range_end(layer::IsingLayer) = range_end(data(layer))
+@inline Base.parentindices(layer::IsingLayer) = parentindices(data(layer))
+
+@inline name(layer::IsingLayer) = name(data(layer))
+@inline traits(layer::IsingLayer) = traits(data(layer))
+@inline connections(layer::IsingLayer) = connections(data(layer))
+@inline top(layer::IsingLayer) = top(data(layer))
+@inline topology(layer::IsingLayer) = topology(data(layer))
+@inline coords(layer::IsingLayer) = coords(data(layer))
+@inline setcoords!(layer::IsingLayer; x = 0, y = 0, z = 0) = setcoords!(data(layer); x, y, z)
+@inline setcoords!(layer::IsingLayer, val) = setcoords!(data(layer), val)
+destructor(layer::IsingLayer) = destructor(data(layer))
+
+# Create view
+IsingLayer(g::AbstractIsingGraph, idx::Integer) = IsingLayer(getfield(g, :layers)[idx], g, idx)
+
+Base.LinearIndices(l::IsingLayer) = LinearIndices(size(l))
+Base.CartesianIndices(l::IsingLayer) = CartesianIndices(size(l))
+
+
+get_weightgenerator(layer::IsingLayer) = get_weightgenerator(data(layer))
+# struct LayerProperties <: AbstractLayerProperties
+#     size::Tuple
+#     kwargs::NamedTuple
+# end
+
+# datalen(lp::LayerProperties) = prod(lp.size)
+
+# function Layer(dims...; kwargs...)
+#     LayerProperties(tuple(dims...), (;kwargs...))
+# end
+
+# export Layer
+
+# IsingLayer(g, idx, startidx, lp::LayerProperties) = IsingLayerData(lp.size, idx, startidx; lp.kwargs...)
+
+export IsingLayer
 export topology
 
 
@@ -242,7 +312,6 @@ export conns, conncoords
 """
 Set graph of layer
 """
-@inline graph(layer::IsingLayer{A,B,C,D,E,F,Precision,AdjType}) where {A,B,C,D,E,F, Precision,AdjType} = layer.graph::IsingGraph{Precision, AdjType}
 # @inline graph(layer::IsingLayer, g::IsingGraph) = layer.graph = g
 # changegraph(l::IsingLayer, g) = IsingLayer{layerparams(l, :StateType), layerparams(l, :DIMS), layerparams(l, :T), layerparams(l, :Top)}(g, l.name, l.internal_idx, l.startidx, l.size, l.nstates, l.traits, l.coords, l.connections, l.timers, l.top)
 addons(layer::IsingLayer) = graph(layer).addons
@@ -250,20 +319,18 @@ export addons
 
 # Get current layeridx through graph
 # @inline layeridx(layer::IsingLayer) = externalidx(layers(graph(layer)), layer.internal_idx)
-@inline layeridx(layer::IsingLayer) = layer.idx
-
 ### COORDINATES OF LAYERS
-@inline coords(layer::AbstractIsingLayer) = layer.coords.cs
+@inline coords(layer::AbstractIsingLayer) = coords(data(layer))
 # Move to user folder
-@inline setcoords!(layer::AbstractIsingLayer{T}; x = 0, y = 0, z = 0) where T = (layer.coords.cs = Int32.((y,x,z)))
-@inline setcoords!(layer::AbstractIsingLayer{T}, val) where T = (layer.coords.cs = Int32.((val,val,val)))
+@inline setcoords!(layer::AbstractIsingLayer; x = 0, y = 0, z = 0) = setcoords!(data(layer); x, y, z)
+@inline setcoords!(layer::AbstractIsingLayer, val) = setcoords!(data(layer), val)
 
 export setcoords!
 
 """
 Get adjacency of layer in layer coordinates
 """
-@inline reladj(layer::AbstractIsingLayer) = adjGToL(layer.adj, layer)
+@inline reladj(layer::AbstractIsingLayer) = adjGToL(adj(graph(layer)), layer)
 
 # Setters and getters
 # @forwardfields IsingLayer IsingGraph g
@@ -325,8 +392,9 @@ export bfield, bvec
 ##
 function aliveidxs(layer::AbstractIsingLayer)
     ds = defects(graph(layer))
-    preceding_defects = sum(ds.layerdefects[1:layer.internal_idx-1])
-    these_defects = ds.layerdefects[layer.internal_idx]
+    lidx = internal_idx(layer)
+    preceding_defects = sum(ds.layerdefects[1:lidx-1])
+    these_defects = ds.layerdefects[lidx]
     alivelist_range = (startidx(layer)-preceding_defects):(endidx(layer)-preceding_defects-these_defects)
     aliveList(ds)[alivelist_range]
 end
@@ -334,89 +402,10 @@ export aliveidxs
 
 
 ### TIMERS
-    pausetimers(layer) = close.(timers(layer))
-    starttimers(layer) = start.(timers(layer))
-    removetimers(layer) = begin close.(timers(layer)); layer.timers = Vector{PTimer}(); end
+    # pausetimers(layer) = close.(timers(layer))
+    # starttimers(layer) = start.(timers(layer))
+    # removetimers(layer) = begin close.(timers(layer)); layer.timers = Vector{PTimer}(); end
 
-### DEFECTS
-    """
-    Get the indexes of all alive spins in the layer
-    """
-    aliveList(layer::AbstractIsingLayer) = aliveList(defects(layer))
-    """
-    Get the indexes of all defect spins in the layer
-    """
-    defectList(layer::AbstractIsingLayer) = defectList(defects(layer))
-
-    """
-    Returns wether layer has any defects
-    """
-    @inline function ndefect(layer::AbstractIsingLayer)
-        if !isnothing(graph(layer)) 
-            return 0
-        end
-        defects(graph(layer)).layerdefects[layeridx(layer)]
-    end
-    @inline nalive(layer::AbstractIsingLayer) = nStates(layer) - ndefect(layer)
-    export ndefect, nalive
-    @inline hasDefects(layer::AbstractIsingLayer) = ndefect(layer) > 0
-    @inline setdefect(layer::AbstractIsingLayer, val, idx) = defects(graph(layer))[idxLToG(idx, layer)] = val
-    @inline clamprange!(layer::AbstractIsingLayer, val, idxs) = setrange!(defects(graph(layer)), val, idxLToG.(idxs, Ref(layer)))
-###
-
-### RESIZING
-"""
-Resize a layer
-Is this used?
-"""
-# function Base.resize!(layer::IsingLayer, len, wid)
-#     g = graph(layer)
-#     old_nstates = nStates(layer)
-#     new_nstates = len*wid
-#     extra_states = new_nstates - old_nstates
-#     if extra_states == 0
-#         return
-#     end
-#     _startidx = startidx(layer)
-#     _endidx = endidx(layer)
-#     if extra_states > 0
-#         insert!(state(g), _endidx+1, rand(len*wid))
-#         adj(g, insertrowcol(g, _endidx+1:(_endidx+1 + extra_states)))
-#     else # extra_states < 0
-#         notidxs = graphidxs(layer)[end+extra_states+1:end]
-#         deleteat!(state(g), _startidx:_endidx)
-#         adj(g, deleterowcol(g, notidxs))
-#     end
-#     return layer
-# end
-
-### RELOCATING
-### Shift from placing 1 layer befor
-"""
-When shifting a layer by one index,
-Copy over the state to the right position, except the adjacency matrix
-"""
-# function relocate!(movable_layer::IsingLayer, causing_layer::IsingLayer, shift, copy::Bool = true)
-#     println("Moveable layer: ", movable_layer)
-#     println("Causing layer: ", causing_layer)
-#     oldstate_view = state(movable_layer)
-#     movable_layer.startidx += shift*nStates(causing_layer)
-#     movable_layer.internal_idx += shift*1
-#     if copy  
-#         state(movable_layer) .= oldstate_view
-#     end
-# end
-
-#TODO: This is a patchwork fix, fix this better
-# This is used to update the stateset in the type
-# function remake_type(layer::IsingLayer)
-#     pars =  typeof(layer).parameters
-#     new_idxset = graphidxs(layer)
-#     # use this one:
-#     #function IsingLayer{ST, SS, IS, DIMS, T, Topology}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top) where {ST, SS, IS, DIMS, T, Topology}
-#     # return new{ST, SS, IS, DIMS, T, Topology}(g, name, internal_idx, start, size, nstates, coords, connections, timers, top)
-#     return IsingLayer{pars[1], pars[2], new_idxset, pars[4], pars[5], pars[6]}(graph(layer), name(layer), internal_idx(layer), startidx(layer), size(layer), nstates(layer), layer.traits, layer.coords, connections(layer), timers(layer), top(layer))
-# end
 
 ### GET INDEXES
 iterator(layer::AbstractIsingLayer) = startidx(layer):endidx(layer)
@@ -444,49 +433,26 @@ export setPeriodic!
 """
 Go from a local idx of layer to idx of the underlying graph
 """
-@inline function idxLToG(idx::Integer, layer::IsingLayer)
+@inline function idxLToG(idx::Integer, layer::L) where L<:IsingLayer
     return Int32(startidx(layer) + idx - 1)
 end
 
 """
 Go from a local matrix indexing of layer to idx of the underlying graph
 """
-@inline function idxLToG(i::Integer, j::Integer, layer::IsingLayer)
+@inline function idxLToG(i::Integer, j::Integer, layer::L) where L<:IsingLayer
     return Int32(startidx(layer) + coordToIdx(i,j, glength(layer)) - 1)
 end
 
-idxLToG(tup::Tuple, layer) = idxLToG(tup[1], tup[2], layer)
+@inline idxLToG(tup::Tuple, layer::L) where L<:IsingLayer = idxLToG(tup[1], tup[2], layer)
 
 """
 Go from graph idx to idx of layer
 """
-@inline function idxGToL(idx::Integer, layer::IsingLayer)
+@inline function idxGToL(idx::Integer, layer::L) where L<:IsingLayer
     return Int32(idx + 1 - startidx(layer))
 end
 export idxLToG, idxGToL
-
-
-
-### STATE SET
-function changeset(l::IsingLayer{SType}, set) where SType
-    _eltype = eltype(graph(l))
-    newset = convert.(_eltype, set)
-    g = graph(l)
-    # newlayer = IsingLayer(SType, l.graph, l.internal_idx, l.start, l.size[1], l.size[2], name = l.name, coords = l.coords, connections = l.connections, rangebegin = set[1], rangeend = set[2])
-    newlayer = IsingLayer{SType, newset}(g, l.name, l.internal_idx, l.startidx, l.size, l.nstates,  l.coords, l.connections, l.timers, l.top)
-    newlayer.timers = l.timers
-
-    return newlayer
-end
-
-function changeset!(l, set)
-    _layers = layers(graph(l))
-    _layeridx = layeridx(l)
-    _layers[_layeridx] = changeset(l, set)
-    notify(graph(l))
-    return _layers[_layeridx]
-end
-export changeset, changeset!
 
 indexset(l::IsingLayer) = graphidxs(l)
 indexset(lt::Type{<:IsingLayer}) = layerparams(lt, Val(:PtrRange))
@@ -537,23 +503,36 @@ export changeset!, stateset
 ### TYPE STUFF
 ## DEFAULT NEW LAYER TYPE BASED ON GRAPH
 default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous 
-# @inline statetype(layer::IsingLayer{ST}) where {ST} = ST
-# @inline statetype(::Type{<:IsingLayer}) = layerparams(IsingLayer, Val(:StateType))
-setstatetype(l::IsingLayer{ST}, stype) where {ST} = IsingLayer{stype}(l.graph, l.name, l.internal_idx, l.startidx, l.size, l.nstates, l.coords, l.connections, l.timers, l.top)
 
 Base.eltype(l::IsingLayer) = eltype(graph(l))
 
-# ORDER LAYER TYPES BASED ON STATETYPE
-# TODO: HACKY
-# # Make empty layers
-# Base.isless(::Type{IsingLayer{A,B,C,D,T1}}, ::Type{IsingLayer{E,F,G,H,T2}}) where {A,B,C,D,E,F,G,H,T1,T2} = isless(A,D)
-# Base.isless(::Type{IsingLayer{A,B}}, ::Type{IsingLayer{E,F,G,H,T}}) where {A,B,E,F,G,H,T} = isless(A,E)
-# Base.isless(t1::Type{<:IsingLayer}, t2::Type{<:IsingLayer}) = isless(layerparams(t1, Val(:StateType)), layerparams(t2, Val(:StateType)))
+### DEFECTS
+"""
+Get the indexes of all alive spins in the layer
+"""
+aliveList(layer::AbstractIsingLayer) = aliveList(defects(layer))
+"""
+Get the indexes of all defect spins in the layer
+"""
+defectList(layer::AbstractIsingLayer) = defectList(defects(layer))
 
+"""
+Returns wether layer has any defects
+"""
+@inline function ndefect(layer::AbstractIsingLayer)
+    if !isnothing(graph(layer)) 
+        return 0
+    end
+    defects(graph(layer)).layerdefects[layeridx(layer)]
+end
+@inline nalive(layer::AbstractIsingLayer) = nStates(layer) - ndefect(layer)
+export ndefect, nalive
+@inline hasDefects(layer::AbstractIsingLayer) = ndefect(layer) > 0
+@inline setdefect(layer::AbstractIsingLayer, val, idx) = defects(graph(layer))[idxLToG(idx, layer)] = val
+@inline clamprange!(layer::AbstractIsingLayer, val, idxs) = setrange!(defects(graph(layer)), val, idxLToG.(idxs, Ref(layer)))
+###
 
-export statetype, setstatetype
-
-
+export statetype
 
 @inline function initstate!(layer::IsingLayer)
     state(layer)[:] .= rand(layer, nStates(layer))
@@ -561,21 +540,45 @@ end
 export initstate!
 
 
-# Extend show for IsingLayer, showing the layer idx, and the size of the layer
-function Base.show(io::IO, layer::IsingLayer{A,B}) where {A,B}
-    showstr = "$A IsingLayer $(layeridx(layer)) with size $(size(layer)) and stateset $(stateset(layer))\n"
-    if coords(layer) != nothing
-        showstr *= " at coordinates $(coords(layer))"
+function Base.show(io::IO, layer::IsingLayer)
+    print(io, statetype(layer), " IsingLayer ", layeridx(layer), " with size ", size(layer), " and stateset ", stateset(layer))
+    layer_coords = coords(layer)
+    if !isnothing(layer_coords)
+        print(io, " at coordinates ", layer_coords)
     end
-    print(io, showstr, "\n")
-    println(io, " with connections:")
+    print(io, "\n\n with connections:")
     for key in keys(connections(layer))
-        println(io, "\tConnected to layer $(key[2]) using ")
-        println("\t", (connections(layer)[key]))
+        print(io, "\n\tConnected to layer ", key[2], " using ")
+        print(io, "\n\t", connections(layer)[key])
     end
-    print(io, " and $(ndefect(layer)) defects")
-    return
+
+    ndef = try
+        ndefect(layer)
+    catch
+        nothing
+    end
+    if isnothing(ndef)
+        print(io, "\n and 0 defects")
+    else
+        print(io, "\n and ", ndef, " defects")
+    end
+end
+
+function Base.show(io::IO, layer::IsingLayerData)
+    print(
+        io,
+        statetype(layer),
+        " IsingLayerData size=",
+        layerparams(layer, :Size),
+        " stateset=",
+        stateset(layer)
+    )
+    layer_coords = coords(layer)
+    if !isnothing(layer_coords)
+        print(io, " coords=", layer_coords)
+    end
+    print(io, " connections=", length(connections(layer)))
 end
 
 # SHOW THE TYPE
-Base.show(io::IO, layertype::Type{IsingLayer{A,B}}) where {A,B} = print(io, "$A IsingLayer")
+Base.show(io::IO, ::Type{IsingLayer{A,B,Data,Graph}}) where {A,B,Data,Graph} = print(io, "$A IsingLayer")

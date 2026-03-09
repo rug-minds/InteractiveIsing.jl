@@ -338,7 +338,7 @@ g.hamiltonian = Ising(g) + Quartic(g) + Sextic(g)
 # g.hamiltonian = Ising(g) + DepolField(g, c=0.0001/(2 * xL * yL), top_layers=1, bottom_layers=1, zfunc = z -> 0.3/z) + Quartic(g) + Sextic(g)
 
 # Only necessary if the Hamiltonian has non-local terms that need to be recalculated after each spin flip.
-reprepare(g)
+reinit(g)
 
 ### Use ii. to check if the terms are correct
 ### Now the H is written like H_self + H_quartic

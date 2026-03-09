@@ -1,4 +1,4 @@
-export FlipProposal, to_delta_exp, to_delta_exp!
+export FlipProposal, to_delta_exp, to_delta_exp!, delta, accepteddelta
 
 """
 rule to replace parameter :symb[i] with :((@view symb[]))
@@ -15,8 +15,18 @@ function FlipProposal(fp::FlipProposal{S, Idx, T}, at_idx, from_val, to_val, lay
     return FlipProposal{S, Idx, T}(at_idx, from_val, to_val, layer_idx, accept)
 end
 
+"""
+Give the proposed delta
+"""
 function delta(fp::FlipProposal{S, Idx, T}) where {S, Idx, T}
     return fp.to_val - fp.from_val
+end
+
+"""
+If the proposal is accepted, return the delta, otherwise return zero (which is the actual change to the system)
+"""
+function accepteddelta(fp::FlipProposal{S, Idx, T}) where {S, Idx, T}
+    return fp.accepted ? delta(fp) : zero(T)
 end
 
 function accept(state, f::FlipProposal)

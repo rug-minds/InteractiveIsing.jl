@@ -48,17 +48,17 @@ export restart
 """
 Keep the keywords and recompile the processes
 """
-function Processes.reprepare(g::IsingGraph; kwargs...)
+function Processes.reinit(g::IsingGraph; kwargs...)
     _processes = processes(g)
     for process in _processes
         if isrunning(process)
-            reprepare(process)
+            reinit(process)
         end
     end
     return
 end
 
-export reprepare
+export reinit
 
 # """
 # Reset the keywords to the standard values, and restart the processes

@@ -63,7 +63,7 @@ function addRandomDefects!(layer, p, val = 0)
 
     setSpins!(layer, idxs, val, true)
 
-    reprepare(graph(layer))
+    reinit(graph(layer))
 
     return
 end

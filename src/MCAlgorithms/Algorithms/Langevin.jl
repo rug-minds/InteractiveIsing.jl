@@ -89,7 +89,6 @@ end
     σ_sub = t > zero(SType) ? sqrt(SType(2) * η_sub * t) : zero(SType)
     n = length(active_spins)
     n == 0 && return (;)
-    ham_args = (;w = adj, s = state, self, hamiltonian...)
     dh = dH()
 
     for _ in 1:n_substeps
@@ -101,7 +100,7 @@ end
             end
 
             spin_idx = @inbounds active_spins[k]
-            derivative = @inline calculate(dh, hamiltonian, ham_args, spin_idx)
+            derivative = @inline calculate(dh, hamiltonian, state, spin_idx)
             if !isfinite(derivative)
                 derivative = zero(SType)
             end
@@ -128,12 +127,15 @@ end
                     # trial_state = (@inbounds(lo_prealloc[spin_idx]) + @inbounds(hi_prealloc[spin_idx])) / SType(2)
                 end
             end
-
+            proposal = FlipProposal{:s, :j, SType}(spin_idx, state[spin_idx], trial_state, 1, false)
             # @inbounds state[spin_idx] = _reflect_to_bounds(trial_state, lo_prealloc[spin_idx], hi_prealloc[spin_idx])
             @inbounds state[spin_idx] = _reflect_to_bounds(trial_state, low_state, high_state)
-        
+             
         end
+
     end
+
+    
 
     return (;)
 end

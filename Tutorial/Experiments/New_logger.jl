@@ -463,7 +463,7 @@ g.hamiltonian[4].qc[] = b1/a1
 g.hamiltonian[5].sc[] = c1/a1
 
 # Only necessary if the Hamiltonian has non-local terms that need to be recalculated after each spin flip.
-reprepare(g)
+reinit(g)
 
 Temperature=1
 temp(g,Temperature)

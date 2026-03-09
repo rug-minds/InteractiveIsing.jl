@@ -6,46 +6,19 @@ function isingfunc(dr, c1, c2)
     return 1/dr
 end
 
+wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=(3,3,2)
 
-g = ii.IsingGraph(100,100,10, type = Continuous, periodic = (:x,:y))
-# g.default_algorithm = Metropolis()
-setdist!(g, (1.0, 10.0, 20.0))
+g = ii.IsingGraph(100,100,10, 
+        Continuous(), 
+        wg, 
+        LatticeConstants(1.0, 1.0, 20.), 
+        Ising(b = :homogeneous) + Clamping(1f0),
+        periodic = (:x,:y), 
+        self = :homogeneous)
 
-wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=3
-# println(@report_opt genAdj!(g, wg) )
-genAdj!(g, wg)
 
 interface(g)
-# createProcess(g)
-# homogeneousself!(g, 0.5f0)
-
-struct PolTracker{T} <: ProcessAlgorithm end
-PolTracker() = PolTracker{Float32}()
-function Processes.init(::PolTracker, context)
-    (;isinggraph) = context
-    initial = sum(state(isinggraph))
-
-    (;pols = Float32[initial])
-end
-
-function Processes.step!(::PolTracker, context)
-    (;proposal, pols) = context
-    push!(pols, delta(proposal))
-    return (;)
-end
-
-# g.hamiltonian = h = Ising(g) 
-isingmetro = InteractiveIsing.IsingMetropolis()
-isingmetro = g.default_algorithm
-algo = ii.IsingLangevin()
-# g.hamiltonian = h = Ising(g) + CoulombHamiltonian(g, 2f0, screening = 20f0, recalc = 200);
-g.hamiltonian = h = Ising(g, :homogeneous_b)
-reprepare(g)
-# CompositeAlgorithm(isingmetro, PolTracker(), (1, 1),  
-#     Share(isingmetro, PolTracker())
-#     )
-
-createProcess(g, algo, dynamics = algo)
+createProcess(g)
 
 
 

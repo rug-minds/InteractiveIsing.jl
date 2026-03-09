@@ -582,7 +582,7 @@ function run_simu!(g; Scale = 1, Screening = 0.1, Amp1 =20, Temp = 0.3, time_fct
     g.hamiltonian[4].qc[] = b1 / a1
     g.hamiltonian[5].sc[] = c1 / a1
 
-    reprepare(g)
+    reinit(g)
     # Temperature init
     temp(g, Temp)
 

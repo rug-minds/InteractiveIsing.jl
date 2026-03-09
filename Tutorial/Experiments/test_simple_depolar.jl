@@ -589,7 +589,7 @@ g.hamiltonian = Ising(g, :homogeneous_b) + DepolField(g, c = 0.4) + Quartic(g) +
 
 # DepolField caches need re-init when the Hamiltonian is replaced
 
-reprepare(g)
+reinit(g)
 
 
 

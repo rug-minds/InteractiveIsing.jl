@@ -1,25 +1,28 @@
 export genAdj!, genAdj, remAdj!, genAdjFull!, remAdjAll!, viewConnections
 
+gen_connections(::Any, ::Nothing) = (Int[], Int[], [])
 """
 Generate the connections in a layer based on a weightgenerator
 Returns sparse representation of the connections
 """
-Base.@propagate_inbounds function genAdj(layer, wg)
-    row_idxs, col_idxs, weights = genLayerConnections(layer, wg)
-    old_row_idxs, old_col_idxs, old_weights = removeConnections(layer)
+Base.@propagate_inbounds function gen_connections(layerdata::AbstractLayerData, precision, wg::WeightGenerator, nstates)
+    row_idxs, col_idxs, weights = genLayerConnections(layerdata, precision, wg, nstates)
+    # old_row_idxs, old_col_idxs, old_weights = removeConnections(layerdata)
 
-    append!(row_idxs,    old_row_idxs)
-    append!(col_idxs,    old_col_idxs)
-    append!(weights ,    old_weights)
+    # append!(row_idxs,    old_row_idxs)
+    # append!(col_idxs,    old_col_idxs)
+    # append!(weights ,    old_weights)
 
     return row_idxs, col_idxs, weights
 end
-"""
-Generate the connections in a layer based on a weightgenerator and set the connections in the layer
-Then put the connections directly in the graph
-"""
-@inline genAdj!(layer::AbstractIsingLayer, wg) = set_adj!(layer, wg, genAdj(layer, wg))
-@inline genAdj!(x::AbstractIsingLayer, ::Nothing) = nothing
+# """
+# Generate the connections in a layer based on a weightgenerator and set the connections in the layer
+# Then put the connections directly in the graph
+# """
+# @inline function genAdj!(layer::AbstractIsingLayer, wg)
+#     set_adj!(layer, wg, gen_connections(layer, wg))
+# end
+# @inline genAdj!(x::AbstractIsingLayer, ::Nothing) = nothing
 
 """
 Give a weightgenerator and two layers.

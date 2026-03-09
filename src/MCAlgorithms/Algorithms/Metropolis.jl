@@ -20,43 +20,38 @@ function Processes.init(::Metropolis, context::Cont) where Cont
 
     state = InteractiveIsing.state(structure)
     hamiltonian = structure.hamiltonian
-    adj = InteractiveIsing.adj(structure)
-    self = structure.self
-
 
     rng = Random.MersenneTwister()
 
     hamiltonian = init!(hamiltonian, structure)
     proposer = get_proposer(structure)
-    proposal = FlipProposal{:s, :j, statetype(proposer)}(0, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
-    M = sum(state)
+    # proposal = FlipProposal{:s, :j, statetype(proposer)}(0, zero(statetype(proposer)), zero(statetype(proposer)), 1, false)
+    proposal = @inline rand(rng, proposer)
+
     ΔE = zero(eltype(state))
 
-    returnargs = (;hamiltonian, proposer, rng, proposal, M, ΔE, isinggraph = structure, state, adj, self)
+    returnargs = (;structure, hamiltonian, proposer, rng, proposal, ΔE, state, adj, self)
     return returnargs
 end
 
 # @inline function (::Metropolis)(context::As) where As
-function Processes.step!(::Metropolis, context::C) where {C}
-    (;rng, isinggraph, state, adj, self, hamiltonian, proposer, proposal, M) = context
+function Processes.step!(metro::Metropolis, context::C) where {C}
+    (;rng, structure, state, hamiltonian, proposer, proposal) = context
 
-    proposal = @inline rand(rng, proposer)::FlipProposal{:s, :j, statetype(proposer)}
+    proposal = @inline rand(rng, proposer)
+    Ttype = eltype(structure)
 
-    Ttype = eltype(isinggraph)
-    β = one(Ttype)/(@inline temp(isinggraph))    
+    β = one(Ttype)/(@inline temp(structure))    
 
-    ΔE = @inline calculate(ΔH(), hamiltonian, (;self = self, s = state, w = adj, M, hamiltonian...), proposal)
+    ΔE = @inline calculate(ΔH(), hamiltonian, state, proposal)
     
     if (@inline (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-β*ΔE)))
         proposal = @inline accept(state, proposal)
-        M += @inline delta(proposal)
     end
 
-    context = @inline inject(context, (;proposal, M))
-    
-    @inline update!(Metropolis(), hamiltonian, context)
-
-    return (;proposal, M, ΔE)
+    context = @inline inject(context, (;proposal))
+    @inline update!(metro, hamiltonian, context)
+    return (;proposal, ΔE)
 end
 
 # function Processes.init(::Metropolis, context::Cont) where Cont

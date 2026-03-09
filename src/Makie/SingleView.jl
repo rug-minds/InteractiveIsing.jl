@@ -36,7 +36,7 @@ function singleView(window)
 
     # LAYER SELECTOR  BUTTONS
     toppanel(ml)[:sb] = selector_buttons = GridLayout(toppanel(ml)[:mid_grid][3,1], tellwidth = false)
-    toppanel(ml)[:sll] = selected_layer_label = lift((x,y) -> "$x/$y", window[:layer_idx], nlayers(g))
+    toppanel(ml)[:sll] = selected_layer_label = lift((x,y) -> "$x/$y", window[:layer_idx], length(layers(g)))
     push!(obs_funcs, selected_layer_label.inputs...)
 
     toppanel(ml)[:sb_l] = selector_buttons[1,1] = leftbutton = Button(f, label = "<", padding = (0,0,0,0), fontsize = 14, width = 40, height = 28)
@@ -57,7 +57,7 @@ function singleView(window)
     end)
 
     push!(obs_funcs, on(rightbutton.clicks, weak = true) do _
-        if window[:layer_idx][] < nlayers(g)
+        if window[:layer_idx][] < length(layers(g))
             window[:layer_idx][] += 1
         end
     end)
