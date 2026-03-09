@@ -28,6 +28,9 @@ struct StaticFill{Val, T, N} <: AbstractArray{T,N}
     end
 end
 
+# Explicit scalar default: `StaticFill(val)` -> 0-dimensional fill.
+StaticFill(val::T) where T = StaticFill{val, T, 0}(())
+
 # -- Base AbstractArray interface ----------------------------------------------
 
 Base.size(sf::StaticFill) = sf.size

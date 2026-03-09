@@ -3,11 +3,12 @@ H = self[i]*s[i]
 
 The Quadratic self energy part of the Ising Hamiltonian
 """
-struct Quadratic{S} <: HamiltonianTerm 
-    self::S
+struct Quadratic{T, N} <: HamiltonianTerm 
+    c::T
+    self::AbstractArray{T,N}
 end
 
-Quadratic() = Quadratic(nothing)
+Quadratic() = Quadratic(StaticFill(1.0), nothing)
 Quadratic(g::AbstractIsingGraph) = reconstruct(Quadratic(), g)
 reconstruct(::Quadratic, g::AbstractIsingGraph) = Quadratic(adj(g).diag)
 
