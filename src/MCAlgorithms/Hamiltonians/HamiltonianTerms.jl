@@ -103,14 +103,21 @@ end
 
 @inline Base.map(f, hts::HamiltonianTerms) = @inline map(f, hamiltonians(hts))
 
-@inline @generated function Base.getproperty(h::HamiltonianTerms{HS}, paramname::Symbol) where HS
-    args = (;)
+@inline function Base.getproperty(h::HamiltonianTerms{HS}, paramname::Symbol) where HS
+    paramname === :hs && return getfield(h, :hs)
+
+    foundidxs = Int[]
     for (hidx, H) in enumerate(HS.parameters)
-        for (fidx, fieldname) in enumerate(fieldnames(H))
-            args = (;args..., fieldname => LazyTermField{typeof(h), hidx, fieldname}())
+        if paramname in fieldnames(H)
+            push!(foundidxs, hidx)
         end
     end
-    return :(getfield($args, paramname)(h))
+
+    if length(foundidxs) > 1
+        error("Property $(paramname) exists in multiple Hamiltonian terms at indices $(foundidxs). Please first get the proper hamiltonian through normal indexing and then get the property.")
+    end
+    isempty(foundidxs) && return getfield(h, paramname)
+    return getfield(getfield(h, :hs)[foundidxs[1]], paramname)
 end
 
 """
