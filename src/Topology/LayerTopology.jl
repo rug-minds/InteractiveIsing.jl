@@ -1,8 +1,5 @@
 
-export LatticeType, Square, Rectangular, Oblique, Hexagonal, Rhombic, AnyLattice
-
-
-
+export LatticeType, Square, Rectangular, Oblique, Hexagonal, Rhombic, AnyLattice, AbstractLayerTopology, periodic, latticetype
 
 struct Square <: LatticeType end
 struct Rectangular <: LatticeType end
@@ -117,19 +114,19 @@ mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: AbstractL
     end
 end
 
+@setterGetter LatticeTopology size
+Base.size(top::AbstractLayerTopology) = top.size
+Base.size(top, i) = top.size[i]
+
 
 LatticeTopology(tp::AbstractLayerTopology; periodic::Bool) = AbstractLayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2]; periodic)
 LatticeTopology(tp::AbstractLayerTopology, pt::Type{<:PeriodicityType}) = AbstractLayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2], periodic = pt == Periodic ? true : false)
 
 # changePeriodicity = 
-export AbstractLayerTopology
 
 periodic(top::AbstractLayerTopology{T,U}) where {T,U} = T
 latticetype(top::AbstractLayerTopology{T,U}) where {T,U} = U
-export periodic, latticetype
-@setterGetter LatticeTopology size
-Base.size(top::AbstractLayerTopology) = top.size
-Base.size(top, i) = top.size[i]
+
 
 function pos(i,j, pvecs)
     return i*pvecs[1] + j*pvecs[2]
@@ -137,167 +134,3 @@ end
 
 pos(idx, top) = pos(idxToCoord(idx, glength(layer(top))), top)
 export pos
-
-###### Square Lattice
-##########
-# function dist(top::AbstractLayerTopology, coords::T...) where T
-#     @inline sqrt(dist2(top, coords...))
-# end
-
-# # function dist(top::SquareTopology{P, 2}, i1, j1, i2, j2) where P
-   
-# # end
-
-# function dist2(top::SquareTopology{P, 2}, i1, j1, i2, j2) where P
-#     di = abs(i1 - i2)
-#     dj = abs(j1 - j2)
-#     if periodic(top, :x) 
-#         if di > size(top,1)/2
-#             di -= size(top,1)
-#         end
-#     end
-#     if periodic(top, :y)
-#         if dj > size(top,2)/2
-#             dj -= size(top,2)
-#         end
-#     end
-
-#     return di^2 + dj^2
-# end
-
-# dist2(top::SquareTopology{P, 3}, (i1,j1,k1)::Tuple,(i2,j2,k2)::Tuple) where P = dist2(top, i1,j1,k1,i2,j2,k2)
-
-# function dist2(top::SquareTopology{P,3}, i1,j1,k1,i2,j2,k2) where P
-#     di = abs(i1 - i2)
-#     dj = abs(j1 - j2)
-#     dk = abs(k1 - k2)
-#     if periodic(top, :x)
-#         if di > size(top,1)/2
-#             di -= size(top,1)
-#         end
-#     end
-#     if periodic(top, :y)
-#         if dj > size(top,2)/2
-#             dj -= size(top,2)
-#         end
-#     end
-#     if periodic(top, :z)
-#         if dk > size(top,3)/2
-#             dk -= size(top,3)
-#         end
-#     end
-    
-
-#     return di^2 + dj^2 + dk^2
-# end
-
-# # If only two given must be indexes of the same layer (or in 1D case idx = i)
-# function dist2(top::AbstractLayerTopology, idx1::Integer, idx2::Integer)
-#     coords1 = idxToCoord(Int32(idx1), size(top))
-#     coords2 = idxToCoord(Int32(idx2), size(top))
-
-#     return @inline dist2(top, coords1..., coords2...)
-# end
-
-# function dist2(top::AbstractLayerTopology, coords1::Tuple, coords2::Tuple)
-#     return @inline dist2(top, coords1..., coords2...)
-# end
-
-# function dist(top::AbstractLayerTopology, idx1::Integer, idx2::Integer)
-#     return sqrt(dist2(top, idx1, idx2))
-# end
-
-# function dist(top::AbstractLayerTopology, coords1::Tuple, coords2::Tuple)
-#     return sqrt(dist2(top, coords1, coords2))
-# end
-
-# export dist2, dist
-
-# function getDistFunc(top::LT) where {LT <: AbstractLayerTopology}
-#     return (i1,j1,i2,j2) -> dist(top, i1,j1,i2,j2)
-# end
-#   export getDistFunc
-
-
-# function (lt::AbstractLayerTopology)(y,x)
-#     point = TwoVec(y,x)
-#     comp1 = point ⋅ covecs(lt)[1]
-#     comp2 = point ⋅ covecs(lt)[2]
-
-#     return (comp1, comp2)
-# end
-
-# function latToPoint(layer, i::Integer, j::Integer)
-#     tp = top(layer)
-#     zag = i ÷ 2
-#     zig = i - zag
-#     zagvec = TwoVec(pvecs(tp)[1][1], -pvecs(tp)[1][2])
-#     return zig*pvecs(tp)[1] + zag*zagvec + j*pvecs(tp)[2]
-# end
-# export latToPoint
-
-# function dx(lt, per::Val{false}, coords1::Tuple, coords2::Tuple)
-#     return abs(coords2[1] - coords1[1])
-# end
-
-# function dx(lt, per::Val{true}, coords1::Tuple, coords2::Tuple)
-#     di = coords2[1] - coords1[1]
-#     if di > size(lt,1)/2
-#         di -= size(lt,1)
-#     end
-#     return di
-# end
-
-# function dy(lt, per::Val{false}, coords1::Tuple, coords2::Tuple)
-#     return abs(coords2[1] - coords1[1])
-# end
-
-# function dy(lt, per::Val{true}, coords1::Tuple, coords2::Tuple)
-#     dj = coords2[2] - coords1[2]
-#     if dj > size(lt,2)/2
-#         dj -= size(lt,2)
-#     end
-#     return dj
-# end
-
-# function dz(lt, per::Val{false}, coords1::Tuple, coords2::Tuple)
-#     return abs(coords2[3] - coords1[3])
-# end
-
-# function dz(lt, per::Val{true}, coords1::Tuple, coords2::Tuple)
-#     dk = coords2[3] - coords1[3]
-#     if dk > size(lt,3)/2
-#         dk -= size(lt,3)
-#     end
-#     return dk
-# end
-
-# dxdy(lt::SquareTopology{P,2}, coords1::Tuple, coords2::Tuple) where P = (dx(lt, Val(periodic(lt,:x)), coords1, coords2), dy(lt, Val(periodic(lt,:y)), coords1, coords2))
-
-# dxdydz(lt::SquareTopology{P,3}, coords1::Tuple, coords2::Tuple) where P = (dx(lt, Val(periodic(lt,:x)), coords1, coords2), dy(lt, Val(periodic(lt,:y)), coords1, coords2), dz(lt, Val(periodic(lt,:z)), coords1, coords2))
-
-# export dy, dx, dxdy
-
-# function lat_mod_or_in(::P, coord::Integer, coordsize::Integer) where P <: PeriodicityType
-#     if P == Periodic
-#         return latmod(coord, coordsize)
-#     elseif P == NonPeriodic
-#         return inlat(coord, coordsize)
-#     end
-# end
-
-# function lat_mod_or_in(top::AbstractLayerTopology{P,N}, coord::NTuple{N,Int32}, size::NTuple{N,Int32}) where {P<:PeriodicityType,N}
-#     return ((lat_mod_or_in(coordperiodicity(top, coord_symbs[i]), coord[i], size[i]) for i in 1:N)...,)
-# end
-
-# function coordperiodicity(top::AbstractLayerTopology{Periodic}, symb)
-#     return Periodic
-# end
-
-# function coordperiodicity(top::AbstractLayerTopology{NonPeriodic}, symb)
-#     return NonPeriodic
-# end
-
-# function coordperiodicity(top::AbstractLayerTopology{PartPeriodic{Parts}}, symb) where {Parts}
-#     return symb in Parts ? Periodic : NonPeriodic
-# end

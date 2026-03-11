@@ -114,7 +114,7 @@ end
     return dpf
 end
 
-@inline function calculate(::ΔH, dpf::DepolField, state, proposal)
+@inline function calculate(::ΔH, dpf::DepolField, state::S, proposal) where {S <: AbstractIsingGraph}
     j = at_idx(proposal)
     T = eltype(state)
     ΔM = delta(proposal)

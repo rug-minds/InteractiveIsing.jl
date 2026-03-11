@@ -10,8 +10,8 @@ end
 @inline reconstruct(::Bilinear, g::AbstractIsingGraph) = Bilinear(adj(g))
 
 # function ΔH(::Bilinear, hargs, proposal)
-@inline function calculate(::ΔH, hterm::BL, state::S, proposal) where {BL<:Bilinear, S}
-    s = state
+@inline function calculate(::ΔH, hterm::BL, state::S, proposal) where {BL<:Bilinear, S <: AbstractIsingGraph}
+    s = @inline InteractiveIsing.state(state)
     wij = hterm.adj
     j = at_idx(proposal)
     total = @inline weighted_neighbors_sum(j, wij, s)
@@ -21,8 +21,8 @@ end
 end
 
 # function dH(::Bilinear, hargs, s_idx)
-@inline function calculate(::dH, hterm::Bilinear, state, s_idx)
-    s = state
+@inline function calculate(::dH, hterm::Bilinear, state::S, s_idx) where {S <: AbstractIsingGraph}
+    s = @inline InteractiveIsing.state(state)
     wij = hterm.adj
     cum = zero(eltype(s))
     rowval = SparseArrays.getrowval(wij)

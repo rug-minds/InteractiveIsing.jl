@@ -42,6 +42,18 @@ function UndirectedAdjacency(ua::UndirectedAdjacency{Tv, Ti, D, I}, cols, rows, 
     return UndirectedAdjacency{Tv, Ti, D, I}(sp_new, ua.diag, indexmap_new)
 end
 
+function UndirectedAdjacency(rows, cols, vals, m, n; diag = nothing, fastwrite = false)
+    sp = sparse(rows, cols, vals, m, n)
+    indexmap = fastwrite ? map_topology(sp) : nothing
+    return UndirectedAdjacency(sp, diag, indexmap)
+end
+
+function UndirectedAdjacency(m::Integer, n::Integer; diag = nothing, fastwrite = false)
+    sp = spzeros(m, n)
+    indexmap = fastwrite ? map_topology(sp) : nothing
+    return UndirectedAdjacency(sp, diag, indexmap)
+end
+
 """
 Map the topology of a sparse matrix to a dictionary for fast access
     Returns a Dict mapping (row, col) pairs to the index in the sparse matrix's storage

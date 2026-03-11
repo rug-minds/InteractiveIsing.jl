@@ -3,7 +3,7 @@
 """
 const allHMacros = Dict{Type, Dict{Symbol, <:Function}}()
 
-function H_Macros(::T, pairs::Pair{Symbol, <:Function}...) where T
+@inline function H_Macros(::T, pairs::Pair{Symbol, <:Function}...) where T
     if !haskey(allHMacros, T)
         allHMacros[T] = Dict(pairs...)
     else
@@ -13,15 +13,15 @@ function H_Macros(::T, pairs::Pair{Symbol, <:Function}...) where T
     end
 end
 
-function H_Macros(::T, symbol::Symbol) where T
+@inline function H_Macros(::T, symbol::Symbol) where T
     return allHMacros[Type][symbol]
 end
 
-function is_registered_HMacro(::Type, ex) 
+@inline function is_registered_HMacro(::Type, ex) 
     return ex.head == :macrocall && haskey(allHMacros[Type], ex.args[1])
 end
 
-function indexed_position(symb, index_symb = nothing)
+@inline function indexed_position(symb, index_symb = nothing)
     symbstring = string(symb)
     idx = findfirst(x == '_', symbstring)
 
@@ -35,7 +35,7 @@ function indexed_position(symb, index_symb = nothing)
     end
 end
 
-function replace_symb_index!(symb, num, index_symb = nothing)
+@inline function replace_symb_index!(symb, num, index_symb = nothing)
     idx = indexed_position(symb, index_symb)
     if !isnothing(idx)
         ssymbol = string(symb)
@@ -44,7 +44,7 @@ function replace_symb_index!(symb, num, index_symb = nothing)
     end
 end
 
-function iterate_exp(hams, ex, symbol = :i)
+@inline function iterate_exp(hams, ex, symbol = :i)
     finalexp = Expr(:block)
     for hidx in 1:length(hams)
         ham = hams[hidx]
@@ -54,7 +54,7 @@ function iterate_exp(hams, ex, symbol = :i)
     end
 end
 
-function symbol_indexes(symb::Symbol)
+@inline function symbol_indexes(symb::Symbol)
     symbstring = string(symb)
     idx = findfirst(x == '_', symbstring)
     if !isnothing(idx)
@@ -63,13 +63,13 @@ function symbol_indexes(symb::Symbol)
     return nothing
 end
 
-function find_contractions(exp, c_symb)
+@inline function find_contractions(exp, c_symb)
     contractions = []
     
     return contractions
 end
 
-function _find_contractions(exp, c_symb, contractions, idxs = [])
+@inline function _find_contractions(exp, c_symb, contractions, idxs = [])
     args = get_args(exp, idxs)
     if args[1] == :*
         types = typeof.(args[2:end])
@@ -79,4 +79,3 @@ function _find_contractions(exp, c_symb, contractions, idxs = [])
         end
     end
 end
-

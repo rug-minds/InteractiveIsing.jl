@@ -52,13 +52,14 @@ end
 params(::Type{MagField}) = HamiltonianParams((:b, Vector{GraphType}, GraphType(0), "Magnetic Field"))
 
 # function ΔH(::MagField, hargs, proposal)
-@inline function calculate(::ΔH, hterm::MagField, state, proposal)
+@inline function calculate(::ΔH, hterm::MagField, state::S, proposal) where {S <: AbstractIsingGraph}
     j = at_idx(proposal)
-    return -hterm.b[j]*(to_val(proposal) - state[j])
+    spins = @inline InteractiveIsing.state(state)
+    return -hterm.b[j]*(to_val(proposal) - spins[j])
 end
 
 # function dH(::MagField, hargs, s_idx)
-@inline function calculate(::dH, hterm::MagField, state, s_idx)
+@inline function calculate(::dH, hterm::MagField, state::S, s_idx) where {S <: AbstractIsingGraph}
     return -hterm.b[s_idx]
 end
 

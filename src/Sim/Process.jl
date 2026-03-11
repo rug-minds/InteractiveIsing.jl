@@ -6,7 +6,7 @@ function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.de
     
     func = deepcopy(func)
     # process = Process(func, Input(DestructureInput(), structure = g); lifetime)
-    process = Process(func, Input(dynamics, structure = g), inputs...; lifetime)
+    process = Process(func, Input(dynamics, state = g), inputs...; lifetime)
     
     ps = processes(g)
     push!(ps, process)

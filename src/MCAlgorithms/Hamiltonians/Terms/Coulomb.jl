@@ -397,7 +397,7 @@ function recalc!(c::CoulombHamiltonian{T}) where {T}
 end
 
 # function ΔH(c::CoulombHamiltonian{T,N}, params, proposal) where {T,N}
-@inline function calculate(::ΔH, c::CoulombHamiltonian{T,N}, state, proposal) where {T,N}
+@inline function calculate(::ΔH, c::CoulombHamiltonian{T,N}, state::S, proposal) where {T,N,S <: AbstractIsingGraph}
     lattice_size = size(c)
     spin_idx = at_idx(proposal)
     charge_coord_below = idxToCoord(spin_idx, lattice_size)

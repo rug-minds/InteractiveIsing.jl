@@ -27,7 +27,7 @@ Coordinate(top, ci::CartesianIndex; check = true) = Coordinate(top, ci.I...; che
 
 @generated function Coordinate(top::AbstractLayerTopology{U,D}, i::Int) where {U,D}
     coord_exprs = Vector{Any}(undef, D)
-    for d in 1:D
+    for d in 1:D # Inline the coordinate calculation for each dimension
         stride_expr = d == 1 ? :(1) : :((*(s[1:$(d-1)]...)))
         coord_exprs[d] = :((((idx0 ÷ $stride_expr) % s[$d]) + 1))
     end
@@ -79,4 +79,13 @@ LinearAlgebra.norm(dc::DeltaCoordinate) = sqrt(norm2(dc))
 norm2(dc::DeltaCoordinate) = sum(x -> x^2, dc.deltas)
 function Base.:^(dc::DeltaCoordinate, p::Integer)
     return sum(x -> x^p, dc.deltas)
+end
+
+function wrap(c::Coordinate, top::AbstractLayerTopology)
+    s = size(top)
+    p = whichperiodic(top)
+    new_coords = ntuple(Val(length(c))) do i
+        p[i] ? mod1(c.coords[i], s[i]) : c.coords[i]
+    end
+    return Coordinate(CartesianIndex(new_coords))
 end

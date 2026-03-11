@@ -8,9 +8,9 @@ intprecision(::Type{Float32}) = Int32
 intprecision(::Type{Float64}) = Int64
 
 # Ising Graph Representation and functions
-mutable struct IsingGraph{T <: AbstractFloat, M, Layers, N} <: AbstractIsingGraph{T}
+mutable struct IsingGraph{T <: AbstractFloat, M, Layers, A, N} <: AbstractIsingGraph{T}
     # Vertices and edges
-    state::AbstractArray{T,N}
+    state::A
     # Adjacency Matrix
     adj::M
     # self::AbstractArray{T,1} # Diagonal of adj stored as a separate array for efficiency
@@ -28,10 +28,36 @@ mutable struct IsingGraph{T <: AbstractFloat, M, Layers, N} <: AbstractIsingGrap
     addons::Dict{Symbol, Any}
 
     layers::Layers
+
+    function IsingGraph(
+        state,
+        adj,
+        temp,
+        default_algorithm,
+        hamiltonian,
+        defects,
+        addons,
+        layers
+    )
+        new{eltype(state), typeof(adj), typeof(layers), typeof(state), length(layers)}(
+            state,
+            adj,
+            temp,
+            default_algorithm,
+            hamiltonian,
+            defects,
+            addons,
+            layers
+        )
+    end
 end
+
 
 Base.eltype(::IsingGraph{T}) where T = T
 Base.eltype(::Type{IsingGraph{T}}) where T = T
+Base.eltype(::Type{<:IsingGraph{T}}) where T = T
+Base.eltype(::AbstractIsingGraph{T}) where T = T
+Base.eltype(::Type{<:AbstractIsingGraph{T}}) where T = T
 
 #extend show to print out the graph, showing the length of the state, and the layers
 function Base.show(io::IO, g::IsingGraph)
@@ -250,21 +276,21 @@ function compare_architecture_sizes(architecture1, architecture2)
     return true
 end
 
-### SELF ENERGY
-@inline function activateself!(g)
-    g.self = activate(g.self) # Ensure self is active
-    reinit(g)
-end
+# ### SELF ENERGY
+# @inline function activateself!(g)
+#     g.self = activate(g.self) # Ensure self is active
+#     reinit(g)
+# end
 
-@inline function disableself!(g)
-    g.self = deactivate(g.self) # Ensure self is inactive
-    reinit(g)
-end
-@inline function homogeneousself!(g, val = 1)
-    g.self = sethomogeneoustensor(g.self, val) # Set self to zero
-    reinit(g)
-end
-export activateself!, disableself!, homogeneousself!
+# @inline function disableself!(g)
+#     g.self = deactivate(g.self) # Ensure self is inactive
+#     reinit(g)
+# end
+# @inline function homogeneousself!(g, val = 1)
+#     g.self = sethomogeneoustensor(g.self, val) # Set self to zero
+#     reinit(g)
+# end
+# export activateself!, disableself!, homogeneousself!
 
 
 #### SAVE
