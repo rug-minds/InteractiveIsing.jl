@@ -509,7 +509,7 @@ g.hamiltonian[6].sc[] = c1/a1
 reinit(g)
 
 Temperature=1
-temp(g,Temperature)
+temp!(g,Temperature)
 
 ### Run simulation process
 fullsweep = xL*yL*zL

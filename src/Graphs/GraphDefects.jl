@@ -9,14 +9,14 @@ end
 
 function getIterator(gd::GraphDefects)
     it = Int32[]
-    for idx in eachindex(gd.isDefect)
-        if !gd.isDefect[idx]
+    for idx in eachindex(isDefect(gd))
+        if !isDefect(gd)[idx]
             push!(it, idx)
         end
     end
     
     # If everything is alive return whole range
-    length(it) == length(gd.isDefect) && return UnitRange{Int32}(1:length(gd.isDefect))
+    length(it) == length(isDefect(gd)) && return UnitRange{Int32}(1:length(isDefect(gd)))
 
     return it
 end
@@ -25,13 +25,13 @@ export getIterator
 #Extend bas show for graph defects, showing wether there are defects, and if so the sum of isDefect vector
 function Base.show(io::IO, defects::GraphDefects)
     if hasDefects(defects)
-        print(io, "GraphDefects with $(sum(defects.isDefect)) defects")
+        print(io, "GraphDefects with $(sum(isDefect(defects))) defects")
     else
         print(io, "GraphDefects with no defects")
     end
 end
 
-@setterGetter GraphDefects
+@Setter!Getter GraphDefects
 # @inline graph(gd::GraphDefects)::IsingGraph = gd.graph
 # @inline graph(gd::GraphDefects, g::IsingGraph) = gd.graph = g
 
@@ -49,7 +49,7 @@ function zipAndRemove!(gd, zipListGetSet, removeListGetSet, d_idxs)
 end
 
 # import Base: setindex!, getindex
-Base.getindex(gd::GraphDefects, idx) = gd.isDefect[idx]
+Base.getindex(gd::GraphDefects, idx) = isDefect(gd)[idx]
 
 # TODO: Alivelist only matters when starting a loop (?)
 # Maybe it's easier to only have the vector with bools
@@ -65,7 +65,7 @@ function Base.setindex!(gd::GraphDefects, val, idx::Int32)
         isDefect(gd)[idx] == val && return val
 
         # Mark Lattice as having defects
-        hasDefects(gd, true)
+        hasDefects!(gd, true)
 
         # Remove first item that matches the index and add it to the alive list
         rem_idx = removeFirst!(defectList(gd),  idx) 
@@ -81,7 +81,7 @@ function Base.setindex!(gd::GraphDefects, val, idx::Int32)
 
         # If no defects left, mark lattice as not containing defects
         if length(defectList(gd)) == 0
-            hasDefects(gd, false)
+            hasDefects!(gd, false)
         end
     end
 
@@ -162,7 +162,7 @@ function setaliverange!(gd::GraphDefects, idxs)::Int32
     setlayerdefects(gd, graph(gd), d_idxs, false)
 
     if length(defectList(gd)) == 0
-        hasDefects(gd, false)
+        hasDefects!(gd, false)
     end
 
     #return amount set
@@ -189,7 +189,7 @@ function setdefectrange!(gd::GraphDefects, idxs)::Int32
     @inbounds isDefect(gd)[d_idxs] .= true
 
     # Mark lattice as having defects
-    hasDefects(gd, true)
+    hasDefects!(gd, true)
 
     # Set all the defects in the layers
     # TODO: NOT SETTING CORRECT
@@ -204,11 +204,11 @@ function setdefectrange!(g::AbstractIsingGraph, idxs)
 end
 function setdefectrange!(l::AbstractIsingLayer, idxs)
     d_idxs = setdefectrange!(defects(graph(l)), idxLToG.(idxs, Ref(l)))
-    defects(graph(l)).layerdefects[internal_idx(l)] += d_idxs
+    layerdefects(defects(graph(l)))[internal_idx(l)] += d_idxs
 end
 function setaliverange!(l::AbstractIsingLayer, idxs)
     d_idxs = setaliverange!(defects(graph(l)), idxLToG.(idxs, Ref(l)))
-    defects(graph(l)).layerdefects[internal_idx(l)] -= d_idxs
+    layerdefects(defects(graph(l)))[internal_idx(l)] -= d_idxs
 end
 export setdefectrange!, setaliverange!
 
@@ -216,10 +216,10 @@ export setdefectrange!, setaliverange!
 Reset all the defects
 """
 function reset!(gd::GraphDefects)
-    hasDefects(gd, false)
+    hasDefects!(gd, false)
     isDefect(gd) .= false
-    aliveList(gd, Int32[1:length(isDefect(gd));])
-    defectList(gd, Int32[])
+    aliveList!(gd, Int32[1:length(isDefect(gd));])
+    defectList!(gd, Int32[])
     layerdefects(gd) .= 0
     gd
 end
@@ -232,11 +232,11 @@ function addLayer!(gd::GraphDefects, layer)
     layer_idx =  internal_idx(layer)
     _startidx = startidx(layer)
     #set new isdefect vector 
-    splice!(gd.isDefect, _startidx:_startidx-1, [false for x in 1:nStates(layer)])
+    splice!(isDefect(gd), _startidx:_startidx-1, [false for x in 1:nStates(layer)])
     # gd.isDefect = vcat(gd.isDefect, [false for x in 1:nStates(layer)])
 
     #set new alive list
-    splice!(gd.aliveList, _startidx:_startidx-1, Int32[startidx(layer):(startidx(layer)+nStates(layer)-1);])
+    splice!(aliveList(gd), _startidx:_startidx-1, Int32[startidx(layer):(startidx(layer)+nStates(layer)-1);])
     # gd.aliveList = vcat(gd.aliveList, Int32[start(layer):(start(layer)+nStates(layer)-1);])
 
     insert!(layerdefects(gd), layer_idx, 0)
@@ -254,7 +254,7 @@ function removeLayer!(gd::GraphDefects, lidx)
     preceding_layers = _layers[1:(lidx-1)]
     # Get the number of defects in the layer
     l_ndefect = layerdefects(gd)[lidx]
-    nstates_layer = length(gd.isDefect) - sum(nStates.(_layers)) 
+    nstates_layer = length(isDefect(gd)) - sum(nStates.(_layers)) 
     lidx = min(lidx, length(_layers))
     start_idx = startidx(_layers[lidx])
 
@@ -279,9 +279,9 @@ function removeLayer!(gd::GraphDefects, lidx)
     newalivelist[1:preceding_alives] = aliveList(gd)[1:preceding_alives]
     newalivelist[(preceding_alives+1):end] = (aliveList(gd)[(preceding_alives+1 + l_alivelist_length):end] .- nstates_layer)
 
-    gd.defectList = newdefectlist
-    gd.aliveList = newalivelist
-    deleteat!(gd.isDefect, start_idx:(start_idx+nstates_layer-1))
+    defectList!(gd, newdefectlist)
+    aliveList!(gd, newalivelist)
+    deleteat!(isDefect(gd), start_idx:(start_idx+nstates_layer-1))
 
     # Fix layerdefects
     deleteat!(layerdefects(gd), lidx)

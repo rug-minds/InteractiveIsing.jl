@@ -244,7 +244,7 @@ export topology
 ## ACCESSORS
 @inline function state(l::IsingLayer)
     et = eltype(l)
-    gstate = getstate(graph(l))::Vector{et}
+    gstate = graphstate(graph(l))
     v = @view gstate[graphidxs(l)]
     v = unsafe_wrap(Array, pointer(v), size(l))
 end 
@@ -393,8 +393,8 @@ export bfield, bvec
 function aliveidxs(layer::AbstractIsingLayer)
     ds = defects(graph(layer))
     lidx = internal_idx(layer)
-    preceding_defects = sum(ds.layerdefects[1:lidx-1])
-    these_defects = ds.layerdefects[lidx]
+    preceding_defects = sum(layerdefects(ds)[1:lidx-1])
+    these_defects = layerdefects(ds)[lidx]
     alivelist_range = (startidx(layer)-preceding_defects):(endidx(layer)-preceding_defects-these_defects)
     aliveList(ds)[alivelist_range]
 end
@@ -523,7 +523,7 @@ Returns wether layer has any defects
     if !isnothing(graph(layer)) 
         return 0
     end
-    defects(graph(layer)).layerdefects[layeridx(layer)]
+    layerdefects(defects(graph(layer)))[layeridx(layer)]
 end
 @inline nalive(layer::AbstractIsingLayer) = nStates(layer) - ndefect(layer)
 export ndefect, nalive

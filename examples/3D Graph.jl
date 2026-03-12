@@ -19,14 +19,14 @@ g = ii.IsingGraph(100,100,10,
         periodic = (:x,:y))
 
 interface(g)
-createProcess(g)
+createProcess(g, lifetime = Processes.Until(x -> x == 0, Var(g.default_algorithm, :T)))
 
 
 
-pause(g)
-c = context(g)
-reg = getregistry(c)
-cview = view(c, reg[1][1])
-step!(InteractiveIsing.Metropolis(), cview)
-@code_warntype step!(InteractiveIsing.Metropolis(), cview)
+# pause(g)
+# c = context(g)
+# reg = getregistry(c)
+# cview = view(c, reg[1][1])
+# step!(InteractiveIsing.Metropolis(), cview)
+# @code_warntype step!(InteractiveIsing.Metropolis(), cview)
 

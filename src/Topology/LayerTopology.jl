@@ -114,7 +114,7 @@ mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: AbstractL
     end
 end
 
-@setterGetter LatticeTopology size
+@Setter!Getter LatticeTopology size
 Base.size(top::AbstractLayerTopology) = top.size
 Base.size(top, i) = top.size[i]
 

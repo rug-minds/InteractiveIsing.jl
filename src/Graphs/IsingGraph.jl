@@ -1,3 +1,7 @@
+export adj, state
+export statelen, initRandomState
+export processes, process
+
 #TODO: SHouldn't have the same supertype as layer statetype
 struct ContinuousState <: StateType end
 struct DiscreteState <: StateType end
@@ -61,9 +65,9 @@ Base.eltype(::Type{<:AbstractIsingGraph{T}}) where T = T
 
 #extend show to print out the graph, showing the length of the state, and the layers
 function Base.show(io::IO, g::IsingGraph)
-    for (idx, layer) in enumerate(g.layers)
+    for (idx, layer) in enumerate(layers(g))
         Base.show(io, layer)
-        if idx != length(g.layers)
+        if idx != length(g)
             print(io, "\n")
         end
     end
@@ -81,7 +85,7 @@ export coords
 @inline clamprange!(g::IsingGraph, clamp, idxs) = setrange!(defects(g), clamp, idxs)
 export clamprange!
 
-@setterGetter IsingGraph adj params layers
+@Setter!Getter IsingGraph adj params layers
 # @inline params(g::IsingGraph) = g.params
 export params
 @inline nStates(g::IsingGraph) = length(state(g))::Int
@@ -89,17 +93,17 @@ export params
 @inline nstates(g) = length(state(g))::Int
 export nstates
 
-@inline adj(g::IsingGraph) = g.adj
-@inline function adj!(g::IsingGraph, adj)
-    @assert size(adj, 1) == length(state(g)) && size(adj, 2) == length(state(g))
-    g.adj = adj
+@inline adj(g::IsingGraph) = getfield(g, :adj)
+@inline function adj(g::IsingGraph, newadj)
+    @assert size(newadj, 1) == length(state(g)) && size(newadj, 2) == length(state(g))
+    g.adj = newadj
     # Add callbacks field to graph, which is a Dict{typeof(<:Function), Vector{Function}}
     # And create a setterGetter macro that includes the callbacks
     reinit(g)
-    return adj
+    return newadj
 end
-set_adj!(g::IsingGraph, vecs::Tuple) = adj!(g, UndirectedAdjacency(g.adj, vecs...))
-export adj
+@inline adj!(g::IsingGraph, newadj) = adj(g, newadj)
+set_adj!(g::IsingGraph, vecs::Tuple) = adj(g, UndirectedAdjacency(adj(g), vecs...))
 
 # @forwardfields IsingGraph GraphData d
 @forwardfields IsingGraph GraphDefects defects graph
@@ -119,47 +123,35 @@ export adj
     end
     return g[1]
 end
-layeridxs(g::IsingGraph) = UnitRange{Int32}[graphidxs(unshuffled(layers(g))[i]) for i in 1:length(g)]
+
+@inline graphstate(g::IsingGraph) = getfield(g, :state)
+@inline layeridxs(g::IsingGraph) = UnitRange{Int32}[graphidxs(unshuffled(layers(g))[i]) for i in 1:length(g)]
 @inline spinidx2layer_i_index(g, idx) = internal_idx(spinidx2layer(g, idx))
-@inline layer(g::IsingGraph, idx) = g.layers[idx]
+@inline layer(g::IsingGraph, idx) = getfield(g, :layers)[idx]
 @inline Base.getindex(g::IsingGraph, idx) = IsingLayer(g, idx)
 @inline Base.getindex(g::IsingGraph) = IsingLayer(g, 1)
-@inline Base.length(g::IsingGraph) = length(g.layers)
+@inline Base.length(g::IsingGraph) = length(getfield(g, :layers))
 @inline Base.lastindex(g::IsingGraph) = length(g)
-Base.view(g::IsingGraph, idx) = view(g.layers, idx)
+Base.view(g::IsingGraph, idx) = view(getfield(g, :layers), idx)
 @inline graphidxs(g::IsingGraph) = Int32(1):Int32(nStates(g))
-Base.get!(g::IsingGraph, s, d) = get!(g.addons, s, d)
-Base.get(g::IsingGraph, s) = get(g.addons, s)
-Base.get(g::IsingGraph, s, d) = get(g.addons, s, d)
+Base.get!(g::IsingGraph, s, d) = get!(addons(g), s, d)
+Base.get(g::IsingGraph, s) = get(addons(g), s)
+Base.get(g::IsingGraph, s, d) = get(addons(g), s, d)
 
-@inline layers(g::IsingGraph) = ntuple(i -> IsingLayer(g, i), length(g.layers))
+@inline layers(g::IsingGraph) = ntuple(i -> IsingLayer(g, i), length(g))
 
 # Don't overload!
-@inline getstate(g::IsingGraph) = g.state
-
-# function set_listener_callback!(g, f::Function)
-#     if !haskey(g.addons, :listener_callback)
-#         g.addons[:listener_callback] = Function[f]
-#     else
-#         push!(g.addons[:listener_callback], f)
-#     end
-# end
-
-# function listener_callback(g)
-#     for f in get(g.addons, :listener_callback, Function[])
-#         f(g)
-#     end
-# end
-
+@inline getstate(g::IsingGraph) = state(g)
 
 function Base.convert(::Type{<:AbstractIsingLayer}, g::IsingGraph)
-    @assert length(g.layers) == 1 "Graph has more than one layer, ambiguous"
-    return g.layers[1]
+    @assert length(g) == 1 "Graph has more than one layer, ambiguous"
+    return layer(g, 1)
 end 
 
 function processes(g::IsingGraph)
     get!(g, :processes, Process[])::Vector{Process}
 end
+
 processes(::Nothing) = nothing
 # Get the first process
 function process(g::IsingGraph)
@@ -197,8 +189,7 @@ function reset!(g::IsingGraph)
 end
  
 statelen(g::IsingGraph) = length(state(g))
-export statelen
-export initRandomState
+
 """ 
 Initialize from a graph
 """
@@ -211,17 +202,6 @@ function initRandomState(g)
     return _state
 end
 
-#=
-Methods
-=#
-function stateiterator(g::IsingGraph)
-    if hasDefects(g)
-        return aliveList(g)
-    else
-        return UnitRange{Int32}(1:nStates(g))
-    end
-end
-# Doesn't need to use multiple dispatch
 """ 
 Returns in iterator which can be used to choose a random index among alive spins
 """
@@ -233,21 +213,6 @@ function ising_it(g)
         return aliveList(g)
     end
 end
-
-"""
-Initialization of adjacency Vector for a given N
-and using a weightFunc
-Is a pointer to function in SquareAdj.jl for compatibility
-"""
-# initSqAdj(len, wid; weights = defaultIsingWF) = createSqAdj(len, wid, weights)
-
-# """
-# Initialization of adjacency Vector for a given N
-# and using a weightFunc with a self energy
-# """
-# function initSqAdjSelf(len, wid; selfweight = -1 .* ones(len*wid), weightFunc = defaultIsingWF)
-#     return initSqAdj(len, wid; weightFunc, self = true, selfweight)
-# end
 
 export continuous
 continuous(g::IsingGraph{T}) where T = T <: Integer ? false : true
@@ -275,61 +240,3 @@ function compare_architecture_sizes(architecture1, architecture2)
     end
     return true
 end
-
-# ### SELF ENERGY
-# @inline function activateself!(g)
-#     g.self = activate(g.self) # Ensure self is active
-#     reinit(g)
-# end
-
-# @inline function disableself!(g)
-#     g.self = deactivate(g.self) # Ensure self is inactive
-#     reinit(g)
-# end
-# @inline function homogeneousself!(g, val = 1)
-#     g.self = sethomogeneoustensor(g.self, val) # Set self to zero
-#     reinit(g)
-# end
-# export activateself!, disableself!, homogeneousself!
-
-
-#### SAVE
-
-# Constructor for copying from other graph or savedata.
-# function IsingGraph(
-#     state,
-#     adj,
-#     layers,
-#     defects,
-#     data,
-#     Hamiltonians = Ising(g)
-#     )
-# return IsingGraph(
-# # Sim
-# nothing,
-# #state
-# state,
-# # Adjacency
-# adj,            
-# #Temp
-# 1f0,
-# # Default algorithm
-# updateMetropolis,
-# #Hamiltonians
-# Hamiltonians,
-# # Layers
-# layers,
-# # Connections between layers
-# Dict{Pair, Int32}(),
-# #params
-# # (;self = ParamTensor(zeros(eltype(state), length(state)), 0, "Self Connections", false)),
-# # For notifying simulations or other things
-# Emitter(Observable[]),
-# # Defects
-# defects,
-# # Data
-# data,
-# # Processes
-# Vector{Process}()
-# )
-# end

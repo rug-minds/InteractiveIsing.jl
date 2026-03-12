@@ -30,11 +30,11 @@ function breakcondition(lt::Union{Repeat, Indefinite}, process::P, context::C) w
     end
 end
 
-function breakcondition(u::Until{Vars},process::P, context::C) where {Vars, P <: AbstractProcess, C}
+function breakcondition(u::Until{Vars}, process::P, context::C) where {Vars, P <: AbstractProcess, C}
     if !shouldrun(process)
         return true
     else
-        return !(u.cond(getindex(context, u.Vars...)))
+        return u.cond(getindex(context, Vars...))
     end
 end
 

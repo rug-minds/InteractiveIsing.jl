@@ -128,8 +128,8 @@ activateone!(l::IsingLayer, idx, val = 1, allval = 0) = begin state(l) .= allval
 """
 Set the temperature and notify the simulation
 """
-function settemp(g,val)
-    temp(g, val)
+function settemp!(g,val)
+    temp!(g, val)
     if !isnothing(sim(g))
         temp(sim(g), val)
     end
@@ -143,7 +143,7 @@ function anneal(g, total_time, Trange, steps)
     prev_time = time()
     time_per_step = total_time/steps
     @async for T in LinRange(Trange[1], Trange[2], steps)
-        temp(g, T)
+        temp!(g, T)
         async_sleepy(time_per_step, prev_time)
         prev_time = time()
     end 

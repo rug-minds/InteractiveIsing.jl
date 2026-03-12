@@ -24,8 +24,9 @@ end
     proposal = @inline rand(rng, proposer)
 
     ΔE = zero(eltype(state))
+    T = temp(state)
 
-    returnargs = (;state, hamiltonian, proposer, rng, proposal, ΔE)
+    returnargs = (;state, hamiltonian, proposer, rng, proposal, ΔE, T)
     return returnargs
 end
 
@@ -36,15 +37,14 @@ end
     proposal = @inline rand(rng, proposer)
     Ttype = eltype(state)
 
-    β = one(Ttype)/(@inline temp(state))
-
+   
     ΔE = @inline calculate(ΔH(), hamiltonian, state, proposal)
-    
-    if (@inline (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-β*ΔE)))
+    T = temp(state)
+    if (@inline (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-ΔE/T)))
         proposal = @inline accept(proposer, proposal)
     end
 
     injected = @inline inject(context, (;proposal))
     @inline update!(metro, hamiltonian, injected)
-    return (;proposal, ΔE)
+    return (;proposal, ΔE, T)
 end

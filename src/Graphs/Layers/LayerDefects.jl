@@ -14,21 +14,21 @@ function Base.show(io::IO, defects::LayerDefects)
     print(io, "LayerDefects with $(ndefect(defects)) defects")
 end
 
-ndefect(defects::LayerDefects) = ndefect(defects.l)
-@setterGetter LayerDefects
+ndefect(defects::LayerDefects) = ndefect(l(defects))
+@Setter!Getter LayerDefects
 
-maxdefects(defects::LayerDefects) = nStates(defects.layer)
+maxdefects(defects::LayerDefects) = nStates(l(defects))
 
-graphdefects(df::LayerDefects) = defects(df.graph)
+graphdefects(df::LayerDefects) = defects(graph(df))
 
 reset!(defects::LayerDefects) = ndefect(defects,0)
 
 function Base.getindex(d::LayerDefects, idx)
-    defects(d.graph)[idxLToG(idx, d.l)]
+    defects(graph(d))[idxLToG(idx, l(d))]
 end
 
 function Base.setindex!(d::LayerDefects, val, idx)
-    graphdefects(d)[idxLToG(idx, d.l)] = val
+    graphdefects(d)[idxLToG(idx, l(d))] = val
     return val
 end
 
@@ -37,9 +37,7 @@ end
 
 #NOT WORKING
 function defectList(defects::LayerDefects)
-    currentlayer = layer(defects)
-    lidx = internal_idx(currentlayer)
-    g = graph(currentlayer)
+    currentlayer = l(defects)
 
     preceding_defects = precedingDefects(defects)
 
@@ -47,9 +45,7 @@ function defectList(defects::LayerDefects)
 end
 
 function aliveList(defects::LayerDefects)
-    currentlayer = layer(defects)
-    lidx = internal_idx(currentlayer)
-    g = graph(currentlayer)
+    currentlayer = l(defects)
 
     preceding_states = precedingAlives(defects)
     
@@ -57,7 +53,7 @@ function aliveList(defects::LayerDefects)
 end
 
 function precedingDefects(defects::LayerDefects)
-    currentlayer = layer(defects)
+    currentlayer = l(defects)
 
     preceding_defects = 0
     for i in 1:(internal_idx(currentlayer)-1)
@@ -69,7 +65,7 @@ end
 export precedingDefects
 
 function precedingAlives(defects::LayerDefects)
-    currentlayer = layer(defects)
+    currentlayer = l(defects)
 
     preceding_states = 0
     for i in 1:(internal_idx(currentlayer)-1)
@@ -79,5 +75,4 @@ function precedingAlives(defects::LayerDefects)
     return preceding_states
 end
 export precedingAlives
-
 
