@@ -371,7 +371,7 @@ for i in 1:eachindex(sizes)
     g.hamiltonian = Ising(g) + CoulombHamiltonian2(g, 1, screening = 0.5)
     g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
-    temp(g,starttemp)
+    temp!(g,starttemp)
 
     createProcess(g, Pulse_and_Relax, lifetime = 1)
 end

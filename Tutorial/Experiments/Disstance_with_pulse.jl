@@ -449,7 +449,7 @@ function run_simu!(g; X_dis, Y_dis, Z_dis, Scale, Screening, Amp1, Temp=0.3, tim
     g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 
     # Temperature init
-    temp(g, Temp)
+    temp!(g, Temp)
 
     # ----- Pulse algorithm -----
     pulse1 = TrianglePulseA(Amp1, 2)

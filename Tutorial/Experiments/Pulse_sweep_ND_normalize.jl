@@ -599,7 +599,7 @@ g.hamiltonian[5].sc[] = c1 / a1
 
 reinit(g)
 # Temperature init
-temp(g, Temp)
+temp!(g, Temp)
 
 # ----- Pulse algorithm -----
 nrepeats = 2
