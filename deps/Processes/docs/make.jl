@@ -20,6 +20,8 @@ makedocs(
             "Contexts and Indexing" => "user/contexts.md",
             "Routes and Shares" => "user/routes_shares.md",
             "Inputs and Overrides" => "user/inputs_overrides.md",
+            "Vars (Var Selectors)" => "user/vars.md",
+            "Lifetime" => "user/lifetime.md",
             "Running, Wait, Fetch" => "user/running.md",
             "Value Semantics and Unique" => "user/value_semantics.md",
         ],
@@ -30,5 +32,5 @@ makedocs(
 deploydocs(
     repo = "github.com/f-ij/Processes.jl.git",
     devbranch = "main",
-    versions = ["v#.#", "dev" => "dev"],
+    versions = ["stable" => "dev", "dev" => "dev"],
 )

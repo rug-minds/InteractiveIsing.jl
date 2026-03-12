@@ -9,6 +9,17 @@ run(p)
 
 `run(p)` starts the process loop task.
 
+## Lifetime
+
+The `lifetime` keyword defines stop behavior:
+
+- `lifetime = 1000` -> run a fixed number of iterations.
+- omitted -> default lifetime behavior for that algorithm type.
+- advanced: `Processes.Repeat(...)`, `Processes.Indefinite()`, `Processes.Until(...)`, `Processes.RepeatOrUntil(...)`.
+
+See [Lifetime](@ref lifetime_user) for full details.
+For selector syntax used in `Until`, see [Vars (`Var` Selectors)](@ref vars_user).
+
 ## Control
 
 - `pause(p)`: stop loop while keeping resumable state.
