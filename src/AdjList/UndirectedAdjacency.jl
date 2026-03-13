@@ -83,6 +83,11 @@ function remap!(adj::UndirectedAdjacency)
     end
     return sp
 end
+
+####################################
+############ METHODS ###############
+####################################
+
 @inline function Base.setindex!(A::UA, value, row::Ti, col::Ti) where {UA <: UndirectedAdjacency, Ti}
     if separate_diagonal(A) && row == col
         A.diag[row] = value

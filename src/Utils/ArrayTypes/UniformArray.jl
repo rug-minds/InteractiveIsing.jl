@@ -41,6 +41,10 @@ Base.length(fa::UniformArray) = prod(fa.size)
     return fa.val[]
 end
 
+@inline function Base.getindex(fa::UniformArray{T}) where T
+    return fa.val[]
+end
+
 @inline function Base.getindex(fa::UniformArray{T}, idxs::Integer...) where T
     @boundscheck checkbounds(fa, idxs...)
     return fa.val[]
@@ -48,6 +52,10 @@ end
 
 @inline function Base.setindex!(fa::UniformArray{T}, v, idx::Integer) where T
     @boundscheck checkbounds(fa, idx)
+    fa.val[] = v
+end
+
+@inline function Base.setindex!(fa::UniformArray{T}, v) where T
     fa.val[] = v
 end
 
