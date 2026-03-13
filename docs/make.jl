@@ -1,36 +1,34 @@
-push!(LOAD_PATH, joinpath(@__DIR__, "..", "src"))
+push!(LOAD_PATH,"../src/")
 
 using Documenter
-using Processes
 
-makedocs(
-    sitename = "Processes",
-    format = Documenter.HTML(),
-    pages = [
-        "Home" => "index.md",
-        "Internals" => [
-            "Registry" => "internals/registry.md",
-            "Contexts" => "internals/contexts.md",
-            "Routes and Shares" => "internals/routes_shares.md",
-            "Process Pipeline" => "internals/process_pipeline.md",
-        ],
-        "User API" => [
-            "Algorithms and States" => "user/algorithms_states.md",
-            "Referencing Algorithms" => "user/referencing_algorithms.md",
-            "Contexts and Indexing" => "user/contexts.md",
-            "Routes and Shares" => "user/routes_shares.md",
-            "Inputs and Overrides" => "user/inputs_overrides.md",
-            "Vars (Var Selectors)" => "user/vars.md",
-            "Lifetime" => "user/lifetime.md",
-            "Running, Wait, Fetch" => "user/running.md",
-            "Value Semantics and Unique" => "user/value_semantics.md",
-        ],
-        "Usage Guide (Legacy)" => "man/usage.md",
-    ],
-)
+makedocs(sitename="InteractiveIsing Documentation",
+        pages = [ 
+            # "Index" => "index.md",
+            "General Usage" => "man/usage.md",
+            "Details" => [
+                "IsingGraphs" => "man/IsingGraphs.md",
+                "Indexing" => "man/Indexing.md",
+                "WeightGenerators" => "man/WeightGenerator.md",
+                "Generating Adjacency Lists" => "man/GeneratingAdj.md",
+                "Defects" => "man/Defects.md",
+                "Loops" => "man/Loops.md",
+                "Parameters" => "man/Parameters.md",
+                "Algorithms" => "man/Algorithms.md",
+                "Hamiltonians" => "man/Hamiltonians.md",
+                "Analysis" => "man/Analysis.md",
+                "Processes" => "man/Processes.md",
+                "Windows" => "man/Windows.md",
+                "Topology" => "man/Topology.md",
+            ],
+            "Developer" => [
+                "Registry and Scoping" => "dev/Registry.md",
+                "Scoped Algorithms" => "dev/IdentifiableAlgos.md",
+                "Context" => "dev/Context.md",
+            ]
+        ]
+        )
 
 deploydocs(
-    repo = "github.com/f-ij/Processes.jl.git",
-    devbranch = "main",
-    versions = ["stable" => "dev", "dev" => "dev"],
+    repo = "github.com/rug-minds/InteractiveIsing.jl.git",
 )
