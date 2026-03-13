@@ -333,8 +333,8 @@ function Processes.init(tp::LinAnealingA, args)
     (;current_T = tp.start_T, dT)
 end
 function Processes.step!(::LinAnealingA, context::C) where C
-    (;current_T, dT, isinggraph) = context
-    temp(isinggraph, max(current_T, 0))
+    (;current_T, dT, state) = context
+    temp!(state, max(current_T, 0))
     return (;current_T = current_T + dT)
 end
 ##################################################################################
@@ -361,11 +361,11 @@ function Processes.init(tp::LinAnealingB, args)
     return (;tem_pulse, step, temval = tem_pulse[1])
 end
 function Processes.step!(::LinAnealingB, context::C) where C
-    (;tem_pulse, step, isinggraph) = context
+    (;tem_pulse, step, state) = context
 
     temval = tem_pulse[step]
 
-    temp(isinggraph, max(temval, 0))
+    temp!(state, max(temval, 0))
 
     return (;step = step + 1, temval)
 end
@@ -621,12 +621,12 @@ Metro_and_recal = CompositeAlgorithm(metropolis, M_Integrate_and_Logger, B_Logge
     (1, 1, point_repeat, point_repeat),
     Route(metropolis => M_Integrate_and_Logger, :proposal => :Δvalue, transform = proposal -> accepteddelta(proposal)),
     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
-    Route(metropolis => T_Logger, :isinggraph => :value, transform = temp)
+    Route(metropolis => T_Logger, :state => :value, transform = temp)
 )
 
 anneal_partB = CompositeAlgorithm(Metro_and_recal, AnealingB,
     (1, point_repeat),
-    Route(metropolis => AnealingB, :isinggraph),
+    Route(metropolis => AnealingB, :state),
 )
 
 Anealing_step = Routine(anneal_partB, (anneal_time,))
