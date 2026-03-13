@@ -1,5 +1,6 @@
-# InteractiveIsing.jl
-[![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://rug-minds.github.io/InteractiveIsing.jl/dev/man/usage/)
+[![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://f-ij.github.io/Processes.jl/stable/)
+[![Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://f-ij.github.io/Processes.jl/dev/)
 
 
-This package provides a flexible platform for 2D and 3D, multilayer simulations of Ising models.
+# Processes.jl
+ A module for doing fast threaded loops

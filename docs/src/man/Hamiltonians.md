@@ -1,3 +1,0 @@
-# Hamiltonians
-
-## Required Hamiltonians
