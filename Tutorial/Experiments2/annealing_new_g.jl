@@ -566,7 +566,7 @@ Epp_1 = 2a1 + 12b1 + 30c1   # Ey''(1)
 println("Ey''(1) = ", Epp_1)
 
 # Output directory for the whole sweep
-outdir = raw"C:\Users\P317151\Documents\data\Model_V1.1\Anealing check"
+outdir = raw"D:\Code\data\Manuscript\Demo1"
 mkpath(outdir)
 
 # Run a sweep without re-running the first two setup cells.
@@ -581,15 +581,17 @@ time_fctr=1
 Steps_1=6000
 
 #### 可以给Quartic写个vector，然后后面就不哦那个给
-#### b=:homogeneous会被移除，换成b=:FillArray/StaticArray/OffsetArray，后续版本会移除b=:homogeneous
+#### b=:homogeneous会被移除，换成b=:OffsetArray, UniformArray, ConstFill，后续版本会移除b=:homogeneous
 g = II.IsingGraph(xL, yL, zL, 
         Continuous(), 
         wg5, 
         LatticeConstants(1.0, 1.0, 1.0),
-        Ising(b=:homogeneous) + CoulombHamiltonian(scaling = Scale, screening = Screening_values, recalc = 1000) + Quartic() + Sextic(), 
+        Ising(b = StateLike(UniformArray,0)) + CoulombHamiltonian(scaling = Scale, screening = Screening_values, recalc = 1000) + Quartic() + Sextic(), 
         StateSet(-1.5f0, 1.5f0),
-        periodic = (:x,:y), 
-        self = :homogeneous)
+        periodic = (:x,:y),
+        diag = StateLike(UniformArray)
+)
+
 
 adj(g)[1,1] = a1
 g.hamiltonian[5].c[] = b1/a1
