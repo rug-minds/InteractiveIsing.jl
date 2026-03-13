@@ -4,9 +4,9 @@ struct IsingGraphCopy{G, T} <: AbstractIsingGraph{T}
 
     function IsingGraphCopy(graph::G; init = nothing)
         T = eltype(graph)
-        state = similar(graph.state)
+        state = similar(InteractiveIsing.state(graph))
         if isnothing(init)
-            copy!(state, graph.state)
+            copy!(state, InteractiveIsing.state(graph))
         elseif init == :Random
             state .= initRandomState(graph)
         elseif init == :Zero
@@ -18,6 +18,5 @@ struct IsingGraphCopy{G, T} <: AbstractIsingGraph{T}
         new{typeof(graph), T}(graph, state) 
     end
 end
-
 
 

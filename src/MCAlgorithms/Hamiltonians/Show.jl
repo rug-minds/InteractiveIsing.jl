@@ -31,14 +31,14 @@ function _show_hamiltonian_terms(io::IO, hts::HamiltonianTerms)
     last_idx = length(hs)
     for (idx, h) in enumerate(hs)
         branch = idx == last_idx ? "└── " : "├── "
-        stem = idx == last_idx ? "      " : "     │"
+        stem = idx == last_idx ? "    " : "│   "
         header_prefix = branch
         header_text = string("[", idx, "]: ", summary(h))
         println(io, header_prefix, _truncate_for_prefix(io, header_prefix, header_text))
 
         fnames = fieldnames(typeof(h))
         if isempty(fnames)
-            println(io, stem, " └── vars: ∅")
+            println(io, stem, "└── vars: ∅")
             continue
         end
 

@@ -163,7 +163,7 @@ lines!(ax, x, y, color = :blue, linewidth = 2)
 hlines!(ax, [0], color = (:gray, 0.5), linestyle = :dash)
 display(fig)
 
-temp(g,1)
+temp!(g,1)
 
 g.hamiltonian = Ising(g) + DepolField(g, c=0.0001/(2 * xL * yL), top_layers=1, bottom_layers=1, zfunc = z -> 0.3/z) + Quartic(g) + Sextic(g)
 h = g.hamiltonian

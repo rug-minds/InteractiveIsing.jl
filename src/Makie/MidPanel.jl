@@ -118,7 +118,7 @@ function midPanel(window)
 
             on(tempslider.value) do x
                 if 0.0 <= x <= slider_max
-                    temp(g, x)
+                    temp!(g, x)
                 end
             end
 

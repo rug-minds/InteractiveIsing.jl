@@ -10,12 +10,13 @@ struct Clamping{PBeta, BY} <: Hamiltonian
     β::PBeta
     y::BY
 end
-Clamping(β::Real = 1f0, y::AbstractVector = Float32[]) = Clamping(Ref(β), y)
-function Clamping(g::AbstractIsingGraph, β = one(eltype(g)), y = nothing)
+@inline Clamping(β::Real = 1f0, y::AbstractVector = Float32[]) = Clamping(Ref(β), y)
+@inline Clamping(β::Real, y::Fill) = Clamping(Ref(β), y)
+@inline function Clamping(g::AbstractIsingGraph, β = one(eltype(g)), y = nothing)
     isnothing(y) && (y = zeros(eltype(g), nstates(g)))
     return reconstruct(Clamping(β, y), g)
 end
-function reconstruct(hterm::Clamping, g::AbstractIsingGraph)
+@inline function reconstruct(hterm::Clamping, g::AbstractIsingGraph)
     T = eltype(g)
     ynew = zeros(T, nstates(g))
     copylen = min(length(hterm.y), length(ynew))
@@ -29,12 +30,14 @@ params(::Type{Clamping}, GraphType) = GatherHamiltonianParams((:β, GraphType, G
 
 
 # function ΔH(::Clamping, hargs, proposal)
-function calculate(::ΔH, hterm::Clamping, state, proposal)
+@inline function calculate(::ΔH, hterm::Clamping, state::S, proposal) where {S <: AbstractIsingGraph}
     j = at_idx(proposal)
     newstate = to_val(proposal)
-    return hterm.β[]/2*(newstate^2 - state[j]^2 - 2*hterm.y[j]*(newstate - state[j]))
+    spins = @inline InteractiveIsing.state(state)
+    return hterm.β[]/2*(newstate^2 - spins[j]^2 - 2*hterm.y[j]*(newstate - spins[j]))
 end
 
-function calculate(::dH, hterm::Clamping, state, s_idx)
-    return hterm.β[]*(state[s_idx] - hterm.y[s_idx])
+@inline function calculate(::dH, hterm::Clamping, state::S, s_idx) where {S <: AbstractIsingGraph}
+    spins = @inline InteractiveIsing.state(state)
+    return hterm.β[]*(spins[s_idx] - hterm.y[s_idx])
 end

@@ -652,7 +652,7 @@ function run_simu!(g; Cdep = 0.1, Temp = 0.3, time_fctr = 3, Steps_1 = 4000)
     g.hamiltonian[5].sc[] = c1 / a1
 
     # Temperature init
-    temp(g, Temp)
+    temp!(g, Temp)
 
     # ----- Pulse algorithm -----
     nrepeats = 2

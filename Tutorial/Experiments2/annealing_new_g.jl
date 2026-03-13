@@ -600,7 +600,7 @@ interface(g)
 # reinit(g)
 
 # Temperature init
-temp(g, Temp_aneal)
+temp!(g, Temp_aneal)
 
 # ----- Annealing algorithm -----
 AnealingB = LinAnealingB(Temp_aneal, 0f0)

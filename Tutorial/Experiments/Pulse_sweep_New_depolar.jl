@@ -584,7 +584,7 @@ function run_simu!(g; Scale = 1, Screening = 0.1, Amp1 =20, Temp = 0.3, time_fct
 
     reinit(g)
     # Temperature init
-    temp(g, Temp)
+    temp!(g, Temp)
 
     # ----- Pulse algorithm -----
     nrepeats = 2

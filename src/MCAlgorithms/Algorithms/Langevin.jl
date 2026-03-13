@@ -1,6 +1,6 @@
 struct LangevinDynamics <: ProcessAlgorithm end
 
-function IsingLangevin()
+@inline function IsingLangevin()
     destr = DestructureInput()
     package(CompositeAlgorithm(LangevinDynamics(), destr, Route(destr => LangevinDynamics(), :isinggraph => :structure)))
 end
@@ -34,20 +34,21 @@ end
     return y <= span ? lo + y : hi - (y - span)
 end
 
-function Processes.init(::LangevinDynamics, input)
+@inline function Processes.init(::LangevinDynamics, input)
     (;structure) = input
 
-    state = InteractiveIsing.state(structure)
+    state = structure
+    spins = @inline InteractiveIsing.state(state)
     hamiltonian = structure.hamiltonian
     adj = InteractiveIsing.adj(structure)
-    self = structure.self
+    # self = structure.self
     rng = Random.MersenneTwister()
 
     hamiltonian = init!(hamiltonian, structure)
-    M = sum(state)
+    M = sum(spins)
     iterator = InteractiveIsing.iterator(structure)
 
-    dH_prealloc = zeros(eltype(state), length(state))
+    dH_prealloc = zeros(eltype(state), InteractiveIsing.nstates(state))
 
     rand_alloc = rand(rng, eltype(state), length(dH_prealloc))
 
@@ -57,13 +58,14 @@ function Processes.init(::LangevinDynamics, input)
     max_substep = Ref(eltype(state)(0.01f0))
     max_drift_fraction = Ref(eltype(state)(0.15f0))
 
-    (;isinggraph = structure, hamiltonian, rng, state, adj, self, dH_prealloc, iterator, stepsize, max_substep, max_drift_fraction)
+    (;isinggraph = structure, hamiltonian, rng, state, dH_prealloc, iterator, stepsize, max_substep, max_drift_fraction)
 end
 
 @inline function Processes.step!(::LangevinDynamics, context::C) where {C}
-    (;hamiltonian, rng, isinggraph, state, adj, self, dH_prealloc, iterator, stepsize, max_substep, max_drift_fraction) = context
+    (;hamiltonian, rng, isinggraph, state, dH_prealloc, iterator, stepsize, max_substep, max_drift_fraction) = context
 
     SType = eltype(state)
+    spins = @inline InteractiveIsing.state(state)
     epsT = eps(SType)
     t = max(SType(temp(isinggraph)), zero(SType))
     η = max(stepsize[], epsT)
@@ -116,20 +118,20 @@ end
             drift_step = clamp(η_sub * derivative, -local_drift_cap, local_drift_cap)
 
             noise = σ_sub > zero(SType) ? randn(rng, SType) : zero(SType)
-            trial_state = @inbounds(state[spin_idx]) - drift_step + σ_sub * noise
+            trial_state = @inbounds(spins[spin_idx]) - drift_step + σ_sub * noise
 
 
             if !isfinite(trial_state)
-                trial_state = @inbounds state[spin_idx]
+                trial_state = @inbounds spins[spin_idx]
                 if !isfinite(trial_state)
                     
                     trial_state = (low_state + high_state) / SType(2)
                     # trial_state = (@inbounds(lo_prealloc[spin_idx]) + @inbounds(hi_prealloc[spin_idx])) / SType(2)
                 end
             end
-            proposal = FlipProposal{:s, :j, SType}(spin_idx, state[spin_idx], trial_state, 1, false)
-            # @inbounds state[spin_idx] = _reflect_to_bounds(trial_state, lo_prealloc[spin_idx], hi_prealloc[spin_idx])
-            @inbounds state[spin_idx] = _reflect_to_bounds(trial_state, low_state, high_state)
+            proposal = FlipProposal{SType}(spin_idx, spins[spin_idx], trial_state, 1, false)
+            # @inbounds spins[spin_idx] = _reflect_to_bounds(trial_state, lo_prealloc[spin_idx], hi_prealloc[spin_idx])
+            @inbounds spins[spin_idx] = _reflect_to_bounds(trial_state, low_state, high_state)
              
         end
 

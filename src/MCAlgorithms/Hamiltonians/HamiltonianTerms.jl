@@ -28,6 +28,13 @@ Base.:+(h1::Hamiltonian, h2::Hamiltonian) = HamiltonianTerms((h1, h2))
 Base.:+(h1::Hamiltonian, h2::HamiltonianTerms) = HamiltonianTerms((h1, hamiltonians(h2)...))
 Base.:+(h1::HamiltonianTerms, h2::Hamiltonian) = HamiltonianTerms((hamiltonians(h1)..., h2))
 
+# Allow bare Types in + chains: Ising() + Quartic + Sextic
+Base.:+(h1::Hamiltonian, ::Type{H}) where {H<:Hamiltonian} = h1 + H()
+Base.:+(::Type{H}, h2::Hamiltonian) where {H<:Hamiltonian} = H() + h2
+Base.:+(h1::HamiltonianTerms, ::Type{H}) where {H<:Hamiltonian} = h1 + H()
+Base.:+(::Type{H}, h2::HamiltonianTerms) where {H<:Hamiltonian} = H() + h2
+Base.:+(::Type{H1}, ::Type{H2}) where {H1<:Hamiltonian, H2<:Hamiltonian} = H1() + H2()
+
 function setparam(ham::Hamiltonian, field, paramtensor)
     fnames = paramnames(ham)
     found = findfirst(x->x==field, fnames)

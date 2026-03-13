@@ -410,7 +410,7 @@ Pulse_and_Relax = Routine(pulse_part1, Metro_simple,
 
 
 Temperature=100
-temp(g,Temperature)
+temp!(g,Temperature)
 # a1, b1, c1 = -20, 16, 0 
 a1, c1 = -2, 10
 b1 =-(a1+3*c1)/2

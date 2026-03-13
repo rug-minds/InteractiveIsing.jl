@@ -13,21 +13,20 @@ g = ii.IsingGraph(100,100,10,
         wg, 
         LatticeConstants(1.0, 1.0, 20.),
         StateSet(-1.5f0, 1.5f0),
-        Ising(b = :homogeneous) + Clamping(1f0),
-        periodic = (:x,:y), 
-        self = :homogeneous)
+        Ising(c = ConstVal(1)) + 
+            Clamping(1f0)+ Quartic(c = ConstVal(1.0), ) + 
+            Sextic(c = ConstVal(1.0), localpotential = StateLike(OffsetArray, 0)),
+        periodic = (:x,:y))
 
 interface(g)
-createProcess(g)
+createProcess(g, lifetime = Processes.Until(x -> x == 0, Var(g.default_algorithm, :T)))
 
 
 
+# pause(g)
+# c = context(g)
+# reg = getregistry(c)
+# cview = view(c, reg[1][1])
+# step!(InteractiveIsing.Metropolis(), cview)
+# @code_warntype step!(InteractiveIsing.Metropolis(), cview)
 
-
-# createProcess(g, algo, Input(PolTracker(), isinggraph = g))
-
-# using Random
-# proposer = ii.get_proposer(g)
-# proposal = rand(Random.MersenneTwister(123), proposer)
-# hargs = (;s = InteractiveIsing.state(g), w = InteractiveIsing.adj(g), self = InteractiveIsing.self(g), g.hamiltonian...)
-# ii.ΔH(g.hamiltonian[3], hargs, proposal)

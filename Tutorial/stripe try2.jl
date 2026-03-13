@@ -384,7 +384,7 @@ g.hamiltonian = sethomogeneousparam(g.hamiltonian, :b)
 homogeneousself!(g,a1)
 
 Temperature=1
-temp(g,Temperature)
+temp!(g,Temperature)
 
 ### Run simulation process
 # Time_fctr = 1

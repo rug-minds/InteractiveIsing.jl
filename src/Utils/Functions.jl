@@ -262,33 +262,48 @@ end
 """
 Defines setter and getter functions for all struct fieldnames
 """
-macro setterGetter(strct, deleted...)
+macro Setter!Getter(strct, deleted...)
     funcs = quote end
-    strctname = string(nameof(eval(strct)))
+    strctname = nameof(eval(strct))
 
     for name in fieldnames(eval(strct))
         if !(name ∈ deleted)
-            # strctname = string(nameof(eval(strct)))
-            varname = lowercase(string(nameof(eval(strct))))
+            # varname = lowercase(string(nameof(eval(strct))))
 
             if @methodexists name
                 println("importing $name")
                 eval(:(import Base: $name))
             end
 
-            getstr = "@inline $name($varname::$(strctname)) = $varname.$(string(name))"
-            setstr = "@inline $(name)!($varname::$(strctname), val) = $varname.$(string(name)) = val"
-            setstrdel = "@inline $name($varname::$(strctname), val) = $varname.$(string(name)) = val"
+            # getstr = "@inline $name(structvalue::$(strctname)) = structvalue.$(string(name))"
+            getstr = quote 
+                @inline function $(Symbol(name))(structvalue::$(strctname))
+                    return getproperty(structvalue, $(QuoteNode(Symbol(name))))
+                end
+            end
+            # setstr = "@inline $(name)!(structvalue::$(strctname), val) = structvalue.$(string(name)) = val"
+            setstr = quote
+                @inline function $(Symbol(name,:!))(structvalue::$(strctname), val)
+                    setproperty!(structvalue, $(QuoteNode(Symbol(name))), val)
+                end
+            end
+            # setstrdel = "@inline $name(structvalue::$(strctname), val) = structvalue.$(string(name)) = val"
+            setstrdel = quote
+                @inline $(Symbol(name))(structvalue::$(strctname), val) = begin
+                    name = $(QuoteNode(Symbol(name)))
+                    @warn "Setting $name is not supported and will not persist. If you want to set $name, consider using $(name)! instead."
+                    setproperty!(structvalue, name, val)
+                end
+            end
 
-
-            push!(funcs.args, Meta.parse(getstr))
-            push!(funcs.args, Meta.parse(setstr))
-            push!(funcs.args, Meta.parse(setstrdel))
+            push!(funcs.args, getstr)
+            push!(funcs.args, setstr)
+            push!(funcs.args, setstrdel)
             push!(funcs.args, Meta.parse("export $name"))
+            push!(funcs.args, Meta.parse("export $(Symbol(name,:!))"))
         end
     end
     return esc(funcs)
-
 end
 macro setterGetterAnnotated(strct, deleted...)
     funcs = quote end

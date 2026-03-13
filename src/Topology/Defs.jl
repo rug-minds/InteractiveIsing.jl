@@ -44,11 +44,3 @@ periodic(P::NonPeriodic, ::Val{symb}) where symb = false
 periodicaxes(P::PartPeriodic{Parts}, dims) where {Parts} = Parts
 periodicaxes(P::Periodic, dims) = ntuple(i -> i, dims)
 periodicaxes(P::NonPeriodic, dims) = tuple()
-
-
-
-# """
-# Why is this here?
-# """
-# struct GenericTopology{U} <: AbstractLayerTopology{U,0} end
-

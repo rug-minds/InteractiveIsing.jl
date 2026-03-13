@@ -2,198 +2,244 @@ struct FenwickTree{T}
     tree::Vector{T}
 end
 
-function FenwickTree(n::Int, T=Float64)
-    FenwickTree(zeros(T, n))
-end
+@inline FenwickTree(n::Int, T = Float64) = FenwickTree(zeros(T, n))
 
-function update!(ft::FenwickTree, i, delta)
-    while i <= length(ft.tree)
-        ft.tree[i] += delta
+@inline function update!(ft::FenwickTree{T}, i::Int, delta::T) where {T}
+    n = length(ft.tree)
+    while i <= n
+        @inbounds ft.tree[i] += delta
         i += i & -i
     end
+    return ft
 end
 
-function prefix_sum(ft::FenwickTree, i::Int)
-    s = 0.0
+@inline function prefix_sum(ft::FenwickTree{T}, i::Int) where {T}
+    s = zero(T)
     while i > 0
-        s += ft.tree[i]
+        @inbounds s += ft.tree[i]
         i -= i & -i
     end
     return s
 end
 
-function total_sum(ft::FenwickTree)
-    return prefix_sum(ft, length(ft.tree))
-end
+@inline total_sum(ft::FenwickTree) = prefix_sum(ft, length(ft.tree))
 
-# Find index such that prefix_sum(index) >= u
-function find_index(ft::FenwickTree, u)
+@inline function find_index(ft::FenwickTree{T}, u::T) where {T}
+    n = length(ft.tree)
+    n == 0 && return 0
+
     idx = 0
-    mask = 1 << (floor(Int, log2(length(ft.tree))))
-    s = 0.0
+    s = zero(T)
+    mask = prevpow(2, n)
+
     while mask != 0
         t = idx + mask
-        if t <= length(ft.tree) && s + ft.tree[t] < u
-            s += ft.tree[t]
-            idx = t
+        if t <= n
+            v = @inbounds ft.tree[t]
+            if s + v < u
+                s += v
+                idx = t
+            end
         end
         mask >>= 1
     end
-    # Clamp to last valid index if u >= total sum (due to floating point error)
-    return min(idx + 1, length(ft.tree))
+
+    return min(idx + 1, n)
 end
 
 mutable struct FlipEnergies{T}
     ΔEs::Vector{T}
     rates::Vector{T}
-    fenwick::FenwickTree{T} # Fenwick tree for cumulative rates
-    totalrate::Float64
+    targets::Vector{T}
+    fenwick::FenwickTree{T}
+    totalrate::T
     r0::T
 end
 
-Base.eltype(::Type{FlipEnergies{T}}) where T = T
+@inline Base.eltype(::Type{FlipEnergies{T}}) where {T} = T
 
-function get_r(fe::FlipEnergies, β, i)
-    r = fe.r0 * exp(-β * fe.ΔEs[i])
+@inline function _proposal_for_index(proposer, rng, i::Int)
+    spins = @inline InteractiveIsing.state(proposer.state)
+    oldstate = @inbounds spins[i]
+    layer_idx = spin_idx_to_layer_idx(i, proposer.layers)
+    newstate = @inline inline_layer_dispatch(layer -> randstate(rng, layer, oldstate), layer_idx, proposer.layers)
+    return FlipProposal{statetype(proposer)}(i, oldstate, newstate, layer_idx, false)
+end
+
+@inline function _rate_from_delta(r0::T, ΔE::T, t::T) where {T}
+    if !(t > zero(T))
+        # At T=0, only accept transitions that lower energy
+        return ΔE < zero(T) ? r0 : zero(T)
+    end
+
+    exponent = clamp(-ΔE / t, T(-700), T(700))
+    r = r0 * exp(exponent)
+    if !isfinite(r) || r < zero(T)
+        return zero(T)
+    end
     return r
 end
 
-function FlipEnergies(g::AbstractIsingGraph, args::As, r0 = one(eltype(g))) where As
-    totalrate = zero(eltype(g.state))
-    vec = zeros(eltype(g.state), length(g.state))
-    rates = zeros(eltype(g.state), length(g.state))
-    fe = FlipEnergies(vec, rates, FenwickTree(length(g.state), eltype(g.state)), Float64(totalrate), r0)
-    for i in eachindex(fe.ΔEs)
-       init_i!(fe, g, args, i)
+@inline function FlipEnergies(state, n::Int, r0::T) where {T}
+    ΔEs = zeros(T, n)
+    rates = zeros(T, n)
+    # Targets are filled by rebuild_rates!/refresh_rate!, so avoid copying state.
+    targets = Vector{T}(undef, n)
+    return FlipEnergies(ΔEs, rates, targets, FenwickTree(n, T), zero(T), r0)
+end
+
+@inline function build_fenwick_from_rates!(ft::FenwickTree{T}, rates::Vector{T}) where {T}
+    tree = ft.tree
+    copyto!(tree, rates)
+    n = length(tree)
+    @inbounds for i in 1:n
+        j = i + (i & -i)
+        if j <= n
+            tree[j] += tree[i]
+        end
+    end
+    return ft
+end
+
+@inline function refresh_rate!(fe::FlipEnergies{T}, context, i::Int, t::T) where {T}
+    (;state, hamiltonian, proposer, rng) = context
+
+    @inline proposal = _proposal_for_index(proposer, rng, i)
+    @inline ΔE = calculate(ΔH(), hamiltonian, state, proposal)
+    @inline r = _rate_from_delta(fe.r0, ΔE, t)
+
+    @inbounds oldr = fe.rates[i]
+    delta = r - oldr
+
+    @inbounds fe.ΔEs[i] = ΔE
+    @inbounds fe.rates[i] = r
+    @inbounds fe.targets[i] = to_val(proposal)
+    @inline update!(fe.fenwick, i, delta)
+
+    fe.totalrate += delta
+    nothing
+end
+
+@inline function rebuild_rates!(fe::FlipEnergies, context, t)
+    (;state, hamiltonian, proposer, rng) = context
+    totalrate = zero(eltype(fe))
+
+    for i in eachindex(fe.rates)
+        proposal = _proposal_for_index(proposer, rng, i)
+        ΔE = @inline calculate(ΔH(), hamiltonian, state, proposal)
+        r = _rate_from_delta(fe.r0, ΔE, t)
+
+        @inbounds fe.ΔEs[i] = ΔE
+        @inbounds fe.rates[i] = r
+        @inbounds fe.targets[i] = to_val(proposal)
+        totalrate += r
+    end
+
+    fe.totalrate = totalrate
+    build_fenwick_from_rates!(fe.fenwick, fe.rates)
+    return fe
+end
+
+@inline function update_local_rates!(fe::FlipEnergies, context, j::Int, t)
+    (;adj) = context
+
+    refresh_rate!(fe, context, j, t)
+    rowvals = SparseArrays.rowvals(adj)
+    for ptr in SparseArrays.nzrange(adj, j)
+        i = @inbounds rowvals[ptr]
+        i == j && continue
+        refresh_rate!(fe, context, i, t)
     end
     return fe
 end
 
-function init_i!(fe::FlipEnergies, g, args, i)
-    (;gstate, gadj, deltafunc, lmeta, rng) = args
-    newstate = SparseVal((@inline sampleState(statetype(lmeta), gstate[i], rng, stateset(lmeta))), Int32(length(gstate)), Int32(i))
-    fe.ΔEs[i] = deltafunc((;g, args..., newstate), j = i)
-    previousrate = fe.rates[i]
-    t = temp(g)
-    if t == 0
-        t = eps(eltype(g.state)) # Avoid division by zero
+@inline function draw_event_index(rng, fe::FlipEnergies{T}) where {T}
+    totalrate = fe.totalrate
+    if !(totalrate > zero(T)) || !isfinite(totalrate)
+        return 0, zero(T)
     end
-    maxexp = 700 # Prevent overflow in exp
-    exponent = clamp(-fe.ΔEs[i] / t, -maxexp, maxexp)
-    r = fe.r0 * exp(exponent)
-    if !isfinite(r) || r < 0
-        r = zero(eltype(g.state))
-    end
-    delta = r - previousrate
-    if r > 0
-        fe.rates[i] = r
-        # fe.totalrate += delta
-        update!(fe.fenwick, i, delta)
-    else
-        fe.rates[i] = zero(eltype(g.state))
-        # fe.totalrate -= previousrate
-        update!(fe.fenwick, i, -previousrate)
-    end
-    return fe
+
+    # Keep u strictly positive to avoid selecting index 0 from finite-precision edge cases.
+    u = max(rand(rng, T) * totalrate, eps(T))
+    u = min(u, totalrate)
+    j = find_index(fe.fenwick, u)
+    return j, totalrate
 end
 
-function recalc_temp!(fe::FlipEnergies, args)
-    for i in eachindex(fe.ΔEs)
-        init_i!(fe, args.g, args, i)
-    end
-    return fe
+struct KineticMC <: MCAlgorithm
+    r0::Float64
 end
 
-function recalc!(fe::FlipEnergies, args, j)
-    (;gadj) = args
-    connections = gadj.rowval[nzrange(gadj, j)]
-    for i in connections
-        init_i!(fe, args.g, args, i)
-    end
-    return fe
+@inline KineticMC(; r0 = 1.0) = KineticMC(Float64(r0))
+
+@inline function IsingKinetic(; r0 = 1.0)
+    destr = DestructureInput()
+    kinetic = KineticMC(r0 = r0)
+    package(SimpleAlgo(kinetic, destr, Route(destr => kinetic, :isinggraph => :structure)))
 end
 
-function get_totalrate(fe::FlipEnergies)
-    cum = zero(eltype(fe))
-   @turbo for i in eachindex(fe.rates)
-        cum += fe.rates[i]
-    end
-    fe.totalrate = cum
-    return fe.totalrate
-end
-
-function get_u(rng, fe)
-    totalrate = get_totalrate(fe)
-    if totalrate <= 0 || isnan(totalrate)
-        fe.totalrate = zero(eltype(fe))
-        return zero(eltype(fe))
-    else
-        # println("totalrate: ", totalrate)
-        u = Uniform(zero(eltype(fe)), eltype(fe)(totalrate))
-        return rand(rng, u)
-    end
-    # if fe.totalrate <= 0 || isnan(fe.totalrate)
-    #     fe.totalrate = zero(eltype(fe))
-    #     return zero(eltype(fe))
-    # else
-    #     u = Uniform(zero(eltype(fe)), eltype(fe)(fe.totalrate))
-    #     return rand(rng, u)
-    # end
-end
-
-struct KineticMC <: MCAlgorithm end
 export KineticMC
 
-function Processes.init(::KineticMC, args::As) where As
-    (;g) = args
-    gstate = g.state
-    gadj = g.adj
-    params = g.params
-    iterator = ising_it(g)
-    hamiltonian = init!(g.hamiltonian, g)
-    deltafunc = deltaH(hamiltonian)
-    rng = Random.GLOBAL_RNG
-    M = Ref(sum(g.state))
-    Δs_j = Ref(zero(eltype(g.state)))
+@inline function Processes.init(algo::KineticMC, context::Cont) where {Cont}
+    (;structure) = context
 
-    lmeta = LayerMetaData(g[1])
-    lasttemp = Ref(temp(g))
+    state = structure
+    adj = InteractiveIsing.adj(structure)
+    hamiltonian = structure.hamiltonian
+    rng = Random.MersenneTwister()
+    hamiltonian = init!(hamiltonian, structure)
+    proposer = get_proposer(structure)
+    proposal = @inline rand(rng, proposer)
 
-    
+    T = eltype(state)
+    t = T(temp(structure))
+    rates = FlipEnergies(state, InteractiveIsing.nstates(state), T(algo.r0))
+    lasttemp = Ref(t)
+    lastdt = Ref(zero(T))
+    j = 0
+    ΔE = zero(T)
+    dt = zero(T)
+    totalrate = zero(T)
+    kinetic_context = (;structure, state, adj, hamiltonian, proposer, rng)
+    rebuild_rates!(rates, kinetic_context, t)
 
-    args = (;gstate, gadj, params, iterator, hamiltonian, deltafunc, lmeta, rng, M, Δs_j, lasttemp, lastdt)
-    ΔEs = FlipEnergies(g, args)
-    return (;args..., ΔEs)
+    returnargs = (;kinetic_context..., proposal, rates, lasttemp, lastdt, j, ΔE, dt, totalrate)
+    return returnargs
 end
 
+@inline function Processes.step!(kinetic::KineticMC, context::C) where {C}
+    (;structure, state, rates, rng, proposer) = context
 
-@inline function (::KineticMC)(@specialize(args))
-    (;g, gstate, ΔEs, rng) = args
-
-    if temp(g) != args.lasttemp[]
-        recalc_temp!(ΔEs, args)
-        args.lasttemp[] = temp(g)
+    t = eltype(state)(temp(structure))
+    lasttemp = context.lasttemp[]
+    if isfinite(lasttemp) && abs(t - lasttemp) > eps(eltype(state)) * max(abs(t), abs(lasttemp), one(eltype(state)))
+        rebuild_rates!(rates, context, t)
+        context.lasttemp[] = t
+    elseif !isfinite(lasttemp)
+        rebuild_rates!(rates, context, t)
+        context.lasttemp[] = t
     end
-    β = one(eltype(g))/(temp(g))
-    u = get_u(rng, ΔEs)
-    totalrate = get_totalrate(ΔEs)
-    u = min(u, totalrate - eps(totalrate))
-    if u <= 0
-        return nothing # No valid flip found
+
+    j, totalrate = draw_event_index(rng, rates)
+    if j == 0
+        context.lastdt[] = zero(eltype(state))
+        return (;j = 0, ΔE = zero(eltype(state)), dt = context.lastdt[], totalrate = zero(eltype(state)), proposal = context.proposal)
     end
-    j = find_index(ΔEs.fenwick, u)
 
-    g.state[j] = -g.state[j] # Flip the state
-    # @hasarg if M isa Ref
-    #     M[] += (g.state[j] - gstate[j])
-    # end|
-    # @hasarg if Δs_j isa Ref
-    #     Δs_j[] = g.state[j] - gstate[j]
-    # end
+    spins = @inline InteractiveIsing.state(state)
+    oldstate = @inbounds spins[j]
+    layer_idx = spin_idx_to_layer_idx(j, proposer.layers)
+    proposal = FlipProposal{eltype(state)}(j, oldstate, @inbounds(rates.targets[j]), layer_idx, false)
+    proposal = @inline accept(proposer, proposal)
+    ΔE = @inbounds rates.ΔEs[j]
 
-    recalc!(ΔEs, args, j)
-    # @inline update!(args.hamiltonian, args)
-    dt = 
-    return
+    update_local_rates!(rates, context, j, t)
+
+    dt = -log(max(rand(rng, eltype(state)), eps(eltype(state)))) / totalrate
+    context.lastdt[] = dt
+
+    context = @inline inject(context, (;proposal))
+    @inline update!(kinetic, context.hamiltonian, context)
+
+    return (;j, ΔE, dt, totalrate, proposal)
 end
-

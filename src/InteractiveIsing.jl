@@ -55,9 +55,9 @@ include("Utils/Utils.jl")
 # Global RNG for module
 const rng = MersenneTwister()
 
-@debug "Including WeightFuncs"
-include("WeightFuncs.jl")
-@debug "WeightFuncs loaded"
+# @debug "Including WeightFuncs"
+# include("WeightFuncs.jl")
+# @debug "WeightFuncs loaded"
 
 @debug "Including Topology"
 include("Topology/Topology.jl")

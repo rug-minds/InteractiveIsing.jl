@@ -13,38 +13,6 @@ function imagesc(data::AbstractMatrix{<:Real};
     return get(colorscheme, data, rangescale) # get(...) from ColorSchemes.jl
 end
 
-# Resizes image of graph by duplicating pixels by integer amount
-# Determines integer factor based on specifying some max size
-# N = image size (why not read this from img????)
-# Maxsize specifies maxsize
-# function resizeGImg(img,N,maxsize)
-#     factor = Int32(floor(maxsize/N))
-
-#     newN = (N*factor)
-#     # new_size = trunc.(Int, (size,size) .* factor)
-#     # println(new_size)
-#     newimg = Matrix{RGB{Float64}}(undef,newN,newN)
-    
-#     slices = 1:factor:newN
-
-#     step = factor-1
-#     for (vidx,vert_slice) in enumerate(slices[1:end])
-#         for (hidx,hori_slice) in enumerate(slices[1:end])
-#             newimg[vert_slice:(vert_slice+step), hori_slice:(hori_slice+step)] .= img[vidx,hidx]
-#         end
-#     end
-    
-#     return newimg
-# end
-
-# function gToImg(g::AbstractIsingGraph, maxsize = 600; colorscheme = ColorSchemes.viridis)
-#     tempimg = imagesc(reshape(state(g), glength(g), gwidth(g)); colorscheme)
-#     if gwidth(g) < maxsize
-#         tempimg = resizeGImg(tempimg,gwidth(g),maxsize)
-#     end
-#     return tempimg
-# end
-
 function gToImg(g::AbstractIsingGraph; colorscheme = ColorSchemes.viridis )
     tempimg = imagesc(reshape(state(g), glength(g), gwidth(g)), maxsize = 2000; colorscheme)
     return tempimg
@@ -58,7 +26,6 @@ function checkImgSize(sim, layer, glength, gwidth, qmllen, qmlwid)
         # qmlwidth(sim)[] = gwidth
     end
 end
-
 
 function saveGImg(layers...)
     for layer in layers
