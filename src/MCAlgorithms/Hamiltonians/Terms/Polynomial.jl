@@ -23,13 +23,13 @@ const Octic{T, S} = PolynomialHamiltonian{8, T, S}
 
 order(::Union{PolynomialHamiltonian{Order}, Type{<:PolynomialHamiltonian{Order}}}) where Order = Order
 
-PolynomialHamiltonian(order ;c = ConstVal(0), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian{order}(c, localpotential)
+PolynomialHamiltonian(order ;c = UniformArray(0), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian{order}(c, localpotential)
 PolynomialHamiltonian(order, c) = PolynomialHamiltonian(order; c = c)
 PolynomialHamiltonian(order, c, localpotential) = PolynomialHamiltonian{order}(c, localpotential)
-Quadratic(;c = ConstVal(0), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian(2; c, localpotential)
-Quartic(;c = ConstVal(0), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian(4; c, localpotential)
-Sextic(;c = ConstVal(0), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian(6; c, localpotential)
-Octic(;c = ConstVal(0), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian(8; c, localpotential)
+Quadratic(;c = UniformArray(0), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian(2; c, localpotential)
+Quartic(;c = UniformArray(0), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian(4; c, localpotential)
+Sextic(;c = UniformArray(0), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian(6; c, localpotential)
+Octic(;c = UniformArray(0), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian(8; c, localpotential)
 Quadratic(c) = Quadratic(; c = c)
 Quadratic(c, localpotential) = PolynomialHamiltonian{2, typeof(c), typeof(localpotential)}(c, localpotential)
 Quartic(c) = Quartic(; c = c)
