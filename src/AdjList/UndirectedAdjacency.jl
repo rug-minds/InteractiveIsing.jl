@@ -4,19 +4,19 @@ Sparse Adjacency matrix that has fast access for fixed connectivity
     Useful for models where the topology is fixed but weights are learned
     E.g. Ising models with fixed interactions but learnable coupling strengths
 """
-struct UndirectedAdjacency{Tv, Ti, D, I} <: AbstractSparseMatrix{Tv, Ti}
-    sp::SparseMatrixCSC{Tv, Ti}
+struct UndirectedAdjacency{Tv, Ti, SP, D, I} <: AbstractSparseMatrix{Tv, Ti}
+    sp::SP
     diag::D
     # indexmap::Dict{Pair{Ti, Ti}, Ti}
     indexmap::I
 end
 
-fastwrite(::Union{UndirectedAdjacency{Tv, Ti, D, I}, Type{<:UndirectedAdjacency{Tv, Ti, D, I}}}) where {Tv, Ti, D, I} = !(I <: Nothing)
-separate_diagonal(::Union{UndirectedAdjacency{Tv, Ti, D, I}, Type{<:UndirectedAdjacency{Tv, Ti, D, I}}}) where {Tv, Ti, D, I} = !(D <: Nothing)
+fastwrite(::Union{UndirectedAdjacency{Tv, Ti, SP, D, I}, Type{<:UndirectedAdjacency{Tv, Ti, SP, D, I}}}) where {Tv, Ti, SP, D, I} = !(I <: Nothing)
+separate_diagonal(::Union{UndirectedAdjacency{Tv, Ti, SP, D, I}, Type{<:UndirectedAdjacency{Tv, Ti, SP, D, I}}}) where {Tv, Ti, SP, D, I} = !(D <: Nothing)
 
-function UndirectedAdjacency(sp::SparseMatrixCSC{Tv, Ti}, diag::D = nothing; fastwrite = false) where {Tv, Ti, D}
+function UndirectedAdjacency(sp::AbstractSparseMatrix{Tv, Ti}, diag::D = nothing; fastwrite = false) where {Tv, Ti, D}
     indexmap = fastwrite ? map_topology(sp) : nothing
-    return UndirectedAdjacency(sp, diag, indexmap)
+    return UndirectedAdjacency{Tv, Ti, typeof(sp), D, typeof(indexmap)}(sp, diag, indexmap)
 end
 
 """
@@ -24,11 +24,11 @@ From another UndirectedAdjacency, create a new one with the same topology but ne
     If diag is not provided, it will be copied from the original if it exists, otherwise set to nothing
     If fastwrite is true, a new indexmap will be created for the new adjacency, otherwise it will be set to nothing
 """
-function UndirectedAdjacency(ua::UndirectedAdjacency, diag::D = nothing; fastwrite = false) where {D}
+function UndirectedAdjacency(ua::UndirectedAdjacency{Tv, Ti, SP, D, I}, diag::D = nothing; fastwrite = false) where {Tv, Ti, SP, D, I}
     sp_copy = copy(ua.sp)
     indexmap_copy = fastwrite ? copy(ua.indexmap) : nothing
     diag = isnothing(diag) ? (separate_diagonal(ua) ? copy(ua.diag) : nothing) : diag
-    return UndirectedAdjacency(sp_copy, diag, indexmap_copy)
+    return UndirectedAdjacency{Tv, Ti, SP, D, I}(sp_copy, diag, indexmap_copy)
 end
 
 """
@@ -36,22 +36,22 @@ Give the columns rows and values of a new sparse matrix with the same topology a
     This is useful for efficiently updating the weights of an existing adjacency without changing the topology
     If fastwrite is true, a new indexmap will be created for the new adjacency, otherwise it will be set to nothing
 """
-function UndirectedAdjacency(ua::UndirectedAdjacency{Tv, Ti, D, I}, cols, rows, vals) where {Tv, Ti, D, I}
+function UndirectedAdjacency(ua::UndirectedAdjacency{Tv, Ti, SP, D, I}, cols, rows, vals) where {Tv, Ti, SP, D, I}
     sp_new = sparse(rows, cols, vals, size(ua.sp)...)
     indexmap_new = fastwrite(ua) ? map_topology(sp_new) : nothing
-    return UndirectedAdjacency{Tv, Ti, D, I}(sp_new, ua.diag, indexmap_new)
+    return UndirectedAdjacency{Tv, Ti, SP, D, I}(sp_new, ua.diag, indexmap_new)
 end
 
 function UndirectedAdjacency(rows, cols, vals, m, n; diag = nothing, fastwrite = false)
     sp = sparse(rows, cols, vals, m, n)
     indexmap = fastwrite ? map_topology(sp) : nothing
-    return UndirectedAdjacency(sp, diag, indexmap)
+    return UndirectedAdjacency{eltype(sp.nzval), eltype(sp.rowval), typeof(sp), typeof(diag), typeof(indexmap)}(sp, diag, indexmap)
 end
 
 function UndirectedAdjacency(m::Integer, n::Integer; diag = nothing, fastwrite = false)
     sp = spzeros(m, n)
     indexmap = fastwrite ? map_topology(sp) : nothing
-    return UndirectedAdjacency(sp, diag, indexmap)
+    return UndirectedAdjacency{eltype(sp.nzval), eltype(sp.rowval), typeof(sp), typeof(diag), typeof(indexmap)}(sp, diag, indexmap)
 end
 
 """
@@ -196,6 +196,102 @@ end
 
 @inline Base.getindex(A::UndirectedAdjacency, ::Colon, col::Integer) = getindex(A, axes(A, 1), col)
 @inline Base.getindex(A::UndirectedAdjacency, row::Integer, ::Colon) = getindex(A, row, axes(A, 2))
+
+# ---- Slice setindex! ----
+# Handles scalar and vector values for column/row slices.
+# separate_diagonal / fastwrite are compile-time constants → branches eliminated by JIT.
+
+@inline function Base.setindex!(A::UndirectedAdjacency, val, rows::AbstractVector{<:Integer}, col::Integer)
+    _set_slice!(A, val, rows, Int(col))
+end
+@inline function Base.setindex!(A::UndirectedAdjacency, val, ::Colon, col::Integer)
+    _set_slice!(A, val, axes(A, 1), Int(col))
+end
+# Symmetric: row slice mirrors column slice but indexing into val is by col position
+@inline function Base.setindex!(A::UndirectedAdjacency, val, row::Integer, cols::AbstractVector{<:Integer})
+    _set_slice!(A, val, cols, Int(row))
+end
+@inline function Base.setindex!(A::UndirectedAdjacency, val, row::Integer, ::Colon)
+    _set_slice!(A, val, axes(A, 2), Int(row))
+end
+
+@inline function _set_slice!(A::UndirectedAdjacency, val, inds, fixed::Int)
+    sp = A.sp
+    @inbounds for (i, idx) in enumerate(inds)
+        v = val isa AbstractArray ? val[i] : val
+        if separate_diagonal(A) && idx == fixed
+            A.diag[fixed] = v
+            continue
+        end
+        @inline _set_offdiag!(Val(fastwrite(A)), sp, A, v, idx, fixed)
+    end
+end
+
+@inline function _set_offdiag!(::Val{true}, sp, A, v, row, col)
+    sp.nzval[A.indexmap[row => col]] = v
+    sp.nzval[A.indexmap[col => row]] = v
+end
+
+@inline function _set_offdiag!(::Val{false}, sp, A, v, row, col)
+    sp[row, col] = v
+    sp[col, row] = v
+end
+
+# Matrix slice: A[rows, cols] = val
+@inline function Base.setindex!(A::UndirectedAdjacency, val, rows::AbstractVector{<:Integer}, cols::AbstractVector{<:Integer})
+    @inbounds for (j, col) in enumerate(cols)
+        for (i, row) in enumerate(rows)
+            v = val isa AbstractArray ? val[i, j] : val
+            A[row, col] = v
+        end
+    end
+end
+
+# ---- Broadcastable views (for .= syntax) ----
+
+struct UAView{Tv, P<:UndirectedAdjacency{Tv}, R, C} <: AbstractArray{Tv, 2}
+    parent::P
+    rows::R  # AbstractVector or Int
+    cols::C  # AbstractVector or Int
+end
+
+@inline _resolve(inds::AbstractVector, i) = @inbounds inds[i]
+@inline _resolve(fixed::Integer, _) = fixed
+@inline _viewsize(inds::AbstractVector) = length(inds)
+@inline _viewsize(::Integer) = 1
+
+Base.size(v::UAView{<:Any, <:Any, <:AbstractVector, <:AbstractVector}) = (_viewsize(v.rows), _viewsize(v.cols))
+Base.size(v::UAView{<:Any, <:Any, <:Integer, <:AbstractVector}) = (_viewsize(v.cols),)
+Base.size(v::UAView{<:Any, <:Any, <:AbstractVector, <:Integer}) = (_viewsize(v.rows),)
+
+Base.IndexStyle(::Type{<:UAView}) = IndexCartesian()
+
+# 2D indexing (matrix view)
+@inline Base.getindex(v::UAView{<:Any, <:Any, <:AbstractVector, <:AbstractVector}, i::Integer, j::Integer) =
+    @inbounds v.parent[_resolve(v.rows, i), _resolve(v.cols, j)]
+@inline Base.setindex!(v::UAView{<:Any, <:Any, <:AbstractVector, <:AbstractVector}, val, i::Integer, j::Integer) =
+    @inbounds (v.parent[_resolve(v.rows, i), _resolve(v.cols, j)] = val)
+
+# 1D indexing (vector views — one dim is scalar)
+@inline Base.getindex(v::UAView{<:Any, <:Any, <:Integer, <:AbstractVector}, i::Integer) =
+    @inbounds v.parent[v.rows, _resolve(v.cols, i)]
+@inline Base.setindex!(v::UAView{<:Any, <:Any, <:Integer, <:AbstractVector}, val, i::Integer) =
+    @inbounds (v.parent[v.rows, _resolve(v.cols, i)] = val)
+
+@inline Base.getindex(v::UAView{<:Any, <:Any, <:AbstractVector, <:Integer}, i::Integer) =
+    @inbounds v.parent[_resolve(v.rows, i), v.cols]
+@inline Base.setindex!(v::UAView{<:Any, <:Any, <:AbstractVector, <:Integer}, val, i::Integer) =
+    @inbounds (v.parent[_resolve(v.rows, i), v.cols] = val)
+
+# view constructors
+Base.view(A::UndirectedAdjacency, rows::AbstractVector{<:Integer}, cols::AbstractVector{<:Integer}) = UAView(A, rows, cols)
+Base.view(A::UndirectedAdjacency, ::Colon, cols::AbstractVector{<:Integer}) = UAView(A, axes(A, 1), cols)
+Base.view(A::UndirectedAdjacency, rows::AbstractVector{<:Integer}, ::Colon) = UAView(A, rows, axes(A, 2))
+Base.view(A::UndirectedAdjacency, ::Colon, ::Colon) = UAView(A, axes(A, 1), axes(A, 2))
+Base.view(A::UndirectedAdjacency, row::Integer, cols::AbstractVector{<:Integer}) = UAView(A, Int(row), cols)
+Base.view(A::UndirectedAdjacency, rows::AbstractVector{<:Integer}, col::Integer) = UAView(A, rows, Int(col))
+Base.view(A::UndirectedAdjacency, row::Integer, ::Colon) = UAView(A, Int(row), axes(A, 2))
+Base.view(A::UndirectedAdjacency, ::Colon, col::Integer) = UAView(A, axes(A, 1), Int(col))
 
 #Forward sparse methods:
 Base.size(A::UndirectedAdjacency) = size(A.sp)

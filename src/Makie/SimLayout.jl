@@ -32,7 +32,7 @@ mutable struct SimLayout
 end
 
 SimLayout(f::Figure) = SimLayout(f, LayoutPanel(), LayoutPanel(), LayoutPanel(), Dict{Symbol, Any}(), Any[], Any[], WindowList())
-function deconstruct(ml::SimLayout)
+function cleanup(ml::SimLayout)
     @justtry cleanup(ml, baseFig)
     @justtry cleanup.(Ref(ml), ml.cleanuplist)
     @justtry GLFW.SetWindowShouldClose(to_native(ml[:screen]), true)

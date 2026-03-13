@@ -49,7 +49,7 @@ ConstVal(val) = ConstFill(val)
 
 @inline Base.getindex(::ConstFill{Val, T, 0}) where {Val, T} = Val::T
 
-@inline Base.map(f, sf::ConstFill{Val, T, N}) where {Val, T, N} = ConstFill(f(Val), size(sf))
+@inline Base.map(f, sf::ConstFill{Val, T, N}) where {Val, T, N} = ConstFill(f(Val), size(sf)...)
 
 @inline Base.@propagate_inbounds function Base.getindex(sf::ConstFill{Val, T, N}, idx::Integer) where {Val, T, N}
     @boundscheck checkbounds(sf, idx)

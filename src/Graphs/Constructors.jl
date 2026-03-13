@@ -52,8 +52,8 @@ Multi Layer Constructor
 function IsingGraph(layers::Union{IsingLayerData, Hamiltonian}...;
     precision = Float32, 
     adj = nothing,
-    diag = StateLike(OffsetArray, 0);
-    fast_write = false
+    diag = StateLike(OffsetArray, 0),
+    fastwrite = false
     )
 
     #Parse hamiltonian and filter
@@ -94,7 +94,7 @@ function IsingGraph(layers::Union{IsingLayerData, Hamiltonian}...;
     if isnothing(adj)
         sparse_connections = init_connections_from_layers(precision, total_length, layers...)
         diag = diag(g_for_shape)
-        adj = UndirectedAdjacency(sparse_connections, diag; fast_write)
+        adj = UndirectedAdjacency(sparse_connections, diag; fastwrite)
     else
         @assert size(adj, 1) == total_length "Adjacency matrix size must match total number of nodes in the graph\nexpected $(total_length)x$(total_length), got $(size(adj))"
     end
@@ -145,7 +145,7 @@ end
 """
 Single Layer Constructor
 """
-function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, diag = StateLike(OffsetArray, 0))
+function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, diag = StateLike(OffsetArray, 0), fastwrite = false)
     ham, args = type_parse(Hamiltonian, args...; default = Ising(), error = false)
 
     layer = parse_isinglayer(size1, args...; periodic = periodic)

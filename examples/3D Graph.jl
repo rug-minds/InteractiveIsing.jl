@@ -13,9 +13,9 @@ g = ii.IsingGraph(100,100,10,
         wg, 
         LatticeConstants(1.0, 1.0, 20.),
         StateSet(-1.5f0, 1.5f0),
-        Ising(c = 1, b = :homogeneous) + 
-            Clamping(1f0)+ Quartic(c = 1.0, ) + 
-            Sextic(c = 1.0, localpotential = StateLike(OffsetArray, 0)),
+        Ising(c = ConstVal(1)) + 
+            Clamping(1f0)+ Quartic(c = ConstVal(1.0), ) + 
+            Sextic(c = ConstVal(1.0), localpotential = StateLike(OffsetArray, 0)),
         periodic = (:x,:y))
 
 interface(g)
