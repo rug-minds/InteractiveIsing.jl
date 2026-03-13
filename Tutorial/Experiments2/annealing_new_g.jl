@@ -424,8 +424,6 @@ function Processes.step!(ic::ImageCapture, context::C) where C
     end
 
     CairoMakie.activate!()
-
-    A = Float32.(A)
     nx, ny, nz = size(A)
 
     n = nx * ny * nz
@@ -492,6 +490,54 @@ function Processes.step!(ic::ImageCapture, context::C) where C
 end
 ##################################################################################
 
+##################################################################################
+struct DatatoDataframe{Name} <: ProcessAlgorithm
+end
+
+# fix: store (min,max) in the right order
+# ImageCapture(name, min, max; filepath = pwd()) = ImageCapture{Symbol(name), typeof(min)}(min, max, Symbol(filepath))
+DatatoDataframe(name) = DatatoDataframe{Symbol(name)}()
+
+function Processes.init(ic::DatatoDataframe, input)
+    (;filepath) = input
+    (;callnum = 1, filepath)
+end
+
+dimnames(i) = (:x, :y, :z)[i]
+
+function Processes.step!(ic::DatatoDataframe, context::C) where C
+    (;array, filepath, callnum) = context
+
+    A = array
+
+    arraysize = size(A)
+    dimvecs = (;)
+    for i in 1:length(arraysize)
+        dimvecs = (;dimvecs..., dimnames(i) => Int[])
+    end
+
+    df = DataFrame(;dimvecs..., value = eltype(A)[])
+
+    outdir = filepath
+    path = joinpath(outdir, "Df_running_$(callnum)_" * Dates.format(Dates.now(), "yyyymmdd_HHMMSS") * ".csv")
+    try
+        save(path, df)
+    catch err
+        @warn "Failed to save DataFrame" err
+    finally
+        # avoid accumulating figures in a long-running process
+        try
+            close(fig)
+        catch
+        end
+    end
+
+    return (;callnum = callnum + 1)
+end
+##################################################################################
+
+
+
 function IntegrateAndLog(type = Float64, loginterval = 1)
     integrator = Integrator(type, name = :integrate_and_log)
     logger = Logger(type, name = :integrate_and_log)
@@ -500,8 +546,8 @@ function IntegrateAndLog(type = Float64, loginterval = 1)
 end
 
 
-xL = 50  # Length in the x-dimension
-yL = 50  # Length in the y-dimension
+xL = 40  # Length in the x-dimension
+yL = 40  # Length in the y-dimension
 zL = 10   # Length in the z-dimension
 
 JIsing = 1.0
@@ -512,7 +558,8 @@ a1, c1 = -2, 10
 b1 =-(a1+3*c1)/2
 Ex = range(-1.5, 1.5, length=1000)
 Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
-# f1=newmakie(lines, Ex, Ey);
+f1=newmakie(lines, Ex, Ey);
+
 E_barrier= abs(a1 * 1^2 + b1 * 1^4 .+ c1 * 1^6)
 println("E_barrier = ", E_barrier)
 Epp_1 = 2a1 + 12b1 + 30c1   # Ey''(1)
@@ -527,12 +574,14 @@ mkpath(outdir)
 
 # function run_one_screening!(g; Scale, Screening, Temp_aneal=6f0, time_fctr=30, Steps_1=6000)
 # ---- parameters to sweep ----
-Scale = 2
-Screening_values = 15   # <-- change range here
-Temp_aneal=6f0
-time_fctr=30
+Scale = 1
+Screening_values = 0.01   # <-- change range here
+Temp_aneal=20f0
+time_fctr=1
 Steps_1=6000
 
+#### 可以给Quartic写个vector，然后后面就不哦那个给
+#### b=:homogeneous会被移除，换成b=:FillArray/StaticArray/OffsetArray，后续版本会移除b=:homogeneous
 g = II.IsingGraph(xL, yL, zL, 
         Continuous(), 
         wg5, 
@@ -543,8 +592,8 @@ g = II.IsingGraph(xL, yL, zL,
         self = :homogeneous)
 
 adj(g)[1,1] = a1
-g.hamiltonian[5].c[] = b1
-g.hamiltonian[6].c[] = c1
+g.hamiltonian[5].c[] = b1/a1
+g.hamiltonian[6].c[] = c1/a1
 
 interface(g)
 
@@ -566,16 +615,12 @@ M_Integrate_and_Logger = IntegrateAndLog(Float32, point_repeat)
 B_Logger = ValueLogger(:b)
 T_Logger = ValueLogger(:T)
 
-
-
 Metro_and_recal = CompositeAlgorithm(metropolis, M_Integrate_and_Logger, B_Logger, T_Logger,
     (1, 1, point_repeat, point_repeat),
     Route(metropolis => M_Integrate_and_Logger, :proposal => :Δvalue, transform = proposal -> accepteddelta(proposal)),
     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
     Route(metropolis => T_Logger, :isinggraph => :value, transform = temp)
 )
-
-
 
 anneal_partB = CompositeAlgorithm(Metro_and_recal, AnealingB,
     (1, point_repeat),
@@ -588,7 +633,7 @@ createProcess(g, Anealing_step, lifetime = 1)
 c = process(g) |> fetch
 
 voltage1 = c[B_Logger].values
-Pr1      = c[M_Logger].values
+Pr1      = c[M_Integrate_and_Logger].values
 Temp1    = c[T_Logger].values
 
 # # ============ SAVE (PNG + XLSX) ============
