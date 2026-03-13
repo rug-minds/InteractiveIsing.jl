@@ -635,21 +635,23 @@ Graph_Logger = ImageCapture(:Graph,-1.5,1.5)
 
 
 Metro_Pulse = CompositeAlgorithm(metropolis, M_Integrate_and_Logger, B_Logger,
-    (1, point_repeat, point_repeat),
+    (1, 1, point_repeat),
     Route(metropolis => M_Integrate_and_Logger, :proposal => :Δvalue, transform = proposal -> accepteddelta(proposal)),
     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
 )
 pulse_part1 = CompositeAlgorithm(Metro_Pulse, pulse1, Graph_Logger, (1, point_repeat, capture_interval1), 
-    Route(metropolis => Graph_Logger, :state => :array)
+    Route(metropolis => Graph_Logger, :state => :array, transform = x -> state(x))
 )
 relax_part1 = CompositeAlgorithm(Metro_Pulse, Graph_Logger, (1, capture_interval2), 
-    Route(metropolis => Graph_Logger, :state => :array)
+    Route(metropolis => Graph_Logger, :state => :array, transform = x -> state(x))
 )
 Pulse_and_Relax = Routine(pulse_part1, relax_part1,
     (pulse_time, relax_time),
     Route(metropolis => pulse1, :hamiltonian, :M),
 )
-createProcess(g, Pulse_and_Relax, lifetime = 1, Input(Graph_Logger, filepath = joinpath(outdir, "capture")))
+createProcess(g, Pulse_and_Relax, lifetime = 1, 
+    Input(Graph_Logger, filepath = joinpath(outdir, "capture")),
+    Input(M_Integrate_and_Logger, initialvalue = sum(state(g))))
 c = process(g) |> fetch
 voltage2 = c[B_Logger].values
 Pr2      = c[M_Integrate_and_Logger].log
