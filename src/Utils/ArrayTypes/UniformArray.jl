@@ -59,10 +59,6 @@ end
     fa.val[] = v
 end
 
-@inline function Base.setindex!(fa::UniformArray{T}, v) where T
-    fa.val[] = v
-end
-
 Base.IndexStyle(::Type{<:UniformArray}) = IndexLinear()
 Base.similar(fa::UniformArray{T,N}, ::Type{S}, dims::Dims) where {T,N,S} = Array{S}(undef, dims)
 
