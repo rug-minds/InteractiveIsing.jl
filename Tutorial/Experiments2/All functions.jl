@@ -404,28 +404,22 @@ struct ImageCapture{Name,F} <: ProcessAlgorithm
     max::F
     # filepath::Symbol
 end
-
 # fix: store (min,max) in the right order
 # ImageCapture(name, min, max; filepath = pwd()) = ImageCapture{Symbol(name), typeof(min)}(min, max, Symbol(filepath))
 ImageCapture(name, min, max) = ImageCapture{Symbol(name), typeof(min)}(min, max)
-
 function Processes.init(ic::ImageCapture, input)
     (;filepath) = input
     (;callnum = 1, filepath)
 end
-
 function Processes.step!(ic::ImageCapture, context::C) where C
     (;array, filepath, callnum) = context
-
     A = array
     if !(A isa AbstractArray{<:Real,3})
         @warn "ImageCapture expects a 3D numeric array" typeof(A)
         return (;)
     end
-
     CairoMakie.activate!()
     nx, ny, nz = size(A)
-
     n = nx * ny * nz
     xs = Vector{Float32}(undef, n)
     ys = Vector{Float32}(undef, n)
@@ -576,7 +570,7 @@ mkpath(outdir)
 # ---- parameters to sweep ----
 Scale = 1
 Screening_values = 0.01   # <-- change range here
-Temp_aneal=20f0
+Temp_aneal=5f0
 time_fctr=1
 Steps_1=6000
 
@@ -605,38 +599,71 @@ interface(g)
 temp!(g, Temp_aneal)
 
 # ----- Annealing algorithm -----
+Amp1 =10
+nrepeats = 2
+pulse1 = TrianglePulseA(Amp1, nrepeats)
+pulse2 = SinPulseA(Amp1, nrepeats)
+pulse3 = Unique(SinPulseA(Amp1, nrepeats))
 AnealingB = LinAnealingB(Temp_aneal, 0f0)
 metropolis = g.default_algorithm
 
 fullsweep = xL*yL*zL
 anneal_time = time_fctr*fullsweep*Steps_1
+anneal_time = time_fctr*fullsweep*Steps_1
 point_repeat = fullsweep*time_fctr
 
+capture_interval1 = pulse_time/(nrepeats*4)
+capture_interval2 = relax_time/2 
+
 M_Integrate_and_Logger = IntegrateAndLog(Float32, point_repeat)
-# M_Logger = ValueLogger(:M)
 B_Logger = ValueLogger(:b)
 T_Logger = ValueLogger(:T)
+Graph_Logger = ImageCapture(:Graph,-1.5,1.5)
 
-Metro_and_recal = CompositeAlgorithm(metropolis, M_Integrate_and_Logger, B_Logger, T_Logger,
+Metro_T = CompositeAlgorithm(metropolis, M_Integrate_and_Logger, B_Logger, T_Logger,
     (1, 1, point_repeat, point_repeat),
     Route(metropolis => M_Integrate_and_Logger, :proposal => :Δvalue, transform = proposal -> accepteddelta(proposal)),
     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
     Route(metropolis => T_Logger, :state => :value, transform = temp)
 )
-
-anneal_partB = CompositeAlgorithm(Metro_and_recal, AnealingB,
+anneal_partB = CompositeAlgorithm(Metro_T, AnealingB,
     (1, point_repeat),
     Route(metropolis => AnealingB, :state),
 )
-
 Anealing_step = Routine(anneal_partB, (anneal_time,))
 
 createProcess(g, Anealing_step, lifetime = 1)
 c = process(g) |> fetch
+# voltage1 = c[B_Logger].values
+# Pr1      = c[M_Integrate_and_Logger].values
+# Temp1    = c[T_Logger].values
 
-voltage1 = c[B_Logger].values
-Pr1      = c[M_Integrate_and_Logger].values
-Temp1    = c[T_Logger].values
+
+# Metro_Pulse = CompositeAlgorithm(metropolis, M_Integrate_and_Logger, B_Logger,
+#     (1, point_repeat, point_repeat),
+#     Route(metropolis => M_Integrate_and_Logger, :proposal => :Δvalue, transform = proposal -> accepteddelta(proposal)),
+#     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
+# )
+# pulse_part1 = CompositeAlgorithm(Metro_Pulse, pulse1, Graph_Logger, (1, point_repeat, capture_interval1), 
+#     Route(metropolis => Graph_Logger, :state => :array)
+# )
+# relax_part1 = CompositeAlgorithm(Metro_Pulse, Graph_Logger, (1, capture_interval2), 
+#     Route(metropolis => Graph_Logger, :state => :array)
+# )
+# Pulse_and_Relax = Routine(pulse_part1, relax_part1,
+#     (pulse_time, relax_time),
+#     Route(metropolis => pulse1, :hamiltonian, :M),
+# )
+# createProcess(g, Pulse_and_Relax, lifetime = 1, Input(Graph_Logger, filepath = joinpath(outdir, "capture")))
+# voltage1 = c[B_Logger].values
+# Pr1      = c[M_Integrate_and_Logger].values
+# Temp1    = c[T_Logger].values
+
+
+
+
+
+
 
 # # ============ SAVE (PNG + XLSX) ============
 # date_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
