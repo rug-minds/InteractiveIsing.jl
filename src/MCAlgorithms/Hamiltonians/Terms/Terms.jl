@@ -1,5 +1,4 @@
 include("EmptyHamiltonian.jl")
-include("Initialization.jl")
 include("Polynomial.jl")
 include("Bilinear.jl")
 include("MagField.jl")

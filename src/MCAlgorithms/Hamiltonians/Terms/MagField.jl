@@ -3,8 +3,8 @@ H = -Σ_i b_i s_i
 
 The magnetic field part of the Ising Hamiltonian
 """
-struct MagField{PV} <: HamiltonianTerm
-    b::PV
+Base.@kwdef struct MagField{PV} <: HamiltonianTerm
+    b::PV = StateLike(ConstFill, 0)
 end
 
 @inline function MagField(; b = StateLike(ConstFill, 0))

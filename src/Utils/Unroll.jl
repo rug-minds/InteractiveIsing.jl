@@ -4,25 +4,6 @@ we can unroll the recursion with this function
 
 f requires two arguments: the value to be replaced, and the next argument from the list
 """
-# @inline function unrollreplace(f::F, to_replace::C, args...) where {F, C}
-#     if isempty(args)
-#         return to_replace
-#     end
-#     first_arg = gethead(args)
-#     to_replace = @inline f(to_replace, first_arg)
-#     return @inline unrollreplace(f, to_replace, gettail(args)...)
-# end
-
-# @inline @generated function unrollreplace(f::F, to_replace::C, args...) where {F, C}
-#     num_args = length(args)
-#     replaceblocks = Expr(:block, (Expr(:(=), :to_replace, Expr(:call, :f, :to_replace, Expr(:call, :getindex, :args, i)) ) for i in 1:num_args)...)
-#     quote
-#         $(LineNumberNode(@__LINE__, @__FILE__))
-#         $replaceblocks
-#         to_replace
-#     end
-# end
-
 @inline @generated function unrollreplace(f::F, to_replace::C, args::Vararg{Any,N}) where {F,C,N}
     block = Expr(:block, :(r = to_replace))
     for i in 1:N
@@ -38,6 +19,15 @@ end
         push!(block.args, :(r = f(r, getfield(args, $i))))
     end
     push!(block.args, :(callback(r)))
+    return block
+end
+
+@inline @generated function unrollreplace(f::F, to_replace::C, ::Val{N}) where {F,C,N}
+    block = Expr(:block, :(r = to_replace))
+    for i in 1:N
+        push!(block.args, :(r = f(r, i)))
+    end
+    push!(block.args, :r)
     return block
 end
 
@@ -174,6 +164,8 @@ end
 For a tree with traits at each node
 Nodefunction should return nothing, nothing
 or next leaves, nodetrait 
+
+This only works if every node has the same number of traits, and the traits are tuples
 """
 @inline function tree_trait_flatten(nodefunc, node, carry_trait)
     next_nodes, newtrait = nodefunc(node, carry_trait)
@@ -200,3 +192,19 @@ end
     end
 end
 
+
+"""
+Apply a function f to the nodes of a tree, f returns (newchildren, tuple(whatever...))
+    Not sure if this works
+"""
+function tree_apply_collect(f::F, node, collected = tuple()) where F
+    newchildren, newcollect = f(node)
+
+    if isnothing(newchildren)
+        return (collected..., newcollect...)
+    else
+
+        next = flat_collect_broadcast(x -> tree_apply_collect(f, x), newchildren)
+        return (collected..., newcollect..., next...)
+    end
+end
