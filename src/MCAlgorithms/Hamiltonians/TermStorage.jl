@@ -28,24 +28,24 @@ struct Internal{NT}
     nt::NT
 end
 
-struct MagField{P} <: HamiltonianTerm 
-    parameters::P
-end
+# struct MagField{P} <: HamiltonianTerm 
+#     parameters::P
+# end
 
-function MagField(;b = nothing, c = nothing)
-    c = OwnedSpec(type = Scalar,
-                    default = StaticValue(0),
-                    info = "Magnetic field coupling constant")(c)
+# function MagField(;b = nothing, c = nothing)
+#     c = OwnedSpec(type = Scalar,
+#                     default = StaticValue(0),
+#                     info = "Magnetic field coupling constant")(c)
             
-    b = DerivedSpec(type = AbstractArray,
-            constraint = statelike,
-            default = StateLike(ConstFill, 0),
-            info = "Local magnetic field term, with field values b_i for each spin i")(b)
+#     b = DerivedSpec(type = AbstractArray,
+#             constraint = statelike,
+#             default = StateLike(ConstFill, 0),
+#             info = "Local magnetic field term, with field values b_i for each spin i")(b)
 
-    return MagField(b, c)
-end
+#     return MagField(b, c)
+# end
 
-function parse_hamiltonian_term(terms...)
-    #parsing code to put specs into parameters
+# function parse_hamiltonian_term(terms...)
+#     #parsing code to put specs into parameters
 
-end
+# end
