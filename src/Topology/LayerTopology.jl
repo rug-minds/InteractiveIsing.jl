@@ -13,13 +13,13 @@ struct AnyLattice <: LatticeType end
 General non-square layer topology
 """
 mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: AbstractLayerTopology{U, Dim} 
-    # layer::Union{Nothing, AbstractIsingGraph}
     pvecs::NTuple{Dim, SVector{Dim, Precision}}
     covecs::NTuple{Dim, SVector{Dim, Precision}}
     size::NTuple{Dim, Int32}
+    origin::SVector{Dim, Precision}
 
     # This function uses SMatrix Inverse to calculate the covectors
-    function LatticeTop(_size::NTuple{D}, vecs::NTuple{D, <:AbstractArray}; periodic = nothing, precision = Float32) where D
+    function LatticeTop(_size::NTuple{D}, vecs::NTuple{D, <:AbstractArray}; periodic = nothing, precision = Float32, origin = SVector(ntuple(i->precision(0), D))) where D
         # D = length(_size)
         vecs = Vector{SVector{D, precision}}(undef, D)
         for i in 1:D
@@ -33,16 +33,29 @@ mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: AbstractL
         m = SMatrix{D, D, precision}(vecs...)
         covs = tuple(eachcol(inv(m))...)  # Calculate the covectors using the inverse of the matrix
 
-        return new{Square, U, D, precision}(vecs, covs, _size)
+        return new{Square, U, D, precision}(vecs, covs, _size, origin; periodic)
     end
 
-    function LatticeTopology(_size::Tuple, vec1::Union{Nothing,AbstractArray} = nothing, vec2::Union{Nothing,AbstractArray} = nothing, vec3::Union{Nothing,AbstractArray} = nothing; periodic::Union{Nothing, Bool, Tuple} = nothing)
+    function LatticeTopology(_size::Tuple, 
+        vec1::Union{Nothing,AbstractArray} = nothing, 
+        vec2::Union{Nothing,AbstractArray} = nothing, 
+        vec3::Union{Nothing,AbstractArray} = nothing; 
+        periodic::Union{Nothing, Bool, Tuple} = nothing, 
+        origin::Union{Nothing, AbstractArray} = nothing)
+
         D = length(_size)
         
         ##### Calculate the covectors
         if D == 2 
             # Assert either none given or both
             @assert (isnothing(vec1) && isnothing(vec2)) || (!isnothing(vec1) && !isnothing(vec2))
+
+            if !isnothing(origin)
+                origin = SVector{D, eltype(origin)}(origin...)
+            else
+                origin = SVector{D, Float32}(ntuple(i->0f0, D)...)
+            end
+
              #calculation of covectors
 
             # If all nothing just set to square
@@ -127,10 +140,13 @@ LatticeTopology(tp::AbstractLayerTopology, pt::Type{<:PeriodicityType}) = Abstra
 periodic(top::AbstractLayerTopology{T,U}) where {T,U} = T
 latticetype(top::AbstractLayerTopology{T,U}) where {T,U} = U
 
-
-function pos(i,j, pvecs)
+"""
+Calculate the position based on indices and primitive vectors.
+"""
+function coord(pvecs, i,j)
     return i*pvecs[1] + j*pvecs[2]
 end
 
-pos(idx, top) = pos(idxToCoord(idx, glength(layer(top))), top)
-export pos
+function coordinate_generator(top::AbstractLayerTopology)
+    
+end

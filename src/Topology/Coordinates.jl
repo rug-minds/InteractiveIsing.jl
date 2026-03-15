@@ -81,7 +81,7 @@ function Base.:^(dc::DeltaCoordinate, p::Integer)
     return sum(x -> x^p, dc.deltas)
 end
 
-function wrap(c::Coordinate, top::AbstractLayerTopology)
+function wrap(top::AbstractLayerTopology, c::Coordinate)
     s = size(top)
     p = whichperiodic(top)
     new_coords = ntuple(Val(length(c))) do i

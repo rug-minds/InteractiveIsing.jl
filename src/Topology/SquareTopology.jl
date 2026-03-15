@@ -1,14 +1,17 @@
+# TODO MAKE 
 struct SquareTopology{U,DIMS, P <: AbstractFloat} <: AbstractLayerTopology{U, DIMS}
     size::NTuple{DIMS,Int}
-    ds::MVector{DIMS, P}
+    lattice_constants::MVector{DIMS, P}
+    origin::SVector{DIMS, P}
 end
 
 
-function SquareTopology(size = tuple(); ds = tuple(fill(1.0, length(size))...), periodic::Union{Bool, <:Tuple, Nothing} = true)
+function SquareTopology(size = tuple(); lattice_constants = tuple(fill(1.0, length(size))...), origin = tuple(fill(0.0, length(size))...), periodic::Union{Bool, <:Tuple, Nothing} = true)
         U = nothing
 
         @assert periodic == true ? !isempty(size) : true "Size must be given if periodic is true"
-        @assert length(ds) == length(size) "ds must be same length as size" 
+        @assert length(lattice_constants) == length(size) "lattice_constants must be same length as size" 
+        @assert length(origin) == length(size) "origin must be same length as size"
 
         if periodic isa Bool
             U = periodic ? Periodic : NonPeriodic
@@ -18,15 +21,16 @@ function SquareTopology(size = tuple(); ds = tuple(fill(1.0, length(size))...), 
             U = PartPeriodic(periodic...) 
         end
         DIMS = length(size)
-        SquareTopology{U, DIMS, eltype(ds)}(size, tuple(ds...))
+        SquareTopology{U, DIMS, eltype(lattice_constants)}(size, tuple(lattice_constants...), SVector(tuple(origin...)))
 end
 
 """
 Get the lattice constants of a square topology.
 """
-lattice_constants(top::SquareTopology) = top.ds
+lattice_constants(top::SquareTopology) = top.lattice_constants
+origin(top::SquareTopology) = top.origin
 
-setdist!(lt::SquareTopology{U,DIMS,P}, ds::NTuple{DIMS,P}) where {U,DIMS,P} = begin lt.ds .= ds; lt end
+setdist!(lt::SquareTopology{U,DIMS,P}, lattice_constants::NTuple{DIMS,P}) where {U,DIMS,P} = begin lt.lattice_constants .= lattice_constants; lt end
 
 """
 Get the distance from a deltacoordinate, applying periodic boundary conditions if necessary.

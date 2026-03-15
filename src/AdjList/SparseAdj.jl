@@ -239,6 +239,69 @@ function _fillSparseVecs(layer::AbstractLayerData{3}, precision, row_idxs, col_i
 end
 
 """
+Dimension-generic sparse fill for intra-layer connections.
+    Works for any `D`, including `D = 1`, by iterating an N-dimensional offset stencil.
+"""
+function _fillSparseVecsNew(layer::AbstractLayerData{D}, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {D,WG}
+    NN = getNN(wg, D)
+    @assert (NN isa Integer || length(NN) == D)
+    NNt = NN isa Integer ? ntuple(_ -> NN, Val(D)) : NN
+
+    pr = parentindices(layer)[1]
+    layer_size = size(layer)
+    LI = LinearIndices(layer_size)
+    ps = whichperiodic(topology)
+    ds = lattice_constants(topology)
+
+    n_offsets = prod(2 .* NNt .+ 1) - 1
+    offsets = Vector{NTuple{D,Int}}(undef, n_offsets)
+    drs = Vector{Float64}(undef, n_offsets)
+
+    ranges = ntuple(i -> (-NNt[i]):NNt[i], Val(D))
+    o = 1
+    for offset_ci in CartesianIndices(ranges)
+        offset = offset_ci.I
+        all(iszero, offset) && continue
+
+        offsets[o] = offset
+
+        dr2 = 0.0
+        @inbounds for i in 1:D
+            di = offset[i]
+            if ps[i]
+                halfsize = layer_size[i] >>> 1
+                abs(di) > halfsize && (di -= sign(di) * layer_size[i])
+            end
+            d = ds[i] * di
+            dr2 += d * d
+        end
+        drs[o] = sqrt(dr2)
+        o += 1
+    end
+
+    for col_idx in 1:length(layer)
+        c1 = Coordinate(topology, col_idx)
+        g_col_idx = pr[col_idx]
+
+        for oi in eachindex(offsets)
+            c2 = offset(topology, c1, offsets[oi]...; check = false)
+            in(c2, topology) || continue
+
+            w = precision(wg.func(drs[oi], c1, c2))
+            (w == 0 || isnan(w)) && continue
+
+            conn_idx = LI[convert(CartesianIndex, c2)]
+            g_conn_idx = pr[conn_idx]
+
+            push!(row_idxs, Int32(g_conn_idx))
+            push!(col_idxs, Int32(g_col_idx))
+            push!(weights, w)
+        end
+    end
+    return nothing
+end
+
+"""
 Give layer and WeightGenerator
     returns the connections within the layer in row_idxs, col_idxs, and weights
 """

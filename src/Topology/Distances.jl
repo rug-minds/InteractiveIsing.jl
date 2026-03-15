@@ -25,3 +25,15 @@ function dist2(top::SquareTopology, c1::C1, c2::C2) where {C1<:Coordinate, C2<:C
     end
     return total
 end
+
+
+"""
+Calculate the squared distance between two coordinates on different topoligies
+    Calculate by taking origin + c1 to calculate world coordinates of c1, and origin + c2 to calculate world coordinates of c2, 
+    then calculating the distance between those world coordinates. 
+"""
+function dist2(top1, c1, top2, c2)
+    worldcoord1 = worldcoordinate(top1, c1)
+    worldcoord2 = worldcoordinate(top2, c2)
+    return sum((worldcoord1[i] - worldcoord2[i])^2 for i in 1:length(worldcoord1))
+end

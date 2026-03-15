@@ -7,15 +7,16 @@ Base.@kwdef struct MagField{PV} <: HamiltonianTerm
     b::PV = StateLike(ConstFill, 0)
 end
 
-@inline function MagField(; b = StateLike(ConstFill, 0))
-    return MagField(b)
-end
+# @inline function MagField(; b = StateLike(ConstFill, 0))
+#     return MagField(b)
+# end
 
 @inline function reconstruct(hterm::MF, g::AbstractIsingGraph) where {MF <: MagField}
     T = eltype(g)
     len = statelen(g)
     b = nothing
-    if hterm.b isa Function
+    # @show hterm.b
+    if hterm.b isa Function || hterm.b isa DerivedParameter
         b = hterm.b(g)
     else
         b = hterm.b

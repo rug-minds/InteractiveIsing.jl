@@ -30,6 +30,10 @@ export coordwalk
 
 Base.getindex(lt::AbstractLayerTopology, i) = lt.pvecs[i]
 
+"""
+Get the coordinate in the world
+"""
+worldcoordinate(top::AbstractLayerTopology, coord::CartesianIndex) = wrap(top, coord) .* lattice_constants(top) .+ origin(top)
 
 
 ################################

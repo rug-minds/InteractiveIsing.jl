@@ -89,7 +89,7 @@ Calculate spin energy in local potentials before and after the hop.
 
     if coordinate_entering in state.top
         # Valid hop, wrap coordinate and calculate energy change
-        coordinate_entering = wrap(coordinate_entering, state.top)
+        coordinate_entering = wrap(state.top,coordinate_entering)
 
         leaving_cproposal = LocalScaleProposal(-state.charge, CartesianIndex(proposal.coordinates), false)
         entering_cproposal = LocalScaleProposal(state.charge, CartesianIndex(proposal.coordinates .+ proposal.displacement), false)
