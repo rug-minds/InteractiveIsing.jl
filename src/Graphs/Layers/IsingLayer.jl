@@ -11,7 +11,7 @@ Coords(;y = 0, x = 0, z = 0) = Coords{Tuple{Int32,Int32,Int32}}((Int32(y), Int32
 Coords(n::Nothing) = Coords{Tuple{Int32,Int32,Int32}}(nothing)
 Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val), Int32(val)))
 function Coords(coords::I...) where I
-    coords = tuple(coords...)
+    coords = Int32.(tuple(coords...))
     Coords{typeof(coords)}(coords)
 end
 

@@ -244,7 +244,7 @@ end
 Dimension-generic sparse fill for intra-layer connections.
     Works for any `D`, including `D = 1`, by iterating an N-dimensional offset stencil.
 """
-function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {D,WG}
+function _fillSparseVecsOLD(layer::AbstractLayerData{D}, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {D,WG}
     NN = getNN(wg, D)
     @assert (NN isa Integer || length(NN) == D)
     NNt = NN isa Integer ? ntuple(_ -> NN, Val(D)) : NN
@@ -257,6 +257,7 @@ function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_i
 
     n_offsets = prod(2 .* NNt .+ 1) - 1
     offsets = Vector{NTuple{D,Int}}(undef, n_offsets)
+    dcs = Vector{DeltaCoordinate{D}}(undef, n_offsets)
     drs = Vector{Float64}(undef, n_offsets)
 
     ranges = ntuple(i -> (-NNt[i]):NNt[i], Val(D))
@@ -267,14 +268,19 @@ function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_i
 
         offsets[o] = offset
 
-        dr2 = 0.0
-        @inbounds for i in 1:D
+        wrapped_offset = ntuple(Val(D)) do i
             di = offset[i]
             if ps[i]
                 halfsize = layer_size[i] >>> 1
                 abs(di) > halfsize && (di -= sign(di) * layer_size[i])
             end
-            d = ds[i] * di
+            di
+        end
+        dcs[o] = DeltaCoordinate(wrapped_offset)
+
+        dr2 = 0.0
+        @inbounds for i in 1:D
+            d = ds[i] * wrapped_offset[i]
             dr2 += d * d
         end
         drs[o] = sqrt(dr2)
@@ -289,7 +295,72 @@ function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_i
             c2 = @inline offset(topology, c1, offsets[oi]...; check = false)
             in(c2, topology) || continue
 
-            w = precision(wg.func(drs[oi], c1, c2))
+            w = precision(wg(;dr = drs[oi], c1, c2, dc = dcs[oi]))
+            (w == 0 || isnan(w)) && continue
+
+            conn_idx = LI[c2]
+            g_conn_idx = pr[conn_idx]
+
+            push!(row_idxs, Int32(g_conn_idx))
+            push!(col_idxs, Int32(g_col_idx))
+            push!(weights, w)
+        end
+    end
+    return nothing
+end
+
+function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {D,WG}
+    NN = getNN(wg, D)
+    @assert (NN isa Integer || length(NN) == D)
+    NNt = NN isa Integer ? ntuple(_ -> NN, Val(D)) : NN
+
+    pr = parentindices(layer)[1]
+    layer_size = size(layer)
+    LI = LinearIndices(layer_size)
+    ps = whichperiodic(topology)
+    ds = lattice_constants(topology)
+
+    n_offsets = prod(2 .* NNt .+ 1) - 1
+    offsets = Vector{NTuple{D,Int}}(undef, n_offsets)
+    dcs = Vector{DeltaCoordinate{D}}(undef, n_offsets)
+    drs = Vector{Float64}(undef, n_offsets)
+
+    ranges = ntuple(i -> (-NNt[i]):NNt[i], Val(D))
+    o = 1
+    for offset_ci in CartesianIndices(ranges)
+        delta_offset = offset_ci.I
+        all(iszero, delta_offset) && continue
+
+        offsets[o] = delta_offset
+
+        wrapped_offset = ntuple(Val(D)) do i
+            di = delta_offset[i]
+            if ps[i]
+                halfsize = layer_size[i] >>> 1
+                abs(di) > halfsize && (di -= sign(di) * layer_size[i])
+            end
+            di
+        end
+        dcs[o] = DeltaCoordinate(wrapped_offset)
+
+        dr2 = 0.0
+        @inbounds for i in 1:D
+            d = ds[i] * wrapped_offset[i]
+            dr2 += d * d
+        end
+        drs[o] = sqrt(dr2)
+        o += 1
+    end
+
+    for col_idx in 1:length(layer)
+        c1 = Coordinate(topology, col_idx)
+        g_col_idx = pr[col_idx]
+
+        for oi in eachindex(offsets)
+            c2 = @inline offset(topology, c1, offsets[oi]...; check = false)
+            in(c2, topology) || continue
+
+            w = precision(wg(;dr = drs[oi], c1, c2, dc = dcs[oi]))
             (w == 0 || isnan(w)) && continue
 
             conn_idx = LI[c2]
@@ -445,7 +516,7 @@ function _fillSparseVecs(layer1::AbstractIsingLayer{T1,D}, layer2::AbstractIsing
         for idx2 in eachindex(wcoords2)
             wc2 = wcoords2[idx2]
             dr = dist(wc1, wc2)
-            w = Float32(wg.func(dr, wc1, wc2))
+            w = Float32(wg(;dr, c1 = wc1, c2 = wc2))
             (w == 0 || isnan(w)) && continue
 
             push!(row_idxs, Int32(pr2[idx2]))

@@ -108,8 +108,8 @@ function weightfunc_angle_ferro(dr, c1, c2)
     return abs(prefac) / r^3
 end
 # Shell-based coupling + dipolar coupling
-function weightfunc_shell(dr, c1, c2, ax, ay, az, csr, lambda1, lambda2)
-    dx, dy, dz = delta(c1, c2)
+function weightfunc_shell(dr, c1, c2, dc, ax, ay, az, csr, lambda1, lambda2)
+    dx, dy, dz = dc
     k1  = 1.0
     k2  = lambda1 * k1
     k3  = lambda2 * k2
@@ -540,7 +540,7 @@ zL = 10   # Length in the z-dimension
 
 JIsing = 1.0
 ### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
-wg5 = @WG (dr,c1,c2) -> weightfunc_shell(dr, c1, c2, 1, 1, 1, JIsing, 0.1, 0.1) NN = 3
+wg5 = @WG (dr,c1,c2,dc) -> weightfunc_shell(dr, c1, c2, dc, 1, 1, 1, JIsing, 0.1, 0.1) NN = 3
 
 a1, c1 = -2, 10
 b1 =-(a1+3*c1)/2
@@ -570,7 +570,7 @@ Steps_1=6000
 
 #### 可以给Quartic写个vector，然后后面就不哦那个给
 #### b=:homogeneous会被移除，换成b=:OffsetArray, UniformArray, ConstFill，后续版本会移除b=:homogeneous
-g = II.IsingGraph(xL, yL, zL, 
+g = IsingGraph(xL, yL, zL, 
         Continuous(), 
         wg5, 
         LatticeConstants(1.0, 1.0, 1.0),

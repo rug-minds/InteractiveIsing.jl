@@ -13,7 +13,7 @@ end
 getNN(::AllToAllWeightGenerator) = :all
 getNN(::AllToAllWeightGenerator, dims) = ntuple(_ -> :all, dims)
 
-@inline function (wg::AllToAllWeightGenerator)(;dr::DR, c1 = nothing, c2 = nothing) where DR
+@inline function (wg::AllToAllWeightGenerator)(;dr::DR, c1 = nothing, c2 = nothing, dc = nothing) where DR
     return @inline wg.func(dr, c1, c2)
 end
 
@@ -53,7 +53,7 @@ function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_i
             row_idx == col_idx && continue
             c2 = coords[row_idx]
             wc2 = woorldcoordinate(topology, c2)
-            w = precision(wg.func(dist(wc1, wc2), wc1, wc2))
+            w = precision(wg(;dr = dist(wc1, wc2), c1 = wc1, c2 = wc2))
             (w == 0 || isnan(w)) && continue
 
             push!(row_idxs, Int32(pr[row_idx]))
@@ -108,7 +108,7 @@ function _fillSparseVecs(layer1::AbstractIsingLayer{T1,D}, layer2::AbstractIsing
 
         for idx2 in eachindex(wcoords2)
             wc2 = wcoords2[idx2]
-            w = Float32(wg.func(dist(wc1, wc2), wc1, wc2))
+            w = Float32(wg(;dr = dist(wc1, wc2), c1 = wc1, c2 = wc2))
             (w == 0 || isnan(w)) && continue
 
             push!(row_idxs, Int32(pr2[idx2]))

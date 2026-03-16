@@ -1,5 +1,5 @@
 
-export Coordinate, DeltaCoordinate, coord, norm2, delta
+export Coordinate, DeltaCoordinate, coord, norm2, delta, periodicdelta
 
 struct Coordinate{N} <: Base.AbstractCartesianIndex{N} # N dimensional coordinate
     coords::CartesianIndex{N}
@@ -62,6 +62,22 @@ delta(c1::Coordinate{N}, c2::Coordinate{N}) where N =
     DeltaCoordinate(ntuple(i -> c2.coords[i] - c1.coords[i], Val(N)))
 delta(top::AbstractLayerTopology{U,D}, ci1::CartesianIndex{D}, ci2::CartesianIndex{D}) where {U,D} =
     DeltaCoordinate(ntuple(i -> ci2[i] - ci1[i], Val(D)))
+
+function periodicdelta(top::AbstractLayerTopology{U,D}, c1::Coordinate{D}, c2::Coordinate{D}) where {U,D}
+    ps = whichperiodic(top)
+    sizes = size(top)
+    DeltaCoordinate(ntuple(Val(D)) do i
+        di = c2.coords[i] - c1.coords[i]
+        if ps[i]
+            halfsize = div(sizes[i], 2)
+            abs(di) > halfsize && (di -= sign(di) * sizes[i])
+        end
+        di
+    end)
+end
+
+periodicdelta(top::AbstractLayerTopology{U,D}, ci1::CartesianIndex{D}, ci2::CartesianIndex{D}) where {U,D} =
+    periodicdelta(top, Coordinate(top, ci1), Coordinate(top, ci2))
 
 coord(top::AbstractLayerTopology{U,D}, x::Vararg{Integer,D}) where {U,D} = Coordinate(top, x...)
 
