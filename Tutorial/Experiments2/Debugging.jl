@@ -108,7 +108,7 @@ function weightfunc_angle_ferro(dr, c1, c2)
     return abs(prefac) / r^3
 end
 # Shell-based coupling + dipolar coupling
-function weightfunc_shell(dr, c1, c2, dc, ax, ay, az, csr, lambda1, lambda2)
+function weightfunc_shell(dr, dc, ax, ay, az, csr, lambda1, lambda2)
     dx, dy, dz = dc
     k1  = 1.0
     k2  = lambda1 * k1
@@ -534,17 +534,6 @@ function IntegrateAndLog(type = Float64, loginterval = 1)
 end
 
 
-function normalize_adj_by_average_col!(adj::A, scaling = one(eltype(adj))) where A
-    adj = adj.sp
-    cols = eltype(adj)[]
-    for j in axes(adj, 2)
-        s = sum(abs, @view adj[:, j])
-        push!(cols, s)
-    end
-    avg_col_sum = mean(cols)
-    return adj .*= (scaling/avg_col_sum) 
-end
-
 
 xL = 40  # Length in the x-dimension
 yL = 40  # Length in the y-dimension
@@ -595,11 +584,10 @@ g = IsingGraph(xL, yL, zL,
         diag = StateLike(UniformArray)
 )
 
-# normalize_adj_by_average_col!(g.adj, 1f0)
 
+normalize_adj_by_average_col!(g.adj, 10f0)
 
-
-# adj(g)[1,1] = a1
+adj(g)[1,1] = a1
 g.hamiltonian[5].c[] = b1/a1
 g.hamiltonian[6].c[] = c1/a1
 
