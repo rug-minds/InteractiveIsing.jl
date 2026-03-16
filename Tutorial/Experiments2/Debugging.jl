@@ -592,37 +592,47 @@ Temp = 0.5
 
 #=
 现在我们可以分别使用c,localpotential 在ising，quartic，sextic里设置不同参数。
-如果使用默认数值，那多次项会和Jii耦合在一起。如果Jii是2， 后面的多次项相当于都含有一个2.
-调整参数的时候要注意
+    如果使用默认数值，那多次项会和Jii耦合在一起。如果Jii是2， 后面的多次项相当于都含有一个2.
+    调整参数的时候要注意
 =#
 #=
-            Ising(b = StateLike(UniformArray,0), c = ConstVal(1))
-            Quartic(localpotential = StateLike(ConstFill,0)) + 
-            Sextic(localpotential = StateLike(UniformArray,0)), 
-=#
-
-#### 
-g = IsingGraph(xL, yL, zL, 
+如果使用这个方式，Ising项的c参数和localpotential项的参数就不会耦合在一起了，可以独立调整。
+    g = IsingGraph(xL, yL, zL, 
         Continuous(), 
         wg5, 
         LatticeConstants(1.0, 1.0, 1.0),
-        Ising(b = StateLike(UniformArray,0), c = ConstVal(1)) + 
+        Ising(b = StateLike(UniformArray,0), localpotential = StateLike(UniformArray,0)) + 
             CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + 
-            Quartic(localpotential = StateLike(ConstFill,0)) + 
+            Quartic(localpotential = StateLike(UniformArray,0)) + 
             Sextic(localpotential = StateLike(UniformArray,0)), 
         StateSet(-1.5f0, 1.5f0),
         periodic = (:x,:y),
         diag = StateLike(UniformArray)
+    )
+    ###这样的话，可以在后续直接调整每一个参数。
+        g.hamiltonian[1].lp[] = a1
+        g.hamiltonian[1].c[] = 1
+        g.hamiltonian[5].lp[] = b1
+        g.hamiltonian[5].c[] = 1
+        g.hamiltonian[6].lp[] = c1
+        g.hamiltonian[6].c[] = 1
+=#
+
+
+g = IsingGraph(xL, yL, zL, 
+        Continuous(), 
+        wg5, 
+        LatticeConstants(1.0, 1.0, 1.0),
+        Ising(b = StateLike(UniformArray,0)) + 
+            CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + 
+            Quartic(c=b1/a1) + 
+            Sextic(c=c1/a1), 
+        StateSet(-1.5f0, 1.5f0),
+        periodic = (:x,:y),
+        diag = StateLike(UniformArray)
 )
-
 normalize_adj_by_average_col!(g.adj, 1f0)
-
 adj(g)[1,1] = a1
-# g.hamiltonian[1].lp[] = a1
-g.hamiltonian[5].lp[] = b1/a1
-# g.hamiltonian[5].c[] = 1
-g.hamiltonian[6].lp[] = c1/a1
-# g.hamiltonian[6].c[] = 1
 
 interface(g)
 
