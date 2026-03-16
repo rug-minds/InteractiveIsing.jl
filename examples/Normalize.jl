@@ -13,7 +13,7 @@ function normalize_adj_by_average_col(adj::A, scaling = one(eltype(adj))) where 
         push!(cols, s)
     end
     avg_col_sum = mean(cols)
-    return (scaling/avg_col_sum) .* adj
+    return (scaling/avg_col_sum) .* adj.sp
 end
 
 
