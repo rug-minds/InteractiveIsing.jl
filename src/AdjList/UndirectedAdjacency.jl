@@ -182,6 +182,9 @@ end
     return sparse(out_rows, out_cols, out_vals, length(rows), length(cols))
 end
 
+# Base extensions
+Base.:(==)(A1::UndirectedAdjacency, A2::UndirectedAdjacency) = A1.sp == A2.sp && A1.diag == A2.diag
+
 @inline Base.getindex(A::UndirectedAdjacency, rows::AbstractVector{<:Integer}, cols::AbstractVector{<:Integer}) = _sparse_slice(A, rows, cols)
 @inline Base.getindex(A::UndirectedAdjacency, ::Colon, cols::AbstractVector{<:Integer}) = _sparse_slice(A, axes(A, 1), cols)
 @inline Base.getindex(A::UndirectedAdjacency, rows::AbstractVector{<:Integer}, ::Colon) = _sparse_slice(A, rows, axes(A, 2))

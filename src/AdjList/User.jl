@@ -5,7 +5,7 @@ gen_connections(::Any, ::Nothing) = (Int[], Int[], [])
 Generate the connections in a layer based on a weightgenerator
 Returns sparse representation of the connections
 """
-Base.@propagate_inbounds function gen_connections(layerdata::AbstractLayerData, precision, wg::WeightGenerator, nstates)
+Base.@propagate_inbounds function gen_connections(layerdata::AbstractLayerData, precision, wg::AbstractWeightGenerator, nstates)
     row_idxs, col_idxs, weights = genLayerConnections(layerdata, precision, wg, nstates)
     # old_row_idxs, old_col_idxs, old_weights = removeConnections(layerdata)
 
@@ -101,4 +101,3 @@ function idxs2rowscols(layer, idxs)
     end
     return rows, cols
 end
-

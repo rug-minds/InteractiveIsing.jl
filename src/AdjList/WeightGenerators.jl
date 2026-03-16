@@ -1,5 +1,8 @@
-export WeightGenerator, IsingWG, @WG
-struct WeightGenerator{F, NN}
+export AbstractWeightGenerator, WeightGenerator, IsingWG, @WG
+
+abstract type AbstractWeightGenerator end
+
+struct WeightGenerator{F, NN} <: AbstractWeightGenerator
     func::F
     funcexp::Union{String, Expr, Symbol, Function, Nothing}
     rng::Random.AbstractRNG
@@ -69,7 +72,6 @@ end
 end
 
 const IsingWG = @WG dr -> dr == 1 ? 1 : 0 NN=1
-
 
 
 

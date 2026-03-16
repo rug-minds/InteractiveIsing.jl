@@ -47,7 +47,7 @@ function parse_isinglayer(args...; periodic = true)
     args = remove_optional_parsed_arg(args, stateset_idx)
 
     # Parse optional WeightGenerator
-    weightgen_idx = findfirst(x -> x isa WeightGenerator, args)
+    weightgen_idx = findfirst(x -> x isa AbstractWeightGenerator, args)
     weightgen = weightgen_idx |> isnothing ? nothing : args[weightgen_idx]
     args = remove_optional_parsed_arg(args, weightgen_idx)
 
@@ -85,6 +85,5 @@ function parse_isinglayer(args...; periodic = true)
 
     return IsingLayerData(size, stype, stateset, weightgen, topology, coords)
 end
-
 
 

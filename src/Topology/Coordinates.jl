@@ -5,6 +5,8 @@ struct Coordinate{N} <: Base.AbstractCartesianIndex{N} # N dimensional coordinat
     coords::CartesianIndex{N}
 end
 
+@inline Base.getindex(aa::AbstractArray, c::Coordinate{N}) where N = aa[c.coords]
+
 Coordinate(t::Tuple) = Coordinate(CartesianIndex(t))
 
 @inline function Coordinate(top::AbstractLayerTopology{U,D}, n::Vararg{Integer,D}; check = true) where {U,D}
@@ -22,8 +24,8 @@ Coordinate(t::Tuple) = Coordinate(CartesianIndex(t))
     return Coordinate(CartesianIndex(new_coords))
 end
 
-Coordinate(top, t::Tuple; check = true) = Coordinate(top, t...; check)
-Coordinate(top, ci::CartesianIndex; check = true) = Coordinate(top, ci.I...; check)
+Coordinate(top::T, t::Tuple; check = true) where T = Coordinate(top, t...; check)
+Coordinate(top::T, ci::CartesianIndex; check = true) where T = Coordinate(top, ci.I...; check)
 
 @generated function Coordinate(top::AbstractLayerTopology{U,D}, i::Int) where {U,D}
     coord_exprs = Vector{Any}(undef, D)
@@ -40,26 +42,28 @@ Coordinate(top, ci::CartesianIndex; check = true) = Coordinate(top, ci.I...; che
     end
 end
 
-Base.convert(::Type{<:CartesianIndex}, c::Coordinate) = c.coords
+Base.convert(::Type{<:CartesianIndex}, c::Coordinate{N}) where N = c.coords
 
-offset(top::AbstractLayerTopology, c::Coordinate, deltas...; check = false) =
-    Coordinate(top, ntuple(Val(length(c))) do i
+@inline function offset(top::AbstractLayerTopology, c::Coordinate{D}, deltas::Vararg{Integer,D}; check = false) where D
+    Coordinate(top, ntuple(Val(D)) do i
         c.coords[i] + deltas[i]
     end...; check)
+end
 
-Base.:(-)(c1::Coordinate, c2::Coordinate) = delta(c1, c2)
-Base.abs(c::Coordinate) = Coordinate(abs.(c.coords))
+Base.:(-)(c1::Coordinate{N}, c2::Coordinate{N}) where N = delta(c1, c2)
+Base.abs(c::Coordinate{N}) where N = Coordinate(abs.(c.coords))
 
 Base.getindex(c::Coordinate, i::Int) = c.coords[i]
 Base.iterate(c::Coordinate, state = 1) = iterate(c.coords, state)
 Base.length(c::Coordinate{N}) where N = N
 Base.size(c::Coordinate{N}) where N = (length(c),)
 
-delta(c1::Coordinate, c2::Coordinate) = DeltaCoordinate(ntuple(i -> c2.coords[i] - c1.coords[i], length(c1.coords)))
-delta(top::AbstractLayerTopology, ci1::CartesianIndex, ci2::CartesianIndex) =
-    DeltaCoordinate(ntuple(i -> ci2[i] - ci1[i], length(ci1)))
+delta(c1::Coordinate{N}, c2::Coordinate{N}) where N =
+    DeltaCoordinate(ntuple(i -> c2.coords[i] - c1.coords[i], Val(N)))
+delta(top::AbstractLayerTopology{U,D}, ci1::CartesianIndex{D}, ci2::CartesianIndex{D}) where {U,D} =
+    DeltaCoordinate(ntuple(i -> ci2[i] - ci1[i], Val(D)))
 
-coord(top, x...) = Coordinate(top, x...)
+coord(top::AbstractLayerTopology{U,D}, x::Vararg{Integer,D}) where {U,D} = Coordinate(top, x...)
 
 struct DeltaCoordinate{N} <: AbstractVector{Int} # N dimensional coordinate difference
     deltas::NTuple{N, Int}
@@ -67,7 +71,7 @@ end
 
 DeltaCoordinate(ds::NTuple{N, <:Integer}) where {N} = DeltaCoordinate{N}(ntuple(i -> Int(ds[i]), Val(N)))
 DeltaCoordinate(ds::Vararg{Integer, N}) where {N} = DeltaCoordinate(ntuple(i -> Int(ds[i]), Val(N)))
-DeltaCoordinate(::Coordinate, ds) = DeltaCoordinate(ds)
+DeltaCoordinate(::Coordinate{N}, ds::NTuple{N, <:Integer}) where N = DeltaCoordinate(ds)
 
 Base.getindex(dc::DeltaCoordinate, i::Int) = dc.deltas[i]
 Base.iterate(dc::DeltaCoordinate, state = 1) = iterate(dc.deltas, state)
@@ -81,10 +85,10 @@ function Base.:^(dc::DeltaCoordinate, p::Integer)
     return sum(x -> x^p, dc.deltas)
 end
 
-function wrap(top::AbstractLayerTopology, c::Coordinate)
+function wrap(top::AbstractLayerTopology{U,D}, c::Coordinate{D}) where {U,D}
     s = size(top)
     p = whichperiodic(top)
-    new_coords = ntuple(Val(length(c))) do i
+    new_coords = ntuple(Val(D)) do i
         p[i] ? mod1(c.coords[i], s[i]) : c.coords[i]
     end
     return Coordinate(CartesianIndex(new_coords))

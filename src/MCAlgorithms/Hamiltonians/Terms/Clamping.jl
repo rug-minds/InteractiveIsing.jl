@@ -6,10 +6,11 @@ H = β/2 *(s_i - y_i)^2
 
 Where y_i is the target value for the i-th node
 """
-struct Clamping{PBeta, BY} <: Hamiltonian 
+struct Clamping{PBeta, BY} <: HamiltonianTerm
     β::PBeta
     y::BY
 end
+
 @inline Clamping(β::Real = 1f0, y::AbstractVector = Float32[]) = Clamping(Ref(β), y)
 @inline Clamping(β::Real, y::Fill) = Clamping(Ref(β), y)
 @inline function Clamping(g::AbstractIsingGraph, β = one(eltype(g)), y = nothing)

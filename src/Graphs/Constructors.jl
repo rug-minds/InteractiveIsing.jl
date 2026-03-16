@@ -48,8 +48,12 @@ end
 
 """
 Multi Layer Constructor
+    First the Layers,
+    If there's weight generators in between the layers, use those to set connections between layers
+
+
 """
-function IsingGraph(layers::Union{IsingLayerData, Hamiltonian}...;
+function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamiltonian}...;
     precision = Float32, 
     adj = nothing,
     diag = StateLike(OffsetArray, 0),
@@ -61,6 +65,10 @@ function IsingGraph(layers::Union{IsingLayerData, Hamiltonian}...;
 
     lengths = map(l -> length(l), layers)
     total_length = sum(lengths)
+
+    # First note all weightgenerator indices
+    wg_indices = findall(l -> l isa AbstractWeightGenerator, layers)
+    # Setup (idx-)
 
     # Fix the layers first
     layers = ntuple(length(layers)) do i

@@ -10,6 +10,10 @@ end
 Coords(;y = 0, x = 0, z = 0) = Coords{Tuple{Int32,Int32,Int32}}((Int32(y), Int32(x), Int32(z)))
 Coords(n::Nothing) = Coords{Tuple{Int32,Int32,Int32}}(nothing)
 Coords(val::Integer) = Coords{Tuple{Int32,Int32,Int32}}((Int32(val), Int32(val), Int32(val)))
+function Coords(coords::I...) where I
+    coords = tuple(coords...)
+    Coords{typeof(coords)}(coords)
+end
 
 
 export Coords
@@ -20,7 +24,7 @@ struct IsingLayerData{StateType, StateSet, Dim, Size, PtrRange, Top} <: Abstract
     # TRAITS, Not used?
     traits::NamedTuple
     coords::Coords{Tuple{Int32,Int32,Int32}}
-    weightgenerator::Base.RefValue{Union{WeightGenerator, Nothing}}
+    weightgenerator::Base.RefValue{Union{AbstractWeightGenerator, Nothing}}
 
     # Keeps track of the connected layers
     connections::Dict{Pair{Int32,Int32}, Any} 
@@ -31,12 +35,12 @@ end
 """
 Simple Constructor
 """
-function IsingLayerData(size::Tuple, statetype, stateset, wg::Union{WeightGenerator, Nothing}, topology, coords = Coords(nothing))
+function IsingLayerData(size::Tuple, statetype, stateset, wg::Union{AbstractWeightGenerator, Nothing}, topology, coords = Coords(nothing))
     IsingLayerData{statetype, stateset, length(size), size, 1:prod(size), typeof(topology)}(
         "Layer 1",
         (;StateType = statetype, StateSet = stateset, Dim = length(size), Size = size, PtrRange = 1:prod(size), Top = typeof(topology)),
         coords,
-        Base.RefValue{Union{WeightGenerator, Nothing}}(wg),
+        Base.RefValue{Union{AbstractWeightGenerator, Nothing}}(wg),
         Dict{Pair{Int32,Int32}, Any}(),
         topology
     )
@@ -71,7 +75,7 @@ function IsingLayerData(
             traits = (;),
             coords = Coords(nothing), 
             adjtype = SparseMatrixCSC{precision,Int32},
-            wg::Union{WeightGenerator, Nothing} = nothing,
+            wg::Union{AbstractWeightGenerator, Nothing} = nothing,
             connections = Dict{Pair{Int32,Int32}, Any}(), 
             periodic::Union{Nothing,Bool,Tuple} = true,
             kwargs...
@@ -103,7 +107,7 @@ function IsingLayerData(
             #Coordinates
             coords,
             # WeightGenerator
-            Base.RefValue{Union{WeightGenerator, Nothing}}(wg),
+            Base.RefValue{Union{AbstractWeightGenerator, Nothing}}(wg),
             # Connections
             connections,
 
@@ -249,7 +253,7 @@ export topology
     v = unsafe_wrap(Array, pointer(v), size(l))
 end 
 
-@inline function set_adj!(layer::IsingLayer, wg::WeightGenerator, rcw)
+@inline function set_adj!(layer::IsingLayer, wg::AbstractWeightGenerator, rcw)
     # connections(layer)[internal_idx(layer) => internal_idx(layer)] = wg
     connections(layer)[(layeridx(layer) => layeridx(layer))] = wg
     set_adj!(graph(layer), rcw)
@@ -257,7 +261,7 @@ end
     return adj(graph(layer))
 end
 
-@inline function set_adj!(layer1::IsingLayer, layer2::IsingLayer, wg::WeightGenerator, rcw)
+@inline function set_adj!(layer1::IsingLayer, layer2::IsingLayer, wg::AbstractWeightGenerator, rcw)
     connections(layer1)[internal_idx(layer1) => internal_idx(layer2)] = wg
     set_adj!(graph(layer1), rcw)
     notify(layer1)

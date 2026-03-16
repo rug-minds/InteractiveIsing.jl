@@ -59,190 +59,192 @@ end
 
 
 
-"""
-From a generator that returns (i, j, idx) for the connections
-    fill the row_idxs, col_idxs, and weights
-""" 
-function _fillSparseVecs(layer::AbstractLayerData{2}, precision, row_idxs::Vector, col_idxs, weights, topology, wg::WG) where {WG}
-    # Resolve neighborhood once; this is constant for the whole layer build.
-    NN = getNN(wg, 2)
-    @assert (NN isa Integer || length(NN) == 2)
-    NNt = NN isa Integer ? (NN, NN) : NN
+# """
+# From a generator that returns (i, j, idx) for the connections
+#     fill the row_idxs, col_idxs, and weights
+# """ 
+# function _fillSparseVecs(layer::AbstractLayerData{2}, precision, row_idxs::Vector, col_idxs, weights, topology, wg::WG) where {WG}
+#     # Resolve neighborhood once; this is constant for the whole layer build.
+#     NN = getNN(wg, 2)
+#     @assert (NN isa Integer || length(NN) == 2)
+#     NNt = NN isa Integer ? (NN, NN) : NN
 
-    # Cache lattice metadata used in every inner-loop iteration.
-    pr = parentindices(layer)[1]
-    sx, sy = size(layer)
-    LI = LinearIndices((sx, sy))
-    px, py = whichperiodic(topology)
-    ds = lattice_constants(topology)
+#     # Cache lattice metadata used in every inner-loop iteration.
+#     pr = parentindices(layer)[1]
+#     sx, sy = size(layer)
+#     LI = LinearIndices((sx, sy))
+#     px, py = whichperiodic(topology)
+#     ds = lattice_constants(topology)
 
-    # Precompute relative offsets and metric distances from the origin.
-    # Distances only depend on offset + lattice constants, not on the site index.
-    n_offsets = (2 * NNt[1] + 1) * (2 * NNt[2] + 1) - 1
-    ois = Vector{Int}(undef, n_offsets)
-    ojs = Vector{Int}(undef, n_offsets)
-    drs = Vector{Float64}(undef, n_offsets)
+#     # Precompute relative offsets and metric distances from the origin.
+#     # Distances only depend on offset + lattice constants, not on the site index.
+#     n_offsets = (2 * NNt[1] + 1) * (2 * NNt[2] + 1) - 1
+#     ois = Vector{Int}(undef, n_offsets)
+#     ojs = Vector{Int}(undef, n_offsets)
+#     drs = Vector{Float64}(undef, n_offsets)
 
-    o = 1
-    for dj in -NNt[2]:NNt[2]
-        for di in -NNt[1]:NNt[1]
-            (di == 0 && dj == 0) && continue
-            ois[o] = di
-            ojs[o] = dj
+#     o = 1
+#     for dj in -NNt[2]:NNt[2]
+#         for di in -NNt[1]:NNt[1]
+#             (di == 0 && dj == 0) && continue
+#             ois[o] = di
+#             ojs[o] = dj
 
-            dxi = di
-            dyi = dj
-            if px
-                hx = sx >>> 1
-                abs(dxi) > hx && (dxi -= sign(dxi) * sx)
-            end
-            if py
-                hy = sy >>> 1
-                abs(dyi) > hy && (dyi -= sign(dyi) * sy)
-            end
-            dx = ds[1] * dxi
-            dy = ds[2] * dyi
-            drs[o] = sqrt(dx * dx + dy * dy)
-            o += 1
-        end
-    end
+#             dxi = di
+#             dyi = dj
+#             if px
+#                 hx = sx >>> 1
+#                 abs(dxi) > hx && (dxi -= sign(dxi) * sx)
+#             end
+#             if py
+#                 hy = sy >>> 1
+#                 abs(dyi) > hy && (dyi -= sign(dyi) * sy)
+#             end
+#             dx = ds[1] * dxi
+#             dy = ds[2] * dyi
+#             drs[o] = sqrt(dx * dx + dy * dy)
+#             o += 1
+#         end
+#     end
 
-    for col_idx in 1:length(layer)
-        # Fast linear-index -> (x, y) conversion.
-        y = ((col_idx - 1) ÷ sx) + 1
-        x = col_idx - (y - 1) * sx
-        c1 = Coordinate(topology, x, y; check = false)
-        g_col_idx = pr[col_idx]
+#     for col_idx in 1:length(layer)
+#         # Fast linear-index -> (x, y) conversion.
+#         y = ((col_idx - 1) ÷ sx) + 1
+#         x = col_idx - (y - 1) * sx
+#         c1 = Coordinate(topology, x, y; check = false)
+#         g_col_idx = pr[col_idx]
 
-        for oi in eachindex(ois)
-            xn = x + ois[oi]
-            yn = y + ojs[oi]
-            c2 = Coordinate(topology, xn, yn; check = false)
-            in(c2, topology) || continue
+#         for oi in eachindex(ois)
+#             xn = x + ois[oi]
+#             yn = y + ojs[oi]
+#             c2 = Coordinate(topology, xn, yn; check = false)
+#             in(c2, topology) || continue
 
-            w = precision(wg.func(drs[oi], c1, c2))
-            (w == 0 || isnan(w)) && continue
+#             w = precision(wg.func(drs[oi], c1, c2))
+#             (w == 0 || isnan(w)) && continue
 
-            conn_idx = LI[convert(CartesianIndex, c2)]
-            g_conn_idx = pr[conn_idx]
+#             conn_idx = LI[convert(CartesianIndex, c2)]
+#             g_conn_idx = pr[conn_idx]
 
-            push!(row_idxs, Int32(g_conn_idx))
-            push!(col_idxs, Int32(g_col_idx))
-            push!(weights, w)
-        end
-    end
-    return nothing
-end
+#             push!(row_idxs, Int32(g_conn_idx))
+#             push!(col_idxs, Int32(g_col_idx))
+#             push!(weights, w)
+#         end
+#     end
+#     return nothing
+# end
 
 
 
-# # 2D fallback keeps current behavior.
-# _fillSparseVecsNew(layer::AbstractLayerData{2}, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {WG} =
-#     _fillSparseVecs(layer, precision, row_idxs, col_idxs, weights, topology, wg)
+# # # 2D fallback keeps current behavior.
+# # _fillSparseVecsNew(layer::AbstractLayerData{2}, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {WG} =
+# #     _fillSparseVecs(layer, precision, row_idxs, col_idxs, weights, topology, wg)
 
-"""
-Alternative 3D sparse fill that moves invariant work out of the spin loop:
-    - precomputes the offset stencil once
-    - precomputes distance per offset once
-    - hoists parent index mapping
-    - uses positional weight function call to avoid kwcall overhead
-"""
-function _fillSparseVecs(layer::AbstractLayerData{3}, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {WG}
-    # Resolve neighborhood once; this is constant for the whole layer build.
-    NN = getNN(wg, 3)
-    @assert (NN isa Integer || length(NN) == 3)
-    NNt = NN isa Integer ? (NN, NN, NN) : NN
+# """
+# Alternative 3D sparse fill that moves invariant work out of the spin loop:
+#     - precomputes the offset stencil once
+#     - precomputes distance per offset once
+#     - hoists parent index mapping
+#     - uses positional weight function call to avoid kwcall overhead
+# """
+# function _fillSparseVecs(layer::AbstractLayerData{3}, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {WG}
+#     # Resolve neighborhood once; this is constant for the whole layer build.
+#     NN = getNN(wg, 3)
+#     @assert (NN isa Integer || length(NN) == 3)
+#     NNt = NN isa Integer ? (NN, NN, NN) : NN
 
-    # Cache lattice metadata used in every inner-loop iteration.
-    pr = parentindices(layer)[1]
+#     # Cache lattice metadata used in every inner-loop iteration.
+#     pr = parentindices(layer)[1]
 
-    # Grid shape and linear index constants.
-    sx, sy, sz = size(layer)
-    plane = sx * sy
-    LI = LinearIndices((sx, sy, sz))
-    px, py, pz = whichperiodic(topology)
-    ds = lattice_constants(topology)
+#     # Grid shape and linear index constants.
+#     sx, sy, sz = size(layer)
+#     plane = sx * sy
+#     LI = LinearIndices((sx, sy, sz))
+#     px, py, pz = whichperiodic(topology)
+#     ds = lattice_constants(topology)
 
-    # Precompute relative offsets and metric distances from the origin.
-    # Distances only depend on offset + lattice constants, not on the site index.
-    n_offsets = (2 * NNt[1] + 1) * (2 * NNt[2] + 1) * (2 * NNt[3] + 1) - 1
-    ois = Vector{Int}(undef, n_offsets)
-    ojs = Vector{Int}(undef, n_offsets)
-    oks = Vector{Int}(undef, n_offsets)
-    drs = Vector{Float64}(undef, n_offsets)
+#     # Precompute relative offsets and metric distances from the origin.
+#     # Distances only depend on offset + lattice constants, not on the site index.
+#     n_offsets = (2 * NNt[1] + 1) * (2 * NNt[2] + 1) * (2 * NNt[3] + 1) - 1
+#     ois = Vector{Int}(undef, n_offsets)
+#     ojs = Vector{Int}(undef, n_offsets)
+#     oks = Vector{Int}(undef, n_offsets)
+#     drs = Vector{Float64}(undef, n_offsets)
 
-    o = 1
-    for dk in -NNt[3]:NNt[3]
-        for dj in -NNt[2]:NNt[2]
-            for di in -NNt[1]:NNt[1]
-                (di == 0 && dj == 0 && dk == 0) && continue
-                ois[o] = di
-                ojs[o] = dj
-                oks[o] = dk
+#     o = 1
+#     for dk in -NNt[3]:NNt[3]
+#         for dj in -NNt[2]:NNt[2]
+#             for di in -NNt[1]:NNt[1]
+#                 (di == 0 && dj == 0 && dk == 0) && continue
+#                 ois[o] = di
+#                 ojs[o] = dj
+#                 oks[o] = dk
 
-                # Distance depends only on offset and topology constants.
-                # For periodic axes use shortest wrapped delta.
-                dxi = di
-                dyi = dj
-                dzi = dk
-                if px
-                    hx = sx >>> 1
-                    abs(dxi) > hx && (dxi -= sign(dxi) * sx)
-                end
-                if py
-                    hy = sy >>> 1
-                    abs(dyi) > hy && (dyi -= sign(dyi) * sy)
-                end
-                if pz
-                    hz = sz >>> 1
-                    abs(dzi) > hz && (dzi -= sign(dzi) * sz)
-                end
-                dx = ds[1] * dxi
-                dy = ds[2] * dyi
-                dz = ds[3] * dzi
-                drs[o] = sqrt(dx * dx + dy * dy + dz * dz)
-                o += 1
-            end
-        end
-    end
+#                 # Distance depends only on offset and topology constants.
+#                 # For periodic axes use shortest wrapped delta.
+#                 dxi = di
+#                 dyi = dj
+#                 dzi = dk
+#                 if px
+#                     hx = sx >>> 1
+#                     abs(dxi) > hx && (dxi -= sign(dxi) * sx)
+#                 end
+#                 if py
+#                     hy = sy >>> 1
+#                     abs(dyi) > hy && (dyi -= sign(dyi) * sy)
+#                 end
+#                 if pz
+#                     hz = sz >>> 1
+#                     abs(dzi) > hz && (dzi -= sign(dzi) * sz)
+#                 end
+#                 dx = ds[1] * dxi
+#                 dy = ds[2] * dyi
+#                 dz = ds[3] * dzi
+#                 drs[o] = sqrt(dx * dx + dy * dy + dz * dz)
+#                 o += 1
+#             end
+#         end
+#     end
 
-    for col_idx in 1:length(layer)
-        # Fast linear-index -> (x, y, z) conversion.
-        z = ((col_idx - 1) ÷ plane) + 1
-        rem = col_idx - (z - 1) * plane
-        y = ((rem - 1) ÷ sx) + 1
-        x = rem - (y - 1) * sx
+#     for col_idx in 1:length(layer)
+#         # Fast linear-index -> (x, y, z) conversion.
+#         z = ((col_idx - 1) ÷ plane) + 1
+#         rem = col_idx - (z - 1) * plane
+#         y = ((rem - 1) ÷ sx) + 1
+#         x = rem - (y - 1) * sx
 
-        c1 = Coordinate(topology, x, y, z; check = false)
-        g_col_idx = pr[col_idx]
+#         c1 = Coordinate(topology, x, y, z; check = false)
+#         g_col_idx = pr[col_idx]
 
-        for oi in eachindex(ois)
-            xn = x + ois[oi]
-            yn = y + ojs[oi]
-            zn = z + oks[oi]
-            c2 = Coordinate(topology, xn, yn, zn; check = false)
-            in(c2, topology) || continue
+#         for oi in eachindex(ois)
+#             xn = x + ois[oi]
+#             yn = y + ojs[oi]
+#             zn = z + oks[oi]
+#             c2 = Coordinate(topology, xn, yn, zn; check = false)
+#             in(c2, topology) || continue
 
-            # Avoid kwcall in the hot loop.
-            w = precision(wg.func(drs[oi], c1, c2))
-            (w == 0 || isnan(w)) && continue
+#             # Avoid kwcall in the hot loop.
+#             w = precision(wg.func(drs[oi], c1, c2))
+#             (w == 0 || isnan(w)) && continue
 
-            conn_idx = LI[convert(CartesianIndex, c2)]
-            g_conn_idx = pr[conn_idx]
+#             conn_idx = LI[c2]
+#             g_conn_idx = pr[conn_idx]
 
-            push!(row_idxs, Int32(g_conn_idx))
-            push!(col_idxs, Int32(g_col_idx))
-            push!(weights, w)
-        end
-    end
-    return nothing
-end
+#             push!(row_idxs, Int32(g_conn_idx))
+#             push!(col_idxs, Int32(g_col_idx))
+#             push!(weights, w)
+#         end
+#     end
+#     return nothing
+# end
+
+
 
 """
 Dimension-generic sparse fill for intra-layer connections.
     Works for any `D`, including `D = 1`, by iterating an N-dimensional offset stencil.
 """
-function _fillSparseVecsNew(layer::AbstractLayerData{D}, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {D,WG}
+function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {D,WG}
     NN = getNN(wg, D)
     @assert (NN isa Integer || length(NN) == D)
     NNt = NN isa Integer ? ntuple(_ -> NN, Val(D)) : NN
@@ -284,13 +286,13 @@ function _fillSparseVecsNew(layer::AbstractLayerData{D}, precision, row_idxs, co
         g_col_idx = pr[col_idx]
 
         for oi in eachindex(offsets)
-            c2 = offset(topology, c1, offsets[oi]...; check = false)
+            c2 = @inline offset(topology, c1, offsets[oi]...; check = false)
             in(c2, topology) || continue
 
             w = precision(wg.func(drs[oi], c1, c2))
             (w == 0 || isnan(w)) && continue
 
-            conn_idx = LI[convert(CartesianIndex, c2)]
+            conn_idx = LI[c2]
             g_conn_idx = pr[conn_idx]
 
             push!(row_idxs, Int32(g_conn_idx))
@@ -301,27 +303,110 @@ function _fillSparseVecsNew(layer::AbstractLayerData{D}, precision, row_idxs, co
     return nothing
 end
 
+# """
+# Give layer and WeightGenerator
+#     returns the connections within the layer in row_idxs, col_idxs, and weights
+# """
+# function genLayerConnections(layer1::AbstractIsingLayer{T1,2}, layer2::AbstractIsingLayer{T2,2}, wg) where {T1,T2}
+#     row_idxs = Int32[]
+#     col_idxs = Int32[]
+#     weights = Float32[]
+#
+#     g = graph(layer1)
+#
+#     _NN = wg.NN
+#
+#     blocksize = (2*_NN+1)^2
+#     n_conns = nStates(g)*blocksize
+#     sizehint!(col_idxs, 2*n_conns)
+#     sizehint!(row_idxs, 2*n_conns)
+#     sizehint!(weights, 2*n_conns)
+#
+#     pre_3tuple = Prealloc(NTuple{3, Int32}, blocksize)
+#     _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, wg, pre_3tuple)
+#
+#     append!(row_idxs, col_idxs)
+#     append!(col_idxs, @view(row_idxs[1:end÷2]))
+#     append!(weights, weights)
+#
+#     return row_idxs, col_idxs, weights
+# end
+# export genLayerConnections
+#
+# # TODO: OLD
+# """
+# Give preallocated vectors for row_idxs, col_idxs, and weights
+#     fills them with the connections withing between two layers
+# """
+# function _fillSparseVecs(layer1::AbstractIsingLayer, layer2::AbstractIsingLayer, row_idxs, col_idxs, weights, wg, pre_3tuple)
+#     NN = wg.NN
+#
+#     local NNi = NN
+#     local NNj = NN
+#     if NN isa Tuple
+#         NNi, NNj = NN
+#     else
+#         NNi = NN
+#         NNj = NN
+#     end
+#
+#     for col_idx in 1:nStates(layer1)
+#         vert_i, vert_j = idxToCoord(col_idx, layer1)
+#         lattice2_iterator(layer1, layer2, vert_i, vert_j, NNi, NNj, pre_3tuple)
+#         for conn in pre_3tuple
+#             conn_i, conn_j = conn[1], conn[2]
+#
+#             dr = dist(layer1, layer2, vert_i, vert_j, conn_i, conn_j)
+#
+#             _,_,z1 = coords(layer1)
+#             _,_,z2 = coords(layer2)
+#
+#             # Project the spin onto layer 1
+#             conn_i_layer1, conn_j_layer1 = coordsl2tol1(layer1, layer2, conn_i, conn_j)
+#
+#             #Relative distances between spins
+#             dx = conn_i_layer1-vert_i
+#             dy = conn_j_layer1-vert_j
+#             dz = z2 - z1
+#
+#             # x,y,z of the connection
+#             x = (vert_i+conn_i)/2
+#             y = (vert_j+conn_j)/2
+#             z = (z1+z2)/2
+#
+#             weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
+#
+#             if weight == 0 || isnan(weight)
+#                 continue
+#             end
+#         
+#             g_col_idx     = idxLToG(col_idx, layer1)
+#             g_row_idx    = idxLToG(conn[3], layer2)
+#
+#             push!(row_idxs, g_row_idx)
+#             push!(col_idxs, g_col_idx)
+#             push!(weights, weight)
+#
+#         end
+#         reset!(pre_3tuple)
+#     end
+# end
+
 """
 Give layer and WeightGenerator
-    returns the connections within the layer in row_idxs, col_idxs, and weights
+    returns the connections between the two layers in row_idxs, col_idxs, and weights
 """
-function genLayerConnections(layer1::AbstractIsingLayer{T1,2}, layer2::AbstractIsingLayer{T2,2}, wg) where {T1,T2}
+function genLayerConnections(layer1::AbstractIsingLayer{T1,D}, layer2::AbstractIsingLayer{T2,D}, wg) where {T1,T2,D}
     row_idxs = Int32[]
     col_idxs = Int32[]
     weights = Float32[]
 
-    g = graph(layer1)
-
-    _NN = wg.NN
-
-    blocksize = (2*_NN+1)^2
-    n_conns = nStates(g)*blocksize
+    n_conns = nStates(layer1) * nStates(layer2)
     sizehint!(col_idxs, 2*n_conns)
     sizehint!(row_idxs, 2*n_conns)
     sizehint!(weights, 2*n_conns)
 
-    pre_3tuple = Prealloc(NTuple{3, Int32}, blocksize)
-    _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, wg, pre_3tuple)
+    _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, wg)
 
     append!(row_idxs, col_idxs)
     append!(col_idxs, @view(row_idxs[1:end÷2]))
@@ -331,63 +416,44 @@ function genLayerConnections(layer1::AbstractIsingLayer{T1,2}, layer2::AbstractI
 end
 export genLayerConnections
 
-# TODO: OLD
 """
-Give preallocated vectors for row_idxs, col_idxs, and weights
-    fills them with the connections withing between two layers
+Fill row_idxs, col_idxs, and weights with connections between two layers,
+    using woorldcoordinates to measure inter-layer distances in a shared space.
 """
-function _fillSparseVecs(layer1::AbstractIsingLayer, layer2::AbstractIsingLayer, row_idxs, col_idxs, weights, wg, pre_3tuple)
-    NN = wg.NN
+function _fillSparseVecs(layer1::AbstractIsingLayer{T1,D}, layer2::AbstractIsingLayer{T2,D}, row_idxs, col_idxs, weights, wg::WG) where {T1,T2,D,WG}
+    top1 = topology(layer1)
+    top2 = topology(layer2)
+    pr1 = parentindices(layer1)[1]
+    pr2 = parentindices(layer2)[1]
+    LI1 = LinearIndices(size(layer1))
+    LI2 = LinearIndices(size(layer2))
 
-    local NNi = NN
-    local NNj = NN
-    if NN isa Tuple
-        NNi, NNj = NN
-    else
-        NNi = NN
-        NNj = NN
+    wc2type = typeof(woorldcoordinate(top2, Coordinate(top2, first(CartesianIndices(size(layer2))))))
+    wcoords2 = Vector{wc2type}(undef, nStates(layer2))
+    for ci2 in CartesianIndices(size(layer2))
+        idx2 = LI2[ci2]
+        c2 = Coordinate(top2, ci2)
+        wcoords2[idx2] = woorldcoordinate(top2, c2)
     end
 
-    for col_idx in 1:nStates(layer1)
-        vert_i, vert_j = idxToCoord(col_idx, layer1)
-        lattice2_iterator(layer1, layer2, vert_i, vert_j, NNi, NNj, pre_3tuple)
-        for conn in pre_3tuple
-            conn_i, conn_j = conn[1], conn[2]
+    for ci1 in CartesianIndices(size(layer1))
+        idx1 = LI1[ci1]
+        c1 = Coordinate(top1, ci1)
+        wc1 = woorldcoordinate(top1, c1)
+        g_col_idx = pr1[idx1]
 
-            dr = dist(layer1, layer2, vert_i, vert_j, conn_i, conn_j)
+        for idx2 in eachindex(wcoords2)
+            wc2 = wcoords2[idx2]
+            dr = dist(wc1, wc2)
+            w = Float32(wg.func(dr, wc1, wc2))
+            (w == 0 || isnan(w)) && continue
 
-            _,_,z1 = coords(layer1)
-            _,_,z2 = coords(layer2)
-
-            # Project the spin onto layer 1
-            conn_i_layer1, conn_j_layer1 = coordsl2tol1(layer1, layer2, conn_i, conn_j)
-
-            #Relative distances between spins
-            dx = conn_i_layer1-vert_i
-            dy = conn_j_layer1-vert_j
-            dz = z2 - z1
-
-            # x,y,z of the connection
-            x = (vert_i+conn_i)/2
-            y = (vert_j+conn_j)/2
-            z = (z1+z2)/2
-
-            weight = getWeight(wg; dr, dx, dy, dz, x, y, z)
-
-            if weight == 0 || isnan(weight)
-                continue
-            end
-        
-            g_col_idx     = idxLToG(col_idx, layer1)
-            g_row_idx    = idxLToG(conn[3], layer2)
-
-            push!(row_idxs, g_row_idx)
-            push!(col_idxs, g_col_idx)
-            push!(weights, weight)
-
+            push!(row_idxs, Int32(pr2[idx2]))
+            push!(col_idxs, Int32(g_col_idx))
+            push!(weights, w)
         end
-        reset!(pre_3tuple)
     end
+    return nothing
 end
 
 

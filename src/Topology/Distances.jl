@@ -9,6 +9,10 @@ dist(c1::C1, c2::C2) where {C1<:Coordinate, C2<:Coordinate} =
 dist2(c1::C1, c2::C2) where {C1<:Coordinate, C2<:Coordinate} =
     throw(ArgumentError("dist2(c1, c2) requires topology context. Use dist2(topology, c1, c2)."))
 
+dist(c1::WoorldCoordinate{D}, c2::WoorldCoordinate{D}) where D = sqrt(dist2(c1, c2))
+dist2(c1::WoorldCoordinate{D}, c2::WoorldCoordinate{D}) where D =
+    sum((c1[i] - c2[i])^2 for i in 1:D)
+
 dist(top::SquareTopology, c1::C1, c2::C2) where {C1<:Coordinate, C2<:Coordinate} = sqrt(dist2(top, c1, c2))
 function dist2(top::SquareTopology, c1::C1, c2::C2) where {C1<:Coordinate, C2<:Coordinate}
     ps = whichperiodic(top)
@@ -33,7 +37,7 @@ Calculate the squared distance between two coordinates on different topoligies
     then calculating the distance between those world coordinates. 
 """
 function dist2(top1, c1, top2, c2)
-    worldcoord1 = worldcoordinate(top1, c1)
-    worldcoord2 = worldcoordinate(top2, c2)
+    worldcoord1 = woorldcoordinate(top1, c1)
+    worldcoord2 = woorldcoordinate(top2, c2)
     return sum((worldcoord1[i] - worldcoord2[i])^2 for i in 1:length(worldcoord1))
 end
