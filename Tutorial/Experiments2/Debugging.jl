@@ -588,14 +588,27 @@ Steps_1=6000
 Temp = 0.5
 
 #### 可以给Quartic写个vector，然后后面就不哦那个给
-#### b=:homogeneous会被移除，换成b=:OffsetArray, UniformArray, ConstFill，后续版本会移除b=:homogeneous
+#### b=:homogeneous会被移除，换成b=:OffsetArray, UniformArray, ConstFill，（ConstValue = ConstFill with dimension 0）
+
+#=
+现在我们可以分别使用c,localpotential 在ising，quartic，sextic里设置不同参数。
+如果使用默认数值，那多次项会和Jii耦合在一起。如果Jii是2， 后面的多次项相当于都含有一个2.
+调整参数的时候要注意
+=#
+#=
+            Ising(b = StateLike(UniformArray,0), c = ConstVal(1))
+            Quartic(localpotential = StateLike(ConstFill,0)) + 
+            Sextic(localpotential = StateLike(UniformArray,0)), 
+=#
+
+#### 
 g = IsingGraph(xL, yL, zL, 
         Continuous(), 
         wg5, 
         LatticeConstants(1.0, 1.0, 1.0),
         Ising(b = StateLike(UniformArray,0), c = ConstVal(1)) + 
             CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + 
-            Quartic(localpotential = StateLike(UniformArray,0)) + 
+            Quartic(localpotential = StateLike(ConstFill,0)) + 
             Sextic(localpotential = StateLike(UniformArray,0)), 
         StateSet(-1.5f0, 1.5f0),
         periodic = (:x,:y),
@@ -604,11 +617,12 @@ g = IsingGraph(xL, yL, zL,
 
 normalize_adj_by_average_col!(g.adj, 1f0)
 
+adj(g)[1,1] = a1
 # g.hamiltonian[1].lp[] = a1
 g.hamiltonian[5].lp[] = b1/a1
-g.hamiltonian[5].c[] = 1
+# g.hamiltonian[5].c[] = 1
 g.hamiltonian[6].lp[] = c1/a1
-g.hamiltonian[6].c[] = 1
+# g.hamiltonian[6].c[] = 1
 
 interface(g)
 
