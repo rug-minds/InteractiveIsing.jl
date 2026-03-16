@@ -108,7 +108,7 @@ function weightfunc_angle_ferro(dr, c1, c2)
     return abs(prefac) / r^3
 end
 # Shell-based coupling + dipolar coupling
-function weightfunc_shell(dr, dc, ax, ay, az, csr, lambda1, lambda2)
+function weightfunc_shell(dr,c1,c2, dc, ax, ay, az, csr, lambda1, lambda2)
     dx, dy, dz = dc
     k1  = 1.0
     k2  = lambda1 * k1
@@ -524,6 +524,18 @@ function Processes.step!(ic::DatatoDataframe, context::C) where C
 end
 ##################################################################################
 
+function normalize_adj_by_average_col!(adj::A, scaling = one(eltype(adj))) where A
+    adj = adj.sp
+    cols = eltype(adj)[]
+    for j in axes(adj, 2)
+        s = sum(abs, @view adj[:, j])
+        push!(cols, s)
+    end
+    avg_col_sum = mean(cols)
+    return adj .*= (scaling/avg_col_sum) 
+end
+
+
 
 
 function IntegrateAndLog(type = Float64, loginterval = 1)
@@ -533,23 +545,26 @@ function IntegrateAndLog(type = Float64, loginterval = 1)
     pack = package(c)
 end
 
-
+#####################################################################################
+#####################################################################################
+#####################################################################################
+#####################################################################################
 
 xL = 40  # Length in the x-dimension
 yL = 40  # Length in the y-dimension
 zL = 10   # Length in the z-dimension
 
-JIsing = 1.0
+
 ### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
 wg1 = @WG (dr,c1,c2) -> weightfunc1(dr, c1, c2) NN = 3
 wg2 = @WG (dr,c1,c2) -> weightfunc_skymion(dr, c1, c2) NN = 3
-wg5 = @WG (dr,c1,c2,dc) -> weightfunc_shell(dr, c1, c2, dc, 1, 1, 1, JIsing, 0.1, 0.1) NN = 3
+wg5 = @WG (dr,c1,c2,dc) -> weightfunc_shell(dr, c1, c2, dc, 1, 1, 1, 1, 0.1, 0.1) NN = 3
 
 a1, c1 = -2, 10
 b1 =-(a1+3*c1)/2
-# Ex = range(-1.5, 1.5, length=1000)
-# Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
-# f1=newmakie(lines, Ex, Ey);
+Ex = range(-1.5, 1.5, length=1000)
+Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
+f1=newmakie(lines, Ex, Ey);
 
 E_barrier= abs(a1 * 1^2 + b1 * 1^4 .+ c1 * 1^6)
 println("E_barrier = ", E_barrier)
@@ -566,11 +581,11 @@ mkpath(outdir)
 # function run_one_screening!(g; Scale, Screening, Temp_aneal=6f0, time_fctr=30, Steps_1=6000)
 # ---- parameters to sweep ----
 Scale = 1
-Screening_values = 0.01   # <-- change range here
+Screening = 0.01   # <-- change range here
 Temp_aneal=5f0
 time_fctr=1
 Steps_1=6000
-Temp = 1
+Temp = 0.5
 
 #### 可以给Quartic写个vector，然后后面就不哦那个给
 #### b=:homogeneous会被移除，换成b=:OffsetArray, UniformArray, ConstFill，后续版本会移除b=:homogeneous
@@ -578,18 +593,22 @@ g = IsingGraph(xL, yL, zL,
         Continuous(), 
         wg5, 
         LatticeConstants(1.0, 1.0, 1.0),
-        Ising(b = StateLike(UniformArray,0)) + CoulombHamiltonian(scaling = Scale, screening = Screening_values, recalc = 1000) + Quartic() + Sextic(), 
+        Ising(b = StateLike(UniformArray,0), c = ConstVal(1)) + 
+            CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + 
+            Quartic(localpotential = StateLike(UniformArray,0)) + 
+            Sextic(localpotential = StateLike(UniformArray,0)), 
         StateSet(-1.5f0, 1.5f0),
         periodic = (:x,:y),
         diag = StateLike(UniformArray)
 )
 
+normalize_adj_by_average_col!(g.adj, 1f0)
 
-normalize_adj_by_average_col!(g.adj, 10f0)
-
-adj(g)[1,1] = a1
-g.hamiltonian[5].c[] = b1/a1
-g.hamiltonian[6].c[] = c1/a1
+# g.hamiltonian[1].lp[] = a1
+g.hamiltonian[5].lp[] = b1/a1
+g.hamiltonian[5].c[] = 1
+g.hamiltonian[6].lp[] = c1/a1
+g.hamiltonian[6].c[] = 1
 
 interface(g)
 
@@ -671,21 +690,21 @@ fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines
 
 
 
-# # ============ SAVE (PNG + XLSX) ============
-# date_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
-# base_name = string(
-#     "Scale=", round(Scale, digits=4),
-#     "_Screening=", round(Screening, digits=4),
-#     "_timefctr=", round(time_fctr, digits=4),
-#     "_Steps_1=", round(Steps_1, digits=4),
-#     "_Eb=", round(E_barrier, digits=4),
-#     "_Epp=", round(Epp_1, digits=4),
-#     "_Temp_aneal=", round(Temp_aneal, digits=4),
-#     "_", date_str
-# )
+# ============ SAVE (PNG + XLSX) ============
+date_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
+base_name = string(
+    "Scale=", round(Scale, digits=4),
+    "_Screening=", round(Screening, digits=4),
+    "_timefctr=", round(time_fctr, digits=4),
+    "_Steps_1=", round(Steps_1, digits=4),
+    "_Eb=", round(E_barrier, digits=4),
+    "_Epp=", round(Epp_1, digits=4),
+    "_Temp_aneal=", round(Temp_aneal, digits=4),
+    "_", date_str
+)
 
-# png_path  = joinpath(outdir, base_name * ".png")
-# xlsx_path = joinpath(outdir, base_name * ".xlsx")
+png_path  = joinpath(outdir, base_name * ".png")
+xlsx_path = joinpath(outdir, base_name * ".xlsx")
 
 # # Figure: Temperature vs Pr
 # fTPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Temperature", ylabel = "Pr"), ax -> lines!(ax, Temp1, Pr1))
@@ -696,24 +715,24 @@ fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines
 #     @warn "Failed to save figure" err
 # end
 
-# # Pr distribution histogram
-# P = state(g[])
-# v = vec(P)
-# bins = -1.5:0.05:1.5
-# h = fit(Histogram, v, bins)
-# density = h.weights ./ sum(h.weights)
+# Pr distribution histogram
+P = state(g[])
+v = vec(P)
+bins = -1.5:0.05:1.5
+h = fit(Histogram, v, bins)
+density = h.weights ./ sum(h.weights)
 
-# fig_dist = Figure()
-# ax_dist = Axis(fig_dist[1, 1], xlabel="P", ylabel="Probability")
-# barplot!(ax_dist, h.edges[1][1:end-1], density; width = step(bins))
+fig_dist = Figure()
+ax_dist = Axis(fig_dist[1, 1], xlabel="P", ylabel="Probability")
+barplot!(ax_dist, h.edges[1][1:end-1], density; width = step(bins))
 
-# png_path_dist = joinpath(outdir, base_name * "_Pr_distribution.png")
-# try
-#     save(png_path_dist, fig_dist)
-#     println("Saved Pr distribution figure: ", png_path_dist)
-# catch err
-#     @warn "Failed to save Pr distribution figure" err
-# end
+png_path_dist = joinpath(outdir, base_name * "_Pr_distribution.png")
+try
+    save(png_path_dist, fig_dist)
+    println("Saved Pr distribution figure: ", png_path_dist)
+catch err
+    @warn "Failed to save Pr distribution figure" err
+end
 
 # # Excel: series + distribution + params
 # n = min(length(Temp1), length(Pr1))
