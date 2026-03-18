@@ -14,7 +14,7 @@ intprecision(::Type{Float32}) = Int32
 intprecision(::Type{Float64}) = Int64
 
 # Ising Graph Representation and functions
-mutable struct IsingGraph{T <: AbstractFloat, M, Layers, A, N} <: AbstractIsingGraph{T}
+mutable struct IsingGraph{T <: AbstractFloat, M, Layers, A, N, I} <: AbstractIsingGraph{T}
     # Vertices and edges
     state::A
     # Adjacency Matrix
@@ -29,7 +29,7 @@ mutable struct IsingGraph{T <: AbstractFloat, M, Layers, A, N} <: AbstractIsingG
     # Connection between layers, Could be useful to track for faster removing of layers
     # layerconns::Dict{Set, Int32}
 
-    defects::GraphDefects
+    index_set::I
     # d::GraphData{T} #Other stuff. Maybe just make this a dict?
     addons::Dict{Symbol, Any}
 
@@ -41,17 +41,17 @@ mutable struct IsingGraph{T <: AbstractFloat, M, Layers, A, N} <: AbstractIsingG
         temp,
         default_algorithm,
         hamiltonian,
-        defects,
+        index_set,
         addons,
         layers
     )
-        new{eltype(state), typeof(adj), typeof(layers), typeof(state), length(layers)}(
+        new{eltype(state), typeof(adj), typeof(layers), typeof(state), length(layers), typeof(index_set)}(
             state,
             adj,
             temp,
             default_algorithm,
             hamiltonian,
-            defects,
+            index_set,
             addons,
             layers
         )
@@ -84,7 +84,7 @@ Base.show(io::IO, graphtype::Type{IsingGraph}) = print(io, "IsingGraph")
 coords(g::IsingGraph) = VSI(layers(g), :coords)
 export coords
 
-@inline clamprange!(g::IsingGraph, clamp, idxs) = setrange!(defects(g), clamp, idxs)
+@inline clamprange!(g::IsingGraph, clamp, idxs) = setrange!(index_set(g), clamp, idxs)
 export clamprange!
 
 @Setter!Getter IsingGraph adj params layers
@@ -108,7 +108,22 @@ end
 set_adj!(g::IsingGraph, vecs::Tuple) = adj(g, UndirectedAdjacency(adj(g), vecs...))
 
 # @forwardfields IsingGraph GraphData d
-@forwardfields IsingGraph GraphDefects defects graph
+hasDefects(::AbstractRange{<:Integer}) = false
+hasDefects(::AbstractVector{<:Integer}) = false
+hasDefects(::AbstractSet{<:Integer}) = false
+
+sampling_indices(idxs::AbstractRange{<:Integer}) = idxs
+sampling_indices(idxs::AbstractVector{<:Integer}) = idxs
+sampling_indices(idxs::AbstractSet{<:Integer}) = idxs
+sampling_indices(gd::GraphDefects) = aliveList(gd)
+sampling_indices(gd::GraphDefectsNew) = aliveindices(gd)
+
+hasDefects(g::IsingGraph) = hasDefects(index_set(g))
+aliveList(g::IsingGraph) = aliveList(index_set(g))
+defectList(g::IsingGraph) = defectList(index_set(g))
+layerdefects(g::IsingGraph) = layerdefects(index_set(g))
+isDefect(g::IsingGraph) = isDefect(index_set(g))
+export hasDefects, aliveList, defectList, layerdefects, isDefect
 
 @inline glength(g::IsingGraph)::Int32 = size(g)[1]
 @inline gwidth(g::IsingGraph)::Int32 = size(g)[2]
@@ -208,11 +223,6 @@ end
 Returns in iterator which can be used to choose a random index among alive spins
 """
 function ising_it(g)
-    defects = hasDefects(g)
-    if !defects
-        return UnitRange{Int32}(1:nStates(g))
-    else
-        return aliveList(g)
-    end
+    return sampling_indices(index_set(g))
 end
-setdefect(g::IsingGraph, val, idx) = defects(g)[idx] = val
+setdefect(g::IsingGraph, val, idx) = index_set(g)[idx] = val

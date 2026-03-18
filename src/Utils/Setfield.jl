@@ -9,13 +9,14 @@ General replacing setfield
         error("Field $(FieldName) not found in struct $(S)\nfieldnames are: $(fieldnames)\nlooking for field of type $(V)")
     end
     parameters = S.parameters
+    constructor_ref = GlobalRef(parentmodule(S), nameof(S))
     parameter_match = findfirst(==(fieldtype(S, FieldName)), tuple(parameters...))
-    type_expr = :($S)
+    return_type_expr = :($S)
     if !isempty(parameters) && !isnothing(parameter_match) && !(S <: NamedTuple)
         parameters = (parameters[1:(parameter_match - 1)]..., val, parameters[(parameter_match + 1):end]...)
         parameters = map(x -> x isa Symbol ? QuoteNode(x) : x, parameters)
 
-        type_expr = Expr(:curly, :($(nameof(S))), parameters...)
+        return_type_expr = Expr(:curly, constructor_ref, parameters...)
     end    
 
     getfields = Any[:(getfield(s, $(QuoteNode(field)))) for field in fieldnames]
@@ -25,18 +26,18 @@ General replacing setfield
     # If it's a namedtuple, we only need the names
     if S <: NamedTuple
         parameters = tuple(S.parameters[1]...)
-        type_expr = Expr(:curly, :($(nameof(S))), parameters)
+        return_type_expr = Expr(:curly, :($(nameof(S))), parameters)
         getfields = tuple(Expr(:tuple, getfields...))
     end
 
     
-    exp = Expr(:call, type_expr, getfields...)
+    exp = Expr(:call, constructor_ref, getfields...)
     # error("Exp: $exp")
 
 
     ### ERROR:
         exp_str = sprint(show, exp)
-        type_expr_str = sprint(show, type_expr)
+        type_expr_str = sprint(show, return_type_expr)
         getfields_str = repr(getfields)
         msg = string(
             "\n--- setfield debug ---\n",
@@ -53,7 +54,7 @@ General replacing setfield
             "exp = ", exp_str, "\n",
         )
 
-    final_struct_expr = Expr(:(::), exp, Expr(:curly, nameof(S), parameters...))
+    final_struct_expr = Expr(:(::), exp, return_type_expr)
     return quote
         try
             # $exp
@@ -65,7 +66,7 @@ General replacing setfield
     # return exp
 end
 
-@inline function setfields(s::S, names::Tuple, vals...)
+@inline function setfields(s::S, names::Tuple, vals...) where {S}
     final = unrollreplace(s, Val(length(vals))) do current, idx
         setfield(current, Val(names[idx]), vals[idx])
     end

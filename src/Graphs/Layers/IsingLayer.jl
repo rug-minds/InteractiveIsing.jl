@@ -221,7 +221,7 @@ destructor(layer::IsingLayer) = destructor(data(layer))
 IsingLayer(g::AbstractIsingGraph, idx::Integer) = IsingLayer(getfield(g, :layers)[idx], g, idx)
 
 Base.LinearIndices(l::IsingLayer) = LinearIndices(size(l))
-Base.CartesianIndices(l::IsingLayer) = CartesianIndices(size(l))
+Base.CartesianIndices(layer::AbstractIsingLayer) = CartesianIndices(size(layer))
 
 
 get_weightgenerator(layer::IsingLayer) = get_weightgenerator(data(layer))
@@ -395,7 +395,7 @@ export bfield, bvec
 
 ##
 function aliveidxs(layer::AbstractIsingLayer)
-    ds = defects(graph(layer))
+    ds = index_set(graph(layer))
     lidx = internal_idx(layer)
     preceding_defects = sum(layerdefects(ds)[1:lidx-1])
     these_defects = layerdefects(ds)[lidx]
@@ -510,31 +510,31 @@ default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous
 
 Base.eltype(l::IsingLayer) = eltype(graph(l))
 
-### DEFECTS
-"""
-Get the indexes of all alive spins in the layer
-"""
-aliveList(layer::AbstractIsingLayer) = aliveList(defects(layer))
-"""
-Get the indexes of all defect spins in the layer
-"""
-defectList(layer::AbstractIsingLayer) = defectList(defects(layer))
+# ### DEFECTS
+# """
+# Get the indexes of all alive spins in the layer
+# """
+# aliveList(layer::AbstractIsingLayer) = aliveList(defects(layer))
+# """
+# Get the indexes of all defect spins in the layer
+# """
+# defectList(layer::AbstractIsingLayer) = defectList(defects(layer))
 
-"""
-Returns wether layer has any defects
-"""
-@inline function ndefect(layer::AbstractIsingLayer)
-    if !isnothing(graph(layer)) 
-        return 0
-    end
-    layerdefects(defects(graph(layer)))[layeridx(layer)]
-end
-@inline nalive(layer::AbstractIsingLayer) = nStates(layer) - ndefect(layer)
-export ndefect, nalive
-@inline hasDefects(layer::AbstractIsingLayer) = ndefect(layer) > 0
-@inline setdefect(layer::AbstractIsingLayer, val, idx) = defects(graph(layer))[idxLToG(idx, layer)] = val
-@inline clamprange!(layer::AbstractIsingLayer, val, idxs) = setrange!(defects(graph(layer)), val, idxLToG.(idxs, Ref(layer)))
-###
+# """
+# Returns wether layer has any defects
+# """
+# @inline function ndefect(layer::AbstractIsingLayer)
+#     if !isnothing(graph(layer)) 
+#         return 0
+#     end
+#     layerdefects(index_set(graph(layer)))[layeridx(layer)]
+# end
+# @inline nalive(layer::AbstractIsingLayer) = nStates(layer) - ndefect(layer)
+# export ndefect, nalive
+# @inline hasDefects(layer::AbstractIsingLayer) = ndefect(layer) > 0
+# @inline setdefect(layer::AbstractIsingLayer, val, idx) = index_set(graph(layer))[idxLToG(idx, layer)] = val
+# @inline clamprange!(layer::AbstractIsingLayer, val, idxs) = setrange!(index_set(graph(layer)), val, idxLToG.(idxs, Ref(layer)))
+# ###
 
 export statetype
 

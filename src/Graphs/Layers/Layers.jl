@@ -1,5 +1,5 @@
 include("Utils.jl")
-include("LayerDefects.jl")
+# include("LayerDefects.jl")
 
 include("IsingLayer.jl")
 include("CuboidLayer.jl")

@@ -8,14 +8,31 @@ end
 
 wg = @WG (;dr) -> isingfunc(;dr) NN = (3,3,2)
 
-function ReducedBoltzmannArchitecture(layer_sizes...)
-    layer_gen = (Layer(layer_sizes[i],
-              Continuous(),
-              Coords(0, i, 0)) for i in 1:length(layer_sizes))
+# @benchmark g = ii.IsingGraph(100,100,10, 
+#         Continuous(), 
+#         wg, 
+#         LatticeConstants(1.0, 1.0, 20.),
+#         StateSet(-1.5f0, 1.5f0),
+#         Ising(c = ConstVal(1)) + 
+#             Clamping(1f0)+ Quartic(c = ConstVal(1.0), ) + 
+#             Sextic(c = ConstVal(1.0), localpotential = StateLike(OffsetArray, 0)),
+#         periodic = (:x,:y))
+
+function ReducedBoltzmannArchitecture(layer_sizes...; precision = Float32)
+    layer_gen = (Layer(
+            layer_sizes[i],
+            Continuous(),
+            Coords(0, i, 0)) for i in 1:length(layer_sizes))
 
     
     IsingGraph(layer_gen...,
-                Ising() + Clamping())
+                Ising() + Clamping();
+                iterator = g -> ii.GraphDefectsNew(g, 0), # 50% defects
+                # callback! = g -> begin
+                #     # set first layer defect since it's the input layer
+                #     setClamp!(g[1], zero(precision))
+                # end
+                )
                 # default_algorithm = Langevin())
 end
 
@@ -29,26 +46,17 @@ function GraphFromSource(g::IsingGraph)
         temp(g),
         g.default_algorithm,
         g.hamiltonian,
-        g.defects,
+        g.index_set,
         g.addons,
         g.layers,
         wg
     )
 end
 
-ReducedBoltzmannArchitecture(100, 100, 10)
+g = ReducedBoltzmannArchitecture(100, 100, 10)
 
-g = ii.IsingGraph(100,100,10, 
-        Continuous(), 
-        wg, 
-        LatticeConstants(1.0, 1.0, 20.),
-        StateSet(-1.5f0, 1.5f0),
-        Ising(c = ConstVal(1)) + 
-            Clamping(1f0)+ Quartic(c = ConstVal(1.0), ) + 
-            Sextic(c = ConstVal(1.0), localpotential = StateLike(OffsetArray, 0)),
-        periodic = (:x,:y))
 # interface(g)
-# createProcess(g, lifetime = Processes.Until(x -> x == 0, Var(g.default_algorithm, :T)))
+createProcess(g, lifetime = Processes.Until(x -> x == 0, Var(g.default_algorithm, :T)))
 
 
 
@@ -58,4 +66,3 @@ g = ii.IsingGraph(100,100,10,
 # cview = view(c, reg[1][1])
 # step!(InteractiveIsing.Metropolis(), cview)
 # @code_warntype step!(InteractiveIsing.Metropolis(), cview)
-

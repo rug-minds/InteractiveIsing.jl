@@ -57,7 +57,9 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
     precision = Float32, 
     adj = nothing,
     diag = StateLike(OffsetArray, 0),
-    fastwrite = false
+    iterator = nothing,
+    fastwrite = false,
+    callback! = identity,
     )
 
     #Parse hamiltonian and filter
@@ -80,7 +82,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         newlayer = fix_layerdata(oldlayer, precision, offset)
     end
 
-    sparse_connections = init_connections_from_layers(precision, total_length, layers...)
+    # sparse_connections = init_connections_from_layers(precision, total_length, layers...)
 
     g_for_shape =  IsingGraph(
         # State
@@ -94,7 +96,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         #Hamiltonians
         EmptyHamiltonian(),
         #Defects
-        GraphDefects(nothing),
+        1:total_length,
         Dict{Symbol, Any}(),
         layers
     )
@@ -105,6 +107,12 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         adj = UndirectedAdjacency(sparse_connections, diag; fastwrite)
     else
         @assert size(adj, 1) == total_length "Adjacency matrix size must match total number of nodes in the graph\nexpected $(total_length)x$(total_length), got $(size(adj))"
+    end
+
+    if !isnothing(iterator)
+        it = iterator(g_for_shape)
+    else
+        it = 1:total_length
     end
 
     g_with_adj = IsingGraph(
@@ -119,14 +127,13 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         #Hamiltonians
         EmptyHamiltonian(),
         #Defects
-        GraphDefects(nothing),
+        it,
         Dict{Symbol, Any}(),
         layers
     )
 
     ham  = reconstruct(ham, g_with_adj)
-
-
+    
     # Construct the graph
     g = IsingGraph(
         # State
@@ -140,13 +147,14 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         #Hamiltonians
         ham,
         #Defects
-        GraphDefects(nothing),
+        it,
         Dict{Symbol, Any}(),
         layers
     )
-    graph!(defects(g), g)
+    
     initRandomState(g)
     # g.hamiltonian = reconstruct(ham, g)
+    callback!(g)
     return g
 end
 

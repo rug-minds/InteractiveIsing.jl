@@ -1,5 +1,3 @@
-using MacroTools
-
 #=Grid lattice functions=#
 
 # Matrix Coordinates to vector Coordinates

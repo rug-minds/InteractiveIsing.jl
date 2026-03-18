@@ -57,7 +57,7 @@ end
 function setDefects!(g, val, idxs)
     hasdefects_before = hasDefects(graph(g))
     
-    defects(g)[idxs] = val
+    index_set(g)[idxs] = val
     
     hasdefects_after = hasDefects(graph(g))
     

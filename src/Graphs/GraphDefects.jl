@@ -200,15 +200,15 @@ function setdefectrange!(gd::GraphDefects, idxs)::Int32
 end
 
 function setdefectrange!(g::AbstractIsingGraph, idxs)
-    setdefectrange!(defects(g), idxs)
+    setdefectrange!(index_set(g), idxs)
 end
 function setdefectrange!(l::AbstractIsingLayer, idxs)
-    d_idxs = setdefectrange!(defects(graph(l)), idxLToG.(idxs, Ref(l)))
-    layerdefects(defects(graph(l)))[internal_idx(l)] += d_idxs
+    d_idxs = setdefectrange!(index_set(graph(l)), idxLToG.(idxs, Ref(l)))
+    layerdefects(index_set(graph(l)))[internal_idx(l)] += d_idxs
 end
 function setaliverange!(l::AbstractIsingLayer, idxs)
-    d_idxs = setaliverange!(defects(graph(l)), idxLToG.(idxs, Ref(l)))
-    layerdefects(defects(graph(l)))[internal_idx(l)] -= d_idxs
+    d_idxs = setaliverange!(index_set(graph(l)), idxLToG.(idxs, Ref(l)))
+    layerdefects(index_set(graph(l)))[internal_idx(l)] -= d_idxs
 end
 export setdefectrange!, setaliverange!
 

@@ -19,12 +19,12 @@ ndefect(defects::LayerDefects) = ndefect(l(defects))
 
 maxdefects(defects::LayerDefects) = nStates(l(defects))
 
-graphdefects(df::LayerDefects) = defects(graph(df))
+graphdefects(df::LayerDefects) = index_set(graph(df))
 
 reset!(defects::LayerDefects) = ndefect(defects,0)
 
 function Base.getindex(d::LayerDefects, idx)
-    defects(graph(d))[idxLToG(idx, l(d))]
+    graphdefects(d)[idxLToG(idx, l(d))]
 end
 
 function Base.setindex!(d::LayerDefects, val, idx)
@@ -75,4 +75,3 @@ function precedingAlives(defects::LayerDefects)
     return preceding_states
 end
 export precedingAlives
-

@@ -1,6 +1,7 @@
 export genAdj!, genAdj, remAdj!, genAdjFull!, remAdjAll!, viewConnections
 
 gen_connections(::Any, ::Nothing) = (Int[], Int[], [])
+gen_connections(::AbstractLayerData, precision, ::Nothing, ::Any) = (Int[], Int[], precision[])
 """
 Generate the connections in a layer based on a weightgenerator
 Returns sparse representation of the connections

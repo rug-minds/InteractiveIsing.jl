@@ -33,5 +33,6 @@ include("SparseVal.jl")
 include("TypeParsing.jl")
 include("Macros.jl")
 include("DirectMethod.jl")
+include("Setfield.jl")
 
 include("Parameters/Parameters.jl")
