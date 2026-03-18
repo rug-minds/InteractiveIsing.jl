@@ -32,15 +32,14 @@ function makieaxis(axisfunc, modifiers...)
 end
 
 # Weight function variant 1
-function weightfunc1(dr,c1,c2)
+function weightfunc1(; dc::T) where {T}
     prefac = 1
-    d = delta(c1,c2)
-    dx, dy, dz = d
+    d = dc
     # Always positive coupling (ferromagnetic)
     return prefac / norm2(d)
 end
-function weightfunc2(dr, c1, c2)
-    d = delta(c1, c2)
+function weightfunc2(; dc)
+    d = dc
     dx, dy, dz = d  # 先解包
     physical_dr2 = sqrt((0.05*dx)^2 + (0.05*dy)^2 + (0.2*dz)^2) 
     # z 方向保持铁磁 (正耦合)
@@ -55,8 +54,8 @@ function weightfunc2(dr, c1, c2)
     prefac = 1
     return prefac / physical_dr2
 end
-function weightfunc3(dr, c1, c2)
-    d = delta(c1, c2)
+function weightfunc3(; dc)
+    d = dc
     dx, dy, dz = d  # 先解包
     physical_dr2 = sqrt((0.3*dx)^2 + (0.3*dy)^2 + (0.3*dz)^2) 
     # z 方向保持铁磁 (正耦合)
@@ -71,8 +70,8 @@ function weightfunc3(dr, c1, c2)
     # prefac = 1
     return prefac / physical_dr2
 end
-function weightfunc_angle_anti(dr, c1, c2)
-    d = delta(c1, c2)
+function weightfunc_angle_anti(; dc::DC) where DC
+    d = dc
     dx, dy, dz = d  # 先解包
     ax=0.2
     ay=0.2
@@ -89,8 +88,8 @@ function weightfunc_angle_anti(dr, c1, c2)
 
     return prefac / r^3
 end
-function weightfunc_angle_ferro(dr, c1, c2)
-    d = delta(c1, c2)
+function weightfunc_angle_ferro(; dc)
+    d = dc
     dx, dy, dz = d  # 先解包
     ax=0.2
     ay=0.2
@@ -108,7 +107,7 @@ function weightfunc_angle_ferro(dr, c1, c2)
     return abs(prefac) / r^3
 end
 # Shell-based coupling + dipolar coupling
-function weightfunc_shell(dr,c1,c2, dc, ax, ay, az, csr, lambda1, lambda2)
+function weightfunc_shell(ax, ay, az, csr, lambda1, lambda2; dc)
     dx, dy, dz = dc
     k1  = 1.0
     k2  = lambda1 * k1
@@ -148,8 +147,8 @@ function weightfunc_shell(dr,c1,c2, dc, ax, ay, az, csr, lambda1, lambda2)
     return Jsr
 end
 # Skymion-like coupling
-function weightfunc_skymion(dr,c1,c2)
-    d = delta(c1, c2)
+function weightfunc_skymion(; dc)
+    d = dc
     dx, dy, dz = d  # 先解包
     # z 方向保持铁磁 (正耦合)
     prefac = 2
@@ -160,8 +159,8 @@ function weightfunc_skymion(dr,c1,c2)
     return prefac / norm2(d)
 end
 
-function weightfunc_xy_antiferro(dr, c1, c2, ax, ay, az)
-    d = delta(c1, c2)
+function weightfunc_xy_antiferro(ax, ay, az; dc)
+    d = dc
     dx, dy, dz = d  # 先解包
     physical_dr2 = sqrt((ax*dx)^2 + (ay*dy)^2 + (az*dz)^2) 
     # z 方向保持铁磁 (正耦合)
@@ -177,8 +176,8 @@ function weightfunc_xy_antiferro(dr, c1, c2, ax, ay, az)
     return prefac / physical_dr2
 end
 
-function weightfunc_xy_dilog_antiferro(dr, c1, c2)
-    d = delta(c1, c2)
+function weightfunc_xy_dilog_antiferro(; dc)
+    d = dc
     dx, dy, dz = d
     
     if (abs(dx) + abs(dy)) % 2 == 0
@@ -190,10 +189,9 @@ function weightfunc_xy_dilog_antiferro(dr, c1, c2)
     return prefac / norm2(d)
 end
 
-function weightfunc4(dr,c1,c2)
+function weightfunc4(; dc)
     prefac = -1
-    d = delta(c1,c2)
-    dx, dy, _ = d
+    d = dc
     # Always positive coupling (ferromagnetic)
     return prefac / norm2(d)
 end
@@ -556,9 +554,9 @@ zL = 10   # Length in the z-dimension
 
 
 ### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
-wg1 = @WG (dr,c1,c2) -> weightfunc1(dr, c1, c2) NN = 3
-wg2 = @WG (dr,c1,c2) -> weightfunc_skymion(dr, c1, c2) NN = 3
-wg5 = @WG (dr,c1,c2,dc) -> weightfunc_shell(dr, c1, c2, dc, 1, 1, 1, 1, 0.1, 0.1) NN = 3
+wg1 = @WG (; dc) -> weightfunc1(; dc) NN = 3
+wg2 = @WG (; dc) -> weightfunc_skymion(; dc) NN = 3
+wg5 = @WG (; dc) -> weightfunc_shell(1, 1, 1, 1, 0.1, 0.1; dc) NN = 3
 
 a1, c1 = -2, 10
 b1 =-(a1+3*c1)/2
