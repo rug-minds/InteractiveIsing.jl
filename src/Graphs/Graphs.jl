@@ -19,7 +19,6 @@ export reshapeView
 
 include("Utils.jl")
 include("GraphDefects.jl")
-include("Parameters.jl")
 include("IsingGraph.jl")
 
 
@@ -27,10 +26,6 @@ include("Layers/Layers.jl")
 include("StatePartition.jl")
 include("SingleLayerGraph.jl")
 include("Constructors.jl")
-
-include("SetEls.jl")
-
-include("Saving.jl")
 
 
 include("User.jl")
