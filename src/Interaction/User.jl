@@ -1,47 +1,5 @@
-export drawCircle, addRandomDefects!, setBField!, remBField!, setClamp!, remClamp!
-"""
-Draw circle of some size to the layer g with center at i,j, and state value of val.
-"""
-function drawCircle(layer, x_in, y_in, val, r = nothing; periodic = true, clamp = false, debug = false)
-    fsim = sim(graph(layer))
+export addRandomDefects!, setClamp!, remClamp!
 
-    if !( 1 <= x_in <= size(layer)[1] && 1 <= y_in <= size(layer)[2])
-        return
-    end
-
-    # imgsize = size(image(fsim)[])
-    
-    # If img is size of underlying graph, use rounded coordinate, otherwise scale
-    # i = glength(layer) == imgsize[1]    ? Int16(round(x_in)) : Int16(round(x_in/imgsize[1]*glength(layer)))
-    # j = gwidth(layer) == imgsize[2]     ? Int16(round(y_in)) : Int16(round(y_in/imgsize[2]*gwidth(layer)))
-    i = round(Int, x_in)
-    j = round(Int, y_in)
-
-    circle = isnothing(r) ? circ(fsim) : getOrdCirc(r)
-
-
-    offcirc = offCirc(circle, i,j)
-
-    if periodic 
-        circle = sort(loopCirc(offcirc, glength(layer), gwidth(layer)), by = x -> reverse(x))
-    else 
-        circle = cutCirc(offcirc, glength(layer), gwidth(layer))
-    end
-
-    if debug
-        println("x_in $x_in, y_in $y_in")
-        println("i $i, j$j")
-        println("Value used $val")
-        # println("Drew circle at y=$i and x=$j")
-        println("Circle to state circle $cir|cle")
-    end
-
-    setSpins!(layer, circle, val, clamp)
-    return
-end
-
-
-# TODO: Notify sim
 """
 Randomly make p percent of states in layer defect
 """
@@ -67,37 +25,6 @@ function addRandomDefects!(layer, p, val = 0)
 
     return
 end
-
-"""
-Set a magneticfield to a layer
-
-Enter a funcion f(x,y)
-Can use mode :Static, :Timed, :Repeating, :Timer
-
-For repeating you can supply a timestep as final argument
-For you timed can supply a time length and time step as final arguments
-For you timer can supply a time step as final argument
-
-"""
-function setBField!(layer::AbstractIsingLayer, func::Function, mode::Symbol = :Static, args...)
-    if mode == :Static
-        setBFunc!(layer, (;x,y) -> func(x,y))
-    elseif mode == :Repeating
-        setBFuncRepeating!(layer, (;x,y) -> func(x,y))
-    elseif mode == :Timed
-        setBFuncTimed!(layer, (;x,y) -> func(x,y), args...)
-    elseif mode == :Timer
-        setBFuncTimer!(layer, (;x,y,t) -> func(x,y,t))
-    else
-        error("Mode $mode not recognized")
-    end
-end
-"""
-Set magnetic field by idxs and strength. 
-"""
-setBField!(layer::AbstractIsingLayer, idxs::Vector, strengths::Vector) = setBIdxs!(layer, idxs, strengths)
-export setBField!
-#remBField!
 
 """
 Add a term to the Hamiltonian of the form beta 1/2(sigma_i - y)^2 where sigma_i is the i-th state and y is the target for that state

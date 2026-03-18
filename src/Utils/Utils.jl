@@ -32,5 +32,6 @@ include("ArrayTypes/ArrayTypes.jl")
 include("SparseVal.jl")
 include("TypeParsing.jl")
 include("Macros.jl")
+include("DirectMethod.jl")
 
 include("Parameters/Parameters.jl")

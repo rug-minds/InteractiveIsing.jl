@@ -2,25 +2,11 @@ using InteractiveIsing, JET, BenchmarkTools
 using InteractiveIsing.Processes
 import InteractiveIsing as ii
 
-function isingfunc(dr::R) where R
+function isingfunc(;dr::R = 1) where R
     return 1/dr
 end
 
-wg = ii.WGNEW(isingfunc, (3,3,2))
-
-
-# wg = @WG (dr,c1,c2) -> isingfunc(dr, c1, c2) NN=(3,3,2)
-
-# g = ii.IsingGraph(100,100,10, 
-#         Continuous(), 
-#         wg, 
-#         LatticeConstants(1.0, 1.0, 20.),
-#         StateSet(-1.5f0, 1.5f0),
-#         Ising(c = ConstVal(1)) + 
-#             Clamping(1f0)+ Quartic(c = ConstVal(1.0), ) + 
-#             Sextic(c = ConstVal(1.0), localpotential = StateLike(OffsetArray, 0)),
-#         periodic = (:x,:y))
-
+wg = @WG (;dr) -> isingfunc(;dr) NN = (3,3,2)
 
 function ReducedBoltzmannArchitecture(layer_sizes...)
     layer_gen = (Layer(layer_sizes[i],
@@ -61,17 +47,6 @@ g = ii.IsingGraph(100,100,10,
             Clamping(1f0)+ Quartic(c = ConstVal(1.0), ) + 
             Sextic(c = ConstVal(1.0), localpotential = StateLike(OffsetArray, 0)),
         periodic = (:x,:y))
-
-@benchmark g = ii.IsingGraph(100,100,10, 
-        Continuous(), 
-        wg, 
-        LatticeConstants(1.0, 1.0, 20.),
-        StateSet(-1.5f0, 1.5f0),
-        Ising(c = ConstVal(1)) + 
-            Clamping(1f0)+ Quartic(c = ConstVal(1.0), ) + 
-            Sextic(c = ConstVal(1.0), localpotential = StateLike(OffsetArray, 0)),
-        periodic = (:x,:y))
-
 # interface(g)
 # createProcess(g, lifetime = Processes.Until(x -> x == 0, Var(g.default_algorithm, :T)))
 

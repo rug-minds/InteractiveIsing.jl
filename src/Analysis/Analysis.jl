@@ -13,7 +13,5 @@ end
 include("Plotting.jl")
 include("CorrelationLength.jl")
 include("Data.jl")
-include("TempSweep.jl")
-include("TotalEnergy.jl")
 include("Susceptibility.jl")
 include("User.jl")

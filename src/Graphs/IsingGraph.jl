@@ -1,6 +1,8 @@
 export adj, state
 export statelen, initRandomState
 export processes, process
+# export continuous
+
 
 #TODO: SHouldn't have the same supertype as layer statetype
 struct ContinuousState <: StateType end
@@ -213,30 +215,4 @@ function ising_it(g)
         return aliveList(g)
     end
 end
-
-export continuous
-continuous(g::IsingGraph{T}) where T = T <: Integer ? false : true
-
 setdefect(g::IsingGraph, val, idx) = defects(g)[idx] = val
-
-### ARCHITECTURE
-function getarchitecture(g)
-    architecture = []
-    for layer in layers(g)
-        push!(architecture, (glength(layer), gwidth(layer), statetype(layer)))
-    end
-    return architecture
-end
-
-function compare_architecture_sizes(architecture1, architecture2)
-    if length(architecture1) != length(architecture2)
-        return false
-    else
-        for (idx, layer) in enumerate(architecture1)
-            if layer[1] != architecture2[idx][1] || layer[2] != architecture2[idx][2]
-                return false
-            end
-        end
-    end
-    return true
-end
