@@ -8,15 +8,6 @@ end
 
 wg = @WG (;dr) -> isingfunc(;dr) NN = (3,3,2)
 
-# @benchmark g = ii.IsingGraph(100,100,10, 
-#         Continuous(), 
-#         wg, 
-#         LatticeConstants(1.0, 1.0, 20.),
-#         StateSet(-1.5f0, 1.5f0),
-#         Ising(c = ConstVal(1)) + 
-#             Clamping(1f0)+ Quartic(c = ConstVal(1.0), ) + 
-#             Sextic(c = ConstVal(1.0), localpotential = StateLike(OffsetArray, 0)),
-#         periodic = (:x,:y))
 
 function ReducedBoltzmannArchitecture(layer_sizes...; precision = Float32)
     layer_gen = (Layer(
@@ -27,20 +18,14 @@ function ReducedBoltzmannArchitecture(layer_sizes...; precision = Float32)
     
     IsingGraph(layer_gen...,
                 Ising() + Clamping();
-                iterator = g -> ii.GraphDefectsNew(g, 0), # 50% defects
-                # callback! = g -> begin
-                #     # set first layer defect since it's the input layer
-                #     setClamp!(g[1], zero(precision))
-                # end
-                )
-                # default_algorithm = Langevin())
+                iterator = g -> ii.GraphDefectsNew(g, 0))
 end
 
 """
     Create a graph copy, with separate state, but shared data
 """
-function GraphFromSource(g::IsingGraph)
-    IsingGraph(
+function GraphFromSource(g::IsingGraph; init! = identity)
+    gnew = IsingGraph(
         copy(state(g)),
         adj(g),
         temp(g),
@@ -49,8 +34,9 @@ function GraphFromSource(g::IsingGraph)
         g.index_set,
         g.addons,
         g.layers,
-        wg
     )
+    init!(gnew)
+    return gnew
 end
 
 g = ReducedBoltzmannArchitecture(100, 100, 10)

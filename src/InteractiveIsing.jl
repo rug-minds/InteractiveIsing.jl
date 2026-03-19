@@ -25,10 +25,11 @@ include("Utils/Utils.jl")
 include("Topology/Topology.jl")
 
 include("AdjList/AdjList.jl")
-
+include("Proposals/Proposals.jl")
 include("MCAlgorithms/MCAlgorithms.jl")
 
 include("Graphs/Graphs.jl")
+include("IndexPickers/IndexPickers.jl")
 
 include("Sim/Sim.jl")
 

@@ -1,4 +1,4 @@
-export AbstractIsingGraph, IsingGraph, CIsingGraph, coordToIdx, idxToCoord, ising_it, setSpins!, addDefects!, remDefects!, addDefect!, remDefect!, 
+export AbstractIsingGraph, IsingGraph, CIsingGraph, coordToIdx, idxToCoord, index_set, setSpins!, addDefects!, remDefects!, addDefect!, remDefect!, 
     connIdx, connW, initSqAdj, HFunc, HWeightedFunc, HMagFunc, HWMagFunc, setGHFunc!, gwidth, glength,
     StatePartition, partition_index, partition_value, partition_dispatch
 

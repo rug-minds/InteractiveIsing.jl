@@ -57,7 +57,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
     precision = Float32, 
     adj = nothing,
     diag = StateLike(OffsetArray, 0),
-    iterator = nothing,
+    index_set = nothing,
     fastwrite = false,
     callback! = identity,
     )
@@ -109,8 +109,8 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         @assert size(adj, 1) == total_length "Adjacency matrix size must match total number of nodes in the graph\nexpected $(total_length)x$(total_length), got $(size(adj))"
     end
 
-    if !isnothing(iterator)
-        it = iterator(g_for_shape)
+    if !isnothing(index_set)
+        it = index_set(g_for_shape)
     else
         it = 1:total_length
     end

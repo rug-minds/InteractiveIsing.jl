@@ -30,7 +30,7 @@ copystate(g::AbstractIsingGraph, idxs, val::Real) = @inbounds state(g)[idxs] .= 
 
 copystate(g::AbstractIsingGraph, idxs, val::AbstractArray) = @inbounds state(g)[idxs] .= val[1:end]
 
-copystate(g::IsingLayer, idxs, val::AbstractArray) = mapToStateSet!(g, (@view state(g)[idxs]), val)
+copystate(g::IsingLayer, idxs, val::AbstractArray) = clamp_to_stateset(g, (@view state(g)[idxs]), val)
 
 
 

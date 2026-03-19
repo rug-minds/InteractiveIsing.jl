@@ -4,7 +4,6 @@ export HamiltonianTerms
 
 include("Interface.jl")
 include("DerivedParameters.jl")
-include("Proposals/Proposals.jl")
 include("Hamiltonian.jl")
 include("HamiltonianTerms.jl")
 include("Show.jl")

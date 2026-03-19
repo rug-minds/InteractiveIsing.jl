@@ -1,3 +1,16 @@
+export Coords
+export IsingLayer
+
+export statetype, addons, stateset,
+    initstate!, topology
+export setPeriodic!
+
+
+
+
+
+
+
 """
 ndefect not tracking correctly FIX
 """
@@ -16,7 +29,6 @@ function Coords(coords::I...) where I
 end
 
 
-export Coords
 struct IsingLayerData{StateType, StateSet, Dim, Size, PtrRange, Top} <: AbstractLayerData{Dim}
     # Reference to the graph holding it    
     # Can be nothing so that saving is easier
@@ -142,7 +154,7 @@ end
         idx = 4
     elseif S == :PtrRange
         idx = 5    
-    elseif S == :Tpt
+    elseif S == :Top
         idx = 6
     end
     return ps[idx]
@@ -158,8 +170,9 @@ end
 @inline statetype(lt::Type{<:IsingLayerData{A}}) where {A} = A
 @inline statetype(l::IsingLayerData) = statetype(typeof(l))
 
-@inline range(lt::Type{<:IsingLayerData{A,B,C,D,E}}) where {A,B,C,D,E} = E
-@inline range(l::IsingLayerData) = range(typeof(l))
+@inline range(lt::Union{Type{<:IsingLayerData{A,B,C,D,E}}, 
+                                IsingLayerData{A,B,C,D,E}}) where {A,B,C,D,E} = E
+
 @inline range_end(lt::Type{<:IsingLayerData{A,B,C,D,E}}) where {A,B,C,D,E} = last(E)
 @inline range_end(l::IsingLayerData) = range_end(typeof(l))
 @inline Base.parentindices(l::IsingLayerData) = (range(l),)
@@ -240,8 +253,6 @@ get_weightgenerator(layer::IsingLayer) = get_weightgenerator(data(layer))
 
 # IsingLayer(g, idx, startidx, lp::LayerProperties) = IsingLayerData(lp.size, idx, startidx; lp.kwargs...)
 
-export IsingLayer
-export topology
 
 
 
@@ -319,7 +330,6 @@ Set graph of layer
 # @inline graph(layer::IsingLayer, g::IsingGraph) = layer.graph = g
 # changegraph(l::IsingLayer, g) = IsingLayer{layerparams(l, :StateType), layerparams(l, :DIMS), layerparams(l, :T), layerparams(l, :Top)}(g, l.name, l.internal_idx, l.startidx, l.size, l.nstates, l.traits, l.coords, l.connections, l.timers, l.top)
 addons(layer::IsingLayer) = graph(layer).addons
-export addons
 
 # Get current layeridx through graph
 # @inline layeridx(layer::IsingLayer) = externalidx(layers(graph(layer)), layer.internal_idx)
@@ -424,15 +434,6 @@ iterator(g::IsingGraph) = 1:(nStates(g))
 # @inline dist(i1::Integer, j1::Integer, i2::Integer, j2::Integer, k1, k2, layer::AbstractIsingLayer{T,3}) where T = sqrt((i1-i2)^2 + (j1-j2)^2 + (k1-k2)^2)
 @inline idxToCoord(idx::Integer, layer::AbstractIsingLayer) = idxToCoord(idx, size(layer))
 
-# Notify a change in the simulation
-# TODO: Make this an observable in the graph that can be coupled with the one in the simulation
-# Base.notify(layer::AbstractIsingLayer) = let _sim = sim(layer); if !isnothing(_sim); notify(layerIdx(_sim)) end; end
-
-export setPeriodic!
-
-
-# Forward Graph Data
-# @inline bfield(layer::IsingLayer) = @view bfield(graph(layer))[start(layer):endidx(layer)]
 
 """
 Go from a local idx of layer to idx of the underlying graph
@@ -475,8 +476,14 @@ function extremise!(l::IsingLayer{ST}) where ST
     map!(x -> x >= (a+b)/2f0 ? b : a, state(l), state(l))
 end
 
-mapToStateSet!(l::IsingLayer{ST}, dest, source) where {ST} = map!(x -> closestTo(l, x), dest, source)
+"""
+Map values to the stateset of the layer, for example to ensure that values are valid for the precision
+"""
+clamp_to_stateset(l::IsingLayer{ST}, dest, source) where {ST} = map!(x -> closestTo(l, x), dest, source)
 
+"""
+Given a value, return the closest value in the stateset of the layer
+"""
 function closestTo(l::IsingLayer{ST}, x) where {ST}
     if x < stateset(l)[1]
         return stateset(l)[1]
@@ -502,7 +509,6 @@ function closestTo(l::IsingLayer{ST}, x) where {ST}
     return x
 end
 
-export changeset!, stateset
 
 ### TYPE STUFF
 ## DEFAULT NEW LAYER TYPE BASED ON GRAPH
@@ -510,38 +516,9 @@ default_ltype(g::IsingGraph{T}) where T = T == Int8 ? Discrete : Continuous
 
 Base.eltype(l::IsingLayer) = eltype(graph(l))
 
-# ### DEFECTS
-# """
-# Get the indexes of all alive spins in the layer
-# """
-# aliveList(layer::AbstractIsingLayer) = aliveList(defects(layer))
-# """
-# Get the indexes of all defect spins in the layer
-# """
-# defectList(layer::AbstractIsingLayer) = defectList(defects(layer))
-
-# """
-# Returns wether layer has any defects
-# """
-# @inline function ndefect(layer::AbstractIsingLayer)
-#     if !isnothing(graph(layer)) 
-#         return 0
-#     end
-#     layerdefects(index_set(graph(layer)))[layeridx(layer)]
-# end
-# @inline nalive(layer::AbstractIsingLayer) = nStates(layer) - ndefect(layer)
-# export ndefect, nalive
-# @inline hasDefects(layer::AbstractIsingLayer) = ndefect(layer) > 0
-# @inline setdefect(layer::AbstractIsingLayer, val, idx) = index_set(graph(layer))[idxLToG(idx, layer)] = val
-# @inline clamprange!(layer::AbstractIsingLayer, val, idxs) = setrange!(index_set(graph(layer)), val, idxLToG.(idxs, Ref(layer)))
-# ###
-
-export statetype
-
 @inline function initstate!(layer::IsingLayer)
     state(layer)[:] .= rand(layer, nStates(layer))
 end
-export initstate!
 
 
 function Base.show(io::IO, layer::IsingLayer)

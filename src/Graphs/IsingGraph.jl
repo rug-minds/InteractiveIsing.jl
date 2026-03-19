@@ -1,6 +1,8 @@
 export adj, state
 export statelen, initRandomState
 export processes, process
+# Layer forwards
+export layer_idxs
 # export continuous
 
 
@@ -115,7 +117,7 @@ hasDefects(::AbstractSet{<:Integer}) = false
 sampling_indices(idxs::AbstractRange{<:Integer}) = idxs
 sampling_indices(idxs::AbstractVector{<:Integer}) = idxs
 sampling_indices(idxs::AbstractSet{<:Integer}) = idxs
-sampling_indices(gd::GraphDefects) = aliveList(gd)
+# sampling_indices(gd::GraphDefects) = aliveList(gd)
 sampling_indices(gd::GraphDefectsNew) = aliveindices(gd)
 
 hasDefects(g::IsingGraph) = hasDefects(index_set(g))
@@ -141,9 +143,8 @@ export hasDefects, aliveList, defectList, layerdefects, isDefect
     return g[1]
 end
 
+@inline layer_idxs(g::IsingGraph) = range.(layers(g))
 @inline graphstate(g::IsingGraph) = getfield(g, :state)
-@inline layeridxs(g::IsingGraph) = UnitRange{Int32}[graphidxs(unshuffled(layers(g))[i]) for i in 1:length(g)]
-@inline spinidx2layer_i_index(g, idx) = internal_idx(spinidx2layer(g, idx))
 @inline layer(g::IsingGraph, idx) = getfield(g, :layers)[idx]
 @inline Base.getindex(g::IsingGraph, idx) = IsingLayer(g, idx)
 @inline Base.getindex(g::IsingGraph) = IsingLayer(g, 1)
@@ -222,7 +223,7 @@ end
 """ 
 Returns in iterator which can be used to choose a random index among alive spins
 """
-function ising_it(g)
+function index_set(g)
     return sampling_indices(index_set(g))
 end
 setdefect(g::IsingGraph, val, idx) = index_set(g)[idx] = val
