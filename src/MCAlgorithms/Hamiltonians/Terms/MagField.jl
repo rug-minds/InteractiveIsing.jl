@@ -27,7 +27,7 @@ end
 
 @inline function calculate(::ΔH, hterm::MagField, state::S, proposal) where {S <: AbstractIsingGraph}
     j = at_idx(proposal)
-    spins = @inline InteractiveIsing.state(state)
+    spins = @inline graphstate(state)
     return -hterm.b[j]*(to_val(proposal) - spins[j])
 end
 

@@ -60,16 +60,16 @@ end
 
 @inline function calculate(::ΔH, hterm::LH, state::S, proposal) where {LH <: PolynomialHamiltonian, S <: AbstractIsingGraph}
     j = at_idx(proposal)
-    spins = @inline InteractiveIsing.state(state)
+    spins = @inline graphstate(state)
     return hterm.c[]*hterm.lp[j]*(to_val(proposal)^order(hterm) - spins[j]^order(hterm))
 end
 
 @inline function calculate(::dH, hterm::LH, state::S, s_idx) where {LH <: PolynomialHamiltonian, S <: AbstractIsingGraph}
-    spins = @inline InteractiveIsing.state(state)
+    spins = @inline graphstate(state)
     return order(hterm)*hterm.c[]*hterm.lp[s_idx]*spins[s_idx]^(order(hterm)-1)
 end
 
 @inline function calculate(::H_i, hterm::LH, state::S, idx) where {LH <: PolynomialHamiltonian, S <: AbstractIsingGraph}
-    spins = @inline InteractiveIsing.state(state)
+    spins = @inline graphstate(state)
     return hterm.c[]*hterm.lp[idx]*spins[idx]^order(hterm)
 end

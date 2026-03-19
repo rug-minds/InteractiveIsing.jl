@@ -194,16 +194,8 @@ IsingGraph(g::IsingGraph) = deepcopy(g)
 
 @inline Base.size(g::IsingGraph)::Tuple{Int32,Int32} = (nStates(g), 1)
 
-function closetimers(g::IsingGraph)
-    for layer in layers(g)
-        close.(timers(layer))
-        deleteat!(timers(layer), 1:length(timers(layer)))
-    end
-end
-
 function reset!(g::IsingGraph)
     state(g) .= initRandomState(g)
-    closetimers(g)
 end
  
 statelen(g::IsingGraph) = length(state(g))

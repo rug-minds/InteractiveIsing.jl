@@ -179,7 +179,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         layers
     )
     
-    initRandomState(g)
+    state(g) .= initRandomState(g)
     # g.hamiltonian = reconstruct(ham, g)
     callback!(g)
     return g
