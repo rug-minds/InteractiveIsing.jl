@@ -1,4 +1,4 @@
-
+export ToggledIndexSet, toggle
 """
 Structs that pick indices from a set with Uniform probability
 """
@@ -44,7 +44,7 @@ function toggle(is::ToggledIndexSet, layer_idx::Int)
     return is
 end
 
-function pick_idx(rng::R, is::ToggledIndexSet) where R
+function pick_idx(rng::R, is::ToggledIndexSet) where {R <: AbstractRNG}
     # Binary search on the cumulative lengths
     # Find the last index where idx <= cum_lengths[idx]
     el_idx = rand(rng, 1:cumulative_length(is))

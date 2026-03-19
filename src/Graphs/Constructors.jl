@@ -46,6 +46,30 @@ function _make_field(spec::Fill, g::AbstractIsingGraph)
     return fill(convert(T, spec.val), nstates(g))
 end
 
+function _parse_multilayer_constructor_args(args)
+    layers = filter(x -> x isa IsingLayerData, args)
+    between_layer_wgs = Tuple{Int, AbstractWeightGenerator}[]
+
+    parsed_layers = 0
+    pending_wg = nothing
+    for arg in args
+        if arg isa IsingLayerData
+            parsed_layers += 1
+            if !isnothing(pending_wg)
+                push!(between_layer_wgs, (parsed_layers - 1, pending_wg))
+                pending_wg = nothing
+            end
+        else
+            parsed_layers == 0 && throw(ArgumentError("A between-layer weight generator must come after a layer in the IsingGraph constructor."))
+            isnothing(pending_wg) || throw(ArgumentError("Consecutive between-layer weight generators are not supported in the IsingGraph constructor."))
+            pending_wg = arg
+        end
+    end
+
+    isnothing(pending_wg) || throw(ArgumentError("A between-layer weight generator must be followed by another layer in the IsingGraph constructor."))
+    return layers, between_layer_wgs
+end
+
 """
 Multi Layer Constructor
     First the Layers,
@@ -64,13 +88,9 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
 
     #Parse hamiltonian and filter
     ham, layers = type_parse(Hamiltonian, layers...; default = Ising(), error = false)
-
+    layers, between_layer_wgs = _parse_multilayer_constructor_args(layers)
     lengths = map(l -> length(l), layers)
     total_length = sum(lengths)
-
-    # First note all weightgenerator indices
-    wg_indices = findall(l -> l isa AbstractWeightGenerator, layers)
-    # Setup (idx-)
 
     # Fix the layers first
     layers = ntuple(length(layers)) do i
@@ -102,7 +122,14 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
     )
 
     if isnothing(adj)
-        sparse_connections = init_connections_from_layers(precision, total_length, layers...)
+        rows, cols, vals = init_connection_triplets_from_layers(precision, total_length, layers...)
+        for (layer_idx, wg) in between_layer_wgs
+            layerrows, layercols, layervals = genLayerConnections(g_for_shape[layer_idx], g_for_shape[layer_idx + 1], wg)
+            append!(rows, layerrows)
+            append!(cols, layercols)
+            append!(vals, layervals)
+        end
+        sparse_connections = sparse(rows, cols, vals, total_length, total_length)
         diag = diag(g_for_shape)
         adj = UndirectedAdjacency(sparse_connections, diag; fastwrite)
     else

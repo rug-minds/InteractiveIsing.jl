@@ -1,4 +1,4 @@
-
+export ToggledLayerIndexSet, toggle
 """
 Toggle one layer on/off, and pick indices from the appropriate set
 """
@@ -24,7 +24,7 @@ function toggle(is::ToggledLayerIndexSet)
     return is
 end
 
-function pick_idx(rng::R, is::ToggledLayerIndexSet) where R
+function pick_idx(rng::R, is::ToggledLayerIndexSet) where {R <: AbstractRNG}
     if is.on[]
         return rand(rng, is.set_with)
     else

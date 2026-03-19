@@ -2,6 +2,7 @@ using AbstractMCMC
 using BenchmarkTools
 using InteractiveIsing
 using Random
+using UUIDs: uuid1
 
 struct PlainIsingModel{T} <: AbstractMCMC.AbstractModel
     side_length::Int
@@ -72,12 +73,67 @@ function make_interactiveising_graph(side_length::Int, temperature::T, spins::Ab
     return g
 end
 
-function make_interactiveising_kernel(side_length::Int, temperature::T, spins::AbstractMatrix{T}) where T
+function make_inline_process(func; repeats::Int, inputs = tuple(), overrides = tuple(), threaded = false)
+    if !(func isa Processes.LoopAlgorithm)
+        func = Processes.SimpleAlgo(func)
+    end
+
+    inputs = inputs isa Tuple ? inputs : (inputs,)
+    overrides = overrides isa Tuple ? overrides : (overrides,)
+
+    empty_context = Processes.ProcessContext(func)
+    reg = Processes.getregistry(empty_context)
+
+    named_inputs = Processes.to_named(reg, filter(x -> x isa Processes.Input, inputs)...)
+    named_overrides = Processes.to_named(reg, filter(x -> x isa Processes.Override, overrides)...)
+
+    lifetime = Processes.Repeat(repeats)
+    td = Processes.TaskData(func; lifetime, inputs = named_inputs, overrides = named_overrides)
+    context = Processes.init_context(td)
+
+    return Processes.InlineProcess{typeof(td), typeof(context), threaded}(
+        uuid1(),
+        td,
+        context,
+        UInt(1),
+        repeats,
+        nothing,
+        nothing,
+    )
+end
+
+function make_interactiveising_process(side_length::Int, temperature::T, spins::AbstractMatrix{T}, nsteps::Int) where T
     g = make_interactiveising_graph(side_length, temperature, spins)
-    hamiltonian = init!(g.hamiltonian, g)
-    proposer = InteractiveIsing.get_proposer(g)
-    rng = MersenneTwister(1234)
-    return (; state = g, hamiltonian, proposer, rng)
+    algo = g.default_algorithm
+    return make_inline_process(algo; repeats = nsteps, inputs = Processes.Input(algo, state = g))
+end
+
+function make_warmed_interactiveising_process(side_length::Int, temperature::T, spins::AbstractMatrix{T}, nsteps::Int) where T
+    g = make_interactiveising_graph(side_length, temperature, spins)
+    algo = g.default_algorithm
+
+    warm_process = make_inline_process(algo; repeats = 1, inputs = Processes.Input(algo, state = g))
+    run(warm_process)
+
+    copyto!(state(g), vec(spins))
+    temp!(g, temperature)
+
+    process = make_inline_process(algo; repeats = nsteps, inputs = Processes.Input(algo, state = g))
+    return (; process, graph = g)
+end
+
+function make_interactiveising_runner(side_length::Int, temperature::T, spins::AbstractMatrix{T}, nsteps::Int) where T
+    g = make_interactiveising_graph(side_length, temperature, spins)
+    algo = g.default_algorithm
+    process = make_inline_process(algo; repeats = nsteps, inputs = Processes.Input(algo, state = g))
+    return (; process, graph = g)
+end
+
+function reset_interactiveising_runner!(runner, temperature, spins)
+    copyto!(state(runner.graph), vec(spins))
+    temp!(runner.graph, temperature)
+    Processes.reset!(runner.process)
+    return runner
 end
 
 function make_abstractmcmc_state(side_length::Int, temperature::T, spins::AbstractMatrix{T}) where T
@@ -88,21 +144,27 @@ function make_abstractmcmc_state(side_length::Int, temperature::T, spins::Abstra
     return model, sampler, rng, sampler_state
 end
 
-function run_interactiveising_steps!(kernel, nsteps::Int)
-    (; state, hamiltonian, proposer, rng) = kernel
-    last_output = nothing
-    Ttype = eltype(state)
-    for _ in 1:nsteps
-        proposal = rand(rng, proposer)
-        delta_e = InteractiveIsing.calculate(InteractiveIsing.ΔH(), hamiltonian, state, proposal)
-        t = temp(state)
-        if delta_e <= zero(Ttype) || rand(rng, Ttype) < exp(-delta_e / t)
-            proposal = InteractiveIsing.accept(proposer, proposal)
-        end
-        InteractiveIsing.update!(Metropolis(), hamiltonian, (; state, hamiltonian, proposer, rng, proposal, ΔE = delta_e, T = t))
-        last_output = proposal
-    end
-    return last_output
+function make_abstractmcmc_runner(side_length::Int, temperature::T, spins::AbstractMatrix{T}) where T
+    model, sampler, rng, sampler_state = make_abstractmcmc_state(side_length, temperature, spins)
+    return (; model, sampler, rng, sampler_state)
+end
+
+function make_warmed_abstractmcmc_runner(side_length::Int, temperature::T, spins::AbstractMatrix{T}, nsteps::Int) where T
+    runner = make_abstractmcmc_runner(side_length, temperature, spins)
+    run_abstractmcmc_steps!(runner.rng, runner.model, runner.sampler, runner.sampler_state, 1)
+
+    runner = make_abstractmcmc_runner(side_length, temperature, spins)
+    return runner
+end
+
+function reset_abstractmcmc_runner!(runner, spins)
+    copyto!(runner.sampler_state.spins, spins)
+    Random.seed!(runner.rng, 1234)
+    return runner
+end
+
+function run_interactiveising_steps!(process::Processes.InlineProcess)
+    return run(process)
 end
 
 function run_abstractmcmc_steps!(
@@ -123,44 +185,72 @@ end
 function benchmark_ising_metropolis(; side_length = 100, temperature = 2.0f0, nsteps = 10_000)
     seed_rng = MersenneTwister(20260319)
     initial_spins = make_initial_spins(seed_rng, side_length, Float32)
+    interactive_runner = make_warmed_interactiveising_process(side_length, temperature, initial_spins, nsteps)
+    abstractmcmc_runner = make_warmed_abstractmcmc_runner(side_length, temperature, initial_spins, nsteps)
 
-    interactive_setup = @benchmarkable make_interactiveising_kernel($side_length, $temperature, $initial_spins)
-    abstractmcmc_setup = @benchmarkable make_abstractmcmc_state($side_length, $temperature, $initial_spins)
+    reset_interactiveising_runner!(interactive_runner, temperature, initial_spins)
+    run(interactive_runner.process)
+    reset_interactiveising_runner!(interactive_runner, temperature, initial_spins)
 
-    interactive_steps = @benchmarkable begin
-        kernel = make_interactiveising_kernel($side_length, $temperature, $initial_spins)
-        run_interactiveising_steps!(kernel, $nsteps)
-    end evals = 1
+    reset_abstractmcmc_runner!(abstractmcmc_runner, initial_spins)
+    run_abstractmcmc_steps!(
+        abstractmcmc_runner.rng,
+        abstractmcmc_runner.model,
+        abstractmcmc_runner.sampler,
+        abstractmcmc_runner.sampler_state,
+        1,
+    )
+    reset_abstractmcmc_runner!(abstractmcmc_runner, initial_spins)
 
-    abstractmcmc_steps = @benchmarkable begin
-        model, sampler, rng, sampler_state = make_abstractmcmc_state($side_length, $temperature, $initial_spins)
-        run_abstractmcmc_steps!(rng, model, sampler, sampler_state, $nsteps)
-    end evals = 1
+    interactive_steps = @benchmark begin
+        run($interactive_runner.process)
+        nothing
+    end setup = (
+        reset_interactiveising_runner!($interactive_runner, $temperature, $initial_spins)
+    ) evals = 1
+
+    abstractmcmc_steps = @benchmark begin
+        run_abstractmcmc_steps!(
+            $abstractmcmc_runner.rng,
+            $abstractmcmc_runner.model,
+            $abstractmcmc_runner.sampler,
+            $abstractmcmc_runner.sampler_state,
+            $nsteps,
+        )
+        nothing
+    end setup = (
+        reset_abstractmcmc_runner!($abstractmcmc_runner, $initial_spins)
+    ) evals = 1
+
+    display(interactive_steps)
+    display(abstractmcmc_steps)
+
+    reset_interactiveising_runner!(interactive_runner, temperature, initial_spins)
+    run_interactiveising_steps!(interactive_runner.process)
+
+    reset_abstractmcmc_runner!(abstractmcmc_runner, initial_spins)
+    run_abstractmcmc_steps!(
+        abstractmcmc_runner.rng,
+        abstractmcmc_runner.model,
+        abstractmcmc_runner.sampler,
+        abstractmcmc_runner.sampler_state,
+        nsteps,
+    )
 
     return (
-        interactive_setup = run(interactive_setup),
-        abstractmcmc_setup = run(abstractmcmc_setup),
-        interactive_steps = run(interactive_steps),
-        abstractmcmc_steps = run(abstractmcmc_steps),
+        interactive_steps,
+        abstractmcmc_steps,
+        interactive_graph = interactive_runner.graph,
+        interactive_process = interactive_runner.process,
+        abstract_model = abstractmcmc_runner.model,
+        abstract_sampler = abstractmcmc_runner.sampler,
+        abstract_rng = abstractmcmc_runner.rng,
+        abstract_state = abstractmcmc_runner.sampler_state,
     )
 end
 
-function print_benchmark_summary(results)
-    println("InteractiveIsing setup:")
-    display(results.interactive_setup)
-    println()
-    println("AbstractMCMC setup:")
-    display(results.abstractmcmc_setup)
-    println()
-    println("InteractiveIsing $((BenchmarkTools.params(results.interactive_steps)).evals)-eval step batch:")
-    display(results.interactive_steps)
-    println()
-    println("AbstractMCMC $((BenchmarkTools.params(results.abstractmcmc_steps)).evals)-eval step batch:")
-    display(results.abstractmcmc_steps)
-    return nothing
-end
+run_benchmark(; kwargs...) = benchmark_ising_metropolis(; kwargs...)
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    results = benchmark_ising_metropolis()
-    print_benchmark_summary(results)
+    run_benchmark()
 end

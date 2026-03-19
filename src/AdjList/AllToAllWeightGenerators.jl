@@ -6,7 +6,7 @@ struct AllToAllWeightGenerator{F} <: AbstractWeightGenerator
     rng::Random.AbstractRNG
 end
 
-function AllToAllWeightGenerator(func = (dr, c1, c2) -> one(Float32), rng = Random.MersenneTwister(); exp = nothing)
+function AllToAllWeightGenerator(func = ((;dr::R, c1, c2, dc) where R) -> one(Float32), rng = Random.MersenneTwister(); exp = nothing)
     AllToAllWeightGenerator{typeof(func)}(func, exp, rng)
 end
 
@@ -14,7 +14,7 @@ getNN(::AllToAllWeightGenerator) = :all
 getNN(::AllToAllWeightGenerator, dims) = ntuple(_ -> :all, dims)
 
 @inline function (wg::AllToAllWeightGenerator)(;dr::DR, c1 = nothing, c2 = nothing, dc = nothing) where DR
-    return @inline wg.func(dr, c1, c2)
+    return @inline wg.func(;dr = dr, c1 = c1, c2 = c2, dc = dc)
 end
 
 """
