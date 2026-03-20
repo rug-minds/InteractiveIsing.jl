@@ -158,6 +158,10 @@ end
 
 function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
     ρ    = c.ρ
+    spins = graphstate(g)
+    layer1 = g[1]
+    layer_idxs = graphidxs(layer1)
+    linear_idxs = LinearIndices(layer1)
 
     Nx, Ny, Nz = size(ρ)
     Nz_dip = Nz - 1
@@ -167,10 +171,8 @@ function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
 
     # accumulate bound charges from dipoles
     @inbounds for z in 1:Nz_dip
-        
-        dip = state(g)[:,:,z]    # assumed Array{T,2}
         @inbounds for j in 1:Ny, i in 1:Nx
-            v = dip[i,j]
+            v = spins[layer_idxs[linear_idxs[i, j, z]]]
             v = v * c.scaling[] # Scaling factor dipole to charge
             ρ[i,j,z]   -= v
             ρ[i,j,z+1] += v
