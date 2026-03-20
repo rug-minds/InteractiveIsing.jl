@@ -30,7 +30,7 @@ Get the lattice constants of a square topology.
 lattice_constants(top::SquareTopology) = top.lattice_constants
 origin(top::SquareTopology) = top.origin
 
-setdist!(lt::SquareTopology{U,DIMS,P}, lattice_constants::NTuple{DIMS,P}) where {U,DIMS,P} = begin lt.lattice_constants .= lattice_constants; lt end
+setdist!(lt::SquareTopology{U,DIMS,P}, lattice_constants::NTuple{DIMS}) where {U,DIMS,P} = begin lt.lattice_constants .= lattice_constants; lt end
 
 """
 Get the distance from a deltacoordinate, applying periodic boundary conditions if necessary.
