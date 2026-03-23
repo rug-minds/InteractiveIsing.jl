@@ -109,6 +109,10 @@ function pushtimer!(w::MakieWindow, t::PTimer)
 end
 
 function Base.close(window::MakieWindow)
+    if get(window.other, :closing, false) || get(window.other, :closed, false)
+        return nothing
+    end
+    window[:closing] = true
     # println("Closing window ", window.uuid)
     close(window.maintimer)
     # println("Closed main timer")
@@ -120,6 +124,9 @@ function Base.close(window::MakieWindow)
     # println("Called custom close_window")
     close_glfw(window)
     # println("Closed GLFW window")
+    window[:closed] = true
+    window[:closing] = false
+    return nothing
 end
 
 function close_window(window::MakieWindow) #Overloadable for custom closing
@@ -158,7 +165,7 @@ function new_window(;window_type = :Any, objectptr = nothing, reinit_rate = 30, 
             # println("Window open set to false, closing window.")
             close(w)
             # println("Deleting window from registry.")
-            delete!(windows, w)
+            delete!(windows, w.uuid)
             # println("Window deleted.")
         end
     end

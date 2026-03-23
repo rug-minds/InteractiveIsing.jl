@@ -53,8 +53,7 @@ end
 function update_call(p::InlineProcess)
     (; rng, proposer, scv, metro, hamiltonian) = metropolis_parts(p)
     proposal = rand(rng, proposer)
-    injected = inject(scv, (; proposal))
-    return InteractiveIsing.update!(metro, hamiltonian, injected)
+    return InteractiveIsing.update!(metro, hamiltonian, scv.state, proposal)
 end
 
 function warm_breakdown!(p::InlineProcess)
@@ -81,7 +80,7 @@ function print_inlineprocess_alloc_breakdown(p::InlineProcess)
     reset!(p); println("rand(rng, proposer): ", @allocated proposer_rand_call(p))
     reset!(p); println("calculate(ΔH(), hamiltonian, state, proposal): ", @allocated deltaE_call(p))
     reset!(p); println("inject(context_view, (; proposal)): ", @allocated inject_call(p))
-    reset!(p); println("update!(metropolis, hamiltonian, injected): ", @allocated update_call(p))
+    reset!(p); println("update!(metropolis, hamiltonian, state, proposal): ", @allocated update_call(p))
     return nothing
 end
 

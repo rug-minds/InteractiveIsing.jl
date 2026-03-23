@@ -50,7 +50,7 @@ For a Hamiltonian, return all fieldnames that are a ParamTensor
 end
 
 
-function update!(::Hamiltonian, args)
+function update!(::Hamiltonian, state, proposal)
     return nothing
 end
 
@@ -59,6 +59,6 @@ end
     Fallback required derived hamiltonian for an algorithm, 
     indicating that that the algorithm did not define a required derived hamiltonian.
 """
-function requires(::Type{<:MCAlgorithm})
+function requires(::Type{<:IsingMCAlgorithm})
     throw(ArgumentError("This algorithm did not define a required derived Hamiltonian."))
 end

@@ -183,19 +183,22 @@ Get a hamiltonian from the set of hamiltonians
 Base.getindex(hts::HamiltonianTerms, idx::Int) = getfield(hts, :hs)[idx]
 
 
-update!(algo, a,b) = nothing
+update!(algo, a, state, proposal) = nothing
 """
 If updating functions are defined, update
 """
 update!_expr = quote end
-@inline @generated function update!(algo, hts::HamiltonianTerms{Hs}, args) where Hs
+@inline @generated function update!(algo, hts::HamiltonianTerms{Hs}, state, proposal) where Hs
     # names = paramnames(hts)
     num_h = numhamiltonians(hts)
     global update!_expr = quote
-        $([:(@inline update!(algo, hamiltonians(hts)[$i]::$(Hs.parameters[i]), args)) for i in 1:num_h]...)
+        $([:(@inline update!(algo, hamiltonians(hts)[$i]::$(Hs.parameters[i]), state, proposal)) for i in 1:num_h]...)
     end
     return update!_expr
 end
+
+@inline update!(::LangevinDynamics, hts::HamiltonianTerms{Hs}, state::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, state, proposal)
+@inline update!(::KineticMC, hts::HamiltonianTerms{Hs}, state::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, state, proposal)
 
 
 @inline function init!(hts::HamiltonianTerms{Hs}, g) where Hs

@@ -44,10 +44,10 @@ function singleView(window)
     toppanel(ml)[:sb_r] = selector_buttons[1,3] = rightbutton = Button(f, label = ">", padding = (0,0,0,0), fontsize = 14, width = 40, height = 28)
     # rowsize!(_grid[1,1].layout, 1, 80)
 
-    # BFIELD BUTTON
-    push!(obs_funcs, on(midpanel(ml)[:showbfield].active, weak = true) do _
-        img_obs[] = getSingleViewImg(window)
-    end)
+    # # BFIELD BUTTON
+    # push!(obs_funcs, on(midpanel(ml)[:showbfield].active, weak = true) do _
+    #     img_obs[] = getSingleViewImg(window)
+    # end)
 
     push!(obs_funcs, on(leftbutton.clicks, weak = true) do _
         # setLayerIdx!(simulation, layerIdx(simulation)[] -1)

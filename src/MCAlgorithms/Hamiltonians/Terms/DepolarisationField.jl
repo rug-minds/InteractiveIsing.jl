@@ -129,8 +129,7 @@ end
     return -(D * ΔM + M * ΔD + ΔD * ΔM) / c
 end
 
-@inline function update!(::Metropolis, dpf::DepolField, context)
-    (;proposal) = context
+@inline function update!(::Metropolis, dpf::DepolField, state, proposal)
     if isaccepted(proposal)
         j = at_idx(proposal)
         if j ∈ dpf
