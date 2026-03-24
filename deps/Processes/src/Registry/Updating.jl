@@ -20,7 +20,7 @@ end
 Scoped Algorithms or thin_wrapped scoped algorithms that need an updated name
     Can be matched with a new registry and rebuilt accordingly
 """
-function update_keys(func::F, reg::NameSpaceRegistry) where {F}
+function update_keys(func::F, reg::NameSpaceRegistry) where {F <: ProcessEntity}
     reg[func]
     # if func isa IdentifiableAlgo
     #     @DebugMode println("Updating name for IdentifiableAlgo: $func using registry: $reg")
@@ -34,6 +34,10 @@ function update_keys(func::F, reg::NameSpaceRegistry) where {F}
     # end
     # # Default: keep non-Identifiable algorithms unchanged.
     # return func
+end
+
+function update_keys(::Type{F}, reg::NameSpaceRegistry) where {F <: ProcessEntity}
+    reg[F]
 end
 
 """
@@ -64,34 +68,18 @@ end
 ###### REPLACING ALL NAMES #######
 ##################################
 
-function replace_all_keys(reg::NameSpaceRegistry, name::Symbol)
-    func = valentry -> setcontextkey(valentry, name)
-    rebuild_type_entries(func, reg)
-end
-
 # """
-# Replace all names in the registry to a given name
+# Replace 
 # """
 # function replace_all_keys(reg::NameSpaceRegistry, name::Symbol)
-#     new_type_entries = replace_all_keys.(getentries(reg), name)
-#     setfield(reg, :entries, new_type_entries)
+#     func = valentry -> setcontextkey(valentry, name)
+#     rebuild_type_entries(func, reg)
 # end
 
-# function replace_all_keys(func::T, name::Symbol) where {T}
-#     if contains_type(T, IdentifiableAlgo)
-#         return rebuild_from(x -> x isa IdentifiableAlgo, 
-#             x -> begin 
-#                 changename(x, name)
-#             end,
-#             func)
-#     end
-#     return func
+# function replace_all_keys(cla::LoopAlgorithm, name::Symbol)
+#     newfuncs = replace_all_keys.(getalgos(cla), name)
+#     new_registry = replace_all_keys(getregistry(cla), name)
+#     cla = setfield(cla, :funcs, newfuncs)
+#     cla = setfield(cla, :registry, new_registry)
+#     return cla
 # end
-
-function replace_all_keys(cla::LoopAlgorithm, name::Symbol)
-    newfuncs = replace_all_keys.(getalgos(cla), name)
-    new_registry = replace_all_keys(getregistry(cla), name)
-    cla = setfield(cla, :funcs, newfuncs)
-    cla = setfield(cla, :registry, new_registry)
-    return cla
-end
