@@ -29,8 +29,8 @@ end
     return ising_energy
 end
 
-# function dH(::Bilinear, hargs, s_idx)
-@inline function calculate(::dH, hterm::Bilinear, state::S, s_idx) where {S <: AbstractIsingGraph}
+# function d_iH(::Bilinear, hargs, s_idx)
+@inline function calculate(::d_iH, hterm::Bilinear, state::S, s_idx) where {S <: AbstractIsingGraph}
     s = @inline graphstate(state)
     wij = hterm.adj
     total = @inline weighted_neighbors_sum(s_idx, wij, s)

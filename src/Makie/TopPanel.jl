@@ -72,15 +72,16 @@ function topPanel(window)
 
         tp[:upsgrid] = upsgrid = GridLayout(topgrid[1,1])
 
-        update_label_ups = lift(x -> "Updates per second: $(round(x, digits = 2))", ups)
+        update_label_ups = lift(x -> "$(round(x, digits = 2))", ups)
         push!(obs_funcs, update_label_ups.inputs...)
-
-
-        update_label_upsps = lift(x -> "Updates per second per spin: $(round(x, digits = 4))", upsps)
+        update_label_upsps = lift(x -> "$(round(x, digits = 2))", upsps)
         push!(obs_funcs, update_label_upsps.inputs...)
+        countergrid = GridLayout(upsgrid[1:2,1], tellheight = false, tellwidth = false)
 
-        tp[:updates_label] = upsgrid[1,1] = updates_label = Label(f, update_label_ups, padding = (0,0,0,0), fontsize = 18, halign = :left, valign = :top, tellheight = false, tellwidth = false)
-        tp[:updates_label_per_spin] = upsgrid[2,1] = updates_label_per_spin = Label(f, update_label_upsps, fontsize = 18,  halign = :left, valign = :top, tellheight = false, tellwidth = false)
+        Label(countergrid[1,1], "Steps per second", padding = (0,0,0,0), fontsize = 12, halign = :left, valign = :top, tellheight = false, tellwidth = false)
+        tp[:updates_label] = updates_label = Label(countergrid[2,1], update_label_ups, padding = (0,0,0,0), fontsize = 12, halign = :left, valign = :top, tellheight = false, tellwidth = false)
+        Label(countergrid[3,1], "Steps per second, per unit", padding = (0,0,0,0), fontsize = 12, halign = :left, valign = :top, tellheight = false, tellwidth = false)
+        tp[:updates_label_per_spin] = updates_label_per_spin = Label(countergrid[4,1], update_label_upsps, fontsize = 12,  halign = :left, valign = :top, tellheight = false, tellwidth = false)
     # TOP RIGHT PANEL
 
     # Etcetera buttons

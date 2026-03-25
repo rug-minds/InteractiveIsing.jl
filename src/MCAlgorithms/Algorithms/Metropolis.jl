@@ -1,5 +1,5 @@
 export Metropolis
-struct Metropolis <: MCAlgorithm end
+struct Metropolis <: IsingMCAlgorithm end
 
 
 @inline function IsingMetropolis()
@@ -44,7 +44,6 @@ end
         proposal = @inline accept(proposer, proposal)
     end
 
-    injected = @inline inject(context, (;proposal))
-    @inline update!(metro, hamiltonian, injected)
+    @inline update!(metro, hamiltonian, state, proposal)
     return (;proposal, ΔE, T)
 end

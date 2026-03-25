@@ -1,7 +1,7 @@
 using LoopVectorization, SparseArrays, MacroTools
 export build_H
 
-abstract type MCAlgorithm <: ProcessAlgorithm end
+abstract type IsingMCAlgorithm <: ProcessAlgorithm end
 
 
 

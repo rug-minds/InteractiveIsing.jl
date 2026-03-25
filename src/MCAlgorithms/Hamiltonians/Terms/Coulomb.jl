@@ -1,15 +1,11 @@
 # TODO: We need a conversion factor from dipole to charge
 export CoulombHamiltonian, init!, precompute_du_self!, recalc!, recalcnew, ΔH, update!
 
-function mygemmavx!(C, A, B)
-    @turbo for m ∈ axes(A, 1), n ∈ axes(B, 2)
-        Cmn = zero(eltype(C))
-        for k ∈ axes(A, 2)
-            Cmn += A[m, k] * B[k, n]
-        end
-        C[m, n] = Cmn
-    end
-end
+"""
+We have a charge field where s_i -> (q_i+1, q_i) for the
+
+The energy becomes H = 1/2 ϕ_i q_i
+"""
 struct CoulombHamiltonian{T,PT,PxyT,PiT,N} <: HamiltonianTerm
     size::NTuple{N,Int}
     ρ::Array{T,3}                 # real charges
@@ -158,6 +154,10 @@ end
 
 function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
     ρ    = c.ρ
+    spins = graphstate(g)
+    layer1 = g[1]
+    layer_idxs = graphidxs(layer1)
+    linear_idxs = LinearIndices(layer1)
 
     Nx, Ny, Nz = size(ρ)
     Nz_dip = Nz - 1
@@ -167,10 +167,8 @@ function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
 
     # accumulate bound charges from dipoles
     @inbounds for z in 1:Nz_dip
-        
-        dip = state(g)[:,:,z]    # assumed Array{T,2}
         @inbounds for j in 1:Ny, i in 1:Nx
-            v = dip[i,j]
+            v = spins[layer_idxs[linear_idxs[i, j, z]]]
             v = v * c.scaling[] # Scaling factor dipole to charge
             ρ[i,j,z]   -= v
             ρ[i,j,z+1] += v
@@ -419,8 +417,17 @@ end
     return ΔE_below + ΔE_above + ΔE_self
 end
 
-update!(::Metropolis, c::CoulombHamiltonian{T}, context) where {T} = begin
-    (;proposal) = context
+@inline function calculate(::d_iH, c::CoulombHamiltonian{T,N}, state::S, s_idx) where {T,N,S <: AbstractIsingGraph}
+    lattice_size = size(c)
+    charge_coord_below = idxToCoord(s_idx, lattice_size)
+    charge_coord_above = (charge_coord_below[1], charge_coord_below[2], charge_coord_below[3] + 1)
+
+    # For H = 1/2 * sum_i q_i * ϕ_i and q_pair = (-s, +s) * scaling,
+    # the derivative with respect to the dipole variable is Δq/Δs · ϕ.
+    return c.scaling[] * (c.u[charge_coord_above...] - c.u[charge_coord_below...])
+end
+
+update!(::Metropolis, c::CoulombHamiltonian{T}, state::AbstractIsingGraph, proposal::FP) where {T, FP <: FlipProposal} = begin
     if isaccepted(proposal)
         # 和 ΔH 一样，用自旋所在的 dipole 坐标推两层电荷平面
         spin_idx = at_idx(proposal)

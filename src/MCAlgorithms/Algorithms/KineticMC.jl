@@ -166,7 +166,7 @@ end
     return j, totalrate
 end
 
-struct KineticMC <: MCAlgorithm
+struct KineticMC <: IsingMCAlgorithm
     r0::Float64
 end
 
@@ -179,6 +179,8 @@ end
 end
 
 export KineticMC
+
+@inline update!(::KineticMC, hterm, state, proposal) = update!(Metropolis(), hterm, state, proposal)
 
 @inline function Processes.init(algo::KineticMC, context::Cont) where {Cont}
     (;structure) = context
@@ -238,8 +240,7 @@ end
     dt = -log(max(rand(rng, eltype(state)), eps(eltype(state)))) / totalrate
     context.lastdt[] = dt
 
-    context = @inline inject(context, (;proposal))
-    @inline update!(kinetic, context.hamiltonian, context)
+    @inline update!(kinetic, context.hamiltonian, state, proposal)
 
     return (;j, ΔE, dt, totalrate, proposal)
 end

@@ -7,9 +7,7 @@ Base.@kwdef struct MagField{PV} <: HamiltonianTerm
     b::PV = StateLike(ConstFill, 0)
 end
 
-# @inline function MagField(; b = StateLike(ConstFill, 0))
-#     return MagField(b)
-# end
+
 
 @inline function reconstruct(hterm::MF, g::AbstractIsingGraph) where {MF <: MagField}
     T = eltype(g)
@@ -25,14 +23,26 @@ end
     MagField(map(T, b))
 end
 
+
+@inline calculate(::H, hterm::MagField, state::S) where S <: AbstractIsingGraph = calculate(H(), hterm, state; b = hterm.b)
+@inline function calculate(::H, ::MagField, state::S; b) where S
+    s = @inline graphstate(state)
+    return -dot(b, s)
+end
+
+
 @inline function calculate(::ΔH, hterm::MagField, state::S, proposal) where {S <: AbstractIsingGraph}
     j = at_idx(proposal)
     spins = @inline graphstate(state)
     return -hterm.b[j]*(to_val(proposal) - spins[j])
 end
 
-# function dH(::MagField, hargs, s_idx)
-@inline function calculate(::dH, hterm::MagField, state::S, s_idx) where {S <: AbstractIsingGraph}
+# function d_iH(::MagField, hargs, s_idx)
+@inline function calculate(::d_iH, hterm::MagField, state::S, s_idx) where {S <: AbstractIsingGraph}
     return -hterm.b[s_idx]
 end
 
+@inline function parameter_derivative(hterm::MagField, state::S) where {S <: AbstractIsingGraph}
+    spins = @inline graphstate(state)
+    return (; b = -spins)
+end

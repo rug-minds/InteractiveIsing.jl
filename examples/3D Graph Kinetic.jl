@@ -22,4 +22,4 @@ g = ii.IsingGraph(
 )
 
 interface(g)
-createProcess(g, KineticMC(); dynamics = KineticMC())
+createProcess(g, KineticMC())

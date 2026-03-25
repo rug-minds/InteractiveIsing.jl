@@ -31,7 +31,7 @@ function cumulative_length(is::ToggledIndexSet)
     is.cum_lengths[end]
 end
 
-function toggle(is::ToggledIndexSet, layer_idx::Int)
+function toggle!(is::ToggledIndexSet, layer_idx::Int)
     step_func(b::Bool) = b ? 1 : -1
     is.on[layer_idx] = !is.on[layer_idx]
     # Fix the cumulative lengths
@@ -41,6 +41,19 @@ function toggle(is::ToggledIndexSet, layer_idx::Int)
     # Fix the cumulative lengths for all layers after the toggled one
     cum_lengths[layer_idx+1:end] .+= step_func(on) * this_length
     # Fix the total length
+    return is
+end
+
+@inline function on!(is::ToggledIndexSet, layer_idx::Int)
+    if !is.on[layer_idx]
+        toggle!(is, layer_idx)
+    end
+    return is
+end
+@inline function off!(is::ToggledIndexSet, layer_idx::Int)
+    if is.on[layer_idx]
+        toggle!(is, layer_idx)
+    end
     return is
 end
 

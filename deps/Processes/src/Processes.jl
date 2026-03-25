@@ -10,7 +10,7 @@ module Processes
 
     import DataStructures: Queue, dequeue!, enqueue!
 
-    export ProcessAlgorithm, ProcessState
+    export ProcessAlgorithm, ProcessState, profile_step_return, filter_args
 
     const DEBUG_MODE = @load_preference("debug", false)
     debug_mode() = @load_preference("debug", false)
@@ -20,6 +20,7 @@ module Processes
 
     include("AbstractTypeDefs.jl")
 
+    include("Utils.jl")
     include("Functions.jl")
     include("Unroll.jl")
     include("Printing.jl")
@@ -44,6 +45,7 @@ module Processes
     include("TaskDatas.jl")
     include("InputInterface/InputInterface.jl")
     include("Init.jl")
+    include("ConstructorCommon.jl")
     include("Running.jl")
     include("TriggerList.jl")
     include("Benchmark.jl")
@@ -66,6 +68,8 @@ module Processes
     # include("ProcessAlgorithms.jl")
 
     include("LoopAlgorithms/LoopAlgorithms.jl")
+    include("Threaded/Threaded.jl")
+    include("Worker/Worker.jl")
     include("Packaging/Packaging.jl")
     include("Loops.jl")
     include("Trackers/Trackers.jl")

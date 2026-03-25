@@ -23,7 +23,7 @@ makedocs(sitename="InteractiveIsing Documentation",
             ],
             "Developer" => [
                 "Registry and Scoping" => "dev/Registry.md",
-                "Scoped Algorithms" => "dev/IdentifiableAlgos.md",
+                "Scoped Algorithms" => "dev/ScopedAlgorithms.md",
                 "Context" => "dev/Context.md",
             ]
         ]
