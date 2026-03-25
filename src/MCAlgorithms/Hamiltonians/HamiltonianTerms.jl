@@ -142,6 +142,9 @@ Get a param
     error("Parameter $paramname not found in any of the Hamitonians")
 end
 
+Base.@constprop :aggressive @inline getparam(hts::HamiltonianTerms, paramname::Symbol) =
+    getparam(hts, Val(paramname))
+
 """
 Get a hamiltonian from a type
 """
@@ -166,6 +169,73 @@ function gethamiltonian(hts::HamiltonianTerms, t::Symbol)
     error("Type $t not found in any of the Hamiltonians")
 end
 export gethamiltonian
+
+"""
+Get a param from a specific Hamiltonian term by term type and field name.
+
+For the generated fast path, call with `Val(:fieldname)`.
+"""
+@generated function getparam(hts::HamiltonianTerms{Hs}, ::Type{H}, ::Val{fieldname}) where {Hs, H, fieldname}
+    matching_idxs = Int[]
+    for (hidx, Hterm) in enumerate(Hs.parameters)
+        if Hterm <: H
+            push!(matching_idxs, hidx)
+        end
+    end
+
+    if isempty(matching_idxs)
+        return :(error($(string("Hamiltonian type ", H, " not found in HamiltonianTerms"))))
+    end
+
+    if length(matching_idxs) > 1
+        return :(error($(string(
+            "Hamiltonian type ",
+            H,
+            " is ambiguous in HamiltonianTerms; matches indices ",
+            matching_idxs,
+            ". Please disambiguate before requesting field ",
+            fieldname,
+            "."
+        ))))
+    end
+
+    hidx = matching_idxs[1]
+    Hterm = Hs.parameters[hidx]
+    for (fidx, fname) in enumerate(fieldnames(Hterm))
+        if fname == fieldname
+            ftype = fieldtypes(Hterm)[fidx]
+            return :(getfield(getfield(hts, :hs)[$hidx], $(QuoteNode(fieldname)))::$(ftype))
+        end
+    end
+
+    return :(error($(string("Field ", fieldname, " not found in Hamiltonian type ", Hterm))))
+end
+
+Base.@constprop :aggressive @inline getparam(hts::HamiltonianTerms, ::Type{H}, fieldname::Symbol) where {H} =
+    getparam(hts, H, Val(fieldname))
+
+@inline gethamiltonianfield(hts::HamiltonianTerms, ::Type{H}, fieldname::Val) where {H} =
+    getparam(hts, H, fieldname)
+
+Base.@constprop :aggressive @inline gethamiltonianfield(hts::HamiltonianTerms, ::Type{H}, fieldname::Symbol) where {H} =
+    getparam(hts, H, Val(fieldname))
+
+export getparam, gethamiltonianfield
+
+@inline function _merge_parameter_derivatives(current::NamedTuple, new::NamedTuple)
+    duplicate_keys = [k for k in keys(new) if k in keys(current)]
+    isempty(duplicate_keys) || error("Parameter derivative contains duplicate fields $(duplicate_keys).")
+    return merge(current, new)
+end
+
+@inline function parameter_derivative(hts::AbstractHamiltonianTerms, state::AbstractIsingGraph, args...)
+    total = NamedTuple()
+    for hterm in hts
+        applicable(parameter_derivative, hterm, state, args...) || continue
+        total = _merge_parameter_derivatives(total, parameter_derivative(hterm, state, args...))
+    end
+    return total
+end
 
 # Fallback for fieldnames for a hamltonian
 Base.fieldnames(::Hamiltonian) = tuple()

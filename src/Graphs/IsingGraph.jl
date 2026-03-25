@@ -3,6 +3,7 @@ export statelen, initRandomState
 export processes, process
 # Layer forwards
 export layer_idxs
+export nstates, nspins, nnodes
 # export continuous
 
 
@@ -95,6 +96,8 @@ export params
 @inline nStates(g::IsingGraph) = length(state(g))::Int
 
 @inline nstates(g) = length(state(g))::Int
+@inline nspins(g::IsingGraph) = length(state(g))::Int
+@inline nnodes(g::IsingGraph) = length(state(g))::Int
 export nstates
 
 @inline adj(g::IsingGraph) = getfield(g, :adj)

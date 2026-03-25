@@ -3,7 +3,7 @@ using InteractiveIsing
 
 const COULOMB_WG = @WG (;dr) -> dr == 1 ? 1.0 : 0.0 NN = 1
 
-@testset "Coulomb dH" begin
+@testset "Coulomb d_iH" begin
     g = IsingGraph(
         2,
         2,
@@ -23,7 +23,7 @@ const COULOMB_WG = @WG (;dr) -> dr == 1 ? 1.0 : 0.0 NN = 1
     InteractiveIsing.init!(h, g)
 
     spin_idx = 3
-    analytic = InteractiveIsing.calculate(InteractiveIsing.dH(), h, g, spin_idx)
+    analytic = InteractiveIsing.calculate(InteractiveIsing.d_iH(), h, g, spin_idx)
 
     eps = 1e-6
     original = InteractiveIsing.graphstate(g)[spin_idx]

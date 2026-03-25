@@ -1,4 +1,4 @@
-export ToggledLayerIndexSet, toggle
+export ToggledLayerIndexSet, toggle!
 """
 Toggle one layer on/off, and pick indices from the appropriate set
 """
@@ -19,8 +19,18 @@ function ToggledLayerIndexSet(g::IsingGraph, toggle_idx)
     return ToggledLayerIndexSet(toggle_idx, layer_sets...)
 end
 
-function toggle(is::ToggledLayerIndexSet)
+function toggle!(is::ToggledLayerIndexSet)
     is.on[] = !is.on[]
+    return is
+end
+
+function on!(is::ToggledLayerIndexSet)
+    is.on[] = true
+    return is
+end
+
+function off!(is::ToggledLayerIndexSet)
+    is.on[] = false
     return is
 end
 

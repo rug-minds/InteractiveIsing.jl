@@ -95,7 +95,7 @@ end
     σ_sub = t > zero(SType) ? sqrt(SType(2) * η_sub * t) : zero(SType)
     n = length(active_spins)
     n == 0 && return (;)
-    dh = dH()
+    dh = d_iH()
 
     for _ in 1:n_substeps
         offset = rand(rng, 0:(n - 1))

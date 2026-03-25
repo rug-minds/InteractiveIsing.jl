@@ -417,7 +417,7 @@ end
     return ΔE_below + ΔE_above + ΔE_self
 end
 
-@inline function calculate(::dH, c::CoulombHamiltonian{T,N}, state::S, s_idx) where {T,N,S <: AbstractIsingGraph}
+@inline function calculate(::d_iH, c::CoulombHamiltonian{T,N}, state::S, s_idx) where {T,N,S <: AbstractIsingGraph}
     lattice_size = size(c)
     charge_coord_below = idxToCoord(s_idx, lattice_size)
     charge_coord_above = (charge_coord_below[1], charge_coord_below[2], charge_coord_below[3] + 1)

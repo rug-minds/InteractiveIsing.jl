@@ -10,7 +10,7 @@ include("Show.jl")
 
 include("Functionals.jl")
 
-include("DeltaH.jl")
+# include("DeltaH.jl")
 include("Terms/Terms.jl")
 
 
