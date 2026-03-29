@@ -1,101 +1,85 @@
 const start_finished = Ref(false)
 
-@inline function before_while(p::AbstractProcess)
+@inline function before_while(p::P) where P <: AbstractProcess
     start_finished[] = true
     p.threadid = Threads.threadid()
-    # @atomic p.paused = false
-    # _runtimelisteners = runtimelisteners(p)
-    # start(_runtimelisteners)
-    # start.(get_linked_processes(p)) # TODO OBSOLETE?
     set_starttime!(p)
 end
 
-@inline function before_while(ip::InlineProcess)
+@inline function before_while(ip::IP) where IP <: InlineProcess
     @inline set_starttime!(ip)
 end
 
-@inline function after_while(p::AbstractProcess, func::F, context) where {F}
+@inline function after_while(p::AbstractProcess, func::F, context::C) where {F, C}
     @inline set_endtime!(p)
-    # _runtimelisteners = runtimelisteners(p)
-    # close(_runtimelisteners)
-    # close.(get_linked_processes(p)) # TODO OBSOLETE?
     if !shouldrun(p) || lifetime(p) isa Indefinite # If user interrupted, or lifetime is indefinite
         Processes.context(p, context)
         return context
     else
-        # return cleanup(getalgo(p), context)
         Processes.context(p, @inline cleanup(func, context))
         return context
     end
 end
 
-@inline function after_while(ip::InlineProcess, func::F, context) where {F}
+@inline function after_while(ip::InlineProcess, func::F, context::C) where {F, C}
     @inline set_endtime!(ip)
     @inline cleanup(func, context)
 end
 
-
-# resuming(::Any) = false
-# function resuming(p::Process)
-#     if p.paused
-#         @atomic p.paused = false
-#         return true
-#     else
-#         return false
-#     end
-# end
-
-
 """
 Run a single function in a loop indefinitely
 """
-@inline function processloop(process::AbstractProcess, func::F, context::C, ::Indefinite) where {F, C}
-    # @static if DEBUG_MODE
-        println("Running process loop indefinitely from thread $(Threads.threadid())")
-    # end
-
+@inline function loop(process::AbstractProcess, func::F, context::C, lt::LT, ::NonGenerated) where {F, C, LT <: IndefiniteLifetime}
     @inline before_while(process)
 
-    # if resuming(process)
-    #     context = @inline resume_step!(func, context)
-    # end
+    context = @inline step!(func, context, Unstable())
+    @inline tick!(process)
+    @inline inc!(process)
 
-    while shouldrun(process)
-        context = @inline step!(func, context)
+    while true
+        context = @inline step!(func, context, Stable())
         @inline tick!(process)
         @inline inc!(process) 
-        # if isthreaded(p) || isasync(p)
-        #     GC.safepoint()
-        # end
+        if @inline breakcondition(lt, process, context)
+            break
+        end
     end
-    return @inline after_while(process, func, context)
+
+    if @inline shouldrun(process)
+        return context
+    else
+        return @inline after_while(process, func, context)
+    end
 end
 
 """
 Run a single function in a loop for a given number of times
 """
-Base.@constprop :aggressive function processloop(process::AbstractProcess, algo::F, context::C, r::Repeat) where {F, C}
+Base.@constprop :aggressive function loop(process::AbstractProcess, algo::F, context::C, r::R, ::NonGenerated) where {F, C, R <: RepeatLifetime}
     @DebugMode "Running process loop for $repeats times from thread $(Threads.threadid())"
     @inline before_while(process)
-    start_idx = loopidx(process)
     
-    # if resuming(process)
-    #     context = @inline resume_step!(algo, context)
-    #     start_idx += 1
-    # end
-
-    for _ in start_idx:repeats(r)
-        if !shouldrun(process)
-            break
-        end
-        context = @inline step!(algo, context)
+    context = @inline step!(algo, context, Unstable())
+    @inline tick!(process)
+    @inline inc!(process)
+    
+    start_idx = @inline loopidx(process)
+    end_idx = @inline repeats(r)
+    
+    for _ in start_idx:end_idx
+    
+        context = @inline step!(algo, context, Stable())
         @inline tick!(process)
         @inline inc!(process)
+        if @inline breakcondition(r, process, context)
+            break
+        end
 
-        # if isthreaded(p) || isasync(p)
-        #     GC.safepoint()
-        # end
     end
-    return @inline after_while(process, algo, context)
+    if @inline shouldrun(process)
+        return context
+    else
+        return @inline after_while(process, algo, context)
+    end
 end
 

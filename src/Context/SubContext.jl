@@ -71,9 +71,9 @@ end
 
 @inline function Base.replace(sc::SubContext{Name, T, S, R}, args::NamedTuple = (;)) where {Name, T, S, R}
     # println("Replace called from SubContext: $Name with args: $args")
-    if isempty(args)
-        @warn "Replacing SubContext: $Name with empty NamedTuple"
-    end
+    # if isempty(args)
+    #     @warn "Replacing SubContext: $Name with empty NamedTuple"
+    # end
     @inline setfield(sc, :data, args)
 end
 
@@ -102,4 +102,20 @@ function merge_sharedvars(sctuple::NamedTuple, sharedvars::NamedTuple)
         sctuple = (sctuple..., name => set_sharedvars(sctuple[name], sharedvars))
     end
     return sctuple
+end
+
+
+################################################
+####### Replacing ROUTES/SHARES ########
+################################################
+
+@inline function replace_routes(sc::SubContext, routes::R) where R
+    setfield(sc, :sharedvars, routes)::SubContext{getkey(sc), get_datatype(sc), getsharedcontext_types(sc), R}
+end
+
+@inline function replace_shares(sc::SubContext{K, T, Ss, R}, shares::S) where {K, T, Ss, R, S}
+    if Ss == S
+        return sc
+    end
+    setfield(sc, :sharedcontexts, shares)::SubContext{getkey(sc), get_datatype(sc), S, getsharedvars_types(sc)}
 end

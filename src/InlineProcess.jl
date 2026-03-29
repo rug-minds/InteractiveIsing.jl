@@ -5,15 +5,18 @@ Mainly used to compose algorithms in tight loops, plugging into the ProcessLoopA
 
 This doesn't provide the multitasking features of Process, but is faster to restart
 """
-mutable struct InlineProcess{TD,As,Lt,Mode} <: AbstractProcess
+mutable struct InlineProcess{TD,ContextType, Lt,Mode} <: AbstractProcess
     const id::UUID
     const taskdata::TD
-    context::As
+    context::ContextType
+    consumed::Bool
     loopidx::UInt
     lifetime::Lt
     starttime::Union{Nothing,Float64,UInt64}
     endtime::Union{Nothing,Float64,UInt64}
 end
+#TODO Improve context semantics
+contexttype(::Union{InlineProcess{TD,ContextType}, Type{<:InlineProcess{TD,ContextType}}}) where {TD,ContextType} = ContextType
 
 @inline function _inline_process_mode(threaded)
     if threaded === true || threaded === :threaded
@@ -41,55 +44,87 @@ end
 @inline function InlineProcess(func, inputs_overrides...; threaded=false, repeats=nothing, lifetime=nothing, context=nothing)
     lifetime = _inline_process_lifetime(func, repeats, lifetime)
     prepared = prepare_process_constructor(func, inputs_overrides...; lifetime, context)
+    
     tf = prepared.taskdata
     prepared_context = prepared.context
     mode = _inline_process_mode(threaded)
 
-    p = InlineProcess{typeof(tf),typeof(prepared_context),typeof(lifetime),mode}(uuid1(), tf, prepared_context, UInt(1), lifetime, nothing, nothing)
+    p = InlineProcess{typeof(tf), typeof(prepared_context), typeof(lifetime),mode}(uuid1(), tf, prepared_context, false, UInt(1), lifetime, nothing, nothing)
     return p
 end
 
-@inline isthreaded(ip::InlineProcess{TD,As,Lt,Mode}) where {TD,As,Lt,Mode} = Mode == :threaded
-@inline isasync(ip::InlineProcess{TD,As,Lt,Mode}) where {TD,As,Lt,Mode} = Mode == :async
+@inline isthreaded(ip::InlineProcess{TD,ContextType,Lt,Mode}) where {TD,ContextType,Lt,Mode} = Mode == :threaded
+@inline isasync(ip::InlineProcess{TD,ContextType,Lt,Mode}) where {TD,ContextType,Lt,Mode} = Mode == :async
 
 # getlidx(ip::InlineProcess) = Int(ip.loopidx)
-@inline shouldrun(ip::InlineProcess) = true
-@inline lifetime(ip::InlineProcess) = ip.lifetime
-@inline getcontext(ip::InlineProcess) = ip.context
+@inline shouldrun(ip::IP) where {IP<:InlineProcess} = true
+@inline lifetime(ip::IP) where {IP<:InlineProcess} = ip.lifetime
+@inline getcontext(ip::IP) where {IP<:InlineProcess} = ip.context::contexttype(ip)
 
 @inline set_starttime!(ip::InlineProcess) = (ip.starttime = time_ns())
 @inline set_endtime!(ip::InlineProcess) = (ip.endtime = time_ns())
 taskdata(ip::InlineProcess) = ip.taskdata
 
 @inline context(ip::InlineProcess, c) = (ip.context = c)
-@inline context(ip::InlineProcess) = ip.context
+@inline context(ip::InlineProcess) = ip.context::contexttype(ip)
 
-@inline function reset!(p::InlineProcess)
+@inline function reset!(p::InlineProcess, inputs_overrides...)
     p.loopidx = 1
-    makecontext!(p)
+    p.context = makecontext(p, inputs_overrides...)
+    # TODO: Probably remove consumed flag
+    p.consumed = false
     return true
 end
 
-@inline function Base.run(p::InlineProcess, repeat=nothing)
+@inline function Base.run(p::InlineProcess, inputs_overrides...; context = nothing, repeats=nothing, lifetime=nothing, threaded=nothing)
     algo = p.taskdata.func
-    context = p.context
+    
+    if isnothing(context)
+        context = Processes.context(p)
+    else
+        @assert context isa contexttype(p) "Wrong context shape for this process\n Context is of type $(typeof(context)), but expected $(contexttype(p))."
+    end
+
     p.loopidx = 1
     runtime_context = @inline merge_into_globals(context, (; process=p))
-    loopdispatch = isnothing(repeat) ? lifetime(p) : _inline_process_lifetime(algo, repeat, nothing)
+    # loopdispatch = isnothing(repeat) ? lifetime(p) : _inline_process_lifetime(algo, repeat, nothing)
+    inputlifetime = isnothing(lifetime) ? Processes.lifetime(p) : lifetime
+    lifetime = _inline_process_lifetime(algo, repeats, inputlifetime)
 
-    # @inline processloop(p, algo, runtime_context, (@inline repeats(p)))
+    # p.consumed = true
+    return @inline loop(p, algo, runtime_context, lifetime, Generated())
+    # return @noinline processloop(p, algo, runtime_context, lifetime)
 
-    if isthreaded(p)
-        return Threads.@spawn generated_processloop(p, algo, runtime_context, loopdispatch)
-    elseif isasync(p)
-        return @async generated_processloop(p, algo, runtime_context, loopdispatch)
-    else
-        return @inline generated_processloop(p, algo, runtime_context, loopdispatch)
-    end
+    # if (isnothing(threaded) && isthreaded(p)) || threaded === true
+    #     return Threads.@spawn generated_processloop(p, algo, runtime_context, lifetime)
+    # elseif (isnothing(threaded) && isasync(p)) || threaded === :async
+    #     return @async generated_processloop(p, algo, runtime_context, lifetime)
+    # else 
+    #     return @inline generated_processloop(p, algo, runtime_context, lifetime)
+    # end
 end
 
-@inline function init_and_run(p::InlineProcess, inputs...)
-    @inline makecontext!(p)
+@inline function run_nogen(p::InlineProcess, inputs_overrides...; context = nothing, repeats=nothing, lifetime=nothing, threaded=nothing)
+    algo = p.taskdata.func
+    
+    if isnothing(context)
+        context = Processes.context(p)
+    else
+        @assert context isa contexttype(p) "Wrong context shape for this process\n Context is of type $(typeof(context)), but expected $(contexttype(p))."
+    end
+
+    p.loopidx = 1
+    runtime_context = @inline merge_into_globals(context, (; process=p))
+    # loopdispatch = isnothing(repeat) ? lifetime(p) : _inline_process_lifetime(algo, repeat, nothing)
+    inputlifetime = isnothing(lifetime) ? Processes.lifetime(p) : lifetime
+    lifetime = _inline_process_lifetime(algo, repeats, inputlifetime)
+
+    # p.consumed = true
+    return @inline loop(p, algo, runtime_context, lifetime, NonGenerated())
+end
+
+@inline function init_and_run(p::InlineProcess, inputs_overrides...)
+    @inline makecontext!(p, inputs_overrides...)
     return run(p)
 end
 

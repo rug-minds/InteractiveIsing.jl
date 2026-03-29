@@ -1,0 +1,1 @@
+@inline isresolved(::LoopAlgorithm) = false
