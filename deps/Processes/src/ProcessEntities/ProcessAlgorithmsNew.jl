@@ -134,7 +134,7 @@ function _pa_bootstrap_init_assignment(field, initsym)
     getexpr = field.required ? _pa_required_get_expr(initsym, field.name) : _pa_local_get_expr(initsym, field.name, field.default)
     return _pa_typed_assignment(field.name, field.typeexpr, getexpr)
 end
-
+# TODO: MAKE IT EASIER TO PASS THROUGH INPUTS TO step!!! Currently we have to re-declare all inputs as init inputs and then pull them into an @managed state
 """
 Function-first ProcessAlgorithm definition with explicit managed runtime state and init-only
 inputs.
@@ -157,7 +157,7 @@ end
 provided through the process context or through the standalone bootstrap call
 `MyAlgo(...; @init((; ...)))`.
 """
-macro ProcessAlgorithmNew(ex)
+macro ProcessAlgorithm(ex)
     ex isa Expr && ex.head == :function || error("@ProcessAlgorithmNew expects a function definition")
 
     signature = _pa_new_parse_signature(ex.args[1])
@@ -235,8 +235,8 @@ macro ProcessAlgorithmNew(ex)
         $init_def
         $step_def
     end
-    println(q)
+    # println(q)
     return esc(q)
 end
 
-export @ProcessAlgorithmNew, @init
+export @ProcessAlgorithm, @init
