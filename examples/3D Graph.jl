@@ -18,4 +18,5 @@ g = IsingGraph(100,100,10,
         periodic = (:x,:y))
 
 interface(g)
+
 createProcess(g)
