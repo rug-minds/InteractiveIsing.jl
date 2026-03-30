@@ -359,7 +359,7 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 version = "1.11.0"
 
 [[deps.Processes]]
-deps = ["DataStructures", "Documenter", "JLD2", "MacroTools", "PrecompileTools", "Preferences", "StaticArrays", "UUIDs"]
+deps = ["Accessors", "DataStructures", "Documenter", "JLD2", "MacroTools", "PrecompileTools", "Preferences", "StaticArrays", "UUIDs"]
 path = "."
 uuid = "6a369836-0793-447d-b7ee-625716f2d05b"
 version = "0.1.2"

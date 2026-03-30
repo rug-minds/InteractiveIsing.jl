@@ -1,5 +1,5 @@
-using Test, Pkg
-Pkg.activate((@__DIR__ )*"/..")
+using Test
+using Processes
 
 @testset "Processes" begin
     include("CompositeCompositionTest.jl")
@@ -14,4 +14,5 @@ Pkg.activate((@__DIR__ )*"/..")
     include("MaterializeLoopAlgorithmTest.jl")
     include("InnerTypeFilterTest.jl")
     include("CompositeDSLTest.jl")
+    include("ProcessAlgorithmMacroTest.jl")
 end

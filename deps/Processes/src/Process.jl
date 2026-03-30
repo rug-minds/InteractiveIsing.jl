@@ -162,18 +162,17 @@ end
 """
 Runs the prepared task of a process on a thread
 """
-function makeloop!(p::Process; threaded = true, loopfunc::LF = loop) where LF 
+function makeloop!(p::Process, lt = lifetime(p); threaded = true, loopfunc::LF = loop) where LF 
     @atomic p.paused = false
     @atomic p.shouldrun = true
 
     func = p.taskdata.func
-    lt = lifetime(p)
     context = merge_into_globals(p.context, (;process = p))
     @inline precompile_loop!(p, func, context, lt)
     if threaded
-        p.task = Threads.@spawn loopfunc(p, func, context, lt, NonGenerated())
+        p.task = Threads.@spawn loopfunc(p, func, context, lt)
     else
-        p.task = @async loopfunc(p, func, context, lt, NonGenerated())
+        p.task = @async loopfunc(p, func, context, lt)
     end
     return p
 end
