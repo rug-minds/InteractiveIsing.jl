@@ -170,9 +170,9 @@ function makeloop!(p::Process, lt = lifetime(p); threaded = true, loopfunc::LF =
     context = merge_into_globals(p.context, (;process = p))
     @inline precompile_loop!(p, func, context, lt)
     if threaded
-        p.task = Threads.@spawn loopfunc(p, func, context, lt)
+        p.task = Threads.@spawn loopfunc(p, func, context, lt, NonGenerated())
     else
-        p.task = @async loopfunc(p, func, context, lt)
+        p.task = @async loopfunc(p, func, context, lt, NonGenerated())
     end
     return p
 end

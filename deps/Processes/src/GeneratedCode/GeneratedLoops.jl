@@ -11,6 +11,9 @@ Generated process loop that inlines the step! expression when available.
         # After this we're not allowed to
 
         @inline before_while(process)
+        if @inline breakcondition(lifetime, process, context)
+                break
+        end
         $(algo_name) = algo
         $(first_step_expr)
         @inline inc!(process)
@@ -19,13 +22,14 @@ Generated process loop that inlines the step! expression when available.
         first_step_idx = @inline loopidx(process)
         final_idx = @inline repeats(lifetime)
         for _ in first_step_idx:final_idx
+            if @inline breakcondition(lifetime, process, context)
+                break
+            end
             $(algo_name) = algo
             $(for_step_expr)
             @inline inc!(process)
             @inline tick!(process)
-            if @inline breakcondition(lifetime, process, context)
-                break
-            end
+           
         end
         return @inline after_while(process, algo, context)
     end

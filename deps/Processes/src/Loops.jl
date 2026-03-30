@@ -12,7 +12,7 @@ end
 
 @inline function after_while(p::AbstractProcess, func::F, context::C) where {F, C}
     @inline set_endtime!(p)
-    if !shouldrun(p) || lifetime(p) isa Indefinite # If user interrupted, or lifetime is indefinite
+    if !shouldrun(p)
         Processes.context(p, context)
         return context
     else
@@ -34,24 +34,23 @@ Run a single function in a loop indefinitely
 @inline function loop(process::AbstractProcess, func::F, context::C, lt::LT, ::NonGenerated) where {F, C, LT <: IndefiniteLifetime}
     @inline before_while(process)
 
+    if @inline breakcondition(r, process, context)
+            @inline after_while(process, algo, context)
+    end
     context = @inline step!(func, context, Unstable())
     @inline tick!(process)
     @inline inc!(process)
 
     while true
-        context = @inline step!(func, context, Stable())
-        @inline tick!(process)
-        @inline inc!(process) 
         if @inline breakcondition(lt, process, context)
             break
         end
+        context = @inline step!(func, context, Stable())
+        @inline tick!(process)
+        @inline inc!(process) 
     end
 
-    if @inline shouldrun(process)
-        return context
-    else
-        return @inline after_while(process, func, context)
-    end
+    return @inline after_while(process, func, context)
 end
 
 """
@@ -61,6 +60,9 @@ Base.@constprop :aggressive function loop(process::AbstractProcess, algo::F, con
     @DebugMode "Running process loop for $repeats times from thread $(Threads.threadid())"
     @inline before_while(process)
     
+    if @inline breakcondition(r, process, context)
+            @inline after_while(process, algo, context)
+    end
     context = @inline step!(algo, context, Unstable())
     @inline tick!(process)
     @inline inc!(process)
@@ -69,19 +71,15 @@ Base.@constprop :aggressive function loop(process::AbstractProcess, algo::F, con
     end_idx = @inline repeats(r)
     
     for _ in start_idx:end_idx
-    
-        context = @inline step!(algo, context, Stable())
-        @inline tick!(process)
-        @inline inc!(process)
         if @inline breakcondition(r, process, context)
             break
         end
+        context = @inline step!(algo, context, Stable())
+        @inline tick!(process)
+        @inline inc!(process)
+        
 
     end
-    if @inline shouldrun(process)
-        return context
-    else
-        return @inline after_while(process, algo, context)
-    end
+    return @inline after_while(process, algo, context)
 end
 
