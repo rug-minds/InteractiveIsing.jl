@@ -1,0 +1,197 @@
+"""
+    apply_field_defaults(ham, g, field_defaults)
+
+After `reconstruct`, override Hamiltonian fields with user-specified (Type, fill_value) defaults.
+Each kwarg maps a field name to a `(Type, fill_value)` tuple or a `Fill(val)`.
+
+Example: `y = (Vector, 0.5f0)` overwrites Clamping's `y` field with a vector filled with 0.5.
+"""
+function apply_field_defaults(ham::HamiltonianTerms, g::AbstractIsingGraph, field_defaults)
+    isempty(field_defaults) && return ham
+    hams = hamiltonians(ham)
+    newhams = map(hams) do h
+        apply_field_defaults(h, g, field_defaults)
+    end
+    return HamiltonianTerms(newhams...)
+end
+
+function apply_field_defaults(h::Hamiltonian, g::AbstractIsingGraph, field_defaults)
+    fnames = fieldnames(typeof(h))
+    changed = false
+    newfields = map(fnames) do fname
+        if haskey(field_defaults, fname)
+            spec = field_defaults[fname]
+            changed = true
+            return _make_field(spec, g)
+        else
+            return getfield(h, fname)
+        end
+    end
+    changed || return h
+    return typeof(h).name.wrapper(newfields...)
+end
+
+function _make_field(spec::Tuple{Type, Any}, g::AbstractIsingGraph)
+    T = eltype(g)
+    ArrayType, fillval = spec
+    if ArrayType <: AbstractVector
+        return ArrayType{T}(fill(convert(T, fillval), nstates(g)))
+    else
+        return fill(convert(T, fillval), nstates(g))
+    end
+end
+
+function _make_field(spec::Fill, g::AbstractIsingGraph)
+    T = eltype(g)
+    return fill(convert(T, spec.val), nstates(g))
+end
+
+function _parse_multilayer_constructor_args(args)
+    layers = filter(x -> x isa IsingLayerData, args)
+    between_layer_wgs = Tuple{Int, AbstractWeightGenerator}[]
+
+    parsed_layers = 0
+    pending_wg = nothing
+    for arg in args
+        if arg isa IsingLayerData
+            parsed_layers += 1
+            if !isnothing(pending_wg)
+                push!(between_layer_wgs, (parsed_layers - 1, pending_wg))
+                pending_wg = nothing
+            end
+        else
+            parsed_layers == 0 && throw(ArgumentError("A between-layer weight generator must come after a layer in the IsingGraph constructor."))
+            isnothing(pending_wg) || throw(ArgumentError("Consecutive between-layer weight generators are not supported in the IsingGraph constructor."))
+            pending_wg = arg
+        end
+    end
+
+    isnothing(pending_wg) || throw(ArgumentError("A between-layer weight generator must be followed by another layer in the IsingGraph constructor."))
+    return layers, between_layer_wgs
+end
+
+"""
+Multi Layer Constructor
+    First the Layers,
+    If there's weight generators in between the layers, use those to set connections between layers
+
+
+"""
+function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamiltonian}...;
+    precision = Float32, 
+    adj = nothing,
+    diag = StateLike(OffsetArray, 0),
+    index_set = nothing,
+    fastwrite = false,
+    callback! = identity,
+    )
+
+    #Parse hamiltonian and filter
+    ham, layers = type_parse(Hamiltonian, layers...; default = Ising(), error = false)
+    layers, between_layer_wgs = _parse_multilayer_constructor_args(layers)
+    lengths = map(l -> length(l), layers)
+    total_length = sum(lengths)
+
+    # Fix the layers first
+    layers = ntuple(length(layers)) do i
+        oldlayer = layers[i]
+        offset = 0
+        if i != 1
+            offset = sum(lengths[1:(i-1)])
+        end
+        newlayer = fix_layerdata(oldlayer, precision, offset)
+    end
+
+    # sparse_connections = init_connections_from_layers(precision, total_length, layers...)
+
+    g_for_shape =  IsingGraph(
+        # State
+        zeros(precision, total_length),
+        # Adjacency
+        UndirectedAdjacency(total_length, total_length),
+        # Temp
+        precision(1.0),
+        # Default Algo
+        IsingMetropolis(),
+        #Hamiltonians
+        EmptyHamiltonian(),
+        #Defects
+        1:total_length,
+        Dict{Symbol, Any}(),
+        layers
+    )
+
+    if isnothing(adj)
+        rows, cols, vals = init_connection_triplets_from_layers(precision, total_length, layers...)
+        for (layer_idx, wg) in between_layer_wgs
+            layerrows, layercols, layervals = genLayerConnections(g_for_shape[layer_idx], g_for_shape[layer_idx + 1], wg)
+            append!(rows, layerrows)
+            append!(cols, layercols)
+            append!(vals, layervals)
+        end
+        sparse_connections = sparse(rows, cols, vals, total_length, total_length)
+        diag = diag(g_for_shape)
+        adj = UndirectedAdjacency(sparse_connections, diag; fastwrite)
+    else
+        @assert size(adj, 1) == total_length "Adjacency matrix size must match total number of nodes in the graph\nexpected $(total_length)x$(total_length), got $(size(adj))"
+    end
+
+    if !isnothing(index_set)
+        it = index_set(g_for_shape)
+    else
+        it = 1:total_length
+    end
+
+    g_with_adj = IsingGraph(
+        # State
+        zeros(precision, total_length),
+        # Adjacency
+        adj,
+        # Temp
+        precision(1.0),
+        # Default Algo
+        IsingMetropolis(),
+        #Hamiltonians
+        EmptyHamiltonian(),
+        #Defects
+        it,
+        Dict{Symbol, Any}(),
+        layers
+    )
+
+    ham  = reconstruct(ham, g_with_adj)
+    
+    # Construct the graph
+    g = IsingGraph(
+        # State
+        zeros(precision, total_length),
+        # Adjacency
+        adj,
+        # Temp
+        precision(1.0),
+        # Default Algo
+        IsingMetropolis(),
+        #Hamiltonians
+        ham,
+        #Defects
+        it,
+        Dict{Symbol, Any}(),
+        layers
+    )
+    
+    state(g) .= initRandomState(g)
+    # g.hamiltonian = reconstruct(ham, g)
+    callback!(g)
+    return g
+end
+
+"""
+Single Layer Constructor
+"""
+function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, diag = StateLike(OffsetArray, 0), fastwrite = false)
+    ham, args = type_parse(Hamiltonian, args...; default = Ising(), error = false)
+
+    layer = parse_isinglayer(size1, args...; periodic = periodic)
+
+    return IsingGraph(ham, layer; precision, adj, diag)
+end
