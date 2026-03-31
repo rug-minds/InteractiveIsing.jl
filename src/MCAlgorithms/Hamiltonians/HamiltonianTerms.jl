@@ -9,21 +9,10 @@ function HamiltonianTerms{HS}(g::AbstractIsingGraph) where HS <: Tuple{Vararg{Ha
     HamiltonianTerms{HS}(ntuple(i->HS.parameters[i](g), length(HS.parameters)))
 end
 
-function changeterm(hts, newham)
-    hams = hamiltonians(hts)
-    newhams = tuple((Base.typename(typeof(newham))  == Base.typename(typeof(h)) ? newham : h for h in hams)...)
-    return HamiltonianTerms{typeof(newhams)}(newhams)
-end
-
 HamiltonianTerms(hs::Type{<:Hamiltonian}...) = HamiltonianTerms{Tuple{hs...}}
 HamiltonianTerms(hs::Hamiltonian...) = HamiltonianTerms{Tuple{typeof.(hs)...}}(hs)
 
-hamiltonians(hts::HamiltonianTerms) = getfield(hts, :hs)
-numhamiltonians(hts::HamiltonianTerms) = length(hamiltonians(hts))
-numhamiltonians(hts::Type{<:HamiltonianTerms}) = length(hts.parameters[1].parameters)
-
-htypes(hts::Type{<:HamiltonianTerms}) = htypes(hts.parameters[1])
-
+# BASE EXTENSIONS
 Base.:+(h1::Hamiltonian, h2::Hamiltonian) = HamiltonianTerms((h1, h2))
 Base.:+(h1::Hamiltonian, h2::HamiltonianTerms) = HamiltonianTerms((h1, hamiltonians(h2)...))
 Base.:+(h1::HamiltonianTerms, h2::Hamiltonian) = HamiltonianTerms((hamiltonians(h1)..., h2))
@@ -35,77 +24,11 @@ Base.:+(h1::HamiltonianTerms, ::Type{H}) where {H<:Hamiltonian} = h1 + H()
 Base.:+(::Type{H}, h2::HamiltonianTerms) where {H<:Hamiltonian} = H() + h2
 Base.:+(::Type{H1}, ::Type{H2}) where {H1<:Hamiltonian, H2<:Hamiltonian} = H1() + H2()
 
-function setparam(ham::Hamiltonian, field, paramtensor)
-    fnames = paramnames(ham)
-    found = findfirst(x->x==field, fnames)
-    if isnothing(found)
-        error("Field $field not found in Hamiltonian $ham")
-    end
-    newfields = (i == found ? paramtensor : ham.fieldnames[i] for i in eachindex(fnames))  # Regenerate all the subhamiltonians
-    Base.typename(typeof(ham)).wrapper(newfields...)                                    # Create a new Hamiltonian type
-end
-export setparam
 
-function paramactivation!(g::AbstractIsingGraph, param::Symbol, activation::Bool)
-    g.hamiltonian = paramactivation(g.hamiltonian, param, activation)
-    reinit(g)
-end
-
-function h_param(g::AbstractIsingGraph, param::Symbol)
-    return getproperty(g.hamiltonian, param)
-end
-export paramactivation!, h_param
-
-
-function paramactivation(ham::Hamiltonian, param::Symbol, activation::Bool)
-    initialparam = getproperty(ham, param)
-    if activation
-        return activateparam(ham, param)
-    else
-        return deactivateparam(ham, param)
-    end
-end
-
-function activateparam(ham::Hamiltonian, param::Symbol)
-    initialparam = getproperty(ham, param)
-    setparam(ham, param, activate(initialparam))
-end
-
-function activateparam(hts::HamiltonianTerms, param::Symbol)
-    newham = activateparam(gethamiltonian(hts, param), param)
-    changeterm(hts, newham)
-end
-
-function deactivateparam(ham::Hamiltonian, param::Symbol)
-    initialparam = getproperty(ham, param)
-    setparam(ham, param, deactivate(initialparam))
-end
-
-function deactivateparam(hts::HamiltonianTerms, param::Symbol)
-    newham = deactivateparam(gethamiltonian(hts, param), param)
-    changeterm(hts, newham)
-end
-
-function sethomogeneousparam(ham::Hamiltonian, param::Symbol, val = default(getproperty(ham, param)))
-    initialparam = getproperty(ham, param)
-    newparam = HomogeneousParam(val, length(initialparam.val); description = initialparam.description)
-    setparam(ham, param, newparam)
-end
-
-function sethomogeneousparam(hts::HamiltonianTerms, param::Symbol, val = default(getproperty(hts, param)))
-    newham = sethomogeneousparam(gethamiltonian(hts, param), param, val)
-    changeterm(hts, newham)
-end
-
-export deactivateparam, sethomogeneousparam, activateparam
-
-struct LazyTermField{HTS, substruct, paramname} end
-
-
-ltf_exp = nothing
-@generated function (ltf::LazyTermField{HTS, substruct, paramname})(hts) where {HTS, substruct, paramname} 
-    global ltf_exp = :(getfield(hts, :hs)[$substruct].$(paramname))
-    return ltf_exp
+function changeterm(hts, newham)
+    hams = hamiltonians(hts)
+    newhams = tuple((Base.typename(typeof(newham))  == Base.typename(typeof(h)) ? newham : h for h in hams)...)
+    return HamiltonianTerms{typeof(newhams)}(newhams)
 end
 
 @inline Base.map(f, hts::HamiltonianTerms) = @inline map(f, hamiltonians(hts))
@@ -126,6 +49,19 @@ end
     isempty(foundidxs) && return getfield(h, paramname)
     return getfield(getfield(h, :hs)[foundidxs[1]], paramname)
 end
+
+@generated function Base.getindex(h::HamiltonianTerms{HS}, ::Type{H}) where {HS, H}
+    hams = HS.parameters
+    findall(x-> x <: H, hams) |> (idxs -> isempty(idxs) ? :(error("Hamiltonian type $H not found in HamiltonianTerms")) : :(getfield(h, :hs)[$(idxs[1])]))
+end
+
+hamiltonians(hts::HamiltonianTerms) = getfield(hts, :hs)
+numhamiltonians(hts::HamiltonianTerms) = length(hamiltonians(hts))
+numhamiltonians(hts::Type{<:HamiltonianTerms}) = length(hts.parameters[1].parameters)
+
+htypes(hts::Type{<:HamiltonianTerms}) = htypes(hts.parameters[1])
+
+
 
 """
 Get a param
@@ -222,20 +158,20 @@ Base.@constprop :aggressive @inline gethamiltonianfield(hts::HamiltonianTerms, :
 
 export getparam, gethamiltonianfield
 
-@inline function _merge_parameter_derivatives(current::NamedTuple, new::NamedTuple)
-    duplicate_keys = [k for k in keys(new) if k in keys(current)]
-    isempty(duplicate_keys) || error("Parameter derivative contains duplicate fields $(duplicate_keys).")
-    return merge(current, new)
-end
+# @inline function _merge_parameter_derivatives(current::NamedTuple, new::NamedTuple)
+#     duplicate_keys = [k for k in keys(new) if k in keys(current)]
+#     isempty(duplicate_keys) || error("Parameter derivative contains duplicate fields $(duplicate_keys).")
+#     return merge(current, new)
+# end
 
-@inline function parameter_derivative(hts::AbstractHamiltonianTerms, state::AbstractIsingGraph, args...)
-    total = NamedTuple()
-    for hterm in hts
-        applicable(parameter_derivative, hterm, state, args...) || continue
-        total = _merge_parameter_derivatives(total, parameter_derivative(hterm, state, args...))
-    end
-    return total
-end
+# @inline function parameter_derivative(hts::AbstractHamiltonianTerms, state::AbstractIsingGraph, args...)
+#     total = NamedTuple()
+#     for hterm in hts
+#         applicable(parameter_derivative, hterm, state, args...) || continue
+#         total = _merge_parameter_derivatives(total, parameter_derivative(hterm, state, args...))
+#     end
+#     return total
+# end
 
 # Fallback for fieldnames for a hamltonian
 Base.fieldnames(::Hamiltonian) = tuple()

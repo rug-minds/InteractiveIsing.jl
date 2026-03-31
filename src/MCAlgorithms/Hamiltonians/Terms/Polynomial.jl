@@ -73,3 +73,16 @@ end
     spins = @inline graphstate(state)
     return hterm.c[]*hterm.lp[idx]*spins[idx]^order(hterm)
 end
+
+@inline function parameter_derivative(hterm::PolynomialHamiltonian, state::AbstractVector; dlp = similar(hterm.lp), buffermode::BufferMode = OverwriteBuffer())
+    if buffermode isa OverwriteBuffer
+        for i in eachindex(dlp)
+            dlp[i] = hterm.c[]*graphstate(state)[i]^order(hterm)
+        end
+    else
+        for i in eachindex(dlp)
+            dlp[i] += sign(buffermode) * hterm.c[]*graphstate(state)[i]^order(hterm)
+        end
+    end
+    return (; dlp = dlp)
+end
