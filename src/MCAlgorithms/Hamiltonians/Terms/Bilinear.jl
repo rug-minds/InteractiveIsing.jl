@@ -38,7 +38,7 @@ end
     return ising_energy
 end
 
-@inline function parameter_derivative(hterm::Bilinear, state::AbstractVector; dJ = similar(hterm.J), buffermode::BufferMode = OverwriteBuffer()) where {S <: AbstractIsingGraph}
+@inline function parameter_derivative(hterm::Bilinear, state::S; dJ = similar(hterm.J), buffermode::BufferMode = OverwriteBuffer()) where {S <: AbstractArray}
     s = @inline graphstate(state)
     n = length(s)
     indexes = index_pairs_iterator(hterm.J, false)

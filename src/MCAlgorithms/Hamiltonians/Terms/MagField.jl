@@ -42,7 +42,7 @@ end
     return -hterm.b[s_idx]
 end
 
-@inline function parameter_derivative(hterm::MagField, state::AbstractArray; db = similar(hterm.b), buffermode::BufferMode = OverwriteBuffer()) where {S <: AbstractIsingGraph}
+@inline function parameter_derivative(hterm::MagField, state::S; db = similar(hterm.b), buffermode::BufferMode = OverwriteBuffer()) where {S <: AbstractArray}
     if buffermode isa OverwriteBuffer
         db .= -state
     else
