@@ -37,22 +37,6 @@ _pa_is_macrocall(ex, names::Symbol...) =
 _pa_is_inputs_macro(ex) = _pa_is_macrocall(ex, Symbol("@init"), Symbol("@input"), Symbol("@inputs"))
 _pa_macro_args(ex) = [arg for arg in ex.args[2:end] if !(arg isa LineNumberNode)]
 
-function _pa_unwrap_where(ex)
-    where_params = Any[]
-    while ex isa Expr && ex.head == :where
-        push!(where_params, ex.args[2])
-        ex = ex.args[1]
-    end
-    return ex, reverse(where_params)
-end
-
-function _pa_rewrap_where(ex, where_params)
-    for param in where_params
-        ex = Expr(:where, ex, param)
-    end
-    return ex
-end
-
 function _pa_binding_parts(ex)
     if ex isa Symbol
         return ex, nothing
@@ -110,8 +94,7 @@ function _pa_parse_positional_arg(ex)
 end
 
 function _pa_new_parse_signature(call_ex)
-    call_ex, where_params = _pa_unwrap_where(call_ex)
-    call_ex isa Expr && call_ex.head == :call || error("@ProcessAlgorithm expects a function definition")
+    call_ex isa Expr && call_ex.head == :call || error("@ProcessAlgorithmNew expects a function definition")
 
     fname = call_ex.args[1]
     args = call_ex.args[2:end]
@@ -142,7 +125,7 @@ function _pa_new_parse_signature(call_ex)
         end
     end
 
-    return (; fname, positional, plain_pos, managed_pos, normal_kwargs, input_fields, where_params)
+    return (; fname, positional, plain_pos, managed_pos, normal_kwargs, input_fields)
 end
 
 _pa_local_get_expr(ctx, name::Symbol, default) = :(get($ctx, $(QuoteNode(name)), $default))
@@ -156,7 +139,12 @@ function _pa_required_get_expr(ctx, name::Symbol)
     end
 end
 
-_pa_typed_assignment(name::Symbol, typeexpr, value_expr) = :(local $name = $value_expr)
+function _pa_typed_assignment(name::Symbol, typeexpr, value_expr)
+    if isnothing(typeexpr)
+        return :(local $name = $value_expr)
+    end
+    return :(local $(Expr(:(::), name, typeexpr)) = $value_expr)
+end
 
 function _pa_input_assignment_exprs(field, ctxsym, tempsym; bind_public = true)
     getexpr = field.required ? _pa_required_get_expr(ctxsym, field.name) : _pa_local_get_expr(ctxsym, field.name, field.default)
@@ -186,174 +174,28 @@ function _pa_runtime_pos_assignment(field, ctxsym)
 end
 
 """
-    @ProcessAlgorithm function Name(...)
-        ...
-    end
+Function-first ProcessAlgorithm definition with explicit managed runtime state and init-only
+inputs.
 
-Define a `ProcessAlgorithm` from a function-like signature.
-
-The macro splits the signature into three groups:
-
-1. Plain positional arguments:
-   Runtime values read from the process context during `Processes.step!`.
-2. `@managed(...)` positional arguments:
-   Local algorithm state created during `Processes.init` and then read back from the
-   algorithm's own subcontext during `Processes.step!`.
-3. Normal keyword arguments:
-   Runtime keyword-style values looked up from the context during `Processes.step!`, with
-   the declared default used when the key is missing.
-
-An optional trailing `@input((; ...))`, `@inputs((; ...))`, or `@init((; ...))` block declares
-init-time inputs. These are only available while building managed state and in the bootstrap
-call form; they are not automatically runtime arguments unless you also capture them into
-managed state.
-
-# Supported signature forms
-
-The macro accepts normal function signatures and `where` signatures:
+Supported surface syntax:
 
 ```julia
-@ProcessAlgorithm function Accumulate(x)
-    return (; x = x + 1)
-end
-
-@ProcessAlgorithm function resetgraph!(isinggraph::G) where G
-    resetstate!(isinggraph)
-    return
-end
-```
-
-# Positional parsing rules
-
-Plain positional arguments:
-
-```julia
-@ProcessAlgorithm function F(a, b)
-    ...
-end
-```
-
-These are treated as runtime values and are looked up from the context inside `Processes.step!`.
-
-Managed positional arguments:
-
-```julia
-@ProcessAlgorithm function F(
-    a,
-    @managed(state = 0.0),
-    @managed(cache),
-    @managed(buffer = zeros(n), metric = 0.0);
-    @inputs((; n = 8))
+@ProcessAlgorithm function MyAlgo(
+    input_signal,
+    @managed(state = 0.0);
+    gain::Float64 = 1.0,
+    @inputs((; n::Int, scale0::Float64 = 1.0))
 )
     ...
 end
 ```
 
-The managed forms mean:
-
-- `@managed(name)`:
-  create a managed local called `name` by reading `name` from the init context.
-- `@managed(name = expr)`:
-  create a managed local called `name` by evaluating `expr` during `Processes.init`.
-- `@managed(a, b = expr, c = expr2)`:
-  expand to multiple managed locals in the written order.
-
-Managed initializer expressions run during `Processes.init`, so they may refer to:
-
-- init-time inputs declared by `@input/@inputs/@init`
-- earlier managed locals in the same generated init block
-- plain Julia globals/functions in scope
-
-They do not read plain runtime positional arguments from `step!`.
-
-# Keyword parsing rules
-
-Regular keyword arguments:
-
-```julia
-@ProcessAlgorithm function F(a; gain = 1.0, offset::Float64 = 0.0)
-    ...
-end
-```
-
-These are runtime keyword-style values. During `Processes.step!`, the macro reads them from the
-context with `get(context, :name, default)`.
-
-Init-time input block:
-
-```julia
-@ProcessAlgorithm function F(
-    a,
-    @managed(scale = scale0);
-    gain = 1.0,
-    @inputs((; scale0::Float64 = 2.0, n::Int))
-)
-    ...
-end
-```
-
-Rules:
-
-- only one of `@input`, `@inputs`, or `@init` is allowed
-- it must be the last keyword-like entry in the signature
-- entries may be required (`n`) or defaulted (`scale0 = 2.0`)
-
-# What the macro defines
-
-For a declaration like:
-
-```julia
-@ProcessAlgorithm function MyAlgo(...)
-    body
-end
-```
-
-the macro generates:
-
-- `struct MyAlgo <: Processes.ProcessAlgorithm end`
-- a hidden implementation function that contains `body`
-- a public bootstrap call `MyAlgo(...)` that can be called directly
-- `Processes.init(::MyAlgo, context)` to build the managed local subcontext
-- `Processes.step!(::MyAlgo, context)` to read runtime values and call the hidden implementation
-
-# User entrypoints
-
-There are three main ways users interact with a macro-generated algorithm:
-
-1. Direct/bootstrap call:
-
-```julia
-MyAlgo(a; @inputs((; n = 4)))
-```
-
-This evaluates the managed init path immediately and then calls the generated implementation.
-
-2. Process init hook:
-
-```julia
-Processes.init(MyAlgo(), context)
-```
-
-This reads the declared init inputs from `context` and returns the managed local named tuple.
-
-3. Process step hook:
-
-```julia
-Processes.step!(MyAlgo(), context)
-```
-
-This reads plain positional and runtime keyword arguments from `context`, reads managed values
-from the algorithm subcontext, and forwards everything to the generated implementation.
-
-# Type annotations and `where`
-
-Argument type annotations are preserved on the generated public call signatures and on the hidden
-implementation function. `where` clauses are also preserved there.
-
-The generated `Processes.init` and `Processes.step!` methods currently extract values from the
-context into local bindings before calling the typed implementation. That means the original
-argument annotations still constrain the implementation entrypoint, but the context extraction
-bindings themselves are intentionally kept simple and untyped.
+`@managed(...)` marks positional arguments that live in the local subcontext and are created by
+`Processes.init`. `@managed(name)` captures a same-named value from the init context into local
+state, and `@managed(a = ..., b = ...)` can declare multiple managed locals at once. The
+trailing `@inputs((; ...))` block declares init-only inputs that may be
+provided through the process context or through the standalone bootstrap call
+`MyAlgo(...; @inputs((; ...)))`.
 """
 macro ProcessAlgorithm(ex)
     ex isa Expr && ex.head == :function || error("@ProcessAlgorithm expects a function definition")
@@ -373,7 +215,6 @@ macro ProcessAlgorithm(ex)
     if !isempty(kw_bindings)
         insert!(impl_signature.args, 2, Expr(:parameters, kw_bindings...))
     end
-    impl_signature = _pa_rewrap_where(impl_signature, signature.where_params)
 
     impl_def = Expr(:function, impl_signature, body)
 
@@ -381,7 +222,6 @@ macro ProcessAlgorithm(ex)
     piped_kw_bindings = copy(kw_bindings)
     push!(piped_kw_bindings, Expr(:kw, :_init, nothing))
     insert!(public_piped_signature.args, 2, Expr(:parameters, piped_kw_bindings...))
-    public_piped_signature = _pa_rewrap_where(public_piped_signature, signature.where_params)
     piped_kw_forward = [Expr(:kw, kw.name, kw.name) for kw in signature.normal_kwargs]
     piped_def = Expr(:function, public_piped_signature, quote
             if !isnothing(_init)
@@ -394,7 +234,6 @@ macro ProcessAlgorithm(ex)
     bootstrap_kw_bindings = copy(kw_bindings)
     push!(bootstrap_kw_bindings, Expr(:kw, :_init, Expr(:tuple, Expr(:parameters))))
     insert!(bootstrap_signature.args, 2, Expr(:parameters, bootstrap_kw_bindings...))
-    bootstrap_signature = _pa_rewrap_where(bootstrap_signature, signature.where_params)
     bootstrap_input_assignments = Any[]
     bootstrap_bound_names = Set{Symbol}(arg.name for arg in signature.plain_pos)
     union!(bootstrap_bound_names, (kw.name for kw in signature.normal_kwargs))
