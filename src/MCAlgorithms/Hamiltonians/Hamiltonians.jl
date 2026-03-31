@@ -3,6 +3,7 @@ export HamiltonianTerms
 # RuntimeGeneratedFunctions.init(@__MODULE__)
 
 include("Interface.jl")
+include("Derivatives.jl")
 include("DerivedParameters.jl")
 include("Hamiltonian.jl")
 include("HamiltonianTerms.jl")
