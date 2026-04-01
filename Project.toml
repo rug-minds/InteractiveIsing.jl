@@ -37,7 +37,6 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 VectorizationBase = "3d5dd08c-fd9d-11e8-17fa-ed2836048c2f"
 
 [weakdeps]
-Lux = "b2108857-7c20-44ae-9111-449ecde12c47"
 
 [extensions]
 
