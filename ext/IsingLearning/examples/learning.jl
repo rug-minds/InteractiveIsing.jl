@@ -1,0 +1,14 @@
+using Pkg
+Pkg.activate(joinpath(@__DIR__, ".."))
+
+using IsingLearning, InteractiveIsing, InteractiveIsing.Processes, Lux, Random, SparseArrays
+
+# MNIST TEST
+rbm = ReducedBoltzmannArchitecture(784, 100, 10; precision = Float64)
+
+rbm2 = GraphFromSource(rbm)
+
+lux_model = LayeredIsingGraphLayer(() -> ReducedBoltzmannArchitecture(784, 100, 10; precision = Float64); input_idxs = layerrange(rbm2[1]), output_idxs = layerrange(rbm2[end]))
+ps, st = Lux.setup(Random.default_rng(), lux_model)
+
+dynamics = NudgedProcess(lux_model)

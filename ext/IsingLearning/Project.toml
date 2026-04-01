@@ -1,0 +1,25 @@
+name = "IsingLearning"
+uuid = "e943fad4-50f4-4dc7-acaf-cc14565d7d32"
+version = "0.1.0"
+authors = ["Fabian IJpelaar <87425229+f-ij@users.noreply.github.com>"]
+
+[deps]
+ChainRules = "082447d4-558c-5d27-93f4-14fc19e9eca2"
+ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+InteractiveIsing = "4d251d0e-e9cc-4969-a014-b26a68f98433"
+Lux = "b2108857-7c20-44ae-9111-449ecde12c47"
+LuxCore = "bb33d45b-7691-41d6-9220-0943567d0623"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
+[compat]
+ChainRules = "1.73.0"
+ChainRulesCore = "1.26.0"
+DataStructures = "0.19.4"
+InteractiveIsing = "0.1.0"
+Lux = "1.31.3"
+LuxCore = "1.5.3"
+ProgressMeter = "1.11.0"
+SparseArrays = "1.12.0"
