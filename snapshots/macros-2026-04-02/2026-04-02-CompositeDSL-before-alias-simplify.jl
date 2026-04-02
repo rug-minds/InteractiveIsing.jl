@@ -104,16 +104,6 @@ end
     return getproperty(context, name)
 end
 
-"""Fetch an optional `@state` input, falling back to the default if the source is not initialized yet."""
-@inline function _inline_state_optional(context, name::Symbol, default)
-    haskey(context, name) || return default
-    try
-        return getproperty(context, name)
-    catch
-        return default
-    end
-end
-
 """Initialize an `InlineState` from a context or plain named tuple."""
 @generated function Processes.init(state::InlineState{Fields, Required, Defaults}, context::C) where {Fields, Required, Defaults, C <: Union{Processes.AbstractContext, NamedTuple}}
     default_names = fieldnames(Defaults)
@@ -123,7 +113,7 @@ end
             push!(values, :(_inline_state_required(context, $(QuoteNode(field)))))
         else
             field in default_names || error("Missing default for optional @state field `$field`.")
-            push!(values, :(_inline_state_optional(context, $(QuoteNode(field)), getproperty(state.defaults, $(QuoteNode(field))))))
+            push!(values, :(get(context, $(QuoteNode(field)), getproperty(state.defaults, $(QuoteNode(field))))))
         end
     end
 
@@ -205,15 +195,12 @@ end
 function _resolve_composite_dsl_call(
     spec,
     keyword_args::NamedTuple,
-    positional_values::Tuple,
+    input_symbols::Tuple{Vararg{Symbol}},
     output_symbols::Tuple{Vararg{Symbol}},
-    routed_positional_inputs::Tuple,
     routed_keyword_inputs::Tuple,
     ::Val{Name},
 ) where {Name}
     if spec isa Union{ProcessAlgorithm, Type{<:ProcessAlgorithm}}
-        all(input -> input.kind == :simple && input.source == input.destination, routed_positional_inputs) || error("Direct-call DSL syntax for ProcessAlgorithms only supports routed symbol positional arguments.")
-        input_symbols = tuple((input.source for input in routed_positional_inputs)...)
         remapped_kwargs = Pair{Symbol, Symbol}[]
         for destination in keys(keyword_args)
             source = getproperty(keyword_args, destination)
@@ -236,10 +223,10 @@ function _resolve_composite_dsl_call(
 
     # FuncWrapper handles the runtime call; the DSL only has to recover how the
     # wrapper should receive its routed inputs.
-    wrapped = FuncWrapper(spec, positional_values, output_symbols, keyword_args)
+    wrapped = FuncWrapper(spec, input_symbols, output_symbols, keyword_args)
     resolved = _dsl_with_customname(wrapped, Val(Name))
 
-    inputs = Any[routed_positional_inputs...]
+    inputs = Any[(; kind = :simple, source, destination = source) for source in input_symbols]
     append!(inputs, routed_keyword_inputs)
     routed_inputs = tuple(inputs...)
     return _CompositeDSLResolved{:algo, typeof(resolved), typeof(routed_inputs)}(resolved, routed_inputs)
@@ -478,25 +465,16 @@ function _composite_dsl_register_outputs!(producers::Dict{Symbol, Any}, owner, o
     return producers
 end
 
-"""Remember which symbols belong to an inline state for later writeback routing."""
-function _composite_dsl_register_state_outputs!(state_owners::Dict{Symbol, Any}, owner, outputs::Tuple{Vararg{Symbol}})
-    for output in outputs
-        state_owners[output] = owner
-    end
-    return state_owners
-end
-
 """
 Bind the outputs produced by one DSL statement.
 
 If the output already belongs to an inline `@state`, keep that state as the
 owner and add a writeback route instead of rebinding the symbol.
 """
-function _composite_dsl_bind_outputs!(options::Vector{Any}, producers::Dict{Symbol, Any}, state_owners::Dict{Symbol, Any}, target, outputs::Tuple{Vararg{Symbol}})
+function _composite_dsl_bind_outputs!(options::Vector{Any}, producers::Dict{Symbol, Any}, target, outputs::Tuple{Vararg{Symbol}})
     for output in outputs
-        if haskey(state_owners, output)
-            push!(options, Route(state_owners[output] => target, output => output))
-            producers[output] = state_owners[output]
+        if haskey(producers, output) && producers[output] isa ProcessState
+            push!(options, Route(producers[output] => target, output => output))
         else
             producers[output] = target
         end
@@ -587,7 +565,6 @@ function _dsl_state_setup_expr(state_fields, state_name::Symbol)
         local _dsl_state = $state_expr
         push!(_dsl_states, $(QuoteNode(state_name)) => _dsl_state)
         Processes._composite_dsl_register_outputs!(_dsl_producers, _dsl_state, $outputs_expr)
-        Processes._composite_dsl_register_state_outputs!(_dsl_state_owners, _dsl_state, $outputs_expr)
     end
 end
 
@@ -657,33 +634,27 @@ function _dsl_parse_schedule(ex)
     return (:default, :(1), ex)
 end
 
-"""Return the macro-scope alias binding for one root symbol, if any."""
-function _dsl_alias_binding(alias_map, name)
-    name isa Symbol || return nothing
-    haskey(alias_map, name) || return nothing
-    return (; name, value = alias_map[name])
+"""Resolve a DSL alias when the callee is referenced by name."""
+function _dsl_resolve_alias(alias_map, ex)
+    if ex isa Symbol && haskey(alias_map, ex)
+        return alias_map[ex], ex
+    end
+    return ex, Symbol()
 end
 
 """
-Apply macro-scope root substitution for one DSL entry expression.
+Resolve constructor syntax while preserving alias-based custom names.
 
-This is the only place where `@alias` participates in entry parsing:
-
-- `source` becomes `SomeAlgo`
-- `source(args...)` becomes `SomeAlgo(args...)`
-
-The alias name is carried separately so the emitted constructor args can still
-become `:source => value` at the final builder step.
+Alias calls are handled by plain root substitution. For example, if
+`@alias source = SomeAlgo(1)`, then `source(value = x)` is treated like
+`SomeAlgo(1)(value = x)`.
 """
-function _dsl_rewrite_entry_root(alias_map, ex)
-    binding = _dsl_alias_binding(alias_map, ex)
-    !isnothing(binding) && return binding.value, binding.name
-
-    if ex isa Expr && ex.head == :call
-        binding = _dsl_alias_binding(alias_map, ex.args[1])
-        !isnothing(binding) && return Expr(:call, binding.value, ex.args[2:end]...), binding.name
+function _dsl_resolve_constructor_expr(alias_map, ex)
+    if ex isa Symbol
+        return _dsl_resolve_alias(alias_map, ex)
+    elseif ex isa Expr && ex.head == :call && ex.args[1] isa Symbol && haskey(alias_map, ex.args[1])
+        return Expr(:call, alias_map[ex.args[1]], ex.args[2:end]...), ex.args[1]
     end
-
     return ex, Symbol()
 end
 
@@ -693,21 +664,16 @@ Parse a plain Julia function call DSL entry.
 Supported function-call forms:
 - `f(x)`
 - `f(x, y)`
-- `f("prefix", x)`
-- `f(:name, x)`
 - `f(x; scale = 2)`
 - `f(x, y; scale = 2, offset = bias)`
 
-Positional arguments may be routed symbols, quoted symbol literals, or ordinary
-Julia expressions captured inline into the wrapper. Keyword values may be routed
-from previous DSL outputs/@context references or captured as normal Julia
-expressions.
+All positional arguments must be plain symbols. Keyword values may be routed from
+previous DSL outputs/@context references or captured as normal Julia expressions.
 """
 function _dsl_parse_function_call(alias_map, context_map, ex, known_outputs::Set{Symbol})
-    callee, alias_name = _dsl_rewrite_entry_root(alias_map, ex.args[1])
+    callee, alias_name = _dsl_resolve_alias(alias_map, ex.args[1])
 
-    positional_specs = Any[]
-    routed_positional_inputs = Any[]
+    input_symbols = Symbol[]
     keyword_specs = Any[]
     routed_keyword_inputs = Any[]
 
@@ -753,16 +719,10 @@ function _dsl_parse_function_call(alias_map, context_map, ex, known_outputs::Set
                 _record_function_kwarg!(name, kw.args[2])
             end
         else
-            if arg isa Symbol && (arg in known_outputs)
-                push!(positional_specs, (; kind = :routed, value = arg))
-                push!(routed_positional_inputs, (; kind = :simple, source = arg, destination = arg))
-            elseif arg isa QuoteNode && arg.value isa Symbol
-                push!(positional_specs, (; kind = :literal_symbol, value = arg.value))
-            else
-                protected_symbols = Set(known_outputs)
-                rewritten = _dsl_rewrite_alias_expr(alias_map, arg, protected_symbols)
-                push!(positional_specs, (; kind = :captured, value = rewritten))
-            end
+            # Plain function positional arguments are routed by position; keep
+            # this syntax intentionally narrow so it stays readable.
+            arg isa Symbol || error("Plain function positional arguments in the DSL must be routed symbols. Got `$arg`.")
+            push!(input_symbols, arg)
         end
     end
 
@@ -770,25 +730,10 @@ function _dsl_parse_function_call(alias_map, context_map, ex, known_outputs::Set
         kind = :function_call,
         spec_expr = callee,
         alias_name,
-        positional_specs = tuple(positional_specs...),
-        routed_positional_inputs = tuple(routed_positional_inputs...),
         inputs = tuple(routed_keyword_inputs...),
+        input_symbols = tuple(input_symbols...),
         keyword_specs = tuple(keyword_specs...),
     )
-end
-
-"""Emit the positional tuple passed to `FuncWrapper`, preserving routed names and literals."""
-function _dsl_function_positional_args_expr(positional_specs)
-    positional_exprs = map(positional_specs) do spec
-        if spec.kind == :routed
-            QuoteNode(spec.value)
-        elseif spec.kind == :literal_symbol
-            :(Core.QuoteNode($(QuoteNode(spec.value))))
-        else
-            esc(spec.value)
-        end
-    end
-    return Expr(:tuple, positional_exprs...)
 end
 
 """Emit a plain `NamedTuple` constructor for function-call keyword forwarding."""
@@ -819,7 +764,7 @@ function _dsl_parse_all_share_arg(alias_map, arg)
         source_expr = source_expr.args[1]
     end
 
-    resolved_source, source_name = _dsl_rewrite_entry_root(alias_map, source_expr)
+    resolved_source, source_name = _dsl_resolve_constructor_expr(alias_map, source_expr)
     return source_name == Symbol() ? resolved_source : :(Processes.IdentifiableAlgo($(esc(resolved_source)), $(QuoteNode(source_name))))
 end
 
@@ -932,9 +877,8 @@ function _dsl_parse_invocation(alias_map, context_map, ex, known_outputs::Set{Sy
                 kind = :resolved_expr,
                 resolved_expr = _dsl_expand_repeated_block(block, repeats_expr),
                 alias_name = Symbol(),
-                positional_specs = (),
-                routed_positional_inputs = (),
                 inputs = (),
+                input_symbols = (),
                 keyword_specs = (),
                 schedule_kind = :default,
                 schedule_value = :(1),
@@ -946,15 +890,14 @@ function _dsl_parse_invocation(alias_map, context_map, ex, known_outputs::Set{Sy
 
     parsed = if inner isa Symbol
         # Bare names refer to either aliases or directly to algorithms/states.
-        spec_expr, alias_name = _dsl_rewrite_entry_root(alias_map, inner)
+        spec_expr, alias_name = _dsl_resolve_constructor_expr(alias_map, inner)
         (
             kind = :entity,
             spec_expr,
             alias_name,
-            positional_specs = (),
-            routed_positional_inputs = (),
             inputs = (),
             shares = (),
+            input_symbols = (),
             keyword_specs = (),
         )
     elseif inner isa Expr && inner.head == :call
@@ -964,28 +907,26 @@ function _dsl_parse_invocation(alias_map, context_map, ex, known_outputs::Set{Sy
         if callee isa Expr && callee.head == :call
             # `Algo(args...)(routes...)`: first build/resolve the entity, then
             # parse the outer keyword routes against known DSL outputs.
-            spec_expr, alias_name = _dsl_rewrite_entry_root(alias_map, callee)
+            spec_expr, alias_name = _dsl_resolve_constructor_expr(alias_map, callee)
             inputs, shares = _dsl_parse_entity_call_args(alias_map, context_map, args, known_outputs)
             (
                 kind = :entity,
                 spec_expr,
                 alias_name,
-                positional_specs = (),
-                routed_positional_inputs = (),
                 inputs,
                 shares,
+                input_symbols = (),
                 keyword_specs = (),
             )
         elseif isempty(args)
-            spec_expr, alias_name = _dsl_rewrite_entry_root(alias_map, callee)
+            spec_expr, alias_name = _dsl_resolve_constructor_expr(alias_map, callee)
             (
                 kind = :keyword_call,
                 spec_expr,
                 alias_name,
-                positional_specs = (),
-                routed_positional_inputs = (),
                 inputs = (),
                 shares = (),
+                input_symbols = (),
                 keyword_specs = (),
             )
         else
@@ -1001,29 +942,27 @@ function _dsl_parse_invocation(alias_map, context_map, ex, known_outputs::Set{Sy
                 # wrapped, while ProcessAlgorithms/ProcessStates go through the
                 # normal entity route path. Keep the macro as syntax lowering only.
                 parsed_function = _dsl_parse_function_call(alias_map, context_map, inner, known_outputs)
-                spec_expr, alias_name = _dsl_rewrite_entry_root(alias_map, callee)
+                spec_expr, alias_name = _dsl_resolve_alias(alias_map, callee)
                 (
                     kind = :keyword_call,
                     spec_expr,
                     alias_name,
-                    positional_specs = (),
-                    routed_positional_inputs = (),
                     inputs = parsed_function.inputs,
                     shares = (),
+                    input_symbols = (),
                     keyword_specs = parsed_function.keyword_specs,
                 )
             end
         end
     else
-        spec_expr, alias_name = _dsl_rewrite_entry_root(alias_map, inner)
+        spec_expr, alias_name = _dsl_resolve_constructor_expr(alias_map, inner)
         (
             kind = :entity,
             spec_expr,
             alias_name,
-            positional_specs = (),
-            routed_positional_inputs = (),
             inputs = (),
             shares = (),
+            input_symbols = (),
             keyword_specs = (),
         )
     end
@@ -1128,7 +1067,7 @@ function _dsl_build_statement(stmt, alias_map, context_map, known_outputs::Set{S
                     :(push!(_dsl_options, Processes.Share($(share_source), $share_target_expr)))
                 end...)
                 Processes._composite_dsl_add_routes!(_dsl_options, _dsl_producers, _dsl_external_inputs, _dsl_resolved.entity, _dsl_resolved.inputs)
-                Processes._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_state_owners, _dsl_resolved.entity, _dsl_outputs)
+                Processes._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_resolved.entity, _dsl_outputs)
             end
         end
     end
@@ -1143,12 +1082,11 @@ function _dsl_build_statement(stmt, alias_map, context_map, known_outputs::Set{S
             push!(_dsl_algos, $algo_entry_expr)
             push!(_dsl_specification, Int($schedule_expr))
             Processes._composite_dsl_add_routes!(_dsl_options, _dsl_producers, _dsl_external_inputs, _dsl_resolved.entity, _dsl_resolved.inputs)
-            Processes._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_state_owners, _dsl_resolved.entity, _dsl_outputs)
+            Processes._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_resolved.entity, _dsl_outputs)
         end
     end
 
-    positional_values_expr = _dsl_function_positional_args_expr(parsed.positional_specs)
-    routed_positional_inputs_expr = _dsl_inputs_expr(parsed.routed_positional_inputs)
+    input_symbols_expr = Expr(:tuple, [QuoteNode(sym) for sym in parsed.input_symbols]...)
     keyword_args_expr = _dsl_function_keyword_args_expr(parsed.keyword_specs)
     inputs_expr = _dsl_inputs_expr(parsed.inputs)
     customname = _dsl_customname(parsed.spec_expr, parsed.alias_name)
@@ -1167,7 +1105,7 @@ function _dsl_build_statement(stmt, alias_map, context_map, known_outputs::Set{S
             push!(_dsl_algos, $algo_entry_expr)
             push!(_dsl_specification, Int($schedule_expr))
             Processes._composite_dsl_add_routes!(_dsl_options, _dsl_producers, _dsl_external_inputs, _dsl_resolved.entity, _dsl_resolved.inputs)
-            Processes._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_state_owners, _dsl_resolved.entity, _dsl_outputs)
+            Processes._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_resolved.entity, _dsl_outputs)
         end
     end
 
@@ -1178,16 +1116,15 @@ function _dsl_build_statement(stmt, alias_map, context_map, known_outputs::Set{S
         local _dsl_resolved = Processes._resolve_composite_dsl_call(
             $(esc(parsed.spec_expr)),
             $keyword_args_expr,
-            $positional_values_expr,
+            $input_symbols_expr,
             _dsl_outputs,
-            $routed_positional_inputs_expr,
             $inputs_expr,
             Val{$(QuoteNode(customname))}(),
         )
         push!(_dsl_algos, $algo_entry_expr)
         push!(_dsl_specification, Int($schedule_expr))
         Processes._composite_dsl_add_routes!(_dsl_options, _dsl_producers, _dsl_external_inputs, _dsl_resolved.entity, _dsl_resolved.inputs)
-        Processes._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_state_owners, _dsl_resolved.entity, _dsl_outputs)
+        Processes._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_resolved.entity, _dsl_outputs)
     end
 end
 
@@ -1256,7 +1193,6 @@ function _dsl_expand_loopalgorithm(block, constructor_name::Symbol, expected_sch
             local _dsl_options = Any[]
             local _dsl_specification = Int[]
             local _dsl_producers = Dict{Symbol, Any}()
-            local _dsl_state_owners = Dict{Symbol, Any}()
             local _dsl_external_inputs = Pair{Symbol, Symbol}[]
 
             $(isnothing(state_setup_expr) ? nothing : state_setup_expr)
@@ -1307,7 +1243,6 @@ function _dsl_expand_simplealgorithm_resolved(block)
             local _dsl_options = Any[]
             local _dsl_specification = Int[]
             local _dsl_producers = Dict{Symbol, Any}()
-            local _dsl_state_owners = Dict{Symbol, Any}()
             local _dsl_external_inputs = Pair{Symbol, Symbol}[]
 
             $(isnothing(state_setup_expr) ? nothing : state_setup_expr)
