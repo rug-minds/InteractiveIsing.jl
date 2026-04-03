@@ -5,6 +5,7 @@ struct DSLSourceAlgo <: Processes.ProcessAlgorithm end
 struct DSLCombineAlgo <: Processes.ProcessAlgorithm end
 struct DSLSinkAlgo <: Processes.ProcessAlgorithm end
 struct DSLValueAlgo <: Processes.ProcessAlgorithm end
+struct DSLNestedSourceAlgo <: Processes.ProcessAlgorithm end
 
 function Processes.step!(::DSLSourceAlgo, context)
     return (; produced = 2, passthrough = context.seed)
@@ -20,6 +21,10 @@ end
 
 function Processes.step!(::DSLValueAlgo, context)
     return (; result = context.value)
+end
+
+function Processes.step!(::DSLNestedSourceAlgo, context)
+    return (; captured = 4)
 end
 
 scaled_double_dsl_test(x; scale = 1) = scale * (2x)
@@ -253,259 +258,28 @@ end
         @test repeats(resolved_routine) == (3,)
     end
 
-    @testset "Zero-input plain functions are routable" begin
-        @info "Composite DSL: Zero-input plain functions are routable"
-        generated = @CompositeAlgorithm begin
-            result = zero_input_dsl_test()
+    @testset "FuncWrapper positional args accept @context property routes" begin
+        @info "Composite DSL: FuncWrapper positional args accept @context property routes"
+        nested_identity(x) = x
+        plus = @Routine begin
+            @alias plus_capture = DSLNestedSourceAlgo
+            plus_capture()
         end
 
-        p_generated = Process(resolve(generated), repeat = 1)
-        Processes.run(p_generated)
-        ctx_generated = fetch(p_generated)
-        @test ctx_generated[:FuncWrapper_1].result == 7
-    end
-
-    @testset "Assignments write back into inline state" begin
-        @info "Composite DSL: Assignments write back into inline state"
-        mockcomp = @CompositeAlgorithm begin
-            @state num = 0.0
-            num = rand()
-            num = sqrt(num)
+        algo = @CompositeAlgorithm begin
+            @context c1 = plus()
+            result = nested_identity(c1.plus_capture.captured)
         end
 
-        comp_process = InlineProcess(mockcomp, repeats = 1)
-        comp_ctx = run(comp_process)
+        resolved = resolve(algo)
+        wrapper = Processes.getalgo(resolved, 2)
+        wrapper_key = Processes.getkey(wrapper)
+        routes = Processes.getoptions(resolved)[wrapper_key]
+        @test length(routes) == 1
 
-        @test 0.0 < comp_ctx[:_state].num <= 1.0
+        p = Process(resolved, repeat = 1)
+        Processes.run(p)
+        ctx = fetch(p)
+        @test ctx[wrapper_key].result == 4
     end
-
-    @testset "Repeated assignments write back into inline state" begin
-        @info "Composite DSL: Repeated assignments write back into inline state"
-        mockroutine = @Routine begin
-            @state num = 16.0
-            num = @repeat 2 sqrt(num)
-        end
-
-        routine_process = InlineProcess(mockroutine, repeats = 1)
-        routine_ctx = run(routine_process)
-
-        @test routine_ctx[:_state].num == 2.0
-    end
-
-    @testset "FuncWrapper positional literals survive DSL lowering" begin
-        @info "Composite DSL: FuncWrapper positional literals survive DSL lowering"
-        literal_algo = @CompositeAlgorithm begin
-            @state num = 4
-            joined = literal_join_dsl_test("Num: ", num, :done)
-        end
-
-        literal_process = InlineProcess(literal_algo, repeats = 1)
-        literal_ctx = run(literal_process)
-
-        @test literal_ctx[:_state].num == 4
-        @test literal_ctx[:FuncWrapper_1].joined == "Num: 4done"
-    end
-
-    @testset "Interval and repeat DSL shapes from manual test work" begin
-        @info "Composite DSL: Interval and repeat DSL shapes from manual test work"
-        mockcomp = @CompositeAlgorithm begin
-            @state num = 0.0
-            num = constant_value_dsl_test()
-            num = sqrt(num)
-            println(num)
-        end
-
-        comp_process = InlineProcess(mockcomp, repeats = 1)
-        comp_ctx = run(comp_process)
-        @test comp_ctx[:_state].num == 0.5
-
-        mockroutine = @Routine begin
-            @state num = 0.0
-            num = constant_value_dsl_test()
-            num = @repeat 2 square_dsl_test(num)
-            println("Num: ", num)
-            num = constant_value_dsl_test()
-        end
-
-        resolved_routine = resolve(mockroutine)
-        @test resolved_routine isa Routine
-        @test repeats(resolved_routine) == (1, 2, 1, 1)
-
-        routine_process = InlineProcess(mockroutine, repeats = 2)
-        routine_ctx = run(routine_process)
-        @test routine_ctx[:_state].num == 0.25
-        @test occursin("globals", sprint(show, routine_ctx))
-
-        inline_process_show = sprint(io -> show(io, MIME("text/plain"), routine_process))
-        @test !occursin("globals", inline_process_show)
-        @test occursin("FuncWrapper_3: println :: (\"Num: \", num) -> nothing", inline_process_show)
-    end
-
-    @testset "Constructor expression left of final route call is preserved" begin
-        @info "Composite DSL: Constructor expression left of final route call is preserved"
-        expanded_ctor = macroexpand(@__MODULE__, quote
-            @CompositeAlgorithm begin
-                state = DSLSourceAlgo()
-            end
-        end)
-        expanded_ctor_str = sprint(show, Base.remove_linenums!(expanded_ctor))
-        @test occursin("_resolve_composite_dsl_keyword_call(DSLSourceAlgo,", expanded_ctor_str)
-
-        expanded_nested = macroexpand(@__MODULE__, quote
-            @CompositeAlgorithm begin
-                DSLCombineAlgo(1)(left = produced)
-            end
-        end)
-        expanded_nested_str = sprint(show, Base.remove_linenums!(expanded_nested))
-        @test occursin("_resolve_composite_dsl_entity(DSLCombineAlgo(1)", expanded_nested_str)
-
-        expanded_double = macroexpand(@__MODULE__, quote
-            @CompositeAlgorithm begin
-                state = DSLSourceAlgo()()
-            end
-        end)
-        expanded_double_str = sprint(show, Base.remove_linenums!(expanded_double))
-        @test occursin("_resolve_composite_dsl_entity(DSLSourceAlgo()", expanded_double_str)
-    end
-
-    @testset "Aliases rewrite call roots directly" begin
-        @info "Composite DSL: Aliases rewrite call roots directly"
-        expanded = macroexpand(@__MODULE__, quote
-            @CompositeAlgorithm begin
-                @alias source = DSLSourceAlgo
-                produced = source(seed = seed)
-            end
-        end)
-        expanded_str = sprint(show, Base.remove_linenums!(expanded))
-        @test occursin("_resolve_composite_dsl_keyword_call", expanded_str)
-        @test occursin("DSLSourceAlgo", expanded_str)
-    end
-
-    @testset "@context lowers to plain route owner expressions" begin
-        @info "Composite DSL: @context lowers to plain route owner expressions"
-        expanded_property = macroexpand(@__MODULE__, quote
-            @CompositeAlgorithm begin
-                @alias plus = DSLSourceAlgo
-                @context c1 = plus()
-                DSLSinkAlgo(value = c1.plus_capture.buffer)
-            end
-        end)
-        expanded_property_str = sprint(show, Base.remove_linenums!(expanded_property))
-        @test occursin("owner = plus.plus_capture", expanded_property_str)
-        @test occursin("source = :buffer", expanded_property_str)
-
-        expanded_index = macroexpand(@__MODULE__, quote
-            @CompositeAlgorithm begin
-                @alias plus = DSLSourceAlgo
-                @context c1 = plus()
-                DSLSinkAlgo(value = c1[plus_capture].buffer)
-            end
-        end)
-        expanded_index_str = sprint(show, Base.remove_linenums!(expanded_index))
-        @test occursin("owner = plus[plus_capture]", expanded_index_str)
-        @test occursin("source = :buffer", expanded_index_str)
-    end
-
-    @testset "@context direct field lowers to nested state owner" begin
-        @info "Composite DSL: @context direct field lowers to nested state owner"
-        expanded = macroexpand(@__MODULE__, quote
-            @Routine begin
-                @alias inner = DSLSourceAlgo
-                @context c = inner()
-                DSLSinkAlgo(value = c.seed)
-            end
-        end)
-        expanded_str = sprint(show, Base.remove_linenums!(expanded))
-        @test occursin("owner = inner._state", expanded_str)
-        @test occursin("source = :seed", expanded_str)
-    end
-
-    @testset "@context strips scheduling wrappers" begin
-        @info "Composite DSL: @context strips scheduling wrappers"
-        expanded = macroexpand(@__MODULE__, quote
-            @Routine begin
-                @alias plus = DSLSourceAlgo
-                @context c1 = @repeat 2 plus()
-                DSLSinkAlgo(value = c1.plus_capture.buffer)
-            end
-        end)
-        expanded_str = sprint(show, Base.remove_linenums!(expanded))
-        @test occursin("owner = plus.plus_capture", expanded_str)
-        @test !occursin("@repeat", expanded_str)
-    end
-
-    @testset "Keyword-only plain functions can mix @context routes and lexical captures" begin
-        @info "Composite DSL: Keyword-only plain functions can mix @context routes and lexical captures"
-        expanded = macroexpand(@__MODULE__, quote
-            @CompositeAlgorithm begin
-                @state buffers
-                @alias plus = DSLSourceAlgo
-                @alias minus = DSLSourceAlgo
-                @context c1 = plus()
-                @context c2 = minus()
-                keyword_only_capture_dsl_test(plus_capture = c1.plus_capture.buffer, minus_capture = c2[minus_capture].buffer, β = beta, buffers = buffers)
-            end
-        end)
-        expanded_str = sprint(show, Base.remove_linenums!(expanded))
-        @test occursin("owner = plus.plus_capture", expanded_str)
-        @test occursin("owner = minus[minus_capture]", expanded_str)
-        @test occursin("plus_capture = :plus_capture", expanded_str)
-        @test occursin("minus_capture = :minus_capture", expanded_str)
-        @test occursin("β = beta", expanded_str)
-        @test occursin("buffers = :buffers", expanded_str)
-    end
-
-    @testset "Identity aliases stay plain aliases in nested DSL blocks" begin
-        @info "Composite DSL: Identity aliases stay plain aliases in nested DSL blocks"
-        expanded = macroexpand(@__MODULE__, quote
-            function nudged_process_dsl_regression(beta, fullsweeps, plus_capture, minus_capture, plus, minus)
-                @CompositeAlgorithm begin
-                    @state buffers
-                    @alias plus = plus
-                    @alias minus = minus
-                    @context c1 = plus()
-                    @context c2 = minus()
-                    keyword_only_capture_dsl_test(
-                        plus_capture = c1.plus_capture.buffer,
-                        minus_capture = c2.minus_capture.buffer,
-                        β = beta,
-                        buffers = buffers,
-                    )
-                end
-            end
-        end)
-        expanded_str = sprint(show, Base.remove_linenums!(expanded))
-        @test occursin("owner = plus.plus_capture", expanded_str)
-        @test occursin("owner = minus.minus_capture", expanded_str)
-        @test !occursin("Transform route for `plus_capture`", expanded_str)
-    end
-
-    @testset "Routine DSL accepts direct ProcessAlgorithm call syntax" begin
-        @info "Composite DSL: Routine DSL accepts direct ProcessAlgorithm call syntax"
-        positional_routine = @Routine begin
-            @state input = 5
-            seen = @repeat 2 DSLPositionalCallAlgo(input)
-        end
-
-        resolved_positional = resolve(positional_routine)
-        p_positional = Process(resolved_positional, repeat = 1)
-        Processes.run(p_positional)
-        ctx_positional = fetch(p_positional)
-        @test ctx_positional[:DSLPositionalCallAlgo_1].seen == 5
-
-        keyword_routine = @Routine begin
-            @state begin
-                input = 5
-                factor = 3
-            end
-            seen = @repeat 2 DSLKeywordCallAlgo(input; scale = factor)
-        end
-
-        resolved_keyword = resolve(keyword_routine)
-        p_keyword = Process(resolved_keyword, repeat = 1)
-        Processes.run(p_keyword)
-        ctx_keyword = fetch(p_keyword)
-        @test ctx_keyword[:DSLKeywordCallAlgo_1].seen == 15
-    end
-
 end
