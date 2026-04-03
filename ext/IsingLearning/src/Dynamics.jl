@@ -18,8 +18,7 @@ function NudgedProcess(layer)
     beta = layer.β
     fullsweeps = layer.fullsweeps
     n_units = layer.nunits
-    # c1 = ConvergeanceTest(windowsize, tol)
-    # c2 = ConvergeanceTest(windowsize, tol)
+  
     plus_capture = Capturer()
     minus_capture = Capturer()
     
@@ -31,12 +30,6 @@ function NudgedProcess(layer)
         @repeat fullsweeps*n_units plus_capture(isinggraph = state)
         resetgraph!(state)
     end
-        
-
-    # minus = Routine(CompositeAlgorithm(:dynamics => Metropolis()), :minus_capture => minus_capture, resetgraph!, (Repeat(fullsweeps*n_units), 1,1),
-    #     Route(Metropolis => minus_capture, :state => :isinggraph),
-    #     Route(Metropolis => resetgraph!, :state => :isinggraph)
-    # )
 
     minus = @Routine begin
         @alias dynamics = Metropolis()
@@ -50,12 +43,12 @@ function NudgedProcess(layer)
 
     final = @CompositeAlgorithm begin
         @state buffers
-        @alias plus = plus
-        @alias minus = minus
+        # @alias plus = plus
+        # @alias minus = minus
         @context c1 = plus()
         @context c2 = minus()
         contrastive_gradient(plus_capture = c1.plus_capture.buffer, minus_capture = c2.minus_capture.buffer, β = beta, buffers = buffers) 
     end 
-    (;algorithm = final, plus_capture, minus_capture, dynamics = plus.dynamics)
+    (;algorithm = resolve(final), plus_capture, minus_capture, dynamics = plus.dynamics)
 end
 

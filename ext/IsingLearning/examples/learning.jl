@@ -13,4 +13,7 @@ ps, st = Lux.setup(Random.default_rng(), lux_model)
 
 dynamics = NudgedProcess(lux_model)
 
-resolve(dynamics.algorithm)
+buffers = (;w = zeros(length(SparseArrays.getnzval(adj(rbm)))), b = zeros(nstates(rbm)), α = zeros(nstates(rbm)))
+
+p = InlineProcess(dynamics.algorithm; Input(_state, buffers))
+run(p)
