@@ -39,22 +39,28 @@ function NudgedProcess(layer)
     end
         
 
-    minus = Routine(CompositeAlgorithm(:dynamics => Metropolis()), :minus_capture => minus_capture, resetgraph!, (Repeat(fullsweeps*n_units), 1,1),
-        Route(Metropolis => minus_capture, :state => :isinggraph),
-        Route(Metropolis => resetgraph!, :state => :isinggraph)
-    )
-
-    # r = CompositeAlgorithm(:plus => plus, :minus => minus, :computegradients => computegradients,
-    #     Route(plus_capture => computegradients, :buffer => :plus_state),
-    #     Route(minus_capture => computegradients, :buffer => :minus_state)
+    # minus = Routine(CompositeAlgorithm(:dynamics => Metropolis()), :minus_capture => minus_capture, resetgraph!, (Repeat(fullsweeps*n_units), 1,1),
+    #     Route(Metropolis => minus_capture, :state => :isinggraph),
+    #     Route(Metropolis => resetgraph!, :state => :isinggraph)
     # )
+
+    minus = @Routine begin
+        @alias dynamics = Metropolis()
+        @alias minus_capture = minus_capture
+        
+        state = Metropolis()
+        @repeat fullsweeps*n_units minus_capture(isinggraph = state)
+        resetgraph!(state)
+    end
+
+
     final = @CompositeAlgorithm begin
         @state buffers
         @alias plus = plus
         @alias minus = minus
         @context c1 = plus()
         @context c2 = minus()
-        compute_gradients(plus_capture = c1.plus_capture.buffer, minus_capture = c2.minus_capture.buffer, β = beta, buffers = buffers) 
+        contrastive_gradient(plus_capture = c1.plus_capture.buffer, minus_capture = c2.minus_capture.buffer, β = beta, buffers = buffers) 
     end 
     (;algorithm = final, plus_capture, minus_capture, dynamics = plus.dynamics)
 end

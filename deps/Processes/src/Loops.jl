@@ -27,15 +27,15 @@ end
 end
 
 
-@inline loop(p::P, f::F, c::C, lt::LT) where {P, F, C, LT} = loop(p, f, c, lt, sys_looptype)
+@inline loop(p::P, f::F, c::C, lt::LT) where {P, F, C, LT} = loop(p, f, c, lt, NonGenerated())
 """
 Run a single function in a loop indefinitely
 """
 @inline function loop(process::AbstractProcess, func::F, context::C, lt::LT, ::NonGenerated) where {F, C, LT <: IndefiniteLifetime}
     @inline before_while(process)
 
-    if @inline breakcondition(r, process, context)
-            @inline after_while(process, algo, context)
+    if @inline breakcondition(lt, process, context)
+            @inline after_while(process, func, context)
     end
     context = @inline step!(func, context, Unstable())
     @inline tick!(process)

@@ -17,6 +17,6 @@ g = IsingGraph(100,100,10,
         CoulombHamiltonian(recalc = 2000),
         periodic = (:x,:y))
 
-# interface(g)
+interface(g)
 
-# createProcess(g)
+createProcess(g)

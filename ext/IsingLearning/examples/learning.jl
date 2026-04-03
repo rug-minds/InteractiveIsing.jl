@@ -1,7 +1,7 @@
 using Pkg
 Pkg.activate(joinpath(@__DIR__, ".."))
 
-using IsingLearning, InteractiveIsing, InteractiveIsing.Processes, Lux, Random, SparseArrays
+using IsingLearning, .InteractiveIsing, .InteractiveIsing.Processes, Lux, Random, SparseArrays
 
 # MNIST TEST
 rbm = ReducedBoltzmannArchitecture(784, 100, 10; precision = Float64)
