@@ -76,7 +76,10 @@ Get an algo by name
     end
     sidx = findfirst(==(name), getkey.(States))
     if !isnothing(sidx)
-        return :(getindex(getstates(ca), $sidx))
+        return quote
+            LineNumberNode(@__LINE__, @__FILE__) 
+            getindex(getstates(ca), $sidx)
+        end
     end
     return :(error("No algorithm or state with name $(name) found in LoopAlgorithm $(ca)"))
 end

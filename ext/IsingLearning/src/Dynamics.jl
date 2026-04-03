@@ -22,18 +22,12 @@ function NudgedProcess(layer)
     # c2 = ConvergeanceTest(windowsize, tol)
     plus_capture = Capturer()
     minus_capture = Capturer()
-    # plus = Routine(CompositeAlgorithm(:dynamics => Metropolis()), 
-    #                     :plus_capture => plus_capture, 
-    #                     resetgraph!, 
-    #                     (Repeat(fullsweeps*n_units), 1,1),
-    #     Route(Metropolis => plus_capture, :state => :isinggraph),
-    #     Route(Metropolis => resetgraph!, :state => :isinggraph)
-    #     )
+    
     plus = @Routine begin
         @alias dynamics = Metropolis()
         @alias plus_capture = plus_capture
         
-        state = Metropolis()
+        state = dynamics()
         @repeat fullsweeps*n_units plus_capture(isinggraph = state)
         resetgraph!(state)
     end
@@ -48,7 +42,7 @@ function NudgedProcess(layer)
         @alias dynamics = Metropolis()
         @alias minus_capture = minus_capture
         
-        state = Metropolis()
+        state = dynamics()
         @repeat fullsweeps*n_units minus_capture(isinggraph = state)
         resetgraph!(state)
     end
