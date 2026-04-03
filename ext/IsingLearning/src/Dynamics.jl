@@ -47,7 +47,7 @@ function NudgedProcess(layer)
         # @alias minus = minus
         @context c1 = plus()
         @context c2 = minus()
-        contrastive_gradient(plus_capture = c1.plus_capture.buffer, minus_capture = c2.minus_capture.buffer, β = beta, buffers = buffers) 
+        contrastive_gradient(c1.dynamics.state, c1.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers) 
     end 
     (;algorithm = resolve(final), plus_capture, minus_capture, dynamics = plus.dynamics)
 end

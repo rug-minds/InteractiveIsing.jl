@@ -35,12 +35,12 @@ params(::Type{Clamping}, GraphType) = GatherHamiltonianParams((:β, GraphType, G
     j = at_idx(proposal)
     newstate = to_val(proposal)
     spins = @inline graphstate(state)
-    return hterm.β/2*(newstate^2 - spins[j]^2 - 2*hterm.y[j]*(newstate - spins[j]))
+    return hterm.β[]/2*(newstate^2 - spins[j]^2 - 2*hterm.y[j]*(newstate - spins[j]))
 end
 
 @inline function calculate(::d_iH, hterm::Clamping, state::S, s_idx) where {S <: AbstractIsingGraph}
     spins = @inline graphstate(state)
-    return hterm.β*(spins[s_idx] - hterm.y[s_idx])
+    return hterm.β[]*(spins[s_idx] - hterm.y[s_idx])
 end
 
 function clamp!(c::Clamping, layer::AbstractIsingLayer, vals::V) where {V <: AbstractVector}

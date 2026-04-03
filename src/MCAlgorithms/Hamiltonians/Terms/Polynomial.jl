@@ -77,11 +77,11 @@ end
 @inline function parameter_derivative(hterm::PolynomialHamiltonian, state::AbstractVector; dlp = similar(hterm.lp), buffermode::BufferMode = OverwriteBuffer())
     if buffermode isa OverwriteBuffer
         for i in eachindex(dlp)
-            dlp[i] = hterm.c[]*graphstate(state)[i]^order(hterm)
+            dlp[i] = hterm.c[]*state[i]^order(hterm)
         end
     else
         for i in eachindex(dlp)
-            dlp[i] += sign(buffermode) * hterm.c[]*graphstate(state)[i]^order(hterm)
+            dlp[i] += sign(buffermode) * hterm.c[]*state[i]^order(hterm)
         end
     end
     return (; dlp = dlp)

@@ -39,17 +39,17 @@ end
 end
 
 @inline function parameter_derivative(hterm::Bilinear, state::S; dJ = similar(hterm.J), buffermode::BufferMode = OverwriteBuffer()) where {S <: AbstractArray}
-    s = @inline graphstate(state)
+    s = @inline state
     n = length(s)
     indexes = index_pairs_iterator(hterm.J, false)
     if buffermode isa OverwriteBuffer  
         for (ptr, (i,j)) in enumerate(indexes)
-            d_J[ptr] = -1/2 * s[i] * s[j]
+            dJ[ptr] = -1/2 * s[i] * s[j]
         end
     else
         for (ptr, (i,j)) in enumerate(indexes)
-            d_J[ptr] += sign(buffermode) * -1/2 * s[i] * s[j]
+            dJ[ptr] += sign(buffermode) * -1/2 * s[i] * s[j]
         end
     end
-    return (; d_J)
+    return (; dJ)
 end
