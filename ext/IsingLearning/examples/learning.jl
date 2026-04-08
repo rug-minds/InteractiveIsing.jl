@@ -1,7 +1,8 @@
-using Pkg
+ using Pkg
 Pkg.activate(joinpath(@__DIR__, ".."))
 
 using IsingLearning, IsingLearning.InteractiveIsing, IsingLearning.InteractiveIsing.Processes, Lux, Random, SparseArrays
+using BenchmarkTools
 
 # MNIST TEST
 rbm = ReducedBoltzmannArchitecture(784, 100, 10; precision = Float64)
@@ -17,9 +18,9 @@ buffers = (;w = zeros(length(SparseArrays.getnzval(adj(rbm)))), b = zeros(nstate
 algo = dynamics.algorithm
 reg = getregistry(algo)
 reg
-p = InlineProcess(dynamics.algorithm, Input(:_state; buffers), Input(:dynamics, state = rbm), Input(:plus_capture, state = rbm), Input(:minus_capture, state = rbm); repeats = 1)
+p = InlineProcess(dynamics.algorithm, Input(:_state; buffers, equilibrium_state = copy(state(rbm))), Input(:dynamics, state = rbm), Input(:plus_capture, state = rbm), Input(:minus_capture, state = rbm); repeats = 1)
 rc = run(p)
-
+@benchmark run(p)
 
 test(rc, rbm) = Processes.initcontext(rc, :dynamics, inputs = (;state = rbm))
 rc = Processes.initcontext(rc, :dynamics, inputs = (;state = rbm))

@@ -28,7 +28,7 @@ function NudgedProcess(layer)
         @alias dynamics = Metropolis()
         @alias plus_capture = plus_capture
         
-        setgraph!(isinggraph = state, target = equilibrium_state)
+        setgraph!(isinggraph = dynamics.state, target = equilibrium_state)
         state = @repeat fullsweeps*n_units dynamics()
         plus_capture(isinggraph = state)
     end
@@ -38,7 +38,7 @@ function NudgedProcess(layer)
         @alias dynamics = Metropolis()
         @alias minus_capture = minus_capture
         
-        setgraph!(isinggraph = state, target = equilibrium_state)
+        setgraph!(isinggraph = dynamics.state, target = equilibrium_state)
         state = @repeat fullsweeps*n_units dynamics()
         minus_capture(isinggraph = state)
     end
