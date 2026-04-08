@@ -1,2 +1,0 @@
-# Generating Adjacency Lists
-
