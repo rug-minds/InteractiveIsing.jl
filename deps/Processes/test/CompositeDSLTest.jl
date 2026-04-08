@@ -6,6 +6,7 @@ struct DSLCombineAlgo <: Processes.ProcessAlgorithm end
 struct DSLSinkAlgo <: Processes.ProcessAlgorithm end
 struct DSLValueAlgo <: Processes.ProcessAlgorithm end
 struct DSLNestedSourceAlgo <: Processes.ProcessAlgorithm end
+struct DSLHeldStateAlgo <: Processes.ProcessAlgorithm end
 
 function Processes.step!(::DSLSourceAlgo, context)
     return (; produced = 2, passthrough = context.seed)
@@ -25,6 +26,14 @@ end
 
 function Processes.step!(::DSLNestedSourceAlgo, context)
     return (; captured = 4)
+end
+
+function Processes.init(::DSLHeldStateAlgo, context)
+    return (; state = 11)
+end
+
+function Processes.step!(::DSLHeldStateAlgo, context)
+    return (; state = context.state)
 end
 
 scaled_double_dsl_test(x; scale = 1) = scale * (2x)
@@ -186,8 +195,8 @@ end
         @test named_ctx[:mystate].a == 1
     end
 
-    @testset "@all uses raw share endpoints" begin
-        @info "Composite DSL: @all uses raw share endpoints"
+    @testset "@all uses known alias keys in share endpoints" begin
+        @info "Composite DSL: @all uses known alias keys in share endpoints"
         @ProcessAlgorithm function DSLShareSource(@managed(x = 1))
             return (; x)
         end
@@ -205,7 +214,7 @@ end
         end)
         expanded_str = sprint(show, Base.remove_linenums!(expanded))
         @test occursin("Share(", expanded_str)
-        @test !occursin("Processes.IdentifiableAlgo", expanded_str)
+        @test occursin("IdentifiableAlgo", expanded_str)
     end
 
     @testset "Transform routes resolve from expressions" begin
@@ -259,6 +268,22 @@ end
         @test repeats(resolved_routine) == (3,)
     end
 
+    @testset "Nested DSL state writeback resolves through keyed _state" begin
+        @info "Composite DSL: Nested DSL state writeback resolves through keyed _state"
+        inner = @Routine begin
+            @state stored = 0
+            stored = zero_input_dsl_test()
+        end
+
+        outer = @CompositeAlgorithm begin
+            @state outer_flag = 1
+            inner
+        end
+
+        resolved_outer = resolve(outer)
+        @test resolved_outer isa CompositeAlgorithm
+    end
+
     @testset "FuncWrapper positional args accept @context property routes" begin
         @info "Composite DSL: FuncWrapper positional args accept @context property routes"
         nested_identity(x) = x
@@ -282,5 +307,45 @@ end
         Processes.run(p)
         ctx = fetch(p)
         @test ctx[wrapper_key].result == 4
+    end
+
+    @testset "Alias field routes work before later output bindings" begin
+        @info "Composite DSL: Alias field routes work before later output bindings"
+        algo = @Routine begin
+            @alias dynamics = DSLHeldStateAlgo()
+            seen = DSLValueAlgo(value = dynamics.state)
+            state = dynamics()
+        end
+
+        resolved = resolve(algo)
+        sink = Processes.getalgo(resolved, 1)
+        sink_key = Processes.getkey(sink)
+        routes = Processes.getoptions(resolved)[sink_key]
+        @test length(routes) == 1
+
+        p = Process(resolved, repeat = 1)
+        Processes.run(p)
+        ctx = fetch(p)
+        @test ctx[sink_key].result == 11
+        @test ctx[:dynamics].state == 11
+    end
+
+    @testset "state = dynamics.state aliases a known owned field" begin
+        @info "Composite DSL: state = dynamics.state aliases a known owned field"
+        algo = @Routine begin
+            @alias dynamics = DSLHeldStateAlgo()
+            state = dynamics.state
+            seen = DSLValueAlgo(value = state)
+            state = dynamics()
+        end
+
+        resolved = resolve(algo)
+        sink = Processes.getalgo(resolved, 1)
+        sink_key = Processes.getkey(sink)
+
+        p = Process(resolved, repeat = 1)
+        Processes.run(p)
+        ctx = fetch(p)
+        @test ctx[sink_key].result == 11
     end
 end

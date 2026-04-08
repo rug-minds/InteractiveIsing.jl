@@ -72,7 +72,6 @@ end
 ############################
 
 @inline function static_findfirst_match(rte::RegistryTypeEntry, val)
-    # First get id, because val might not wrappeable in Val, but the id is always findable
     id = @inline match_by(val)
     @inline static_findfirst_match(rte, Val(id))
 end
@@ -83,8 +82,8 @@ end
 #     return :($idx)
 # end
 
-@inline dynamic_find_match(rte::RegistryTypeEntry{T}, val::V) where {T,V} = get(getdynamiclookup(rte), match_by(val), nothing)
-@inline findfirst_match(rte::RegistryTypeEntry, val::V) where V = isstaticallyfindable(val) ? static_findfirst_match(rte, val) : dynamic_find_match(rte, val)
+@inline dynamic_find_match(rte::RegistryTypeEntry{T}, val) where {T} = get(getdynamiclookup(rte), match_by(val), nothing)
+@inline findfirst_match(rte::RegistryTypeEntry, val) = isstaticallyfindable(val) ? static_findfirst_match(rte, val) : dynamic_find_match(rte, val)
 
 ##########################
 ######## GETTERS #########
