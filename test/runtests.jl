@@ -1,20 +1,9 @@
 using Test
-using Processes
+using InteractiveIsing
 
-@testset "Processes" begin
-    include("CompositeCompositionTest.jl")
-    include("InlineBenchmarkTest.jl")
-    include("InlineProcessConstructorTest.jl")
-    include("LifetimeTest.jl")
-    include("FibLucProcessTest.jl")
-    include("CopyManagerTest.jl")
-    include("PackagedAlgoTest.jl")
-    include("RouteWalkerTest.jl")
-    include("ShareContextTest.jl")
-    include("MaterializeLoopAlgorithmTest.jl")
-    include("SymbolIndexingTest.jl")
-    include("InnerTypeFilterTest.jl")
-    include("CompositeDSLTest.jl")
-    include("ProcessAlgorithmMacroTest.jl")
-    include("ContextAnalyzerTest.jl")
-end
+include("TopologyTest.jl")
+include("ConstructorTest.jl")
+include("CoulombTest.jl")
+include("HamiltonianTermsTest.jl")
+include("UndirectedAdjacencyTest.jl")
+include("ProcessInputTest.jl")
