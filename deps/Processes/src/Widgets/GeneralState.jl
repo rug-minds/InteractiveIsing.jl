@@ -5,10 +5,19 @@ General-purpose ProcessState that acts only as an initialization scheme.
 
 `Fields` and `Required` are stored in the type, while `defaults_builder`
 produces the optional defaults each time `init` runs.
+
+General states have custom matching behavior that allows them to merge with other general states
 """
 struct GeneralState{Fields, Required, Builder} <: ProcessState
     defaults_builder::Builder
 end
+
+
+# TODO Maybe make it match with any general state where one has a subset of the fields of the other? 
+"""
+General states match by key for now
+"""
+match_by(ia::Union{IdentifiableAlgo{<:GeneralState}, Type{<:IdentifiableAlgo{<:GeneralState}}}) = ValMatcher(getkey(ia))
 
 const InlineState = GeneralState
 
@@ -41,11 +50,15 @@ Base.show(io::IO, state::GeneralState) = print(io, _general_state_signature(stat
 
 function _merge_general_state_fields(fields_a::Tuple, fields_b::Tuple)
     overlaps = filter(name -> name in fields_a, fields_b)
-    isempty(overlaps) || error(
-        "Cannot merge GeneralState values with overlapping field names: $(collect(overlaps)). " *
-        "Mergeable GeneralState values must define disjoint state fields."
-    )
-    return (fields_a..., fields_b...)
+    if !isempty(overlaps)
+        @warn "Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones." overlapping_fields = collect(overlaps)
+    end
+
+    merged = Symbol[fields_a...]
+    for name in fields_b
+        name in merged || push!(merged, name)
+    end
+    return tuple(merged...)
 end
 
 function _merge_general_state_required(required_a::Tuple, required_b::Tuple)
@@ -60,9 +73,9 @@ end
 Merge two `GeneralState` initialization schemes.
 
 This is intended for higher-level registry/setup code that decides two state
-entries with the same outer key should coalesce. The states themselves must
-define disjoint field names; overlapping state fields are rejected so state
-composition stays explicit.
+entries with the same outer key should coalesce. If both states define the same
+field name, the merge continues with a warning and the later state's defaults
+override the earlier state's defaults for that field.
 """
 function Base.merge(
     a::GeneralState{FieldsA, RequiredA},

@@ -16,6 +16,7 @@ dynamics = NudgedProcess(lux_model)
 buffers = (;w = zeros(length(SparseArrays.getnzval(adj(rbm)))), b = zeros(nstates(rbm)), α = zeros(nstates(rbm)))
 algo = dynamics.algorithm
 reg = getregistry(algo)
+reg
 p = InlineProcess(dynamics.algorithm, Input(:_state; buffers), Input(:dynamics, state = rbm), Input(:plus_capture, state = rbm), Input(:minus_capture, state = rbm); repeats = 1)
 rc = run(p)
 
