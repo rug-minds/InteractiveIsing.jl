@@ -5,8 +5,9 @@ ForwardDynamics(windowsize, tol,) = CompositeAlgorithm(
     ConvergeanceTest()
 )
 
-@ProcessAlgorithm function resetgraph!(isinggraph::G) where G
-    resetstate!(isinggraph)
+@ProcessAlgorithm function setgraph!(isinggraph::G, target) where G
+    # resetstate!(isinggraph)
+    state(isinggraph) .= target
     return 
 end
 
@@ -23,28 +24,28 @@ function NudgedProcess(layer)
     minus_capture = Capturer()
     
     plus = @Routine begin
+        @state equilibrium_state
         @alias dynamics = Metropolis()
         @alias plus_capture = plus_capture
         
-        state = dynamics()
-        @repeat fullsweeps*n_units plus_capture(isinggraph = state)
-        resetgraph!(state)
+        setgraph!(isinggraph = state, target = equilibrium_state)
+        state = @repeat fullsweeps*n_units dynamics()
+        plus_capture(isinggraph = state)
     end
 
     minus = @Routine begin
+        @state equilibrium_state
         @alias dynamics = Metropolis()
         @alias minus_capture = minus_capture
         
-        state = dynamics()
-        @repeat fullsweeps*n_units minus_capture(isinggraph = state)
-        resetgraph!(state)
+        setgraph!(isinggraph = state, target = equilibrium_state)
+        state = @repeat fullsweeps*n_units dynamics()
+        minus_capture(isinggraph = state)
     end
 
 
     final = @CompositeAlgorithm begin
         @state buffers
-        # @alias plus = plus
-        # @alias minus = minus
         @context c1 = plus()
         @context c2 = minus()
         contrastive_gradient(c1.dynamics.state, c1.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers) 
