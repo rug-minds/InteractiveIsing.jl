@@ -5,7 +5,7 @@
 end
 
 function LearningStep(layer)
-    (;algorithm, plus_capture, minus_capture) = NudgedProcess(layer)
+    (;algorithm, plus_capture, minus_capture) = NudgedComp(layer)
     backwards_plus_gradient = 
 
 end

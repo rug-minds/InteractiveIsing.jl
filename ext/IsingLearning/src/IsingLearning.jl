@@ -23,5 +23,6 @@ include("CaptureState.jl")
 include("GraphSetup.jl")
 include("Dynamics.jl")
 include("Gradient.jl")
+include("ThreadedMNISTLoop.jl")
 
 end # module IsingLearning
