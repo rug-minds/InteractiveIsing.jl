@@ -42,6 +42,7 @@ keyword_only_capture_dsl_test(; plus_capture, minus_capture, β, buffers) = plus
 literal_join_dsl_test(prefix, value, marker) = string(prefix, value, marker)
 constant_value_dsl_test() = 0.25
 square_dsl_test(x) = x^2
+keyword_value_identity_dsl_test(; value) = value
 
 @ProcessAlgorithm function DSLPositionalCallAlgo(value)
     return (; seen = value)
@@ -217,13 +218,13 @@ end
         @test occursin("IdentifiableAlgo", expanded_str)
     end
 
-    @testset "Transform routes resolve from expressions" begin
-        @info "Composite DSL: Transform routes resolve from expressions"
+    @testset "Transform routes use explicit @transform syntax" begin
+        @info "Composite DSL: Transform routes use explicit @transform syntax"
         one_var_transform = @CompositeAlgorithm begin
             @state seed = 3
             @alias source = DSLSourceAlgo
             produced, passthrough = source(seed = seed)
-            DSLSinkAlgo(value = produced * 3)
+            DSLSinkAlgo(value = @transform(x -> 3x, produced))
         end
 
         resolved_one_var = resolve(one_var_transform)
@@ -237,11 +238,12 @@ end
         ctx_one_var = fetch(p_one_var)
         @test ctx_one_var[:DSLSinkAlgo_1].seen == 6
 
+        bias = 3
         two_var_transform = @CompositeAlgorithm begin
             @state seed = 3
             @alias source = DSLSourceAlgo
             produced, passthrough = source(seed = seed)
-            DSLValueAlgo(value = produced + passthrough)
+            DSLValueAlgo(value = @transform(x -> x + bias, produced))
         end
 
         resolved_two_var = resolve(two_var_transform)
@@ -254,6 +256,18 @@ end
         Processes.run(p_two_var)
         ctx_two_var = fetch(p_two_var)
         @test ctx_two_var[:DSLValueAlgo_1].result == 5
+    end
+
+    @testset "Implicit transform expressions are rejected in route syntax" begin
+        @info "Composite DSL: Implicit transform expressions are rejected in route syntax"
+        @test_throws ErrorException macroexpand(@__MODULE__, quote
+            @CompositeAlgorithm begin
+                @state seed = 3
+                @alias source = DSLSourceAlgo
+                produced, passthrough = source(seed = seed)
+                DSLSinkAlgo(value = produced * 3)
+            end
+        end)
     end
 
     @testset "Routine repeat form expands correctly" begin
@@ -302,11 +316,59 @@ end
         wrapper_key = Processes.getkey(wrapper)
         routes = Processes.getoptions(resolved)[wrapper_key]
         @test length(routes) == 1
+        @test occursin("c1.plus_capture.captured", sprint(show, wrapper))
 
         p = Process(resolved, repeat = 1)
         Processes.run(p)
         ctx = fetch(p)
         @test ctx[wrapper_key].result == 4
+    end
+
+    @testset "FuncWrapper positional args accept explicit @transform routes" begin
+        @info "Composite DSL: FuncWrapper positional args accept explicit @transform routes"
+        nested_identity(x) = x
+        plus = @Routine begin
+            @alias plus_capture = DSLNestedSourceAlgo
+            plus_capture()
+        end
+
+        algo = @CompositeAlgorithm begin
+            @context c1 = plus()
+            result = nested_identity(@transform(x -> x + 1, c1.plus_capture.captured))
+        end
+
+        resolved = resolve(algo)
+        wrapper = Processes.getalgo(resolved, 2)
+        wrapper_key = Processes.getkey(wrapper)
+        @test occursin("@transform", sprint(show, wrapper))
+        @test occursin("c1.plus_capture.captured", sprint(show, wrapper))
+
+        p = Process(resolved, repeat = 1)
+        Processes.run(p)
+        ctx = fetch(p)
+        @test ctx[wrapper_key].result == 5
+    end
+
+    @testset "FuncWrapper keyword args preserve routed display expressions" begin
+        @info "Composite DSL: FuncWrapper keyword args preserve routed display expressions"
+        plus = @Routine begin
+            @alias plus_capture = DSLNestedSourceAlgo
+            plus_capture()
+        end
+
+        algo = @CompositeAlgorithm begin
+            @context c1 = plus()
+            result = keyword_value_identity_dsl_test(value = c1.plus_capture.captured)
+        end
+
+        resolved = resolve(algo)
+        wrapper = Processes.getalgo(resolved, 2)
+        @test occursin("value = c1.plus_capture.captured", sprint(show, wrapper))
+
+        p = Process(resolved, repeat = 1)
+        Processes.run(p)
+        ctx = fetch(p)
+        @test ctx[Processes.getkey(wrapper)].result == 4
     end
 
     @testset "Alias field routes work before later output bindings" begin
