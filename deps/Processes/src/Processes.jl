@@ -53,6 +53,7 @@ module Processes
     include("Listeners.jl")
 
     include("Process.jl")
+    include("Copy.jl")
     include("InlineProcess.jl")
     include("InlineProcessShowing.jl")
 

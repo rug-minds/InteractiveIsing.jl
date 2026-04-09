@@ -18,21 +18,17 @@ function contrastive_gradient(graph, s_plus, s_minus, β::Real; buffers = nothin
     magfield = graph.hamiltonian[InteractiveIsing.MagField]
     bilinear = graph.hamiltonian[InteractiveIsing.Bilinear]
 
-    # Compute dH/dw!
-    # dw_thunk = @thunk begin
-        InteractiveIsing.parameter_derivative(bilinear, s_plus, dJ = buffers.w, buffermode = InteractiveIsing.OverwriteBuffer())
-        InteractiveIsing.parameter_derivative(bilinear, s_minus, dJ = buffers.w, buffermode = InteractiveIsing.SubtractBuffer())
-        buffers.w ./= 2β
-    # end
+    # Accumulate dH/dw (plus - minus) into buffers
+    InteractiveIsing.parameter_derivative(bilinear, s_plus, dJ = buffers.w, buffermode = InteractiveIsing.AccumulateBuffer{+}())
+    InteractiveIsing.parameter_derivative(bilinear, s_minus, dJ = buffers.w, buffermode = InteractiveIsing.SubtractBuffer())
 
-    # Compute dH/db!
-    InteractiveIsing.parameter_derivative(magfield, s_plus, db = buffers.b, buffermode = InteractiveIsing.OverwriteBuffer())
+    # Accumulate dH/db
+    InteractiveIsing.parameter_derivative(magfield, s_plus, db = buffers.b, buffermode = InteractiveIsing.AccumulateBuffer{+}())
     InteractiveIsing.parameter_derivative(magfield, s_minus, db = buffers.b, buffermode = InteractiveIsing.SubtractBuffer())
-    buffers.b ./= 2β
-    # Compute dH/dα!
-    InteractiveIsing.parameter_derivative(polynomial_ham, s_plus, dlp = buffers.α, buffermode = InteractiveIsing.OverwriteBuffer())
+
+    # Accumulate dH/dα
+    InteractiveIsing.parameter_derivative(polynomial_ham, s_plus, dlp = buffers.α, buffermode = InteractiveIsing.AccumulateBuffer{+}())
     InteractiveIsing.parameter_derivative(polynomial_ham, s_minus, dlp = buffers.α, buffermode = InteractiveIsing.SubtractBuffer())
-    buffers.α ./= 2β
 
     (;w = buffers.w, b = buffers.b, α = buffers.α)    
 end

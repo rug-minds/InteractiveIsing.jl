@@ -1,6 +1,6 @@
 export ReducedBoltzmannArchitecture, GraphFromSource, GraphFromInit
 
-function ReducedBoltzmannArchitecture(layer_sizes...; precision = Float32)
+function ReducedBoltzmannArchitecture(layer_sizes...; precision = Float32, b = StateLike(Vector, zero(precision)))
     layer_gen = [Layer(
             layer_sizes[i],
             Continuous(),
@@ -15,7 +15,7 @@ function ReducedBoltzmannArchitecture(layer_sizes...; precision = Float32)
 
     
     IsingGraph(layers_and_wgs...,
-                Ising() + Clamping();
+                Ising(b = b) + Clamping();
                 index_set = g -> ToggledIndexSet(g))
 end
 
@@ -55,4 +55,3 @@ function GraphFromInit(g::IsingGraph, parameters; init! = identity)
     init!(gnew)
     return gnew
 end
-

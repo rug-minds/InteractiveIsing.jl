@@ -80,7 +80,7 @@ function LayeredIsingGraphLayer(graph_init;
                       input_idxs,
                       output_idxs,
                       β::Real = 0.1f0,
-                      fullsweeps::Integer = 10)
+                      fullsweeps::Integer = 50)
 
     graph_init = graph_init isa Function ? graph_init() : graph_init
     n_units = nstates(graph_init)
@@ -100,15 +100,54 @@ end
 function initialparameters(rng::AbstractRNG, layer::LayeredIsingGraphLayer)
     g = layer.model_graph  # throwaway graph just to read the initial values
     return (
-        w = deepcopy((SparseArrays.getnzval(adj(g)))),
-        b  = rand(rng, eltype(g), nstates(g)),  # placeholder random biases
-        α_i     = rand(rng, eltype(g), nstates(g))  # placeholder random self-energies
+        w = copy(SparseArrays.getnzval(adj(g))),
+        b = copy(getparam(g.hamiltonian, InteractiveIsing.MagField, :b)),
+        α = copy(diag(adj(g))),
+    )
+end
+
+_process_buffers(g) = (;
+    w = zeros(eltype(g), length(SparseArrays.getnzval(adj(g)))),
+    b = zeros(eltype(g), nstates(g)),
+    α = zeros(eltype(g), nstates(g)),
+)
+
+function _forward_process(layer::LayeredIsingGraphLayer, g)
+    algo = resolve(ForwardDynamics(layer).algorithm)
+    return Process(
+        algo,
+        Input(:_state;
+            x = zeros(eltype(g), length(layer.input_layer)),
+            equilibrium_state = copy(state(g)),
+        ),
+        Input(:dynamics, state = g);
+        repeat = 1,
+    )
+end
+
+function _backward_process(layer::LayeredIsingGraphLayer, g)
+    algo = resolve(Forward_and_Nudged(layer).algorithm)
+    return Process(
+        algo,
+        Input(:_state;
+            x = zeros(eltype(g), length(layer.input_layer)),
+            y = zeros(eltype(g), length(layer.output_layer)),
+            buffers = _process_buffers(g),
+            equilibrium_state = copy(state(g)),
+        ),
+        Input(:dynamics, state = g),
+        Input(:plus_capture, state = g),
+        Input(:minus_capture, state = g);
+        repeat = 1,
     )
 end
 
 function initialstates(rng::AbstractRNG, layer::LayeredIsingGraphLayer)
-    return (
-        graph = layer.model_graph  # the live graph state will be managed inside `st` and mutated in-place during the forward pass,
+    g = deepcopy(layer.model_graph)
+    return (;
+        graph = g,
+        forward_process = _forward_process(layer, g),
+        backward_process = _backward_process(layer, g),
     )
 end
 
@@ -124,8 +163,8 @@ back into the graph `g` before running a simulation phase.
 """
 
 function sync_params!(g::IsingGraph, ps)
-    nonzeros(offdiag(adj(g))) .= ps.w
-    biases = getparam(g.hamiltonian, Magfield, :b)
+    SparseArrays.getnzval(adj(g)) .= ps.w
+    biases = getparam(g.hamiltonian, InteractiveIsing.MagField, :b)
     biases .= ps.b
     self_energies = diag(adj(g))
     self_energies .= ps.α
@@ -141,20 +180,20 @@ function (layer::LayeredIsingGraphLayer)(x, ps, st)
     g = st.graph
 
     # 1. Push learnable weights / biases into the graph
-    # sync_params!(g, ps)
+    sync_params!(g, ps)
 
-    # 2. Clamp input spins to x
-    off!(g.index_set, layer.input_layer)  # ensure the input layer is turned off
-    state(g[1]) .= x  # TODO: this assumes the input layer is layer 1; generalize to arbitrary input_layer
+    # 2. Write inputs and run the prepared forward process
+    forward_process = st.forward_process
+    forward_context = getcontext(forward_process)
+    forward_context._state.x .= x
 
-    # 3. Run free phase (Ising hamiltonian only, clamping β = 0)
-    algo = st.relax_routine
-    #TODO: Use named variant when available
-    # For not algo[1] is the dynamics 
-    run(algo, Input(algo[1], state = g), lifetime = Repeat(length(state(g))*layer.fullsweeps), mode = :inline_synced)
+    Processes.reset!(forward_process)
+    run(forward_process)
+    wait(forward_process)
+    close(forward_process)
 
-    # 4. Read output spins
-    y = copy(state(g[nlayers(g)]))  # TODO: this assumes the output layer is the last layer; generalize to arbitrary output_layer
+    # 3. Read output spins from the configured output layer
+    y = graph_view(g, layer.output_layer)
     
     return y, st  # st keys unchanged → Lux is happy
 end

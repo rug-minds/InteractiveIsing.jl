@@ -1,51 +1,13 @@
-export SGD,
-       ParameterBuffer,
-       MNISTDataLoader,
+export MNISTDataLoader,
        init_mnist_trainer,
        fit_mnist_threaded!,
        close_trainer!
 
+using Optimisers
 using ProgressMeter: Progress, next!, finish!
 using LinearAlgebra: diag
+import MLDatasets
 import Random
-
-const HAS_MLDATASETS = let available = false
-    try
-        @eval import MLDatasets
-        available = true
-    catch
-        available = false
-    end
-    available
-end
-
-struct ParameterBuffer{TW<:AbstractVector, TB<:AbstractVector, TA<:AbstractVector}
-    w::TW
-    b::TB
-    α::TA
-end
-
-struct SGD{T}
-    η::T
-end
-
-SGD(; η = 1f-3) = SGD(η)
-
-struct WorkerScratch{G,P,B,S,R}
-    graph::G
-    params::P
-    scratch::B
-    equilibrium_state::S
-    plus_state::S
-    minus_state::S
-    relaxer::R
-end
-
-struct ThreadedExampleGradient{R} <: Processes.ProcessAlgorithm
-    input_layer_idx::Int
-    target_idxs::R
-    β::Float32
-end
 
 struct MNISTDataLoader{TX<:AbstractMatrix, TY<:AbstractMatrix, TI<:AbstractVector{Int}}
     x::TX
@@ -54,212 +16,91 @@ struct MNISTDataLoader{TX<:AbstractMatrix, TY<:AbstractMatrix, TI<:AbstractVecto
     indices::TI
 end
 
-struct MNISTThreadedTrainer{G,P,O,W<:Process}
-    graph::G
+mutable struct MNISTThreadedTrainer{L,G,P,S,W<:Process,V<:Process,O}
+    layer::L
+    prototype_graph::G
     params::P
+    opt_state::S
+    worker_graphs::Vector{G}
     workers::Vector{W}
+    validation_graph::G
+    validation_worker::V
     optimiser::O
 end
 
-function ParameterBuffer(graph)
-    biases = copy(InteractiveIsing.getparam(graph.hamiltonian, InteractiveIsing.MagField, :b))
-    weights = copy(SparseArrays.getnzval(adj(graph)))
-    self_energies = copy(diag(adj(graph)))
-    return ParameterBuffer(weights, biases, self_energies)
-end
+gradient_buffer(graph) = (;
+    w = zeros(eltype(graph), length(SparseArrays.getnzval(adj(graph)))),
+    b = zeros(eltype(graph), nstates(graph)),
+    α = zeros(eltype(graph), nstates(graph)),
+)
 
-function gradient_buffer(graph)
-    T = eltype(graph)
-    return ParameterBuffer(
-        zeros(T, length(SparseArrays.getnzval(adj(graph)))),
-        zeros(T, nstates(graph)),
-        zeros(T, nstates(graph)),
+function read_graph_params(graph)
+    return (;
+        w = copy(SparseArrays.getnzval(adj(graph))),
+        b = copy(InteractiveIsing.getparam(graph.hamiltonian, InteractiveIsing.MagField, :b)),
+        α = copy(diag(adj(graph))),
     )
 end
 
-function zero_buffer!(buffer::ParameterBuffer)
+function sync_graph_params!(graph, params)
+    SparseArrays.getnzval(adj(graph)) .= params.w
+    diag(adj(graph)) .= params.α
+    InteractiveIsing.getparam(graph.hamiltonian, InteractiveIsing.MagField, :b) .= params.b
+    return graph
+end
+
+function zero_buffer!(buffer)
     fill!(buffer.w, zero(eltype(buffer.w)))
     fill!(buffer.b, zero(eltype(buffer.b)))
     fill!(buffer.α, zero(eltype(buffer.α)))
     return buffer
 end
 
-function add_buffer!(dest::ParameterBuffer, src::ParameterBuffer)
+function add_buffer!(dest, src)
     dest.w .+= src.w
     dest.b .+= src.b
     dest.α .+= src.α
     return dest
 end
 
-function scale_buffer!(buffer::ParameterBuffer, scale)
+function scale_buffer!(buffer, scale)
     buffer.w .*= scale
     buffer.b .*= scale
     buffer.α .*= scale
     return buffer
 end
 
-function apply_sgd!(params::ParameterBuffer, grads::ParameterBuffer, optimiser::SGD)
-    η = optimiser.η
-    params.w .+= η .* grads.w
-    params.b .+= η .* grads.b
-    params.α .+= η .* grads.α
-    return params
+function _layer_state_bounds(layer)
+    layer_stateset = InteractiveIsing.stateset(layer)
+    return Float32(first(layer_stateset)), Float32(last(layer_stateset))
 end
 
-function _copy_if_writable!(dest, src)
-    try
-        dest .= src
-    catch err
-        if err isa ArgumentError || err isa MethodError
-            return false
-        end
-        rethrow(err)
-    end
-    return true
-end
-
-function apply_params!(graph, params::ParameterBuffer)
-    SparseArrays.getnzval(adj(graph)) .= params.w
-    _copy_if_writable!(diag(adj(graph)), params.α)
-    _copy_if_writable!(InteractiveIsing.getparam(graph.hamiltonian, InteractiveIsing.MagField, :b), params.b)
-    return graph
-end
-
-function _set_free_phase!(graph)
-    clamping = graph.hamiltonian[InteractiveIsing.Clamping]
-    clamping.β[] = zero(eltype(graph))
-    fill!(clamping.y, zero(eltype(clamping.y)))
-    return graph
-end
-
-function _set_clamped_phase!(graph, target_idxs, y, β)
-    clamping = graph.hamiltonian[InteractiveIsing.Clamping]
-    clamping.β[] = β
-    fill!(clamping.y, zero(eltype(clamping.y)))
-    @views clamping.y[target_idxs] .= y
-    return graph
-end
-
-function _apply_input!(graph, input_layer_idx::Int, x)
-    InteractiveIsing.off!(graph.index_set, input_layer_idx)
-    state(graph[input_layer_idx]) .= x
-    return graph
-end
-
-function make_worker_scratch(prototype_graph, shared_params; fullsweeps::Integer)
-    graph = deepcopy(prototype_graph)
-    nsteps = fullsweeps * nstates(graph)
-    metropolis = Metropolis()
-    relaxer = InlineProcess(metropolis, Input(metropolis, state = graph); repeats = nsteps)
-    return WorkerScratch(
-        graph,
-        shared_params,
-        gradient_buffer(graph),
-        copy(state(graph)),
-        copy(state(graph)),
-        copy(state(graph)),
-        relaxer,
-    )
-end
-
-function _run_example_gradient!(
-    algo::ThreadedExampleGradient,
-    scratch::WorkerScratch,
-    buffer::ParameterBuffer,
-    x,
-    y,
-)
-    graph = scratch.graph
-    apply_params!(graph, scratch.params)
-
-    resetstate!(graph)
-    _set_free_phase!(graph)
-    _apply_input!(graph, algo.input_layer_idx, x)
-    run(scratch.relaxer)
-    copyvector!(scratch.equilibrium_state, state(graph))
-
-    state(graph) .= scratch.equilibrium_state
-    _set_clamped_phase!(graph, algo.target_idxs, y, algo.β)
-    _apply_input!(graph, algo.input_layer_idx, x)
-    run(scratch.relaxer)
-    copyvector!(scratch.plus_state, state(graph))
-
-    state(graph) .= scratch.equilibrium_state
-    _set_clamped_phase!(graph, algo.target_idxs, y, -algo.β)
-    _apply_input!(graph, algo.input_layer_idx, x)
-    run(scratch.relaxer)
-    copyvector!(scratch.minus_state, state(graph))
-
-    contrastive_gradient(
-        graph,
-        scratch.plus_state,
-        scratch.minus_state,
-        algo.β;
-        buffers = scratch.scratch,
-    )
-    add_buffer!(buffer, scratch.scratch)
-    return nothing
-end
-
-function Processes.step!(algo::ThreadedExampleGradient, context)
-    _run_example_gradient!(algo, context.scratch, context.buffer, context.x, context.y)
-    return nothing
-end
-
-function worker_algorithm(
-    prototype_graph,
-    shared_params;
-    β::Real,
-    fullsweeps::Integer,
-    input_layer_idx::Integer = 1,
-    target_layer_idx::Integer = length(prototype_graph),
-)
-    T = eltype(prototype_graph)
-    input_dim = length(state(prototype_graph[input_layer_idx]))
-    target_idxs = collect(InteractiveIsing.layerrange(prototype_graph[target_layer_idx]))
-    target_dim = length(target_idxs)
-    input_dim == 28 * 28 || throw(ArgumentError("MNIST expects 784 input units, got $(input_dim)"))
-    target_dim == 10 || throw(ArgumentError("MNIST expects 10 output units, got $(target_dim)"))
-    example_step = ThreadedExampleGradient(input_layer_idx, target_idxs, Float32(β))
-
-    algo = @CompositeAlgorithm begin
-        @state x = zeros(T, input_dim)
-        @state y = zeros(T, target_dim)
-        @state buffer = gradient_buffer(prototype_graph)
-        @state scratch = make_worker_scratch(prototype_graph, shared_params; fullsweeps = fullsweeps)
-        @alias example_step = example_step
-
-        example_step(x = x, y = y, buffer = buffer, scratch = scratch)
-    end
-
-    return resolve(algo)
-end
-
-function _normalize_mnist_images(images)
+function _normalize_mnist_images(images, lo::Float32, hi::Float32)
     x = Float32.(images) ./ 255f0
+    x .*= hi - lo
+    x .+= lo
     return reshape(x, :, size(images, ndims(images)))
 end
 
-function _onehot(labels, nclasses::Integer)
-    y = zeros(Float32, nclasses, length(labels))
+function _onehot(labels, nclasses::Integer; off_value::Float32, on_value::Float32)
+    y = fill(off_value, nclasses, length(labels))
     @inbounds for (col, label) in enumerate(labels)
-        y[Int(label) + 1, col] = 1f0
+        y[Int(label) + 1, col] = on_value
     end
     return y
 end
 
-function load_mnist_arrays(; split::Symbol = :train, limit::Union{Nothing,Int} = nothing)
-    HAS_MLDATASETS || error(
-        "MLDatasets is required to load MNIST. Add it to the IsingLearning environment and instantiate the project first.",
-    )
-
+function load_mnist_arrays(layer::LayeredIsingGraphLayer; split::Symbol = :train, limit::Union{Nothing,Int} = nothing)
     images, labels =
         split === :train ? MLDatasets.MNIST.traindata() :
         split === :test ? MLDatasets.MNIST.testdata() :
         throw(ArgumentError("split must be :train or :test, got $(split)"))
 
-    x = _normalize_mnist_images(images)
-    y = _onehot(labels, 10)
+    input_lo, input_hi = _layer_state_bounds(layer.model_graph[1])
+    output_lo, output_hi = _layer_state_bounds(layer.model_graph[end])
+
+    x = _normalize_mnist_images(images, input_lo, input_hi)
+    y = _onehot(labels, 10; off_value = output_lo, on_value = output_hi)
 
     if !isnothing(limit)
         last_idx = min(limit, size(x, 2))
@@ -290,97 +131,239 @@ function Base.iterate(loader::MNISTDataLoader, state::Int = 1)
     return ((xbatch, ybatch), last_idx + 1)
 end
 
+function _worker_graph(prototype_graph, params)
+    worker_graph = deepcopy(prototype_graph)
+    sync_graph_params!(worker_graph, params)
+    InteractiveIsing.temp!(worker_graph, Float32(1e-4))
+    return worker_graph
+end
+
+function _worker_process(layer, worker_graph)
+    algo = resolve(Forward_and_Nudged(layer).algorithm)
+    xdim = length(layer.input_layer)
+    ydim = length(layer.output_layer)
+    buffers = gradient_buffer(worker_graph)
+
+    Process(
+        algo,
+        Input(:_state;
+            x = zeros(eltype(worker_graph), xdim),
+            y = zeros(eltype(worker_graph), ydim),
+            buffers = buffers,
+            equilibrium_state = copy(state(worker_graph)),
+        ),
+        Input(:dynamics, state = worker_graph),
+        Input(:plus_capture, state = worker_graph),
+        Input(:minus_capture, state = worker_graph);
+        repeat = 1,
+    )
+end
+
+function _validation_process(layer, worker_graph)
+    algo = resolve(ForwardDynamics(layer).algorithm)
+    xdim = length(layer.input_layer)
+
+    Process(
+        algo,
+        Input(:_state;
+            x = zeros(eltype(worker_graph), xdim),
+            equilibrium_state = copy(state(worker_graph)),
+        ),
+        Input(:dynamics, state = worker_graph);
+        repeat = 1,
+    )
+end
+
 function init_mnist_trainer(
-    graph;
+    layer::LayeredIsingGraphLayer;
+    graph = layer.model_graph,
     numthreads::Integer = Threads.nthreads(),
-    β::Real = 0.1f0,
-    fullsweeps::Integer = 10,
-    optimiser = SGD(),
-    input_layer_idx::Integer = 1,
-    target_layer_idx::Integer = length(graph),
+    optimiser = Optimisers.Descent(1f-3),
 )
     numthreads > 0 || throw(ArgumentError("numthreads must be positive"))
 
-    params = ParameterBuffer(graph)
-    algo = worker_algorithm(
+    params = read_graph_params(graph)
+    opt_state = Optimisers.setup(optimiser, params)
+    worker_template_graph = _worker_graph(graph, params)
+    worker_template = _worker_process(layer, worker_template_graph)
+    # println("[threaded-mnist] built worker template process id=", worker_template.id)
+    workers = [
+        idx == 1 ? worker_template :
+        Processes.copyprocess(worker_template; context = deepcopy(worker_template.context))
+        for idx in 1:numthreads
+    ]
+    for (idx, worker) in enumerate(workers)
+        # println("[threaded-mnist] worker slot ", idx, " uses process id=", worker.id)
+    end
+    worker_graphs = [worker.context.dynamics.state for worker in workers]
+
+    validation_template_graph = _worker_graph(graph, params)
+    validation_worker = _validation_process(layer, validation_template_graph)
+    # println("[threaded-mnist] built validation process id=", validation_worker.id)
+    validation_graph = validation_worker.context.dynamics.state
+
+    return MNISTThreadedTrainer(
+        layer,
         graph,
-        params;
-        β = β,
-        fullsweeps = fullsweeps,
-        input_layer_idx = input_layer_idx,
-        target_layer_idx = target_layer_idx,
+        params,
+        opt_state,
+        worker_graphs,
+        workers,
+        validation_graph,
+        validation_worker,
+        optimiser,
     )
-    workers = [Process(algo; repeat = 1) for _ in 1:numthreads]
-    apply_params!(graph, params)
-    return MNISTThreadedTrainer(graph, params, workers, optimiser)
 end
 
-function _write_example!(worker::Process, x, y)
-    context = getcontext(worker)
+function close_trainer!(trainer::MNISTThreadedTrainer)
+    for worker in trainer.workers
+        if !isnothing(worker.task)
+            close(worker)
+        end
+    end
+
+    if !isnothing(trainer.validation_worker.task)
+        close(trainer.validation_worker)
+    end
+
+    return trainer
+end
+
+function _write_example!(worker, x, y)
+    context = worker.context
     context._state.x .= x
     context._state.y .= y
     return context
 end
 
-function _close_workers!(workers)
-    for worker in workers
-        if !isnothing(worker.task)
-            close(worker)
-        end
-    end
-    return workers
+function _write_input!(worker, x)
+    context = worker.context
+    context._state.x .= x
+    return context
 end
 
-function close_trainer!(trainer::MNISTThreadedTrainer)
-    _close_workers!(trainer.workers)
-    return trainer
-end
-
-function _reset_worker_buffers!(trainer::MNISTThreadedTrainer)
+function _reset_batch_buffers!(trainer)
     for worker in trainer.workers
-        zero_buffer!(getcontext(worker)._state.buffer)
+        zero_buffer!(worker.context._state.buffers)
     end
     return trainer
 end
 
-function _collect_batch_gradient!(dest::ParameterBuffer, trainer::MNISTThreadedTrainer, batchsize::Integer)
+function _collect_batch_gradient!(trainer, dest, batchsize)
     zero_buffer!(dest)
     for worker in trainer.workers
-        add_buffer!(dest, getcontext(worker)._state.buffer)
+        add_buffer!(dest, worker.context._state.buffers)
     end
-    scale = inv(Float32(batchsize))
-    scale_buffer!(dest, scale)
+    β = trainer.layer.β
+    scale_buffer!(dest, inv(Float32(2β * batchsize)))
     return dest
 end
 
-function _run_minibatch!(trainer::MNISTThreadedTrainer, xbatch, ybatch, batch_gradient::ParameterBuffer)
-    _reset_worker_buffers!(trainer)
+function _broadcast_params!(trainer)
+    sync_graph_params!(trainer.prototype_graph, trainer.params)
+    for worker_graph in trainer.worker_graphs
+        sync_graph_params!(worker_graph, trainer.params)
+    end
+    sync_graph_params!(trainer.validation_graph, trainer.params)
+    return trainer
+end
 
-    nworkers = length(trainer.workers)
+function _validation_output(trainer)
+    equilibrium_state = trainer.validation_worker.context._state.equilibrium_state
+    return @view equilibrium_state[trainer.layer.output_layer]
+end
+
+function evaluate_mnist!(
+    trainer::MNISTThreadedTrainer,
+    x::AbstractMatrix,
+    y::AbstractMatrix;
+    show_progress::Bool = true,
+    desc::AbstractString = "MNIST evaluation",
+)
+    nsamples = size(x, 2)
+    progress = show_progress ? Progress(nsamples; desc = desc) : nothing
+    ncorrect = 0
+    total_squared_error = zero(eltype(trainer.params.w))
+
+    for sample_idx in 1:nsamples
+        worker = trainer.validation_worker
+        _write_input!(worker, view(x, :, sample_idx))
+        Processes.reset!(worker)
+        run(worker)
+        wait(worker)
+        close(worker)
+
+        output = _validation_output(trainer)
+        target = view(y, :, sample_idx)
+        total_squared_error += sum(abs2, output .- target)
+        ncorrect += argmax(output) == argmax(target)
+        progress === nothing || next!(progress; showvalues = [(:sample, sample_idx)])
+    end
+
+    progress === nothing || finish!(progress)
+    return (
+        accuracy = ncorrect / nsamples,
+        classification_error = 1 - ncorrect / nsamples,
+        mean_squared_error = total_squared_error / nsamples,
+        nsamples = nsamples,
+    )
+end
+
+function _log_epoch_metrics(epoch, split, metrics)
+    println(
+        "Epoch ", epoch, " ", split,
+        ": classification_error = ", metrics.classification_error,
+        ", mean_squared_error = ", metrics.mean_squared_error,
+        ", accuracy = ", metrics.accuracy,
+    )
+    return nothing
+end
+
+function _run_minibatch!(trainer, xbatch, ybatch, batch_gradient)
+    _reset_batch_buffers!(trainer)
+
     batchsize = size(xbatch, 2)
+    workers = trainer.workers
+    # println("[threaded-mnist] starting minibatch with ", batchsize, " samples on ", length(workers), " workers")
 
-    for offset in 1:nworkers:batchsize
-        active = min(nworkers, batchsize - offset + 1)
-        for worker_idx in 1:active
-            sample_idx = offset + worker_idx - 1
-            worker = trainer.workers[worker_idx]
+    for sample_idx in 1:batchsize
+        while true
+            worker_idx = findfirst(worker -> isnothing(worker.task) || Processes.isdone(worker), workers)
+
+            if isnothing(worker_idx)
+                # println("[threaded-mnist] sample ", sample_idx, " waiting for free worker")
+                yield()
+                continue
+            end
+
+            worker = workers[worker_idx]
+            if Processes.isdone(worker)
+                # println("[threaded-mnist] closing finished worker slot ", worker_idx, " process id=", worker.id, " before reusing for sample ", sample_idx)
+                close(worker)
+            end
             _write_example!(worker, view(xbatch, :, sample_idx), view(ybatch, :, sample_idx))
             Processes.reset!(worker)
+            # println("[threaded-mnist] dispatch sample ", sample_idx, " to worker slot ", worker_idx, " process id=", worker.id)
             run(worker)
-        end
-
-        for worker_idx in 1:active
-            wait(trainer.workers[worker_idx])
-        end
-
-        for worker_idx in 1:active
-            close(trainer.workers[worker_idx])
+            break
         end
     end
 
-    _collect_batch_gradient!(batch_gradient, trainer, batchsize)
-    apply_sgd!(trainer.params, batch_gradient, trainer.optimiser)
-    apply_params!(trainer.graph, trainer.params)
+    for worker in workers
+        if !isnothing(worker.task)
+            # println("[threaded-mnist] draining worker process id=", worker.id)
+            wait(worker)
+            # println("[threaded-mnist] closing drained worker process id=", worker.id)
+            close(worker)
+        end
+    end
+
+    # println("[threaded-mnist] minibatch finished, collecting gradients")
+
+    _collect_batch_gradient!(trainer, batch_gradient, batchsize)
+    trainer.opt_state, trainer.params = Optimisers.update(trainer.opt_state, trainer.params, batch_gradient)
+    _broadcast_params!(trainer)
+    # println("[threaded-mnist] minibatch update applied")
     return nothing
 end
 
@@ -389,15 +372,27 @@ function fit_mnist_threaded!(
     epochs::Integer = 1,
     batchsize::Integer = 128,
     split::Symbol = :train,
+    validation_split::Union{Nothing,Symbol} = :test,
     shuffle::Bool = true,
     rng = Random.default_rng(),
     limit::Union{Nothing,Int} = nothing,
+    validation_limit::Union{Nothing,Int} = nothing,
     show_progress::Bool = true,
+    show_validation_progress::Bool = show_progress,
+    log_metrics::Bool = true,
+    train_eval_limit::Union{Nothing,Int} = batchsize,
+    full_train_eval_every::Union{Nothing,Int} = nothing,
 )
     epochs > 0 || throw(ArgumentError("epochs must be positive"))
 
-    x, y = load_mnist_arrays(; split, limit)
-    batch_gradient = gradient_buffer(trainer.graph)
+    x, y = load_mnist_arrays(trainer.layer; split, limit)
+    xvalidation = nothing
+    yvalidation = nothing
+    if !isnothing(validation_split)
+        xvalidation, yvalidation = load_mnist_arrays(trainer.layer; split = validation_split, limit = validation_limit)
+    end
+
+    batch_gradient = gradient_buffer(trainer.prototype_graph)
     stats = NamedTuple[]
 
     for epoch in 1:epochs
@@ -406,32 +401,70 @@ function fit_mnist_threaded!(
         nbatches = 0
 
         for (xbatch, ybatch) in loader
-            _run_minibatch!(trainer, xbatch, ybatch, batch_gradient)
+            # println("[threaded-mnist] epoch ", epoch, " starting minibatch ", nbatches + 1)
+            batch_elapsed = @elapsed _run_minibatch!(trainer, xbatch, ybatch, batch_gradient)
             nbatches += 1
+            # println("[threaded-mnist] epoch ", epoch, " finished minibatch ", nbatches, " in ", batch_elapsed, " seconds")
             progress === nothing || next!(progress; showvalues = [(:batch, nbatches)])
         end
 
         progress === nothing || finish!(progress)
-        push!(stats, (; epoch, nbatches))
+
+        train_eval_count = if !isnothing(full_train_eval_every) && full_train_eval_every > 0 && mod(epoch, full_train_eval_every) == 0
+            size(x, 2)
+        elseif isnothing(train_eval_limit)
+            0
+        else
+            min(train_eval_limit, size(x, 2))
+        end
+
+        train = nothing
+        if train_eval_count > 0
+            xtrain_eval = @view x[:, 1:train_eval_count]
+            ytrain_eval = @view y[:, 1:train_eval_count]
+            train = evaluate_mnist!(
+                trainer,
+                xtrain_eval,
+                ytrain_eval;
+                show_progress = false,
+                desc = "MNIST train $(epoch)",
+            )
+        end
+
+        validation = nothing
+        if !isnothing(xvalidation)
+            validation = evaluate_mnist!(
+                trainer,
+                xvalidation,
+                yvalidation;
+                show_progress = show_validation_progress,
+                desc = "MNIST validation $(epoch)",
+            )
+        end
+        if !isnothing(train)
+            log_metrics && _log_epoch_metrics(epoch, "train", train)
+        end
+        if !isnothing(validation)
+            log_metrics && _log_epoch_metrics(epoch, "validation", validation)
+        end
+        push!(stats, (; epoch, nbatches, train, validation))
     end
 
     return trainer.params, stats
 end
 
 function fit_mnist_threaded!(
-    graph;
+    layer::LayeredIsingGraphLayer;
+    graph = layer.model_graph,
     numthreads::Integer = Threads.nthreads(),
-    β::Real = 0.1f0,
-    fullsweeps::Integer = 10,
-    optimiser = SGD(),
+    optimiser = Optimisers.Descent(1f-3),
     close_workers::Bool = true,
     kwargs...,
 )
     trainer = init_mnist_trainer(
-        graph;
+        layer;
+        graph = graph,
         numthreads = numthreads,
-        β = β,
-        fullsweeps = fullsweeps,
         optimiser = optimiser,
     )
 

@@ -1,4 +1,4 @@
-export ForwardDynamics, NudgedDynamics, Forwards_and_Nudged
+export ForwardDynamics, NudgedDynamics, Forward_and_Nudged
 
 @ProcessAlgorithm function setgraph!(isinggraph::G, target) where G
     # resetstate!(isinggraph)
@@ -16,12 +16,25 @@ end
     return 
 end
 
-function apply_input(state, x)
-    # Set the iterator (don't vary inputs) and apply to inputindexes...
+function apply_input(isinggraph, x)
+    InteractiveIsing.off!(isinggraph.index_set, 1)
+    state(isinggraph[1]) .= x
+    return isinggraph
 end
 
-function apply_targets(state, y)
-    # Set the clamping hamiltonian for the target indexes...
+function apply_targets(isinggraph, y)
+    output_layer = isinggraph[end]
+    output_idxs = InteractiveIsing.layerrange(output_layer)
+    clamping = isinggraph.hamiltonian[InteractiveIsing.Clamping]
+    fill!(clamping.y, zero(eltype(clamping.y)))
+    clamping.y[output_idxs] .= y
+    return isinggraph
+end
+
+function set_clamping_beta!(isinggraph, β)
+    clamping = isinggraph.hamiltonian[InteractiveIsing.Clamping]
+    clamping.β[] = β
+    return isinggraph
 end
 
 
@@ -36,7 +49,7 @@ function ForwardDynamics(layer)
         @state x
 
         initstate!(dynamics.state)
-        apply_input(dynamics.state, y)
+        apply_input(dynamics.state, x)
         state = @repeat fullsweeps*n_units dynamics()
         copyvector!(equilibrium_state, @transform(x -> InteractiveIsing.state(x), state))
     end
@@ -60,8 +73,9 @@ function NudgedDynamics(layer)
         @alias plus_capture = plus_capture
         
         setgraph!(isinggraph = dynamics.state, target = equilibrium_state)
-        apply_input(dynamics.state, y)
+        apply_input(dynamics.state, x)
         apply_targets(dynamics.state, y)
+        set_clamping_beta!(dynamics.state, beta)
         state = @repeat fullsweeps*n_units dynamics()
         plus_capture(isinggraph = state)
     end
@@ -74,7 +88,9 @@ function NudgedDynamics(layer)
         @alias minus_capture = minus_capture
         
         setgraph!(isinggraph = dynamics.state, target = equilibrium_state)
-        apply_input(dynamics.state, y)
+        apply_input(dynamics.state, x)
+        apply_targets(dynamics.state, y)
+        set_clamping_beta!(dynamics.state, -beta)
         state = @repeat fullsweeps*n_units dynamics()
         minus_capture(isinggraph = state)
     end
@@ -91,9 +107,10 @@ function NudgedDynamics(layer)
     (;algorithm = final, plus_capture, minus_capture, dynamics = plus.dynamics)
 end
 
-function Forwards_and_Nudged(layer)
+function Forward_and_Nudged(layer)
     forward = ForwardDynamics(layer).algorithm
     nudged = NudgedDynamics(layer).algorithm
+    beta = layer.β
 
     final = @CompositeAlgorithm begin
         @state buffers
@@ -101,8 +118,10 @@ function Forwards_and_Nudged(layer)
         @context c1 = forward()
         @context c2 = nudged()
 
-        contrastive_gradient(c1.dynamics.state, c2.plus_capture.captured, c2.minus_capture.captured, layer.β, buffers = buffers) 
+        # Reset clamping after backward phases
+        set_clamping_beta!(c1.dynamics.state, zero(beta))
+
+        contrastive_gradient(c1.dynamics.state, c2.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers) 
     end 
     (;algorithm = final, plus_capture = nudged.plus_capture, minus_capture = nudged.minus_capture, dynamics = forward.dynamics)
 end
-
