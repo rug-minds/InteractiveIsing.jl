@@ -66,8 +66,8 @@ Swap this out for `Optimisers.update` later if you want momentum, Adam, etc.
 function apply_sgd_update(ps, grads; η::Real = 1f-3)
     ηf = Float32(η)
     return (
-        weights = ps.weights .+ ηf .* grads.weights,
-        biases = ps.biases .+ ηf .* grads.biases,
+        weights = ps.weights .- ηf .* grads.weights,
+        biases = ps.biases .- ηf .* grads.biases,
     )
 end
 

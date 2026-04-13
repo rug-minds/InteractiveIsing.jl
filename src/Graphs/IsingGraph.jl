@@ -117,10 +117,12 @@ hasDefects(::AbstractRange{<:Integer}) = false
 hasDefects(::AbstractVector{<:Integer}) = false
 hasDefects(::AbstractSet{<:Integer}) = false
 
+"""
+The indices that may be sampled from
+"""
 sampling_indices(idxs::AbstractRange{<:Integer}) = idxs
 sampling_indices(idxs::AbstractVector{<:Integer}) = idxs
 sampling_indices(idxs::AbstractSet{<:Integer}) = idxs
-# sampling_indices(gd::GraphDefects) = aliveList(gd)
 sampling_indices(gd::GraphDefectsNew) = aliveindices(gd)
 
 hasDefects(g::IsingGraph) = hasDefects(index_set(g))

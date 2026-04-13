@@ -686,6 +686,15 @@ Metro_Pulse = CompositeAlgorithm(metropolis, M_Integrate_and_Logger, B_Logger,
     Route(metropolis => M_Integrate_and_Logger, :proposal => :Δvalue, transform = proposal -> accepteddelta(proposal)),
     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
 )
+
+Metro_Pulse = @CompositeAlgorithm begin
+    @alias metropolis = metropolis
+
+    proposal = metropolis()
+    M_Integrate_and_Logger(Δvalue = accepteddelta(proposal))
+    @every point_repeat B_Logger(hamiltonian = metropolis.hamiltonian)
+end
+
 pulse_part1 = CompositeAlgorithm(Metro_Pulse, pulse1, Graph_Logger, (1, point_repeat, capture_interval1), 
     Route(metropolis => Graph_Logger, :state => :array, transform = x -> state(x))
 )

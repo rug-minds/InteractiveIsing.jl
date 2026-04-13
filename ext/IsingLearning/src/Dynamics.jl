@@ -1,4 +1,4 @@
-export ForwardDynamics, NudgedDynamics, Forward_and_Nudged
+export PowerLawTemperatureSchedule, ForwardDynamics, NudgedDynamics, Forward_and_Nudged
 
 @ProcessAlgorithm function setgraph!(isinggraph::G, target) where G
     # resetstate!(isinggraph)
@@ -14,6 +14,49 @@ end
 @ProcessAlgorithm function initstate!(isinggraph::G) where G
     resetstate!(isinggraph)
     return 
+end
+
+function _power_law_temperature(progress::Real, start_T::Real, stop_T::Real, power::Real)
+    progress_f32 = clamp(Float32(progress), 0f0, 1f0)
+    start_f32 = Float32(start_T)
+    stop_f32 = Float32(stop_T)
+    power_f32 = Float32(power)
+
+    power_f32 > 0f0 || throw(ArgumentError("power must be positive, got $(power)"))
+
+    # progress = 0 gives start_T, progress = 1 gives stop_T.
+    return stop_f32 + (start_f32 - stop_f32) * (1f0 - progress_f32)^power_f32
+end
+
+"""
+    PowerLawTemperatureSchedule(; start_T = 1f0, stop_T = 1f-4, power = 1f0)
+
+Process algorithm that updates `temp(isinggraph)` according to a bounded power-law decay:
+
+`T(p) = stop_T + (start_T - stop_T) * (1 - p)^power`, where `p ∈ [0, 1]`.
+
+Use `n_steps` as an init input to control over how many calls the schedule is traversed.
+The first call uses `start_T` and the final call uses `stop_T`.
+"""
+@ProcessAlgorithm begin
+    @config start_T::Float32 = 1f0
+    @config stop_T::Float32 = 1f-4
+    @config power::Float32 = 1f0
+
+    function PowerLawTemperatureSchedule(
+        isinggraph,
+        @managed(step_idx = 0),
+        @managed(total_steps = n_steps);
+        @inputs((; n_steps::Int = 1))
+    )
+        total = max(total_steps, 1)
+        progress = total == 1 ? 1f0 : Float32(step_idx) / Float32(total - 1)
+        current_T = _power_law_temperature(progress, start_T, stop_T, power)
+        InteractiveIsing.temp!(isinggraph, current_T)
+
+        next_step = min(step_idx + 1, total - 1)
+        return (; step_idx = next_step, current_T)
+    end
 end
 
 function apply_input(isinggraph, x)
