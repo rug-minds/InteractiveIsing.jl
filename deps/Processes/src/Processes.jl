@@ -71,6 +71,7 @@ module Processes
 
     include("LoopAlgorithms/LoopAlgorithms.jl")
     include("Threaded/Threaded.jl")
+    include("LoopAlgorithms/Edit/Edit.jl")
     include("Worker/Worker.jl")
     include("Packaging/Packaging.jl")
     include("Loops.jl")
