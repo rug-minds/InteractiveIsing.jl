@@ -35,17 +35,17 @@ end
 end
 
 @inline function Processes.init(::LangevinDynamics, context::Cont) where {Cont}
-    (;state) = context
+    (;model) = context
 
-    hamiltonian = state.hamiltonian
+    hamiltonian = model.hamiltonian
     rng = Random.MersenneTwister()
 
-    hamiltonian = init!(hamiltonian, state)
-    dH_prealloc = zeros(eltype(state), InteractiveIsing.nstates(state))
-    active_spins = sampling_indices(getfield(state, :index_set))
-    layer_views = layers(state)
-    T = temp(state)
-    SType = eltype(state)
+    hamiltonian = init!(hamiltonian, model)
+    dH_prealloc = zeros(eltype(model), InteractiveIsing.nstates(model))
+    active_spins = sampling_indices(getfield(model, :index_set))
+    layer_views = layers(model)
+    T = temp(model)
+    SType = eltype(model)
     stepsize = Ref(SType(0.1))
     max_substep = Ref(SType(0.01))
     max_drift_fraction = Ref(SType(0.15))
@@ -59,20 +59,20 @@ end
     n_substeps = max(1, n_substeps_eta)
     η_sub = η / SType(n_substeps)
 
-    return (;state, hamiltonian, rng, dH_prealloc, active_spins, 
+    return (;model, hamiltonian, rng, dH_prealloc, active_spins, 
                 layer_views, stepsize, max_substep, max_drift_fraction, 
                 proposal, T, η, ηmax, σ_sub, n_substeps, η_sub)
 end
 
-@inline update!(::LangevinDynamics, hterm, state::AbstractIsingGraph, proposal::FlipProposal) = update!(Metropolis(), hterm, state, proposal)
+@inline update!(::LangevinDynamics, hterm, model::AbstractIsingGraph, proposal::FlipProposal) = update!(Metropolis(), hterm, model, proposal)
 
 @inline function Processes.step!(langevin::LangevinDynamics, context::C) where {C}
-    (;hamiltonian, rng, state, dH_prealloc, active_spins, layer_views, stepsize, max_substep, max_drift_fraction, proposal, T, η, ηmax, σ_sub, n_substeps) = context
+    (;hamiltonian, rng, model, dH_prealloc, active_spins, layer_views, stepsize, max_substep, max_drift_fraction, proposal, T, η, ηmax, σ_sub, n_substeps) = context
 
-    SType = eltype(state)
-    spins = @inline InteractiveIsing.graphstate(state)
+    SType = eltype(model)
+    spins = @inline InteractiveIsing.graphstate(model)
     epsT = eps(SType)
-    T = temp(state)
+    T = temp(model)
     t = max(SType(T), zero(SType))
     η = max(stepsize[], epsT)
     ηmax = max(max_substep[], epsT)
@@ -106,7 +106,7 @@ end
             end
 
             spin_idx = @inbounds active_spins[k]
-            derivative = @inline calculate(dh, hamiltonian, state, spin_idx)
+            derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
             if !isfinite(derivative)
                 derivative = zero(SType)
             end
@@ -135,7 +135,7 @@ end
             layer_idx = spin_idx_to_layer_idx(spin_idx, layer_views)
             proposal = FlipProposal{SType}(spin_idx, old_state, new_state, layer_idx, true)
             @inbounds spins[spin_idx] = new_state
-            @inline update!(langevin, hamiltonian, state, proposal)
+            @inline update!(langevin, hamiltonian, model, proposal)
         end
 
     end

@@ -24,21 +24,21 @@ end
 end
 
 
-@inline calculate(::H, hterm::MagField, state::S) where S <: AbstractIsingGraph = calculate(H(), hterm, state; b = hterm.b)
-@inline function calculate(::H, ::MagField, state::S; b) where S
-    s = @inline graphstate(state)
+@inline calculate(::H, hterm::MagField, model::S) where S <: AbstractIsingGraph = calculate(H(), hterm, model; b = hterm.b)
+@inline function calculate(::H, ::MagField, model::S; b) where S
+    s = @inline graphstate(model)
     return -dot(b, s)
 end
 
 
-@inline function calculate(::ΔH, hterm::MagField, state::S, proposal) where {S <: AbstractIsingGraph}
+@inline function calculate(::ΔH, hterm::MagField, model::S, proposal) where {S <: AbstractIsingGraph}
     j = at_idx(proposal)
-    spins = @inline graphstate(state)
+    spins = @inline graphstate(model)
     return -hterm.b[j]*(to_val(proposal) - spins[j])
 end
 
 # function d_iH(::MagField, hargs, s_idx)
-@inline function calculate(::d_iH, hterm::MagField, state::S, s_idx) where {S <: AbstractIsingGraph}
+@inline function calculate(::d_iH, hterm::MagField, model::S, s_idx) where {S <: AbstractIsingGraph}
     return -hterm.b[s_idx]
 end
 

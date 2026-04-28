@@ -164,11 +164,11 @@ export getparam, gethamiltonianfield
 #     return merge(current, new)
 # end
 
-# @inline function parameter_derivative(hts::AbstractHamiltonianTerms, state::AbstractIsingGraph, args...)
+# @inline function parameter_derivative(hts::AbstractHamiltonianTerms, model::AbstractIsingGraph, args...)
 #     total = NamedTuple()
 #     for hterm in hts
-#         applicable(parameter_derivative, hterm, state, args...) || continue
-#         total = _merge_parameter_derivatives(total, parameter_derivative(hterm, state, args...))
+#         applicable(parameter_derivative, hterm, model, args...) || continue
+#         total = _merge_parameter_derivatives(total, parameter_derivative(hterm, model, args...))
 #     end
 #     return total
 # end
@@ -189,22 +189,22 @@ Get a hamiltonian from the set of hamiltonians
 Base.getindex(hts::HamiltonianTerms, idx::Int) = getfield(hts, :hs)[idx]
 
 
-update!(algo, a, state, proposal) = nothing
+update!(algo, a, model, proposal) = nothing
 """
 If updating functions are defined, update
 """
 update!_expr = quote end
-@inline @generated function update!(algo, hts::HamiltonianTerms{Hs}, state, proposal) where Hs
+@inline @generated function update!(algo, hts::HamiltonianTerms{Hs}, model, proposal) where Hs
     # names = paramnames(hts)
     num_h = numhamiltonians(hts)
     global update!_expr = quote
-        $([:(@inline update!(algo, hamiltonians(hts)[$i]::$(Hs.parameters[i]), state, proposal)) for i in 1:num_h]...)
+        $([:(@inline update!(algo, hamiltonians(hts)[$i]::$(Hs.parameters[i]), model, proposal)) for i in 1:num_h]...)
     end
     return update!_expr
 end
 
-@inline update!(::LangevinDynamics, hts::HamiltonianTerms{Hs}, state::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, state, proposal)
-@inline update!(::KineticMC, hts::HamiltonianTerms{Hs}, state::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, state, proposal)
+@inline update!(::LangevinDynamics, hts::HamiltonianTerms{Hs}, model::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, model, proposal)
+@inline update!(::KineticMC, hts::HamiltonianTerms{Hs}, model::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, model, proposal)
 
 
 @inline function init!(hts::HamiltonianTerms{Hs}, g) where Hs

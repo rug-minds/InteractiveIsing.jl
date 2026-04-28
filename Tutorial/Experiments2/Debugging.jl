@@ -331,8 +331,8 @@ function Processes.init(tp::LinAnealingA, args)
     (;current_T = tp.start_T, dT)
 end
 function Processes.step!(::LinAnealingA, context::C) where C
-    (;current_T, dT, state) = context
-    temp!(state, max(current_T, 0))
+    (;current_T, dT, model) = context
+    temp!(model, max(current_T, 0))
     return (;current_T = current_T + dT)
 end
 ##################################################################################
@@ -359,11 +359,11 @@ function Processes.init(tp::LinAnealingB, args)
     return (;tem_pulse, step, temval = tem_pulse[1])
 end
 function Processes.step!(::LinAnealingB, context::C) where C
-    (;tem_pulse, step, state) = context
+    (;tem_pulse, step, model) = context
 
     temval = tem_pulse[step]
 
-    temp!(state, max(temval, 0))
+    temp!(model, max(temval, 0))
 
     return (;step = step + 1, temval)
 end
@@ -666,11 +666,11 @@ Graph_Logger = ImageCapture(:Graph,-1.5,1.5)
 #     (1, 1, point_repeat, point_repeat),
 #     Route(metropolis => M_Integrate_and_Logger, :proposal => :Δvalue, transform = proposal -> accepteddelta(proposal)),
 #     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
-#     Route(metropolis => T_Logger, :state => :value, transform = temp)
+#     Route(metropolis => T_Logger, :model => :value, transform = temp)
 # )
 # anneal_partB = CompositeAlgorithm(Metro_T, AnealingB,
 #     (1, point_repeat),
-#     Route(metropolis => AnealingB, :state),
+#     Route(metropolis => AnealingB, :model),
 # )
 # Anealing_step = Routine(anneal_partB, (anneal_time,))
 
@@ -696,10 +696,10 @@ Metro_Pulse = @CompositeAlgorithm begin
 end
 
 pulse_part1 = CompositeAlgorithm(Metro_Pulse, pulse1, Graph_Logger, (1, point_repeat, capture_interval1), 
-    Route(metropolis => Graph_Logger, :state => :array, transform = x -> state(x))
+    Route(metropolis => Graph_Logger, :model => :array, transform = model -> state(model))
 )
 relax_part1 = CompositeAlgorithm(Metro_Pulse, Graph_Logger, (1, capture_interval2), 
-    Route(metropolis => Graph_Logger, :state => :array, transform = x -> state(x))
+    Route(metropolis => Graph_Logger, :model => :array, transform = model -> state(model))
 )
 Pulse_and_Relax = Routine(pulse_part1, relax_part1,
     (pulse_time, relax_time),

@@ -80,10 +80,10 @@ end
     return r
 end
 
-@inline function FlipEnergies(state, n::Int, r0::T) where {T}
+@inline function FlipEnergies(model, n::Int, r0::T) where {T}
     ΔEs = zeros(T, n)
     rates = zeros(T, n)
-    # Targets are filled by rebuild_rates!/refresh_rate!, so avoid copying state.
+    # Targets are filled by rebuild_rates!/refresh_rate!, so avoid copying the graph.
     targets = Vector{T}(undef, n)
     return FlipEnergies(ΔEs, rates, targets, FenwickTree(n, T), zero(T), r0)
 end
@@ -102,10 +102,10 @@ end
 end
 
 @inline function refresh_rate!(fe::FlipEnergies{T}, context, i::Int, t::T) where {T}
-    (;state, hamiltonian, proposer, rng) = context
+    (;model, hamiltonian, proposer, rng) = context
 
     @inline proposal = _proposal_for_index(proposer, rng, i)
-    @inline ΔE = calculate(ΔH(), hamiltonian, state, proposal)
+    @inline ΔE = calculate(ΔH(), hamiltonian, model, proposal)
     @inline r = _rate_from_delta(fe.r0, ΔE, t)
 
     @inbounds oldr = fe.rates[i]
@@ -121,12 +121,12 @@ end
 end
 
 @inline function rebuild_rates!(fe::FlipEnergies, context, t)
-    (;state, hamiltonian, proposer, rng) = context
+    (;model, hamiltonian, proposer, rng) = context
     totalrate = zero(eltype(fe))
 
     for i in eachindex(fe.rates)
         proposal = _proposal_for_index(proposer, rng, i)
-        ΔE = @inline calculate(ΔH(), hamiltonian, state, proposal)
+        ΔE = @inline calculate(ΔH(), hamiltonian, model, proposal)
         r = _rate_from_delta(fe.r0, ΔE, t)
 
         @inbounds fe.ΔEs[i] = ΔE
@@ -175,34 +175,33 @@ end
 @inline function IsingKinetic(; r0 = 1.0)
     destr = DestructureInput()
     kinetic = KineticMC(r0 = r0)
-    package(SimpleAlgo(kinetic, destr, Route(destr => kinetic, :isinggraph => :structure)))
+    package(SimpleAlgo(kinetic, destr, Route(destr => kinetic, :isinggraph => :model)))
 end
 
 export KineticMC
 
-@inline update!(::KineticMC, hterm, state, proposal) = update!(Metropolis(), hterm, state, proposal)
+@inline update!(::KineticMC, hterm, model, proposal) = update!(Metropolis(), hterm, model, proposal)
 
 @inline function Processes.init(algo::KineticMC, context::Cont) where {Cont}
-    (;structure) = context
+    (;model) = context
 
-    state = structure
-    adj = InteractiveIsing.adj(structure)
-    hamiltonian = structure.hamiltonian
+    adj = InteractiveIsing.adj(model)
+    hamiltonian = model.hamiltonian
     rng = Random.MersenneTwister()
-    hamiltonian = init!(hamiltonian, structure)
-    proposer = get_proposer(structure)
+    hamiltonian = init!(hamiltonian, model)
+    proposer = get_proposer(model)
     proposal = @inline rand(rng, proposer)
 
-    T = eltype(state)
-    t = T(temp(structure))
-    rates = FlipEnergies(state, InteractiveIsing.nstates(state), T(algo.r0))
+    T = eltype(model)
+    t = T(temp(model))
+    rates = FlipEnergies(model, InteractiveIsing.nstates(model), T(algo.r0))
     lasttemp = Ref(t)
     lastdt = Ref(zero(T))
     j = 0
     ΔE = zero(T)
     dt = zero(T)
     totalrate = zero(T)
-    kinetic_context = (;structure, state, adj, hamiltonian, proposer, rng)
+    kinetic_context = (;model, adj, hamiltonian, proposer, rng)
     rebuild_rates!(rates, kinetic_context, t)
 
     returnargs = (;kinetic_context..., proposal, rates, lasttemp, lastdt, j, ΔE, dt, totalrate)
@@ -210,11 +209,11 @@ export KineticMC
 end
 
 @inline function Processes.step!(kinetic::KineticMC, context::C) where {C}
-    (;structure, state, rates, rng, proposer) = context
+    (;model, rates, rng, proposer) = context
 
-    t = eltype(state)(temp(structure))
+    t = eltype(model)(temp(model))
     lasttemp = context.lasttemp[]
-    if isfinite(lasttemp) && abs(t - lasttemp) > eps(eltype(state)) * max(abs(t), abs(lasttemp), one(eltype(state)))
+    if isfinite(lasttemp) && abs(t - lasttemp) > eps(eltype(model)) * max(abs(t), abs(lasttemp), one(eltype(model)))
         rebuild_rates!(rates, context, t)
         context.lasttemp[] = t
     elseif !isfinite(lasttemp)
@@ -224,23 +223,23 @@ end
 
     j, totalrate = draw_event_index(rng, rates)
     if j == 0
-        context.lastdt[] = zero(eltype(state))
-        return (;j = 0, ΔE = zero(eltype(state)), dt = context.lastdt[], totalrate = zero(eltype(state)), proposal = context.proposal)
+        context.lastdt[] = zero(eltype(model))
+        return (;j = 0, ΔE = zero(eltype(model)), dt = context.lastdt[], totalrate = zero(eltype(model)), proposal = context.proposal)
     end
 
-    spins = @inline InteractiveIsing.state(state)
+    spins = @inline InteractiveIsing.state(model)
     oldstate = @inbounds spins[j]
     layer_idx = spin_idx_to_layer_idx(j, proposer.layers)
-    proposal = FlipProposal{eltype(state)}(j, oldstate, @inbounds(rates.targets[j]), layer_idx, false)
+    proposal = FlipProposal{eltype(model)}(j, oldstate, @inbounds(rates.targets[j]), layer_idx, false)
     proposal = @inline accept(proposer, proposal)
     ΔE = @inbounds rates.ΔEs[j]
 
     update_local_rates!(rates, context, j, t)
 
-    dt = -log(max(rand(rng, eltype(state)), eps(eltype(state)))) / totalrate
+    dt = -log(max(rand(rng, eltype(model)), eps(eltype(model)))) / totalrate
     context.lastdt[] = dt
 
-    @inline update!(kinetic, context.hamiltonian, state, proposal)
+    @inline update!(kinetic, context.hamiltonian, model, proposal)
 
     return (;j, ΔE, dt, totalrate, proposal)
 end

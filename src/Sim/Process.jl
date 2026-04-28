@@ -1,4 +1,4 @@
-@inline _graph_input_vars(g::IsingGraph) = (; isinggraph = g, structure = g, state = g)
+@inline _graph_input_vars(g::IsingGraph) = (; isinggraph = g, structure = g, model = g)
 
 @inline _collect_ising_mc_targets(::Any) = ()
 @inline _collect_ising_mc_targets(algo::IsingMCAlgorithm) = (algo,)
@@ -64,16 +64,22 @@ function _merge_graph_inputs(func, g::IsingGraph, inputs...)
     return tuple(merged_inputs...)
 end
 
-function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.default_algorithm, lifetime = nothing, args...)
+function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.default_algorithm, lifetime = nothing, repeats = nothing, repeat = nothing, args...)
     if isnothing(func)
         # func = get(args, :algorithm, g.default_algorithm)
         func = g.default_algorithm
+    end
+
+    if !isnothing(lifetime) && !(lifetime isa Processes.Lifetime)
+        isnothing(repeats) || error("Pass either `repeats = ...` or numeric `lifetime = ...`, not both.")
+        repeats = lifetime
+        lifetime = nothing
     end
     
     func = deepcopy(func)
     process_inputs = _merge_graph_inputs(func, g, inputs...)
     # process = Process(func, Input(DestructureInput(), structure = g); lifetime)
-    process = Process(func, process_inputs...; lifetime)
+    process = Process(func, process_inputs...; lifetime, repeats, repeat)
     
     ps = processes(g)
     push!(ps, process)

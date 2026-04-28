@@ -679,11 +679,11 @@ function run_simu!(g; Cdep = 0.1, Temp = 0.3, time_fctr = 3, Steps_1 = 4000)
     )
 
     pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, Graph_Logger, (1, point_repeat, capture_interval1),
-        Route(metropolis => Graph_Logger, :state=> :array),
+        Route(metropolis => Graph_Logger, :model => :array, transform = model -> state(model)),
     )
 
     relax_part1 = CompositeAlgorithm(Metro_and_recal, Graph_Logger, (1,  capture_interval2),
-        Route(metropolis => Graph_Logger, :state=> :array),
+        Route(metropolis => Graph_Logger, :model => :array, transform = model -> state(model)),
     )
 
     Pulse_and_Relax = Routine(pulse_part1, relax_part1,

@@ -50,7 +50,7 @@ For a Hamiltonian, return all fieldnames that are a ParamTensor
 end
 
 
-function update!(::Hamiltonian, state, proposal)
+function update!(::Hamiltonian, model, proposal)
     return nothing
 end
 

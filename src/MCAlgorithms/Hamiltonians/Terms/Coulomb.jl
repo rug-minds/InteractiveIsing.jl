@@ -395,7 +395,7 @@ function recalc!(c::CoulombHamiltonian{T}) where {T}
 end
 
 # function ΔH(c::CoulombHamiltonian{T,N}, params, proposal) where {T,N}
-@inline function calculate(::ΔH, c::CoulombHamiltonian{T,N}, state::S, proposal) where {T,N,S <: AbstractIsingGraph}
+@inline function calculate(::ΔH, c::CoulombHamiltonian{T,N}, model::S, proposal) where {T,N,S <: AbstractIsingGraph}
     lattice_size = size(c)
     spin_idx = at_idx(proposal)
     charge_coord_below = idxToCoord(spin_idx, lattice_size)
@@ -417,7 +417,7 @@ end
     return ΔE_below + ΔE_above + ΔE_self
 end
 
-@inline function calculate(::d_iH, c::CoulombHamiltonian{T,N}, state::S, s_idx) where {T,N,S <: AbstractIsingGraph}
+@inline function calculate(::d_iH, c::CoulombHamiltonian{T,N}, model::S, s_idx) where {T,N,S <: AbstractIsingGraph}
     lattice_size = size(c)
     charge_coord_below = idxToCoord(s_idx, lattice_size)
     charge_coord_above = (charge_coord_below[1], charge_coord_below[2], charge_coord_below[3] + 1)
@@ -427,7 +427,7 @@ end
     return c.scaling[] * (c.u[charge_coord_above...] - c.u[charge_coord_below...])
 end
 
-update!(::Metropolis, c::CoulombHamiltonian{T}, state::AbstractIsingGraph, proposal::FP) where {T, FP <: FlipProposal} = begin
+update!(::Metropolis, c::CoulombHamiltonian{T}, model::AbstractIsingGraph, proposal::FP) where {T, FP <: FlipProposal} = begin
     if isaccepted(proposal)
         # 和 ΔH 一样，用自旋所在的 dipole 坐标推两层电荷平面
         spin_idx = at_idx(proposal)

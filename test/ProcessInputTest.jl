@@ -7,19 +7,18 @@ using InteractiveIsing.Processes
 
     loop = deepcopy(SimpleAlgo(Unique(Metropolis()), Unique(LangevinDynamics())))
     loop_inputs = InteractiveIsing._merge_graph_inputs(loop, g)
-    loop_process = Process(loop, loop_inputs...; lifetime = 1)
+    loop_process = Process(loop, loop_inputs...; repeats = 1)
     loop_context = getcontext(loop_process)
 
-    @test loop_context[loop[1]].state === g
-    @test loop_context[loop[2]].state === g
+    @test loop_context[loop[1]].model === g
+    @test loop_context[loop[2]].model === g
 
     kinetic = deepcopy(KineticMC())
     kinetic_inputs = InteractiveIsing._merge_graph_inputs(kinetic, g)
-    kinetic_process = Process(kinetic, kinetic_inputs...; lifetime = 1)
+    kinetic_process = Process(kinetic, kinetic_inputs...; repeats = 1)
     kinetic_context = getcontext(kinetic_process)
 
-    @test kinetic_context[kinetic].state === g
-    @test kinetic_context[kinetic].structure === g
+    @test kinetic_context[kinetic].model === g
 
     runtime_loop = SimpleAlgo(Unique(Metropolis()), Unique(LangevinDynamics()))
     runtime_loop_process = createProcess(g, runtime_loop; lifetime = 1)

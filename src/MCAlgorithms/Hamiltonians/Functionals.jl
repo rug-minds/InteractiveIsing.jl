@@ -14,11 +14,10 @@ The energy of a single unit
 """
 struct H_i <: AbstractLinearFunctional end 
 
-## TODO: Whatever state is, needs to implement eltype
-@inline function calculate(hF::AbstractLinearFunctional, hts::HTS, state::S, args...) where {HTS <: AbstractHamiltonianTerms, S <: AbstractIsingGraph}
-    total = zero(eltype(state))
+@inline function calculate(hF::AbstractLinearFunctional, hts::HTS, model::S, args...) where {HTS <: AbstractHamiltonianTerms, S <: AbstractIsingGraph}
+    total = zero(eltype(model))
     total = @inline unrollreplace(total, hts...) do ftotal, hamiltonian
-        ftotal = ftotal + @inline calculate(hF, hamiltonian, state, args...)
+        ftotal = ftotal + @inline calculate(hF, hamiltonian, model, args...)
     end
     return total    
 end

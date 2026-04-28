@@ -46,3 +46,7 @@ VectorizationBase = "0.21.72"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 Preferences = "21216c6a-2e73-6563-6e65-726566657250"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

@@ -114,9 +114,9 @@ end
     return dpf
 end
 
-@inline function calculate(::ΔH, dpf::DepolField, state::S, proposal) where {S <: AbstractIsingGraph}
+@inline function calculate(::ΔH, dpf::DepolField, model::S, proposal) where {S <: AbstractIsingGraph}
     j = at_idx(proposal)
-    T = eltype(state)
+    T = eltype(model)
     ΔM = delta(proposal)
     D = dpf.dpf[]/dpf.surface_NxNy
     M = dpf.M[]
@@ -129,7 +129,7 @@ end
     return -(D * ΔM + M * ΔD + ΔD * ΔM) / c
 end
 
-@inline function update!(::Metropolis, dpf::DepolField, state, proposal)
+@inline function update!(::Metropolis, dpf::DepolField, model, proposal)
     if isaccepted(proposal)
         j = at_idx(proposal)
         if j ∈ dpf

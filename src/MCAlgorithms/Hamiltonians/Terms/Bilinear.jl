@@ -19,8 +19,8 @@ end
 end
 
 # function ΔH(::Bilinear, hargs, proposal)
-@inline function calculate(::ΔH, hterm::BL, state::S, proposal) where {BL<:Bilinear, S <: AbstractIsingGraph}
-    s = @inline graphstate(state)
+@inline function calculate(::ΔH, hterm::BL, model::S, proposal) where {BL<:Bilinear, S <: AbstractIsingGraph}
+    s = @inline graphstate(model)
     J = hterm.J
     j = at_idx(proposal)
     total = @inline weighted_neighbors_sum(j, J, s)
@@ -30,8 +30,8 @@ end
 end
 
 # function d_iH(::Bilinear, hargs, s_idx)
-@inline function calculate(::d_iH, hterm::Bilinear, state::S, s_idx) where {S <: AbstractIsingGraph}
-    s = @inline graphstate(state)
+@inline function calculate(::d_iH, hterm::Bilinear, model::S, s_idx) where {S <: AbstractIsingGraph}
+    s = @inline graphstate(model)
     J = hterm.J
     total = @inline weighted_neighbors_sum(s_idx, J, s)
     ising_energy = -total

@@ -501,8 +501,8 @@ Metro_and_recal = CompositeAlgorithm(metropolis, M_Logger, B_Logger, (1, point_r
     )
 
 pulse_part1 = CompositeAlgorithm(Metro_and_recal, pulse1, Graph_Logger, (1, point_repeat, capture_interval), 
-    Route(metropolis => Graph_Logger, :state => :array)
-    )
+    Route(metropolis => Graph_Logger, :model => :array, transform = model -> state(model))
+)
 pulse_part2 = CompositeAlgorithm(Metro_and_recal, pulse2, Graph_Logger, (1, point_repeat, capture_interval))
 anneal_part1 = CompositeAlgorithm(Metro_and_recal, Anealing1, (1, point_repeat))
 
