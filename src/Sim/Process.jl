@@ -1,23 +1,16 @@
 @inline _graph_input_vars(g::IsingGraph) = (; isinggraph = g, structure = g, model = g)
 
-@inline _collect_ising_mc_targets(::Any) = ()
-@inline _collect_ising_mc_targets(algo::IsingMCAlgorithm) = (algo,)
+@inline _flat_process_algos(algo::Processes.LoopAlgorithm) = Processes.flat_funcs(algo)
+@inline _flat_process_algos(algo) = (algo,)
 
-@inline function _collect_ising_mc_targets(algo::Processes.AbstractIdentifiableAlgo)
-    if Processes.algotype(algo) <: IsingMCAlgorithm
-        return (algo,)
-    end
-    return _collect_ising_mc_targets(Processes.getalgos(algo))
-end
+@inline _is_ising_mc_target(algo) = Processes.algotype(algo) <: IsingMCAlgorithm
 
-@inline function _collect_ising_mc_targets(algo::Processes.LoopAlgorithm)
-    return _collect_ising_mc_targets(Processes.getalgos(algo))
-end
-
-@inline function _collect_ising_mc_targets(algos::Tuple)
+function _collect_ising_mc_targets(func)
     targets = ()
-    for algo in algos
-        targets = (targets..., _collect_ising_mc_targets(algo)...)
+    for algo in _flat_process_algos(func)
+        if _is_ising_mc_target(algo)
+            targets = (targets..., algo)
+        end
     end
     return targets
 end

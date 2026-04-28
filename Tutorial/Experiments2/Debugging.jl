@@ -539,7 +539,13 @@ end
 function IntegrateAndLog(type = Float64, loginterval = 1)
     integrator = Integrator(type, name = :integrate_and_log)
     logger = Logger(type, name = :integrate_and_log)
-    c = CompositeAlgorithm(integrator, logger, (1, loginterval), Route(integrator => logger, :total => :value, transform = x -> x[]))
+    c = @CompositeAlgorithm begin
+        @alias integrator = integrator
+        @alias logger = logger
+
+        total = integrator()
+        @every loginterval logger(value = @transform(x -> x[], total))
+    end
     pack = package(c)
 end
 
@@ -662,17 +668,22 @@ B_Logger = ValueLogger(:b)
 T_Logger = ValueLogger(:T)
 Graph_Logger = ImageCapture(:Graph,-1.5,1.5)
 
-# Metro_T = CompositeAlgorithm(metropolis, M_Integrate_and_Logger, B_Logger, T_Logger,
-#     (1, 1, point_repeat, point_repeat),
-#     Route(metropolis => M_Integrate_and_Logger, :proposal => :Δvalue, transform = proposal -> accepteddelta(proposal)),
-#     Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
-#     Route(metropolis => T_Logger, :model => :value, transform = temp)
-# )
-# anneal_partB = CompositeAlgorithm(Metro_T, AnealingB,
-#     (1, point_repeat),
-#     Route(metropolis => AnealingB, :model),
-# )
-# Anealing_step = Routine(anneal_partB, (anneal_time,))
+# Metro_T = @CompositeAlgorithm begin
+#     @alias metropolis = metropolis
+#
+#     proposal = metropolis()
+#     M_Integrate_and_Logger(Δvalue = @transform(proposal -> accepteddelta(proposal), proposal))
+#     @every point_repeat B_Logger(value = @transform(x -> x.b[], metropolis.hamiltonian))
+#     @every point_repeat T_Logger(value = @transform(temp, metropolis.model))
+# end
+# anneal_partB = @CompositeAlgorithm begin
+#     @context metro_t = Metro_T()
+#
+#     @every point_repeat AnealingB(model = metro_t.metropolis.model)
+# end
+# Anealing_step = @Routine begin
+#     @repeat anneal_time anneal_partB()
+# end
 
 # createProcess(g, Anealing_step, lifetime = 1)
 # c = process(g) |> fetch
@@ -681,30 +692,34 @@ Graph_Logger = ImageCapture(:Graph,-1.5,1.5)
 # Temp1    = c[T_Logger].values
 
 
-Metro_Pulse = CompositeAlgorithm(metropolis, M_Integrate_and_Logger, B_Logger,
-    (1, 1, point_repeat),
-    Route(metropolis => M_Integrate_and_Logger, :proposal => :Δvalue, transform = proposal -> accepteddelta(proposal)),
-    Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
-)
-
 Metro_Pulse = @CompositeAlgorithm begin
     @alias metropolis = metropolis
 
     proposal = metropolis()
-    M_Integrate_and_Logger(Δvalue = accepteddelta(proposal))
-    @every point_repeat B_Logger(hamiltonian = metropolis.hamiltonian)
+    M_Integrate_and_Logger(Δvalue = @transform(proposal -> accepteddelta(proposal), proposal))
+    @every point_repeat B_Logger(value = @transform(x -> x.b[], metropolis.hamiltonian))
 end
 
-pulse_part1 = CompositeAlgorithm(Metro_Pulse, pulse1, Graph_Logger, (1, point_repeat, capture_interval1), 
-    Route(metropolis => Graph_Logger, :model => :array, transform = model -> state(model))
-)
-relax_part1 = CompositeAlgorithm(Metro_Pulse, Graph_Logger, (1, capture_interval2), 
-    Route(metropolis => Graph_Logger, :model => :array, transform = model -> state(model))
-)
-Pulse_and_Relax = Routine(pulse_part1, relax_part1,
-    (pulse_time, relax_time),
-    Route(metropolis => pulse1, :hamiltonian, :M),
-)
+pulse_part1 = @CompositeAlgorithm begin
+    @context metro_pulse = Metro_Pulse()
+
+    @every point_repeat pulse1(
+        hamiltonian = metro_pulse.metropolis.hamiltonian,
+        M = metro_pulse.metropolis.M,
+    )
+    @every capture_interval1 Graph_Logger(array = @transform(model -> state(model), metro_pulse.metropolis.model))
+end
+
+relax_part1 = @CompositeAlgorithm begin
+    @context metro_pulse = Metro_Pulse()
+
+    @every capture_interval2 Graph_Logger(array = @transform(model -> state(model), metro_pulse.metropolis.model))
+end
+
+Pulse_and_Relax = @Routine begin
+    @repeat pulse_time pulse_part1()
+    @repeat relax_time relax_part1()
+end
 createProcess(g, Pulse_and_Relax, lifetime = 1, 
     Input(Graph_Logger, filepath = joinpath(outdir, "capture")),
     Input(M_Integrate_and_Logger, initialvalue = sum(state(g))))
