@@ -5,7 +5,7 @@ Gaussian Bernoulli:
 H = sum_i (s_i^2*self_i/σ_i^2 + s_i*(sum_j w_ij*s_j + 2*μ_i*σ_i + b_i) + 1/2*s_i^2 + s_i*b_i)
 """
 struct GaussianBernoulli <: HamiltonianTerm end
-@inline reconstruct(hterm::GaussianBernoulli, g::AbstractIsingGraph) = hterm
+@inline instantiate(hterm::GaussianBernoulli, g::AbstractIsingGraph) = hterm
 
 @inline function calculate(::ΔH, hterm::GaussianBernoulli, hargs, proposal)
     s = hargs.s

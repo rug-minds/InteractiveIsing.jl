@@ -26,6 +26,7 @@ mutable struct IsingGraph{T <: AbstractFloat, M, Layers, A, N, I} <: AbstractIsi
     
     temp::T
 
+    proposer::AbstractProposer
     default_algorithm::ProcessAlgorithm
     hamiltonian::Hamiltonian
     
@@ -42,6 +43,7 @@ mutable struct IsingGraph{T <: AbstractFloat, M, Layers, A, N, I} <: AbstractIsi
         state,
         adj,
         temp,
+        proposer,
         default_algorithm,
         hamiltonian,
         index_set,
@@ -52,6 +54,7 @@ mutable struct IsingGraph{T <: AbstractFloat, M, Layers, A, N, I} <: AbstractIsi
             state,
             adj,
             temp,
+            proposer,
             default_algorithm,
             hamiltonian,
             index_set,

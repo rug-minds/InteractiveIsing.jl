@@ -33,12 +33,55 @@ end
 
 @inline Base.map(f, hts::HamiltonianTerms) = @inline map(f, hamiltonians(hts))
 
+function _template_parameter_names(::Type{H}) where {H}
+    hasfield(H, :parameters) || return ()
+
+    P = fieldtype(H, :parameters)
+    P <: Parameters || return ()
+
+    entries_type = P.parameters[1]
+    entries_type <: NamedTuple || return ()
+    return fieldnames(entries_type)
+end
+
+_hamiltonian_property_names(::Type{H}) where {H} = propertynames_type(H)
+
+propertynames_type(::Type{H}) where {H<:HamiltonianTerm} =
+    _hamiltonianterm_propertynames(H)
+
+@generated function _hamiltonianterms_propertynames(::Type{HTS}) where {HTS<:HamiltonianTerms}
+    hs_type = HTS.parameters[1]
+    fields = fieldnames(HTS)
+    names = Symbol[fields...]
+    seen = Set{Symbol}(fields)
+    ambiguous = Set{Symbol}()
+
+    for H in hs_type.parameters
+        for name in propertynames_type(H)
+            name in fields && continue
+            if name in seen
+                push!(ambiguous, name)
+            else
+                push!(seen, name)
+                push!(names, name)
+            end
+        end
+    end
+
+    unique_names = Tuple(name for name in names if !(name in ambiguous))
+    return :($(QuoteNode(unique_names)))
+end
+
+Base.propertynames(hts::HamiltonianTerms; private = false) =
+    _hamiltonianterms_propertynames(typeof(hts))
+
 @inline function Base.getproperty(h::HamiltonianTerms{HS}, paramname::Symbol) where HS
     paramname === :hs && return getfield(h, :hs)
 
     foundidxs = Int[]
-    for (hidx, H) in enumerate(HS.parameters)
-        if paramname in fieldnames(H)
+    hs = getfield(h, :hs)
+    for (hidx, hterm) in enumerate(hs)
+        if paramname in propertynames(hterm)
             push!(foundidxs, hidx)
         end
     end
@@ -47,7 +90,7 @@ end
         error("Property $(paramname) exists in multiple Hamiltonian terms at indices $(foundidxs). Please first get the proper hamiltonian through normal indexing and then get the property.")
     end
     isempty(foundidxs) && return getfield(h, paramname)
-    return getfield(getfield(h, :hs)[foundidxs[1]], paramname)
+    return getproperty(hs[foundidxs[1]], paramname)
 end
 
 @generated function Base.getindex(h::HamiltonianTerms{HS}, ::Type{H}) where {HS, H}
@@ -74,6 +117,9 @@ Get a param
                 return :(getfield(h,:hs)[$hidx].$(paramname)::$(ft))
             end
         end
+        if paramname in _template_parameter_names(H)
+            return :(getproperty(getfield(h, :hs)[$hidx], $(QuoteNode(paramname))))
+        end
     end
     error("Parameter $paramname not found in any of the Hamitonians")
 end
@@ -98,7 +144,7 @@ Get the hamiltonian from a parameter name
 """
 function gethamiltonian(hts::HamiltonianTerms, t::Symbol)
     for h in hamiltonians(hts)
-        if t in fieldnames(typeof(h))
+        if t in propertynames(h)
             return h
         end
     end
@@ -142,6 +188,10 @@ For the generated fast path, call with `Val(:fieldname)`.
             ftype = fieldtypes(Hterm)[fidx]
             return :(getfield(getfield(hts, :hs)[$hidx], $(QuoteNode(fieldname)))::$(ftype))
         end
+    end
+
+    if fieldname in _template_parameter_names(Hterm)
+        return :(getproperty(getfield(getfield(hts, :hs)[$hidx], :parameters), $(QuoteNode(fieldname))))
     end
 
     return :(error($(string("Field ", fieldname, " not found in Hamiltonian type ", Hterm))))

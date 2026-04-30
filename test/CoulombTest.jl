@@ -29,11 +29,11 @@ const COULOMB_WG = @WG (;dr) -> dr == 1 ? 1.0 : 0.0 NN = 1
     original = InteractiveIsing.graphstate(g)[spin_idx]
 
     InteractiveIsing.graphstate(g)[spin_idx] = original + eps
-    h_plus = InteractiveIsing.reconstruct(h, g)
+    h_plus = InteractiveIsing.instantiate(h, g)
     e_plus = 0.5 * sum(h_plus.ρ .* h_plus.u)
 
     InteractiveIsing.graphstate(g)[spin_idx] = original - eps
-    h_minus = InteractiveIsing.reconstruct(h, g)
+    h_minus = InteractiveIsing.instantiate(h, g)
     e_minus = 0.5 * sum(h_minus.ρ .* h_minus.u)
 
     InteractiveIsing.graphstate(g)[spin_idx] = original

@@ -1,66 +1,58 @@
 export DepolField
-struct DepolField{PV <: ParamTensor, CV <: ParamTensor, F, T, R} <: HamiltonianTerm 
+struct DepolInternal{PV,F,S,R} <: InternalImplementation
     dpf::PV
-    c::CV
     zfunc::F
-    # field_adj::SP
     top_layers::Int32
     bottom_layers::Int32
-    size::T
+    size::S
     M::Base.RefValue{R}
     surface_NxNy::Int
+end
+
+struct DepolField{P,I} <: HamiltonianTerm
+    parameters::P
+    internal::I
 end
 
 Base.Expr(::DepolField) = :( -(dpf[j]/(surface_NxNy * c[]))*(s[j]) )
 
 @inline function DepolField(; top_layers = 1, bottom_layers = top_layers, c = 1f0, zfunc = z -> exp(-abs(z - 1)))
-    T = typeof(c)
-    pv = HomogeneousParam(zero(T), 0, description = "Depolarisation Field")
-    cv = ScalarParam(T, c; description = "Depolarisation Field")
-    return DepolField(
-        pv,
-        cv,
-        zfunc,
-        Int32(top_layers),
-        Int32(bottom_layers),
-        (1, 1, 1),
-        Ref(zero(T)),
-        1,
+    params = Parameters(
+        parameter(;
+            c,
+            type = AbstractArray,
+            default = ConstVal(1f0),
+            ensure = ensure_isinggraph_scalar,
+            info = "Depolarisation coupling constant",
+        ),
     )
+    internal = InternalPlan((; top_layers, bottom_layers, zfunc)) do plan, g
+        config = plan.values
+        T = eltype(g)
+        pv = HomogeneousParam(zero(T), length(state(g[1])); description = "Depolarisation Field")
+        layer_size = size(g[1])
+        nxny = prod(layer_size[1:end-1])
+        surface_NxNy = (config.bottom_layers + config.top_layers) * nxny
+
+        return DepolInternal(
+            pv,
+            config.zfunc,
+            Int32(config.top_layers),
+            Int32(config.bottom_layers),
+            layer_size,
+            Ref(T(sum(state(g[1])))),
+            surface_NxNy,
+        )
+    end
+    return DepolField(params, internal)
 end
 
 @inline function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1f0, zfunc = z -> exp(-(min(abs(z-1), abs(z-size(g[1],3))))))
-    return reconstruct(
+    h = instantiate(
         DepolField(; top_layers, bottom_layers, c, zfunc),
         g,
     )
-end
-
-@inline function reconstruct(dpf::DepolField, g::AbstractIsingGraph)
-    T = eltype(g)
-    pv = HomogeneousParam(T(0), length(state(g[1])); description = description(dpf.dpf))
-    cv = ParamTensor(
-        fill(convert(T, dpf.c[])),
-        convert(T, default(dpf.c));
-        active = isactive(dpf.c),
-        size = tuple(),
-        description = description(dpf.c),
-    )
-    nxny = prod(size(g[1])[1:end-1])
-    surface_NxNy = (dpf.bottom_layers + dpf.top_layers) * nxny
-
-    rebound = DepolField(
-        pv,
-        cv,
-        dpf.zfunc,
-        Int32(dpf.top_layers),
-        Int32(dpf.bottom_layers),
-        size(g[1]),
-        Ref(T(sum(state(g[1])))),
-        surface_NxNy,
-    )
-    init!(rebound, g)
-    return rebound
+    return init!(h, g)
 end
 
 @inline Base.CartesianIndices(df::DepolField) = CartesianIndices(df.size)

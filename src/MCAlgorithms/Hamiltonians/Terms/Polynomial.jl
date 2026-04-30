@@ -9,53 +9,68 @@ The Quadratic self energy part of the Ising Hamiltonian
 """
 Hamiltonians of the form H = c*lp[i]*s[i]^n
 """
-struct PolynomialHamiltonian{Order, T, S} <: HamiltonianTerm
-    c::T
-    lp::S
+struct PolynomialHamiltonian{Order, P} <: HamiltonianTerm
+    parameters::P
 end
 
-PolynomialHamiltonian{Order}(c, lp) where Order = PolynomialHamiltonian{Order, typeof(c), typeof(lp)}(c, lp)
+PolynomialHamiltonian{Order}(params::Parameters) where Order = PolynomialHamiltonian{Order, typeof(params)}(params)
 
-const Quadratic{T, S} = PolynomialHamiltonian{2, T, S}
-const Quartic{T, S} = PolynomialHamiltonian{4, T, S}
-const Sextic{T, S} = PolynomialHamiltonian{6, T, S}
-const Octic{T, S} = PolynomialHamiltonian{8, T, S}
+const Quadratic{P} = PolynomialHamiltonian{2, P}
+const Quartic{P} = PolynomialHamiltonian{4, P}
+const Sextic{P} = PolynomialHamiltonian{6, P}
+const Octic{P} = PolynomialHamiltonian{8, P}
 
 order(::Union{PolynomialHamiltonian{Order}, Type{<:PolynomialHamiltonian{Order}}}) where Order = Order
 
-PolynomialHamiltonian(order ;c = UniformArray(1), localpotential = g -> adj(g).diag) = PolynomialHamiltonian{order}(c, localpotential)
+function PolynomialHamiltonian(order; c = nothing, localpotential = nothing)
+    lp = localpotential
+    params = Parameters(
+        parameter(;
+            c,
+            type = AbstractArray,
+            default = UniformArray(1),
+            ensure = ensure_isinggraph_scalar,
+            info = "Polynomial coupling constant c",
+        ),
+        parameter(;
+            lp,
+            type = AbstractArray,
+            default = g -> adj(g).diag,
+            ensure = (ensure_isinggraph_state_length, ensure_isinggraph_eltype),
+            info = "Local polynomial potential l_i",
+        ),
+    )
+    return PolynomialHamiltonian{order, typeof(params)}(params)
+end
+
 PolynomialHamiltonian(order, c) = PolynomialHamiltonian(order; c = c)
-PolynomialHamiltonian(order, c, localpotential) = PolynomialHamiltonian{order}(c, localpotential)
+PolynomialHamiltonian(order, c, localpotential) = PolynomialHamiltonian(order; c, localpotential)
 Quadratic(;kwargs...) = PolynomialHamiltonian(2; kwargs...)
 Quartic(;kwargs...) = PolynomialHamiltonian(4; kwargs...)
 Sextic(;kwargs...) = PolynomialHamiltonian(6; kwargs...)
 Octic(;kwargs...) = PolynomialHamiltonian(8; kwargs...)
+Quadratic(params::Parameters) = PolynomialHamiltonian{2, typeof(params)}(params)
+Quartic(params::Parameters) = PolynomialHamiltonian{4, typeof(params)}(params)
+Sextic(params::Parameters) = PolynomialHamiltonian{6, typeof(params)}(params)
+Octic(params::Parameters) = PolynomialHamiltonian{8, typeof(params)}(params)
 # Quadratic(;c = UniformArray(1), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian(2; c, localpotential)
 # Quartic(;c = UniformArray(1), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian(4; c, localpotential)
 # Sextic(;c = UniformArray(1), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian(6; c, localpotential)
 # Octic(;c = UniformArray(1), localpotential = StateLike(ConstFill, 0)) = PolynomialHamiltonian(8; c, localpotential)
 Quadratic(c) = Quadratic(; c = c)
-Quadratic(c, localpotential) = PolynomialHamiltonian{2, typeof(c), typeof(localpotential)}(c, localpotential)
+Quadratic(c, localpotential) = PolynomialHamiltonian(2; c, localpotential)
 Quartic(c) = Quartic(; c = c)
-Quartic(c, localpotential) = PolynomialHamiltonian{4, typeof(c), typeof(localpotential)}(c, localpotential)
+Quartic(c, localpotential) = PolynomialHamiltonian(4; c, localpotential)
 Sextic(c) = Sextic(; c = c)
-Sextic(c, localpotential) = PolynomialHamiltonian{6, typeof(c), typeof(localpotential)}(c, localpotential)
+Sextic(c, localpotential) = PolynomialHamiltonian(6; c, localpotential)
 Octic(c) = Octic(; c = c)
-Octic(c, localpotential) = PolynomialHamiltonian{8, typeof(c), typeof(localpotential)}(c, localpotential)
+Octic(c, localpotential) = PolynomialHamiltonian(8; c, localpotential)
 
 # Quadratic(;c = ConstVal(0), localpotential = StateLike(ConstFill, 0)) = Quadratic(c, localpotential)
 
-function reconstruct(lh::PolynomialHamiltonian, g::AbstractIsingGraph)
-    T = eltype(g)
-    c = map(eltype(g), lh.c)
-    if lh.lp isa StateLike
-        lp = lh.lp(g)
-    elseif lh.lp isa Function
-        lp = lh.lp(g)
-    else
-        lp = map(eltype(g), lh.lp)
-    end
-    return PolynomialHamiltonian{order(lh)}(c, lp)
+function instantiate(lh::PolynomialHamiltonian{Order}, g::AbstractIsingGraph) where {Order}
+    params = instantiate(parameters(lh), g)
+    return PolynomialHamiltonian{Order, typeof(params)}(params)
 end
 
 @inline function calculate(::ΔH, hterm::LH, model::S, proposal) where {LH <: PolynomialHamiltonian, S <: AbstractIsingGraph}

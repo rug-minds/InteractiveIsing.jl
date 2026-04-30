@@ -60,7 +60,7 @@ function ParameterSpec{T}(;type, default, validation = x -> true, info = "", kwa
     else                # If a value is provided, check if it's of the expected type
         if val isa type 
             # If Owned validate immediately
-            # If Derived, we can't validate at reconstruct
+            # If Derived, we can't validate at instantiate
             if T == :Owned
                 if validation(val)
                     return ParameterSpec{T}(type, default, constraint, val, info)
@@ -136,6 +136,9 @@ function Base.getproperty(ht::HamiltonianTerm, name::Symbol)
     end
 end
 
+# The old MagField sketch moved to TermTemplate.jl, where it uses the current
+# ParameterSpec -> Parameter template flow.
+#=
 struct MagField{P} <: HamiltonianTerm 
     parameters::P
 end
@@ -152,11 +155,16 @@ function MagField(;b = nothing, c = nothing)
             b,
             type = AbstractArray,
             warn = (like_state_length, like_state_type),
+            # LEGACY / DEPRECATED:
+            # StateLike is an old graph-resolved parameter input. New templates
+            # should use `default = ConstFill(0)` with
+            # `ensure = (ensure_isinggraph_state_length, ensure_isinggraph_eltype)`.
             default = StateLike(ConstFill, 0),
             info = "Local magnetic field term, with field values b_i for each spin i")
 
     return MagField(b, c)
 end
+=#
 
 function parse_hamiltonian_parameters(terms...)
     #parsing code to put specs into parameters
@@ -181,6 +189,6 @@ function parse_hamiltonian_parameters(terms...)
     return Parameters(owned_params, derived_params, (;))
 end
 
-function reconstruct(ps::Parameters, g)
+function instantiate(ps::Parameters, g)
 
 end

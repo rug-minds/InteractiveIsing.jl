@@ -1,7 +1,7 @@
 """
     apply_field_defaults(ham, g, field_defaults)
 
-After `reconstruct`, override Hamiltonian fields with user-specified (Type, fill_value) defaults.
+After `instantiate`, override Hamiltonian fields with user-specified (Type, fill_value) defaults.
 Each kwarg maps a field name to a `(Type, fill_value)` tuple or a `Fill(val)`.
 
 Example: `y = (Vector, 0.5f0)` overwrites Clamping's `y` field with a vector filled with 0.5.
@@ -77,7 +77,7 @@ Multi Layer Constructor
 
 
 """
-function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamiltonian}...;
+function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamiltonian, AbstractProposer}...;
     precision = Float32, 
     adj = nothing,
     diag = StateLike(OffsetArray, 0),
@@ -88,6 +88,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
 
     #Parse hamiltonian and filter
     ham, layers = type_parse(Hamiltonian, layers...; default = Ising(), error = false)
+    proposer, layers = type_parse(AbstractProposer, layers...; default = IsingGraphProposer(), error = false)
     layers, between_layer_wgs = _parse_multilayer_constructor_args(layers)
     lengths = map(l -> length(l), layers)
     total_length = sum(lengths)
@@ -111,6 +112,8 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         UndirectedAdjacency(total_length, total_length),
         # Temp
         precision(1.0),
+        # Proposer
+        proposer,
         # Default Algo
         IsingMetropolis(),
         #Hamiltonians
@@ -149,6 +152,8 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         adj,
         # Temp
         precision(1.0),
+        # Proposer
+        proposer,
         # Default Algo
         IsingMetropolis(),
         #Hamiltonians
@@ -159,7 +164,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         layers
     )
 
-    ham  = reconstruct(ham, g_with_adj)
+    ham  = instantiate(ham, g_with_adj)
     
     # Construct the graph
     g = IsingGraph(
@@ -169,6 +174,8 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         adj,
         # Temp
         precision(1.0),
+        # Proposer
+        proposer,
         # Default Algo
         IsingMetropolis(),
         #Hamiltonians
@@ -180,7 +187,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
     )
     
     state(g) .= initRandomState(g)
-    # g.hamiltonian = reconstruct(ham, g)
+    # g.hamiltonian = instantiate(ham, g)
     callback!(g)
     return g
 end
@@ -190,8 +197,9 @@ Single Layer Constructor
 """
 function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, diag = StateLike(OffsetArray, 0), fastwrite = false)
     ham, args = type_parse(Hamiltonian, args...; default = Ising(), error = false)
+    proposer, args = type_parse(AbstractProposer, args...; default = IsingGraphProposer(), error = false)
 
     layer = parse_isinglayer(size1, args...; periodic = periodic)
 
-    return IsingGraph(ham, layer; precision, adj, diag)
+    return IsingGraph(ham, proposer, layer; precision, adj, diag)
 end

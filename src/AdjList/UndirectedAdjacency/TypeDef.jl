@@ -35,7 +35,7 @@ connections and/or the diagonal while inheriting any omitted part from the origi
 If `check_topology` is true, a provided sparse matrix must have the same sparsity
 pattern as the original adjacency.
 """
-function reconstruct(ua::UndirectedAdjacency; sp = nothing, diag = nothing, fastwrite = fastwrite(ua), check_topology = true)
+function instantiate(ua::UndirectedAdjacency; sp = nothing, diag = nothing, fastwrite = fastwrite(ua), check_topology = true)
     sp_new = if isnothing(sp)
         copy(ua.sp)
     else
@@ -68,7 +68,7 @@ This preserves the existing constructor API by using a non-conflicting positiona
 matrix argument instead of a keyword-only overload.
 """
 @inline function UndirectedAdjacency(ua::UndirectedAdjacency, sp::AbstractSparseMatrix; diag = nothing, fastwrite = fastwrite(ua), check_topology = true)
-    return reconstruct(ua; sp, diag, fastwrite, check_topology)
+    return instantiate(ua; sp, diag, fastwrite, check_topology)
 end
 
 """

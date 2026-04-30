@@ -6,25 +6,37 @@ H = β/2 *(s_i - y_i)^2
 
 Where y_i is the target value for the i-th node
 """
-mutable struct Clamping{PBeta, BY} <: HamiltonianTerm
-    β::PBeta
-    const y::BY
+struct Clamping{P} <: HamiltonianTerm
+    parameters::P
 end
 
-@inline Clamping(β::Real = 1f0, y::AbstractVector = Float32[]) = Clamping(Ref(β), y)
+@inline function Clamping(; β = 1f0, y = nothing)
+    params = Parameters(
+        parameter(;
+            β,
+            type = AbstractArray,
+            default = ConstVal(1f0),
+            ensure = ensure_isinggraph_scalar,
+            info = "Clamping strength β",
+        ),
+        parameter(;
+            y,
+            type = AbstractVector,
+            default = 0,
+            ensure = ensure_isinggraph_state_vector,
+            info = "Target state y_i",
+        ),
+    )
+    return Clamping(params)
+end
+
+@inline Clamping(β::Real, y = nothing) = Clamping(; β, y)
+@inline Clamping(β::AbstractArray, y = nothing) = Clamping(; β, y)
+@inline Clamping(β::NoEnsure, y = nothing) = Clamping(; β, y)
+@inline Clamping(β::Force, y = nothing) = Clamping(; β, y)
 
 @inline function Clamping(g::AbstractIsingGraph, β = one(eltype(g)), y = nothing)
-    isnothing(y) && (y = zeros(eltype(g), nstates(g)))
-    return reconstruct(Clamping(β, y), g)
-end
-@inline function reconstruct(hterm::Clamping, g::AbstractIsingGraph)
-    T = eltype(g)
-    ynew = zeros(T, nstates(g))
-    copylen = min(length(hterm.y), length(ynew))
-    if copylen > 0
-        @inbounds ynew[1:copylen] .= convert.(T, hterm.y[1:copylen])
-    end
-    return Clamping(Ref(convert(T, hterm.β[])), ynew)
+    return instantiate(Clamping(β, y), g)
 end
 
 params(::Type{Clamping}, GraphType) = GatherHamiltonianParams((:β, GraphType, GraphType(0), "Clamping Factor"), (:y, Vector{GraphType}, GraphType(0), "Targets"))

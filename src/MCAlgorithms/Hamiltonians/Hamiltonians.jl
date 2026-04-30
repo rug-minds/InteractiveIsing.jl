@@ -5,6 +5,7 @@ export HamiltonianTerms
 include("Interface.jl")
 
 include("DerivedParameters.jl")
+include("TermTemplate.jl")
 include("Hamiltonian.jl")
 include("HamiltonianTerms.jl")
 include("Derivatives.jl")

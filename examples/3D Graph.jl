@@ -10,6 +10,7 @@ wg = @WG isingweights NN= 1
 
 g = IsingGraph(100,100,10, 
         Continuous(), 
+        LocalProposer(0.5),
         wg, 
         LatticeConstants(1f0, 1f0, 1f0),
         StateSet(-1.5f0, 1.5f0),
