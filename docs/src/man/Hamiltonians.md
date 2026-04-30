@@ -1,170 +1,144 @@
 # Hamiltonians
 
-Hamiltonians in `InteractiveIsing.jl` are built from small term objects and combined with `+`. The graph constructor then reconstructs those terms against the final graph shape and stores the result in `g.hamiltonian`.
-
-In other words, you usually write a compact symbolic description first:
+Hamiltonians are built from small term objects and combined with `+`.
+The graph constructor instantiates those terms against the graph, so the user
+can write compact graph-independent input while each term receives graph-sized
+data internally.
 
 ```julia
-h = Ising() + Quartic() + Clamping()
+h = Ising() + Quartic() + Sextic()
 ```
 
-and `IsingGraph(...)` turns that into graph-sized arrays, adjacency-backed terms, and any other graph-dependent data structures that the terms need.
-
-## Basic pattern
-
-Pass the Hamiltonian as one of the positional arguments to `IsingGraph`:
-
 ```julia
-wg = @WG (; dr) -> dr == 1 ? 1f0 : 0f0 NN = 1
-
 g = IsingGraph(
     64,
     64,
     Continuous(),
     wg,
     StateSet(-1.5f0, 1.5f0),
-    Ising() + Quartic();
+    h;
     periodic = (:x, :y),
 )
 ```
 
-Terms are composed with `+`:
+## Front-End Use
 
-```julia
-h = Ising() + Quartic() + Sextic()
-```
+Most users only need the constructors. Constructor inputs follow the same
+rules across template-based terms:
 
-The result is a `HamiltonianTerms` object containing each term.
+- `nothing` means use the term default.
+- A plain scalar such as `1` is converted to the graph precision and wrapped in
+  the default scalar container for that term.
+- A concrete vector, matrix, or scalar container is checked against the graph
+  and converted where the term asks for graph precision.
+- A function `g -> ...` is evaluated during instantiation.
+- `NoEnsure(x)` skips automatic resizing/conversion but still runs checks.
+- `Force(x)` skips automatic resizing/conversion and hard checks.
 
-## The `Ising()` shortcut
+The default `Ising()` shortcut expands to:
 
-`Ising()` is the main convenience constructor. It expands to
-
-- `Quadratic(...)`,
-- `Bilinear(...)`,
-- `MagField(...)`.
-
-The keyword arguments let you override those pieces:
+- `Quadratic(...)`
+- `Bilinear(...)`
+- `MagField(...)`
 
 ```julia
 Ising(; c = nothing, b = nothing, adj = nothing, localpotential = nothing)
 ```
 
-The common meanings are:
+where:
 
-- `c`: coefficient used by the quadratic on-site term,
-- `b`: magnetic field,
-- `adj`: adjacency used by the bilinear interaction,
-- `localpotential`: local potential used by the polynomial term.
-
-If you do not override them, the defaults are graph-derived:
-
-- `Bilinear` uses `adj(g)`,
-- `Quadratic` uses `adj(g).diag` as its local potential,
-- `MagField` starts from a zero field.
-
-## Common term constructors
-
-The most useful built-in terms for graph construction are:
-
-- `Ising(...)`: quadratic + bilinear + magnetic field.
-- `Quadratic(...)`, `Quartic(...)`, `Sextic(...)`, `Octic(...)`: on-site polynomial terms.
-- `Clamping(β, y)`: penalty term `β/2 * (s_i - y_i)^2`.
-- `CoulombHamiltonian(; recalc = N, scaling = 1f0, screening = Inf32)`: long-range electrostatic term for the 3D setup used in the example graphs.
+- `c` is the on-site quadratic coupling,
+- `b` is the magnetic-field vector,
+- `adj` or `J` is the bilinear coupling matrix,
+- `localpotential` is the graph-sized local polynomial potential.
 
 Examples:
 
 ```julia
-h_ising = Ising()
+Ising()
 ```
 
 ```julia
-h_landau = Ising(c = ConstVal(0f0)) + Quartic(c = ConstVal(1f0)) + Sextic(c = ConstVal(1f0))
+Ising(c = ConstVal(0f0), b = 0)
 ```
 
 ```julia
-h_clamped = Ising() + Clamping(1f0)
+Ising(b = UniformArray)
 ```
 
 ```julia
-h_coulomb = Ising(c = ConstVal(0f0), b = StateLike(ConstFill, 0f0)) +
-            CoulombHamiltonian(recalc = 2000)
+Ising(adj = g -> adj(g), localpotential = g -> adj(g).diag)
 ```
 
-## Choosing parameter containers
+## Built-In Terms
 
-Many term fields accept either concrete arrays or graph-dependent placeholders. The placeholders are useful because the graph size is not known until the graph has been constructed.
+`Bilinear(; adj = nothing, J = nothing)`
 
-The most common helpers are:
+Represents ``-1/2 \sum_{ij} J_{ij}s_i s_j``. If neither `adj` nor `J` is
+provided, it uses `adj(g)`. `J` must be an `n x n` matrix for `n` graph states.
 
-- `ConstVal(x)`: a scalar-like constant. Good for coefficients such as `c`.
-- `StateLike(ArrayType, default)`: build something with the same length as the graph state when the Hamiltonian is reconstructed.
-- `g -> ...`: any function of the graph, for fully custom graph-derived fields.
+`MagField(; b = nothing, c = nothing)`
 
-Examples:
+Represents ``-c \sum_i b_i s_i``. The default field is a zero `ConstFill`
+with graph-state length. `b = 1` means a uniform field of one in graph
+precision.
+
+`Quadratic`, `Quartic`, `Sextic`, `Octic`
+
+Represent local polynomial terms ``c l_i s_i^n``. `c` is scalar-like and
+`localpotential` is state-like. By default, `localpotential` is `adj(g).diag`.
+
+```julia
+Quartic(c = ConstVal(1f0))
+```
+
+`Clamping(β, y)`
+
+Represents ``β/2 (s_i - y_i)^2``. The target `y` is instantiated as a mutable
+state-length vector so it can be changed with `clamp!`.
+
+`DepolField(...)`
+
+Stores the coupling `c` as a symbolic parameter and keeps graph-derived state
+such as boundary layers and accumulated depolarisation in internal storage.
+
+`CoulombHamiltonian(...)`
+
+Uses the same parameter/internal split, with `scaling` as a symbolic parameter
+and FFT buffers, screening lengths, lattice constants, and scratch arrays in
+internal storage.
+
+## Containers
+
+For scalar and state-like parameters, prefer the custom containers when the
+parameter is spatially uniform or should be cheap to update. See
+[Hamiltonian Containers](@ref) for details.
+
+Common examples:
 
 ```julia
 Ising(c = ConstVal(0f0))
+Ising(b = ConstFill(0f0))
+Ising(b = UniformArray)
+Ising(b = OffsetArray)
 ```
+
+`StateLike(...)` is legacy. New terms should express graph-sized defaults with
+ordinary defaults plus ensure functions, and front-end users should pass normal
+values, containers, or graph functions.
+
+## Developer Interface
+
+New Hamiltonian terms can either be written freestyle by overloading
+`calculate`, or they can opt into the template convention:
 
 ```julia
-Ising(b = StateLike(ConstFill, 0f0))
+struct MyTerm{P,I} <: HamiltonianTerm
+    parameters::P
+    internal::I
+end
 ```
 
-```julia
-Bilinear(adj = g -> adj(g))
-```
-
-```julia
-Quartic(localpotential = g -> adj(g).diag)
-```
-
-`StateLike` is particularly useful when the field should track the graph size automatically.
-
-## Recipes
-
-### Nearest-neighbor Ising in 2D
-
-```julia
-wg = @WG (; dr) -> dr == 1 ? 1f0 : 0f0 NN = 1
-g = IsingGraph(64, 64, Continuous(), wg, Ising(); periodic = (:x, :y))
-```
-
-### Landau-style local energy
-
-```julia
-wg = @WG (; dr) -> dr == 1 ? 1f0 : 0f0 NN = 1
-h = Ising(c = ConstVal(0f0)) + Quartic(c = ConstVal(1f0)) + Sextic(c = ConstVal(1f0))
-g = IsingGraph(64, 64, Continuous(), wg, StateSet(-1.5f0, 1.5f0), h)
-```
-
-### Supervised / clamped setup
-
-```julia
-h = Ising() + Clamping(1f0)
-```
-
-`Clamping` reconstructs its target vector `y` to the full graph size, so it composes naturally with the normal graph constructor.
-
-### 3D electrostatic example
-
-```julia
-h = Ising(c = ConstVal(0f0), b = StateLike(ConstFill, 0f0)) +
-    CoulombHamiltonian(recalc = 2000)
-```
-
-This is the pattern used in the 3D example graph. At the moment `CoulombHamiltonian` is tied to the 3D layer geometry and is best understood as a specialized term for that setup.
-
-## Inspecting the reconstructed Hamiltonian
-
-After graph construction, the realized terms live in `g.hamiltonian`:
-
-```julia
-g.hamiltonian
-gethamiltonian(g.hamiltonian, Bilinear)
-gethamiltonian(g.hamiltonian, CoulombHamiltonian)
-```
-
-This is useful when you want to inspect the actual adjacency or parameter storage that a term ended up using.
-
-The constructor overview on [`IsingGraphs`](IsingGraphs.md) shows how these Hamiltonians are attached to single-layer and multi-layer graphs.
+Use `parameters` only for symbolic Hamiltonian parameters. Use `internal` for
+buffers, plans, caches, graph constants, and other implementation state. See
+[Hamiltonian Term Templates](@ref) for the backend pattern.

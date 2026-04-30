@@ -16,6 +16,7 @@ makedocs(sitename="InteractiveIsing Documentation",
                 "Parameters" => "man/Parameters.md",
                 "Algorithms" => "man/Algorithms.md",
                 "Hamiltonians" => "man/Hamiltonians.md",
+                "Hamiltonian Containers" => "man/HamiltonianContainers.md",
                 "Analysis" => "man/Analysis.md",
                 "Processes" => "man/Processes.md",
                 "Windows" => "man/Windows.md",
@@ -24,6 +25,7 @@ makedocs(sitename="InteractiveIsing Documentation",
             "Developer" => [
                 "Registry and Scoping" => "dev/Registry.md",
                 "Scoped Algorithms" => "dev/ScopedAlgorithms.md",
+                "Hamiltonian Term Templates" => "dev/HamiltonianTemplates.md",
                 "Context" => "dev/Context.md",
             ]
         ]
