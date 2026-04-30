@@ -35,7 +35,9 @@ export normalize_adj_by_average_col!
 export graph_array
 export ManuscriptParams, update_params, derived_params, build_graph
 export landau_coefficients, landau_energy, landau_second_derivative, landau_hamiltonian, apply_landau_coefficients!
-export AnnealRun, PulseRun, build_anneal_process, build_pulse_process
+export AnnealRun, PulseRun
+export anneal_components, pulse_components, anneal_run, pulse_run
+export build_anneal_process, build_pulse_process
 export start_anneal!, start_pulse!, fetch_run
 export save_run_outputs
 

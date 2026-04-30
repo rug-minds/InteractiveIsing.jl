@@ -89,7 +89,7 @@ function landau_second_derivative(coeffs, x)
     return total
 end
 
-function _poly_term(order::Integer; c = UniformArray(1), localpotential = g -> adj(g).diag)
+function _poly_term(order::Integer; c = UniformArray(1.0f0), localpotential = g -> adj(g).diag)
     return PolynomialHamiltonian(order; c, localpotential)
 end
 
@@ -104,7 +104,7 @@ function _coupled_diag_landau_hamiltonian(p::ManuscriptParams, coeffs)
     isnothing(a2) && error("Coupled diag Landau mode requires a 2nd-order coefficient, e.g. landau_coeffs = Dict(2=>a, 4=>b, 6=>c).")
     a2 isa Number || error("Coupled diag mode requires a scalar 2nd-order coefficient. Use landau_mode = :independent_lp for per-site Landau coefficients.")
 
-    ham = Ising(b = StateLike(UniformArray, 0))
+    ham = Ising(b = StateLike(UniformArray, 0.0f0))
     ham += CoulombHamiltonian(scaling = p.Scale, screening = p.Screening, recalc = 1000)
 
     for order in sort(collect(keys(coeffs)))
@@ -116,8 +116,8 @@ function _coupled_diag_landau_hamiltonian(p::ManuscriptParams, coeffs)
 end
 
 function _independent_lp_landau_hamiltonian(p::ManuscriptParams, coeffs)
-    localpotential = StateLike(p.landau_storage, 0)
-    ham = Ising(b = StateLike(UniformArray, 0), localpotential = localpotential)
+    localpotential = StateLike(p.landau_storage, 0.0f0)
+    ham = Ising(b = StateLike(UniformArray, 0.0f0), localpotential = localpotential)
     ham += CoulombHamiltonian(scaling = p.Scale, screening = p.Screening, recalc = 1000)
 
     for order in sort(collect(keys(coeffs)))
@@ -180,7 +180,7 @@ function build_graph(p::ManuscriptParams; wg = default_weight_generator())
         landau_hamiltonian(p),
         StateSet(-1.5f0, 1.5f0);
         periodic = (:x, :y),
-        diag = StateLike(UniformArray),
+        diag = StateLike(UniformArray, 0.0f0),
     )
     normalize_adj_by_average_col!(g.adj, p.JIsing)
     apply_landau_coefficients!(g, p)

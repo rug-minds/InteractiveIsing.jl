@@ -65,9 +65,81 @@ function coeffs_from_stationary_abs_positions(abs_positions; K = 1.0)
     return (; a = q0 / 2, b = q1 / 4, c = q2 / 6, d = q3 / 8, e = q4 / 10)
 end
 
+"""
+Return coefficients for
+
+    E(P) = K * P^2 * (P^2 - amin^2)^2 * (P^2 - bmin^2)^2
+
+This gives equal minima with E = 0 at
+
+    P = 0, +/-amin, +/-bmin
+
+Use a small K first. K = 0.1 is usually much easier to inspect than K = 10.
+"""
+function coeffs_equal_minima_0ab(amin, bmin; K = 0.1)
+    A = amin^2
+    B = bmin^2
+    return (;
+        a = K * A^2 * B^2,
+        b = -2K * A * B * (A + B),
+        c = K * (A^2 + B^2 + 4A * B),
+        d = -2K * (A + B),
+        e = K,
+    )
+end
+
+"""
+Return coefficients for
+
+    E(P) = K * (P^2 - amin^2)^2 * (P^2 - bmin^2)^2
+
+This gives four equal minima with E = 0 at
+
+    P = +/-amin, +/-bmin
+
+P = 0 is still a stationary point because this is an even polynomial, but it is
+a central barrier rather than one of the minima.
+"""
+function coeffs_equal_minima_ab(amin, bmin; K = 1.0)
+    A = amin^2
+    B = bmin^2
+    return (;
+        a = -2K * A * B * (A + B),
+        b = K * (A^2 + B^2 + 4A * B),
+        c = -2K * (A + B),
+        d = K,
+        e = 0.0,
+    )
+end
+
+# ----------------------------------------------------------------------
+# Mode 0: equal-minima design.
+#
+# This makes E(P) = 0 at P = 0, +/-amin, +/-bmin.
+# Recommended for checking "many equal minima" Landau shapes.
+# ----------------------------------------------------------------------
+# amin = 0.6
+# bmin = 1.0
+# cs = coeffs_equal_minima_0ab(amin, bmin; K = 500)
+# a1, b1, c1, d1, e1 = cs.a, cs.b, cs.c, cs.d, cs.e
+# target_x = sort([-bmin, -amin, 0.0, amin, bmin])
+
+# ----------------------------------------------------------------------
+# Mode 0b: four equal minima, without P = 0 as a minimum.
+#
+# This makes E(P) = 0 at +/-amin and +/-bmin.
+# P = 0 remains a stationary point, but it is a central barrier.
+# Uncomment this block and comment Mode 0 above to use it.
+# ----------------------------------------------------------------------
+amin = 0.5
+bmin = 1.0
+cs = coeffs_equal_minima_ab(amin, bmin; K = 100.0)
+a1, b1, c1, d1, e1 = cs.a, cs.b, cs.c, cs.d, cs.e
+target_x = sort([-bmin, -amin, amin, bmin])
+
 # ----------------------------------------------------------------------
 # Mode 1: choose extrema positions directly.
-# This is the easiest way to force many bends.
+# This is useful if you want many bends but not necessarily equal minima.
 #
 # The four numbers below mean the curve has stationary points at
 # +/-0.32, +/-0.65, +/-1.0, +/-1.32, plus P = 0 automatically.
@@ -76,9 +148,10 @@ end
 # This choice makes +/-1 local minima, but e1 is negative, so treat this as a
 # bounded-window test curve on [-1.5, 1.5], not a globally stable polynomial.
 # ----------------------------------------------------------------------
-abs_extrema = [0.55, 1.0, 1.30, 1.40]
-cs = coeffs_from_stationary_abs_positions(abs_extrema; K = -12.0)
-a1, b1, c1, d1, e1 = cs.a, cs.b, cs.c, cs.d, cs.e
+# abs_extrema = [0.55, 1.0, 1.30, 1.40]
+# cs = coeffs_from_stationary_abs_positions(abs_extrema; K = 12.0)
+# a1, b1, c1, d1, e1 = cs.a, cs.b, cs.c, cs.d, cs.e
+# target_x = sort(vcat(-reverse(abs_extrema), 0.0, abs_extrema))
 
 # ----------------------------------------------------------------------
 # Mode 1b: if you want e1 > 0 and +/-1 still local minima, use this instead.
@@ -97,10 +170,11 @@ a1, b1, c1, d1, e1 = cs.a, cs.b, cs.c, cs.d, cs.e
 # e1 = 2
 # b1 = b_for_extremum_at(a1, c1, d1, e1; target = 1)
 
-Ex = range(-1.5, 1.5, length = 1000)
-Ey = [landau_energy(x, a1, b1, c1, d1, e1) for x in Ex]
+Ex1 = range(-1.5, 1.5, length = 1000)
+Ex2 = range(-1.0, 1.0, length = 1000)
+Ey1 = [landau_energy(x, a1, b1, c1, d1, e1) for x in Ex1]
+Ey2 = [landau_energy(x, a1, b1, c1, d1, e1) for x in Ex2]
 
-target_x = sort(vcat(-reverse(abs_extrema), 0.0, abs_extrema))
 target_y = [landau_energy(x, a1, b1, c1, d1, e1) for x in target_x]
 
 println("a1 = ", a1)
@@ -112,12 +186,18 @@ println("E'(1)  = ", landau_d1(1, a1, b1, c1, d1, e1))
 println("E''(1) = ", landau_d2(1, a1, b1, c1, d1, e1), "  # > 0 means +/-1 are local minima")
 println("E(0)   = ", landau_energy(0, a1, b1, c1, d1, e1))
 println("E(1)   = ", landau_energy(1, a1, b1, c1, d1, e1))
-println("stationary |P| targets = ", abs_extrema)
+println("target minima/points = ", target_x)
+println("E(targets)  = ", [landau_energy(x, a1, b1, c1, d1, e1) for x in target_x])
 println("E'(targets) = ", [landau_d1(x, a1, b1, c1, d1, e1) for x in target_x])
 
 fig = Figure()
 ax = Axis(fig[1, 1], xlabel = "P", ylabel = "Landau energy")
-lines!(ax, Ex, Ey)
+# lines!(ax, Ex1, Ey1)
+# scatter!(ax, target_x, target_y, color = :red, markersize = 10)
+# display(fig)
+# f1 = fig
+
+lines!(ax, Ex2, Ey2)
 scatter!(ax, target_x, target_y, color = :red, markersize = 10)
 display(fig)
-f1 = fig
+f2 = fig

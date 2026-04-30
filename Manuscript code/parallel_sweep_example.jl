@@ -3,6 +3,7 @@
 
 include(joinpath(@__DIR__, "common", "ManuscriptTools.jl"))
 import InteractiveIsing
+using InteractiveIsing.Processes
 MT = ManuscriptTools
 
 example_wg_skymion(; dc) = MT.weightfunc_skymion(; dc)
@@ -39,12 +40,83 @@ base = MT.ManuscriptParams(;
 )
 
 ###############################################################################
-# 2. Example A: run one pulse simulation
+# 2. Route design lives in the experiment file
+###############################################################################
+
+# `common/` supplies components, but this file owns the route design.
+# For a new experiment, copy and edit these two functions here instead of
+# changing `common/process_recipes.jl`.
+
+function make_anneal_run(g, p)
+    parts = MT.anneal_components(g, p)
+    (; d, metropolis, annealing, M_Integrator, M_Logger, B_Logger, T_Logger) = parts
+
+    metro_t = CompositeAlgorithm(
+        metropolis, M_Integrator, M_Logger, B_Logger, T_Logger,
+        (1, 1, d.point_repeat, d.point_repeat, d.point_repeat),
+        Route(metropolis => M_Integrator, :proposal => :Δvalue,
+            transform = proposal -> InteractiveIsing.accepteddelta(proposal)),
+        Route(M_Integrator => M_Logger, :total => :value),
+        Route(metropolis => B_Logger, :hamiltonian => :value,
+            transform = x -> x.b[]),
+        Route(metropolis => T_Logger, :model => :value,
+            transform = InteractiveIsing.temp),
+    )
+
+    anneal_part = CompositeAlgorithm(
+        metro_t, annealing,
+        (1, d.point_repeat),
+        Route(metropolis => annealing, :model),
+    )
+
+    algorithm = Routine(anneal_part, (d.anneal_time,))
+    return MT.anneal_run(algorithm, parts)
+end
+
+function make_pulse_run(g, p; capture_dir = joinpath(p.outdir, "capture"))
+    parts = MT.pulse_components(g, p; capture_dir)
+    (; d, metropolis, pulse, M_Integrator, M_Logger, B_Logger, Graph_Logger) = parts
+
+    metro_pulse = CompositeAlgorithm(
+        metropolis, M_Integrator, M_Logger, B_Logger,
+        (1, 1, d.point_repeat, d.point_repeat),
+        Route(metropolis => M_Integrator, :proposal => :Δvalue,
+            transform = proposal -> InteractiveIsing.accepteddelta(proposal)),
+        Route(M_Integrator => M_Logger, :total => :value),
+        Route(metropolis => B_Logger, :hamiltonian => :value,
+            transform = x -> x.b[]),
+    )
+
+    pulse_part = CompositeAlgorithm(
+        metro_pulse, pulse, Graph_Logger,
+        (1, d.point_repeat, d.capture_interval1),
+        Route(metropolis => Graph_Logger, :model => :array,
+            transform = MT.graph_array),
+    )
+
+    relax_part = CompositeAlgorithm(
+        metro_pulse, Graph_Logger,
+        (1, d.capture_interval2),
+        Route(metropolis => Graph_Logger, :model => :array,
+            transform = MT.graph_array),
+    )
+
+    algorithm = Routine(
+        pulse_part, relax_part,
+        (d.pulse_time, d.relax_time),
+        Route(metropolis => pulse, :hamiltonian, :M),
+    )
+
+    return MT.pulse_run(algorithm, parts)
+end
+
+###############################################################################
+# 3. Example A: run one pulse simulation
 ###############################################################################
 
 function example_single_pulse(base)
     g = MT.build_graph(base)
-    pulse_run = MT.build_pulse_process(g, base; capture_dir = joinpath(base.outdir, "single_pulse", "capture"))
+    pulse_run = make_pulse_run(g, base; capture_dir = joinpath(base.outdir, "single_pulse", "capture"))
 
     process = MT.start_pulse!(g, pulse_run; repeats = 1)
     pulse_result = MT.fetch_run(process, pulse_run)
@@ -55,12 +127,12 @@ function example_single_pulse(base)
 end
 
 ###############################################################################
-# 3. Example B: run one annealing simulation
+# 4. Example B: run one annealing simulation
 ###############################################################################
 
 function example_single_anneal(base)
     g = MT.build_graph(base)
-    anneal_run = MT.build_anneal_process(g, base)
+    anneal_run = make_anneal_run(g, base)
 
     process = MT.start_anneal!(g, anneal_run; repeats = 1)
     anneal_result = MT.fetch_run(process, anneal_run)
@@ -71,7 +143,7 @@ function example_single_anneal(base)
 end
 
 ###############################################################################
-# 4. Example C: sweep one parameter, start all processes first, fetch later
+# 5. Example C: sweep one parameter, start all processes first, fetch later
 ###############################################################################
 
 function example_screening_sweep(base)
@@ -89,7 +161,7 @@ function example_screening_sweep(base)
     # Important pattern:
     # 1. start_pulse_sweep starts every process first.
     # 2. fetch_pulse_sweep waits only after all runs are already launched.
-    runs = MT.start_pulse_sweep(paramsets; repeats = 1)
+    runs = MT.start_pulse_sweep(paramsets; repeats = 1, run_builder = make_pulse_run)
     finished = MT.fetch_pulse_sweep(runs)
 
     for item in finished
@@ -101,7 +173,7 @@ function example_screening_sweep(base)
 end
 
 ###############################################################################
-# 5. Example D: sweep multiple parameters
+# 6. Example D: sweep multiple parameters
 ###############################################################################
 
 function example_2d_sweep(base)
@@ -119,7 +191,7 @@ function example_2d_sweep(base)
         for scale in scales
     ]
 
-    runs = MT.start_pulse_sweep(paramsets; repeats = 1)
+    runs = MT.start_pulse_sweep(paramsets; repeats = 1, run_builder = make_pulse_run)
     finished = MT.fetch_pulse_sweep(runs)
 
     for item in finished
@@ -131,7 +203,7 @@ function example_2d_sweep(base)
 end
 
 ###############################################################################
-# 6. Example E: change the Landau polynomial
+# 7. Example E: change the Landau polynomial
 ###############################################################################
 
 function example_landau_variants(base)
@@ -201,7 +273,7 @@ function example_landau_variants(base)
     # p = p4
 
     g = MT.build_graph(p)
-    pulse_run = MT.build_pulse_process(g, p; capture_dir = joinpath(p.outdir, "capture"))
+    pulse_run = make_pulse_run(g, p; capture_dir = joinpath(p.outdir, "capture"))
 
     process = MT.start_pulse!(g, pulse_run; repeats = 1)
     pulse_result = MT.fetch_run(process, pulse_run)
@@ -212,7 +284,7 @@ function example_landau_variants(base)
 end
 
 ###############################################################################
-# 7. Example F: change the weight function
+# 8. Example F: change the weight function
 ###############################################################################
 
 function example_custom_weight(base)
@@ -238,7 +310,7 @@ function example_custom_weight(base)
     )
 
     g = MT.build_graph(p; wg)
-    pulse_run = MT.build_pulse_process(g, p; capture_dir = joinpath(p.outdir, "capture"))
+    pulse_run = make_pulse_run(g, p; capture_dir = joinpath(p.outdir, "capture"))
 
     process = MT.start_pulse!(g, pulse_run; repeats = 1)
     pulse_result = MT.fetch_run(process, pulse_run)
@@ -249,17 +321,17 @@ function example_custom_weight(base)
 end
 
 ###############################################################################
-# 8. Example G: run anneal first, then pulse on the same graph
+# 9. Example G: run anneal first, then pulse on the same graph
 ###############################################################################
 
 function example_anneal_then_pulse(base)
     g = MT.build_graph(base)
 
-    anneal_run = MT.build_anneal_process(g, base)
+    anneal_run = make_anneal_run(g, base)
     anneal_process = MT.start_anneal!(g, anneal_run; repeats = 1)
     anneal_result = MT.fetch_run(anneal_process, anneal_run)
 
-    pulse_run = MT.build_pulse_process(g, base; capture_dir = joinpath(base.outdir, "anneal_then_pulse", "capture"))
+    pulse_run = make_pulse_run(g, base; capture_dir = joinpath(base.outdir, "anneal_then_pulse", "capture"))
     pulse_process = MT.start_pulse!(g, pulse_run; repeats = 1)
     pulse_result = MT.fetch_run(pulse_process, pulse_run)
 
@@ -272,11 +344,13 @@ end
 # Choose what to run
 ###############################################################################
 
-# Start with exactly one uncommented line.
-# example_single_pulse(base)
-# example_single_anneal(base)
-# example_screening_sweep(base)
-# example_2d_sweep(base)
-example_landau_variants(base)
-# example_custom_weight(base)
-# example_anneal_then_pulse(base)
+if abspath(PROGRAM_FILE) == @__FILE__
+    # Start with exactly one uncommented line.
+    # example_single_pulse(base)
+    # example_single_anneal(base)
+    # example_screening_sweep(base)
+    # example_2d_sweep(base)
+    example_landau_variants(base)
+    # example_custom_weight(base)
+    # example_anneal_then_pulse(base)
+end

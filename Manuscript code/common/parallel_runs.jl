@@ -10,11 +10,11 @@ Build all graphs and start all pulse processes first. Call `fetch_pulse_sweep`
 afterwards to wait for results. This avoids serializing the sweep by fetching
 inside the launch loop.
 """
-function start_pulse_sweep(paramsets; repeats = 1)
+function start_pulse_sweep(paramsets; repeats = 1, run_builder = build_pulse_process)
     runs = Any[]
     for p in paramsets
         g = build_graph(p)
-        run = build_pulse_process(g, p; capture_dir = _run_capture_dir(p))
+        run = run_builder(g, p; capture_dir = _run_capture_dir(p))
         process = start_pulse!(g, run; repeats)
         push!(runs, (; params = p, graph = g, run, process))
     end
