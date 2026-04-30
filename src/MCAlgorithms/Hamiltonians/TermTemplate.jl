@@ -33,6 +33,8 @@ export ParameterSpec,
        ensure_isinggraph_eltype,
        ensure_isinggraph_scalar,
        ensure_isinggraph_state_length,
+       ensure_isinggraph_state_vector,
+       ensure_isinggraph_adjacency,
        parameter,
        value,
        origin,
@@ -146,13 +148,12 @@ end
 
 function ensure_isinggraph_scalar(input, default, model)
     input isa DerivedParameter && return ensure_isinggraph_scalar(input(model), default, model)
+    input isa Type && return _fill_storage(input, convert(eltype(model), _default_value(default)))
     applicable(input, model) && return ensure_isinggraph_scalar(input(model), default, model)
 
     T = eltype(model)
 
-    if input isa Type
-        return _fill_storage(input, convert(T, _default_value(default)))
-    elseif input isa Number
+    if input isa Number
         return _fill_storage(_storage_type(default), convert(T, input))
     elseif input isa Base.RefValue || (input isa AbstractArray && Base.ndims(input) == 0)
         return _fill_storage(_storage_type(input), convert(T, _default_value(input)))
@@ -177,13 +178,11 @@ function ensure_isinggraph_state_length(input, default, model)
         return ensure_isinggraph_state_length(input(model), default, model)
     end
 
+    len = statelen(model)
+    input isa Type && return _fill_storage(input, _default_value(default), len)
     applicable(input, model) && return ensure_isinggraph_state_length(input(model), default, model)
 
-    len = statelen(model)
-
-    if input isa Type
-        return _fill_storage(input, _default_value(default), len)
-    elseif input isa Number
+    if input isa Number
         return _fill_storage(_storage_type(default), input, len)
     elseif input isa Base.RefValue || (input isa AbstractArray && Base.ndims(input) == 0)
         return _fill_storage(_storage_type(input), _default_value(input), len)
@@ -194,6 +193,39 @@ function ensure_isinggraph_state_length(input, default, model)
     else
         return input
     end
+end
+
+function ensure_isinggraph_state_vector(input, default, model)
+    input isa DerivedParameter && return ensure_isinggraph_state_vector(input(model), default, model)
+
+    T = eltype(model)
+    len = statelen(model)
+    input isa Type && return fill(convert(T, _default_value(default)), len)
+    applicable(input, model) && return ensure_isinggraph_state_vector(input(model), default, model)
+
+    if input isa Number
+        return fill(convert(T, input), len)
+    elseif input isa Base.RefValue || (input isa AbstractArray && Base.ndims(input) == 0)
+        return fill(convert(T, _default_value(input)), len)
+    elseif input isa AbstractArray
+        length(input) == len ||
+            throw(DimensionMismatch("Expected state-like vector with length $(len); got $(length(input))."))
+        return collect(T, input)
+    else
+        return input
+    end
+end
+
+function ensure_isinggraph_adjacency(input, default, model)
+    !(input isa Type) && applicable(input, model) && return ensure_isinggraph_adjacency(input(model), default, model)
+
+    n = statelen(model)
+    if input isa AbstractMatrix
+        size(input, 1) == n && size(input, 2) == n ||
+            throw(DimensionMismatch("Adjacency matrix size must match graph state length; expected $(n)x$(n), got $(size(input))."))
+    end
+
+    return input
 end
 
 function _apply_ensure(ensure, input, default, model)

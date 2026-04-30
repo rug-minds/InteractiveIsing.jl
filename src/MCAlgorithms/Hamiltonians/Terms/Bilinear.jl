@@ -1,22 +1,29 @@
 """
 E = -1/2 * sum_{i,j} J_{ij} s_i s_j
 """
-struct Bilinear{A} <: HamiltonianTerm 
-    J::A
+struct Bilinear{P} <: HamiltonianTerm
+    parameters::P
 end
 
-@inline Bilinear(;adj = g -> adj(g)) = Bilinear(adj)
-@inline Bilinear(g::AbstractIsingGraph) = instantiate(Bilinear(), g)
-@inline function instantiate(b::Bilinear, g::AbstractIsingGraph)
-    J = nothing
-    if b.J isa Function
-        J = b.J(g)
-    else
-        J = b.J
-        @assert size(J, 1) == length(graphstate(g)) && size(J, 2) == length(graphstate(g)) "Adjacency matrix size must match number of spins in graph\nexpected $(length(graphstate(g)))x$(length(graphstate(g))), got $(size(J))"
-    end
-    Bilinear(J)
+_default_bilinear_adjacency(g) = adj(g)
+
+@inline function Bilinear(; adj = nothing, J = nothing)
+    isnothing(J) || isnothing(adj) ||
+        throw(ArgumentError("Pass either `J` or `adj`, not both."))
+    J = isnothing(J) ? adj : J
+    params = Parameters(
+        parameter(;
+            J,
+            type = AbstractMatrix,
+            default = _default_bilinear_adjacency,
+            ensure = ensure_isinggraph_adjacency,
+            info = "Bilinear coupling matrix J_ij",
+        ),
+    )
+    return Bilinear(params)
 end
+
+@inline Bilinear(g::AbstractIsingGraph) = instantiate(Bilinear(), g)
 
 # function ΔH(::Bilinear, hargs, proposal)
 @inline function calculate(::ΔH, hterm::BL, model::S, proposal) where {BL<:Bilinear, S <: AbstractIsingGraph}

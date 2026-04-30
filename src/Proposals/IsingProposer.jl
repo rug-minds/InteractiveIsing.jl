@@ -5,14 +5,24 @@ struct IsingGraphProposer{I,L,S} <: AbstractProposer
     state::S
 end
 
+IsingGraphProposer() = IsingGraphProposer(nothing, nothing, nothing)
+
 ed(proposer::IsingGraphProposer) = proposer.accepted_state
 
 @inline statetype(proposer::IsingGraphProposer) = eltype(proposer.state)
 
-function get_proposer(g::AbstractIsingGraph)
+function _default_proposer(g::AbstractIsingGraph)
     idx_set = index_set(g)
     _layers = layers(g)
     return IsingGraphProposer(idx_set, _layers, g)
+end
+
+@inline bind_proposer(g::AbstractIsingGraph, ::IsingGraphProposer) = _default_proposer(g)
+@inline bind_proposer(::AbstractIsingGraph, proposer::AbstractProposer) = proposer
+
+function get_proposer(g::AbstractIsingGraph)
+    proposer = getfield(g, :proposer)
+    return bind_proposer(g, proposer)
 end
 
 @inline function Base.rand(rng::AbstractRNG, proposer::IsingGraphProposer)

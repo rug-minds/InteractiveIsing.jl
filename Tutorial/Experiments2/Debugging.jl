@@ -687,7 +687,7 @@ Graph_Logger = ImageCapture(:Graph,-1.5,1.5)
 
 # createProcess(g, Anealing_step, lifetime = 1)
 # c = process(g) |> fetch
-# voltage1 = c[B_Logger].values
+# voltage1 = c[B_Logger].valuesß
 # Pr1      = c[M_Integrate_and_Logger].log
 # Temp1    = c[T_Logger].values
 

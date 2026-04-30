@@ -33,7 +33,7 @@ function accepteddelta(fp::FlipProposal{T}) where {T}
     return fp.accepted ? delta(fp) : zero(T)
 end
 
-function accept(proposer::IsingGraphProposer, f::FlipProposal)
+function accept(proposer::AbstractProposer, f::FlipProposal)
     spins = @inline InteractiveIsing.state(proposer.state)
     @inbounds spins[at_idx(f)] = to_val(f)
     FlipProposal(f, f.at_idx, f.from_val, f.to_val, f.layer_idx, true)
