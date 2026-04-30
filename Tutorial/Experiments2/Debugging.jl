@@ -627,7 +627,7 @@ g = IsingGraph(xL, yL, zL,
         Continuous(), 
         wg5, 
         LatticeConstants(1.0, 1.0, 1.0),
-        Ising(b = StateLike(UniformArray,0)) + 
+        Ising(b = UniformArray(0)) + 
             CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + 
             Quartic(c=b1/a1) + 
             Sextic(c=c1/a1), 

@@ -30,13 +30,13 @@ Base.Expr(::DepolField) = :( -(dpf[j]/(surface_NxNy * c[]))*(s[j]) )
 end
 
 @inline function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1f0, zfunc = z -> exp(-(min(abs(z-1), abs(z-size(g[1],3))))))
-    return reconstruct(
+    return instantiate(
         DepolField(; top_layers, bottom_layers, c, zfunc),
         g,
     )
 end
 
-@inline function reconstruct(dpf::DepolField, g::AbstractIsingGraph)
+@inline function instantiate(dpf::DepolField, g::AbstractIsingGraph)
     T = eltype(g)
     pv = HomogeneousParam(T(0), length(state(g[1])); description = description(dpf.dpf))
     cv = ParamTensor(

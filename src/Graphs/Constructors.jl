@@ -1,7 +1,7 @@
 """
     apply_field_defaults(ham, g, field_defaults)
 
-After `reconstruct`, override Hamiltonian fields with user-specified (Type, fill_value) defaults.
+After `instantiate`, override Hamiltonian fields with user-specified (Type, fill_value) defaults.
 Each kwarg maps a field name to a `(Type, fill_value)` tuple or a `Fill(val)`.
 
 Example: `y = (Vector, 0.5f0)` overwrites Clamping's `y` field with a vector filled with 0.5.
@@ -159,7 +159,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         layers
     )
 
-    ham  = reconstruct(ham, g_with_adj)
+    ham  = instantiate(ham, g_with_adj)
     
     # Construct the graph
     g = IsingGraph(
@@ -180,7 +180,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
     )
     
     state(g) .= initRandomState(g)
-    # g.hamiltonian = reconstruct(ham, g)
+    # g.hamiltonian = instantiate(ham, g)
     callback!(g)
     return g
 end

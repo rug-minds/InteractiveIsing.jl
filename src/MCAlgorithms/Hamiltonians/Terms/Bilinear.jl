@@ -6,8 +6,8 @@ struct Bilinear{A} <: HamiltonianTerm
 end
 
 @inline Bilinear(;adj = g -> adj(g)) = Bilinear(adj)
-@inline Bilinear(g::AbstractIsingGraph) = reconstruct(Bilinear(), g)
-@inline function reconstruct(b::Bilinear, g::AbstractIsingGraph)
+@inline Bilinear(g::AbstractIsingGraph) = instantiate(Bilinear(), g)
+@inline function instantiate(b::Bilinear, g::AbstractIsingGraph)
     J = nothing
     if b.J isa Function
         J = b.J(g)

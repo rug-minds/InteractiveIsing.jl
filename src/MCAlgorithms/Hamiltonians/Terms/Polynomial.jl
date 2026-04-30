@@ -45,7 +45,7 @@ Octic(c, localpotential) = PolynomialHamiltonian{8, typeof(c), typeof(localpoten
 
 # Quadratic(;c = ConstVal(0), localpotential = StateLike(ConstFill, 0)) = Quadratic(c, localpotential)
 
-function reconstruct(lh::PolynomialHamiltonian, g::AbstractIsingGraph)
+function instantiate(lh::PolynomialHamiltonian, g::AbstractIsingGraph)
     T = eltype(g)
     c = map(eltype(g), lh.c)
     if lh.lp isa StateLike

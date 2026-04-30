@@ -22,7 +22,7 @@ using SparseArrays
     @test replaced_sp[1, 2] == 9f0
     @test replaced_sp[2, 1] == 9f0
 
-    replaced_diag = InteractiveIsing.reconstruct(base; diag = replacement_diag)
+    replaced_diag = InteractiveIsing.instantiate(base; diag = replacement_diag)
     @test sparse(replaced_diag) == sparse(base)
     @test replaced_diag.diag == replacement_diag
 
@@ -34,5 +34,5 @@ using SparseArrays
     @test_throws ArgumentError InteractiveIsing.UndirectedAdjacency(base, wrong_topology)
 
     wrong_diag = Float32[1, 2]
-    @test_throws DimensionMismatch InteractiveIsing.reconstruct(base; diag = wrong_diag)
+    @test_throws DimensionMismatch InteractiveIsing.instantiate(base; diag = wrong_diag)
 end

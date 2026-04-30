@@ -6,90 +6,117 @@ We have a charge field where s_i -> (q_i+1, q_i) for the
 
 The energy becomes H = 1/2 ϕ_i q_i
 """
-struct CoulombHamiltonian{T,PT,PxyT,PiT,N} <: HamiltonianTerm
+# Template rewrite note:
+# The old CoulombHamiltonian stored parameters, buffers, FFT plans, Thomas
+# factors, and recalc state as one flat struct. That flat storage is intentionally
+# replaced here by:
+#
+#     CoulombHamiltonian(parameters, internal)
+#
+# where `parameters` contains symbolic/template Hamiltonian parameters such as
+# the scaling factor, while `CoulombInternal` contains scratch buffers, plans,
+# lattice constants, boundary configuration such as screening lengths, and
+# recalc state. The old numerical code below is kept active by generic property
+# forwarding (`c.ρ`, `c.scaling`, `c.recalc_steps`, etc.), but the old flat
+# struct layout should not be restored.
+struct CoulombInternal{T,PxyT,IPxyT,N} <: InternalImplementation
     size::NTuple{N,Int}
     ρ::Array{T,3}                 # real charges
     ρhat::Array{Complex{T},3}     # rfft(ρ) over (x,y)
     uhat::Array{Complex{T},3}     # spectral potential (same size as ρhat)
     u::Array{T,3}                 # real potential
-    scaling::PT
     screen_top::T
     screen_bot::T
     ax::T
     ay::T
     az::T
     ϵ::T
-    du_self::Array{T,1}           # per-layer unit charge-pair field jump du[z+1]-du[z]
+    du_self::Vector{T}            # per-layer unit charge-pair field jump du[z+1]-du[z]
 
     Pxy::PxyT                     # plan_rfft for 2D slices
-    iPxy::PiT                     # plan_irfft for 2D slices
-    
-    mod_upperd::Array{T, 3}       # Thomas algorithm modified upper diagonal (cp), size (Nxh, Ny, Nz)
-    inv_den::Array{T, 3}
-    dp_scratch::Array{Complex{T}, 3}       # Thomas algorithm forward sweep scratch space
+    iPxy::IPxyT                   # plan_irfft for 2D slices
+
+    mod_upperd::Array{T,3}        # Thomas algorithm modified upper diagonal (cp), size (Nxh, Ny, Nz)
+    inv_den::Array{T,3}
+    dp_scratch::Array{Complex{T},3} # Thomas algorithm forward sweep scratch space
 
     recalc_steps::Int
     recalc_tracker::Base.RefValue{Int} # Counter to track when to recalculate potential (for external coupling)
 end
 
+struct CoulombHamiltonian{P,I} <: HamiltonianTerm
+    parameters::P
+    internal::I
+end
+
 Base.size(c::CoulombHamiltonian) = c.size
 
 @inline function CoulombHamiltonian(;
-    scaling::Real = 1.f0,
+    scaling = 1.f0,
     screening = Inf32,
     screen_len_top = screening,
     screen_len_bot = screening,
     recalc = 1
 )
-    T = promote_type(typeof(float(scaling)), typeof(float(screen_len_top)), typeof(float(screen_len_bot)), Float32)
-    dims = (1, 1, 2)
-    Nx, Ny, Nz = dims
-    Nxh = Nx ÷ 2 + 1
-
-    ρ = zeros(T, dims...)
-    ρhat = zeros(Complex{T}, Nxh, Ny, Nz)
-    uhat = zeros(Complex{T}, Nxh, Ny, Nz)
-
-    s = @view ρ[:, :, 1]
-    uh = @view uhat[:, :, 1]
-    Pxy = plan_rfft(s, (1, 2); flags = FFTW.MEASURE)
-    iPxy = plan_irfft(uh, Nx, (1, 2); flags = FFTW.MEASURE)
-
-    scaling_pt = StaticParam(convert(T, scaling))
-
-    return CoulombHamiltonian{T, typeof(scaling_pt), typeof(Pxy), typeof(iPxy), 3}(
-        dims,
-        ρ,
-        ρhat,
-        uhat,
-        zeros(T, dims...),
-        scaling_pt,
-        convert(T, screen_len_top),
-        convert(T, screen_len_bot),
-        one(T),
-        one(T),
-        one(T),
-        one(T),
-        zeros(T, Nz - 1),
-        Pxy,
-        iPxy,
-        zeros(T, Nxh, Ny, Nz),
-        zeros(T, Nxh, Ny, Nz),
-        zeros(Complex{T}, Nxh, Ny, Nz),
-        recalc,
-        Ref(1),
+    params = Parameters(
+        parameter(;
+            scaling,
+            type = AbstractArray,
+            default = ConstVal(1f0),
+            ensure = ensure_isinggraph_scalar,
+            info = "Dipole-to-charge scaling factor",
+        ),
     )
+    internal = InternalPlan((; screen_len_top, screen_len_bot, recalc)) do plan, g
+        config = plan.values
+        T = eltype(g)
+        Nx, Ny, Nz_dip = size(g[1])
+        Nz = Nz_dip + 1
+        Nxh = Nx ÷ 2 + 1
+
+        charge_size = (Nx, Ny, Nz)
+        spectral_size = (Nxh, Ny, Nz)
+        constants = lattice_constants(top(g[1]))
+
+        ρ = zeros(T, charge_size)
+        ρhat = zeros(Complex{T}, spectral_size)
+        uhat = zeros(Complex{T}, spectral_size)
+        u = zeros(T, charge_size)
+
+        return CoulombInternal(
+            charge_size,                                  # size
+            ρ,                                            # ρ
+            ρhat,                                         # ρhat
+            uhat,                                         # uhat
+            u,                                            # u
+            T(config.screen_len_top),                     # screen_top
+            T(config.screen_len_bot),                     # screen_bot
+            T(constants[1]),                              # ax
+            T(constants[2]),                              # ay
+            T(constants[3]),                              # az
+            one(T),                                       # ϵ
+            zeros(T, Nz_dip),                             # du_self
+            plan_rfft(@view(ρ[:, :, 1]), (1, 2); flags = FFTW.MEASURE), # Pxy
+            plan_irfft(@view(uhat[:, :, 1]), Nx, (1, 2); flags = FFTW.MEASURE), # iPxy
+            zeros(T, spectral_size),                      # mod_upperd
+            zeros(T, spectral_size),                      # inv_den
+            zeros(Complex{T}, spectral_size),             # dp_scratch
+            config.recalc,                                # recalc_steps
+            Ref{Int}(1),                                  # recalc_tracker
+        )
+    end
+    return CoulombHamiltonian(params, internal)
 end
 
 @inline function CoulombHamiltonian(
     g::AbstractIsingGraph,
-    scaling::Real = 1.f0;
+    scaling = 1.f0;
     screening = Inf32,
     screen_len_top = screening,
     screen_len_bot = screening,
     recalc = 1
 )
-    return reconstruct(
+    h = instantiate(
         CoulombHamiltonian(;
             scaling,
             screening,
@@ -99,57 +126,18 @@ end
         ),
         g,
     )
+    return init!(h, g)
 end
 
-@inline function reconstruct(c::CoulombHamiltonian, g::AbstractIsingGraph)
-    gdims = size(g[1])                 # (Nx,Ny,Nz-1)
-    etype = eltype(g)
-
-    ax, ay, az = etype.(lattice_constants(top(g[1])))
-
-    Nx, Ny, Nz_dip = gdims
-    Nz = Nz_dip + 1                    # charge planes
-
-    dims = (Nx, Ny, Nz)
-
-    ρ    = zeros(etype, dims...)
-    Nxh  = Nx ÷ 2 + 1
-    ρhat = zeros(Complex{etype}, Nxh, Ny, Nz)
-    uhat = zeros(Complex{etype}, Nxh, Ny, Nz)
-
-
-    # FFT plans (bind to representative slices)
-    s  = @view ρ[:,:,1]
-    uh = @view uhat[:,:,1]
-
-    Pxy  = plan_rfft(s, (1,2);  flags=FFTW.MEASURE)
-    iPxy = plan_irfft(uh, Nx, (1,2); flags=FFTW.MEASURE)
-
-    # twoπ = etype(2) * etype(π)
-    ax = eltype(g)(ax)
-    ay = eltype(g)(ay)
-    az = eltype(g)(az)
-
-    # Precompute Thomas algorithm factors for each (kx,ky) mode
-    mod_upperd = zeros(etype, Nxh, Ny, Nz) # modified upper diagonal
-    inv_den = zeros(etype, Nxh, Ny, Nz)    # inverse of main diagonal after forward elimination
-    dp_scratch = zeros(Complex{etype}, Nxh, Ny, Nz) # scratch space for forward sweep
-    du_self = zeros(etype, Nz_dip)
-
-    physical_scaling = etype(c.scaling[] * c.az)
-    scaling_pt = StaticParam(physical_scaling / az) # Convert from dipole moment to charge
-
-    rebound = CoulombHamiltonian{etype, typeof(scaling_pt), typeof(Pxy), typeof(iPxy), 3}(
-        dims, ρ, ρhat, uhat, zeros(etype, dims...), scaling_pt, etype(c.screen_top), etype(c.screen_bot), ax, ay, az, etype(1), du_self,
-        Pxy, iPxy,
-        mod_upperd,
-        inv_den,
-        dp_scratch,
-        c.recalc_steps,
-        Ref(1)
+function instantiate(c::CoulombHamiltonian, g::AbstractIsingGraph)
+    # `scaling` is stored here as the raw user parameter. Charge conversion is
+    # applied later as `c.scaling[] / c.az`, so re-instantiation must rebuild
+    # buffers for the new lattice but must not renormalize `scaling` itself.
+    h = CoulombHamiltonian(
+        instantiate(parameters(c), g),
+        instantiate(internal(c), g),
     )
-    init!(rebound, g)
-    return rebound
+    return init!(h, g)
 end
 
 function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
@@ -161,6 +149,8 @@ function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
 
     Nx, Ny, Nz = size(ρ)
     Nz_dip = Nz - 1
+    # Convert the stored dipole scaling to charge scaling for this lattice.
+    scaling = c.scaling[] / c.az
 
     # zero charge buffers
     fill!(ρ, zero(eltype(ρ)))
@@ -169,7 +159,7 @@ function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
     @inbounds for z in 1:Nz_dip
         @inbounds for j in 1:Ny, i in 1:Nx
             v = spins[layer_idxs[linear_idxs[i, j, z]]]
-            v = v * c.scaling[] # Scaling factor dipole to charge
+            v = v * scaling # Scaling factor dipole to charge
             ρ[i,j,z]   -= v
             ρ[i,j,z+1] += v
         end
@@ -182,7 +172,8 @@ function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
 end
 
 
-function compute_ktilde2(c::CoulombHamiltonian{T}, nx, ny) where {T}
+function compute_ktilde2(c::CoulombHamiltonian, nx, ny)
+    T = eltype(c.ρ)
     ax = c.ax
     ay = c.ay
 
@@ -215,7 +206,8 @@ Precompute Thomas-factorization-like arrays for each (kx,ky) mode.
 
     where c = 2 + k̃² * az², α_bot = 1 - az/λbot, α_top = 1 - az/λtop.
 """
-function precompute_solve_factors!(ch::CoulombHamiltonian{T}) where T
+function precompute_solve_factors!(ch::CoulombHamiltonian)
+    T = eltype(ch.ρ)
     m_upper = ch.mod_upperd #modified upper diagonal,
     invden = ch.inv_den
     Nx, _, _ = size(ch.ρ)
@@ -274,7 +266,8 @@ function precompute_solve_factors!(ch::CoulombHamiltonian{T}) where T
     return nothing
 end
 
-function precompute_du_self!(c::CoulombHamiltonian{T}) where {T}
+function precompute_du_self!(c::CoulombHamiltonian)
+    T = eltype(c.ρ)
     Nx, Ny, Nz = size(c.ρ)
     Nxh = size(c.ρhat, 1)
     invden = c.inv_den
@@ -349,7 +342,7 @@ This does:
   backward: ϕ̂[n] = dp[n] - cp[n] * ϕ̂[n+1]
 """
 
-function recalc!(c::CoulombHamiltonian{T}) where {T}
+function recalc!(c::CoulombHamiltonian)
     uhat = c.uhat
     rho_hat = c.ρhat
     rho = c.ρ
@@ -359,6 +352,7 @@ function recalc!(c::CoulombHamiltonian{T}) where {T}
     m_upper = c.mod_upperd
     dp_scratch = c.dp_scratch
     u = c.u
+    T = eltype(u)
     az2 = c.az^2
 
     # Calculate rho_hat from rho (rFFT in x,y)
@@ -395,13 +389,15 @@ function recalc!(c::CoulombHamiltonian{T}) where {T}
 end
 
 # function ΔH(c::CoulombHamiltonian{T,N}, params, proposal) where {T,N}
-@inline function calculate(::ΔH, c::CoulombHamiltonian{T,N}, model::S, proposal) where {T,N,S <: AbstractIsingGraph}
+@inline function calculate(::ΔH, c::CoulombHamiltonian, model::S, proposal) where {S <: AbstractIsingGraph}
+    T = eltype(c.ρ)
     lattice_size = size(c)
     spin_idx = at_idx(proposal)
     charge_coord_below = idxToCoord(spin_idx, lattice_size)
     charge_coord_above = (charge_coord_below[1], charge_coord_below[2], charge_coord_below[3] + 1)
-    Δcharge_below = -delta(proposal)*c.scaling[]
-    Δcharge_above = delta(proposal)*c.scaling[]
+    scaling = c.scaling[] / c.az
+    Δcharge_below = -delta(proposal)*scaling
+    Δcharge_above = delta(proposal)*scaling
 
     # Linear term from the existing potential at the two updated charge planes.
     ΔE_below = Δcharge_below * c.u[charge_coord_below...]
@@ -417,17 +413,17 @@ end
     return ΔE_below + ΔE_above + ΔE_self
 end
 
-@inline function calculate(::d_iH, c::CoulombHamiltonian{T,N}, model::S, s_idx) where {T,N,S <: AbstractIsingGraph}
+@inline function calculate(::d_iH, c::CoulombHamiltonian, model::S, s_idx) where {S <: AbstractIsingGraph}
     lattice_size = size(c)
     charge_coord_below = idxToCoord(s_idx, lattice_size)
     charge_coord_above = (charge_coord_below[1], charge_coord_below[2], charge_coord_below[3] + 1)
 
     # For H = 1/2 * sum_i q_i * ϕ_i and q_pair = (-s, +s) * scaling,
     # the derivative with respect to the dipole variable is Δq/Δs · ϕ.
-    return c.scaling[] * (c.u[charge_coord_above...] - c.u[charge_coord_below...])
+    return (c.scaling[] / c.az) * (c.u[charge_coord_above...] - c.u[charge_coord_below...])
 end
 
-update!(::Metropolis, c::CoulombHamiltonian{T}, model::AbstractIsingGraph, proposal::FP) where {T, FP <: FlipProposal} = begin
+update!(::Metropolis, c::CoulombHamiltonian, model::AbstractIsingGraph, proposal::FP) where {FP <: FlipProposal} = begin
     if isaccepted(proposal)
         # 和 ΔH 一样，用自旋所在的 dipole 坐标推两层电荷平面
         spin_idx = at_idx(proposal)
@@ -435,8 +431,9 @@ update!(::Metropolis, c::CoulombHamiltonian{T}, model::AbstractIsingGraph, propo
         coord_above = (coord_below[1], coord_below[2], coord_below[3] + 1)
 
         # dipole → charge 的缩放也要加进来
-        Δq_below = -delta(proposal) * c.scaling[]
-        Δq_above =  delta(proposal) * c.scaling[]
+        scaling = c.scaling[] / c.az
+        Δq_below = -delta(proposal) * scaling
+        Δq_above =  delta(proposal) * scaling
 
         # 表面 screening：z=1 和 z=Nz 的电荷需要乘 (1-screening)
 

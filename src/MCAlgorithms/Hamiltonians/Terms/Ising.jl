@@ -17,11 +17,11 @@ strip_nothing_kwargs(; kwargs...) =
 end
 
 @inline function Ising(g::AbstractIsingGraph; c = nothing, b = nothing, adj = nothing, localpotential = nothing)
-    return reconstruct(Ising(; c, b, adj, localpotential), g)
+    return instantiate(Ising(; c, b, adj, localpotential), g)
 end
 
-@inline function reconstruct(hts::HamiltonianTerms, g::AbstractIsingGraph)
-    return HamiltonianTerms((reconstruct.(hamiltonians(hts), Ref(g)))...)
+@inline function instantiate(hts::HamiltonianTerms, g::AbstractIsingGraph)
+    return HamiltonianTerms((instantiate.(hamiltonians(hts), Ref(g)))...)
 end
 
 export Ising

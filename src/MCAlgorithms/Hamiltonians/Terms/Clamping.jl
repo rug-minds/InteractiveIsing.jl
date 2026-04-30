@@ -15,9 +15,9 @@ end
 
 @inline function Clamping(g::AbstractIsingGraph, β = one(eltype(g)), y = nothing)
     isnothing(y) && (y = zeros(eltype(g), nstates(g)))
-    return reconstruct(Clamping(β, y), g)
+    return instantiate(Clamping(β, y), g)
 end
-@inline function reconstruct(hterm::Clamping, g::AbstractIsingGraph)
+@inline function instantiate(hterm::Clamping, g::AbstractIsingGraph)
     T = eltype(g)
     ynew = zeros(T, nstates(g))
     copylen = min(length(hterm.y), length(ynew))
