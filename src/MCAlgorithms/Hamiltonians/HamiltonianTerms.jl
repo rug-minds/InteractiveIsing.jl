@@ -238,10 +238,77 @@ Get a hamiltonian from the set of hamiltonians
 """
 Base.getindex(hts::HamiltonianTerms, idx::Int) = getfield(hts, :hs)[idx]
 
-
-update!(algo, a, model, proposal) = nothing
 """
-If updating functions are defined, update
+    update!(algo, hterm, model, proposal)
+
+Default Hamiltonian update hook.
+
+Hamiltonian terms that maintain cached state can specialize this method. Terms
+without cached state fall through to `nothing`.
+"""
+update!(algo, a, model, proposal) = nothing
+
+"""
+    update!(algo, hterm::Hamiltonian, model, proposal::MultiSpinProposal)
+
+Fallback cache update for one Hamiltonian term after an accepted multi-spin
+move.
+
+Rejected proposals do not update anything. Accepted proposals are decomposed
+with `subproposals(proposal)` and forwarded to the term's single-spin
+`update!` method in proposal order.
+"""
+@inline function update!(algo, hterm::Hamiltonian, model::AbstractIsingGraph, proposal::MultiSpinProposal)
+    isaccepted(proposal) || return nothing
+    for fp in subproposals(proposal)
+        @inline update!(algo, hterm, model, fp)
+    end
+    return nothing
+end
+
+"""
+    update!(algo, hts::HamiltonianTerms, model, proposal::MultiSpinProposal)
+
+Fallback cache update for a set of Hamiltonian terms after an accepted
+multi-spin move.
+
+The proposal is decomposed into single-spin `FlipProposal`s and each
+subproposal is passed through the usual `HamiltonianTerms` update path. This
+preserves the same sequential behavior as applying the flips one at a time.
+"""
+@inline function update!(algo, hts::HamiltonianTerms, model::AbstractIsingGraph, proposal::MultiSpinProposal)
+    isaccepted(proposal) || return nothing
+    for fp in subproposals(proposal)
+        @inline update!(algo, hts, model, fp)
+    end
+    return nothing
+end
+
+"""
+    update!(::Metropolis, hts::HamiltonianTerms, model, proposal::MultiSpinProposal)
+
+Metropolis-specific multi-spin update fallback.
+
+This method removes dispatch ambiguity with the generated `HamiltonianTerms`
+single-proposal update path. It has the same sequential decomposition semantics
+as the generic multi-spin fallback.
+"""
+@inline function update!(algo::Metropolis, hts::HamiltonianTerms, model::AbstractIsingGraph, proposal::MultiSpinProposal)
+    isaccepted(proposal) || return nothing
+    for fp in subproposals(proposal)
+        @inline update!(algo, hts, model, fp)
+    end
+    return nothing
+end
+
+"""
+    update!(algo, hts::HamiltonianTerms, model, proposal)
+
+Generated update dispatcher for Hamiltonian term collections.
+
+For a single proposal, this unrolls the update over all terms in `hts`. Terms
+without a specialized update method fall through to the default no-op method
+above.
 """
 update!_expr = quote end
 @inline @generated function update!(algo, hts::HamiltonianTerms{Hs}, model, proposal) where Hs
@@ -253,7 +320,12 @@ update!_expr = quote end
     return update!_expr
 end
 
-@inline update!(::LangevinDynamics, hts::HamiltonianTerms{Hs}, model::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, model, proposal)
+@inline update!(::LocalLangevin, hts::HamiltonianTerms{Hs}, model::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, model, proposal)
+@inline update!(::LocalLangevin, hts::HamiltonianTerms, model::AbstractIsingGraph, proposal::MultiSpinProposal) = update!(Metropolis(), hts, model, proposal)
+@inline update!(::GlobalLangevin, hts::HamiltonianTerms{Hs}, model::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, model, proposal)
+@inline update!(::GlobalLangevin, hts::HamiltonianTerms, model::AbstractIsingGraph, proposal::MultiSpinProposal) = update!(Metropolis(), hts, model, proposal)
+@inline update!(::BlockLangevin, hts::HamiltonianTerms{Hs}, model::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, model, proposal)
+@inline update!(::BlockLangevin, hts::HamiltonianTerms, model::AbstractIsingGraph, proposal::MultiSpinProposal) = update!(Metropolis(), hts, model, proposal)
 @inline update!(::KineticMC, hts::HamiltonianTerms{Hs}, model::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, model, proposal)
 
 

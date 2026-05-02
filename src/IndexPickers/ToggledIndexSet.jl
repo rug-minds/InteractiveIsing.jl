@@ -19,6 +19,19 @@ function ToggledIndexSet(g::IsingGraph)
     return ToggledIndexSet(layer_ranges...)
 end
 
+function sampling_indices(is::ToggledIndexSet)
+    total_length = cumulative_length(is)
+    active = Vector{eltype(is.cum_lengths)}(undef, total_length)
+    next_idx = 1
+    for (layer_range, is_on) in zip(is.layer_ranges, is.on)
+        is_on || continue
+        layer_length = length(layer_range)
+        copyto!(active, next_idx, layer_range, 1, layer_length)
+        next_idx += layer_length
+    end
+    return active
+end
+
 function Base.length(is::ToggledIndexSet, layer_idx::Int)
     length(is.layer_ranges[layer_idx])
 end

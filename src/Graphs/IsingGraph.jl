@@ -128,6 +128,8 @@ sampling_indices(idxs::AbstractVector{<:Integer}) = idxs
 sampling_indices(idxs::AbstractSet{<:Integer}) = idxs
 sampling_indices(gd::GraphDefectsNew) = aliveindices(gd)
 
+@inline sampling_indices(g::IsingGraph) = sampling_indices(index_set(g))
+
 hasDefects(g::IsingGraph) = hasDefects(index_set(g))
 aliveList(g::IsingGraph) = aliveList(index_set(g))
 defectList(g::IsingGraph) = defectList(index_set(g))
@@ -220,10 +222,4 @@ function initRandomState(g)
     return _state
 end
 
-""" 
-Returns in iterator which can be used to choose a random index among alive spins
-"""
-function index_set(g)
-    return sampling_indices(index_set(g))
-end
 setdefect(g::IsingGraph, val, idx) = index_set(g)[idx] = val

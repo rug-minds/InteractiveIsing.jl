@@ -12,7 +12,7 @@ const COULOMB_WG = @WG (;dr) -> dr == 1 ? 1.0 : 0.0 NN = 1
         COULOMB_WG,
         LatticeConstants(1.0, 1.0, 1.0),
         StateSet(-1.5, 1.5),
-        Ising(c = ConstVal(0.0), b = StateLike(ConstFill, 0.0)) + CoulombHamiltonian(recalc = 1);
+        Ising(c = ConstVal(0.0), b = 0.0) + CoulombHamiltonian(recalc = 1);
         periodic = (:x, :y),
         precision = Float64,
     )

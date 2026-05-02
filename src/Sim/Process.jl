@@ -57,7 +57,17 @@ function _merge_graph_inputs(func, g::IsingGraph, inputs...)
     return tuple(merged_inputs...)
 end
 
-function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.default_algorithm, lifetime = nothing, repeats = nothing, repeat = nothing, args...)
+"""
+    createProcess(g::IsingGraph, func=nothing, inputs...; allow_multiple=false, kwargs...)
+
+Create and run a process attached to `g`.
+
+By default, existing processes on `g` are closed and removed before the new
+process is launched, so repeated calls replace the active simulation. Pass
+`allow_multiple=true` to keep existing processes and append the new one, which
+matches the previous behavior.
+"""
+function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.default_algorithm, lifetime = nothing, repeats = nothing, repeat = nothing, allow_multiple = false, args...)
     if isnothing(func)
         # func = get(args, :algorithm, g.default_algorithm)
         func = g.default_algorithm
@@ -67,6 +77,10 @@ function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.de
         isnothing(repeats) || error("Pass either `repeats = ...` or numeric `lifetime = ...`, not both.")
         repeats = lifetime
         lifetime = nothing
+    end
+
+    if !allow_multiple
+        Processes.close(g)
     end
     
     func = deepcopy(func)

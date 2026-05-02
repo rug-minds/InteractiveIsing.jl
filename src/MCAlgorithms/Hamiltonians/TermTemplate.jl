@@ -174,7 +174,6 @@ function ensure_isinggraph_state_length(input, default, model)
     # This branch is kept temporarily for front-end/back-end compatibility and
     # should be removed after old docs/tutorials have migrated.
     if input isa DerivedParameter
-        @warn "StateLike/DerivedParameter Hamiltonian inputs are deprecated and will be removed. Use a plain default plus ensure_isinggraph_state_length/ensure_isinggraph_eltype in the Hamiltonian template, or pass a normal value/container directly." input_type = typeof(input)
         return ensure_isinggraph_state_length(input(model), default, model)
     end
 
@@ -192,6 +191,21 @@ function ensure_isinggraph_state_length(input, default, model)
         return input
     else
         return input
+    end
+end
+
+function _deprecated_derived_parameter_message(name::Symbol, input)
+    return "Hamiltonian parameter `$(name)` uses deprecated graph-derived input $(typeof(input)). This usually comes from a constructor keyword like `$(name) = StateLike(...)`. Pass a value, container, or graph function directly instead."
+end
+
+function _deprecated_derived_parameter_message(name::Symbol, input::StateLike{T}) where {T}
+    value = repr(input.default_el)
+    if T === ConstFill
+        return "Hamiltonian parameter `$(name)` was passed `StateLike(ConstFill, $(value))`, probably from `$(name) = StateLike(ConstFill, $(value))` in the Hamiltonian constructor. Replace it with `$(name) = $(value)` for the term's default constant storage, or `$(name) = ConstFill($(value))` if you want to request `ConstFill` explicitly."
+    elseif T === UniformArray
+        return "Hamiltonian parameter `$(name)` was passed `StateLike(UniformArray, $(value))`, probably from `$(name) = StateLike(UniformArray, $(value))` in the Hamiltonian constructor. Replace it with `$(name) = UniformArray($(value))` for mutable uniform storage."
+    else
+        return "Hamiltonian parameter `$(name)` was passed `StateLike($(nameof(T)), $(value))`, probably from `$(name) = StateLike($(nameof(T)), $(value))` in the Hamiltonian constructor. Replace it with a direct graph function such as `$(name) = g -> filltype($(nameof(T)), $(value), statelen(g))`, or pass a concrete container."
     end
 end
 
@@ -358,6 +372,7 @@ end
 function instantiate(spec::ParameterSpec, model)
     input = spec.input
     param_origin = _origin(input)
+    input isa DerivedParameter && @warn _deprecated_derived_parameter_message(spec.name, input) maxlog = 1
 
     if isnothing(input)
         resolved = _apply_ensure(spec.ensure, _resolve_default(spec.default, model), spec.default, model)

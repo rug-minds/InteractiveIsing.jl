@@ -5,7 +5,7 @@ using InteractiveIsing.Processes
 @testset "MC Process Inputs" begin
     g = IsingGraph(2, 2, Continuous(); precision = Float32)
 
-    loop = deepcopy(SimpleAlgo(Unique(Metropolis()), Unique(LangevinDynamics())))
+    loop = deepcopy(SimpleAlgo(Unique(Metropolis()), Unique(LocalLangevin())))
     loop_inputs = InteractiveIsing._merge_graph_inputs(loop, g)
     loop_process = Process(loop, loop_inputs...; repeats = 1)
     loop_context = getcontext(loop_process)
@@ -20,12 +20,53 @@ using InteractiveIsing.Processes
 
     @test kinetic_context[kinetic].model === g
 
-    runtime_loop = SimpleAlgo(Unique(Metropolis()), Unique(LangevinDynamics()))
+    runtime_loop = SimpleAlgo(Unique(Metropolis()), Unique(LocalLangevin()))
     runtime_loop_process = createProcess(g, runtime_loop; lifetime = 1)
     wait(runtime_loop_process)
     @test istaskdone(runtime_loop_process.task)
+    @test length(processes(g)) == 1
 
     runtime_kinetic_process = createProcess(g, KineticMC(); lifetime = 1)
     wait(runtime_kinetic_process)
     @test istaskdone(runtime_kinetic_process.task)
+    @test length(processes(g)) == 1
+
+    extra_process = createProcess(g, Metropolis(); lifetime = 1, allow_multiple = true)
+    wait(extra_process)
+    @test istaskdone(extra_process.task)
+    @test length(processes(g)) == 2
+end
+
+@testset "Index Set API" begin
+    toggled = ToggledIndexSet(1:2, 3:5)
+    @test collect(InteractiveIsing.sampling_indices(toggled)) == [1, 2, 3, 4, 5]
+
+    InteractiveIsing.off!(toggled, 2)
+    @test collect(InteractiveIsing.sampling_indices(toggled)) == [1, 2]
+
+    layered = ToggledLayerIndexSet(2, 1:2, 3:4, 5:6)
+    @test collect(InteractiveIsing.sampling_indices(layered)) == [3, 4]
+
+    InteractiveIsing.off!(layered)
+    @test collect(InteractiveIsing.sampling_indices(layered)) == [1, 2, 5, 6]
+
+    g = IsingGraph(
+        Layer(2, Continuous(), Coords(0, 1, 0)),
+        Layer(2, Continuous(), Coords(0, 2, 0));
+        precision = Float32,
+        index_set = graph -> ToggledIndexSet(graph),
+    )
+    @test index_set(g) isa ToggledIndexSet
+    @test collect(sampling_indices(g)) == [1, 2, 3, 4]
+
+    InteractiveIsing.off!(index_set(g), 2)
+    @test collect(sampling_indices(g)) == [1, 2]
+
+    proc = createProcess(g, LocalLangevin(adjusted = false); lifetime = 1)
+    wait(proc)
+    @test istaskdone(proc.task)
+
+    global_proc = createProcess(g, GlobalLangevin(adjusted = false); lifetime = 1)
+    wait(global_proc)
+    @test istaskdone(global_proc.task)
 end

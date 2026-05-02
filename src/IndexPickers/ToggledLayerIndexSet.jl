@@ -34,6 +34,10 @@ function off!(is::ToggledLayerIndexSet)
     return is
 end
 
+@inline function sampling_indices(is::ToggledLayerIndexSet)
+    return is.on[] ? is.set_with : is.set_without
+end
+
 function pick_idx(rng::R, is::ToggledLayerIndexSet) where {R <: AbstractRNG}
     if is.on[]
         return rand(rng, is.set_with)

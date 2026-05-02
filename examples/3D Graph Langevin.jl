@@ -13,9 +13,16 @@ g = IsingGraph(100,100,10,
         wg, 
         LatticeConstants(1f0, 1f0, 1f0),
         StateSet(-1.5f0, 1.5f0),
-        Ising(c = ConstVal(0f0), b = StateLike(ConstFill, 0f0)) +
+        Ising(c = ConstVal(0f0), b = 0) +
         CoulombHamiltonian(recalc = 5000),
         periodic = (:x,:y))
 
+
+
+algorithm = LocalLangevin(
+        stepsize = 0.05f0,
+        adjusted = true,
+    )
+
 interface(g)
-createProcess(g, LangevinDynamics())
+createProcess(g, algorithm; lifetime = 1)
