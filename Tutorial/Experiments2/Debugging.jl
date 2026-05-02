@@ -668,69 +668,81 @@ B_Logger = ValueLogger(:b)
 T_Logger = ValueLogger(:T)
 Graph_Logger = ImageCapture(:Graph,-1.5,1.5)
 
-# Metro_T = @CompositeAlgorithm begin
-#     @alias metropolis = metropolis
-#
-#     proposal = metropolis()
-#     M_Integrate_and_Logger(Δvalue = @transform(proposal -> accepteddelta(proposal), proposal))
-#     @every point_repeat B_Logger(value = @transform(x -> x.b[], metropolis.hamiltonian))
-#     @every point_repeat T_Logger(value = @transform(temp, metropolis.model))
-# end
-# anneal_partB = @CompositeAlgorithm begin
-#     @context metro_t = Metro_T()
-#
-#     @every point_repeat AnealingB(model = metro_t.metropolis.model)
-# end
-# Anealing_step = @Routine begin
-#     @repeat anneal_time anneal_partB()
-# end
 
-# createProcess(g, Anealing_step, lifetime = 1)
-# c = process(g) |> fetch
-# voltage1 = c[B_Logger].valuesß
-# Pr1      = c[M_Integrate_and_Logger].log
-# Temp1    = c[T_Logger].values
-
-
-Metro_Pulse = @CompositeAlgorithm begin
-    @alias metropolis = metropolis
-
-    proposal = metropolis()
-    M_Integrate_and_Logger(Δvalue = @transform(proposal -> accepteddelta(proposal), proposal))
-    @every point_repeat B_Logger(value = @transform(x -> x.b[], metropolis.hamiltonian))
-end
-
-pulse_part1 = @CompositeAlgorithm begin
-    @context metro_pulse = Metro_Pulse()
-
-    @every point_repeat pulse1(
-        hamiltonian = metro_pulse.metropolis.hamiltonian,
-        M = metro_pulse.metropolis.M,
+langevin = LocalLangevin(
+        stepsize = 0.05f0,
+        adjusted = true,
     )
-    @every capture_interval1 Graph_Logger(array = @transform(model -> state(model), metro_pulse.metropolis.model))
+
+Metro_T = @CompositeAlgorithm begin
+    @alias dynamics = langevin
+
+    proposal = dynamics()
+    M_Integrate_and_Logger(Δvalue = @transform(proposal -> accepteddelta(proposal), proposal))
+    @every point_repeat B_Logger(value = @transform(x -> x.b[], dynamics.hamiltonian))
+    @every point_repeat T_Logger(value = @transform(temp, dynamics.model))
+end
+anneal_partB = @CompositeAlgorithm begin
+    @context metro_t = Metro_T()
+
+    @every point_repeat AnealingB(model = metro_t.dynamics.model)
+end
+Anealing_step = @Routine begin
+    @repeat anneal_time anneal_partB()
 end
 
-relax_part1 = @CompositeAlgorithm begin
-    @context metro_pulse = Metro_Pulse()
-
-    @every capture_interval2 Graph_Logger(array = @transform(model -> state(model), metro_pulse.metropolis.model))
-end
-
-Pulse_and_Relax = @Routine begin
-    @repeat pulse_time pulse_part1()
-    @repeat relax_time relax_part1()
-end
-createProcess(g, Pulse_and_Relax, lifetime = 1, 
-    Input(Graph_Logger, filepath = joinpath(outdir, "capture")),
-    Input(M_Integrate_and_Logger, initialvalue = sum(state(g))))
+createProcess(g, Anealing_step, lifetime = 1)
 c = process(g) |> fetch
-voltage2 = c[B_Logger].values
-Pr2      = c[M_Integrate_and_Logger].log
-# Temp1    = c[T_Logger].values
+voltage1 = c[B_Logger].valuesß
+Pr1      = c[M_Integrate_and_Logger].log
+Temp1    = c[T_Logger].values
+
+fVPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax, voltage1, Pr1))
+fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines!(ax, Pr1))
 
 
-fVPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax, voltage2, Pr2))
-fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines!(ax, Pr2))
+
+# Metro_Pulse = @CompositeAlgorithm begin
+#     @alias metropolis = metropolis
+
+#     @every 1 proposal = metropolis()
+#     @every 1 M_Integrate_and_Logger(Δvalue = @transform(proposal -> accepteddelta(proposal), proposal))
+#     @every point_repeat B_Logger(value = @transform(x -> x.b[], metropolis.hamiltonian))
+# end
+
+
+
+# pulse_part1 = @CompositeAlgorithm begin
+#     @context metro_pulse = Metro_Pulse()
+
+#     @every point_repeat pulse1(
+#         hamiltonian = metro_pulse.metropolis.hamiltonian,
+#         M = metro_pulse.metropolis.M,
+#     )
+#     @every capture_interval1 Graph_Logger(array = @transform(model -> state(model), metro_pulse.metropolis.model))
+# end
+
+# relax_part1 = @CompositeAlgorithm begin
+#     @context metro_pulse = Metro_Pulse()
+
+#     @every capture_interval2 Graph_Logger(array = @transform(model -> state(model), metro_pulse.metropolis.model))
+# end
+
+# Pulse_and_Relax = @Routine begin
+#     @repeat pulse_time pulse_part1()
+#     @repeat relax_time relax_part1()
+# end
+# createProcess(g, Pulse_and_Relax, lifetime = 1, 
+#     Input(Graph_Logger, filepath = joinpath(outdir, "capture")),
+#     Input(M_Integrate_and_Logger, initialvalue = sum(state(g))))
+# c = process(g) |> fetch
+# voltage2 = c[B_Logger].values
+# Pr2      = c[M_Integrate_and_Logger].log
+# # Temp1    = c[T_Logger].values
+
+
+# fVPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax, voltage2, Pr2))
+# fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines!(ax, Pr2))
 
 
 
