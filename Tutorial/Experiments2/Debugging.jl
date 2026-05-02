@@ -589,7 +589,7 @@ Screening = 0.01   # <-- change range here
 Temp_aneal=5f0
 time_fctr=1
 Steps_1=6000
-Temp = 0.5
+Temp = 0.1
 
 #### 可以给Quartic写个vector，然后后面就不哦那个给
 #### b=:homogeneous会被移除，换成b=:OffsetArray, UniformArray, ConstFill，（ConstValue = ConstFill with dimension 0）
@@ -674,174 +674,174 @@ langevin = LocalLangevin(
         adjusted = true,
     )
 
-Metro_T = @CompositeAlgorithm begin
+# Metro_T = @CompositeAlgorithm begin
+#     @alias dynamics = langevin
+
+#     proposal = dynamics()
+#     M_Integrate_and_Logger(Δvalue = @transform(proposal -> accepteddelta(proposal), proposal))
+#     @every point_repeat B_Logger(value = @transform(x -> x.b[], dynamics.hamiltonian))
+#     @every point_repeat T_Logger(value = @transform(temp, dynamics.model))
+# end
+# anneal_partB = @CompositeAlgorithm begin
+#     @context metro_t = Metro_T()
+
+#     @every point_repeat AnealingB(model = metro_t.dynamics.model)
+# end
+# Anealing_step = @Routine begin
+#     @repeat anneal_time anneal_partB()
+# end
+
+# createProcess(g, Anealing_step, lifetime = 1)
+# c = process(g) |> fetch
+# voltage1 = c[B_Logger].values
+# Pr1      = c[M_Integrate_and_Logger].log
+# Temp1    = c[T_Logger].values
+
+# fVPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax, voltage1, Pr1))
+# fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines!(ax, Pr1))
+
+
+
+Metro_Pulse = @CompositeAlgorithm begin
     @alias dynamics = langevin
 
-    proposal = dynamics()
-    M_Integrate_and_Logger(Δvalue = @transform(proposal -> accepteddelta(proposal), proposal))
+    @every 1 proposal = dynamics()
+    @every 1 M_Integrate_and_Logger(Δvalue = @transform(proposal -> accepteddelta(proposal), proposal))
     @every point_repeat B_Logger(value = @transform(x -> x.b[], dynamics.hamiltonian))
-    @every point_repeat T_Logger(value = @transform(temp, dynamics.model))
-end
-anneal_partB = @CompositeAlgorithm begin
-    @context metro_t = Metro_T()
-
-    @every point_repeat AnealingB(model = metro_t.dynamics.model)
-end
-Anealing_step = @Routine begin
-    @repeat anneal_time anneal_partB()
 end
 
-createProcess(g, Anealing_step, lifetime = 1)
+
+
+pulse_part1 = @CompositeAlgorithm begin
+    @context metro_pulse = Metro_Pulse()
+
+    @every point_repeat pulse1(
+        hamiltonian = metro_pulse.dynamics.hamiltonian,
+        M = metro_pulse.dynamics.M,
+    )
+    @every capture_interval1 Graph_Logger(array = @transform(model -> state(model), metro_pulse.dynamics.model))
+end
+
+relax_part1 = @CompositeAlgorithm begin
+    @context metro_pulse = Metro_Pulse()
+
+    @every capture_interval2 Graph_Logger(array = @transform(model -> state(model), metro_pulse.dynamics.model))
+end
+
+Pulse_and_Relax = @Routine begin
+    @repeat pulse_time pulse_part1()
+    @repeat relax_time relax_part1()
+end
+createProcess(g, Pulse_and_Relax, lifetime = 1, 
+    Input(Graph_Logger, filepath = joinpath(outdir, "capture")),
+    Input(M_Integrate_and_Logger, initialvalue = sum(state(g))))
 c = process(g) |> fetch
-voltage1 = c[B_Logger].valuesß
-Pr1      = c[M_Integrate_and_Logger].log
-Temp1    = c[T_Logger].values
-
-fVPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax, voltage1, Pr1))
-fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines!(ax, Pr1))
+voltage2 = c[B_Logger].values
+Pr2      = c[M_Integrate_and_Logger].log
+# Temp1    = c[T_Logger].values
 
 
-
-# Metro_Pulse = @CompositeAlgorithm begin
-#     @alias metropolis = metropolis
-
-#     @every 1 proposal = metropolis()
-#     @every 1 M_Integrate_and_Logger(Δvalue = @transform(proposal -> accepteddelta(proposal), proposal))
-#     @every point_repeat B_Logger(value = @transform(x -> x.b[], metropolis.hamiltonian))
-# end
-
-
-
-# pulse_part1 = @CompositeAlgorithm begin
-#     @context metro_pulse = Metro_Pulse()
-
-#     @every point_repeat pulse1(
-#         hamiltonian = metro_pulse.metropolis.hamiltonian,
-#         M = metro_pulse.metropolis.M,
-#     )
-#     @every capture_interval1 Graph_Logger(array = @transform(model -> state(model), metro_pulse.metropolis.model))
-# end
-
-# relax_part1 = @CompositeAlgorithm begin
-#     @context metro_pulse = Metro_Pulse()
-
-#     @every capture_interval2 Graph_Logger(array = @transform(model -> state(model), metro_pulse.metropolis.model))
-# end
-
-# Pulse_and_Relax = @Routine begin
-#     @repeat pulse_time pulse_part1()
-#     @repeat relax_time relax_part1()
-# end
-# createProcess(g, Pulse_and_Relax, lifetime = 1, 
-#     Input(Graph_Logger, filepath = joinpath(outdir, "capture")),
-#     Input(M_Integrate_and_Logger, initialvalue = sum(state(g))))
-# c = process(g) |> fetch
-# voltage2 = c[B_Logger].values
-# Pr2      = c[M_Integrate_and_Logger].log
-# # Temp1    = c[T_Logger].values
-
-
-# fVPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax, voltage2, Pr2))
-# fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines!(ax, Pr2))
+fVPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax, voltage2, Pr2))
+fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines!(ax, Pr2))
 
 
 
 
 
-# ============ SAVE (PNG + XLSX) ============
-date_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
-base_name = string(
-    "Scale=", round(Scale, digits=4),
-    "_Screening=", round(Screening, digits=4),
-    "_timefctr=", round(time_fctr, digits=4),
-    "_Steps_1=", round(Steps_1, digits=4),
-    "_Eb=", round(E_barrier, digits=4),
-    "_Epp=", round(Epp_1, digits=4),
-    "_Temp_aneal=", round(Temp_aneal, digits=4),
-    "_", date_str
-)
+# # ============ SAVE (PNG + XLSX) ============
+# date_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
+# base_name = string(
+#     "Scale=", round(Scale, digits=4),
+#     "_Screening=", round(Screening, digits=4),
+#     "_timefctr=", round(time_fctr, digits=4),
+#     "_Steps_1=", round(Steps_1, digits=4),
+#     "_Eb=", round(E_barrier, digits=4),
+#     "_Epp=", round(Epp_1, digits=4),
+#     "_Temp_aneal=", round(Temp_aneal, digits=4),
+#     "_", date_str
+# )
 
-png_path  = joinpath(outdir, base_name * ".png")
-xlsx_path = joinpath(outdir, base_name * ".xlsx")
+# png_path  = joinpath(outdir, base_name * ".png")
+# xlsx_path = joinpath(outdir, base_name * ".xlsx")
 
-# # Figure: Temperature vs Pr
-# fTPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Temperature", ylabel = "Pr"), ax -> lines!(ax, Temp1, Pr1))
+# # # Figure: Temperature vs Pr
+# # fTPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Temperature", ylabel = "Pr"), ax -> lines!(ax, Temp1, Pr1))
+# # try
+# #     save(png_path, fTPr)
+# #     println("Saved figure: ", png_path)
+# # catch err
+# #     @warn "Failed to save figure" err
+# # end
+
+# # Pr distribution histogram
+# P = state(g[])
+# v = vec(P)
+# bins = -1.5:0.05:1.5
+# h = fit(Histogram, v, bins)
+# density = h.weights ./ sum(h.weights)
+
+# fig_dist = Figure()
+# ax_dist = Axis(fig_dist[1, 1], xlabel="P", ylabel="Probability")
+# barplot!(ax_dist, h.edges[1][1:end-1], density; width = step(bins))
+
+# png_path_dist = joinpath(outdir, base_name * "_Pr_distribution.png")
 # try
-#     save(png_path, fTPr)
-#     println("Saved figure: ", png_path)
+#     save(png_path_dist, fig_dist)
+#     println("Saved Pr distribution figure: ", png_path_dist)
 # catch err
-#     @warn "Failed to save figure" err
+#     @warn "Failed to save Pr distribution figure" err
 # end
 
-# Pr distribution histogram
-P = state(g[])
-v = vec(P)
-bins = -1.5:0.05:1.5
-h = fit(Histogram, v, bins)
-density = h.weights ./ sum(h.weights)
+# # # Excel: series + distribution + params
+# # n = min(length(Temp1), length(Pr1))
+# # df_series = DataFrame(Temp1 = Float64.(Temp1[1:n]), Pr = Float64.(Pr1[1:n]))
 
-fig_dist = Figure()
-ax_dist = Axis(fig_dist[1, 1], xlabel="P", ylabel="Probability")
-barplot!(ax_dist, h.edges[1][1:end-1], density; width = step(bins))
+# # bin_left = Float64.(h.edges[1][1:end-1])
+# # bin_center = bin_left .+ step(bins)/2
+# # df_dist = DataFrame(
+# #     bin_left   = bin_left,
+# #     bin_center = bin_center,
+# #     prob       = Float64.(density),
+# #     counts     = Float64.(h.weights)
+# # )
 
-png_path_dist = joinpath(outdir, base_name * "_Pr_distribution.png")
-try
-    save(png_path_dist, fig_dist)
-    println("Saved Pr distribution figure: ", png_path_dist)
-catch err
-    @warn "Failed to save Pr distribution figure" err
-end
+# # params = DataFrame(
+# #     key = String[
+# #         "JIsing","a1","b1","c1","E_barrier","Eypp_1","xL","yL","zL","Scale","Screening","Steps_1","time_fctr",
+# #         "anneal_time","point_repeat","Temp_aneal"
+# #     ],
+# #     value = Any[
+# #         JIsing, a1, b1, c1, E_barrier, Epp_1, xL, yL, zL, Scale, Screening, Steps_1, time_fctr,
+# #         anneal_time, point_repeat, Temp_aneal
+# #     ]
+# # )
 
-# # Excel: series + distribution + params
-# n = min(length(Temp1), length(Pr1))
-# df_series = DataFrame(Temp1 = Float64.(Temp1[1:n]), Pr = Float64.(Pr1[1:n]))
+# # XLSX.openxlsx(xlsx_path, mode="w") do xf
+# #     xf[1].name = "series"
+# #     XLSX.writetable!(xf["series"], collect(eachcol(df_series)), names(df_series))
 
-# bin_left = Float64.(h.edges[1][1:end-1])
-# bin_center = bin_left .+ step(bins)/2
-# df_dist = DataFrame(
-#     bin_left   = bin_left,
-#     bin_center = bin_center,
-#     prob       = Float64.(density),
-#     counts     = Float64.(h.weights)
-# )
+# #     XLSX.addsheet!(xf, "Pr_distribution")
+# #     XLSX.writetable!(xf["Pr_distribution"], collect(eachcol(df_dist)), names(df_dist))
 
-# params = DataFrame(
-#     key = String[
-#         "JIsing","a1","b1","c1","E_barrier","Eypp_1","xL","yL","zL","Scale","Screening","Steps_1","time_fctr",
-#         "anneal_time","point_repeat","Temp_aneal"
-#     ],
-#     value = Any[
-#         JIsing, a1, b1, c1, E_barrier, Epp_1, xL, yL, zL, Scale, Screening, Steps_1, time_fctr,
-#         anneal_time, point_repeat, Temp_aneal
-#     ]
-# )
+# #     XLSX.addsheet!(xf, "params")
+# #     XLSX.writetable!(xf["params"], collect(eachcol(params)), names(params))
+# # end
+# # println("Saved Excel: ", xlsx_path)
 
-# XLSX.openxlsx(xlsx_path, mode="w") do xf
-#     xf[1].name = "series"
-#     XLSX.writetable!(xf["series"], collect(eachcol(df_series)), names(df_series))
+#     # # Return only small metadata to avoid memory blow-up
+#     # return (; Screening = Float64(Screening), png_path, png_path_dist, xlsx_path)
+# # end
 
-#     XLSX.addsheet!(xf, "Pr_distribution")
-#     XLSX.writetable!(xf["Pr_distribution"], collect(eachcol(df_dist)), names(df_dist))
+# # # ---- parameters to sweep ----
+# # Scale = 2
+# # Screening_values = 15   # <-- change range here
 
-#     XLSX.addsheet!(xf, "params")
-#     XLSX.writetable!(xf["params"], collect(eachcol(params)), names(params))
-# end
-# println("Saved Excel: ", xlsx_path)
+# # # ---- loop over Screening ----
+# # results = Dict{Float64, Any}()
+# # for Screening in Screening_values
+# #     @info "Running sweep" Screening
+# #     res = run_one_screening!(g; Scale=Scale, Screening=Float64(Screening))
+# #     results[Float64(Screening)] = res
+# # end
 
-    # # Return only small metadata to avoid memory blow-up
-    # return (; Screening = Float64(Screening), png_path, png_path_dist, xlsx_path)
-# end
-
-# # ---- parameters to sweep ----
-# Scale = 2
-# Screening_values = 15   # <-- change range here
-
-# # ---- loop over Screening ----
-# results = Dict{Float64, Any}()
-# for Screening in Screening_values
-#     @info "Running sweep" Screening
-#     res = run_one_screening!(g; Scale=Scale, Screening=Float64(Screening))
-#     results[Float64(Screening)] = res
-# end
-
-# println("Done. Available keys(Screening) = ", collect(keys(results)))
+# # println("Done. Available keys(Screening) = ", collect(keys(results)))
