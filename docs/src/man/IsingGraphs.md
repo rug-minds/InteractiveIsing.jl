@@ -15,13 +15,13 @@ This page documents the current constructor API. Older examples that pass `type 
 There are two user-facing ways to build a graph:
 
 ```julia
-IsingGraph(nx::Int, args...; periodic = true, precision = Float32, adj = nothing, fastwrite = false)
+IsingGraph(nx::Int, args...; periodic = true, precision = Float32, adj = nothing, initial_state = nothing, fastwrite = false)
 ```
 
 Use this for a single 2D or 3D lattice.
 
 ```julia
-IsingGraph(layer1::IsingLayerData, items...; precision = Float32, adj = nothing, index_set = nothing, callback! = identity)
+IsingGraph(layer1::IsingLayerData, items...; precision = Float32, adj = nothing, index_set = nothing, initial_state = nothing, callback! = identity)
 ```
 
 Use this when you want multiple explicit layers inside one graph.
@@ -113,6 +113,30 @@ After the dimensions, the constructor commonly receives:
 If no Hamiltonian is given, the default is `Ising()`. If no weight generator is given, the graph is still created, but the off-diagonal couplings remain zero unless you provide `adj` yourself.
 
 The constructor initializes the spin state from the layer state set, builds the adjacency, reconstructs the Hamiltonian against the final graph shape, and stores the result in `g.hamiltonian`.
+
+For bounded continuous layers, the default initial state is sampled uniformly
+from the layer `StateSet`. For unbounded continuous layers such as
+`StateSet(-Inf32, Inf32)`, there is no finite uniform distribution. In that
+case the default initializer uses local Hamiltonian terms when possible: for a
+confining polynomial local energy, it starts at the local-energy minimum.
+Currently this is detected by summing `LocalPotential` terms, including
+polynomial Hamiltonians and `MagField`. If the summed local polynomial does not
+go to `+Inf` at both ends, the fallback initial value is zero.
+
+You can override initialization with `initial_state`:
+
+```julia
+g = IsingGraph(
+    64,
+    64,
+    Continuous(),
+    StateSet(-Inf32, Inf32);
+    initial_state = 0.25f0,
+)
+```
+
+`initial_state` may be `nothing`, a number, an array with graph-state length, or
+a function called as `initial_state(g)`.
 
 ## Single 3D layer vs explicit multi-layer graph
 

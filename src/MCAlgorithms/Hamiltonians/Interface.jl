@@ -1,5 +1,6 @@
 abstract type Hamiltonian end
 abstract type HamiltonianTerm <: Hamiltonian end
+abstract type LocalPotential <: HamiltonianTerm end
 
 abstract type AbstractHamiltonianTerms{HS} <: Hamiltonian end
 # Base.pairs(ht::AbstractHamiltonianTerms) = pairs(merge(pairs.(getfield(ht, :hs))...))

@@ -41,6 +41,8 @@ include("Makie/Makie.jl")
 
 include("Images.jl")
 
+include("Windows/Windows.jl")
+
 # include("Barebones.jl")
 
 @debug "InteractiveIsing module load complete"

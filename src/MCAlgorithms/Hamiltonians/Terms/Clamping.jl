@@ -23,6 +23,7 @@ end
             y,
             type = AbstractVector,
             default = 0,
+            default_type = Vector,
             ensure = ensure_isinggraph_state_vector,
             info = "Target state y_i",
         ),

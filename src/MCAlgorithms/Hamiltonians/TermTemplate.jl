@@ -77,7 +77,7 @@ Base.getindex(::ArrayPlan) =
 
 InternalPlan(values::NamedTuple, f) = InternalPlan(f, values)
 
-struct ParameterSpec{Default,Ensure,Check,Warn,Input,Units}
+struct ParameterSpec{Default,DefaultType,Ensure,Check,Warn,Input,Units}
     # Front-end keyword name, e.g. :b for MagField(; b = ...).
     name::Symbol
     # Required type after instantiation unless the value is wrapped in Force.
@@ -86,6 +86,9 @@ struct ParameterSpec{Default,Ensure,Check,Warn,Input,Units}
     input::Input
     # Value/template used when `input === nothing`.
     default::Default
+    # Storage type used when explicit scalar/singleton input must be filled.
+    # `nothing` means infer it from `default`.
+    default_type::DefaultType
     # Normalization pipeline. Called as ensure(input_or_default, default, model).
     ensure::Ensure
     # Hard validation after ensure. Return false or throw to reject.
@@ -96,6 +99,10 @@ struct ParameterSpec{Default,Ensure,Check,Warn,Input,Units}
     info::String
     # Optional unit metadata kept separately in Parameters.units.
     units::Units
+end
+
+struct ConversionDefault{Storage,Default}
+    default::Default
 end
 
 struct Parameter{Origin<:ParameterOrigin,Value}
@@ -124,12 +131,19 @@ function _default_value(x)
         return x
     end
 end
+_default_value(x::ConversionDefault) = _default_value(x.default)
 
-_storage_type(x) = Base.typename(typeof(x)).wrapper
+function _storage_type(x)
+    x isa Type && return x
+    x isa Function &&
+        throw(ArgumentError("Cannot infer Hamiltonian parameter fill storage from graph-derived default $(typeof(x)). Set `default_type` in the parameter spec."))
+    return Base.typename(typeof(x)).wrapper
+end
+_storage_type(::ConversionDefault{Storage}) where {Storage} = Storage
 
 function _fill_storage(::Type{Storage}, val, dims::Integer...) where {Storage}
     applicable(filltype, Storage, val, dims...) && return filltype(Storage, val, dims...)
-    return fill(val, dims...)
+    throw(ArgumentError("Hamiltonian parameter auto-fill requires `filltype(::Type{$(Storage)}, value, dims...)`. Define that method for custom storage type $(Storage)."))
 end
 
 function ensure_isinggraph_eltype(input, default, model)
@@ -183,9 +197,12 @@ function ensure_isinggraph_state_length(input, default, model)
 
     if input isa Number
         return _fill_storage(_storage_type(default), input, len)
-    elseif input isa Base.RefValue || (input isa AbstractArray && Base.ndims(input) == 0)
+    elseif input isa Base.RefValue
+        return _fill_storage(_storage_type(default), _default_value(input), len)
+    elseif input isa AbstractArray && Base.ndims(input) == 0
         return _fill_storage(_storage_type(input), _default_value(input), len)
     elseif input isa AbstractArray
+        length(input) == 1 && return _fill_storage(_storage_type(default), only(input), len)
         length(input) == len ||
             throw(DimensionMismatch("Expected state-like parameter with length $(len); got $(length(input))."))
         return input
@@ -214,14 +231,15 @@ function ensure_isinggraph_state_vector(input, default, model)
 
     T = eltype(model)
     len = statelen(model)
-    input isa Type && return fill(convert(T, _default_value(default)), len)
+    input isa Type && return _fill_storage(input, convert(T, _default_value(default)), len)
     applicable(input, model) && return ensure_isinggraph_state_vector(input(model), default, model)
 
     if input isa Number
-        return fill(convert(T, input), len)
+        return _fill_storage(_storage_type(default), convert(T, input), len)
     elseif input isa Base.RefValue || (input isa AbstractArray && Base.ndims(input) == 0)
-        return fill(convert(T, _default_value(input)), len)
+        return _fill_storage(_storage_type(default), convert(T, _default_value(input)), len)
     elseif input isa AbstractArray
+        length(input) == 1 && return _fill_storage(_storage_type(default), convert(T, only(input)), len)
         length(input) == len ||
             throw(DimensionMismatch("Expected state-like vector with length $(len); got $(length(input))."))
         return collect(T, input)
@@ -255,7 +273,7 @@ function _apply_ensure(ensures::Tuple, input, default, model)
 end
 
 """
-    parameter(; x = nothing, type = Any, default = nothing, ensure, check, warn, info = "", units = nothing)
+    parameter(; x = nothing, type = Any, default = nothing, default_type = nothing, ensure, check, warn, info = "", units = nothing)
 
 Create a pre-instantiation parameter spec from constructor syntax. Exactly one
 non-template keyword is expected; its name becomes the parameter name.
@@ -264,6 +282,7 @@ non-template keyword is expected; its name becomes the parameter name.
 """
 function parameter(; type = Any,
                      default = nothing,
+                     default_type = nothing,
                      ensure = _noensure,
                      check = _nocheck,
                      warn = _nowarn,
@@ -276,7 +295,7 @@ function parameter(; type = Any,
     name = first(keys(kwargs))
     input = first(values(kwargs))
 
-    return ParameterSpec(name, type, input, default, ensure, check, warn, info, units)
+    return ParameterSpec(name, type, input, default, default_type, ensure, check, warn, info, units)
 end
 
 """
@@ -343,6 +362,11 @@ end
 _origin(input) = isnothing(input) ? Defaulted() : Passed()
 _resolve_default(default, model) = applicable(default, model) ? default(model) : default
 
+function _conversion_default(spec::ParameterSpec)
+    isnothing(spec.default_type) && return spec.default
+    return ConversionDefault{spec.default_type, typeof(spec.default)}(spec.default)
+end
+
 function _run_check(spec::ParameterSpec, value, model)
     result = spec.check(value, model)
     result === false && throw(ArgumentError("Check failed for Hamiltonian parameter :$(spec.name)."))
@@ -384,7 +408,7 @@ function instantiate(spec::ParameterSpec, model)
         resolved = input.value
         run_check = false
     else
-        resolved = _apply_ensure(spec.ensure, input, spec.default, model)
+        resolved = _apply_ensure(spec.ensure, input, _conversion_default(spec), model)
         run_check = true
     end
 

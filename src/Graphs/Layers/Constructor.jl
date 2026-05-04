@@ -1,5 +1,5 @@
 export Layer, StateSet, LatticeConstants
-Layer(args...) = parse_isinglayer(args...)
+Layer(args...; kwargs...) = parse_isinglayer(args...; kwargs...)
 
 struct StateSet{T}
     states::T

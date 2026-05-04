@@ -82,6 +82,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
     adj = nothing,
     diag = StateLike(OffsetArray, 0),
     index_set = nothing,
+    initial_state = nothing,
     fastwrite = false,
     callback! = identity,
     )
@@ -186,7 +187,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         layers
     )
     
-    state(g) .= initRandomState(g)
+    state(g) .= initState(g, initial_state)
     # g.hamiltonian = instantiate(ham, g)
     callback!(g)
     return g
@@ -195,11 +196,11 @@ end
 """
 Single Layer Constructor
 """
-function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, diag = StateLike(OffsetArray, 0), fastwrite = false)
+function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, diag = StateLike(OffsetArray, 0), initial_state = nothing, fastwrite = false)
     ham, args = type_parse(Hamiltonian, args...; default = Ising(), error = false)
     proposer, args = type_parse(AbstractProposer, args...; default = IsingGraphProposer(), error = false)
 
     layer = parse_isinglayer(size1, args...; periodic = periodic)
 
-    return IsingGraph(ham, proposer, layer; precision, adj, diag)
+    return IsingGraph(ham, proposer, layer; precision, adj, diag, initial_state)
 end

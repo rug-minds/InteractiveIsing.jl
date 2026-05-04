@@ -4,27 +4,29 @@ This might be useful to track values that can be updated in locations unaware of
 Can be equipped with a PTimer for regular polling.
 Includes a lock to prevent race conditions during bidirectional synchronization.
 """
-struct PolledObservable{O,F<:Function, P<:Union{PTimer, Nothing}} <: AbstractObservable{O}
+struct PolledObservable{O,F<:Function, S, P<:Union{PTimer, Nothing}} <: AbstractObservable{O}
     obs::Observable{O}
     pollingfunc::F
+    setter::S
     timer::P
     lock::ReentrantLock
 end
 
 Observables.observe(po::PolledObservable) = po.obs
 
-function PolledObservable(val::T, func::Function; interval = nothing) where {T}
+function PolledObservable(val::T, func::Function; setter = nothing, interval = nothing) where {T}
+    obs = PolledObservable(Observable(val), func, setter, nothing, ReentrantLock())
     if !isnothing(interval)
-        timer = PTimer((timer) -> poll!(val), 0., interval = interval)
+        timer = PTimer((timer) -> poll!(obs), 0., interval = interval)
+        return PolledObservable(obs.obs, obs.pollingfunc, obs.setter, timer, obs.lock)
     else
-        timer = nothing
+        return obs
     end
-    return PolledObservable(Observable(val), func, timer, ReentrantLock())
 end
 
 hastimer(po::PolledObservable) = !isnothing(po.timer)
 togglepause(po::PolledObservable) = begin
-    if hastimer(po)
+    if !hastimer(po)
         return false
     end
     if ispaused(po.timer)
@@ -83,9 +85,11 @@ end
 # Override setindex! to use the lock
 function Base.setindex!(po::PolledObservable, value)
     lock(po.lock)
+    if !isnothing(po.setter)
+        po.setter(value)
+    end
     po.obs[] = value
     unlock(po.lock)
 end
 
 Base.getindex(po::PolledObservable) = po.obs[]
-

@@ -11,6 +11,7 @@ GLMakie.activate!(;
         title = "Interactive Ising Simulation"
     )
 
+include("ColorRange.jl")
 include("Windows/Windows.jl")
 include("WindowList.jl")
 include("SimLayout.jl")
@@ -80,7 +81,7 @@ end
 
 getml() = simulation[].ml[]
 export getml
-export interface, closeinterface
+export interface_old, closeinterface
 
 function newwindow()
     f = Figure()
@@ -94,7 +95,6 @@ function cleanup(ml, ::Nothing)
 end
 
 function set_colorrange(l::IsingLayer)
-    midpanel(getml())[:image].colorrange[] = stateset(l)
+    midpanel(getml())[:image].colorrange[] = layer_colorrange(l)
 end
 export set_colorrange
-
