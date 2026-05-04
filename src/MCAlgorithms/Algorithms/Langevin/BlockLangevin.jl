@@ -31,6 +31,12 @@ BlockLangevin(adjusted::Bool) = BlockLangevin(; adjusted)
 @inline function Processes.init(langevin::BlockLangevin, context::Cont) where {Cont}
     (;model) = context
 
+    for layer in layers(model)
+        statetype(layer) isa Discrete &&
+            error("BlockLangevin requires Continuous layers; layer $(layeridx(layer)) is Discrete. " *
+                  "Use a Metropolis or Heatbath algorithm for discrete spin models.")
+    end
+
     hamiltonian = init!(model.hamiltonian, model)
     rng = Random.MersenneTwister()
 

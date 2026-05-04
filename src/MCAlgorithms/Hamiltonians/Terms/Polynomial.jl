@@ -9,7 +9,7 @@ The Quadratic self energy part of the Ising Hamiltonian
 """
 Hamiltonians of the form H = c*lp[i]*s[i]^n
 """
-struct PolynomialHamiltonian{Order, P} <: HamiltonianTerm
+struct PolynomialHamiltonian{Order, P} <: LocalPotential
     parameters::P
 end
 
@@ -36,6 +36,7 @@ function PolynomialHamiltonian(order; c = nothing, localpotential = nothing)
             lp,
             type = AbstractArray,
             default = g -> adj(g).diag,
+            default_type = Vector,
             ensure = (ensure_isinggraph_state_length, ensure_isinggraph_eltype),
             info = "Local polynomial potential l_i",
         ),

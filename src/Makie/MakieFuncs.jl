@@ -31,7 +31,7 @@ function setLayerSV(window) # set layer singleview
     cur_layer = cur_layer
     # create_layer_axis(cur_layer, mp)
     new_img!(window, mp)
-    mp[:image].colorrange = (stateset(cur_layer)[1], stateset(cur_layer)[end])
+    mp[:image].colorrange = layer_colorrange(cur_layer)
 
     reset_limits!(mp[:axis])
 end
@@ -162,6 +162,6 @@ function new_img!(window, mp; color = nothing, colormap = :thermal)
 
 
     end
-        mp[:image].colorrange[] = (first(stateset(layer)), last(stateset(layer)))
+        bind_layer_colorrange!(mp[:image], mp[:img_obs], layer)
 #     mp["image"].colorrange[] = stateset(layer)
 end

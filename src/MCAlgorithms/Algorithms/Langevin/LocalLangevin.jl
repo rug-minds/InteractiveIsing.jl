@@ -6,13 +6,13 @@ export LocalLangevin
 Single-spin Langevin Monte Carlo update.
 
 Each `Processes.step!` proposes one continuous spin move using the local energy
-derivative. Internally, the algorithm keeps the same random cyclic sweep order
-as the older implementation, but returns to the process scheduler between spin
-updates. With `adjusted=true`, each proposal uses a Metropolis-adjusted
-Langevin acceptance probability (MALA-style) for Boltzmann correctness of the
-discretized proposal. With `adjusted=false`, moves are always accepted after
-drift limiting and boundary reflection, which is faster but not an exact
-Boltzmann sampler.
+derivative. Internally, the algorithm walks through a lazy random permutation of
+the active spins, so every spin is visited once per sweep without exposing a
+linear scan order to the process scheduler. With `adjusted=true`, each proposal
+uses a Metropolis-adjusted Langevin acceptance probability (MALA-style) for
+Boltzmann correctness of the discretized proposal. With `adjusted=false`, moves
+are always accepted after drift limiting and boundary reflection, which is
+faster but not an exact Boltzmann sampler.
 
 `stepsize` is the proposal size used by each single-spin Langevin proposal.
 `group_steps` is the number of full sweeps in one internal cycle; it does not
@@ -95,6 +95,12 @@ end
 @inline function Processes.init(langevin::LocalLangevin, context::Cont) where {Cont}
     (;model) = context
 
+    for layer in layers(model)
+        statetype(layer) isa Discrete &&
+            error("LocalLangevin requires Continuous layers; layer $(layeridx(layer)) is Discrete. " *
+                  "Use a Metropolis or Heatbath algorithm for discrete spin models.")
+    end
+
     hamiltonian = model.hamiltonian
     rng = Random.MersenneTwister()
 
@@ -117,7 +123,7 @@ end
     gradient_rms = zero(SType)
     reflected_fraction = zero(SType)
     sweep_position = Ref(0)
-    sweep_offset = Ref(0)
+    sweep_order = collect(1:length(active_spins))
     group_remaining = Ref(0)
 
     η = max(stepsize[], eps(SType))
@@ -127,12 +133,20 @@ end
                 layer_views, stepsize, max_drift_fraction, group_steps,
                 adjusted, proposal, ΔE, accepted, attempted, T, η, σ,
                 gradient_max, gradient_rms, reflected_fraction,
-                sweep_position, sweep_offset, group_remaining)
+                sweep_position, sweep_order, group_remaining)
 end
 
 @inline update!(::LocalLangevin, hterm, model::AbstractIsingGraph, proposal::FlipProposal) = update!(Metropolis(), hterm, model, proposal)
 
-@inline function _start_local_langevin_cycle!(context, dh, hamiltonian, model, active_spins, rng)
+@inline function _reset_local_langevin_order!(order::Vector{Int}, n::Int)
+    resize!(order, n)
+    @inbounds for i in 1:n
+        order[i] = i
+    end
+    return order
+end
+
+@inline function _start_local_langevin_cycle!(context, dh, hamiltonian, model, active_spins)
     SType = eltype(model)
     for spin_idx in active_spins
         derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
@@ -143,11 +157,21 @@ end
     n = length(active_spins)
     context.group_remaining[] = max(1, context.group_steps[])
     context.sweep_position[] = 1
-    context.sweep_offset[] = rand(rng, 0:(n - 1))
+    _reset_local_langevin_order!(context.sweep_order, n)
     return nothing
 end
 
-@inline function _advance_local_langevin_cursor!(context, rng, n::Int)
+@inline function _next_local_langevin_order_index!(context, rng, n::Int)
+    pos = context.sweep_position[]
+    swap_pos = rand(rng, pos:n)
+    order = context.sweep_order
+    @inbounds begin
+        order[pos], order[swap_pos] = order[swap_pos], order[pos]
+        return order[pos]
+    end
+end
+
+@inline function _advance_local_langevin_cursor!(context, n::Int)
     context.sweep_position[] += 1
     if context.sweep_position[] <= n
         return nothing
@@ -156,7 +180,7 @@ end
     context.group_remaining[] -= 1
     if context.group_remaining[] > 0
         context.sweep_position[] = 1
-        context.sweep_offset[] = rand(rng, 0:(n - 1))
+        _reset_local_langevin_order!(context.sweep_order, n)
     else
         context.sweep_position[] = 0
     end
@@ -182,7 +206,7 @@ end
     n = length(active_spins)
     n == 0 && return (;)
     if context.sweep_position[] == 0
-        _start_local_langevin_cycle!(context, dh, hamiltonian, model, active_spins, rng)
+        _start_local_langevin_cycle!(context, dh, hamiltonian, model, active_spins)
     end
 
     attempted = 0
@@ -192,11 +216,7 @@ end
     proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
     reflected = 0
 
-    k = context.sweep_position[] + context.sweep_offset[]
-    if k > n
-        k -= n
-    end
-
+    k = _next_local_langevin_order_index!(context, rng, n)
     spin_idx = @inbounds active_spins[k]
     derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
     derivative = _finite_derivative(SType(derivative))
@@ -263,7 +283,7 @@ end
         end
     end
 
-    _advance_local_langevin_cursor!(context, rng, n)
+    _advance_local_langevin_cursor!(context, n)
 
     acceptance_rate = attempted == 0 ? zero(SType) : SType(accepted) / SType(attempted)
     gradient_max = isempty(active_spins) ? zero(SType) : maximum(abs, @view dH_prealloc[active_spins])

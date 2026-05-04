@@ -73,6 +73,7 @@ manually adding offsets in every Hamiltonian.
 For state-like parameters such as `b`, `localpotential`, or `y`, you can pass:
 
 - a scalar value, e.g. `b = 1`;
+- a singleton vector, e.g. `b = [1]`, which is expanded to graph length;
 - a container value, e.g. `b = ConstFill(1f0)`;
 - a container type, e.g. `b = UniformArray`, which asks the template to build
   the container with the term default value and graph size;
@@ -83,6 +84,7 @@ Examples:
 
 ```julia
 Ising(b = 1)
+Ising(b = [1])
 Ising(b = ConstFill(1f0))
 Ising(b = UniformArray)
 Ising(b = OffsetArray)
@@ -101,6 +103,12 @@ The term template will convert plain numbers to the graph precision by default.
 Use `NoEnsure(x)` when the storage should be accepted as-is but still checked,
 and `Force(x)` when the template should not check it.
 
+If a keyword is omitted, the term uses its optimized default storage. For
+example, omitted `MagField.b` uses a constant zero field. If a scalar or
+singleton is explicitly passed, the term uses its explicit-input storage
+policy. For `MagField.b`, that means `b = 1` and `b = [1]` become mutable
+uniform graph-sized storage.
+
 ## Choosing A Container
 
 Use `ConstVal` for fixed scalar coefficients.
@@ -114,3 +122,17 @@ Use `UniformArray` for uniform values that change during the run.
 Use `OffsetArray` for a global offset plus local deviations.
 
 Use `Vector` or `Array` when every site really has independent memory.
+
+## Container Auto-Fill Interface
+
+Any array type that should be usable as an auto-filled Hamiltonian storage type
+must implement `filltype`:
+
+```julia
+filltype(::Type{MyArray}, value, dims...) = MyArray(value, dims...)
+```
+
+The Hamiltonian template calls this when a user passes a storage type such as
+`b = Vector` or when a scalar must be expanded according to a term's
+`default_type`. If no `filltype` method exists, construction fails with a clear
+error instead of silently falling back to dense `fill`.

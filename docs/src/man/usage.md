@@ -190,7 +190,7 @@ To immediately get the parameter of corresponding to a symbol, we can use
 ```
 getparam(g::AbstractIsingGraph, param::Symbol)
 ```
-See [Parameters](@ref) for more information.
+See [Parameters](Parameters.md) for more information.
 
 ## Algorithms and Hamiltonians
 

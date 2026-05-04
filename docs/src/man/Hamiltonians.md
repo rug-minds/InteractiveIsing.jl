@@ -28,7 +28,9 @@ rules across template-based terms:
 
 - `nothing` means use the term default.
 - A plain scalar such as `1` is converted to the graph precision and wrapped in
-  the default scalar container for that term.
+  the explicit-input container for that term.
+- A singleton vector such as `[1]` is treated like an explicit scalar and
+  expanded to graph length.
 - A concrete vector, matrix, or scalar container is checked against the graph
   and converted where the term asks for graph precision.
 - A function `g -> ...` is evaluated during instantiation.
@@ -81,7 +83,7 @@ provided, it uses `adj(g)`. `J` must be an `n x n` matrix for `n` graph states.
 
 Represents ``-c \sum_i b_i s_i``. The default field is a zero `ConstFill`
 with graph-state length. `b = 1` means a uniform field of one in graph
-precision.
+precision using mutable uniform storage.
 
 `Quadratic`, `Quartic`, `Sextic`, `Octic`
 

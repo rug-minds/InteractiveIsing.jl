@@ -26,6 +26,7 @@ include("IsingGraph.jl")
 include("Layers/Layers.jl")
 include("StatePartition.jl")
 include("SingleLayerGraph.jl")
+include("InitialState.jl")
 include("Constructors.jl")
 
 

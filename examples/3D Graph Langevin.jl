@@ -8,7 +8,7 @@ end
 
 wg = @WG isingweights NN= 1
 
-g = IsingGraph(100,100,10, 
+g = IsingGraph(40,40,10, 
         Continuous(), 
         wg, 
         LatticeConstants(1f0, 1f0, 1f0),
@@ -20,9 +20,10 @@ g = IsingGraph(100,100,10,
 
 
 algorithm = LocalLangevin(
-        stepsize = 0.05f0,
+        stepsize = 0.1f0,
         adjusted = true,
     )
 
 interface(g)
-createProcess(g, algorithm; lifetime = 1)
+createProcess(g, algorithm)
+# createProcess(g)

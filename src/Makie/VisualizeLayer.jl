@@ -22,7 +22,7 @@ function visualizelayer!(parent::Union{Figure, GridLayout}, layer::AbstractIsing
 
     state_obs = Observable(RepeatedRowsView(vec(state(layer)), 10))
     im = image!(ax, state_obs; colormap, fxaa = false, interpolate = false)
-    im.colorrange[] = stateset(layer)
+    bind_layer_colorrange!(im, state_obs, layer)
     return state_obs
 end
 
@@ -39,7 +39,7 @@ function visualizelayer!(parent::Union{Figure, GridLayout}, layer::AbstractIsing
 
     state_obs = Observable(state(layer))
     im = image!(ax, state_obs; colormap, fxaa = false, interpolate = false)
-    im.colorrange[] = stateset(layer)
+    bind_layer_colorrange!(im, state_obs, layer)
     return state_obs
 end
 
@@ -55,6 +55,6 @@ function visualizelayer!(parent::Union{Figure, GridLayout}, layer::AbstractIsing
     zs = idx2zcoord.(Ref(sz), allidxs)
 
     plt = meshscatter!(ax, xs, ys, zs; markersize = 0.3, color = state_obs, colormap)
-    plt.colorrange[] = stateset(layer)
+    bind_layer_colorrange!(plt, state_obs, layer)
     return state_obs
 end

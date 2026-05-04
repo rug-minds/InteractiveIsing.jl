@@ -1,5 +1,5 @@
 using MacroTools
-export HamiltonianTerms
+export HamiltonianTerms, LocalPotential
 # RuntimeGeneratedFunctions.init(@__MODULE__)
 
 include("Interface.jl")

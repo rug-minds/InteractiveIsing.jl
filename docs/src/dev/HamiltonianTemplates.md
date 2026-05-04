@@ -42,6 +42,7 @@ params = Parameters(
         c,
         type = AbstractArray,
         default = ConstVal(1f0),
+        default_type = UniformArray,
         ensure = ensure_isinggraph_scalar,
         info = "Coupling constant",
     ),
@@ -56,10 +57,20 @@ separately. Access is forwarded through the term, so calculation code can write
 Constructor input rules:
 
 - `nothing` uses the default.
-- plain values go through `ensure`;
+- plain values go through `ensure` using `default_type` as the fill storage;
+- singleton arrays such as `[1]` are expanded to graph-sized storage for
+  state-like parameters;
+- storage types such as `Vector` or `UniformArray` are filled through
+  `filltype`;
 - graph functions are evaluated by ensure functions that support them;
 - `NoEnsure(x)` skips ensure but still checks;
 - `Force(x)` skips ensure and hard checks.
+
+`default` and `default_type` are deliberately separate:
+
+- `default` is the omitted-input value.
+- `default_type` is the storage used for explicit scalar/singleton input.
+- if `default_type` is omitted, it is inferred from `typeof(default)`.
 
 Useful ensure functions:
 
@@ -74,6 +85,16 @@ Ensure functions can be composed with tuples:
 ```julia
 ensure = (ensure_isinggraph_state_length, ensure_isinggraph_eltype)
 ```
+
+Auto-filled containers must implement:
+
+```julia
+filltype(::Type{MyArray}, value, dims...) = MyArray(value, dims...)
+```
+
+The template does not fall back to dense `fill` for unknown storage types.
+Missing `filltype` methods should fail early so container authors know which
+interface they need to implement.
 
 ## Internal State
 
@@ -161,6 +182,7 @@ function SomeTerm(; c = nothing, field = nothing)
         parameter(; c, type = AbstractArray, default = ConstVal(1f0),
                   ensure = ensure_isinggraph_scalar),
         parameter(; field, type = AbstractArray, default = ConstFill(0),
+                  default_type = UniformArray,
                   ensure = (ensure_isinggraph_state_length, ensure_isinggraph_eltype)),
     )
     return SomeTerm(params)

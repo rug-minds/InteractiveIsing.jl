@@ -1,4 +1,4 @@
-export interface
+export interface_old
 include("Pausing.jl")
 include("Process.jl")
-interface(g; overwrite = true) = simwindow(g)
+interface_old(g; overwrite = true) = simwindow(g)

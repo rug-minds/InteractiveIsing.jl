@@ -1,5 +1,5 @@
 export adj, state
-export statelen, initRandomState
+export statelen, initRandomState, initState
 export processes, process
 # Layer forwards
 export layer_idxs
@@ -209,17 +209,5 @@ function reset!(g::IsingGraph)
 end
  
 statelen(g::IsingGraph) = length(state(g))
-
-""" 
-Initialize from a graph
-"""
-function initRandomState(g)
-    _state = similar(state(g))
-    # for layer in unshuffled(layers(g))
-    for layer in layers(g)
-        _state[graphidxs(layer)] .= rand(layer, length(graphidxs(layer)))
-    end
-    return _state
-end
 
 setdefect(g::IsingGraph, val, idx) = index_set(g)[idx] = val

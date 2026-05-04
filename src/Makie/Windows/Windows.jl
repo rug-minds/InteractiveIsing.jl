@@ -12,7 +12,7 @@ function LayerAxis(gridposition, l; colormap = :thermal, kwargs...)
     ax.yreversed = @load_preference("makie_y_flip", default = false)
     img_ob = Observable(state(l))
     im = image!(ax, img_ob, fxaa = false, interpolate = false; colormap)
-    im.colorrange[] = stateset(l)
+    bind_layer_colorrange!(im, img_ob, l)
     return ax, im, img_ob
 end
 
@@ -109,6 +109,4 @@ function window_open(f::Figure)
     return events(f).window_open
 end
 export window_open
-
-
 

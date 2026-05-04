@@ -58,7 +58,7 @@ H = -Σ_i b_i s_i
 The magnetic field part of the Ising Hamiltonian, written against the
 term-template parameter convention.
 """
-struct MagField{P} <: HamiltonianTerm
+struct MagField{P} <: LocalPotential
     parameters::P
 end
 
@@ -75,6 +75,7 @@ function MagField(; b = nothing, c = nothing)
             b,
             type = AbstractArray,
             default = ConstFill(0),
+            default_type = UniformArray,
             ensure = (ensure_isinggraph_state_length, ensure_isinggraph_eltype),
             info = "Local magnetic field values b_i for each spin i",
         ),
