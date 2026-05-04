@@ -20,5 +20,5 @@ g = IsingGraph(100,100,10,
 
 interface(g)
 
-dynamics = LocalLangevin(stepsize = 0.05f0, adjusted = false)
+dynamics = LocalLangevin(stepsize = 0.05f0, adjusted = true)
 createProcess(g, dynamics)

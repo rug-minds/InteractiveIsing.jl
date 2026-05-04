@@ -38,6 +38,7 @@ const BIAS_SEEDS = parse_list(Int, "ISING_XOR_SEARCH_BIAS_SEED", "8765")
 const STATE_MODES = Symbol.(split(get(ENV, "ISING_XOR_SEARCH_STATE_MODE", "continuous"), ","))
 const START_TEMP = parse(FT, get(ENV, "ISING_XOR_SEARCH_START_TEMP", "0.03"))
 const STOP_TEMP = parse(FT, get(ENV, "ISING_XOR_SEARCH_STOP_TEMP", "1e-4"))
+const STEPSIZES = parse_list(FT, "ISING_XOR_SEARCH_STEPSIZE", "NaN")
 const WEIGHT_SCALE = parse(FT, get(ENV, "ISING_XOR_SEARCH_WEIGHT_SCALE", "0.03"))
 const SKIP_WEIGHT_SCALES = parse_list(FT, "ISING_XOR_SEARCH_SKIP_WEIGHT_SCALE", "0")
 const WEIGHT_NORMS = parse_list(FT, "ISING_XOR_SEARCH_WEIGHT_NORM", "0")
@@ -443,16 +444,18 @@ function build_configs()
                                             for learning_rate in LEARNING_RATES
                                                 for beta in BETAS
                                                     for relaxation_steps in RELAXATION_STEPS_LIST
-                                                        for dynamics in DYNAMICS_CONFIGS
-                                                            for block_size in BLOCK_SIZES
+                                                    for dynamics in DYNAMICS_CONFIGS
+                                                        for block_size in BLOCK_SIZES
+                                                            for stepsize_config in STEPSIZES
                                                                 for state_mode in STATE_MODES
                                                                     for weight_seed in WEIGHT_SEEDS
                                                                         for bias_seed in BIAS_SEEDS
                                                                             idx += 1
-                                                                            stepsize =
+                                                                            default_stepsize =
                                                                                 dynamics === :block ? FT(1e-3) :
                                                                                 ADJUSTED ? FT(5e-3) :
                                                                                 FT(1e-2)
+                                                                            stepsize = isnan(stepsize_config) ? default_stepsize : stepsize_config
                                                                             yield_config = (;
                                                                                 hidden_sizes = Tuple(hidden_sizes),
                                                                                 output_units,
@@ -483,6 +486,7 @@ function build_configs()
                                                                         end
                                                                     end
                                                                 end
+                                                            end
                                                             end
                                                         end
                                                     end

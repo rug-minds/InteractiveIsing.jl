@@ -326,6 +326,8 @@ end
 @inline update!(::GlobalLangevin, hts::HamiltonianTerms, model::AbstractIsingGraph, proposal::MultiSpinProposal) = update!(Metropolis(), hts, model, proposal)
 @inline update!(::BlockLangevin, hts::HamiltonianTerms{Hs}, model::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, model, proposal)
 @inline update!(::BlockLangevin, hts::HamiltonianTerms, model::AbstractIsingGraph, proposal::MultiSpinProposal) = update!(Metropolis(), hts, model, proposal)
+@inline update!(::DynamicBlockLangevin, hts::HamiltonianTerms{Hs}, model::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, model, proposal)
+@inline update!(::DynamicBlockLangevin, hts::HamiltonianTerms, model::AbstractIsingGraph, proposal::MultiSpinProposal) = update!(Metropolis(), hts, model, proposal)
 @inline update!(::KineticMC, hts::HamiltonianTerms{Hs}, model::AbstractIsingGraph, proposal::FlipProposal) where {Hs} = update!(Metropolis(), hts, model, proposal)
 
 

@@ -14,6 +14,15 @@ using InteractiveIsing.Processes
     @test LocalLangevin(order = :cyclic) isa LocalLangevin{:cyclic}
     @test_throws ArgumentError LocalLangevin(order = :unknown)
     @test_throws ArgumentError LocalLangevin{:random,:unknown}()
+    @test BlockLangevin() isa BlockLangevin{false}
+    @test BlockLangevin(adjusted = true) isa BlockLangevin{true}
+    @test BlockLangevin{true}() isa BlockLangevin{true}
+    @test_throws ArgumentError BlockLangevin{:unknown}()
+    @test DynamicBlockLangevin() isa DynamicBlockLangevin{256,false}
+    @test DynamicBlockLangevin(max_blocksize = 17, adjusted = true) isa DynamicBlockLangevin{17,true}
+    @test DynamicBlockLangevin{13}(adjusted = true) isa DynamicBlockLangevin{13,true}
+    @test_throws ArgumentError DynamicBlockLangevin{0}()
+    @test_throws ArgumentError DynamicBlockLangevin{8,:unknown}()
 
     step_ctx = Processes.init(LocalLangevin(adjusted = false, order = :deterministic), (;model = g))
     step_result = Processes.step!(LocalLangevin(adjusted = false, order = :deterministic), step_ctx)

@@ -121,6 +121,15 @@ Short block-Langevin survey: `constant_readout_hterm`, bounded continuous states
 - The XOR search now supports `ISING_XOR_SEARCH_OUTPUT_CODE=orthogonal`. In that mode the two bipolar output patterns have dot product zero, and the readout vector is normalized so those extreme patterns score `-1` and `+1`.
 - With orthogonal output patterns, `out=4`, `readout_target=1.0`, and the same `hidden=(16,)`, `BlockLangevin`, `Minit=5`, `weight_norm=0.2`, `lr=0.01`, `β=0.1`, `relax=100` setup, the zero-epoch baseline is now meaningful: score MSE `1.006878`, accuracy `0.75`.
 - That orthogonal/`±1` 10,000 epoch run did not learn with the current hyperparameters. Best restored MSE was only `1.00215` at epoch 300, and the final logged epoch was worse (`1.045016`, accuracy `0.5`). Artifact: `ext/IsingLearning/runs/xor_10k_20260504_203500/xor_10k_mse.png`.
+- Re-running the same orthogonal/`±1` curve with the bespoke debug sign flip (`ISING_XOR_SEARCH_GRADIENT_SIGN=-1`) improved MSE slightly but did not solve XOR: before `1.006878`, best `0.993383` at epoch 9500, accuracy still `0.75`.
+- Relaxed-state diagnostics on the untrained orthogonal setup show that the hidden/output states do not mostly sit at the box extremes after the current relaxation budget. With `relaxation=100`, only about `8-12%` of hidden/output coordinates had `|s| >= 0.9`, while roughly half had `|s| < 0.5`. With `relaxation=1000`, the extreme fraction improved only modestly and remained far from a corner-dominated state. This means the present free relaxation is not behaving like a hard zero-temperature coordinate minimizer.
+- A free-phase equilibration curve was added in `ext/IsingLearning/examples/xor_relaxation_equilibration_curve.jl`.
+  For the untrained orthogonal setup, `stepsize=0.001`, `block_size=8`, and 20 active hidden/output units, one full sweep is `ceil(20/8)=3` block proposals. Over 20,000 full sweeps the free state keeps moving toward the boundary:
+  mean `|s|` rises from `0.5109` to `0.6543`, `frac |s| >= 0.9` rises from `0.1125` to `0.39375`, projected residual falls from `0.4934` to `0.2944`, and energy falls from `-0.4040` to `-6.3239`.
+  The curve has not fully plateaued at 20k sweeps, so the previous `relaxation=100` training phases are very likely far from equilibrium for this sampler/stepsize.
+  Artifact: `ext/IsingLearning/runs/xor_equilibration_20260504_225213/xor_equilibration.png`.
+- Larger stepsizes only help if the effective proposal is accepted/applied. With adjusted block Langevin, `stepsize=0.05` did not improve the 2k-sweep relaxation curve much, consistent with rejection-limited motion. With unadjusted block Langevin, `stepsize=0.05` rapidly extremized the free phase: by 100 full sweeps, mean `|s|` was `0.914`, `frac |s| >= 0.9` was `0.869`, projected residual was `0.0555`, and energy had dropped to `-9.79`; by 2000 full sweeps, mean `|s|` was `0.977` and `frac |s| >= 0.9` was `0.988`.
+  This suggests the EP-style relaxation runs should use a much larger effective step, likely with `adjusted=false`, while Boltzmann-correct adjusted sampling needs separate step-size/acceptance tuning.
 
 ## Bias / Symmetry Breaking
 
