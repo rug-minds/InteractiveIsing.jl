@@ -554,8 +554,8 @@ end
 #####################################################################################
 #####################################################################################
 
-xL = 40  # Length in the x-dimension
-yL = 40  # Length in the y-dimension
+xL = 30  # Length in the x-dimension
+yL = 30  # Length in the y-dimension
 zL = 10   # Length in the z-dimension
 
 
@@ -585,7 +585,7 @@ mkpath(outdir)
 # function run_one_screening!(g; Scale, Screening, Temp_aneal=6f0, time_fctr=30, Steps_1=6000)
 # ---- parameters to sweep ----
 Scale = 1
-Screening = 0.01   # <-- change range here
+Screening = 5   # <-- change range here
 Temp_aneal=5f0
 time_fctr=1
 Steps_1=6000
@@ -646,7 +646,7 @@ interface(g)
 temp!(g, Temp)
 
 # ----- Annealing algorithm -----
-Amp1 =10
+Amp1 =1.1
 nrepeats = 2
 pulse1 = TrianglePulseA(Amp1, nrepeats)
 pulse2 = SinPulseA(Amp1, nrepeats)
@@ -705,7 +705,7 @@ langevin = LocalLangevin(
 Metro_Pulse = @CompositeAlgorithm begin
     @alias dynamics = langevin
 
-    @every 1 proposal = dynamics()
+    proposal = @every 1 dynamics()
     @every 1 M_Integrate_and_Logger(Δvalue = @transform(proposal -> accepteddelta(proposal), proposal))
     @every point_repeat B_Logger(value = @transform(x -> x.b[], dynamics.hamiltonian))
 end
