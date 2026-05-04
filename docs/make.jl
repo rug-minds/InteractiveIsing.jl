@@ -1,6 +1,8 @@
-push!(LOAD_PATH,"../src/")
+pushfirst!(LOAD_PATH, joinpath(@__DIR__, ".."))
 
 using Documenter
+using InteractiveIsing
+using InteractiveIsing.Windows
 
 makedocs(sitename="InteractiveIsing Documentation",
         pages = [ 
@@ -26,6 +28,7 @@ makedocs(sitename="InteractiveIsing Documentation",
             "Developer" => [
                 "Registry and Scoping" => "dev/Registry.md",
                 "Scoped Algorithms" => "dev/ScopedAlgorithms.md",
+                "Windows Backend" => "dev/WindowsBackend.md",
                 "Langevin Boltzmann Proof" => "dev/LangevinBoltzmannProof.md",
                 "Hamiltonian Term Templates" => "dev/HamiltonianTemplates.md",
                 "Context" => "dev/Context.md",
