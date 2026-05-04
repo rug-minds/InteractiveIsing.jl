@@ -99,6 +99,30 @@ end
     @test host.closed
 end
 
+@testset "ConnectionsPanel figure construction" begin
+    wg = @WG window_test_weights NN = 1
+    g = IsingGraph(
+        Layer(2, Continuous()),
+        wg,
+        Layer(2, Continuous());
+        precision = Float32,
+    )
+    host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    handle = Windows.panel!(host, Windows.ConnectionsPanel(g; max_edges = 1), (1, 1))
+
+    @test haskey(handle, :axis)
+    @test haskey(handle, :edge_plot)
+    @test haskey(handle, :node_plot)
+    @test handle[:edge_count] == 2
+    @test handle[:visible_edge_count] == 1
+    @test length(handle[:edge_points][]) == 9
+    @test length(handle[:edge_colors][]) == 9
+    @test length(handle[:edge_weights]) == 1
+
+    close(host)
+    @test host.closed
+end
+
 @testset "SimulationPanel figure construction" begin
     g = IsingGraph(3, 3, Continuous(), StateSet(-1.0f0, 1.0f0); precision = Float32)
     host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)

@@ -24,19 +24,20 @@ using GLMakie.GLFW
 using GLMakie: to_native
 using Observables
 using Preferences
+using SparseArrays
 using UUIDs
 
 using ..Processes
 using ..InteractiveIsing: AbstractIsingLayer, Clamping, CoulombHamiltonian,
     CastVec, HamiltonianTerms, IsingGraph, MagField, PTimer, PolynomialHamiltonian,
-    PolledObservable, Parameter, SingleLayerGraph, addRandomDefects!, graphidxs, hamiltonian,
-    hamiltonians, inline_layer_dispatch, layers,
+    PolledObservable, Parameter, SingleLayerGraph, addRandomDefects!, adj, graphidxs,
+    hamiltonian, hamiltonians, idxToCoord, inline_layer_dispatch, layers,
     modulefolder, nstates, origin, parameters, plotCorr, poll!, processes,
     saveGImg, state, stateset, temp, temp!, value, wg
 
 export AbstractPanel, PanelHandle, WindowHost, SimulationPanel, StatusPanel,
-    ContextLinesPanel, HamiltonianDisplaySpec, HamiltonianParameterPanel, LayerDisplayValue,
-    LayerSelectorPanel, LayerViewPanel, TemperaturePanel, MagnetizationPanel,
+    ConnectionsPanel, ContextLinesPanel, HamiltonianDisplaySpec, HamiltonianParameterPanel,
+    LayerDisplayValue, LayerSelectorPanel, LayerViewPanel, TemperaturePanel, MagnetizationPanel,
     close!, interface, layer_display, mount!, new_interface, panel!,
     parameter_display, pause!, register!, register_frame!, register_polled!,
     restart!, resume!, window, displayable_hamiltonian_parameters,
