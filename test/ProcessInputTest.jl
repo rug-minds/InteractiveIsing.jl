@@ -15,6 +15,27 @@ using InteractiveIsing.Processes
     step_result = Processes.step!(LocalLangevin(adjusted = false, order = :deterministic), step_ctx)
     @test step_result.attempted == 1
 
+    zero_temp_graph = IsingGraph(
+        1,
+        1,
+        Continuous(),
+        StateSet(-10f0, 10f0),
+        Clamping(1f0, [0f0]);
+        precision = Float32,
+        initial_state = 1f0,
+    )
+    temp!(zero_temp_graph, 0f0)
+    zero_temp_alg = LocalLangevin(stepsize = 2.5f0, adjusted = false, order = :deterministic)
+    zero_temp_ctx = Processes.init(zero_temp_alg, (;model = zero_temp_graph))
+    zero_temp_vals = Float32[]
+    for _ in 1:8
+        zero_temp_out = Processes.step!(zero_temp_alg, zero_temp_ctx)
+        zero_temp_ctx = merge(zero_temp_ctx, zero_temp_out)
+        push!(zero_temp_vals, state(zero_temp_graph)[1])
+    end
+    @test all(>=(0f0), zero_temp_vals)
+    @test issorted(abs.(zero_temp_vals); rev = true)
+
     loop = deepcopy(SimpleAlgo(Unique(Metropolis()), Unique(LocalLangevin())))
     loop_inputs = InteractiveIsing._merge_graph_inputs(loop, g)
     loop_process = Process(loop, loop_inputs...; repeats = 1)
@@ -50,21 +71,21 @@ end
 @testset "Index Set API" begin
     toggled = ToggledIndexSet(1:2, 3:5)
     @test collect(InteractiveIsing.sampling_indices(toggled)) == [1, 2, 3, 4, 5]
-    @test !InteractiveIsing.sampling_changed!(toggled)
+    @test !InteractiveIsing.consume_changed!(toggled)
 
     InteractiveIsing.off!(toggled, 2)
     @test collect(InteractiveIsing.sampling_indices(toggled)) == [1, 2]
-    @test InteractiveIsing.sampling_changed!(toggled)
-    @test !InteractiveIsing.sampling_changed!(toggled)
+    @test InteractiveIsing.consume_changed!(toggled)
+    @test !InteractiveIsing.consume_changed!(toggled)
 
     layered = ToggledLayerIndexSet(2, 1:2, 3:4, 5:6)
     @test collect(InteractiveIsing.sampling_indices(layered)) == [3, 4]
-    @test !InteractiveIsing.sampling_changed!(layered)
+    @test !InteractiveIsing.consume_changed!(layered)
 
     InteractiveIsing.off!(layered)
     @test collect(InteractiveIsing.sampling_indices(layered)) == [1, 2, 5, 6]
-    @test InteractiveIsing.sampling_changed!(layered)
-    @test !InteractiveIsing.sampling_changed!(layered)
+    @test InteractiveIsing.consume_changed!(layered)
+    @test !InteractiveIsing.consume_changed!(layered)
 
     g = IsingGraph(
         Layer(2, Continuous(), Coords(0, 1, 0)),
@@ -77,8 +98,8 @@ end
 
     InteractiveIsing.off!(index_set(g), 2)
     @test collect(sampling_indices(g)) == [1, 2]
-    @test InteractiveIsing.sampling_changed!(g)
-    @test !InteractiveIsing.sampling_changed!(g)
+    @test InteractiveIsing.consume_changed!(g)
+    @test !InteractiveIsing.consume_changed!(g)
 
     proc = createProcess(g, LocalLangevin(adjusted = false); lifetime = 1)
     wait(proc)

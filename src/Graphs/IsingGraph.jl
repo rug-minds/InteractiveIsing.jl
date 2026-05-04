@@ -129,7 +129,7 @@ sampling_indices(idxs::AbstractSet{<:Integer}) = idxs
 sampling_indices(gd::GraphDefectsNew) = aliveindices(gd)
 
 @inline sampling_indices(g::IsingGraph) = sampling_indices(index_set(g))
-@inline sampling_changed!(g::IsingGraph) = sampling_changed!(index_set(g))
+@inline consume_changed!(g::IsingGraph) = consume_changed!(index_set(g))
 
 hasDefects(g::IsingGraph) = hasDefects(index_set(g))
 aliveList(g::IsingGraph) = aliveList(index_set(g))

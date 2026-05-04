@@ -6,7 +6,7 @@ struct ToggledIndexSet{T,I} <: UniformIndexPicker
     layer_ranges::T
     on::Vector{Bool}
     cum_lengths::Vector{I} #Start at 0
-    sampling_indices_changed::Base.RefValue{Bool}
+    changed::Base.RefValue{Bool}
 end
 
 function ToggledIndexSet(layer_ranges...)
@@ -48,7 +48,7 @@ end
 function toggle!(is::ToggledIndexSet, layer_idx::Int)
     step_func(b::Bool) = b ? 1 : -1
     is.on[layer_idx] = !is.on[layer_idx]
-    is.sampling_indices_changed[] = true
+    is.changed[] = true
     # Fix the cumulative lengths
     on = is.on[layer_idx]
     this_length = length(is, layer_idx)
@@ -72,9 +72,9 @@ end
     return is
 end
 
-@inline function sampling_changed!(is::ToggledIndexSet)
-    changed = is.sampling_indices_changed[]
-    is.sampling_indices_changed[] = false
+@inline function consume_changed!(is::ToggledIndexSet)
+    changed = is.changed[]
+    is.changed[] = false
     return changed
 end
 

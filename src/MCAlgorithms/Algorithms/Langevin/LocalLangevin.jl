@@ -100,6 +100,41 @@ end
     return -(dx * dx) / four_ηT
 end
 
+@inline function _langevin_derivative_sign_flipped(a, b)
+    return (a > zero(a) && b < zero(b)) || (a < zero(a) && b > zero(b))
+end
+
+@inline function _langevin_zero_temp_relax_state(
+    dh,
+    hamiltonian,
+    model,
+    spin_idx::Int,
+    old_state::T,
+    trial_state::T,
+    derivative::T,
+) where {T}
+    iszero(derivative) && return old_state, derivative
+
+    spins = @inline InteractiveIsing.graphstate(model)
+    candidate = trial_state
+    candidate_derivative = derivative
+
+    for _ in 1:24
+        @inbounds spins[spin_idx] = candidate
+        candidate_derivative = _finite_derivative(T(@inline calculate(dh, hamiltonian, model, spin_idx)))
+        @inbounds spins[spin_idx] = old_state
+
+        if isfinite(candidate_derivative) && !_langevin_derivative_sign_flipped(derivative, candidate_derivative)
+            return candidate, candidate_derivative
+        end
+
+        candidate = (old_state + candidate) / T(2)
+        candidate == old_state && return old_state, derivative
+    end
+
+    return candidate, candidate_derivative
+end
+
 """
     _active_spin_vector(model)
 
@@ -253,7 +288,7 @@ end
     use_adjusted = adjusted[]
     dh = d_iH()
     gradient_max = SType(_langevin_unwrap_ref(_langevin_context_value(context, :gradient_max, zero(SType))))
-    active_changed = sampling_changed!(model)
+    active_changed = consume_changed!(model)
     if active_changed
         _set_local_langevin_active_spins!(context.active_spins, _active_spin_vector(model))
     end
@@ -306,11 +341,25 @@ end
     if !use_adjusted
         new_state = _reflect_to_bounds(trial_state, low_state, high_state)
         reflected += new_state == trial_state ? 0 : 1
+        post_derivative = derivative
+        if t <= zero(SType)
+            new_state, post_derivative = _langevin_zero_temp_relax_state(
+                dh,
+                hamiltonian,
+                model,
+                spin_idx,
+                old_state,
+                new_state,
+                derivative,
+            )
+        end
         proposal = FlipProposal{SType}(spin_idx, old_state, new_state, layer_idx, true)
         @inbounds spins[spin_idx] = new_state
         @inline update!(langevin, hamiltonian, model, proposal)
-        post_derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
-        post_derivative = _finite_derivative(SType(post_derivative))
+        if t > zero(SType)
+            post_derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+            post_derivative = _finite_derivative(SType(post_derivative))
+        end
         @inbounds dH_prealloc[spin_idx] = post_derivative
         gradient_max = max(gradient_max, abs(post_derivative))
         accepted += 1

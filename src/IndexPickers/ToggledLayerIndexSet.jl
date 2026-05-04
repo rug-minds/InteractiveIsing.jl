@@ -6,7 +6,7 @@ struct ToggledLayerIndexSet{T} <: UniformIndexPicker
     set_with::Vector{T}
     set_without::Vector{T}
     on::Ref{Bool}
-    sampling_indices_changed::Base.RefValue{Bool}
+    changed::Base.RefValue{Bool}
 end
 
 function ToggledLayerIndexSet(toggle_idx, layer_sets::UnitRange...)
@@ -22,14 +22,14 @@ end
 
 function toggle!(is::ToggledLayerIndexSet)
     is.on[] = !is.on[]
-    is.sampling_indices_changed[] = true
+    is.changed[] = true
     return is
 end
 
 function on!(is::ToggledLayerIndexSet)
     if !is.on[]
         is.on[] = true
-        is.sampling_indices_changed[] = true
+        is.changed[] = true
     end
     return is
 end
@@ -37,7 +37,7 @@ end
 function off!(is::ToggledLayerIndexSet)
     if is.on[]
         is.on[] = false
-        is.sampling_indices_changed[] = true
+        is.changed[] = true
     end
     return is
 end
@@ -46,9 +46,9 @@ end
     return is.on[] ? is.set_with : is.set_without
 end
 
-@inline function sampling_changed!(is::ToggledLayerIndexSet)
-    changed = is.sampling_indices_changed[]
-    is.sampling_indices_changed[] = false
+@inline function consume_changed!(is::ToggledLayerIndexSet)
+    changed = is.changed[]
+    is.changed[] = false
     return changed
 end
 
