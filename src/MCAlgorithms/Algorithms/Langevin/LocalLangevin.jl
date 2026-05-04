@@ -1,7 +1,7 @@
 export LocalLangevin
 
 """
-    LocalLangevin(; stepsize=0.1, max_drift_fraction=0.15, group_steps=1, adjusted=true)
+    LocalLangevin(; stepsize=0.1, max_drift_fraction=0.15, group_steps=1, adjusted=true, order=:random)
 
 Single-spin Langevin Monte Carlo update.
 
@@ -17,17 +17,37 @@ faster but not an exact Boltzmann sampler.
 `stepsize` is the proposal size used by each single-spin Langevin proposal.
 `group_steps` is the number of full sweeps in one internal cycle; it does not
 divide or reinterpret `stepsize`.
+`order=:random` uses a lazy random permutation each sweep. `order=:deterministic`
+uses the active spin order directly.
 """
-struct LocalLangevin{T<:Real} <: IsingMCAlgorithm
+struct LocalLangevin{Order,T<:Real} <: IsingMCAlgorithm
     stepsize::T
     max_drift_fraction::T
     group_steps::Int
     adjusted::Bool
 end
 
-function LocalLangevin(; stepsize = 0.1, max_drift_fraction = 0.15, group_steps = 1, adjusted = true)
+function LocalLangevin(;
+    stepsize = 0.1,
+    max_drift_fraction = 0.15,
+    group_steps = 1,
+    adjusted = true,
+    order::Symbol = :random,
+)
+    if order === :random
+        return LocalLangevin{:random}(; stepsize, max_drift_fraction, group_steps, adjusted)
+    elseif order === :deterministic
+        return LocalLangevin{:deterministic}(; stepsize, max_drift_fraction, group_steps, adjusted)
+    else
+        throw(ArgumentError("LocalLangevin order must be :random or :deterministic, got $(repr(order))."))
+    end
+end
+
+function LocalLangevin{Order}(; stepsize = 0.1, max_drift_fraction = 0.15, group_steps = 1, adjusted = true) where {Order}
+    Order === :random || Order === :deterministic ||
+        throw(ArgumentError("LocalLangevin order must be :random or :deterministic, got $(repr(Order))."))
     stepsize, max_drift_fraction = promote(stepsize, max_drift_fraction)
-    return LocalLangevin(stepsize, max_drift_fraction, max(1, Int(group_steps)), adjusted)
+    return LocalLangevin{Order,typeof(stepsize)}(stepsize, max_drift_fraction, max(1, Int(group_steps)), adjusted)
 end
 
 LocalLangevin(adjusted::Bool) = LocalLangevin(; adjusted)
@@ -92,7 +112,7 @@ end
 @inline _langevin_context_value(context, name::Symbol, default) = get(context, name, default)
 @inline _langevin_unwrap_ref(x) = x isa Ref ? x[] : x
 
-@inline function Processes.init(langevin::LocalLangevin, context::Cont) where {Cont}
+@inline function Processes.init(langevin::LocalLangevin{Order}, context::Cont) where {Order,Cont}
     (;model) = context
 
     for layer in layers(model)
@@ -123,13 +143,13 @@ end
     gradient_rms = zero(SType)
     reflected_fraction = zero(SType)
     sweep_position = Ref(0)
-    sweep_order = collect(1:length(active_spins))
+    sweep_order = Order === :random ? collect(1:length(active_spins)) : Int[]
     group_remaining = Ref(0)
 
     η = max(stepsize[], eps(SType))
     σ = zero(SType)
 
-    return (;model, hamiltonian, rng, dH_prealloc, active_spins,
+    return (;model, state = model, hamiltonian, rng, dH_prealloc, active_spins,
                 layer_views, stepsize, max_drift_fraction, group_steps,
                 adjusted, proposal, ΔE, accepted, attempted, T, η, σ,
                 gradient_max, gradient_rms, reflected_fraction,
@@ -146,7 +166,7 @@ end
     return order
 end
 
-@inline function _start_local_langevin_cycle!(context, dh, hamiltonian, model, active_spins)
+@inline function _start_local_langevin_cycle!(langevin::LocalLangevin{Order}, context, dh, hamiltonian, model, active_spins) where {Order}
     SType = eltype(model)
     for spin_idx in active_spins
         derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
@@ -157,21 +177,29 @@ end
     n = length(active_spins)
     context.group_remaining[] = max(1, context.group_steps[])
     context.sweep_position[] = 1
-    _reset_local_langevin_order!(context.sweep_order, n)
+    if Order === :random
+        _reset_local_langevin_order!(context.sweep_order, n)
+    end
     return nothing
 end
 
-@inline function _next_local_langevin_order_index!(context, rng, n::Int)
-    pos = context.sweep_position[]
-    swap_pos = rand(rng, pos:n)
-    order = context.sweep_order
-    @inbounds begin
-        order[pos], order[swap_pos] = order[swap_pos], order[pos]
-        return order[pos]
+@inline function _next_local_langevin_order_index!(langevin::LocalLangevin{Order}, context, rng, n::Int) where {Order}
+    if Order === :random
+        pos = context.sweep_position[]
+        swap_pos = rand(rng, pos:n)
+        order = context.sweep_order
+        @inbounds begin
+            order[pos], order[swap_pos] = order[swap_pos], order[pos]
+            return order[pos]
+        end
+    elseif Order === :deterministic
+        return context.sweep_position[]
+    else
+        throw(ArgumentError("LocalLangevin order must be :random or :deterministic, got $(repr(Order))."))
     end
 end
 
-@inline function _advance_local_langevin_cursor!(context, n::Int)
+@inline function _advance_local_langevin_cursor!(langevin::LocalLangevin{Order}, context, n::Int) where {Order}
     context.sweep_position[] += 1
     if context.sweep_position[] <= n
         return nothing
@@ -180,14 +208,16 @@ end
     context.group_remaining[] -= 1
     if context.group_remaining[] > 0
         context.sweep_position[] = 1
-        _reset_local_langevin_order!(context.sweep_order, n)
+        if Order === :random
+            _reset_local_langevin_order!(context.sweep_order, n)
+        end
     else
         context.sweep_position[] = 0
     end
     return nothing
 end
 
-@inline function Processes.step!(langevin::LocalLangevin, context::C) where {C}
+@inline function Processes.step!(langevin::LocalLangevin{Order}, context::C) where {Order,C}
     (;hamiltonian, rng, model, dH_prealloc, layer_views, stepsize,
         max_drift_fraction, adjusted) = context
 
@@ -206,7 +236,7 @@ end
     n = length(active_spins)
     n == 0 && return (;)
     if context.sweep_position[] == 0
-        _start_local_langevin_cycle!(context, dh, hamiltonian, model, active_spins)
+        _start_local_langevin_cycle!(langevin, context, dh, hamiltonian, model, active_spins)
     end
 
     attempted = 0
@@ -216,7 +246,7 @@ end
     proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
     reflected = 0
 
-    k = _next_local_langevin_order_index!(context, rng, n)
+    k = _next_local_langevin_order_index!(langevin, context, rng, n)
     spin_idx = @inbounds active_spins[k]
     derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
     derivative = _finite_derivative(SType(derivative))
@@ -283,7 +313,7 @@ end
         end
     end
 
-    _advance_local_langevin_cursor!(context, n)
+    _advance_local_langevin_cursor!(langevin, context, n)
 
     acceptance_rate = attempted == 0 ? zero(SType) : SType(accepted) / SType(attempted)
     gradient_max = isempty(active_spins) ? zero(SType) : maximum(abs, @view dH_prealloc[active_spins])

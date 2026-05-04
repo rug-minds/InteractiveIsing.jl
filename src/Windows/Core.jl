@@ -1,5 +1,21 @@
+"""
+    AbstractPanel
+
+Supertype for mountable Windows UI components. A panel value describes what
+should be mounted; a `PanelHandle` stores the resources and runtime data
+created by mounting it.
+
+Custom panels extend `mount!`.
+"""
 abstract type AbstractPanel end
 
+"""
+    PanelHandle
+
+Runtime object returned by `panel!`. It stores the mounted panel, its
+host, its Makie layout cell, child panels, registered resources, and arbitrary
+panel data accessible as `handle[:key]`.
+"""
 mutable struct PanelHandle
     panel::AbstractPanel
     host::Any
@@ -17,6 +33,12 @@ PanelHandle(panel::AbstractPanel, host, layout) =
 PanelHandle(panel::AbstractPanel, host, layout, slot) =
     PanelHandle(panel, host, layout, slot, Any[], OrderedDict{Any, PanelHandle}(), Dict{Symbol, Any}(), false)
 
+"""
+    WindowHost
+
+Root of a Windows UI. A host owns the Makie figure/screen, frame timer, polling
+timer, mounted panel tree, registered resources, and window lifecycle state.
+"""
 mutable struct WindowHost
     uuid::UUID
     figure::Figure
@@ -36,6 +58,13 @@ mutable struct WindowHost
     closed::Bool
 end
 
+"""
+    WindowHost(fig::Figure; screen = nothing, fps = 30, polling_rate = 10,
+               open = Observable(true))
+
+Create a host around an existing Makie figure. This is useful for tests and for
+embedding panels without opening a GLMakie window.
+"""
 function WindowHost(fig::Figure; screen = nothing, fps = 30, polling_rate = 10, open = Observable(true))
     host = WindowHost(
         uuid1(),
@@ -63,6 +92,13 @@ function WindowHost(fig::Figure; screen = nothing, fps = 30, polling_rate = 10, 
     return host
 end
 
+"""
+    window(; title = "Interactive Ising Simulation", size = (1500, 1500),
+             fps = 30, polling_rate = 10, kwargs...) -> WindowHost
+
+Open a GLMakie screen, display a new figure, and return the owning
+`WindowHost`.
+"""
 function window(; title = "Interactive Ising Simulation", size = (1500, 1500), fps = 30, polling_rate = 10, kwargs...)
     fig = Figure(; size, kwargs...)
     screen = GLMakie.Screen()
@@ -102,6 +138,14 @@ function _store_child!(children::OrderedDict{Any, PanelHandle}, key, handle::Pan
     return handle
 end
 
+"""
+    panel!(host, panel, pos = (1, 1); key = nothing, kwargs...) -> PanelHandle
+    panel!(parent_handle, panel, pos; key = nothing, kwargs...) -> PanelHandle
+
+Mount an `AbstractPanel` into a host or parent panel. `pos` can be a
+Makie grid position tuple or an already selected layout cell. If `key` is
+provided, the child handle is stored under that key; otherwise `pos` is used.
+"""
 function panel!(host::WindowHost, panel::AbstractPanel, pos = (1, 1); key = nothing, kwargs...)
     cell = _grid_cell(host.figure, pos)
     handle = mount!(panel, host, cell; kwargs...)
@@ -122,9 +166,23 @@ end
 panel!(parent::PanelHandle, key, panel::AbstractPanel, pos; kwargs...) =
     panel!(parent, panel, pos; key, kwargs...)
 
+"""
+    mount!(panel::AbstractPanel, host::WindowHost, cell; kwargs...) -> PanelHandle
+
+Panel construction hook. Implement this for custom panel types. The method
+should populate `cell`, register resources/callbacks, and return a
+`PanelHandle`.
+"""
 mount!(panel::AbstractPanel, host::WindowHost, cell; kwargs...) =
     error("No Windows.mount! method defined for $(typeof(panel)).")
 
+"""
+    register!(host_or_handle, resource)
+
+Register `resource` for lifecycle cleanup. Observer functions, timers, polled
+observables, processes, and objects with `close(resource)` are cleaned up when
+the owning host or panel closes.
+"""
 function register!(host::WindowHost, resource)
     push!(host.resources, resource)
     return resource
@@ -135,6 +193,12 @@ function register!(handle::PanelHandle, resource)
     return resource
 end
 
+"""
+    register_frame!(host_or_handle, callback)
+
+Run `callback(host)` on each frame tick. Frame callbacks registered through a
+panel handle are removed automatically when that panel closes.
+"""
 function register_frame!(host::WindowHost, callback::Function)
     push!(host.frame_callbacks, callback)
     return callback
@@ -148,6 +212,13 @@ function register_frame!(handle::PanelHandle, callback::Function)
 end
 register_frame!(callback::Function, handle::PanelHandle) = register_frame!(handle, callback)
 
+"""
+    register_polled!(host_or_handle, po::PolledObservable)
+
+Register a `PolledObservable` with the host polling timer. Polled
+observables registered through a panel handle are removed and closed with that
+panel.
+"""
 function register_polled!(host::WindowHost, po::PolledObservable)
     push!(host.pollables, po)
     register!(host, po)
@@ -247,6 +318,12 @@ pause!(panel::AbstractPanel, handle::PanelHandle) = nothing
 resume!(panel::AbstractPanel, handle::PanelHandle) = nothing
 restart!(panel::AbstractPanel, handle::PanelHandle) = nothing
 
+"""
+    close(handle::PanelHandle)
+
+Close a mounted panel once. Children are closed first, then the panel-specific
+`close!(panel, handle)` hook runs, then registered resources are cleaned up.
+"""
 function Base.close(handle::PanelHandle)
     handle.closed && return nothing
     handle.closed = true
@@ -262,6 +339,13 @@ function Base.close(handle::PanelHandle)
     return nothing
 end
 
+"""
+    close(host::WindowHost)
+
+Close a window host once. Frame and polling timers stop before child panels are
+closed, so callbacks cannot keep notifying Makie objects during native window
+teardown.
+"""
 function Base.close(host::WindowHost)
     (host.closed || host.closing) && return nothing
     host.closing = true
@@ -290,6 +374,13 @@ function Base.close(host::WindowHost)
     return nothing
 end
 
+"""
+    pause!(handle_or_host)
+
+Propagate a pause lifecycle event through panel resources and children. Pausing
+a host does not stop the host frame or polling timers; the interface keeps
+updating while graph processes are paused.
+"""
 function pause!(handle::PanelHandle)
     pause!(handle.panel, handle)
     _pause_resource.(handle.resources)
@@ -297,6 +388,11 @@ function pause!(handle::PanelHandle)
     return handle
 end
 
+"""
+    resume!(handle_or_host)
+
+Resume resources and children paused through `pause!`.
+"""
 function resume!(handle::PanelHandle)
     resume!(handle.panel, handle)
     _resume_resource.(handle.resources)
@@ -304,6 +400,12 @@ function resume!(handle::PanelHandle)
     return handle
 end
 
+"""
+    restart!(handle)
+
+Run the panel-specific restart hook. The default hook is a no-op; panels that
+own restartable processes can extend `restart!(panel, handle)`.
+"""
 function restart!(handle::PanelHandle)
     restart!(handle.panel, handle)
     return handle

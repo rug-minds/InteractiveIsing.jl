@@ -1,3 +1,11 @@
+"""
+    TemperaturePanel(g; slider_max = 20.0)
+
+Panel that displays and edits graph temperature. The value is backed by a
+`PolledObservable`, so REPL-side `temp!(g, x)` changes and compatible process
+context temperature changes are reflected in the slider. UI-side changes write
+back to `temp!(g, x)` and compatible process-context temperature variables.
+"""
 struct TemperaturePanel{G} <: AbstractPanel
     graph::G
     slider_max::Float64
@@ -11,7 +19,16 @@ function mount!(panel::TemperaturePanel, host::WindowHost, cell; kwargs...)
     g = panel.graph
 
     Box(grid[1, 1], width = 110, height = 50, visible = false)
-    po = register_polled!(handle, PolledObservable(temp(g), _ -> temp(g); setter = x -> temp!(g, x)))
+    last_graph_temp = Ref{Any}(temp(g))
+    last_context_temp = Ref{Any}(_process_context_temperature(g))
+    po = register_polled!(
+        handle,
+        PolledObservable(
+            temp(g),
+            _ -> _poll_temperature!(g, last_graph_temp, last_context_temp);
+            setter = x -> _set_temperature!(g, x),
+        ),
+    )
     slider = handle[:slider] = Slider(
         grid[2, 1],
         range = 0.0:0.02:panel.slider_max,

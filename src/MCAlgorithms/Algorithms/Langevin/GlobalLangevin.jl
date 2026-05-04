@@ -76,7 +76,7 @@ GlobalLangevin(adjusted::Bool) = GlobalLangevin(; adjusted)
     η = max(stepsize[], eps(SType))
     σ = zero(SType)
 
-    return (;model, hamiltonian, rng, dH_prealloc, active_spins,
+    return (;model, state = model, hamiltonian, rng, dH_prealloc, active_spins,
                 layer_views, stepsize, max_drift_fraction, group_steps,
                 adjusted, proposal, ΔE, accepted, attempted, T, η, σ,
                 gradient_max, gradient_rms, reflected_fraction,

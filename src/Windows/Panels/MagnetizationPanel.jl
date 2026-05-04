@@ -1,3 +1,9 @@
+"""
+    MagnetizationPanel(g, layer_idx)
+
+Bottom panel that polls and displays the selected layer magnetization. It also
+contains the defect textbox and selected-layer weight-generator label.
+"""
 struct MagnetizationPanel{G, O} <: AbstractPanel
     graph::G
     layer_idx::O

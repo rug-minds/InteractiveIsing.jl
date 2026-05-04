@@ -1,3 +1,13 @@
+"""
+    StatusPanel(g, layer_idx)
+
+Top-strip panel for the simulation UI. It shows a smoothed process steps/sec
+estimate, pause/resume controls for graph processes, and utility buttons for
+the selected layer.
+
+The pause label is polled from graph process state, so REPL-side process changes
+are reflected in the UI.
+"""
 struct StatusPanel{G, O} <: AbstractPanel
     graph::G
     layer_idx::O
@@ -16,29 +26,29 @@ function mount!(panel::StatusPanel, host::WindowHost, cell; kwargs...)
     ups = handle[:ups] = Observable(0.0)
     upsps = handle[:upsps] = Observable(0.0)
     fps = max(1, round(Int, host.fps))
-    last_two_updates = CircularBuffer{Int}(2)
-    push!(last_two_updates, _total_ticks(g))
-    update_deltas = AverageCircular(Int, fps)
-    times = CircularBuffer{UInt64}(fps)
-    push!(times, time_ns())
+    last_update = Ref(_total_ticks(g))
+    last_time = Ref(time_ns())
+    update_deltas = CircularBuffer{Float64}(fps)
+    time_deltas = CircularBuffer{Float64}(fps)
 
     register_frame!(handle) do _
         ticks = _total_ticks(g)
-        push!(last_two_updates, ticks)
-        push!(times, time_ns())
+        now = time_ns()
+        prev = last_update[]
+        delta = ticks >= prev ? ticks - prev : 0
+        dt = (now - last_time[]) * 1e-9
 
-        if length(last_two_updates) == 2 && length(times) >= 2
-            prev = last_two_updates[1]
-            curr = last_two_updates[2]
-            delta = curr >= prev ? curr - prev : 0
-            push!(update_deltas, delta)
-            dt = times[end] - times[1]
-            dt == 0 && return nothing
+        last_update[] = ticks
+        last_time[] = now
+        dt <= 0 && return nothing
 
-            smoothed_delta = avg(update_deltas)
-            ups[] = smoothed_delta / dt * 1e9
-            upsps[] = ups[] / max(nstates(g), 1)
-        end
+        push!(update_deltas, Float64(delta))
+        push!(time_deltas, dt)
+
+        total_time = sum(time_deltas)
+        total_time <= 0 && return nothing
+        ups[] = sum(update_deltas) / total_time
+        upsps[] = ups[] / max(nstates(g), 1)
         return nothing
     end
 

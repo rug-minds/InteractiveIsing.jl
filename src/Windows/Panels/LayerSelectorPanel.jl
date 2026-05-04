@@ -1,3 +1,9 @@
+"""
+    LayerSelectorPanel(g, layer_idx)
+
+Small `< idx/n >` selector for multi-layer graphs. It mutates the observable
+`layer_idx`, which lets sibling panels redraw against the selected layer.
+"""
 struct LayerSelectorPanel{G, O} <: AbstractPanel
     graph::G
     layer_idx::O

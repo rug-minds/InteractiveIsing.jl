@@ -1,3 +1,10 @@
+"""
+    LayerViewPanel(g, layer_idx)
+
+Display panel for the selected graph layer. Two-dimensional layers are shown
+with `image!`; three-dimensional layers are shown with `meshscatter!`. The 3D
+camera orientation is preserved across redraws.
+"""
 struct LayerViewPanel{G, O} <: AbstractPanel
     graph::G
     layer_idx::O

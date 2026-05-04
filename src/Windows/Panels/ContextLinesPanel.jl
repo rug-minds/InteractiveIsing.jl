@@ -1,0 +1,142 @@
+"""
+    ContextLinesPanel(context, xvar, yvar; xlabel = "", ylabel = "", title = "",
+                      axis_kwargs = (;), line_kwargs = (;), autolimits = true)
+
+Panel that plots two dynamically updated context containers as an interactive
+line plot.
+
+`context` may be a `Processes.ProcessContext`, a `Processes.AbstractProcess`, or
+a zero-argument function returning either of those. `xvar` and `yvar` identify
+the context variables. Supported variable selectors are:
+
+- `Processes.Var(:subcontext, :name)`
+- `:subcontext => :name`
+- `(:subcontext, :name)`
+- `:name` for globals or a top-level property
+
+On every frame update, both containers are re-read and trimmed to the shortest
+current length before notifying Makie. This guards against update races where
+one container has grown and the other has not yet caught up.
+"""
+struct ContextLinesPanel{C, X, Y, A, L} <: AbstractPanel
+    context::C
+    xvar::X
+    yvar::Y
+    axis_kwargs::A
+    line_kwargs::L
+    autolimits::Bool
+    xlabel::String
+    ylabel::String
+    title::String
+end
+
+function ContextLinesPanel(
+    context,
+    xvar,
+    yvar;
+    xlabel = "",
+    ylabel = "",
+    title = "",
+    axis_kwargs = (;),
+    line_kwargs = (;),
+    autolimits = true,
+)
+    return ContextLinesPanel(
+        context,
+        xvar,
+        yvar,
+        axis_kwargs,
+        line_kwargs,
+        Bool(autolimits),
+        string(xlabel),
+        string(ylabel),
+        string(title),
+    )
+end
+
+function mount!(panel::ContextLinesPanel, host::WindowHost, cell; kwargs...)
+    grid = GridLayout(cell)
+    handle = PanelHandle(panel, host, grid)
+
+    ax = handle[:axis] = Axis(grid[1, 1]; _context_lines_axis_kwargs(panel)...)
+    xview, yview = _context_line_views(panel)
+    xobs = handle[:x_obs] = Observable(xview)
+    yobs = handle[:y_obs] = Observable(yview)
+    handle[:plot] = lines!(ax, xobs, yobs; panel.line_kwargs...)
+
+    register_frame!(handle) do _
+        _refresh_context_lines!(handle)
+    end
+    return handle
+end
+
+function _context_lines_axis_kwargs(panel::ContextLinesPanel)
+    axis_kwargs = panel.axis_kwargs
+    isempty(panel.xlabel) || (axis_kwargs = merge(axis_kwargs, (; xlabel = panel.xlabel)))
+    isempty(panel.ylabel) || (axis_kwargs = merge(axis_kwargs, (; ylabel = panel.ylabel)))
+    isempty(panel.title) || (axis_kwargs = merge(axis_kwargs, (; title = panel.title)))
+    return axis_kwargs
+end
+
+_context_source(source::Function) = _context_source(source())
+_context_source(process::Processes.AbstractProcess) = getfield(process, :context)
+_context_source(context) = context
+
+function _context_var_value(source, var)
+    context = _context_source(source)
+    return _context_var_value_from_context(context, var)
+end
+
+_context_var_value_from_context(context, var::Processes.Var) = context[var]
+_context_var_value_from_context(context, var::Pair{Symbol, Symbol}) =
+    getproperty(getproperty(context, first(var)), last(var))
+_context_var_value_from_context(context, var::Tuple{Symbol, Symbol}) =
+    getproperty(getproperty(context, first(var)), last(var))
+
+function _context_var_value_from_context(context::Processes.ProcessContext, var::Symbol)
+    globals = Processes.getglobals(context)
+    haskey(globals, var) && return getproperty(globals, var)
+    return getproperty(context, var)
+end
+
+_context_var_value_from_context(context, var::Symbol) = getproperty(context, var)
+
+function _context_line_views(panel::ContextLinesPanel)
+    x = _context_var_value(panel.context, panel.xvar)
+    y = _context_var_value(panel.context, panel.yvar)
+    return _matched_container_views(x, y)
+end
+
+function _matched_container_views(x, y)
+    n = min(_container_length(x), _container_length(y))
+    return _container_prefix_view(x, n), _container_prefix_view(y, n)
+end
+
+_container_length(container) = length(container)
+
+function _container_prefix_view(container, n::Integer)
+    return collect(Iterators.take(container, n))
+end
+
+function _container_prefix_view(container::AbstractVector, n::Integer)
+    n <= 0 && return collect(Iterators.take(container, 0))
+    lo = firstindex(container)
+    hi = lo + n - 1
+    return view(container, lo:hi)
+end
+
+function _refresh_context_lines!(handle::PanelHandle)
+    haskey(handle, :x_obs) || return nothing
+    haskey(handle, :y_obs) || return nothing
+
+    xview, yview = _context_line_views(handle.panel::ContextLinesPanel)
+    handle[:x_obs].val = xview
+    handle[:y_obs].val = yview
+    notify(handle[:x_obs])
+    notify(handle[:y_obs])
+
+    if getfield(handle.panel, :autolimits) && haskey(handle, :axis)
+        autolimits!(handle[:axis])
+    end
+    return nothing
+end

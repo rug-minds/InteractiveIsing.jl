@@ -18,6 +18,99 @@ function _set_slider_close!(slider, value)
     return slider
 end
 
+_temperature_value(value::Real) = value
+_temperature_value(value::Base.RefValue{<:Real}) = value[]
+_temperature_value(_) = nothing
+
+function _temperature_vars(sc)
+    data = Processes.getdata(sc)
+    pairs = Pair{Symbol, Any}[]
+    for name in (:temp, :T)
+        haskey(data, name) || continue
+        value = getproperty(data, name)
+        isnothing(_temperature_value(value)) || push!(pairs, name => value)
+    end
+    return pairs
+end
+
+function _process_context_temperature(process::Processes.AbstractProcess)
+    context = getfield(process, :context)
+    context isa Processes.ProcessContext || return nothing
+
+    subcontexts = Processes.get_subcontexts(context)
+    for subcontext_name in reverse(propertynames(subcontexts))
+        subcontext_name === :globals && continue
+        subcontext_name === :_injector && continue
+        vars = _temperature_vars(getproperty(subcontexts, subcontext_name))
+        isempty(vars) && continue
+        return _temperature_value(last(vars).second)
+    end
+    return nothing
+end
+
+function _process_context_temperature(g::IsingGraph)
+    for process in reverse(processes(g))
+        value = _process_context_temperature(process)
+        isnothing(value) || return value
+    end
+    return nothing
+end
+
+function _set_process_context_temperature!(process::Processes.AbstractProcess, value)
+    context = getfield(process, :context)
+    context isa Processes.ProcessContext || return nothing
+
+    subcontexts = Processes.get_subcontexts(context)
+    for subcontext_name in propertynames(subcontexts)
+        subcontext_name === :globals && continue
+        subcontext_name === :_injector && continue
+
+        subcontext = getproperty(subcontexts, subcontext_name)
+        for (varname, current) in _temperature_vars(subcontext)
+            if current isa Base.RefValue
+                current[] = convert(typeof(current[]), value)
+            elseif Processes.isinteractive(process)
+                Processes.interact!(process, Processes.Var(subcontext_name, varname) => value)
+            elseif !Processes.isrunning(process)
+                converted = convert(typeof(current), value)
+                update = NamedTuple{(subcontext_name,)}((NamedTuple{(varname,)}((converted,)),))
+                Processes.context(process, Processes.merge_into_subcontexts(context, update))
+            end
+        end
+    end
+    return nothing
+end
+
+function _set_temperature!(g, value)
+    temp!(g, value)
+    for process in processes(g)
+        _set_process_context_temperature!(process, value)
+    end
+    return value
+end
+
+function _poll_temperature!(g, last_graph_temp, last_context_temp)
+    graph_temp = temp(g)
+    context_temp = _process_context_temperature(g)
+
+    if graph_temp != last_graph_temp[]
+        last_graph_temp[] = graph_temp
+        last_context_temp[] = context_temp
+        return graph_temp
+    elseif !isnothing(context_temp) && context_temp != last_context_temp[]
+        last_context_temp[] = context_temp
+        temp!(g, context_temp)
+        last_graph_temp[] = temp(g)
+        return context_temp
+    end
+
+    if isnothing(context_temp)
+        return graph_temp
+    else
+        return context_temp
+    end
+end
+
 function _total_ticks(g)
     total = 0
     for process in processes(g)

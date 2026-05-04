@@ -24,6 +24,14 @@ function HamiltonianDisplayEntry(term_index, term_label, spec::HamiltonianDispla
     )
 end
 
+"""
+    HamiltonianParameterPanel(g, layer_idx, display_cell)
+
+Left-side selector panel for graph state and Hamiltonian visualizations.
+Selectable entries are discovered with `hamiltonian_visualizations`.
+The selected entry is rendered into `display_cell`, usually the center of the
+simulation UI.
+"""
 struct HamiltonianParameterPanel{G,O,C} <: AbstractPanel
     graph::G
     layer_idx::O
@@ -96,7 +104,35 @@ end
 _hamiltonian_terms(ham::HamiltonianTerms) = collect(hamiltonians(ham))
 _hamiltonian_terms(ham) = Any[ham]
 
-_term_label(term, idx) = "$(idx) $(nameof(typeof(term)))"
+_term_label(term, idx) = "$(idx) $(_term_type_label(term))"
+
+_term_type_label(term::PolynomialHamiltonian{2,P}) where {P} = "Quadratic{$(_type_parameter_label(P))}"
+_term_type_label(term::PolynomialHamiltonian{4,P}) where {P} = "Quartic{$(_type_parameter_label(P))}"
+_term_type_label(term::PolynomialHamiltonian{6,P}) where {P} = "Sextic{$(_type_parameter_label(P))}"
+_term_type_label(term::PolynomialHamiltonian{8,P}) where {P} = "Octic{$(_type_parameter_label(P))}"
+_term_type_label(term::PolynomialHamiltonian{Order,P}) where {Order,P} =
+    "PolynomialHamiltonian{$Order, $(_type_parameter_label(P))}"
+_term_type_label(term) = _compact_parametric_type(typeof(term))
+
+_type_parameter_label(T::Type) = _compact_type_head(T)
+_type_parameter_label(value) = string(value)
+
+function _compact_type_head(T::Type)
+    text = string(T)
+    brace_idx = findfirst(==('{'), text)
+    head = isnothing(brace_idx) ? text : text[begin:prevind(text, brace_idx)]
+    dot_idx = findlast(==('.'), head)
+    return isnothing(dot_idx) ? head : head[nextind(head, dot_idx):end]
+end
+
+function _compact_parametric_type(T::DataType)
+    head = string(nameof(T))
+    params = T.parameters
+    isempty(params) && return head
+    return string(head, "{", join(_type_parameter_label.(params), ", "), "}")
+end
+
+_compact_parametric_type(T::UnionAll) = _compact_type_head(T)
 
 _term_display_entries(term, term_index, term_label, g) =
     [HamiltonianDisplayEntry(term_index, term_label, spec) for spec in hamiltonian_visualizations(term, g)]

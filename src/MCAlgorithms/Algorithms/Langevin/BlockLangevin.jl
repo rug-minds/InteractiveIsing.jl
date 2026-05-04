@@ -72,7 +72,7 @@ BlockLangevin(adjusted::Bool) = BlockLangevin(; adjusted)
     gradient_rms = zero(SType)
     reflected_fraction = zero(SType)
 
-    return (;model, hamiltonian, rng, active_spins, layer_views, stepsize,
+    return (;model, state = model, hamiltonian, rng, active_spins, layer_views, stepsize,
         max_drift_fraction, block_size, group_steps, adjusted, dH_prealloc,
         old_vals, new_vals, derivatives, reverse_derivatives, layer_idxs,
         block_idxs, proposal, ΔE, accepted, attempted, acceptance_rate, T, η,

@@ -5,6 +5,11 @@ using InteractiveIsing.Processes
 @testset "MC Process Inputs" begin
     g = IsingGraph(2, 2, Continuous(); precision = Float32)
 
+    @test LocalLangevin() isa LocalLangevin{:random}
+    @test LocalLangevin(order = :deterministic) isa LocalLangevin{:deterministic}
+    @test LocalLangevin{:random}(adjusted = false) isa LocalLangevin{:random}
+    @test_throws ArgumentError LocalLangevin(order = :cyclic)
+
     loop = deepcopy(SimpleAlgo(Unique(Metropolis()), Unique(LocalLangevin())))
     loop_inputs = InteractiveIsing._merge_graph_inputs(loop, g)
     loop_process = Process(loop, loop_inputs...; repeats = 1)
@@ -65,6 +70,10 @@ end
     proc = createProcess(g, LocalLangevin(adjusted = false); lifetime = 1)
     wait(proc)
     @test istaskdone(proc.task)
+
+    deterministic_proc = createProcess(g, LocalLangevin(order = :deterministic, adjusted = false); lifetime = 1)
+    wait(deterministic_proc)
+    @test istaskdone(deterministic_proc.task)
 
     global_proc = createProcess(g, GlobalLangevin(adjusted = false); lifetime = 1)
     wait(global_proc)

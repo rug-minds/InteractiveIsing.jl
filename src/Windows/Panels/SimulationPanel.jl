@@ -1,3 +1,10 @@
+"""
+    SimulationPanel(g)
+
+Composite panel for the default Ising simulation interface. It mounts status,
+Hamiltonian parameter selection, graph/field display, temperature, and
+magnetization controls around graph `g`.
+"""
 struct SimulationPanel{G} <: AbstractPanel
     graph::G
 end
@@ -31,6 +38,14 @@ function close!(panel::SimulationPanel, handle::PanelHandle)
     return nothing
 end
 
+"""
+    new_interface(g; framerate = 30, polling_rate = 10,
+                  size = (1500, 1000),
+                  title = "Interactive Ising Simulation") -> WindowHost
+
+Open the Windows-based simulation interface for graph `g`. This is the
+implementation behind `interface(g)`.
+"""
 function new_interface(g; framerate = 30, polling_rate = 10, size = (1500, 1000), title = "Interactive Ising Simulation")
     host = window(; title, size, fps = framerate, polling_rate)
     host[:simulation] = panel!(host, :simulation, SimulationPanel(g), (1, 1))
