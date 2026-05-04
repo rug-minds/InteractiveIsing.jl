@@ -29,6 +29,10 @@ end
     @test !resource.closed[]
     @test host.children[:test] === handle
     @test handle.slot == (1, 1)
+    @test sprint(show, host) == "WindowHost(\"untitled\", panels=1, resources=1, fps=30.0, polling_rate=10.0, closed=false)"
+    @test sprint(show, handle) == "PanelHandle(TestPanel, slot=(1, 1), children=0, resources=1, closed=false)"
+    @test sprint(show, TestPanel()) == "TestPanel(...)"
+    @test !occursin("Figure", sprint(show, MIME("text/plain"), host))
     pause!(host)
     @test host.paused[]
     @test !Processes.ispaused(host.frame_timer)
@@ -75,6 +79,7 @@ end
             ylabel = "y",
             title = "tracked",
             line_kwargs = (; color = :red),
+            update_rate = 0,
         ),
         (1, 1),
     )
@@ -82,14 +87,20 @@ end
     @test String(handle[:axis].xlabel[]) == "x"
     @test String(handle[:axis].ylabel[]) == "y"
     @test String(handle[:axis].title[]) == "tracked"
+    @test handle[:x_container] === ctx.demo.x
+    @test handle[:y_container] === ctx.demo.y
+    @test parent(handle[:x_obs][]) === ctx.demo.x
+    @test parent(handle[:y_obs][]) === ctx.demo.y
     @test length(handle[:x_obs][]) == 3
     @test length(handle[:y_obs][]) == 3
     @test collect(handle[:x_obs][]) == [1, 2, 3]
     @test collect(handle[:y_obs][]) == [2, 4, 6]
 
     ctx.demo.x[1] = 10
-    push!(ctx.demo.y, 8, 10, 12)
+    push!(ctx.demo.y, 8, 10)
     Windows._tick!(host)
+    @test parent(handle[:x_obs][]) === ctx.demo.x
+    @test parent(handle[:y_obs][]) === ctx.demo.y
     @test length(handle[:x_obs][]) == 5
     @test length(handle[:y_obs][]) == 5
     @test collect(handle[:x_obs][]) == [10, 2, 3, 4, 5]
@@ -97,6 +108,10 @@ end
 
     close(host)
     @test host.closed
+
+    probe = Ref(:probe)
+    probe_ctx = Dict(probe => (; xs = [1, 2], ys = [3, 4]))
+    @test Windows._context_var_value(probe_ctx, probe => :xs) == [1, 2]
 end
 
 @testset "ConnectionsPanel figure construction" begin
@@ -177,6 +192,14 @@ end
     Windows._poll!(host)
     @test temperature_panel[:slider].value[] ≈ 3.0f0
     @test temp(g) ≈ 3.0f0
+
+    temp!(g, 4.0f0)
+    Windows._poll!(host)
+    @test temperature_panel[:slider].value[] ≈ 4.0f0
+    @test temp(g) ≈ 4.0f0
+    Windows._poll!(host)
+    @test temperature_panel[:slider].value[] ≈ 4.0f0
+    @test temp(g) ≈ 4.0f0
 
     temperature_panel[:slider].value[] = 1.5f0
     @test temp(g) ≈ 1.5f0

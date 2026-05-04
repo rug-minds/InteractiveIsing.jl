@@ -4,7 +4,7 @@ Index pickers are used with proposers.
 They can be used to specify which parts of the system are part of a montecarlo update scheme
 =#
 
-export UniformIndexPicker, pick_idx, sampling_indices
+export UniformIndexPicker, pick_idx, sampling_indices, sampling_changed!
 
 """
 Implements pick_idx(rng, u::UniformIndexPicker) to pick indices from a set with Uniform probability, 
@@ -31,7 +31,18 @@ sweep-style algorithms in addition to `pick_idx`-based proposers.
     error("sampling_indices not implemented for $(typeof(u)); implement InteractiveIsing.sampling_indices for sweep-based algorithms")
 end
 
+"""
+    sampling_changed!(index_set) -> Bool
+
+Return whether `sampling_indices(index_set)` changed since the last time this
+flag was consumed, then clear the flag.
+
+Static index sets can use the default `false`. Mutable index sets that alter
+their active sweep list should specialize this method so sweep-based algorithms
+can rebuild cached order state without comparing the full index list every step.
+"""
+@inline sampling_changed!(idxs) = false
+
 include("ToggledIndexSet.jl")
 include("ToggledLayerIndexSet.jl")
 include("Extensions.jl")
-

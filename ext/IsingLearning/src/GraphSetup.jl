@@ -1,12 +1,13 @@
 export ReducedBoltzmannArchitecture, GraphFromSource, GraphFromInit
 
-function ReducedBoltzmannArchitecture(layer_sizes...; precision = Float32, b = StateLike(Vector, zero(precision)))
+function ReducedBoltzmannArchitecture(layer_sizes...; precision = Float32, b = nothing, weight_generator = nothing)
     layer_gen = [Layer(
             layer_sizes[i],
             Continuous(),
             Coords(0, i, 0)) for i in 1:length(layer_sizes)]
     
-    weight_generators = [AllToAllWeightGenerator() for _ in 1:(length(layer_sizes)-1)]
+    weight_generator = isnothing(weight_generator) ? AllToAllWeightGenerator() : weight_generator
+    weight_generators = [deepcopy(weight_generator) for _ in 1:(length(layer_sizes)-1)]
 
     layers_and_wgs = Any[layer_gen[1]]
     for i in eachindex(weight_generators)
@@ -14,8 +15,12 @@ function ReducedBoltzmannArchitecture(layer_sizes...; precision = Float32, b = S
     end
 
     
+    bias = isnothing(b) ? (g -> InteractiveIsing.filltype(Vector, zero(precision), statelen(g))) : b
+    clamping_target = g -> InteractiveIsing.filltype(Vector, zero(precision), statelen(g))
+    clamping_beta = InteractiveIsing.UniformArray(zero(precision))
+
     IsingGraph(layers_and_wgs...,
-                Ising(b = b) + Clamping();
+                Ising(b = bias) + Clamping(β = clamping_beta, y = clamping_target);
                 index_set = g -> ToggledIndexSet(g))
 end
 
@@ -47,7 +52,7 @@ function GraphFromInit(g::IsingGraph, parameters; init! = identity)
         new_adj,
         temp(g),
         g.default_algorithm,
-        Ising(b = parameters.biases) + Clamping(),
+        Ising(b = parameters.biases) + Clamping(β = InteractiveIsing.UniformArray(zero(eltype(g))), y = g -> InteractiveIsing.filltype(Vector, zero(eltype(g)), statelen(g))),
         g.index_set,
         g.addons,
         g.layers,

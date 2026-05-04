@@ -46,6 +46,7 @@ function sync_graph_params!(graph, params)
     SparseArrays.getnzval(adj(graph)) .= params.w
     diag(adj(graph)) .= params.α
     InteractiveIsing.getparam(graph.hamiltonian, InteractiveIsing.MagField, :b) .= params.b
+    InteractiveIsing.getparam(graph.hamiltonian, InteractiveIsing.Quadratic, :lp) .= params.α
     return graph
 end
 
@@ -71,18 +72,19 @@ function scale_buffer!(buffer, scale)
 end
 
 function _layer_state_bounds(layer)
+    T = eltype(layer.model_graph)
     layer_stateset = InteractiveIsing.stateset(layer)
-    return Float32(first(layer_stateset)), Float32(last(layer_stateset))
+    return T(first(layer_stateset)), T(last(layer_stateset))
 end
 
-function _normalize_mnist_images(images, lo::Float32, hi::Float32)
-    x = Float32.(images) ./ 255f0
+function _normalize_mnist_images(images, lo::T, hi::T) where {T<:AbstractFloat}
+    x = T.(images) ./ T(255)
     x .*= hi - lo
     x .+= lo
     return reshape(x, :, size(images, ndims(images)))
 end
 
-function _onehot(labels, nclasses::Integer; off_value::Float32, on_value::Float32)
+function _onehot(labels, nclasses::Integer; off_value::T, on_value::T) where {T<:AbstractFloat}
     y = fill(off_value, nclasses, length(labels))
     @inbounds for (col, label) in enumerate(labels)
         y[Int(label) + 1, col] = on_value
@@ -134,7 +136,7 @@ end
 function _worker_graph(prototype_graph, params)
     worker_graph = deepcopy(prototype_graph)
     sync_graph_params!(worker_graph, params)
-    InteractiveIsing.temp!(worker_graph, Float32(1e-4))
+    InteractiveIsing.temp!(worker_graph, eltype(worker_graph)(1e-4))
     return worker_graph
 end
 
@@ -152,7 +154,7 @@ function _worker_process(layer, worker_graph)
             buffers = buffers,
             equilibrium_state = copy(state(worker_graph)),
         ),
-        Input(:dynamics, state = worker_graph),
+        Input(:dynamics, model = worker_graph),
         Input(:plus_capture, state = worker_graph),
         Input(:minus_capture, state = worker_graph);
         repeat = 1,
@@ -160,7 +162,7 @@ function _worker_process(layer, worker_graph)
 end
 
 function _validation_process(layer, worker_graph)
-    algo = resolve(ForwardDynamics(layer).algorithm)
+    algo = resolve(ForwardDynamics(layer; dynamics_algorithm = layer.validation_algorithm).algorithm)
     xdim = length(layer.input_layer)
 
     Process(
@@ -169,7 +171,7 @@ function _validation_process(layer, worker_graph)
             x = zeros(eltype(worker_graph), xdim),
             equilibrium_state = copy(state(worker_graph)),
         ),
-        Input(:dynamics, state = worker_graph);
+        Input(:dynamics, model = worker_graph);
         repeat = 1,
     )
 end
@@ -195,12 +197,12 @@ function init_mnist_trainer(
     for (idx, worker) in enumerate(workers)
         # println("[threaded-mnist] worker slot ", idx, " uses process id=", worker.id)
     end
-    worker_graphs = [worker.context.dynamics.state for worker in workers]
+    worker_graphs = [worker.context.dynamics.model for worker in workers]
 
     validation_template_graph = _worker_graph(graph, params)
     validation_worker = _validation_process(layer, validation_template_graph)
     # println("[threaded-mnist] built validation process id=", validation_worker.id)
-    validation_graph = validation_worker.context.dynamics.state
+    validation_graph = validation_worker.context.dynamics.model
 
     return MNISTThreadedTrainer(
         layer,
@@ -255,7 +257,8 @@ function _collect_batch_gradient!(trainer, dest, batchsize)
         add_buffer!(dest, worker.context._state.buffers)
     end
     β = trainer.layer.β
-    scale_buffer!(dest, inv(Float32(2β * batchsize)))
+    T = eltype(dest.w)
+    scale_buffer!(dest, inv(T(2) * T(β) * T(batchsize)))
     return dest
 end
 

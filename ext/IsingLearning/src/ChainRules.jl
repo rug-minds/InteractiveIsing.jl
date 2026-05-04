@@ -15,9 +15,9 @@ function ChainRulesCore.rrule(layer::LayeredIsingGraphLayer, x, ps, st)
     minus_capture = st.minus_capture
     plus_capture = st.plus_capture
 
-    # reset!(proc, Input(Metropolis(), state = g))
+    # reset!(proc, Input(Metropolis(), model = g))
     g.hamiltonian[4].β = layer.β #TODO: Find a way to refer to \beta cleanly
-    c = run(proc, Input(Metropolis(), state = g))
+    c = run(proc, Input(Metropolis(), model = g))
     plus_state = c[plus_capture].captured
     minus_state = c[minus_capture].captured
     

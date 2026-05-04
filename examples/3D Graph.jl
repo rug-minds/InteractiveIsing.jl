@@ -13,11 +13,12 @@ g = IsingGraph(100,100,10,
         LocalProposer(0.5),
         wg, 
         LatticeConstants(1f0, 1f0, 1f0),
-        StateSet(-1.5f0, 1.5f0),
-        Ising(c = ConstVal(0f0), b = 0) +
-        CoulombHamiltonian(recalc = 2000),
+        StateSet(-1f0, 1f0),
+        Ising(c = ConstVal(0f0), b = 0, localpotential = 0),
         periodic = (:x,:y))
+
 
 interface(g)
 
-createProcess(g)
+dynamics = LocalLangevin(stepsize = 0.1f0, adjusted = false)
+createProcess(g, dynamics)

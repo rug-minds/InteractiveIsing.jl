@@ -66,35 +66,73 @@ function apply_input(isinggraph, x)
 end
 
 function apply_targets(isinggraph, y)
-    output_layer = isinggraph[end]
-    output_idxs = InteractiveIsing.layerrange(output_layer)
-    clamping = isinggraph.hamiltonian[InteractiveIsing.Clamping]
-    fill!(clamping.y, zero(eltype(clamping.y)))
-    clamping.y[output_idxs] .= y
+    _apply_targets!(_learning_clamping(isinggraph), isinggraph, y)
     return isinggraph
 end
 
 function set_clamping_beta!(isinggraph, β)
-    clamping = isinggraph.hamiltonian[InteractiveIsing.Clamping]
+    clamping = _learning_clamping(isinggraph)
     clamping.β[] = β
     return isinggraph
 end
 
+function _find_hamiltonian_term(hts, ::Type{T}) where {T}
+    for hterm in InteractiveIsing.hamiltonians(hts)
+        hterm isa T && return hterm
+    end
+    return nothing
+end
 
-function ForwardDynamics(layer)
+function _learning_clamping(isinggraph)
+    constant_readout = _find_hamiltonian_term(isinggraph.hamiltonian, ConstantLinearReadoutNudge)
+    !isnothing(constant_readout) && return constant_readout
+
+    readout_clamping = _find_hamiltonian_term(isinggraph.hamiltonian, LinearReadoutClamping)
+    !isnothing(readout_clamping) && return readout_clamping
+
+    direct_clamping = _find_hamiltonian_term(isinggraph.hamiltonian, InteractiveIsing.Clamping)
+    !isnothing(direct_clamping) && return direct_clamping
+
+    error("isinggraph has neither LinearReadoutClamping nor InteractiveIsing.Clamping")
+end
+
+function _apply_targets!(clamping::InteractiveIsing.Clamping, isinggraph, y)
+    output_layer = isinggraph[end]
+    output_idxs = InteractiveIsing.layerrange(output_layer)
+    fill!(clamping.y, zero(eltype(clamping.y)))
+    clamping.y[output_idxs] .= y
+    return clamping
+end
+
+function _apply_targets!(clamping::LinearReadoutClamping, isinggraph, y)
+    isempty(y) && throw(ArgumentError("LinearReadoutClamping needs a scalar target in y[1]"))
+    clamping.target[] = first(y)
+    return clamping
+end
+
+function _apply_targets!(clamping::ConstantLinearReadoutNudge, isinggraph, y)
+    isempty(y) && throw(ArgumentError("ConstantLinearReadoutNudge needs a scalar target in y[1]"))
+    clamping.target[] = first(y)
+    clamping.free_score[] = readout_score(clamping, InteractiveIsing.graphstate(isinggraph))
+    return clamping
+end
+
+
+function ForwardDynamics(layer; dynamics_algorithm = layer.dynamics_algorithm)
     beta = layer.β
-    fullsweeps = layer.fullsweeps
+    dynamics_algorithm = deepcopy(dynamics_algorithm)
+    relaxation_steps = layer.relaxation_steps
     n_units = layer.nunits
   
     forward = @Routine begin
-        @alias dynamics = Metropolis()
+        @alias dynamics = dynamics_algorithm
         @state equilibrium_state = zeros(n_units)
         @state x
 
-        initstate!(dynamics.state)
-        apply_input(dynamics.state, x)
-        state = @repeat fullsweeps*n_units dynamics()
-        copyvector!(equilibrium_state, @transform(x -> InteractiveIsing.state(x), state))
+        initstate!(dynamics.model)
+        apply_input(dynamics.model, x)
+        model = @repeat relaxation_steps dynamics()
+        copyvector!(equilibrium_state, @transform(x -> InteractiveIsing.state(x), model))
     end
 
     (;algorithm = forward, dynamics = forward.dynamics)
@@ -102,7 +140,8 @@ end
 
 function NudgedDynamics(layer)
     beta = layer.β
-    fullsweeps = layer.fullsweeps
+    dynamics_algorithm = deepcopy(layer.dynamics_algorithm)
+    relaxation_steps = layer.relaxation_steps
     n_units = layer.nunits
   
     plus_capture = Capturer()
@@ -112,30 +151,30 @@ function NudgedDynamics(layer)
         @state equilibrium_state
         @state y
         @state x
-        @alias dynamics = Metropolis()
+        @alias dynamics = dynamics_algorithm
         @alias plus_capture = plus_capture
         
-        setgraph!(isinggraph = dynamics.state, target = equilibrium_state)
-        apply_input(dynamics.state, x)
-        apply_targets(dynamics.state, y)
-        set_clamping_beta!(dynamics.state, beta)
-        state = @repeat fullsweeps*n_units dynamics()
-        plus_capture(isinggraph = state)
+        setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
+        apply_input(dynamics.model, x)
+        apply_targets(dynamics.model, y)
+        set_clamping_beta!(dynamics.model, beta)
+        model = @repeat relaxation_steps dynamics()
+        plus_capture(isinggraph = model)
     end
 
     minus = @Routine begin
         @state equilibrium_state
         @state y
         @state x
-        @alias dynamics = Metropolis()
+        @alias dynamics = dynamics_algorithm
         @alias minus_capture = minus_capture
         
-        setgraph!(isinggraph = dynamics.state, target = equilibrium_state)
-        apply_input(dynamics.state, x)
-        apply_targets(dynamics.state, y)
-        set_clamping_beta!(dynamics.state, -beta)
-        state = @repeat fullsweeps*n_units dynamics()
-        minus_capture(isinggraph = state)
+        setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
+        apply_input(dynamics.model, x)
+        apply_targets(dynamics.model, y)
+        set_clamping_beta!(dynamics.model, -beta)
+        model = @repeat relaxation_steps dynamics()
+        minus_capture(isinggraph = model)
     end
 
 
@@ -145,7 +184,7 @@ function NudgedDynamics(layer)
         @context c1 = plus()
         @context c2 = minus()
 
-        # contrastive_gradient(c1.dynamics.state, c1.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers) 
+        # contrastive_gradient(c1.dynamics.model, c1.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers) 
     end 
     (;algorithm = final, plus_capture, minus_capture, dynamics = plus.dynamics)
 end
@@ -162,9 +201,9 @@ function Forward_and_Nudged(layer)
         @context c2 = nudged()
 
         # Reset clamping after backward phases
-        set_clamping_beta!(c1.dynamics.state, zero(beta))
+        set_clamping_beta!(c1.dynamics.model, zero(beta))
 
-        contrastive_gradient(c1.dynamics.state, c2.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers) 
+        contrastive_gradient(c1.dynamics.model, c2.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers) 
     end 
     (;algorithm = final, plus_capture = nudged.plus_capture, minus_capture = nudged.minus_capture, dynamics = forward.dynamics)
 end

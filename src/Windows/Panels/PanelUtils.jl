@@ -104,11 +104,7 @@ function _poll_temperature!(g, last_graph_temp, last_context_temp)
         return context_temp
     end
 
-    if isnothing(context_temp)
-        return graph_temp
-    else
-        return context_temp
-    end
+    return graph_temp
 end
 
 function _total_ticks(g)

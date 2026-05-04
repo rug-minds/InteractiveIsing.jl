@@ -123,6 +123,55 @@ Base.getindex(handle::PanelHandle, key::Symbol) = handle.data[key]
 Base.setindex!(handle::PanelHandle, value, key::Symbol) = setindex!(handle.data, value, key)
 Base.haskey(handle::PanelHandle, key::Symbol) = haskey(handle.data, key)
 
+_typename(value) = nameof(typeof(value))
+_window_title(host::WindowHost) = get(host.data, :title, "untitled")
+
+function Base.show(io::IO, panel::AbstractPanel)
+    print(io, _typename(panel), "(...)")
+end
+
+Base.show(io::IO, ::MIME"text/plain", panel::AbstractPanel) = show(io, panel)
+
+function Base.show(io::IO, handle::PanelHandle)
+    print(
+        io,
+        "PanelHandle(",
+        _typename(handle.panel),
+        ", slot=",
+        handle.slot,
+        ", children=",
+        length(handle.children),
+        ", resources=",
+        length(handle.resources),
+        ", closed=",
+        handle.closed,
+        ")",
+    )
+end
+
+Base.show(io::IO, ::MIME"text/plain", handle::PanelHandle) = show(io, handle)
+
+function Base.show(io::IO, host::WindowHost)
+    print(
+        io,
+        "WindowHost(",
+        repr(_window_title(host)),
+        ", panels=",
+        length(host.children),
+        ", resources=",
+        length(host.resources),
+        ", fps=",
+        host.fps,
+        ", polling_rate=",
+        host.polling_rate,
+        ", closed=",
+        host.closed,
+        ")",
+    )
+end
+
+Base.show(io::IO, ::MIME"text/plain", host::WindowHost) = show(io, host)
+
 function _grid_cell(parent, pos)
     pos isa Tuple && return parent[pos...]
     return pos

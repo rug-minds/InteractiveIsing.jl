@@ -67,29 +67,40 @@ Equilibrium Propagation (EP).
 The **nudged phase** and **weight update** live in [`ep_train_step!`](@ref),
 which is called from your training loop.
 """
-struct LayeredIsingGraphLayer{G,I,O} <: LuxCore.AbstractLuxLayer
+struct LayeredIsingGraphLayer{G,I,O,B,D,V} <: LuxCore.AbstractLuxLayer
     model_graph::G
     input_layer::I
     output_layer::O
-    β::Float32
+    β::B
     fullsweeps::Int
     nunits::Int
+    dynamics_algorithm::D
+    validation_algorithm::V
+    relaxation_steps::Int
 end
 
 function LayeredIsingGraphLayer(graph_init;
                       input_idxs,
                       output_idxs,
                       β::Real = 0.1f0,
-                      fullsweeps::Integer = 50)
+                      fullsweeps::Integer = 50,
+                      dynamics_algorithm = Metropolis(),
+                      validation_algorithm = dynamics_algorithm,
+                      relaxation_steps::Union{Nothing, Integer} = nothing)
 
     graph_init = graph_init isa Function ? graph_init() : graph_init
     n_units = nstates(graph_init)
+    n_relaxation_steps = isnothing(relaxation_steps) ? fullsweeps * n_units : relaxation_steps
+    beta = convert(eltype(graph_init), β)
     LayeredIsingGraphLayer(graph_init,
                  input_idxs,
                  output_idxs,
-                 Float32(β),
+                 beta,
                  fullsweeps,
-                 n_units)
+                 n_units,
+                 dynamics_algorithm,
+                 validation_algorithm,
+                 Int(n_relaxation_steps))
 
 end
 
@@ -113,14 +124,14 @@ _process_buffers(g) = (;
 )
 
 function _forward_process(layer::LayeredIsingGraphLayer, g)
-    algo = resolve(ForwardDynamics(layer).algorithm)
+    algo = resolve(ForwardDynamics(layer; dynamics_algorithm = layer.validation_algorithm).algorithm)
     return Process(
         algo,
         Input(:_state;
             x = zeros(eltype(g), length(layer.input_layer)),
             equilibrium_state = copy(state(g)),
         ),
-        Input(:dynamics, state = g);
+        Input(:dynamics, model = g);
         repeat = 1,
     )
 end
@@ -135,7 +146,7 @@ function _backward_process(layer::LayeredIsingGraphLayer, g)
             buffers = _process_buffers(g),
             equilibrium_state = copy(state(g)),
         ),
-        Input(:dynamics, state = g),
+        Input(:dynamics, model = g),
         Input(:plus_capture, state = g),
         Input(:minus_capture, state = g);
         repeat = 1,

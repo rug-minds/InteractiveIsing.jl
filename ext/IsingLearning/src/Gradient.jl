@@ -14,11 +14,17 @@ function contrastive_gradient(graph, s_plus, s_minus, β::Real; buffers = nothin
     if isnothing(buffers) # setup buffers
     end
 
-    polynomial_ham = graph.hamiltonian[InteractiveIsing.PolynomialHamiltonian]
+    polynomial_ham = graph.hamiltonian[InteractiveIsing.Quadratic]
     magfield = graph.hamiltonian[InteractiveIsing.MagField]
     bilinear = graph.hamiltonian[InteractiveIsing.Bilinear]
 
-    # Accumulate dH/dw (plus - minus) into buffers
+    # Laborieux et al. 2021 use the symmetric EP estimator
+    # (∂Φ(sβ)/∂θ - ∂Φ(s-β)/∂θ) / 2β. With their nudging convention this
+    # estimates the *negative* loss gradient, i.e. the update direction for
+    # θ += η * direction. Our dynamics minimize H + βC, so Φ = -H.
+    # Therefore the loss gradient to pass to `Optimisers.update`, which applies
+    # θ -= η * gradient, is (∂H(sβ)/∂θ - ∂H(s-β)/∂θ) / 2β.
+    # Accumulate dH/dw (plus - minus) into buffers.
     InteractiveIsing.parameter_derivative(bilinear, s_plus, dJ = buffers.w, buffermode = InteractiveIsing.AccumulateBuffer{+}())
     InteractiveIsing.parameter_derivative(bilinear, s_minus, dJ = buffers.w, buffermode = InteractiveIsing.SubtractBuffer())
 

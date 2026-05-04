@@ -8,7 +8,12 @@ using InteractiveIsing.Processes
     @test LocalLangevin() isa LocalLangevin{:random}
     @test LocalLangevin(order = :deterministic) isa LocalLangevin{:deterministic}
     @test LocalLangevin{:random}(adjusted = false) isa LocalLangevin{:random}
-    @test_throws ArgumentError LocalLangevin(order = :cyclic)
+    @test LocalLangevin(order = :cyclic) isa LocalLangevin{:cyclic}
+    @test_throws ArgumentError LocalLangevin(order = :unknown)
+
+    step_ctx = Processes.init(LocalLangevin(adjusted = false, order = :deterministic), (;model = g))
+    step_result = Processes.step!(LocalLangevin(adjusted = false, order = :deterministic), step_ctx)
+    @test step_result.attempted == 1
 
     loop = deepcopy(SimpleAlgo(Unique(Metropolis()), Unique(LocalLangevin())))
     loop_inputs = InteractiveIsing._merge_graph_inputs(loop, g)
@@ -45,15 +50,21 @@ end
 @testset "Index Set API" begin
     toggled = ToggledIndexSet(1:2, 3:5)
     @test collect(InteractiveIsing.sampling_indices(toggled)) == [1, 2, 3, 4, 5]
+    @test !InteractiveIsing.sampling_changed!(toggled)
 
     InteractiveIsing.off!(toggled, 2)
     @test collect(InteractiveIsing.sampling_indices(toggled)) == [1, 2]
+    @test InteractiveIsing.sampling_changed!(toggled)
+    @test !InteractiveIsing.sampling_changed!(toggled)
 
     layered = ToggledLayerIndexSet(2, 1:2, 3:4, 5:6)
     @test collect(InteractiveIsing.sampling_indices(layered)) == [3, 4]
+    @test !InteractiveIsing.sampling_changed!(layered)
 
     InteractiveIsing.off!(layered)
     @test collect(InteractiveIsing.sampling_indices(layered)) == [1, 2, 5, 6]
+    @test InteractiveIsing.sampling_changed!(layered)
+    @test !InteractiveIsing.sampling_changed!(layered)
 
     g = IsingGraph(
         Layer(2, Continuous(), Coords(0, 1, 0)),
@@ -66,6 +77,8 @@ end
 
     InteractiveIsing.off!(index_set(g), 2)
     @test collect(sampling_indices(g)) == [1, 2]
+    @test InteractiveIsing.sampling_changed!(g)
+    @test !InteractiveIsing.sampling_changed!(g)
 
     proc = createProcess(g, LocalLangevin(adjusted = false); lifetime = 1)
     wait(proc)
