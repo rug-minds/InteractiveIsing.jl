@@ -6,10 +6,14 @@ using InteractiveIsing.Processes
     g = IsingGraph(2, 2, Continuous(); precision = Float32)
 
     @test LocalLangevin() isa LocalLangevin{:random}
+    @test LocalLangevin() isa LocalLangevin{:random,true}
+    @test LocalLangevin(adjusted = false) isa LocalLangevin{:random,false}
     @test LocalLangevin(order = :deterministic) isa LocalLangevin{:deterministic}
-    @test LocalLangevin{:random}(adjusted = false) isa LocalLangevin{:random}
+    @test LocalLangevin{:random}(adjusted = false) isa LocalLangevin{:random,false}
+    @test LocalLangevin{:random,false}() isa LocalLangevin{:random,false}
     @test LocalLangevin(order = :cyclic) isa LocalLangevin{:cyclic}
     @test_throws ArgumentError LocalLangevin(order = :unknown)
+    @test_throws ArgumentError LocalLangevin{:random,:unknown}()
 
     step_ctx = Processes.init(LocalLangevin(adjusted = false, order = :deterministic), (;model = g))
     step_result = Processes.step!(LocalLangevin(adjusted = false, order = :deterministic), step_ctx)

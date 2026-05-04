@@ -7,10 +7,12 @@ Single-spin Langevin Monte Carlo update.
 
 Each `Processes.step!` attempts one continuous spin move using the local energy
 derivative. The selected spin is taken from an ordered sweep over the active
-spins. With `adjusted=true`, each proposal uses a Metropolis-adjusted Langevin
-acceptance probability (MALA-style) for Boltzmann correctness of the discretized
-proposal. With `adjusted=false`, moves are always accepted after drift limiting
-and boundary reflection, which is faster but not an exact Boltzmann sampler.
+spins. `adjusted` and `order` are type parameters, so the inner step specializes
+on the chosen proposal structure. With `adjusted=true`, each proposal uses a
+Metropolis-adjusted Langevin acceptance probability (MALA-style) for Boltzmann
+correctness of the discretized proposal. With `adjusted=false`, moves are always
+accepted after drift limiting and boundary reflection, which is faster but not
+an exact Boltzmann sampler.
 
 `stepsize` is the proposal size used by each single-spin Langevin proposal.
 `group_steps` is the number of full sweeps in one internal cycle; it does not
@@ -19,39 +21,52 @@ divide or reinterpret `stepsize`.
 uses a lazy random permutation each sweep. `order=:deterministic` uses the active
 spin order directly.
 """
-struct LocalLangevin{Order,T<:Real} <: IsingMCAlgorithm
+struct LocalLangevin{Order,Adjusted,T<:Real} <: IsingMCAlgorithm
     stepsize::T
     max_drift_fraction::T
     group_steps::Int
-    adjusted::Bool
+
+    function LocalLangevin{Order,Adjusted,T}(
+        stepsize::T,
+        max_drift_fraction::T,
+        group_steps::Int,
+    ) where {Order,Adjusted,T<:Real}
+        Order === :cyclic || Order === :random || Order === :deterministic ||
+            throw(ArgumentError("LocalLangevin order must be :cyclic, :random, or :deterministic, got $(repr(Order))."))
+        Adjusted === true || Adjusted === false ||
+            throw(ArgumentError("LocalLangevin adjusted must be true or false, got $(repr(Adjusted))."))
+        return new{Order,Adjusted,T}(stepsize, max_drift_fraction, max(1, group_steps))
+    end
 end
 
 function LocalLangevin(;
     stepsize = 0.1,
     max_drift_fraction = 0.15,
     group_steps = 1,
-    adjusted = true,
+    adjusted::Bool = true,
     order::Symbol = :random,
 )
     if order === :cyclic
-        return LocalLangevin{:cyclic}(; stepsize, max_drift_fraction, group_steps, adjusted)
+        return LocalLangevin{:cyclic,adjusted}(; stepsize, max_drift_fraction, group_steps)
     elseif order === :random
-        return LocalLangevin{:random}(; stepsize, max_drift_fraction, group_steps, adjusted)
+        return LocalLangevin{:random,adjusted}(; stepsize, max_drift_fraction, group_steps)
     elseif order === :deterministic
-        return LocalLangevin{:deterministic}(; stepsize, max_drift_fraction, group_steps, adjusted)
+        return LocalLangevin{:deterministic,adjusted}(; stepsize, max_drift_fraction, group_steps)
     else
         throw(ArgumentError("LocalLangevin order must be :cyclic, :random, or :deterministic, got $(repr(order))."))
     end
 end
 
-function LocalLangevin{Order}(; stepsize = 0.1, max_drift_fraction = 0.15, group_steps = 1, adjusted = true) where {Order}
-    Order === :cyclic || Order === :random || Order === :deterministic ||
-        throw(ArgumentError("LocalLangevin order must be :cyclic, :random, or :deterministic, got $(repr(Order))."))
-    stepsize, max_drift_fraction = promote(stepsize, max_drift_fraction)
-    return LocalLangevin{Order,typeof(stepsize)}(stepsize, max_drift_fraction, max(1, Int(group_steps)), adjusted)
+function LocalLangevin{Order}(; stepsize = 0.1, max_drift_fraction = 0.15, group_steps = 1, adjusted::Bool = true) where {Order}
+    return LocalLangevin{Order,adjusted}(; stepsize, max_drift_fraction, group_steps)
 end
 
-LocalLangevin(stepsize::Real, max_drift_fraction::Real; group_steps = 1, adjusted = true, order::Symbol = :random) =
+function LocalLangevin{Order,Adjusted}(; stepsize = 0.1, max_drift_fraction = 0.15, group_steps = 1) where {Order,Adjusted}
+    stepsize, max_drift_fraction = promote(stepsize, max_drift_fraction)
+    return LocalLangevin{Order,Adjusted,typeof(stepsize)}(stepsize, max_drift_fraction, Int(group_steps))
+end
+
+LocalLangevin(stepsize::Real, max_drift_fraction::Real; group_steps = 1, adjusted::Bool = true, order::Symbol = :random) =
     LocalLangevin(; stepsize, max_drift_fraction, group_steps, adjusted, order)
 
 LocalLangevin(adjusted::Bool) = LocalLangevin(; adjusted)
@@ -121,10 +136,10 @@ end
 
     for _ in 1:24
         @inbounds spins[spin_idx] = candidate
-        candidate_derivative = _finite_derivative(T(@inline calculate(dh, hamiltonian, model, spin_idx)))
+        candidate_derivative = @inline _finite_derivative(T(@inline calculate(dh, hamiltonian, model, spin_idx)))
         @inbounds spins[spin_idx] = old_state
 
-        if isfinite(candidate_derivative) && !_langevin_derivative_sign_flipped(derivative, candidate_derivative)
+        if isfinite(candidate_derivative) && !(@inline _langevin_derivative_sign_flipped(derivative, candidate_derivative))
             return candidate, candidate_derivative
         end
 
@@ -151,7 +166,7 @@ end
 @inline _langevin_context_value(context, name::Symbol, default) = get(context, name, default)
 @inline _langevin_unwrap_ref(x) = x isa Ref ? x[] : x
 
-@inline function Processes.init(langevin::LocalLangevin{Order}, context::Cont) where {Order,Cont}
+@inline function Processes.init(langevin::LocalLangevin{Order,Adjusted}, context::Cont) where {Order,Adjusted,Cont}
     (;model) = context
 
     for layer in layers(model)
@@ -165,15 +180,15 @@ end
 
     hamiltonian = init!(hamiltonian, model)
     dH_prealloc = zeros(eltype(model), InteractiveIsing.nstates(model))
-    active_spins = collect(_active_spin_vector(model))
+    active_spins = collect(@inline _active_spin_vector(model))
     layer_views = layers(model)
     T = temp(model)
     SType = eltype(model)
     stepsize_default = SType(langevin.stepsize)
-    stepsize = Ref(SType(_langevin_unwrap_ref(_langevin_context_value(context, :stepsize, stepsize_default))))
+    stepsize = Ref(SType(@inline _langevin_unwrap_ref(@inline _langevin_context_value(context, :stepsize, stepsize_default))))
     max_drift_fraction = Ref(SType(langevin.max_drift_fraction))
     group_steps = Ref(langevin.group_steps)
-    adjusted = Ref(langevin.adjusted)
+    adjusted = Adjusted
     proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
     ΔE = zero(SType)
     accepted = 0
@@ -219,7 +234,7 @@ end
     gradient_max = zero(SType)
     for spin_idx in active_spins
         derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
-        derivative = _finite_derivative(SType(derivative))
+        derivative = @inline _finite_derivative(SType(derivative))
         @inbounds context.dH_prealloc[spin_idx] = derivative
         gradient_max = max(gradient_max, abs(derivative))
     end
@@ -228,7 +243,7 @@ end
     context.group_remaining[] = max(1, context.group_steps[])
     context.sweep_position[] = 1
     if Order === :random
-        _reset_local_langevin_order!(context.sweep_order, n)
+        @inline _reset_local_langevin_order!(context.sweep_order, n)
     end
     return gradient_max
 end
@@ -236,7 +251,7 @@ end
 @inline function _next_local_langevin_order_index!(langevin::LocalLangevin{Order}, context, rng, n::Int) where {Order}
     if Order === :random
         pos = context.sweep_position[]
-        swap_pos = rand(rng, pos:n)
+        swap_pos = @inline rand(rng, pos:n)
         order = context.sweep_order
         @inbounds begin
             order[pos], order[swap_pos] = order[swap_pos], order[pos]
@@ -245,7 +260,7 @@ end
     elseif Order === :cyclic
         pos = context.sweep_position[]
         if pos == 1
-            context.sweep_offset[] = rand(rng, 0:(n - 1))
+            context.sweep_offset[] = @inline rand(rng, 0:(n - 1))
         end
         k = pos + context.sweep_offset[]
         return k > n ? k - n : k
@@ -266,7 +281,7 @@ end
     if context.group_remaining[] > 0
         context.sweep_position[] = 1
         if Order === :random
-            _reset_local_langevin_order!(context.sweep_order, n)
+            @inline _reset_local_langevin_order!(context.sweep_order, n)
         end
     else
         context.sweep_position[] = 0
@@ -274,23 +289,210 @@ end
     return nothing
 end
 
-@inline function Processes.step!(langevin::LocalLangevin{Order}, context::C) where {Order,C}
+@inline function _local_langevin_bounds(spin_idx::Int, layer_views)
+    local_states = @inline spin_idx_layer_dispatch(stateset, spin_idx, layer_views)
+    low_state = local_states[1]
+    high_state = local_states[end]
+    layer_idx = @inline spin_idx_to_layer_idx(spin_idx, layer_views)
+    return low_state, high_state, high_state - low_state, layer_idx
+end
+
+@inline function _local_langevin_derivative!(dH_prealloc, dh, hamiltonian, model, spin_idx::Int)
+    SType = eltype(model)
+    derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+    derivative = @inline _finite_derivative(SType(derivative))
+    @inbounds dH_prealloc[spin_idx] = derivative
+    return derivative
+end
+
+"""
+    _local_langevin_accept!(...)
+
+Commit one local spin proposal, update Hamiltonian caches, and refresh the
+stored local derivative at that spin.
+"""
+@inline function _local_langevin_accept!(
+    langevin::LocalLangevin,
+    dh,
+    hamiltonian,
+    model,
+    dH_prealloc,
+    spin_idx::Int,
+    layer_idx::Int,
+    old_state::T,
+    new_state::T,
+) where {T}
+    spins = @inline InteractiveIsing.graphstate(model)
+    proposal = FlipProposal{T}(spin_idx, old_state, new_state, layer_idx, true)
+    @inbounds spins[spin_idx] = new_state
+    @inline update!(langevin, hamiltonian, model, proposal)
+    post_derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+    post_derivative = @inline _finite_derivative(T(post_derivative))
+    @inbounds dH_prealloc[spin_idx] = post_derivative
+    return proposal, post_derivative
+end
+
+"""
+    _local_langevin_unadjusted!(...)
+
+Apply the fast always-accepted local proposal. It reflects finite proposals back
+into the local state bounds, and at zero temperature backs off a crossing move
+that would otherwise bounce around the local stationary point.
+"""
+@inline function _local_langevin_unadjusted!(
+    langevin::LocalLangevin,
+    dh,
+    hamiltonian,
+    model,
+    dH_prealloc,
+    spin_idx::Int,
+    layer_idx::Int,
+    old_state::T,
+    trial_state::T,
+    low_state::T,
+    high_state::T,
+    derivative::T,
+    t::T,
+) where {T}
+    new_state = @inline _reflect_to_bounds(trial_state, low_state, high_state)
+    reflected = new_state == trial_state ? 0 : 1
+
+    if t <= zero(T)
+        post_derivative = derivative
+        new_state, post_derivative = @inline _langevin_zero_temp_relax_state(
+            dh,
+            hamiltonian,
+            model,
+            spin_idx,
+            old_state,
+            new_state,
+            derivative,
+        )
+        spins = @inline InteractiveIsing.graphstate(model)
+        proposal = FlipProposal{T}(spin_idx, old_state, new_state, layer_idx, true)
+        @inbounds spins[spin_idx] = new_state
+        @inline update!(langevin, hamiltonian, model, proposal)
+        @inbounds dH_prealloc[spin_idx] = post_derivative
+        return proposal, post_derivative, reflected
+    end
+
+    proposal, post_derivative = @inline _local_langevin_accept!(
+        langevin,
+        dh,
+        hamiltonian,
+        model,
+        dH_prealloc,
+        spin_idx,
+        layer_idx,
+        old_state,
+        new_state,
+    )
+    return proposal, post_derivative, reflected
+end
+
+"""
+    _local_langevin_reverse_mean(...)
+
+Temporarily evaluate the local derivative at the trial state and return the
+reverse Langevin proposal mean used in the MALA correction.
+"""
+@inline function _local_langevin_reverse_mean(
+    dh,
+    hamiltonian,
+    model,
+    spin_idx::Int,
+    old_state::T,
+    new_state::T,
+    η::T,
+) where {T}
+    spins = @inline InteractiveIsing.graphstate(model)
+    @inbounds spins[spin_idx] = new_state
+    reverse_derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+    reverse_derivative = @inline _finite_derivative(T(reverse_derivative))
+    reverse_mean = new_state - η * reverse_derivative
+    @inbounds spins[spin_idx] = old_state
+    return reverse_mean
+end
+
+"""
+    _local_langevin_adjusted!(...)
+
+Evaluate one Metropolis-adjusted local Langevin proposal. Accepted moves are
+committed through `_local_langevin_accept!`; rejected moves leave the graph and
+Hamiltonian caches unchanged.
+"""
+@inline function _local_langevin_adjusted!(
+    langevin::LocalLangevin,
+    rng,
+    dh,
+    hamiltonian,
+    model,
+    dH_prealloc,
+    spin_idx::Int,
+    layer_idx::Int,
+    old_state::T,
+    trial_state::T,
+    low_state::T,
+    high_state::T,
+    derivative::T,
+    drift_step::T,
+    t::T,
+    η::T,
+    four_ηT::T,
+) where {T}
+    if !(@inline _in_bounds(trial_state, low_state, high_state))
+        return FlipProposal{T}(spin_idx, old_state, old_state, layer_idx, false), zero(T), 0, derivative
+    end
+
+    new_state = trial_state
+    proposal_trial = FlipProposal{T}(spin_idx, old_state, new_state, layer_idx, false)
+    ΔE = @inline calculate(ΔH(), hamiltonian, model, proposal_trial)
+
+    if t <= zero(T)
+        accept_move = isfinite(ΔE) && ΔE <= zero(T)
+    else
+        forward_mean = old_state - drift_step
+        reverse_mean = @inline _local_langevin_reverse_mean(dh, hamiltonian, model, spin_idx, old_state, new_state, η)
+        log_forward_q = @inline _mala_log_kernel(new_state, forward_mean, four_ηT)
+        log_reverse_q = @inline _mala_log_kernel(old_state, reverse_mean, four_ηT)
+        log_acceptance = -ΔE / t + log_reverse_q - log_forward_q
+        accept_move = isfinite(log_acceptance) && (log_acceptance >= zero(T) || log(@inline rand(rng, T)) < log_acceptance)
+    end
+
+    if accept_move
+        proposal, post_derivative = @inline _local_langevin_accept!(
+            langevin,
+            dh,
+            hamiltonian,
+            model,
+            dH_prealloc,
+            spin_idx,
+            layer_idx,
+            old_state,
+            new_state,
+        )
+        return proposal, ΔE, 1, post_derivative
+    end
+
+    return FlipProposal{T}(spin_idx, old_state, new_state, layer_idx, false), ΔE, 0, derivative
+end
+
+@inline function Processes.step!(langevin::LocalLangevin{Order,Adjusted}, context::C) where {Order,Adjusted,C}
     (;hamiltonian, rng, model, dH_prealloc, layer_views, stepsize,
-        max_drift_fraction, adjusted) = context
+        max_drift_fraction) = context
 
     SType = eltype(model)
     spins = @inline InteractiveIsing.graphstate(model)
     epsT = eps(SType)
-    T = temp(model)
+    T = @inline temp(model)
     t = max(SType(T), zero(SType))
     η = max(stepsize[], epsT)
     drift_fraction = clamp(max_drift_fraction[], epsT, one(SType))
-    use_adjusted = adjusted[]
     dh = d_iH()
-    gradient_max = SType(_langevin_unwrap_ref(_langevin_context_value(context, :gradient_max, zero(SType))))
-    active_changed = consume_changed!(model)
+    gradient_max = SType(@inline _langevin_unwrap_ref(@inline _langevin_context_value(context, :gradient_max, zero(SType))))
+    active_changed = @inline consume_changed!(model)
     if active_changed
-        _set_local_langevin_active_spins!(context.active_spins, _active_spin_vector(model))
+        @inline _set_local_langevin_active_spins!(context.active_spins, @inline _active_spin_vector(model))
     end
     active_spins = context.active_spins
 
@@ -302,111 +504,76 @@ end
         return (;)
     end
     if active_changed || context.sweep_position[] == 0 || context.sweep_position[] > n
-        gradient_max = _start_local_langevin_cycle!(langevin, context, dh, hamiltonian, model, active_spins)
+        gradient_max = @inline _start_local_langevin_cycle!(langevin, context, dh, hamiltonian, model, active_spins)
     end
 
-    attempted = 0
-    accepted = 0
     ΔE = zero(SType)
     four_ηT = SType(4) * η * max(t, epsT)
     proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
-    gradient_sumsq = zero(SType)
-    gradient_count = 0
     reflected = 0
 
-    k = _next_local_langevin_order_index!(langevin, context, rng, n)
+    k = @inline _next_local_langevin_order_index!(langevin, context, rng, n)
     spin_idx = @inbounds active_spins[k]
-    derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
-    derivative = _finite_derivative(SType(derivative))
-    @inbounds dH_prealloc[spin_idx] = derivative
+    derivative = @inline _local_langevin_derivative!(dH_prealloc, dh, hamiltonian, model, spin_idx)
     gradient_max = max(gradient_max, abs(derivative))
-    gradient_sumsq += derivative * derivative
-    gradient_count += 1
-
-    local_states = @inline spin_idx_layer_dispatch(stateset, spin_idx, layer_views)
-    low_state = local_states[1]
-    high_state = local_states[end]
-    local_span = high_state - low_state
+    low_state, high_state, local_span, layer_idx = @inline _local_langevin_bounds(spin_idx, layer_views)
 
     local_drift_cap = drift_fraction * local_span
     raw_drift_step = η * derivative
-    drift_step = use_adjusted ? raw_drift_step : _langevin_drift_step(η, derivative, local_drift_cap)
+    drift_step = Adjusted ? raw_drift_step : (@inline _langevin_drift_step(η, derivative, local_drift_cap))
 
-    noise = σ > zero(SType) ? randn(rng, SType) : zero(SType)
+    noise = σ > zero(SType) ? (@inline randn(rng, SType)) : zero(SType)
     old_state = @inbounds spins[spin_idx]
     trial_state = old_state - drift_step + σ * noise
-    layer_idx = spin_idx_to_layer_idx(spin_idx, layer_views)
-    attempted += 1
+    post_derivative = derivative
+    accepted = 0
 
-    if !use_adjusted
-        new_state = _reflect_to_bounds(trial_state, low_state, high_state)
-        reflected += new_state == trial_state ? 0 : 1
-        post_derivative = derivative
-        if t <= zero(SType)
-            new_state, post_derivative = _langevin_zero_temp_relax_state(
-                dh,
-                hamiltonian,
-                model,
-                spin_idx,
-                old_state,
-                new_state,
-                derivative,
-            )
-        end
-        proposal = FlipProposal{SType}(spin_idx, old_state, new_state, layer_idx, true)
-        @inbounds spins[spin_idx] = new_state
-        @inline update!(langevin, hamiltonian, model, proposal)
-        if t > zero(SType)
-            post_derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
-            post_derivative = _finite_derivative(SType(post_derivative))
-        end
-        @inbounds dH_prealloc[spin_idx] = post_derivative
-        gradient_max = max(gradient_max, abs(post_derivative))
+    if !Adjusted
+        proposal, post_derivative, reflected = @inline _local_langevin_unadjusted!(
+            langevin,
+            dh,
+            hamiltonian,
+            model,
+            dH_prealloc,
+            spin_idx,
+            layer_idx,
+            old_state,
+            trial_state,
+            low_state,
+            high_state,
+            derivative,
+            t,
+        )
         accepted += 1
-    elseif !_in_bounds(trial_state, low_state, high_state)
-        proposal = FlipProposal{SType}(spin_idx, old_state, old_state, layer_idx, false)
     else
-        new_state = trial_state
-        proposal_trial = FlipProposal{SType}(spin_idx, old_state, new_state, layer_idx, false)
-        ΔE = @inline calculate(ΔH(), hamiltonian, model, proposal_trial)
-
-        if t <= zero(SType)
-            accept_move = isfinite(ΔE) && ΔE <= zero(SType)
-        else
-            forward_mean = old_state - drift_step
-
-            @inbounds spins[spin_idx] = new_state
-            reverse_derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
-            reverse_derivative = _finite_derivative(SType(reverse_derivative))
-            reverse_drift_step = η * reverse_derivative
-            reverse_mean = new_state - reverse_drift_step
-            @inbounds spins[spin_idx] = old_state
-
-            log_forward_q = _mala_log_kernel(new_state, forward_mean, four_ηT)
-            log_reverse_q = _mala_log_kernel(old_state, reverse_mean, four_ηT)
-            log_acceptance = -ΔE / t + log_reverse_q - log_forward_q
-            accept_move = isfinite(log_acceptance) && (log_acceptance >= zero(SType) || log(rand(rng, SType)) < log_acceptance)
-        end
-
-        if accept_move
-            proposal = FlipProposal{SType}(spin_idx, old_state, new_state, layer_idx, true)
-            @inbounds spins[spin_idx] = new_state
-            @inline update!(langevin, hamiltonian, model, proposal)
-            post_derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
-            post_derivative = _finite_derivative(SType(post_derivative))
-            @inbounds dH_prealloc[spin_idx] = post_derivative
-            gradient_max = max(gradient_max, abs(post_derivative))
-            accepted += 1
-        else
-            proposal = FlipProposal{SType}(spin_idx, old_state, new_state, layer_idx, false)
-        end
+        proposal, ΔE, accepted, post_derivative = @inline _local_langevin_adjusted!(
+            langevin,
+            rng,
+            dh,
+            hamiltonian,
+            model,
+            dH_prealloc,
+            spin_idx,
+            layer_idx,
+            old_state,
+            trial_state,
+            low_state,
+            high_state,
+            derivative,
+            drift_step,
+            t,
+            η,
+            four_ηT,
+        )
     end
+    gradient_max = max(gradient_max, abs(post_derivative))
 
-    _advance_local_langevin_cursor!(langevin, context, n)
+    @inline _advance_local_langevin_cursor!(langevin, context, n)
 
-    acceptance_rate = attempted == 0 ? zero(SType) : SType(accepted) / SType(attempted)
-    gradient_rms = gradient_count == 0 ? zero(SType) : sqrt(gradient_sumsq / SType(gradient_count))
-    reflected_fraction = attempted == 0 ? zero(SType) : SType(reflected) / SType(attempted)
+    attempted = 1
+    acceptance_rate = SType(accepted)
+    gradient_rms = abs(derivative)
+    reflected_fraction = SType(reflected)
     return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
         group_steps = max(1, context.group_steps[]), gradient_max, gradient_rms,
         reflected_fraction)
