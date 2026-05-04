@@ -112,6 +112,54 @@ function _bind_layer_colorrange!(plot, state_obs, layer)
     return plot
 end
 
+_is_axis3_like(axis) = hasproperty(axis, :azimuth) && hasproperty(axis, :elevation)
+
+function _axis3_state(axis)
+    _is_axis3_like(axis) || return nothing
+
+    state = Dict{Symbol, Any}()
+    for key in (:azimuth, :elevation, :perspectiveness, :zoom_mult, :targetlimits, :limits)
+        hasproperty(axis, key) || continue
+        attr = getproperty(axis, key)
+        if attr isa Observable
+            state[key] = deepcopy(attr[])
+        end
+    end
+    return state
+end
+
+function _restore_axis3_state!(axis, state)
+    isnothing(state) && return axis
+    _is_axis3_like(axis) || return axis
+
+    for (key, value) in state
+        hasproperty(axis, key) || continue
+        attr = getproperty(axis, key)
+        attr isa Observable || continue
+        try
+            attr[] = value
+        catch
+        end
+    end
+    return axis
+end
+
+function _remember_axis3_state!(handle, key::Symbol, axis)
+    state = _axis3_state(axis)
+    isnothing(state) || (handle[key] = state)
+    return state
+end
+
+function _delete_makie_object!(handle, object)
+    host = handle.host
+    (host.closed || host.closing) && return nothing
+    try
+        delete!(object)
+    catch
+    end
+    return nothing
+end
+
 function _old_linear_layer_coordinates(vals_size)
     sx, sy, sz = vals_size
     allidxs = [1:(sx * sy * sz);]
@@ -119,6 +167,15 @@ function _old_linear_layer_coordinates(vals_size)
     ys = [floor(Int, (idx - 1) / sx) % sy + 1 for idx in allidxs]
     zs = [floor(Int, (idx - 1) / (sx * sy)) + 1 for idx in allidxs]
     return xs, ys, zs
+end
+
+function _coordinates_3d!(handle, vals_size)
+    cache = get!(handle.data, :coordinates_3d) do
+        Dict{Any, Any}()
+    end
+    return get!(cache, vals_size) do
+        _old_linear_layer_coordinates(vals_size)
+    end
 end
 
 function _cast_layer_state_vector(layer)

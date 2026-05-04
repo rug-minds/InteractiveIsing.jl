@@ -23,10 +23,8 @@ end
 
 function _redraw_layer!(handle::PanelHandle)
     if haskey(handle, :axis)
-        try
-            delete!(handle[:axis])
-        catch
-        end
+        _remember_axis3_state!(handle, :axis3_state, handle[:axis])
+        _delete_makie_object!(handle, handle[:axis])
     end
 
     panel = handle.panel::LayerViewPanel
@@ -50,7 +48,8 @@ end
 
 function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,3}) where {T}
     ax = handle[:axis] = Axis3(grid[1, 1], tellheight = true)
-    xs, ys, zs = _old_linear_layer_coordinates(size(layer))
+    _restore_axis3_state!(ax, get(handle.data, :axis3_state, nothing))
+    xs, ys, zs = _coordinates_3d!(handle, size(layer))
     obs = handle[:img_obs] = Observable(_cast_layer_state_vector(layer))
     plot = handle[:plot] = meshscatter!(ax, xs, ys, zs, markersize = 0.3, color = obs, colormap = :thermal)
     _bind_layer_colorrange!(plot, obs, layer)

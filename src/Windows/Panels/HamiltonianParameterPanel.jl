@@ -133,10 +133,8 @@ end
 function _clear_hamiltonian_display!(handle)
     for key in (:display_axis, :display_label, :display_title)
         if haskey(handle, key)
-            try
-                delete!(handle[key])
-            catch
-            end
+            key === :display_axis && _remember_axis3_state!(handle, :display_axis3_state, handle[key])
+            _delete_makie_object!(handle, handle[key])
             delete!(handle.data, key)
         end
     end
@@ -186,7 +184,8 @@ end
 
 function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,3}) where {T}
     ax = handle[:display_axis] = Axis3(cell, tellheight = true)
-    xs, ys, zs = _old_linear_layer_coordinates(size(layer))
+    _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
+    xs, ys, zs = _coordinates_3d!(handle, size(layer))
     obs = handle[:display_obs] = Observable(_cast_layer_state_vector(layer))
     handle[:display_is_3d] = true
     handle[:display_use_data_colorrange] = entry.colorrange === :data
@@ -264,7 +263,8 @@ function _draw_layer_array!(
     vals_size = size(vals)
     length(vals_size) == 3 || throw(ArgumentError("3D layer display needs a 3D array, got size $(vals_size)."))
     ax = handle[:display_axis] = Axis3(cell, tellheight = true)
-    xs, ys, zs = _old_linear_layer_coordinates(vals_size)
+    _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
+    xs, ys, zs = _coordinates_3d!(handle, vals_size)
     obs = handle[:display_obs] = Observable(vec(vals))
     handle[:display_is_3d] = true
     handle[:display_use_data_colorrange] = use_data_colorrange

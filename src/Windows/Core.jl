@@ -56,7 +56,7 @@ function WindowHost(fig::Figure; screen = nothing, fps = 30, polling_rate = 10, 
         false,
     )
     host.frame_timer = PTimer(_ -> _tick!(host), 0.; interval = 1 / host.fps)
-    host.poll_timer = PTimer(_ -> poll!.(host.pollables), 0.; interval = 1 / host.polling_rate)
+    host.poll_timer = PTimer(_ -> _poll!(host), 0.; interval = 1 / host.polling_rate)
     register!(host, on(host.open) do isopen
         isopen || close(host)
     end)
@@ -171,9 +171,19 @@ struct PolledRegistration
 end
 
 function _tick!(host::WindowHost)
-    host.closed && return nothing
-    for callback in host.frame_callbacks
+    (host.closed || host.closing) && return nothing
+    for callback in copy(host.frame_callbacks)
+        (host.closed || host.closing) && return nothing
         callback(host)
+    end
+    return nothing
+end
+
+function _poll!(host::WindowHost)
+    (host.closed || host.closing) && return nothing
+    for observable in copy(host.pollables)
+        (host.closed || host.closing) && return nothing
+        poll!(observable)
     end
     return nothing
 end
@@ -256,12 +266,12 @@ function Base.close(host::WindowHost)
     (host.closed || host.closing) && return nothing
     host.closing = true
     should_close_screen = !isnothing(host.screen) && host.open[]
+    close(host.frame_timer)
+    close(host.poll_timer)
     for child in reverse(collect(values(host.children)))
         close(child)
     end
     empty!(host.children)
-    close(host.frame_timer)
-    close(host.poll_timer)
     for resource in reverse(host.resources)
         _cleanup_resource(resource)
     end

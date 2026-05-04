@@ -133,16 +133,22 @@ end
     @test haskey(handle.children[:temperature], :slider)
     @test parameter_panel[:display_is_3d]
     @test length(parameter_panel[:display_obs][]) == nstates(g)
+    parameter_panel[:display_axis].azimuth[] = 1.1
+    parameter_panel[:display_axis].elevation[] = 0.7
 
     parameter_panel[:selected][] = findfirst(==(:u), getfield.(entries, :name))
     Windows._draw_hamiltonian_entry!(parameter_panel)
     @test parameter_panel[:display_is_3d]
     @test length(parameter_panel[:display_obs][]) == prod(size(coulomb.u))
+    @test parameter_panel[:display_axis].azimuth[] ≈ 1.1
+    @test parameter_panel[:display_axis].elevation[] ≈ 0.7
 
     parameter_panel[:selected][] = findfirst(==(Symbol("ρ")), getfield.(entries, :name))
     Windows._draw_hamiltonian_entry!(parameter_panel)
     @test parameter_panel[:display_is_3d]
     @test length(parameter_panel[:display_obs][]) == prod(size(coulomb.ρ))
+    @test parameter_panel[:display_axis].azimuth[] ≈ 1.1
+    @test parameter_panel[:display_axis].elevation[] ≈ 0.7
 
     close(host)
     @test host.closed
