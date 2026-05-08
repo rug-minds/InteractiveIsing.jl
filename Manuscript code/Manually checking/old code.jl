@@ -70,3 +70,5 @@ Pulse_and_Relax_route = Routine(pulse_part1_route, relax_part1_route,
         g.hamiltonian[6].lp[] = c1
         g.hamiltonian[6].c[] = 1
 =#
+
+g.hamiltonian[Quadratic] 
