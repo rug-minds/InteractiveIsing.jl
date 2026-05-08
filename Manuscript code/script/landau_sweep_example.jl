@@ -23,7 +23,11 @@ landau_base = MT.ManuscriptParams(;
     Steps_1 = 6000,
     Amp1 = 3.0,
     nrepeats = 2,
-    landau_mode = :coupled,
+    # nothing uses old global proposals. A number uses LocalProposer(delta).
+    proposal_delta = 0.1,
+    algorithm_name = :local_langevin,
+    algorithm_kwargs = (; stepsize = 0.05f0, adjusted = true),
+    landau_mode = :independent,
 )
 
 ###############################################################################
@@ -60,6 +64,61 @@ function coeffs_from_stationary_abs_positions(abs_positions; K = 1.0)
     )
 end
 
+function _coeffvec_to_dict(coeffvec; atol = 1e-8)
+    out = Dict{Int,Float64}()
+    for order in 0:length(coeffvec)-1
+        coeff = Float64(coeffvec[order + 1])
+        abs(coeff) <= atol && continue
+        out[order] = coeff
+    end
+    return out
+end
+
+function _dict_max_abs_diff(a::Dict, b::Dict)
+    orders = union(keys(a), keys(b))
+    isempty(orders) && return 0.0
+    return maximum(abs(Float64(get(a, order, 0.0)) - Float64(get(b, order, 0.0))) for order in orders)
+end
+
+function check_landau_encoding(base, coeffs;
+    spin_idx = 1,
+    xrange = range(-1.0, 1.0, length = 1000),
+    atol = 1e-6,
+    tag = "landau_encoding_check",
+)
+    p = MT.update_params(
+        base;
+        landau_mode = :independent,
+        landau_coeffs = coeffs,
+        outdir = joinpath(base.outdir, tag),
+    )
+
+    g = MT.build_graph(p)
+    encoded = _coeffvec_to_dict(
+        InteractiveIsing.local_potential_coefficients(g.hamiltonian, g, spin_idx);
+        atol,
+    )
+    expected = Dict(Int(order) => Float64(coeff) for (order, coeff) in pairs(coeffs))
+
+    diff = _dict_max_abs_diff(expected, encoded)
+
+    mkpath(p.outdir)
+    MT.save_landau_figure(joinpath(p.outdir, "landau_curve.png"), p; xrange)
+
+    println("Landau encoding check")
+    println("  expected coefficients = ", sort(collect(expected)))
+    println("  encoded coefficients  = ", sort(collect(encoded)))
+    println("  max |expected - encoded| = ", diff)
+    println("  curve saved to: ", joinpath(p.outdir, "landau_curve.png"))
+
+    return (;
+        expected,
+        encoded,
+        diff,
+        path = joinpath(p.outdir, "landau_curve.png"),
+    )
+end
+
 ###############################################################################
 # Example A: manually list a few Landau shapes
 ###############################################################################
@@ -91,7 +150,7 @@ function listed_landau_paramsets(base)
     return [
         MT.update_params(
             base;
-            landau_mode = :coupled,
+            landau_mode = :independent,
             landau_coeffs = item.coeffs,
             outdir = joinpath(base.outdir, item.name),
         )
@@ -110,7 +169,7 @@ function ac_grid_landau_paramsets(base)
     return [
         MT.update_params(
             base;
-            landau_mode = :coupled,
+            landau_mode = :independent,
             landau_coeffs = coeffs_246(a, c),
             outdir = joinpath(base.outdir, "a=$(a)_c=$(c)"),
         )
@@ -138,6 +197,26 @@ function independent_landau_paramsets(base)
             outdir = joinpath(base.outdir, item.name),
         )
         for item in variants
+    ]
+end
+
+###############################################################################
+# Example D: local proposal step-size sweep
+###############################################################################
+
+function proposal_delta_landau_paramsets(base)
+    deltas = (0.05, 0.1, 0.2, 0.5, nothing)
+    coeffs = coeffs_246(-2.0, 10.0)
+
+    return [
+        MT.update_params(
+            base;
+            proposal_delta = delta,
+            landau_mode = :independent,
+            landau_coeffs = coeffs,
+            outdir = joinpath(base.outdir, "proposal_delta=$(isnothing(delta) ? "global" : delta)"),
+        )
+        for delta in deltas
     ]
 end
 
@@ -196,10 +275,23 @@ function run_independent_landau_sweep(; max_inflight = 2, capture = false)
     return results
 end
 
+function run_proposal_delta_landau_sweep(; max_inflight = 2, capture = false)
+    paramsets = proposal_delta_landau_paramsets(landau_base)
+    results = run_landau_sweep(paramsets; max_inflight, capture)
+    print_saved_outputs(results)
+    return results
+end
+
 if abspath(PROGRAM_FILE) == @__FILE__
     ## Direct "Run File" enters here.
 
+    # Minimal diagnostic: check that graph-local Landau coefficients match
+    # the requested direct localpotential coefficients.
+    # check_landau_encoding(landau_base, coeffs_246(-2.0, 10.0))
+    # check_landau_encoding(landau_base, Dict(2 => -2.0, 4 => 14.0, 6 => 10.0, 8 => -1.0))
+
     # run_default_landau_sweep(; max_inflight = 4, capture = false)
     # run_ac_grid_landau_sweep(; max_inflight = 4, capture = false)
+    # The active default below uses independent localpotential Landau encoding.
     run_independent_landau_sweep(; max_inflight = 4, capture = false)
 end

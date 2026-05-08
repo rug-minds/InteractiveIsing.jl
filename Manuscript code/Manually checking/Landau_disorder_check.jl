@@ -31,6 +31,25 @@ function makieaxis(axisfunc, modifiers...)
     f
 end
 
+accepted_proposal_delta_base(proposal::II.FlipProposal) = II.accepteddelta(proposal)
+
+function accepted_proposal_delta_base(proposal::II.MultiSpinProposal)
+    total = zero(eltype(proposal))
+    @inbounds for i in 1:length(proposal)
+        total += II.accepteddelta(proposal, i)
+    end
+    return total
+end
+
+function select_dynamics(g, algorithm_name::Symbol; algorithm_kwargs = (;))
+    algorithm_name in (:default, :metropolis) && return g.default_algorithm
+    algorithm_name == :local_langevin && return LocalLangevin(; algorithm_kwargs...)
+    algorithm_name == :global_langevin && return GlobalLangevin(; algorithm_kwargs...)
+    algorithm_name == :block_langevin && return BlockLangevin(; algorithm_kwargs...)
+
+    error("Unknown algorithm_name $(repr(algorithm_name)). Use :default, :metropolis, :local_langevin, :global_langevin, or :block_langevin.")
+end
+
 # Weight function variant 1
 function weightfunc1(; dc::T) where {T}
     prefac = 1
@@ -527,7 +546,13 @@ end
 function IntegrateAndLog(type = Float64, loginterval = 1)
     integrator = Integrator(type, name = :integrate_and_log)
     logger = Logger(type, name = :integrate_and_log)
-    c = CompositeAlgorithm(integrator, logger, (1, loginterval), Route(integrator => logger, :total => :value, transform = x -> x[]))
+    c = @CompositeAlgorithm begin
+        @alias integrator = integrator
+        @alias logger = logger
+
+        total = integrator()
+        @every loginterval logger(value = @transform(x -> x[], total))
+    end
     pack = package(c)
 end
 #####################################################################################
@@ -535,39 +560,8 @@ end
 
 
 #########################################################################
-## ======================== Define simulation ======================== ##
-xL = 40  # Length in the x-dimension
-yL = 40  # Length in the y-dimension
-zL = 10   # Length in the z-dimension
-
-### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
-wg1 = @WG (; dc) -> weightfunc1(; dc) NN = 3
-wg2 = @WG (; dc) -> weightfunc_skymion(; dc) NN = 3
-wg5 = @WG (; dc) -> weightfunc_shell(1, 1, 1, 1, 0.1, 0.1; dc) NN = 3
 
 
-# Output directory for the whole sweep
-outdir = raw"D:\Code\data\Manuscript\Demo1"
-mkpath(outdir)
-
-# ---- parameters to sweep ----
-JIsing = 1.0
-Scale = 1
-Screening = 0.01 
-Temp_aneal=5f0
-time_fctr=1
-Steps_1=6000
-Temp = 0.5
-a1, c1 = -2, 10
-b1 =-(a1+3*c1)/2
-# Ex = range(-1.5, 1.5, length=1000)
-# Ey = a1 .* Ex.^2 .+ b1 .* Ex.^4 .+ c1 .* Ex.^6
-# f1=newmakie(lines, Ex, Ey);
-
-E_barrier= abs(a1 * 1^2 + b1 * 1^4 .+ c1 * 1^6)
-# println("E_barrier = ", E_barrier)
-Epp_1 = 2a1 + 12b1 + 30c1   # Ey''(1)
-# println("Ey''(1) = ", Epp_1)
 
 
 
@@ -602,21 +596,122 @@ Epp_1 = 2a1 + 12b1 + 30c1   # Ey''(1)
         g.hamiltonian[6].c[] = 1
 =#
 
-# ---- initialize the graph ----
+#=
+Spatial Landau disorder / pinned dipoles / domains:
+    In the decoupled / independent localpotential form, each Landau coefficient
+    can be a spatial field. The core Hamiltonian only requires
+    length(localpotential) == nstates(g), so a 3D array with size
+    (xL, yL, zL) can work for calculation.
+
+    However, the new Hamiltonian viewer currently auto-detects state-sized
+    parameters only when they are 1D vectors. For manual checking and
+    visualization, prefer state-length vectors and build them from temporary
+    3D masks with vec(mask).
+
+    Example:
+        coeff2 = fill(-2.0f0, xL * yL * zL)
+        coeff4 = fill(-14.0f0, xL * yL * zL)
+        coeff6 = fill(10.0f0, xL * yL * zL)
+        coeff8 = fill(-1.0f0, xL * yL * zL)
+        coeff10 = fill(0.2f0, xL * yL * zL)
+
+        ## 1. weak disorder
+        coeff2 .+= 0.1f0 .* randn(Float32, length(coeff2))
+        coeff4 .+= 0.2f0 .* randn(Float32, length(coeff4))
+        coeff6 .+= 0.1f0 .* randn(Float32, length(coeff6))
+        coeff8 .+= 0.02f0 .* randn(Float32, length(coeff8))
+        coeff10 .+= 0.01f0 .* randn(Float32, length(coeff10))
+
+        ## 2. pinned region from a 3D mask
+        pin = falses(xL, yL, zL)
+        pin[10:18, 10:18, :] .= true
+        coeff2[vec(pin)] .= 2.5f0
+        coeff4[vec(pin)] .= 18.0f0
+        coeff6[vec(pin)] .= 14.0f0
+        coeff8[vec(pin)] .= 0.0f0
+        coeff10[vec(pin)] .= 0.2f0
+
+        ## 3. domain / layer
+        layer = falses(xL, yL, zL)
+        layer[:, :, div(zL, 2)] .= true
+        coeff2[vec(layer)] .= 1.5f0
+        coeff4[vec(layer)] .= 10.0f0
+        coeff6[vec(layer)] .= 8.0f0
+        coeff8[vec(layer)] .= 0.0f0
+        coeff10[vec(layer)] .= 0.2f0
+
+    Then pass these vectors as localpotential parameters:
+        Ising(b = UniformArray(0.0f0), localpotential = coeff2) +
+        Quartic(localpotential = coeff4) +
+        Sextic(localpotential = coeff6) +
+        Octic(localpotential = coeff8) +
+        PolynomialHamiltonian(10; localpotential = coeff10)
+
+    This is independent Landau; it is not the coupled mode with one global
+    a,b,c shared by every dipole.
+=#
+
+## ======================== Define simulation ======================== ##
+xL = 40  # Length in the x-dimension
+yL = 40  # Length in the y-dimension
+zL = 10   # Length in the z-dimension
+
+### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
+wg1 = @WG (; dc) -> weightfunc1(; dc) NN = 3
+wg2 = @WG (; dc) -> weightfunc_skymion(; dc) NN = 3
+wg5 = @WG (; dc) -> weightfunc_shell(1, 1, 1, 1, 0.1, 0.1; dc) NN = 3
+# Output directory for the whole sweep
+outdir = raw"D:\Code\data\Manuscript\Demo1"
+mkpath(outdir)
+# ---- parameters to sweep ----
+JIsing = 1.0
+Scale = 1
+Screening = 0.01 
+Temp_aneal= 5f0
+Temp = 0.15
+
+a1 = -0.2
+b1 = -1.4
+c1 = 1
+d1 = 0
+e1 = 0
+
+nspins = xL * yL * zL
+coeff2 = fill(Float32(a1), nspins)
+coeff4 = fill(Float32(b1), nspins)
+coeff6 = fill(Float32(c1), nspins)
+coeff8 = fill(Float32(d1), nspins)
+coeff10 = fill(Float32(e1), nspins)
+
+# Optional spatial disorder examples. Keep them off for the baseline check.
+apply_weak_landau_disorder = true
+if apply_weak_landau_disorder
+    coeff2 .+= 0.1f0 .* randn(Float32, nspins)
+    coeff4 .+= 0.8f0 .* randn(Float32, nspins)
+    coeff6 .+= 0.5f0 .* randn(Float32, nspins)
+    # coeff8 .+= 0.01f0 .* randn(Float32, nspins)
+    # coeff10 .+= 0.01f0 .* randn(Float32, nspins)
+end
+
+proposal_delta = nothing  # use 0.1, 0.2, 0.5 for LocalProposer(delta)
+proposer_args = isnothing(proposal_delta) ? () : (LocalProposer(proposal_delta),)
 g = IsingGraph(xL, yL, zL, 
         Continuous(), 
+        proposer_args...,
         wg5, 
         LatticeConstants(1.0, 1.0, 1.0),
-        Ising(b = StateLike(UniformArray,0)) + 
+        Ising(b = UniformArray(0), localpotential = coeff2) + 
             CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + 
-            Quartic(c=b1/a1) + 
-            Sextic(c=c1/a1), 
+            Quartic(localpotential = coeff4) + 
+            Sextic(localpotential = coeff6) +
+            Octic(localpotential = coeff8) +
+            PolynomialHamiltonian(10; localpotential = coeff10), 
         StateSet(-1.5f0, 1.5f0),
         periodic = (:x,:y),
         diag = StateLike(UniformArray)
 )
 normalize_adj_by_average_col!(g.adj, JIsing)
-adj(g)[1,1] = a1
+# Independent Landau: coeff2 carries the quadratic term, so do not set adj(g)[1,1] = a1.
 
 interface(g)
 
@@ -624,13 +719,24 @@ interface(g)
 temp!(g, Temp)
 
 # ----- Annealing algorithm -----
-Amp1 =10
+time_fctr= 2
+Steps_1= 1800
+
+Amp1 = 1.5
 nrepeats = 2
 pulse1 = TrianglePulseA(Amp1, nrepeats)
 pulse2 = SinPulseA(Amp1, nrepeats)
 pulse3 = Unique(SinPulseA(Amp1, nrepeats))
 AnealingB = LinAnealingB(Temp_aneal, 0f0)
-metropolis = g.default_algorithm
+# algorithm_name = :metropolis
+# algorithm_kwargs = (;)
+algorithm_name = :local_langevin
+algorithm_kwargs = (; stepsize = 0.05f0, adjusted = true)
+# algorithm_name = :global_langevin
+# algorithm_kwargs = (; stepsize = 0.01f0, adjusted = false)
+# algorithm_name = :block_langevin
+# algorithm_kwargs = (; stepsize = 0.02f0, block_size = 128, adjusted = false)
+dynamics = select_dynamics(g, algorithm_name; algorithm_kwargs)
 
 fullsweep = xL*yL*zL
 anneal_time = time_fctr*fullsweep*Steps_1
@@ -641,147 +747,49 @@ point_repeat = fullsweep*time_fctr
 capture_interval1 = pulse_time/(nrepeats*4)
 capture_interval2 = relax_time/2 
 
-M_Integrator = Integrator(Float32, name = :M_integrator)
-M_Logger = Logger(Float32, name = :M_logger)
+M_Integrate_and_Logger = IntegrateAndLog(Float32, point_repeat)
 B_Logger = ValueLogger(:b)
 T_Logger = ValueLogger(:T)
 Graph_Logger = ImageCapture(:Graph,-1.5,1.5)
 
-Metro_T = CompositeAlgorithm(metropolis, M_Integrator, M_Logger, B_Logger, T_Logger,
-    (1, 1, point_repeat, point_repeat, point_repeat),
-    Route(metropolis => M_Integrator, :proposal => :Δvalue,
-        transform = proposal -> accepteddelta(proposal)),
-    Route(M_Integrator => M_Logger, :total => :value),
-    Route(metropolis => B_Logger, :hamiltonian => :value, transform = x -> x.b[]),
-    Route(metropolis => T_Logger, :model => :value, transform = temp)
-)
-
-anneal_partB = CompositeAlgorithm(Metro_T, AnealingB,
-    (1, point_repeat),
-    Route(metropolis => AnealingB, :model),
-)
-Anealing_step = Routine(anneal_partB, (anneal_time,))
-
-# ---- Start simulation ----
-createProcess(g, Anealing_step, repeats = 1)
-c = process(g) |> fetch
-
-# ---- Collect data1 ----
-voltage1 = c[B_Logger].values
-Pr1      = c[M_Logger].log
-Temp1    = c[T_Logger].values
-fVPr = makieaxis(f -> Axis(f[1, 1], xlabel = "T", ylabel = "Pr"), ax -> lines!(ax, Temp1, Pr1))
-fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines!(ax, Pr1))
 
 
-# ----- Pulse algorithm -----
-Metro_Pulse = CompositeAlgorithm(metropolis, M_Integrator, M_Logger, B_Logger,
-    (1, 1, point_repeat, point_repeat),
-    Route(metropolis => M_Integrator, :proposal => :Δvalue,
-          transform = proposal -> accepteddelta(proposal)),
-    Route(M_Integrator => M_Logger, :total => :value),
-    Route(metropolis => B_Logger, :hamiltonian => :value,
-          transform = x -> x.b[]),
-)
-pulse_part1 = CompositeAlgorithm(Metro_Pulse, pulse1, Graph_Logger, (1, point_repeat, capture_interval1), 
-    Route(metropolis => Graph_Logger, :model => :array, transform = state)
-)
-relax_part1 = CompositeAlgorithm(Metro_Pulse, Graph_Logger, (1, capture_interval2), 
-    Route(metropolis => Graph_Logger, :model => :array, transform = state)
-)
-Pulse_and_Relax = Routine(pulse_part1, relax_part1,
-    (pulse_time, relax_time),
-    Route(metropolis => pulse1, :hamiltonian, :M),
-)
+# ----- Pulse Step -----
+Metro_Pulse = @CompositeAlgorithm begin
+    @alias dynamics = dynamics
 
-# ---- Start simulation ----
-createProcess(g, Pulse_and_Relax, repeats = 1,
-    Input(Graph_Logger, filepath = joinpath(outdir, "capture")),
-    Input(M_Integrator, initialvalue = sum(state(g))))
+    proposal = @every 1 dynamics()
+    @every 1 M_Integrate_and_Logger(Δvalue = @transform(accepted_proposal_delta_base, proposal))
+    @every point_repeat B_Logger(value = @transform(x -> x.b[], dynamics.hamiltonian))
+end
+pulse_part1 = @CompositeAlgorithm begin
+    @context metro_pulse = Metro_Pulse()
+
+    @every point_repeat pulse1(
+        hamiltonian = metro_pulse.dynamics.hamiltonian,
+        M = metro_pulse.dynamics.M,
+    )
+    # @every capture_interval1 Graph_Logger(array = @transform(model -> state(model), metro_pulse.dynamics.model))
+end
+relax_part1 = @CompositeAlgorithm begin
+    @context metro_pulse = Metro_Pulse()
+
+    # @every capture_interval2 Graph_Logger(array = @transform(model -> state(model), metro_pulse.dynamics.model))
+end
+Pulse_and_Relax = @Routine begin
+    @repeat pulse_time pulse_part1()
+    @repeat relax_time relax_part1()
+end
+
+# ---- Start simulation2 ----
+createProcess(g, Pulse_and_Relax, lifetime = 1, 
+    # Input(Graph_Logger, filepath = joinpath(outdir, "capture")),
+    Input(M_Integrate_and_Logger, initialvalue = sum(state(g))))
 c = process(g) |> fetch
 
 # ---- Collect data2 ----
 voltage2 = c[B_Logger].values
-Pr2      = c[M_Logger].log
+Pr2      = c[M_Integrate_and_Logger].log
+# Temp1    = c[T_Logger].values
 fVPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax, voltage2, Pr2))
 fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines!(ax, Pr2))
-########################################################################
-
-# ============ SAVE (PNG + XLSX) ============
-date_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
-base_name = string(
-    "Scale=", round(Scale, digits=4),
-    "_Screening=", round(Screening, digits=4),
-    "_timefctr=", round(time_fctr, digits=4),
-    "_Steps_1=", round(Steps_1, digits=4),
-    "_Eb=", round(E_barrier, digits=4),
-    "_Epp=", round(Epp_1, digits=4),
-    "_Temp_aneal=", round(Temp_aneal, digits=4),
-    "_", date_str
-)
-
-png_path  = joinpath(outdir, base_name * ".png")
-xlsx_path = joinpath(outdir, base_name * ".xlsx")
-
-# # Figure: Temperature vs Pr
-# fTPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Temperature", ylabel = "Pr"), ax -> lines!(ax, Temp1, Pr1))
-# try
-#     save(png_path, fTPr)
-#     println("Saved figure: ", png_path)
-# catch err
-#     @warn "Failed to save figure" err
-# end
-
-# Pr distribution histogram
-P = state(g)
-v = vec(P)
-bins = -1.5:0.05:1.5
-h = fit(Histogram, v, bins)
-density = h.weights ./ sum(h.weights)
-
-fig_dist = Figure()
-ax_dist = Axis(fig_dist[1, 1], xlabel="P", ylabel="Probability")
-barplot!(ax_dist, h.edges[1][1:end-1], density; width = step(bins))
-
-png_path_dist = joinpath(outdir, base_name * "_Pr_distribution.png")
-try
-    save(png_path_dist, fig_dist)
-    println("Saved Pr distribution figure: ", png_path_dist)
-catch err
-    @warn "Failed to save Pr distribution figure" err
-end
-
-# Excel: series + distribution + params
-n = min(length(Temp1), length(Pr1))
-df_series = DataFrame(Temp1 = Float64.(Temp1[1:n]), Pr = Float64.(Pr1[1:n]))
-
-bin_left = Float64.(h.edges[1][1:end-1])
-bin_center = bin_left .+ step(bins)/2
-df_dist = DataFrame(
-    bin_left   = bin_left,
-    bin_center = bin_center,
-    prob       = Float64.(density),
-    counts     = Float64.(h.weights)
-)
-
-params = DataFrame(
-    key = String[
-        "JIsing","a1","b1","c1","E_barrier","Eypp_1","xL","yL","zL","Scale","Screening","Steps_1","time_fctr",
-        "anneal_time","point_repeat","Temp_aneal"
-    ],
-    value = Any[
-        JIsing, a1, b1, c1, E_barrier, Epp_1, xL, yL, zL, Scale, Screening, Steps_1, time_fctr,
-        anneal_time, point_repeat, Temp_aneal
-    ]
-)
-
-XLSX.openxlsx(xlsx_path, mode="w") do xf
-    xf[1].name = "series"
-    XLSX.writetable!(xf["series"], collect(eachcol(df_series)), names(df_series))
-    XLSX.addsheet!(xf, "Pr_distribution")
-    XLSX.writetable!(xf["Pr_distribution"], collect(eachcol(df_dist)), names(df_dist))
-    XLSX.addsheet!(xf, "params")
-    XLSX.writetable!(xf["params"], collect(eachcol(params)), names(params))
-end
-println("Saved Excel: ", xlsx_path)
-# ============ END SAVE (PNG + XLSX) ============

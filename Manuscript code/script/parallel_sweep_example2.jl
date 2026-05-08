@@ -30,10 +30,14 @@ base = MT.ManuscriptParams(;
     Steps_1 = 6000,
     Amp1 = 10.0,
     nrepeats = 2,
+    # nothing uses the old global proposer. A number uses LocalProposer(delta).
+    proposal_delta = 0.1,
+    algorithm_name = :metropolis,
+    algorithm_kwargs = (;),
     a1 = -2.0,
     b1 = nothing,
     c1 = 10.0,
-    landau_mode = :coupled,
+    landau_mode = :independent,
     landau_coeffs = nothing,
 )
 
@@ -82,23 +86,23 @@ function make_packaged_pulse_run(g, p; capture_dir = joinpath(p.outdir, "capture
     capture_interval2 = dsl_count(d.capture_interval2)
     pulse_time = dsl_count(d.pulse_time)
     relax_time = dsl_count(d.relax_time)
-    metropolis = g.default_algorithm
+    dynamics = MT.select_dynamics(g, p)
     pulse1 = MT.TrianglePulseA(p.Amp1, p.nrepeats)
     M_Integrate_and_Logger = IntegrateAndLog(Float32, point_repeat)
     B_Logger = MT.ValueLogger(:b)
     Graph_Logger = capture ? MT.ImageCapture(:Graph, -1.5, 1.5) : nothing
 
     Metro_Pulse = @CompositeAlgorithm begin
-        @alias metropolis = metropolis
+        @alias dynamics = dynamics
         @alias M_Integrate_and_Logger = M_Integrate_and_Logger
         @alias B_Logger = B_Logger
 
-        proposal = metropolis()
+        proposal = dynamics()
         M_Integrate_and_Logger(
-            Δvalue = @transform(InteractiveIsing.accepteddelta, proposal),
+            Δvalue = @transform(MT.accepted_proposal_delta, proposal),
         )
         @every point_repeat B_Logger(
-            value = @transform(x -> x.b[], metropolis.hamiltonian),
+            value = @transform(x -> x.b[], dynamics.hamiltonian),
         )
     end
 
@@ -109,11 +113,11 @@ function make_packaged_pulse_run(g, p; capture_dir = joinpath(p.outdir, "capture
             @context metro_pulse = Metro_Pulse()
 
             @every point_repeat pulse1(
-                hamiltonian = metro_pulse.metropolis.hamiltonian,
-                M = metro_pulse.metropolis.M,
+                hamiltonian = metro_pulse.dynamics.hamiltonian,
+                M = metro_pulse.dynamics.M,
             )
             @every capture_interval1 Graph_Logger(
-                array = @transform(MT.graph_array, metro_pulse.metropolis.model),
+                array = @transform(MT.graph_array, metro_pulse.dynamics.model),
             )
         end
 
@@ -122,7 +126,7 @@ function make_packaged_pulse_run(g, p; capture_dir = joinpath(p.outdir, "capture
             @context metro_pulse = Metro_Pulse()
 
             @every capture_interval2 Graph_Logger(
-                array = @transform(MT.graph_array, metro_pulse.metropolis.model),
+                array = @transform(MT.graph_array, metro_pulse.dynamics.model),
             )
         end
     else
@@ -131,8 +135,8 @@ function make_packaged_pulse_run(g, p; capture_dir = joinpath(p.outdir, "capture
             @context metro_pulse = Metro_Pulse()
 
             @every point_repeat pulse1(
-                hamiltonian = metro_pulse.metropolis.hamiltonian,
-                M = metro_pulse.metropolis.M,
+                hamiltonian = metro_pulse.dynamics.hamiltonian,
+                M = metro_pulse.dynamics.M,
             )
         end
 
@@ -182,27 +186,27 @@ function make_packaged_anneal_run(g, p)
     d = MT.derived_params(p)
     point_repeat = dsl_count(d.point_repeat)
     anneal_time = dsl_count(d.anneal_time)
-    metropolis = g.default_algorithm
+    dynamics = MT.select_dynamics(g, p)
     annealing = MT.LinAnealingB(p.Temp_aneal, 0f0)
     M_Integrate_and_Logger = IntegrateAndLog(Float32, point_repeat)
     B_Logger = MT.ValueLogger(:b)
     T_Logger = MT.ValueLogger(:T)
 
     Metro_T = @CompositeAlgorithm begin
-        @alias metropolis = metropolis
+        @alias dynamics = dynamics
         @alias M_Integrate_and_Logger = M_Integrate_and_Logger
         @alias B_Logger = B_Logger
         @alias T_Logger = T_Logger
 
-        proposal = metropolis()
+        proposal = dynamics()
         M_Integrate_and_Logger(
-            Δvalue = @transform(InteractiveIsing.accepteddelta, proposal),
+            Δvalue = @transform(MT.accepted_proposal_delta, proposal),
         )
         @every point_repeat B_Logger(
-            value = @transform(x -> x.b[], metropolis.hamiltonian),
+            value = @transform(x -> x.b[], dynamics.hamiltonian),
         )
         @every point_repeat T_Logger(
-            value = @transform(InteractiveIsing.temp, metropolis.model),
+            value = @transform(InteractiveIsing.temp, dynamics.model),
         )
     end
 
@@ -210,7 +214,7 @@ function make_packaged_anneal_run(g, p)
         @alias annealing = annealing
         @context metro_t = Metro_T()
 
-        @every point_repeat annealing(model = metro_t.metropolis.model)
+        @every point_repeat annealing(model = metro_t.dynamics.model)
     end
 
     algorithm = @Routine begin
@@ -245,7 +249,7 @@ end
 
 function make_split_pulse_run(g, p; capture_dir = joinpath(p.outdir, "capture"), capture = false)
     parts = MT.pulse_components(g, p; capture_dir)
-    (; d, metropolis, pulse, M_Integrator, M_Logger, B_Logger, Graph_Logger) = parts
+    (; d, dynamics, pulse, M_Integrator, M_Logger, B_Logger, Graph_Logger) = parts
     Graph_Logger = capture ? Graph_Logger : nothing
     point_repeat = dsl_count(d.point_repeat)
     capture_interval1 = dsl_count(d.capture_interval1)
@@ -254,18 +258,18 @@ function make_split_pulse_run(g, p; capture_dir = joinpath(p.outdir, "capture"),
     relax_time = dsl_count(d.relax_time)
 
     Metro_Pulse = @CompositeAlgorithm begin
-        @alias metropolis = metropolis
+        @alias dynamics = dynamics
         @alias M_Integrator = M_Integrator
         @alias M_Logger = M_Logger
         @alias B_Logger = B_Logger
 
-        proposal = metropolis()
+        proposal = dynamics()
         total = M_Integrator(
-            Δvalue = @transform(InteractiveIsing.accepteddelta, proposal),
+            Δvalue = @transform(MT.accepted_proposal_delta, proposal),
         )
         @every point_repeat M_Logger(value = total)
         @every point_repeat B_Logger(
-            value = @transform(x -> x.b[], metropolis.hamiltonian),
+            value = @transform(x -> x.b[], dynamics.hamiltonian),
         )
     end
 
@@ -276,11 +280,11 @@ function make_split_pulse_run(g, p; capture_dir = joinpath(p.outdir, "capture"),
             @context metro_pulse = Metro_Pulse()
 
             @every point_repeat pulse(
-                hamiltonian = metro_pulse.metropolis.hamiltonian,
-                M = metro_pulse.metropolis.M,
+                hamiltonian = metro_pulse.dynamics.hamiltonian,
+                M = metro_pulse.dynamics.M,
             )
             @every capture_interval1 Graph_Logger(
-                array = @transform(MT.graph_array, metro_pulse.metropolis.model),
+                array = @transform(MT.graph_array, metro_pulse.dynamics.model),
             )
         end
 
@@ -289,7 +293,7 @@ function make_split_pulse_run(g, p; capture_dir = joinpath(p.outdir, "capture"),
             @context metro_pulse = Metro_Pulse()
 
             @every capture_interval2 Graph_Logger(
-                array = @transform(MT.graph_array, metro_pulse.metropolis.model),
+                array = @transform(MT.graph_array, metro_pulse.dynamics.model),
             )
         end
     else
@@ -298,8 +302,8 @@ function make_split_pulse_run(g, p; capture_dir = joinpath(p.outdir, "capture"),
             @context metro_pulse = Metro_Pulse()
 
             @every point_repeat pulse(
-                hamiltonian = metro_pulse.metropolis.hamiltonian,
-                M = metro_pulse.metropolis.M,
+                hamiltonian = metro_pulse.dynamics.hamiltonian,
+                M = metro_pulse.dynamics.M,
             )
         end
 
@@ -354,6 +358,37 @@ function screening_paramsets(base)
     ]
 end
 
+function proposal_delta_paramsets(base)
+    deltas = (0.05, 0.1, 0.2, 0.5, nothing)
+    return [
+        MT.update_params(
+            base;
+            proposal_delta = delta,
+            outdir = joinpath(base.outdir, "proposal_delta=$(isnothing(delta) ? "global" : delta)"),
+        )
+        for delta in deltas
+    ]
+end
+
+function algorithm_paramsets(base)
+    configs = [
+        (name = "metropolis", algorithm_name = :metropolis, algorithm_kwargs = (;)),
+        (name = "local_langevin", algorithm_name = :local_langevin, algorithm_kwargs = (; stepsize = 0.05f0, adjusted = true)),
+        (name = "global_langevin", algorithm_name = :global_langevin, algorithm_kwargs = (; stepsize = 0.01f0, adjusted = false)),
+        (name = "block_langevin", algorithm_name = :block_langevin, algorithm_kwargs = (; stepsize = 0.02f0, block_size = 128, adjusted = false)),
+    ]
+
+    return [
+        MT.update_params(
+            base;
+            algorithm_name = item.algorithm_name,
+            algorithm_kwargs = item.algorithm_kwargs,
+            outdir = joinpath(base.outdir, item.name),
+        )
+        for item in configs
+    ]
+end
+
 function start_all_packaged_pulse_sweep(paramsets; capture = false)
     runs = Any[]
     for p in paramsets
@@ -399,6 +434,8 @@ if abspath(PROGRAM_FILE) == @__FILE__
     # the OS will time-slice them; Julia/Processes will not automatically cap
     # concurrency for you.
     # paramsets = screening_paramsets(base)
+    # paramsets = proposal_delta_paramsets(base)
+    # paramsets = algorithm_paramsets(base)
     # runs = start_all_packaged_pulse_sweep(paramsets)
     # fetch_packaged_pulse_sweep(runs)
 
