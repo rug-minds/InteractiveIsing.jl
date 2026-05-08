@@ -14,7 +14,7 @@ function contrastive_gradient(graph, s_plus, s_minus, β::Real; buffers = nothin
     if isnothing(buffers) # setup buffers
     end
 
-    polynomial_ham = graph.hamiltonian[InteractiveIsing.Quadratic]
+    polynomial_ham = hamiltonian_or_nothing(graph.hamiltonian, InteractiveIsing.Quadratic)
     magfield = graph.hamiltonian[InteractiveIsing.MagField]
     bilinear = graph.hamiltonian[InteractiveIsing.Bilinear]
 
@@ -32,9 +32,13 @@ function contrastive_gradient(graph, s_plus, s_minus, β::Real; buffers = nothin
     InteractiveIsing.parameter_derivative(magfield, s_plus, db = buffers.b, buffermode = InteractiveIsing.AccumulateBuffer{+}())
     InteractiveIsing.parameter_derivative(magfield, s_minus, db = buffers.b, buffermode = InteractiveIsing.SubtractBuffer())
 
-    # Accumulate dH/dα
-    InteractiveIsing.parameter_derivative(polynomial_ham, s_plus, dlp = buffers.α, buffermode = InteractiveIsing.AccumulateBuffer{+}())
-    InteractiveIsing.parameter_derivative(polynomial_ham, s_minus, dlp = buffers.α, buffermode = InteractiveIsing.SubtractBuffer())
+    # Accumulate dH/dα only for graphs that actually have a local-potential term.
+    if !isnothing(polynomial_ham)
+        hasproperty(buffers, :α) || error("graph has Quadratic local potential but gradient buffers have no α")
+        InteractiveIsing.parameter_derivative(polynomial_ham, s_plus, dlp = buffers.α, buffermode = InteractiveIsing.AccumulateBuffer{+}())
+        InteractiveIsing.parameter_derivative(polynomial_ham, s_minus, dlp = buffers.α, buffermode = InteractiveIsing.SubtractBuffer())
+    end
 
-    (;w = buffers.w, b = buffers.b, α = buffers.α)    
+    hasproperty(buffers, :α) && return (; w = buffers.w, b = buffers.b, α = buffers.α)
+    return (; w = buffers.w, b = buffers.b)
 end

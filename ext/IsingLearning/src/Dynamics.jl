@@ -1,4 +1,4 @@
-export PowerLawTemperatureSchedule, ForwardDynamics, NudgedDynamics, Forward_and_Nudged
+export PowerLawTemperatureSchedule, ScheduledLangevin, ForwardDynamics, NudgedDynamics, Forward_and_Nudged
 
 @ProcessAlgorithm function setgraph!(isinggraph::G, target) where G
     # resetstate!(isinggraph)
@@ -26,6 +26,52 @@ function _power_law_temperature(progress::Real, start_T::Real, stop_T::Real, pow
 
     # progress = 0 gives start_T, progress = 1 gives stop_T.
     return stop_f32 + (start_f32 - stop_f32) * (1f0 - progress_f32)^power_f32
+end
+
+function _power_law_value(step_idx::Integer, schedule_steps::Integer, start_value::Real, stop_value::Real, power::Real)
+    progress = schedule_steps <= 1 ? 1f0 : clamp(Float32(step_idx) / Float32(schedule_steps - 1), 0f0, 1f0)
+    return Float32(stop_value) + (Float32(start_value) - Float32(stop_value)) * (1f0 - progress)^Float32(power)
+end
+
+"""
+    ScheduledLangevin(base; start_stepsize, stop_stepsize, schedule_steps, power = 2f0)
+
+Wrapper for Langevin MC algorithms that writes a power-law stepsize schedule
+into the wrapped algorithm's `context.stepsize[]` before each step.
+
+This is intended for EP debugging where the free phase can use a large
+settling step while the nudged phase uses a smaller perturbative step.
+"""
+struct ScheduledLangevin{A,T<:Real} <: InteractiveIsing.IsingMCAlgorithm
+    base::A
+    start_stepsize::T
+    stop_stepsize::T
+    schedule_steps::Int
+    power::T
+end
+
+function ScheduledLangevin(base; start_stepsize, stop_stepsize, schedule_steps::Integer, power = 2f0)
+    start_stepsize, stop_stepsize, power = promote(start_stepsize, stop_stepsize, power)
+    return ScheduledLangevin(base, start_stepsize, stop_stepsize, Int(schedule_steps), power)
+end
+
+function InteractiveIsing.Processes.init(algorithm::ScheduledLangevin, context)
+    inner = InteractiveIsing.Processes.init(algorithm.base, context)
+    return merge(inner, (; scheduled_step_idx = 0))
+end
+
+function InteractiveIsing.Processes.step!(algorithm::ScheduledLangevin, context)
+    step_idx = getproperty(context, :scheduled_step_idx)
+    η = _power_law_value(
+        step_idx,
+        algorithm.schedule_steps,
+        algorithm.start_stepsize,
+        algorithm.stop_stepsize,
+        algorithm.power,
+    )
+    context.stepsize[] = convert(eltype(context.model), η)
+    update = InteractiveIsing.Processes.step!(algorithm.base, context)
+    return merge(update, (; scheduled_step_idx = step_idx + 1))
 end
 
 """
@@ -61,7 +107,10 @@ end
 
 function apply_input(isinggraph, x)
     InteractiveIsing.off!(isinggraph.index_set, 1)
-    state(isinggraph[1]) .= x
+    input_state = state(isinggraph[1])
+    input_state .= reshape(x, size(input_state))
+    hook = get(isinggraph, :after_apply_input!, nothing)
+    isnothing(hook) || hook(isinggraph)
     return isinggraph
 end
 
@@ -121,7 +170,7 @@ end
 function ForwardDynamics(layer; dynamics_algorithm = layer.dynamics_algorithm)
     beta = layer.β
     dynamics_algorithm = deepcopy(dynamics_algorithm)
-    relaxation_steps = layer.relaxation_steps
+    relaxation_steps = layer.free_relaxation_steps
     n_units = layer.nunits
   
     forward = @Routine begin
@@ -140,8 +189,8 @@ end
 
 function NudgedDynamics(layer)
     beta = layer.β
-    dynamics_algorithm = deepcopy(layer.dynamics_algorithm)
-    relaxation_steps = layer.relaxation_steps
+    dynamics_algorithm = deepcopy(layer.nudged_dynamics_algorithm)
+    relaxation_steps = layer.nudged_relaxation_steps
     n_units = layer.nunits
   
     plus_capture = Capturer()
@@ -151,14 +200,14 @@ function NudgedDynamics(layer)
         @state equilibrium_state
         @state y
         @state x
-        @alias dynamics = dynamics_algorithm
+        @alias nudged_dynamics = dynamics_algorithm
         @alias plus_capture = plus_capture
         
-        setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
-        apply_input(dynamics.model, x)
-        apply_targets(dynamics.model, y)
-        set_clamping_beta!(dynamics.model, beta)
-        model = @repeat relaxation_steps dynamics()
+        setgraph!(isinggraph = nudged_dynamics.model, target = equilibrium_state)
+        apply_input(nudged_dynamics.model, x)
+        apply_targets(nudged_dynamics.model, y)
+        set_clamping_beta!(nudged_dynamics.model, beta)
+        model = @repeat relaxation_steps nudged_dynamics()
         plus_capture(isinggraph = model)
     end
 
@@ -166,14 +215,14 @@ function NudgedDynamics(layer)
         @state equilibrium_state
         @state y
         @state x
-        @alias dynamics = dynamics_algorithm
+        @alias nudged_dynamics = dynamics_algorithm
         @alias minus_capture = minus_capture
         
-        setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
-        apply_input(dynamics.model, x)
-        apply_targets(dynamics.model, y)
-        set_clamping_beta!(dynamics.model, -beta)
-        model = @repeat relaxation_steps dynamics()
+        setgraph!(isinggraph = nudged_dynamics.model, target = equilibrium_state)
+        apply_input(nudged_dynamics.model, x)
+        apply_targets(nudged_dynamics.model, y)
+        set_clamping_beta!(nudged_dynamics.model, -beta)
+        model = @repeat relaxation_steps nudged_dynamics()
         minus_capture(isinggraph = model)
     end
 
@@ -186,7 +235,7 @@ function NudgedDynamics(layer)
 
         # contrastive_gradient(c1.dynamics.model, c1.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers) 
     end 
-    (;algorithm = final, plus_capture, minus_capture, dynamics = plus.dynamics)
+    (;algorithm = final, plus_capture, minus_capture, dynamics = plus.nudged_dynamics)
 end
 
 function Forward_and_Nudged(layer)

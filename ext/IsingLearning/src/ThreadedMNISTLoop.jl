@@ -28,46 +28,56 @@ mutable struct MNISTThreadedTrainer{L,G,P,S,W<:Process,V<:Process,O}
     optimiser::O
 end
 
-gradient_buffer(graph) = (;
-    w = zeros(eltype(graph), length(SparseArrays.getnzval(adj(graph)))),
-    b = zeros(eltype(graph), nstates(graph)),
-    α = zeros(eltype(graph), nstates(graph)),
-)
+function gradient_buffer(graph)
+    base = (;
+        w = zeros(eltype(graph), length(SparseArrays.getnzval(adj(graph)))),
+        b = zeros(eltype(graph), nstates(graph)),
+    )
+    isnothing(hamiltonian_or_nothing(graph.hamiltonian, InteractiveIsing.Quadratic)) && return base
+    return merge(base, (; α = zeros(eltype(graph), nstates(graph))))
+end
 
 function read_graph_params(graph)
-    return (;
+    base = (;
         w = copy(SparseArrays.getnzval(adj(graph))),
         b = copy(InteractiveIsing.getparam(graph.hamiltonian, InteractiveIsing.MagField, :b)),
-        α = copy(diag(adj(graph))),
     )
+    isnothing(hamiltonian_or_nothing(graph.hamiltonian, InteractiveIsing.Quadratic)) && return base
+    return merge(base, (; α = copy(diag(adj(graph)))))
 end
 
 function sync_graph_params!(graph, params)
     SparseArrays.getnzval(adj(graph)) .= params.w
-    diag(adj(graph)) .= params.α
     InteractiveIsing.getparam(graph.hamiltonian, InteractiveIsing.MagField, :b) .= params.b
-    InteractiveIsing.getparam(graph.hamiltonian, InteractiveIsing.Quadratic, :lp) .= params.α
+    quadratic = hamiltonian_or_nothing(graph.hamiltonian, InteractiveIsing.Quadratic)
+    if isnothing(quadratic)
+        hasproperty(params, :α) && error("graph has no Quadratic local potential but params contains α")
+    else
+        hasproperty(params, :α) || error("graph has Quadratic local potential but params has no α")
+        diag(adj(graph)) .= params.α
+        InteractiveIsing.getparam(graph.hamiltonian, InteractiveIsing.Quadratic, :lp) .= params.α
+    end
     return graph
 end
 
 function zero_buffer!(buffer)
     fill!(buffer.w, zero(eltype(buffer.w)))
     fill!(buffer.b, zero(eltype(buffer.b)))
-    fill!(buffer.α, zero(eltype(buffer.α)))
+    hasproperty(buffer, :α) && fill!(buffer.α, zero(eltype(buffer.α)))
     return buffer
 end
 
 function add_buffer!(dest, src)
     dest.w .+= src.w
     dest.b .+= src.b
-    dest.α .+= src.α
+    hasproperty(dest, :α) && (dest.α .+= src.α)
     return dest
 end
 
 function scale_buffer!(buffer, scale)
     buffer.w .*= scale
     buffer.b .*= scale
-    buffer.α .*= scale
+    hasproperty(buffer, :α) && (buffer.α .*= scale)
     return buffer
 end
 
@@ -155,6 +165,7 @@ function _worker_process(layer, worker_graph)
             equilibrium_state = copy(state(worker_graph)),
         ),
         Input(:dynamics, model = worker_graph),
+        Input(:nudged_dynamics, model = worker_graph),
         Input(:plus_capture, state = worker_graph),
         Input(:minus_capture, state = worker_graph);
         repeat = 1,
