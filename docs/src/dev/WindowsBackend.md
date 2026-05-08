@@ -93,6 +93,58 @@ Host pause does not pause the window frame or polling timers. It only propagates
 the panel pause lifecycle. Simulation process pausing is handled by the
 simulation status panel, not by stopping the UI.
 
+## Axis And Image Export Interfaces
+
+Panel export has two layers.
+
+The axis layer is for panels whose mounted handle stores one meaningful Makie
+axis. Opt in with `axis_trait`; the default lookup reads `handle[:axis]`.
+
+```julia
+Windows.axis_trait(::Type{MyPanel}) = HasAxis()
+```
+
+If the axis is stored under another handle key, override `axiskey`:
+
+```julia
+Windows.axiskey(::Type{MyPanel}) = :display_axis
+```
+
+This enables:
+
+```julia
+axis = getaxis(handle)
+axis_to_png("axis.png", handle)
+```
+
+The image layer is for export-oriented figures. `toimage(path, handle)` and
+`toimage(path, host)` build a fresh minimal figure, then save it. This lets
+composite panels export useful runtime content while omitting UI-only controls.
+`fullimage(path, host)` is the literal current-window export.
+
+The default `toimage!` behavior is:
+
+- if a panel has a custom image builder, use it;
+- else if it exposes an axis, rasterize that axis into the export figure;
+- else compose imageable children using their layout slots where possible.
+
+For a panel-specific minimal representation, implement:
+
+```julia
+Windows.image_trait(::Type{MyPanel}) = HasImage()
+
+function Windows.toimage!(cell, panel::MyPanel, handle::PanelHandle; kwargs...)
+    ax = Axis(cell; title = "Minimal export")
+    lines!(ax, handle[:x][], handle[:y][])
+    return ax
+end
+```
+
+Composite panels should usually call `toimage!` on selected children instead of
+reimplementing their children. For example, the simulation panel exports its
+status summary, selected Hamiltonian/state view, temperature readout, and
+magnetization readout, but not reset buttons or text boxes.
+
 ## Hamiltonian Visualization Extension
 
 Hamiltonian visualization is intentionally separate from the panel internals.

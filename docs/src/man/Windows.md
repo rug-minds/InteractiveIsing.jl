@@ -111,9 +111,11 @@ subpanels.
 
 ## Dynamic Context Lines
 
-`ContextLinesPanel` plots two context containers against each other and refreshes
-them from the context every frame. If the two containers briefly have different
-lengths, the plot uses the shortest current length.
+`InteractiveLinesPanel` plots two dynamic containers against each other. The
+basic constructor accepts two vector-like containers. A getter constructor can
+return the current `(x, y)` containers, and `ContextLinesPanel` is the
+context-variable entry point on top of the same panel. If the two containers
+briefly have different lengths, the plot uses the shortest current length.
 
 ```julia
 using InteractiveIsing.Windows
@@ -131,6 +133,50 @@ panel!(
         line_kwargs = (; color = :dodgerblue),
     ),
 )
+```
+
+## Exporting Images
+
+Windows distinguish between a literal screenshot and a minimal data export.
+Use `fullimage` when you want the actual current Makie window, including UI
+controls:
+
+```julia
+fullimage("window.png", host)
+```
+
+Use `toimage` when you want an export-oriented representation. `toimage` builds
+a fresh figure from the useful panel content first, omitting controls such as
+buttons and sliders where the panel provides a better data-only view:
+
+```julia
+toimage("simulation.png", host)
+toimage("connections.png", handle)
+```
+
+Axis-hosting panels can also export just their mounted axis:
+
+```julia
+axis_to_png("axis.png", handle)
+```
+
+For custom panels, the simplest export interface is to expose an axis:
+
+```julia
+InteractiveIsing.Windows.axis_trait(::Type{MyPanel}) = HasAxis()
+```
+
+If the panel should build a cleaner export than its mounted UI, implement an
+image builder:
+
+```julia
+InteractiveIsing.Windows.image_trait(::Type{MyPanel}) = HasImage()
+
+function InteractiveIsing.Windows.toimage!(cell, panel::MyPanel, handle; kwargs...)
+    ax = Axis(cell; title = "Export")
+    lines!(ax, handle[:x][], handle[:y][])
+    return ax
+end
 ```
 
 ## Connection Graphs
@@ -158,6 +204,29 @@ panel!(
 )
 ```
 
+## All-Layer Layouts
+
+`AllLayersViewPanel` draws every positioned 2D layer into one shared axis. It
+uses `coords(layer)` as a coarse `(y, x, z)` layer position and plots each
+layer at its global xy rectangle. The panel currently supports only 2D layers.
+Layers need explicit, unique xy coordinates; duplicate or overlapping positions
+throw an error.
+
+```julia
+using InteractiveIsing.Windows
+
+g = IsingGraph(
+    Layer(32, 32, Continuous(), Coords(y = 0, x = 0, z = 0)),
+    Layer(32, 32, Continuous(), Coords(y = 0, x = 1, z = 0)),
+)
+
+host = window(title = "All layers")
+panel!(host, AllLayersViewPanel(g; initial_view = :all), (1, 1))
+```
+
+The resulting axis uses Makie's normal drag-pan and scroll-zoom interactions,
+so it works as one large scrollable map of layer state.
+
 ## Public API
 
 ```@docs
@@ -175,13 +244,32 @@ InteractiveIsing.Windows.register_polled!
 InteractiveIsing.Windows.pause!
 InteractiveIsing.Windows.resume!
 InteractiveIsing.Windows.restart!
+InteractiveIsing.Windows.AxisTrait
+InteractiveIsing.Windows.HasAxis
+InteractiveIsing.Windows.NoAxis
+InteractiveIsing.Windows.ImageTrait
+InteractiveIsing.Windows.HasImage
+InteractiveIsing.Windows.NoImage
+InteractiveIsing.Windows.axis_trait
+InteractiveIsing.Windows.axiskey
+InteractiveIsing.Windows.image_trait
+InteractiveIsing.Windows.hasaxis
+InteractiveIsing.Windows.hasimage
+InteractiveIsing.Windows.getaxis
+InteractiveIsing.Windows.axis_to_png
+InteractiveIsing.Windows.tofigure
+InteractiveIsing.Windows.toimage!
+InteractiveIsing.Windows.toimage
+InteractiveIsing.Windows.fullimage
 InteractiveIsing.Windows.SimulationPanel
 InteractiveIsing.Windows.StatusPanel
 InteractiveIsing.Windows.LayerSelectorPanel
 InteractiveIsing.Windows.LayerViewPanel
+InteractiveIsing.Windows.AllLayersViewPanel
 InteractiveIsing.Windows.TemperaturePanel
 InteractiveIsing.Windows.MagnetizationPanel
 InteractiveIsing.Windows.HamiltonianParameterPanel
+InteractiveIsing.Windows.InteractiveLinesPanel
 InteractiveIsing.Windows.ContextLinesPanel
 InteractiveIsing.Windows.ConnectionsPanel
 InteractiveIsing.Windows.HamiltonianDisplaySpec
