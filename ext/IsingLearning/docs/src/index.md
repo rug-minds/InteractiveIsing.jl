@@ -30,12 +30,17 @@ The older experimental files `ComputeGradients.jl`, `ChainRules.jl`, and
 ## Examples
 
 - `examples/tiny_mnist.jl`: tiny MNIST smoke test on the active threaded path.
-- `examples/xor_patterns.jl`: simple XOR pattern experiment.
-- `examples/xor_bespoke_search.jl`: configurable XOR search/debug script.
-- `examples/xor_relaxation_sweep.jl`: relaxation-step diagnostics.
+- `examples/xor_statistical_ep.jl`: statistical XOR experiment using repeated relaxations.
 - `examples/gradient_trace.jl`: gradient tracing/debugging.
 
 ## Notes
 
 Development findings from the XOR debugging runs are tracked in
 [`xor_findings.md`](xor_findings.md).
+
+The first successful statistical XOR run is documented in
+[`xor_successful_learning.md`](xor_successful_learning.md).
+
+The distinction between exact equilibrium propagation and the successful
+short-run contrastive update is explained in
+[`xor_short_run_contrast.md`](xor_short_run_contrast.md).
