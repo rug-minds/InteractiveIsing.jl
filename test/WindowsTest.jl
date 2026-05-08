@@ -29,8 +29,8 @@ end
     @test !resource.closed[]
     @test host.children[:test] === handle
     @test handle.slot == (1, 1)
-    @test sprint(show, host) == "WindowHost(\"untitled\", panels=1, resources=1, fps=30.0, polling_rate=10.0, closed=false)"
-    @test sprint(show, handle) == "PanelHandle(TestPanel, slot=(1, 1), children=0, resources=1, closed=false)"
+    @test sprint(show, host) == "WindowHost(\"untitled\", panels=1, resources=1, close_callbacks=0, fps=30.0, polling_rate=10.0, closed=false)"
+    @test sprint(show, handle) == "PanelHandle(TestPanel, slot=(1, 1), children=0, resources=1, close_callbacks=0, closed=false)"
     @test sprint(show, TestPanel()) == "TestPanel(...)"
     @test !occursin("Figure", sprint(show, MIME("text/plain"), host))
     pause!(host)
@@ -45,6 +45,26 @@ end
 
     close(host)
     @test resource.closed[]
+
+    callback_host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    callback_done = Channel{Symbol}(1)
+    callback_owner = Ref{Any}(nothing)
+    Windows.onclose!(callback_host) do owner
+        callback_owner[] = owner
+        put!(callback_done, :host)
+    end
+    callback_handle = Windows.panel!(callback_host, TestPanel(), (1, 1))
+    panel_done = Channel{Symbol}(1)
+    panel_owner = Ref{Any}(nothing)
+    Windows.onclose!(callback_handle) do owner
+        panel_owner[] = owner
+        put!(panel_done, :panel)
+    end
+    close(callback_host)
+    @test take!(callback_done) == :host
+    @test callback_owner[] === callback_host
+    @test take!(panel_done) == :panel
+    @test panel_owner[] === callback_handle
 
     native_host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
     native_handle = Windows.panel!(native_host, :test, TestPanel(), (1, 1))
@@ -192,7 +212,7 @@ end
 @testset "AllLayersViewPanel figure construction" begin
     g = IsingGraph(
         Layer(2, 3, Continuous(), StateSet(-1.0f0, 1.0f0), Coords(y = 0, x = 0, z = 0)),
-        Layer(2, 3, Continuous(), StateSet(-1.0f0, 1.0f0), Coords(y = 0, x = 1, z = 0));
+        Layer(2, 3, Continuous(), StateSet(-1.0f0, 1.0f0), Coords(y = 1, x = 4, z = 0));
         precision = Float32,
     )
     host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
@@ -205,8 +225,12 @@ end
     @test length(handle[:plots]) == 2
     @test handle[:placements][1].x0 == 0.0f0
     @test handle[:placements][1].x1 == 3.0f0
-    @test handle[:placements][2].x0 == 3.0f0
-    @test handle[:placements][2].x1 == 6.0f0
+    @test handle[:placements][1].y0 == 0.0f0
+    @test handle[:placements][1].y1 == 2.0f0
+    @test handle[:placements][2].x0 == 4.0f0
+    @test handle[:placements][2].x1 == 7.0f0
+    @test handle[:placements][2].y0 == 1.0f0
+    @test handle[:placements][2].y1 == 3.0f0
     @test Windows.tofigure(handle) isa Figure
 
     state(g[1]) .= 0.5f0

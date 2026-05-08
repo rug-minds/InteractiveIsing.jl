@@ -42,7 +42,7 @@ export AbstractPanel, PanelHandle, WindowHost, SimulationPanel, StatusPanel,
     HasAxis, NoAxis, AxisTrait, HasImage, NoImage, ImageTrait,
     axis_to_png, axis_trait, axiskey, fullimage, image_trait,
     close!, getaxis, hasaxis, hasimage, interface, layer_display, mount!, new_interface,
-    panel!, parameter_display, pause!, register!, register_frame!,
+    onclose!, panel!, parameter_display, pause!, register!, register_frame!,
     register_polled!, restart!, resume!, tofigure, toimage, toimage!, window,
     displayable_hamiltonian_parameters, hamiltonian_visualizations
 

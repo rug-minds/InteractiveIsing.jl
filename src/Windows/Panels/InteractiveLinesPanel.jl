@@ -35,6 +35,7 @@ stays in the source containers.
 """
 struct InteractiveLinesPanel <: AbstractPanel
     getter::Any
+    close_resources::Any
     axis_kwargs::Any
     line_kwargs::Any
     autolimits::Bool
@@ -56,9 +57,11 @@ function InteractiveLinesPanel(
     line_kwargs = (;),
     autolimits = true,
     update_rate = 10,
+    close_resources = (),
 )
     return InteractiveLinesPanel(
         getter,
+        close_resources,
         axis_kwargs,
         line_kwargs,
         Bool(autolimits),
@@ -89,12 +92,19 @@ are:
 - `:name` for globals or a top-level property
 """
 function ContextLinesPanel(context, xvar, yvar; kwargs...)
-    return InteractiveLinesPanel(_context_var_value(context, xvar), _context_var_value(context, yvar); kwargs...)
+    resolved_context, close_resources = _resolved_context_and_close_resources(context)
+    return InteractiveLinesPanel(
+        _context_var_value_from_context(resolved_context, xvar),
+        _context_var_value_from_context(resolved_context, yvar);
+        close_resources,
+        kwargs...,
+    )
 end
 
 function mount!(panel::InteractiveLinesPanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell)
     handle = PanelHandle(panel, host, grid)
+    _register_process_close!(handle, panel.close_resources)
 
     ax = handle[:axis] = Axis(grid[1, 1]; _interactive_lines_axis_kwargs(panel)...)
     snapshot = _line_snapshot(panel.getter)
@@ -124,14 +134,18 @@ function _interactive_lines_axis_kwargs(panel::InteractiveLinesPanel)
     return axis_kwargs
 end
 
-function _context_source(source::Function)
-    return _context_source(source())
+function _resolved_context_and_close_resources(source::Function)
+    return _resolved_context_and_close_resources(source())
 end
-_context_source(process::Processes.AbstractProcess) = getfield(process, :context)
-_context_source(context) = context
+
+function _resolved_context_and_close_resources(process::Processes.AbstractProcess)
+    return getfield(process, :context), (process,)
+end
+
+_resolved_context_and_close_resources(context) = context, ()
 
 function _context_var_value(source, var)
-    context = _context_source(source)
+    context, _ = _resolved_context_and_close_resources(source)
     return _context_var_value_from_context(context, var)
 end
 

@@ -5,10 +5,10 @@
 Display all positioned 2D layers of `g` in one shared Makie axis.
 
 Layer coordinates are read from `coords(layer)`, interpreted as `(y, x, z)`,
-and only the xy position is used. The coarse xy coordinate is converted to a
-global image rectangle by multiplying by that layer's height and width. Layers
-must be 2D and must have unique xy coordinates; duplicate coordinates or
-overlapping rectangles throw an `ArgumentError`.
+and only the xy position is used. The xy coordinate is treated as the global
+lower-left origin of that layer's image rectangle. Layers must be 2D and must
+have unique xy coordinates; duplicate coordinates or overlapping rectangles
+throw an `ArgumentError`.
 
 The resulting axis keeps Makie's normal drag-pan and scroll-zoom interactions,
 so large layer arrangements can be inspected as one continuous view.
@@ -31,6 +31,7 @@ end
 function mount!(panel::AllLayersViewPanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell)
     handle = PanelHandle(panel, host, grid)
+    _register_graph_close!(handle, panel.graph)
     _draw_all_layers_view!(handle, grid[1, 1])
     register_frame!(handle) do _
         for obs in get(handle.data, :layer_observables, Observable[])
@@ -128,8 +129,8 @@ function _all_layer_placements(g)
 
         height = Float32(size(layer, 1))
         width = Float32(size(layer, 2))
-        x0 = Float32(c[2]) * width
-        y0 = Float32(c[1]) * height
+        x0 = Float32(c[2])
+        y0 = Float32(c[1])
         push!(placements, AllLayerPlacement(idx, layer, xy, x0, x0 + width, y0, y0 + height))
     end
 

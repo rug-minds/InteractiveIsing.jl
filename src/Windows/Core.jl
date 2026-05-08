@@ -22,16 +22,17 @@ mutable struct PanelHandle
     layout::Any
     slot::Any
     resources::Vector{Any}
+    close_callbacks::Vector{Any}
     children::OrderedDict{Any, PanelHandle}
     data::Dict{Symbol, Any}
     closed::Bool
 end
 
 PanelHandle(panel::AbstractPanel, host, layout) =
-    PanelHandle(panel, host, layout, nothing, Any[], OrderedDict{Any, PanelHandle}(), Dict{Symbol, Any}(), false)
+    PanelHandle(panel, host, layout, nothing, Any[], Any[], OrderedDict{Any, PanelHandle}(), Dict{Symbol, Any}(), false)
 
 PanelHandle(panel::AbstractPanel, host, layout, slot) =
-    PanelHandle(panel, host, layout, slot, Any[], OrderedDict{Any, PanelHandle}(), Dict{Symbol, Any}(), false)
+    PanelHandle(panel, host, layout, slot, Any[], Any[], OrderedDict{Any, PanelHandle}(), Dict{Symbol, Any}(), false)
 
 """
     WindowHost
@@ -51,6 +52,7 @@ mutable struct WindowHost
     frame_callbacks::Vector{Function}
     pollables::Vector{PolledObservable}
     resources::Vector{Any}
+    close_callbacks::Vector{Any}
     children::OrderedDict{Any, PanelHandle}
     paused::Observable{Bool}
     data::Dict{Symbol, Any}
@@ -77,6 +79,7 @@ function WindowHost(fig::Figure; screen = nothing, fps = 30, polling_rate = 10, 
         nothing,
         Function[],
         PolledObservable[],
+        Any[],
         Any[],
         OrderedDict{Any, PanelHandle}(),
         Observable(false),
@@ -160,6 +163,8 @@ function Base.show(io::IO, handle::PanelHandle)
         length(handle.children),
         ", resources=",
         length(handle.resources),
+        ", close_callbacks=",
+        length(handle.close_callbacks),
         ", closed=",
         handle.closed,
         ")",
@@ -177,6 +182,8 @@ function Base.show(io::IO, host::WindowHost)
         length(host.children),
         ", resources=",
         length(host.resources),
+        ", close_callbacks=",
+        length(host.close_callbacks),
         ", fps=",
         host.fps,
         ", polling_rate=",
@@ -259,6 +266,34 @@ function register!(handle::PanelHandle, resource)
     return resource
 end
 
+struct CloseCallback
+    callback::Function
+end
+
+"""
+    onclose!(host_or_handle, callback)
+
+Register `callback(owner)` to run once when a window host or mounted panel is
+closed. Close callbacks run for both explicit `close(host)` calls and native
+window close events.
+
+Callbacks are scheduled asynchronously and do not block native GLMakie window
+teardown.
+"""
+function onclose!(host::WindowHost, callback::Function)
+    wrapped = CloseCallback(callback)
+    push!(host.close_callbacks, wrapped)
+    return wrapped
+end
+onclose!(callback::Function, host::WindowHost) = onclose!(host, callback)
+
+function onclose!(handle::PanelHandle, callback::Function)
+    wrapped = CloseCallback(callback)
+    push!(handle.close_callbacks, wrapped)
+    return wrapped
+end
+onclose!(callback::Function, handle::PanelHandle) = onclose!(handle, callback)
+
 """
     register_frame!(host_or_handle, callback)
 
@@ -329,7 +364,7 @@ function _cleanup_resource(resource)
     try
         _cleanup_resource!(resource)
     catch err
-        @warn "Error while closing window resource" resource exception = (err, catch_backtrace())
+        @warn "Error while closing window resource" resource_type = typeof(resource) exception = (err, catch_backtrace())
     end
     return nothing
 end
@@ -349,8 +384,56 @@ _cleanup_resource!(observer::Observables.ObserverFunction) = off(observer)
 _cleanup_resource!(timer::PTimer) = close(timer)
 _cleanup_resource!(timer::Timer) = close(timer)
 _cleanup_resource!(po::PolledObservable) = close(po)
-_cleanup_resource!(process::Processes.AbstractProcess) = close(process)
+function _cleanup_resource!(process::Processes.AbstractProcess)
+    @async try
+        close(process)
+    catch err
+        @warn "Error while closing window process resource" process_type = typeof(process) exception = (err, catch_backtrace())
+    end
+    return nothing
+end
 _cleanup_resource!(resource) = applicable(close, resource) ? close(resource) : nothing
+
+function _cleanup_native_resource(resource)
+    try
+        _cleanup_native_resource!(resource)
+    catch err
+        @warn "Error while detaching native window resource" resource_type = typeof(resource) exception = (err, catch_backtrace())
+    end
+    return nothing
+end
+
+_cleanup_native_resource!(::Nothing) = nothing
+_cleanup_native_resource!(callback::FrameCallback) = filter!(!isequal(callback.callback), callback.host.frame_callbacks)
+function _cleanup_native_resource!(registration::PolledRegistration)
+    filter!(!isequal(registration.observable), registration.host.pollables)
+    close(registration.observable)
+    return nothing
+end
+_cleanup_native_resource!(observer::Observables.ObserverFunction) = off(observer)
+_cleanup_native_resource!(timer::PTimer) = close(timer)
+_cleanup_native_resource!(timer::Timer) = close(timer)
+_cleanup_native_resource!(po::PolledObservable) = close(po)
+_cleanup_native_resource!(process::Processes.AbstractProcess) = _cleanup_resource!(process)
+_cleanup_native_resource!(resource) = nothing
+
+function _run_close_callback(owner, callback::CloseCallback)
+    @async try
+        callback.callback(owner)
+    catch err
+        @warn "Error in window close callback" owner_type = typeof(owner) exception = (err, catch_backtrace())
+    end
+    return nothing
+end
+
+function _run_close_callbacks!(owner)
+    callbacks = reverse(copy(getfield(owner, :close_callbacks)))
+    empty!(getfield(owner, :close_callbacks))
+    for callback in callbacks
+        _run_close_callback(owner, callback)
+    end
+    return nothing
+end
 
 function _pause_resource(resource)
     try
@@ -362,7 +445,7 @@ function _pause_resource(resource)
             Processes.pause(resource)
         end
     catch err
-        @warn "Error while pausing window resource" resource exception = (err, catch_backtrace())
+        @warn "Error while pausing window resource" resource_type = typeof(resource) exception = (err, catch_backtrace())
     end
     return nothing
 end
@@ -377,7 +460,7 @@ function _resume_resource(resource)
             run(resource)
         end
     catch err
-        @warn "Error while resuming window resource" resource exception = (err, catch_backtrace())
+        @warn "Error while resuming window resource" resource_type = typeof(resource) exception = (err, catch_backtrace())
     end
     return nothing
 end
@@ -400,6 +483,7 @@ function Base.close(handle::PanelHandle)
         close(child)
     end
     close!(handle.panel, handle)
+    _run_close_callbacks!(handle)
     for resource in reverse(handle.resources)
         _cleanup_resource(resource)
     end
@@ -414,6 +498,27 @@ function _mark_closed!(handle::PanelHandle)
         _mark_closed!(child)
     end
     empty!(handle.resources)
+    empty!(handle.close_callbacks)
+    empty!(handle.children)
+    return nothing
+end
+
+function _native_close_handle!(handle::PanelHandle)
+    handle.closed && return nothing
+    handle.closed = true
+    for child in reverse(collect(values(handle.children)))
+        _native_close_handle!(child)
+    end
+    try
+        close!(handle.panel, handle)
+    catch err
+        @warn "Error while closing native window panel" panel = handle.panel exception = (err, catch_backtrace())
+    end
+    _run_close_callbacks!(handle)
+    for resource in reverse(handle.resources)
+        _cleanup_native_resource(resource)
+    end
+    empty!(handle.resources)
     empty!(handle.children)
     return nothing
 end
@@ -424,15 +529,14 @@ function _native_close!(host::WindowHost)
     isnothing(host.frame_timer) || close(host.frame_timer)
     isnothing(host.poll_timer) || close(host.poll_timer)
 
-    for child in values(host.children)
-        try
-            close!(child.panel, child)
-        catch err
-            @warn "Error while closing native window panel" panel = child.panel exception = (err, catch_backtrace())
-        end
-        _mark_closed!(child)
+    for child in reverse(collect(values(host.children)))
+        _native_close_handle!(child)
     end
 
+    _run_close_callbacks!(host)
+    for resource in reverse(host.resources)
+        _cleanup_native_resource(resource)
+    end
     empty!(host.children)
     empty!(host.resources)
     empty!(host.frame_callbacks)
@@ -459,6 +563,7 @@ function Base.close(host::WindowHost)
         close(child)
     end
     empty!(host.children)
+    _run_close_callbacks!(host)
     for resource in reverse(host.resources)
         _cleanup_resource(resource)
     end

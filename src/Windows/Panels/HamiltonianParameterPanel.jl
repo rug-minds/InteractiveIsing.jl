@@ -52,6 +52,7 @@ function mount!(panel::HamiltonianParameterPanel, host::WindowHost, cell; kwargs
     grid_width = panel.show_buttons ? 240 : 0
     grid = GridLayout(cell, tellheight = false, valign = :top, halign = :left, width = grid_width)
     handle = PanelHandle(panel, host, grid)
+    _register_graph_close!(handle, panel.graph)
     handle[:display_grid] = GridLayout(panel.display_cell)
     rowgap!(handle[:display_grid], 8)
     handle[:entries] = _hamiltonian_display_entries(panel.graph)

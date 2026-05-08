@@ -164,7 +164,7 @@ end
         )
         g2_positioned = IsingGraph(
             Layer(4, 4, Continuous(), StateSet(-1.0f0, 1.0f0), Coords(y = 0, x = 0, z = 0)),
-            Layer(4, 4, Continuous(), StateSet(-1.0f0, 1.0f0), Coords(y = 0, x = 1, z = 0)),
+            Layer(4, 4, Continuous(), StateSet(-1.0f0, 1.0f0), Coords(y = 0, x = 4, z = 0)),
             Ising(b = Float32[0.1 for _ in 1:32]) + Quartic();
             precision = Float32,
         )

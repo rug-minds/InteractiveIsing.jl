@@ -78,6 +78,7 @@ end
 function mount!(panel::ConnectionsPanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell)
     handle = PanelHandle(panel, host, grid)
+    _register_graph_close!(handle, panel.graph)
 
     plot_dim = _connection_plot_dimension(panel.graph)
     nodes = _connection_node_points(panel.graph, plot_dim)

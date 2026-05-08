@@ -9,6 +9,31 @@ current_layer(g, layer_idx) = _with_layer(identity, g, layer_idx)
 _has_layer_selector(g) = length(layers(g)) > 1
 _has_layer_selector(g::SingleLayerGraph) = false
 
+function _register_graph_close!(handle::PanelHandle, g)
+    close_graphs = get!(handle.host.data, :close_graphs, IdDict{Any, Bool}())
+    haskey(close_graphs, g) && return nothing
+    close_graphs[g] = true
+    onclose!(handle) do _
+        Processes.close(g)
+    end
+    return nothing
+end
+
+function _register_process_close!(handle::PanelHandle, process::Processes.AbstractProcess)
+    onclose!(handle) do _
+        close(process)
+    end
+    return nothing
+end
+
+function _register_process_close!(handle::PanelHandle, processes)
+    for process in processes
+        process isa Processes.AbstractProcess || continue
+        _register_process_close!(handle, process)
+    end
+    return nothing
+end
+
 function _set_slider_close!(slider, value)
     try
         set_close_to!(slider, value)

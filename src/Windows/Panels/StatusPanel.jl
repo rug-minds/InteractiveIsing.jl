@@ -19,6 +19,7 @@ function mount!(panel::StatusPanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell)
     handle = PanelHandle(panel, host, grid)
     g = panel.graph
+    _register_graph_close!(handle, g)
 
     Box(grid[1, 1:3], visible = false)
     colsize!(grid, 1, Relative(1 / 3))

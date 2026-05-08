@@ -15,6 +15,7 @@ function mount!(panel::LayerSelectorPanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell, tellwidth = false)
     handle = PanelHandle(panel, host, grid)
     g = panel.graph
+    _register_graph_close!(handle, g)
     layer_idx = panel.layer_idx
 
     label_text = lift(i -> "$i/$(length(layers(g)))", layer_idx)

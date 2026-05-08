@@ -88,7 +88,37 @@ using Random
     @test langevin_refresh_pattern(GlobalLangevin(stepsize = 0.1f0, adjusted = true), 4) ==
         [true, false, false, false, true]
     @test langevin_refresh_pattern(BlockLangevin(stepsize = 0.1f0, adjusted = true, block_size = 3), 3) ==
-        [true, true, true, true]
+        [true, false, false, true]
+
+    function ordered_block_shuffle_groups()
+        graph = IsingGraph(
+            8,
+            Continuous(),
+            StateSet(-10f0, 10f0),
+            Clamping(1f0, fill(0f0, 8));
+            precision = Float32,
+            initial_state = 1f0,
+        )
+        temp!(graph, 0f0)
+        algorithm = BlockLangevin(stepsize = 0.1f0, adjusted = false, block_size = 3)
+        context = Processes.init(algorithm, (;model = graph))
+        Random.seed!(context.rng, 1)
+        out = Processes.step!(algorithm, context)
+        first = copy(@view context.block_idxs[1:out.block_size])
+        for _ in 2:out.block_size
+            out = Processes.step!(algorithm, context)
+            context = merge(context, out)
+        end
+        out = Processes.step!(algorithm, context)
+        second = copy(@view context.block_idxs[1:out.block_size])
+        return first, second, out
+    end
+
+    first_block, second_block, second_out = ordered_block_shuffle_groups()
+    @test second_out.refreshed_gradient
+    @test length(unique(first_block)) == length(first_block)
+    @test length(unique(second_block)) == length(second_block)
+    @test isempty(intersect(first_block, second_block))
 
     function adjusted_langevin_acceptance(algorithm)
         graph = IsingGraph(

@@ -15,6 +15,7 @@ function mount!(panel::MagnetizationPanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell, tellheight = false, tellwidth = false)
     handle = PanelHandle(panel, host, grid)
     g = panel.graph
+    _register_graph_close!(handle, g)
     layer_idx = panel.layer_idx
 
     mid_grid = handle[:mid_grid] = GridLayout(grid[1, 1], tellwidth = false)

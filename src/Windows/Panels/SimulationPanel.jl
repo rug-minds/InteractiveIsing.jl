@@ -23,6 +23,7 @@ function mount!(panel::SimulationPanel, host::WindowHost, cell; kwargs...)
     handle = PanelHandle(panel, host, grid)
     handle[:graph] = panel.graph
     handle[:layer_idx] = Observable(1)
+    _register_graph_close!(handle, panel.graph)
 
     status = panel!(handle, :status, StatusPanel(panel.graph, handle[:layer_idx]), (1, 1))
     if _has_layer_selector(panel.graph)
@@ -53,7 +54,6 @@ function mount!(panel::SimulationPanel, host::WindowHost, cell; kwargs...)
 end
 
 function close!(panel::SimulationPanel, handle::PanelHandle)
-    _request_graph_process_close!(panel.graph)
     return nothing
 end
 

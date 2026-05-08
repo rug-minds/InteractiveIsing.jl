@@ -21,6 +21,7 @@ function mount!(panel::TemperaturePanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell, halign = :center)
     handle = PanelHandle(panel, host, grid)
     g = panel.graph
+    _register_graph_close!(handle, g)
 
     Box(grid[1, 1], width = 110, height = 50, visible = false)
     last_graph_temp = Ref{Any}(temp(g))

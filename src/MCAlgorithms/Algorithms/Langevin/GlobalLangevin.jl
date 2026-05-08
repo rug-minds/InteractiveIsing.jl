@@ -16,8 +16,9 @@ Boltzmann sampler.
 `group_steps` is retained for interface compatibility; a `Processes.step!` call
 still attempts only one spin update.
 
-With `adjusted=true`, the selected spin move is accepted or rejected with a
-Metropolis-adjusted Langevin acceptance probability.
+With `adjusted=true`, the full active-spin proposal is accepted or rejected
+with a Metropolis-adjusted Langevin probability, then accepted entries are
+written one spin per `Processes.step!`.
 """
 struct GlobalLangevin{T<:Real} <: IsingMCAlgorithm
     stepsize::T
@@ -214,6 +215,36 @@ end
     use_adjusted = adjusted[]
     dh = d_iH()
     active_changed = @inline consume_changed!(context.active_index_set)
+
+    if use_adjusted
+        σ = t > zero(SType) ? sqrt(SType(2) * η * t) : zero(SType)
+        if schedule_accepted[] && schedule_position[] > 0 && schedule_position[] <= schedule_length[]
+            pos = schedule_position[]
+            spin_idx = @inbounds schedule_idxs[pos]
+            proposal = @inline _langevin_accept_single_spin!(
+                langevin,
+                hamiltonian,
+                model,
+                spin_idx,
+                @inbounds(layer_idxs[pos]),
+                @inbounds(old_vals[pos]),
+                @inbounds(new_vals[pos]),
+            )
+            schedule_position[] = pos + 1
+            if active_changed
+                @inline _set_local_langevin_active_spins!(context.active_spins, @inline _active_spin_vector(context.active_index_set))
+            end
+            accepted = 1
+            attempted = 1
+            acceptance_rate = one(SType)
+            gradient_max = gradient_max_cache[]
+            gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
+            return (;proposal, ΔE = schedule_ΔE[], accepted, attempted, acceptance_rate, T, η, σ,
+                group_steps = n_group_steps, refreshed_gradient = false,
+                gradient_max, gradient_rms, reflected_fraction = zero(SType))
+        end
+    end
+
     if active_changed
         @inline _set_local_langevin_active_spins!(context.active_spins, @inline _active_spin_vector(context.active_index_set))
     end
@@ -231,31 +262,6 @@ end
     end
 
     if use_adjusted
-        σ = t > zero(SType) ? sqrt(SType(2) * η * t) : zero(SType)
-        if schedule_accepted[] && schedule_position[] > 0 && schedule_position[] <= schedule_length[]
-            pos = schedule_position[]
-            proposal_pos = @inbounds schedule_idxs[pos]
-            spin_idx = @inbounds active_spins[proposal_pos]
-            proposal = @inline _langevin_accept_single_spin!(
-                langevin,
-                hamiltonian,
-                model,
-                spin_idx,
-                @inbounds(layer_idxs[proposal_pos]),
-                @inbounds(old_vals[proposal_pos]),
-                @inbounds(new_vals[proposal_pos]),
-            )
-            schedule_position[] = pos + 1
-            accepted = 1
-            attempted = 1
-            acceptance_rate = one(SType)
-            gradient_max = gradient_max_cache[]
-            gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
-            return (;proposal, ΔE = schedule_ΔE[], accepted, attempted, acceptance_rate, T, η, σ,
-                group_steps = n_group_steps, refreshed_gradient = false,
-                gradient_max, gradient_rms, reflected_fraction = zero(SType))
-        end
-
         resize!(schedule_idxs, n)
         gradient_max = zero(SType)
         gradient_sumsq = zero(SType)
@@ -264,7 +270,7 @@ end
         four_ηT = SType(4) * η * max(t, epsT)
         @inbounds for pos in 1:n
             spin_idx = active_spins[pos]
-            schedule_idxs[pos] = pos
+            schedule_idxs[pos] = spin_idx
             derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
             derivative = @inline _finite_derivative(SType(derivative))
             dH_prealloc[spin_idx] = derivative
@@ -318,6 +324,9 @@ end
         @inbounds for pos in 1:n
             swap_pos = @inline rand(rng, pos:n)
             schedule_idxs[pos], schedule_idxs[swap_pos] = schedule_idxs[swap_pos], schedule_idxs[pos]
+            old_vals[pos], old_vals[swap_pos] = old_vals[swap_pos], old_vals[pos]
+            new_vals[pos], new_vals[swap_pos] = new_vals[swap_pos], new_vals[pos]
+            layer_idxs[pos], layer_idxs[swap_pos] = layer_idxs[swap_pos], layer_idxs[pos]
         end
         schedule_position[] = 1
         schedule_length[] = accept_move ? n : 0
@@ -327,21 +336,20 @@ end
         gradient_sumsq_cache[] = gradient_sumsq
 
         if accept_move
-            proposal_pos = @inbounds schedule_idxs[1]
-            spin_idx = @inbounds active_spins[proposal_pos]
+            spin_idx = @inbounds schedule_idxs[1]
             proposal = @inline _langevin_accept_single_spin!(
                 langevin,
                 hamiltonian,
                 model,
                 spin_idx,
-                @inbounds(layer_idxs[proposal_pos]),
-                @inbounds(old_vals[proposal_pos]),
-                @inbounds(new_vals[proposal_pos]),
+                @inbounds(layer_idxs[1]),
+                @inbounds(old_vals[1]),
+                @inbounds(new_vals[1]),
             )
             schedule_position[] = 2
             accepted = 1
         else
-            proposal = FlipProposal{SType}(@inbounds(active_spins[1]), @inbounds(old_vals[1]), @inbounds(new_vals[1]), @inbounds(layer_idxs[1]), false)
+            proposal = FlipProposal{SType}(@inbounds(schedule_idxs[1]), @inbounds(old_vals[1]), @inbounds(new_vals[1]), @inbounds(layer_idxs[1]), false)
             accepted = 0
         end
 

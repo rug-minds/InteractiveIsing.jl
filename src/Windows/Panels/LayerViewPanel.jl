@@ -16,6 +16,7 @@ image_trait(::Type{LayerViewPanel}) = HasImage()
 function mount!(panel::LayerViewPanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell)
     handle = PanelHandle(panel, host, grid)
+    _register_graph_close!(handle, panel.graph)
     handle[:grid] = grid
 
     _redraw_layer!(handle)

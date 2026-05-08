@@ -6,14 +6,15 @@ export BlockLangevin, DynamicBlockLangevin
 Block-gradient Langevin Monte Carlo update.
 
 At the start of each internal cycle, one `Processes.step!` refreshes the
-derivative on a random cyclic block of active spins. That step and subsequent
+derivative on a random group of active spins. That step and subsequent
 steps then consume the cached block derivatives one spin at a time. This is a
 compromise between `LocalLangevin` and `GlobalLangevin`: it avoids a full
 gradient refresh while keeping the per-step state mutation to one spin.
 
-`adjusted` is a type parameter because it changes the structure of each step:
-`adjusted=true` evaluates the MALA correction, while `adjusted=false` uses the
-fast reflected always-accepted proposal.
+`adjusted` is a type parameter because it changes the structure of each cycle:
+`adjusted=true` accepts or rejects the whole block proposal with a MALA
+correction, while `adjusted=false` uses the fast reflected always-accepted
+single-spin stream.
 
 `stepsize` is the proposal size. If a `stepsize` variable is supplied in the
 process context, it overrides this configured default at initialization.
@@ -56,8 +57,9 @@ Block Langevin update with a fresh random block size for each step.
 
 The maximum block size is a type parameter: `DynamicBlockLangevin{MaxBlockSize,
 Adjusted,T}`. Each proposal draws a block size uniformly from
-`1:min(MaxBlockSize, n_active)` and then chooses a random cyclic block of that
-size. One spin from the selected block is then proposed.
+`1:min(MaxBlockSize, n_active)` and then chooses a random group of that size.
+In adjusted mode the selected block is accepted or rejected as one block
+proposal, then accepted entries are written one spin per `Processes.step!`.
 """
 struct DynamicBlockLangevin{MaxBlockSize,Adjusted,T<:Real} <: IsingMCAlgorithm
     stepsize::T
@@ -139,6 +141,7 @@ DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
     new_vals = Vector{SType}(undef, nstates_model)
     layer_idxs = Vector{Int}(undef, nstates_model)
     block_idxs = Vector{Int}(undef, min(nstates_model, max(1, block_size[])))
+    block_shuffle_position = Ref(length(active_spins) + 1)
 
     proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
     ΔE = zero(SType)
@@ -160,7 +163,8 @@ DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
 
     return (;model, hamiltonian, rng, active_index_set, active_spins, layer_views, stepsize,
         max_drift_fraction, block_size, group_steps, adjusted, dH_prealloc,
-        derivatives, old_vals, new_vals, layer_idxs, block_idxs, proposal, ΔE, accepted, attempted, acceptance_rate, T, η,
+        derivatives, old_vals, new_vals, layer_idxs, block_idxs, block_shuffle_position,
+        proposal, ΔE, accepted, attempted, acceptance_rate, T, η,
         σ, gradient_max, gradient_rms, reflected_fraction, schedule_position,
         schedule_length, schedule_accepted, schedule_ΔE, gradient_max_cache, gradient_sumsq_cache)
 end
@@ -196,6 +200,7 @@ end
     new_vals = Vector{SType}(undef, nstates_model)
     layer_idxs = Vector{Int}(undef, nstates_model)
     block_idxs = Vector{Int}(undef, min(nstates_model, MaxBlockSize))
+    block_shuffle_position = Ref(length(active_spins) + 1)
 
     proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
     ΔE = zero(SType)
@@ -217,7 +222,8 @@ end
 
     return (;model, hamiltonian, rng, active_index_set, active_spins, layer_views, stepsize,
         max_drift_fraction, max_blocksize, group_steps, adjusted, dH_prealloc,
-        derivatives, old_vals, new_vals, layer_idxs, block_idxs, proposal, ΔE, accepted, attempted, acceptance_rate, T, η,
+        derivatives, old_vals, new_vals, layer_idxs, block_idxs, block_shuffle_position,
+        proposal, ΔE, accepted, attempted, acceptance_rate, T, η,
         σ, gradient_max, gradient_rms, reflected_fraction, schedule_position,
         schedule_length, schedule_accepted, schedule_ΔE, gradient_max_cache, gradient_sumsq_cache)
 end
@@ -225,16 +231,26 @@ end
 @inline update!(::BlockLangevin, hterm, model::AbstractIsingGraph, proposal::AbstractProposal) = update!(Metropolis(), hterm, model, proposal)
 @inline update!(::DynamicBlockLangevin, hterm, model::AbstractIsingGraph, proposal::AbstractProposal) = update!(Metropolis(), hterm, model, proposal)
 
-@inline function _fill_langevin_block!(block_idxs, active_spins, rng, m::Int)
+@inline function _fill_langevin_block!(
+    block_idxs::Vector{Int},
+    active_spins::Vector{Int},
+    block_shuffle_position::Base.RefValue{Int},
+    rng::Random.AbstractRNG,
+    m::Int,
+)
     n = length(active_spins)
-    offset = @inline rand(rng, 0:(n - 1))
-    @inbounds for pos in 1:m
-        k = pos + offset
-        while k > n
-            k -= n
+    first_pos = block_shuffle_position[]
+    if first_pos < 1 || first_pos + m - 1 > n
+        @inbounds for pos in 1:(n - 1)
+            swap_pos = @inline rand(rng, pos:n)
+            active_spins[pos], active_spins[swap_pos] = active_spins[swap_pos], active_spins[pos]
         end
-        block_idxs[pos] = active_spins[k]
+        first_pos = 1
     end
+    @inbounds for pos in 1:m
+        block_idxs[pos] = active_spins[first_pos + pos - 1]
+    end
+    block_shuffle_position[] = first_pos + m
     return @view block_idxs[1:m]
 end
 
@@ -257,7 +273,7 @@ end
 @inline function _block_langevin_step!(langevin, context::C, ::Val{Adjusted}) where {Adjusted,C}
     (;hamiltonian, rng, model, layer_views, stepsize,
         max_drift_fraction, group_steps, dH_prealloc,
-        derivatives, old_vals, new_vals, layer_idxs, block_idxs,
+        derivatives, old_vals, new_vals, layer_idxs, block_idxs, block_shuffle_position,
         schedule_position, schedule_length, schedule_accepted, schedule_ΔE,
         gradient_max_cache, gradient_sumsq_cache) = context
 
@@ -272,6 +288,7 @@ end
     active_changed = @inline consume_changed!(context.active_index_set)
     if active_changed
         @inline _set_local_langevin_active_spins!(context.active_spins, @inline _active_spin_vector(context.active_index_set))
+        block_shuffle_position[] = length(context.active_spins) + 1
     end
     active_spins = context.active_spins
     n_active = length(active_spins)
@@ -316,11 +333,7 @@ end
         if length(block_idxs) < m
             resize!(block_idxs, m)
         end
-        @inline _fill_langevin_block!(block_idxs, active_spins, rng, m)
-        @inbounds for pos in 1:m
-            swap_pos = @inline rand(rng, pos:m)
-            block_idxs[pos], block_idxs[swap_pos] = block_idxs[swap_pos], block_idxs[pos]
-        end
+        @inline _fill_langevin_block!(block_idxs, active_spins, block_shuffle_position, rng, m)
 
         gradient_max = zero(SType)
         gradient_sumsq = zero(SType)
@@ -419,11 +432,7 @@ end
         if length(block_idxs) < m
             resize!(block_idxs, m)
         end
-        @inline _fill_langevin_block!(block_idxs, active_spins, rng, m)
-        @inbounds for pos in 1:m
-            swap_pos = @inline rand(rng, pos:m)
-            block_idxs[pos], block_idxs[swap_pos] = block_idxs[swap_pos], block_idxs[pos]
-        end
+        @inline _fill_langevin_block!(block_idxs, active_spins, block_shuffle_position, rng, m)
 
         gradient_max = zero(SType)
         gradient_sumsq = zero(SType)
