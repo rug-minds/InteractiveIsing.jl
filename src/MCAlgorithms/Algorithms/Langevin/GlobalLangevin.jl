@@ -66,9 +66,14 @@ GlobalLangevin(adjusted::Bool) = GlobalLangevin(; adjusted)
     gradient_max = zero(SType)
     gradient_rms = zero(SType)
     reflected_fraction = zero(SType)
+    old_vals = Vector{SType}(undef, nstates_model)
+    new_vals = Vector{SType}(undef, nstates_model)
+    layer_idxs = Vector{Int}(undef, nstates_model)
     schedule_idxs = Vector{Int}(undef, length(active_spins))
     schedule_position = Ref(0)
     schedule_length = Ref(0)
+    schedule_accepted = Ref(false)
+    schedule_ΔE = Ref(zero(SType))
     gradient_max_cache = Ref(zero(SType))
     gradient_sumsq_cache = Ref(zero(SType))
 
@@ -79,7 +84,9 @@ GlobalLangevin(adjusted::Bool) = GlobalLangevin(; adjusted)
                 layer_views, stepsize, max_drift_fraction, group_steps,
                 adjusted, proposal, ΔE, accepted, attempted, T, η, σ,
                 gradient_max, gradient_rms, reflected_fraction,
+                old_vals, new_vals, layer_idxs,
                 schedule_idxs, schedule_position, schedule_length,
+                schedule_accepted, schedule_ΔE,
                 gradient_max_cache, gradient_sumsq_cache)
 end
 
@@ -193,9 +200,9 @@ end
 
 @inline function Processes.step!(langevin::GlobalLangevin, context::C) where {C}
     (;hamiltonian, rng, model, dH_prealloc, layer_views, stepsize,
-        max_drift_fraction, group_steps, adjusted, schedule_idxs,
-        schedule_position, schedule_length, gradient_max_cache,
-        gradient_sumsq_cache) = context
+        max_drift_fraction, group_steps, adjusted, old_vals, new_vals,
+        layer_idxs, schedule_idxs, schedule_position, schedule_length,
+        schedule_accepted, schedule_ΔE, gradient_max_cache, gradient_sumsq_cache) = context
 
     SType = eltype(model)
     epsT = eps(SType)
@@ -224,45 +231,126 @@ end
     end
 
     if use_adjusted
+        σ = t > zero(SType) ? sqrt(SType(2) * η * t) : zero(SType)
+        if schedule_accepted[] && schedule_position[] > 0 && schedule_position[] <= schedule_length[]
+            pos = schedule_position[]
+            proposal_pos = @inbounds schedule_idxs[pos]
+            spin_idx = @inbounds active_spins[proposal_pos]
+            proposal = @inline _langevin_accept_single_spin!(
+                langevin,
+                hamiltonian,
+                model,
+                spin_idx,
+                @inbounds(layer_idxs[proposal_pos]),
+                @inbounds(old_vals[proposal_pos]),
+                @inbounds(new_vals[proposal_pos]),
+            )
+            schedule_position[] = pos + 1
+            accepted = 1
+            attempted = 1
+            acceptance_rate = one(SType)
+            gradient_max = gradient_max_cache[]
+            gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
+            return (;proposal, ΔE = schedule_ΔE[], accepted, attempted, acceptance_rate, T, η, σ,
+                group_steps = n_group_steps, refreshed_gradient = false,
+                gradient_max, gradient_rms, reflected_fraction = zero(SType))
+        end
+
+        resize!(schedule_idxs, n)
         gradient_max = zero(SType)
         gradient_sumsq = zero(SType)
-        @inbounds for spin_idx in active_spins
+        log_forward_q = zero(SType)
+        in_bounds = true
+        four_ηT = SType(4) * η * max(t, epsT)
+        @inbounds for pos in 1:n
+            spin_idx = active_spins[pos]
+            schedule_idxs[pos] = pos
             derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
             derivative = @inline _finite_derivative(SType(derivative))
             dH_prealloc[spin_idx] = derivative
             gradient_sumsq += derivative * derivative
             gradient_max = max(gradient_max, abs(derivative))
+            low_state, high_state, _, layer_idx = @inline _local_langevin_bounds(spin_idx, layer_views)
+            old_state = @inbounds InteractiveIsing.graphstate(model)[spin_idx]
+            drift_step = η * derivative
+            new_state = old_state - drift_step + (σ > zero(SType) ? (@inline randn(rng, SType)) * σ : zero(SType))
+            old_vals[pos] = old_state
+            new_vals[pos] = new_state
+            layer_idxs[pos] = layer_idx
+            in_bounds &= @inline _in_bounds(new_state, low_state, high_state)
+            log_forward_q += @inline _mala_log_kernel(new_state, old_state - drift_step, four_ηT)
         end
 
-        k = @inline rand(rng, 1:n)
-        spin_idx = @inbounds active_spins[k]
-        derivative = @inbounds dH_prealloc[spin_idx]
-        σ = t > zero(SType) ? sqrt(SType(2) * η * t) : zero(SType)
-        proposal, ΔE, accepted, reflected = @inline _langevin_single_spin_proposal!(
-            langevin,
-            rng,
-            dh,
-            hamiltonian,
-            model,
-            layer_views,
-            spin_idx,
-            derivative,
-            η,
-            σ,
-            drift_fraction,
-            t,
-            true,
-        )
+        ΔE = zero(SType)
+        accept_move = false
+        if in_bounds
+            spins = @inline InteractiveIsing.graphstate(model)
+            @inbounds for pos in 1:n
+                fp = FlipProposal{SType}(active_spins[pos], old_vals[pos], new_vals[pos], layer_idxs[pos], false)
+                ΔE += @inline calculate(ΔH(), hamiltonian, model, fp)
+                spins[active_spins[pos]] = new_vals[pos]
+            end
+            @inbounds for pos in 1:n
+                spins[active_spins[pos]] = old_vals[pos]
+            end
+            if t <= zero(SType)
+                accept_move = isfinite(ΔE) && ΔE <= zero(SType)
+            else
+                @inbounds for pos in 1:n
+                    spins[active_spins[pos]] = new_vals[pos]
+                end
+                log_reverse_q = zero(SType)
+                @inbounds for pos in 1:n
+                    spin_idx = active_spins[pos]
+                    reverse_derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+                    reverse_derivative = @inline _finite_derivative(SType(reverse_derivative))
+                    reverse_mean = new_vals[pos] - η * reverse_derivative
+                    log_reverse_q += @inline _mala_log_kernel(old_vals[pos], reverse_mean, four_ηT)
+                end
+                @inbounds for pos in 1:n
+                    spins[active_spins[pos]] = old_vals[pos]
+                end
+                log_acceptance = -ΔE / t + log_reverse_q - log_forward_q
+                accept_move = isfinite(log_acceptance) && (log_acceptance >= zero(SType) || log(@inline rand(rng, SType)) < log_acceptance)
+            end
+        end
+
+        @inbounds for pos in 1:n
+            swap_pos = @inline rand(rng, pos:n)
+            schedule_idxs[pos], schedule_idxs[swap_pos] = schedule_idxs[swap_pos], schedule_idxs[pos]
+        end
+        schedule_position[] = 1
+        schedule_length[] = accept_move ? n : 0
+        schedule_accepted[] = accept_move
+        schedule_ΔE[] = ΔE
+        gradient_max_cache[] = gradient_max
+        gradient_sumsq_cache[] = gradient_sumsq
+
+        if accept_move
+            proposal_pos = @inbounds schedule_idxs[1]
+            spin_idx = @inbounds active_spins[proposal_pos]
+            proposal = @inline _langevin_accept_single_spin!(
+                langevin,
+                hamiltonian,
+                model,
+                spin_idx,
+                @inbounds(layer_idxs[proposal_pos]),
+                @inbounds(old_vals[proposal_pos]),
+                @inbounds(new_vals[proposal_pos]),
+            )
+            schedule_position[] = 2
+            accepted = 1
+        else
+            proposal = FlipProposal{SType}(@inbounds(active_spins[1]), @inbounds(old_vals[1]), @inbounds(new_vals[1]), @inbounds(layer_idxs[1]), false)
+            accepted = 0
+        end
 
         attempted = 1
         acceptance_rate = SType(accepted)
         gradient_rms = sqrt(gradient_sumsq / SType(n))
-        reflected_fraction = SType(reflected)
-        schedule_position[] = 0
-        schedule_length[] = 0
         return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
             group_steps = n_group_steps, refreshed_gradient = true,
-            gradient_max, gradient_rms, reflected_fraction)
+            gradient_max, gradient_rms, reflected_fraction = zero(SType))
     end
 
     refreshed = active_changed || schedule_position[] == 0 || schedule_position[] > schedule_length[]
