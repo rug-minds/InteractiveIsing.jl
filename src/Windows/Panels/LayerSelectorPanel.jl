@@ -4,10 +4,12 @@
 Small `< idx/n >` selector for multi-layer graphs. It mutates the observable
 `layer_idx`, which lets sibling panels redraw against the selected layer.
 """
-struct LayerSelectorPanel{G, O} <: AbstractPanel
-    graph::G
-    layer_idx::O
+struct LayerSelectorPanel <: AbstractPanel
+    graph::Any
+    layer_idx::Any
 end
+
+image_trait(::Type{LayerSelectorPanel}) = HasImage()
 
 function mount!(panel::LayerSelectorPanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell, tellwidth = false)
@@ -27,4 +29,14 @@ function mount!(panel::LayerSelectorPanel, host::WindowHost, cell; kwargs...)
         layer_idx[] < length(layers(g)) && (layer_idx[] += 1)
     end)
     return handle
+end
+
+function toimage!(cell, panel::LayerSelectorPanel, handle::PanelHandle; kwargs...)
+    return Label(
+        cell,
+        "Layer $(panel.layer_idx[])/$(length(layers(panel.graph)))",
+        fontsize = 12,
+        tellwidth = false,
+        halign = :center,
+    )
 end

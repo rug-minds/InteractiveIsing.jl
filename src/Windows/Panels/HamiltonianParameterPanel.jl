@@ -1,11 +1,11 @@
-struct HamiltonianDisplayEntry{V}
+struct HamiltonianDisplayEntry
     term_index::Int
     term_label::String
     name::Symbol
     source::Symbol
     origin::Symbol
     info::String
-    value::V
+    value::Any
     colormap::Symbol
     colorrange::Symbol
 end
@@ -32,11 +32,15 @@ Selectable entries are discovered with `hamiltonian_visualizations`.
 The selected entry is rendered into `display_cell`, usually the center of the
 simulation UI.
 """
-struct HamiltonianParameterPanel{G,O,C} <: AbstractPanel
-    graph::G
-    layer_idx::O
-    display_cell::C
+struct HamiltonianParameterPanel <: AbstractPanel
+    graph::Any
+    layer_idx::Any
+    display_cell::Any
 end
+
+axis_trait(::Type{HamiltonianParameterPanel}) = HasAxis()
+axiskey(::Type{HamiltonianParameterPanel}) = :display_axis
+image_trait(::Type{HamiltonianParameterPanel}) = HasImage()
 
 function mount!(panel::HamiltonianParameterPanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell, tellheight = false, valign = :top, halign = :left, width = 240)
@@ -50,10 +54,11 @@ function mount!(panel::HamiltonianParameterPanel, host::WindowHost, cell; kwargs
     Label(grid[1, 1], "Fields", fontsize = 13, halign = :left, tellwidth = false)
 
     for (idx, entry) in enumerate(handle[:entries])
+        button_label = _entry_button_label(entry)
         button = Button(
             grid[idx + 1, 1],
-            label = _entry_button_label(entry),
-            fontsize = 10,
+            label = button_label,
+            fontsize = _entry_button_fontsize(button_label),
             height = 28,
             width = 230,
             tellwidth = false,
@@ -106,13 +111,12 @@ _hamiltonian_terms(ham) = Any[ham]
 
 _term_label(term, idx) = "$(idx) $(_term_type_label(term))"
 
-_term_type_label(term::PolynomialHamiltonian{2,P}) where {P} = "Quadratic{$(_type_parameter_label(P))}"
-_term_type_label(term::PolynomialHamiltonian{4,P}) where {P} = "Quartic{$(_type_parameter_label(P))}"
-_term_type_label(term::PolynomialHamiltonian{6,P}) where {P} = "Sextic{$(_type_parameter_label(P))}"
-_term_type_label(term::PolynomialHamiltonian{8,P}) where {P} = "Octic{$(_type_parameter_label(P))}"
-_term_type_label(term::PolynomialHamiltonian{Order,P}) where {Order,P} =
-    "PolynomialHamiltonian{$Order, $(_type_parameter_label(P))}"
-_term_type_label(term) = _compact_parametric_type(typeof(term))
+_term_type_label(term::PolynomialHamiltonian{2}) = "Quadratic"
+_term_type_label(term::PolynomialHamiltonian{4}) = "Quartic"
+_term_type_label(term::PolynomialHamiltonian{6}) = "Sextic"
+_term_type_label(term::PolynomialHamiltonian{8}) = "Octic"
+_term_type_label(term::PolynomialHamiltonian{Order}) where {Order} = "PolynomialHamiltonian{$Order}"
+_term_type_label(term) = _compact_type_head(typeof(term))
 
 _type_parameter_label(T::Type) = _compact_type_head(T)
 _type_parameter_label(value) = string(value)
@@ -140,6 +144,13 @@ _term_display_entries(term, term_index, term_label, g) =
 function _entry_button_label(entry::HamiltonianDisplayEntry)
     entry.source === :graph && return "Graph state"
     return "$(entry.term_label).$(entry.name)"
+end
+
+function _entry_button_fontsize(label; width = 230, max_fontsize = 10, min_fontsize = 7)
+    usable_width = 0.88 * width
+    estimated_width = max(length(label), 1) * 0.56 * max_fontsize
+    estimated_width <= usable_width && return max_fontsize
+    return max(min_fontsize, min(max_fontsize, floor(Int, usable_width / (0.56 * length(label)))))
 end
 
 function _draw_hamiltonian_entry!(handle::PanelHandle)
@@ -385,3 +396,24 @@ end
 
 _entry_colorrange(entry::HamiltonianDisplayEntry, vals) =
     entry.colorrange === :data ? _array_colorrange(vals) : nothing
+
+function toimage!(cell, panel::HamiltonianParameterPanel, handle::PanelHandle; kwargs...)
+    entries = handle[:entries]
+    isempty(entries) && throw(ArgumentError("HamiltonianParameterPanel has no display entries."))
+    idx = clamp(handle[:selected][], 1, length(entries))
+    entry = entries[idx]
+
+    grid = GridLayout(cell)
+    Label(grid[1, 1], _display_title(entry), fontsize = 14, tellwidth = false, halign = :center)
+    rowsize!(grid, 1, Auto())
+
+    export_handle = PanelHandle(panel, handle.host, grid)
+    if haskey(handle, :display_axis)
+        _remember_axis3_state!(export_handle, :display_axis3_state, handle[:display_axis])
+    else
+        export_handle[:display_axis3_state] = get(handle.data, :display_axis3_state, nothing)
+    end
+
+    _draw_value!(export_handle, entry, grid[2, 1])
+    return grid
+end
