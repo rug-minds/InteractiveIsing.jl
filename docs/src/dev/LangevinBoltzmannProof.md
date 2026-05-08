@@ -6,6 +6,13 @@ This is a scratch proof for the exact Langevin algorithms implemented in
 The goal is not to prove a generic Langevin method. The goal is to check the
 actual transition kernels used by this code.
 
+Implementation note: `GlobalLangevin` and `BlockLangevin` now commit one
+single-spin proposal per `Processes.step!`. Their "global" and "block" behavior
+is the derivative refresh scope, not a multi-spin state update. Sections below
+that discuss historical all-active or block `MultiSpinProposal` kernels are kept
+as scratch notes until this proof is fully rewritten around the current
+single-spin implementation.
+
 ## Target Distribution
 
 For a graph state `x`, the intended finite-temperature Boltzmann target is
