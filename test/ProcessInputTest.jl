@@ -1,6 +1,7 @@
 using Test
 using InteractiveIsing
 using InteractiveIsing.Processes
+using Random
 
 @testset "MC Process Inputs" begin
     g = IsingGraph(2, 2, Continuous(); precision = Float32)
@@ -58,6 +59,63 @@ using InteractiveIsing.Processes
         @test out.proposal isa FlipProposal
         @test out.attempted == 1
         @test out.accepted == 1
+    end
+
+    function langevin_refresh_pattern(algorithm, n)
+        graph = IsingGraph(
+            n,
+            Continuous(),
+            StateSet(-10f0, 10f0),
+            Clamping(1f0, fill(0f0, n));
+            precision = Float32,
+            initial_state = 1f0,
+        )
+        temp!(graph, 0f0)
+        context = Processes.init(algorithm, (;model = graph))
+        refreshed = Bool[]
+        for _ in 1:(n + 1)
+            out = Processes.step!(algorithm, context)
+            context = merge(context, out)
+            push!(refreshed, out.refreshed_gradient)
+        end
+        return refreshed
+    end
+
+    @test langevin_refresh_pattern(GlobalLangevin(stepsize = 0.1f0, adjusted = false), 4) ==
+        [true, false, false, false, true]
+    @test langevin_refresh_pattern(BlockLangevin(stepsize = 0.1f0, adjusted = false, block_size = 3), 3) ==
+        [true, false, false, true]
+
+    function adjusted_langevin_acceptance(algorithm)
+        graph = IsingGraph(
+            8,
+            Continuous(),
+            StateSet(-10f0, 10f0),
+            Clamping(1f0, fill(0f0, 8));
+            precision = Float32,
+            initial_state = 1f0,
+        )
+        temp!(graph, 1f0)
+        context = Processes.init(algorithm, (;model = graph))
+        Random.seed!(context.rng, 1)
+        before = copy(state(graph))
+        accepted = 0
+        for _ in 1:32
+            out = Processes.step!(algorithm, context)
+            context = merge(context, out)
+            accepted += out.accepted
+        end
+        changed = count(i -> before[i] != state(graph)[i], eachindex(before))
+        return accepted, changed
+    end
+
+    for algorithm in (
+        GlobalLangevin(stepsize = 0.01f0, max_drift_fraction = 0.15f0, adjusted = true),
+        BlockLangevin(stepsize = 0.01f0, max_drift_fraction = 0.15f0, adjusted = true, block_size = 4),
+    )
+        accepted, changed = adjusted_langevin_acceptance(algorithm)
+        @test accepted > 0
+        @test changed > 0
     end
 
     zero_temp_graph = IsingGraph(

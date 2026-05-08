@@ -25,17 +25,23 @@ function HamiltonianDisplayEntry(term_index, term_label, spec::HamiltonianDispla
 end
 
 """
-    HamiltonianParameterPanel(g, layer_idx, display_cell)
+    HamiltonianParameterPanel(g, layer_idx, display_cell; show_buttons = true)
 
-Left-side selector panel for graph state and Hamiltonian visualizations.
-Selectable entries are discovered with `hamiltonian_visualizations`.
-The selected entry is rendered into `display_cell`, usually the center of the
-simulation UI.
+Selector/display panel for graph state and Hamiltonian visualizations.
+Selectable entries are discovered with `hamiltonian_visualizations`. The
+selected entry is rendered into `display_cell`, usually the center of the
+simulation UI. Set `show_buttons = false` to keep the display behavior while
+hiding the left-side selector buttons.
 """
 struct HamiltonianParameterPanel <: AbstractPanel
     graph::Any
     layer_idx::Any
     display_cell::Any
+    show_buttons::Bool
+end
+
+function HamiltonianParameterPanel(graph, layer_idx, display_cell; show_buttons = true)
+    return HamiltonianParameterPanel(graph, layer_idx, display_cell, Bool(show_buttons))
 end
 
 axis_trait(::Type{HamiltonianParameterPanel}) = HasAxis()
@@ -43,31 +49,37 @@ axiskey(::Type{HamiltonianParameterPanel}) = :display_axis
 image_trait(::Type{HamiltonianParameterPanel}) = HasImage()
 
 function mount!(panel::HamiltonianParameterPanel, host::WindowHost, cell; kwargs...)
-    grid = GridLayout(cell, tellheight = false, valign = :top, halign = :left, width = 240)
+    grid_width = panel.show_buttons ? 240 : 0
+    grid = GridLayout(cell, tellheight = false, valign = :top, halign = :left, width = grid_width)
     handle = PanelHandle(panel, host, grid)
     handle[:display_grid] = GridLayout(panel.display_cell)
     rowgap!(handle[:display_grid], 8)
     handle[:entries] = _hamiltonian_display_entries(panel.graph)
     handle[:selected] = Observable(1)
+    handle[:selector_buttons] = Any[]
+    handle[:buttons_hidden] = !panel.show_buttons
     rowgap!(grid, 8)
 
-    Label(grid[1, 1], "Fields", fontsize = 13, halign = :left, tellwidth = false)
+    if panel.show_buttons
+        Label(grid[1, 1], "Fields", fontsize = 13, halign = :left, tellwidth = false)
 
-    for (idx, entry) in enumerate(handle[:entries])
-        button_label = _entry_button_label(entry)
-        button = Button(
-            grid[idx + 1, 1],
-            label = button_label,
-            fontsize = _entry_button_fontsize(button_label),
-            height = 28,
-            width = 230,
-            tellwidth = false,
-            halign = :left,
-        )
-        register!(handle, on(button.clicks) do _
-            handle[:selected][] = idx
-            _draw_hamiltonian_entry!(handle)
-        end)
+        for (idx, entry) in enumerate(handle[:entries])
+            button_label = _entry_button_label(entry)
+            button = Button(
+                grid[idx + 1, 1],
+                label = button_label,
+                fontsize = _entry_button_fontsize(button_label),
+                height = 28,
+                width = 230,
+                tellwidth = false,
+                halign = :left,
+            )
+            push!(handle[:selector_buttons], button)
+            register!(handle, on(button.clicks) do _
+                handle[:selected][] = idx
+                _draw_hamiltonian_entry!(handle)
+            end)
+        end
     end
 
     register!(handle, on(panel.layer_idx) do _

@@ -57,6 +57,8 @@ The returned step context includes:
 - `σ`: current Gaussian noise scale.
 - `group_steps`: effective group step count.
 - `block_size`: selected derivative block size for block Langevin outputs.
+- `refreshed_gradient`: true when this step recomputed the cached derivative
+  cycle for global or block Langevin.
 - `gradient_max`: maximum absolute derivative in the stored derivative buffer.
 - `gradient_rms`: derivative RMS over the derivatives measured by this call,
   except `LocalLangevin`, where a step is one spin and this is the absolute
@@ -122,8 +124,9 @@ GlobalLangevin(;
 )
 ```
 
-`GlobalLangevin` recomputes the derivative for every active spin, then selects
-one active spin and proposes a single-spin move. The proposal is stored as a
+`GlobalLangevin` recomputes the derivative for every active spin at the start
+of a cached cycle, shuffles the active indices, then consumes that cached
+gradient one spin per `Processes.step!`. The proposal is stored as a
 `FlipProposal`.
 
 For the selected spin `i`, the adjusted proposal is
@@ -134,7 +137,8 @@ y_i = x_i - \eta\,\partial_i H(x) + \sqrt{2\eta T}\,\xi,
 ```
 
 If `adjusted=true`, an out-of-bounds proposal is rejected. Otherwise the
-single-spin proposal is accepted or rejected as one Metropolis-Hastings move.
+single-spin proposal is accepted or rejected as one Metropolis-Hastings move
+using the cached drift that generated the proposal.
 
 If `adjusted=false`, the selected coordinate is reflected into its layer bounds,
 written to the graph state, and marked accepted.
@@ -154,11 +158,12 @@ BlockLangevin(;
 )
 ```
 
-`BlockLangevin` is between local and global Langevin. Each step refreshes a
-random cyclic block of active-spin derivatives. If there are `n` active spins
-and `m = min(block_size, n)`, the algorithm chooses a random cyclic offset and
-takes `m` consecutive active indices modulo `n`. It then proposes one spin from
-that block.
+`BlockLangevin` is between local and global Langevin. At the start of a cached
+cycle it refreshes a random cyclic block of active-spin derivatives. If there
+are `n` active spins and `m = min(block_size, n)`, the algorithm chooses a
+random cyclic offset and takes `m` consecutive active indices modulo `n`. It
+then shuffles that block and consumes one cached derivative per
+`Processes.step!`.
 
 The adjusted proposal and acceptance rule are the same as `GlobalLangevin`, but
 the derivative refresh is restricted to the selected block.
@@ -171,9 +176,10 @@ attempts one spin update.
 
 ## Adjusted Versus Unadjusted
 
-`adjusted=true` means the proposal is a Metropolis-adjusted Langevin proposal.
-For positive temperature, finite derivatives, exact `ΔH`, and fixed stepsize,
-this is the Boltzmann-correct path.
+`adjusted=true` means the proposal is accepted with a Metropolis-Hastings
+correction. `LocalLangevin` uses the usual current-gradient single-spin MALA
+correction. `GlobalLangevin` and `BlockLangevin` use the cached drift that
+generated the proposal in both the forward and reverse proposal densities.
 
 `adjusted=false` means the proposal is reflected into bounds and accepted
 without a Metropolis-Hastings correction. This can be useful for interactive or

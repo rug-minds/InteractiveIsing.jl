@@ -1,3 +1,5 @@
+export Bilinear, MagField
+
 include("EmptyHamiltonian.jl")
 include("Polynomial.jl")
 include("Bilinear.jl")
@@ -7,3 +9,4 @@ include("GaussianBernoulli.jl")
 include("Clamping.jl")
 include("DepolarisationField.jl")
 include("Coulomb.jl")
+

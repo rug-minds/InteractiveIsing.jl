@@ -259,6 +259,8 @@ end
     parameter_panel = handle.children[:hamiltonian_parameters]
     entries = parameter_panel[:entries]
     labels = getfield.(entries, :term_label)
+    @test !parameter_panel[:buttons_hidden]
+    @test length(parameter_panel[:selector_buttons]) == length(entries)
     @test Windows.hasaxis(parameter_panel)
     @test Windows.getaxis(parameter_panel) === parameter_panel[:display_axis]
     @test Windows.hasimage(handle)
@@ -332,6 +334,28 @@ end
     temperature_panel[:slider].value[] = 1.5f0
     @test temp(g) ≈ 1.5f0
     @test getproperty(getproperty(process.context, :Metropolis_1), :T) ≈ 1.5f0
+
+    close(host)
+    @test host.closed
+end
+
+@testset "SimulationPanel hidden left buttons" begin
+    g = IsingGraph(3, 3, Continuous(), StateSet(-1.0f0, 1.0f0); precision = Float32)
+    host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    handle = Windows.panel!(host, Windows.SimulationPanel(g; hide_left_buttons = true), (1, 1))
+    parameter_panel = handle.children[:hamiltonian_parameters]
+
+    @test handle.panel.hide_left_buttons
+    @test !parameter_panel.panel.show_buttons
+    @test parameter_panel[:buttons_hidden]
+    @test isempty(parameter_panel[:selector_buttons])
+    @test haskey(parameter_panel, :display_axis)
+    @test Windows.hasaxis(parameter_panel)
+    @test Windows.tofigure(handle) isa Figure
+
+    state(g[1]) .= 0.75f0
+    Windows._tick!(host)
+    @test all(parameter_panel[:display_obs][] .== 0.75f0)
 
     close(host)
     @test host.closed

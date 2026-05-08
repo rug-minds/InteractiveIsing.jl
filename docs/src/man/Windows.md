@@ -17,6 +17,13 @@ you want to close the window from code:
 close(host)
 ```
 
+The standard window accepts layout options through keyword arguments. To keep
+the central graph/field display but hide the left Hamiltonian selector buttons:
+
+```julia
+host = interface(g; hide_left_buttons = true)
+```
+
 ## Default Simulation Interface
 
 The default interface contains:
@@ -27,6 +34,10 @@ The default interface contains:
 - a central layer display;
 - a temperature slider that stays synchronized with `temp(g)`;
 - bottom magnetization and defect controls.
+
+With `hide_left_buttons = true`, the left selector is collapsed and the central
+display starts on the graph state. This is useful when you want the standard
+simulation controls but do not need to switch Hamiltonian fields from the UI.
 
 The pause button controls graph processes only. It does not pause the window
 frame or polling timers, so the display continues to update while you inspect or
