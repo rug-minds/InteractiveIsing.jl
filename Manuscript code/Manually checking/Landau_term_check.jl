@@ -165,10 +165,17 @@ target_x = sort([-bmin, -amin, amin, bmin])
 # Mode 2: old manual mode. Tune a,c,d,e; b is solved so +/-1 is stationary.
 # ----------------------------------------------------------------------
 # a1 = -2
-# c1 = -2
-# d1 = 1
-# e1 = 2
+# c1 = 10
+# d1 = -1
+# e1 = 0
 # b1 = b_for_extremum_at(a1, c1, d1, e1; target = 1)
+
+a1 = -0.2
+b1 = -1.4
+c1 = 1
+d1 = 0
+e1 = 0
+
 
 Ex1 = range(-1.5, 1.5, length = 1000)
 Ex2 = range(-1.0, 1.0, length = 1000)
@@ -190,14 +197,15 @@ println("target minima/points = ", target_x)
 println("E(targets)  = ", [landau_energy(x, a1, b1, c1, d1, e1) for x in target_x])
 println("E'(targets) = ", [landau_d1(x, a1, b1, c1, d1, e1) for x in target_x])
 
-fig = Figure()
-ax = Axis(fig[1, 1], xlabel = "P", ylabel = "Landau energy")
-# lines!(ax, Ex1, Ey1)
-# scatter!(ax, target_x, target_y, color = :red, markersize = 10)
-# display(fig)
-# f1 = fig
+fig = Figure(size = (1000, 400))
 
-lines!(ax, Ex2, Ey2)
-scatter!(ax, target_x, target_y, color = :red, markersize = 10)
+ax1 = Axis(fig[1, 1], xlabel = "P", ylabel = "Landau energy", title = "Ex1 / Ey1")
+lines!(ax1, Ex1, Ey1)
+scatter!(ax1, target_x, target_y, color = :red, markersize = 10)
+
+ax2 = Axis(fig[1, 2], xlabel = "P", ylabel = "Landau energy", title = "Ex2 / Ey2")
+lines!(ax2, Ex2, Ey2)
+scatter!(ax2, target_x, target_y, color = :red, markersize = 10)
+
 display(fig)
-f2 = fig
+f = fig

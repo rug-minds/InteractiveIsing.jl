@@ -3,6 +3,16 @@ struct TrianglePulseA{T} <: ProcessAlgorithm
     numpulses::Int
 end
 
+accepted_proposal_delta(proposal::InteractiveIsing.FlipProposal) = InteractiveIsing.accepteddelta(proposal)
+
+function accepted_proposal_delta(proposal::InteractiveIsing.MultiSpinProposal)
+    total = zero(eltype(proposal))
+    @inbounds for i in 1:length(proposal)
+        total += InteractiveIsing.accepteddelta(proposal, i)
+    end
+    return total
+end
+
 function Processes.init(tp::TrianglePulseA, args)
     steps = num_calls(args)
     num_samples = steps / (4 * tp.numpulses)

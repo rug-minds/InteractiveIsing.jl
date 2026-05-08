@@ -37,13 +37,73 @@ function save_series_figure(path; x, y, xlabel, ylabel = "Pr", title = "")
     return fig
 end
 
+_landau_is_scalar_coeff(coeff) = coeff isa Number
+_landau_has_spatial_coeffs(coeffs) = any(!_landau_is_scalar_coeff(coeff) for coeff in values(coeffs))
+
+function _mean_landau_coefficients(coeffs)
+    return Dict(
+        Int(order) => (
+            coeff isa Number ? Float64(coeff) : Float64(sum(coeff) / length(coeff))
+        )
+        for (order, coeff) in pairs(coeffs)
+    )
+end
+
+function _spatial_landau_energy_band(coeffs, xrange)
+    flattened = Dict{Int,Vector{Float64}}()
+    nsites = nothing
+
+    for (order, coeff) in pairs(coeffs)
+        coeff isa Number && continue
+        values_flat = Float64.(vec(coeff))
+        if isnothing(nsites)
+            nsites = length(values_flat)
+        else
+            length(values_flat) == nsites || error("All array-valued Landau coefficient fields must have the same size.")
+        end
+        flattened[Int(order)] = values_flat
+    end
+
+    isnothing(nsites) && error("Spatial Landau energy band requires at least one array-valued coefficient.")
+
+    xs = Float64.(collect(xrange))
+    mins = Vector{Float64}(undef, length(xs))
+    maxs = Vector{Float64}(undef, length(xs))
+    means = Vector{Float64}(undef, length(xs))
+    temp = Vector{Float64}(undef, nsites)
+
+    for (i, x) in pairs(xs)
+        fill!(temp, 0.0)
+        for (order, coeff) in pairs(coeffs)
+            power = x^order
+            if coeff isa Number
+                temp .+= Float64(coeff) * power
+            else
+                temp .+= flattened[Int(order)] .* power
+            end
+        end
+        mins[i] = minimum(temp)
+        maxs[i] = maximum(temp)
+        means[i] = sum(temp) / nsites
+    end
+
+    return (; xs, mins, maxs, means)
+end
+
 function save_landau_figure(path, p::ManuscriptParams; xrange = range(-1.5, 1.5, length = 1000))
     coeffs = landau_coefficients(p)
-    energy = [landau_energy(coeffs, x) for x in xrange]
-
     fig = Figure()
     ax = Axis(fig[1, 1]; xlabel = "Pr", ylabel = "Landau energy", title = "Landau energy")
-    lines!(ax, Float64.(collect(xrange)), Float64.(energy))
+
+    if _landau_has_spatial_coeffs(coeffs)
+        band = _spatial_landau_energy_band(coeffs, xrange)
+        lines!(ax, band.xs, band.means, color = :blue)
+        band!(ax, band.xs, band.mins, band.maxs, color = (:blue, 0.18))
+    else
+        energy = [landau_energy(coeffs, x) for x in xrange]
+        lines!(ax, Float64.(collect(xrange)), Float64.(energy))
+    end
+
     save(path, fig)
     return fig
 end
@@ -166,13 +226,15 @@ function save_run_outputs(g, p::ManuscriptParams; anneal = nothing, pulse = noth
     param_keys = String[
         "JIsing", "a1", "b1", "c1", "E_barrier", "Eypp_1", "xL", "yL", "zL",
         "Scale", "Screening", "Steps_1", "time_fctr", "anneal_time",
-        "point_repeat", "Temp_aneal", "landau_mode", "landau_coeffs",
+        "point_repeat", "Temp_aneal", "proposal_delta", "algorithm_name", "algorithm_kwargs",
+        "landau_mode", "landau_coeffs",
         "landau_2", "landau_4", "landau_6", "landau_8", "landau_10",
     ]
     param_values = Any[
         p.JIsing, p.a1, d.b1, p.c1, d.E_barrier, d.Epp_1, p.xL, p.yL, p.zL,
         p.Scale, p.Screening, p.Steps_1, p.time_fctr, d.anneal_time,
-        d.point_repeat, p.Temp_aneal, p.landau_mode, d.landau_coeffs,
+        d.point_repeat, p.Temp_aneal, p.proposal_delta, p.algorithm_name, p.algorithm_kwargs,
+        p.landau_mode, d.landau_coeffs,
         get(coeffs, 2, missing), get(coeffs, 4, missing), get(coeffs, 6, missing),
         get(coeffs, 8, missing), get(coeffs, 10, missing),
     ]

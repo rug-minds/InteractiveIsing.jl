@@ -11,11 +11,14 @@ Base.@kwdef struct ManuscriptParams
     Steps_1::Int = 6000
     Amp1::Float64 = 10.0
     nrepeats::Int = 2
+    proposal_delta::Any = nothing
+    algorithm_name::Symbol = :default
+    algorithm_kwargs::Any = (;)
     a1::Float64 = -2.0
     b1::Any = nothing
     c1::Float64 = 10.0
     landau_coeffs::Any = nothing
-    landau_mode::Symbol = :coupled_diag
+    landau_mode::Symbol = :independent_lp
     landau_storage::Any = UniformArray
     outdir::String = raw"D:\Code\data\Manuscript\Demo1"
 end
@@ -93,31 +96,17 @@ function _poly_term(order::Integer; c = UniformArray(1.0f0), localpotential = g 
     return PolynomialHamiltonian(order; c, localpotential)
 end
 
+_landau_storage(storage, value = 0.0f0) =
+    storage === UniformArray ? UniformArray(value) : (g -> filltype(storage, value, statelen(g)))
+
 function _normalized_landau_mode(mode::Symbol)
-    mode == :coupled && return :coupled_diag
     mode == :independent && return :independent_lp
     return mode
 end
 
-function _coupled_diag_landau_hamiltonian(p::ManuscriptParams, coeffs)
-    a2 = get(coeffs, 2, nothing)
-    isnothing(a2) && error("Coupled diag Landau mode requires a 2nd-order coefficient, e.g. landau_coeffs = Dict(2=>a, 4=>b, 6=>c).")
-    a2 isa Number || error("Coupled diag mode requires a scalar 2nd-order coefficient. Use landau_mode = :independent_lp for per-site Landau coefficients.")
-
-    ham = Ising(b = StateLike(UniformArray, 0.0f0))
-    ham += CoulombHamiltonian(scaling = p.Scale, screening = p.Screening, recalc = 1000)
-
-    for order in sort(collect(keys(coeffs)))
-        order == 2 && continue
-        ham += _poly_term(order; c = coeffs[order] / a2)
-    end
-
-    return ham
-end
-
 function _independent_lp_landau_hamiltonian(p::ManuscriptParams, coeffs)
-    localpotential = StateLike(p.landau_storage, 0.0f0)
-    ham = Ising(b = StateLike(UniformArray, 0.0f0), localpotential = localpotential)
+    localpotential = _landau_storage(p.landau_storage, 0.0f0)
+    ham = Ising(b = UniformArray(0.0f0), localpotential = localpotential)
     ham += CoulombHamiltonian(scaling = p.Scale, screening = p.Screening, recalc = 1000)
 
     for order in sort(collect(keys(coeffs)))
@@ -131,23 +120,27 @@ end
 function landau_hamiltonian(p::ManuscriptParams)
     coeffs = landau_coefficients(p)
     mode = _normalized_landau_mode(p.landau_mode)
-    if mode == :coupled_diag
-        return _coupled_diag_landau_hamiltonian(p, coeffs)
-    elseif mode == :independent_lp
+    if mode == :independent_lp
         return _independent_lp_landau_hamiltonian(p, coeffs)
     else
-        error("Unknown landau_mode $(p.landau_mode). Use :coupled_diag or :independent_lp.")
+        error("Unknown landau_mode $(p.landau_mode). Use :independent or :independent_lp.")
     end
+end
+
+function _set_landau_lp!(term, coeff)
+    if coeff isa Number
+        term.lp[] = coeff
+    else
+        length(coeff) == length(term.lp) ||
+            throw(DimensionMismatch("Landau coefficient field length $(length(coeff)) does not match localpotential length $(length(term.lp))."))
+        term.lp .= reshape(vec(coeff), size(term.lp))
+    end
+    return term
 end
 
 function _set_landau_value!(term, coeff)
     term.c[] = one(eltype(term.c))
-    if coeff isa Number
-        term.lp[] = coeff
-    else
-        term.lp .= coeff
-    end
-    return term
+    return _set_landau_lp!(term, coeff)
 end
 
 _poly_order(term::PolynomialHamiltonian) = typeof(term).parameters[1]
@@ -155,10 +148,8 @@ _poly_order(term::PolynomialHamiltonian) = typeof(term).parameters[1]
 function apply_landau_coefficients!(g, p::ManuscriptParams)
     coeffs = landau_coefficients(p)
     mode = _normalized_landau_mode(p.landau_mode)
-
-    if mode == :coupled_diag
-        adj(g)[1, 1] = coeffs[2]
-        return g
+    mode == :independent_lp || begin
+        error("Unknown landau_mode $(p.landau_mode). Use :independent or :independent_lp.")
     end
 
     for term in InteractiveIsing.hamiltonians(g.hamiltonian)
@@ -172,9 +163,11 @@ function apply_landau_coefficients!(g, p::ManuscriptParams)
 end
 
 function build_graph(p::ManuscriptParams; wg = default_weight_generator())
+    proposer_args = isnothing(p.proposal_delta) ? () : (LocalProposer(p.proposal_delta),)
     g = IsingGraph(
         p.xL, p.yL, p.zL,
         Continuous(),
+        proposer_args...,
         wg,
         LatticeConstants(1.0, 1.0, 1.0),
         landau_hamiltonian(p),
@@ -186,4 +179,16 @@ function build_graph(p::ManuscriptParams; wg = default_weight_generator())
     apply_landau_coefficients!(g, p)
     temp!(g, p.Temp)
     return g
+end
+
+function select_dynamics(g, p::ManuscriptParams)
+    name = p.algorithm_name
+    kwargs = p.algorithm_kwargs
+
+    name in (:default, :metropolis) && return g.default_algorithm
+    name == :local_langevin && return LocalLangevin(; kwargs...)
+    name == :global_langevin && return GlobalLangevin(; kwargs...)
+    name == :block_langevin && return BlockLangevin(; kwargs...)
+
+    error("Unknown algorithm_name $(repr(name)). Use :default, :metropolis, :local_langevin, :global_langevin, or :block_langevin.")
 end

@@ -32,10 +32,12 @@ base = MT.ManuscriptParams(;
     Steps_1 = 6000,
     Amp1 = 10.0,
     nrepeats = 2,
+    algorithm_name = :metropolis,
+    algorithm_kwargs = (;),
     a1 = -2.0,
     b1 = nothing,  # default: b1 = -(a1 + 3c1) / 2
     c1 = 10.0,
-    landau_mode = :coupled,
+    landau_mode = :independent,
     landau_coeffs = nothing,
 )
 
@@ -49,63 +51,95 @@ base = MT.ManuscriptParams(;
 
 function make_anneal_run(g, p)
     parts = MT.anneal_components(g, p)
-    (; d, metropolis, annealing, M_Integrator, M_Logger, B_Logger, T_Logger) = parts
+    (; d, dynamics, annealing, M_Integrator, M_Logger, B_Logger, T_Logger) = parts
+    point_repeat = max(1, round(Int, d.point_repeat))
+    anneal_time = max(1, round(Int, d.anneal_time))
 
-    metro_t = CompositeAlgorithm(
-        metropolis, M_Integrator, M_Logger, B_Logger, T_Logger,
-        (1, 1, d.point_repeat, d.point_repeat, d.point_repeat),
-        Route(metropolis => M_Integrator, :proposal => :Δvalue,
-            transform = proposal -> InteractiveIsing.accepteddelta(proposal)),
-        Route(M_Integrator => M_Logger, :total => :value),
-        Route(metropolis => B_Logger, :hamiltonian => :value,
-            transform = x -> x.b[]),
-        Route(metropolis => T_Logger, :model => :value,
-            transform = InteractiveIsing.temp),
-    )
+    Metro_T = @CompositeAlgorithm begin
+        @alias dynamics = dynamics
+        @alias M_Integrator = M_Integrator
+        @alias M_Logger = M_Logger
+        @alias B_Logger = B_Logger
+        @alias T_Logger = T_Logger
 
-    anneal_part = CompositeAlgorithm(
-        metro_t, annealing,
-        (1, d.point_repeat),
-        Route(metropolis => annealing, :model),
-    )
+        proposal = dynamics()
+        total = M_Integrator(
+            Δvalue = @transform(MT.accepted_proposal_delta, proposal),
+        )
+        @every point_repeat M_Logger(value = total)
+        @every point_repeat B_Logger(
+            value = @transform(x -> x.b[], dynamics.hamiltonian),
+        )
+        @every point_repeat T_Logger(
+            value = @transform(InteractiveIsing.temp, dynamics.model),
+        )
+    end
 
-    algorithm = Routine(anneal_part, (d.anneal_time,))
+    anneal_part = @CompositeAlgorithm begin
+        @alias annealing = annealing
+        @context metro_t = Metro_T()
+
+        @every point_repeat annealing(model = metro_t.dynamics.model)
+    end
+
+    algorithm = @Routine begin
+        @repeat anneal_time anneal_part()
+    end
     return MT.anneal_run(algorithm, parts)
 end
 
 function make_pulse_run(g, p; capture_dir = joinpath(p.outdir, "capture"))
     parts = MT.pulse_components(g, p; capture_dir)
-    (; d, metropolis, pulse, M_Integrator, M_Logger, B_Logger, Graph_Logger) = parts
+    (; d, dynamics, pulse, M_Integrator, M_Logger, B_Logger, Graph_Logger) = parts
+    point_repeat = max(1, round(Int, d.point_repeat))
+    capture_interval1 = max(1, round(Int, d.capture_interval1))
+    capture_interval2 = max(1, round(Int, d.capture_interval2))
+    pulse_time = max(1, round(Int, d.pulse_time))
+    relax_time = max(1, round(Int, d.relax_time))
 
-    metro_pulse = CompositeAlgorithm(
-        metropolis, M_Integrator, M_Logger, B_Logger,
-        (1, 1, d.point_repeat, d.point_repeat),
-        Route(metropolis => M_Integrator, :proposal => :Δvalue,
-            transform = proposal -> InteractiveIsing.accepteddelta(proposal)),
-        Route(M_Integrator => M_Logger, :total => :value),
-        Route(metropolis => B_Logger, :hamiltonian => :value,
-            transform = x -> x.b[]),
-    )
+    Metro_Pulse = @CompositeAlgorithm begin
+        @alias dynamics = dynamics
+        @alias M_Integrator = M_Integrator
+        @alias M_Logger = M_Logger
+        @alias B_Logger = B_Logger
 
-    pulse_part = CompositeAlgorithm(
-        metro_pulse, pulse, Graph_Logger,
-        (1, d.point_repeat, d.capture_interval1),
-        Route(metropolis => Graph_Logger, :model => :array,
-            transform = MT.graph_array),
-    )
+        proposal = dynamics()
+        total = M_Integrator(
+            Δvalue = @transform(MT.accepted_proposal_delta, proposal),
+        )
+        @every point_repeat M_Logger(value = total)
+        @every point_repeat B_Logger(
+            value = @transform(x -> x.b[], dynamics.hamiltonian),
+        )
+    end
 
-    relax_part = CompositeAlgorithm(
-        metro_pulse, Graph_Logger,
-        (1, d.capture_interval2),
-        Route(metropolis => Graph_Logger, :model => :array,
-            transform = MT.graph_array),
-    )
+    pulse_part = @CompositeAlgorithm begin
+        @alias pulse = pulse
+        @alias Graph_Logger = Graph_Logger
+        @context metro_pulse = Metro_Pulse()
 
-    algorithm = Routine(
-        pulse_part, relax_part,
-        (d.pulse_time, d.relax_time),
-        Route(metropolis => pulse, :hamiltonian, :M),
-    )
+        @every point_repeat pulse(
+            hamiltonian = metro_pulse.dynamics.hamiltonian,
+            M = metro_pulse.dynamics.M,
+        )
+        @every capture_interval1 Graph_Logger(
+            array = @transform(MT.graph_array, metro_pulse.dynamics.model),
+        )
+    end
+
+    relax_part = @CompositeAlgorithm begin
+        @alias Graph_Logger = Graph_Logger
+        @context metro_pulse = Metro_Pulse()
+
+        @every capture_interval2 Graph_Logger(
+            array = @transform(MT.graph_array, metro_pulse.dynamics.model),
+        )
+    end
+
+    algorithm = @Routine begin
+        @repeat pulse_time pulse_part()
+        @repeat relax_time relax_part()
+    end
 
     return MT.pulse_run(algorithm, parts)
 end
@@ -207,25 +241,23 @@ end
 ###############################################################################
 
 function example_landau_variants(base)
-    # Original Basefile style:
+    # Original Basefile coefficients:
     # E(P) = a1*P^2 + b1*P^4 + c1*P^6
-    # In :coupled mode the higher-order terms are stored as ratios to the
-    # quadratic coefficient, matching:
-    #   Ising(...) + Quartic(c=b1/a1) + Sextic(c=c1/a1)
+    # Landau coefficients are passed directly as localpotential values.
     p1 = MT.update_params(
         base;
-        landau_mode = :coupled,
+        landau_mode = :independent,
         a1 = -2.0,
         b1 = nothing,
         c1 = 10.0,
-        outdir = joinpath(base.outdir, "landau_coupled_246"),
+        outdir = joinpath(base.outdir, "landau_246"),
     )
 
     # Explicit coefficients. This is the clearer way when you already know
     # a, b, c and do not want b1 computed from a1/c1.
     p2 = MT.update_params(
         base;
-        landau_mode = :coupled,
+        landau_mode = :independent,
         landau_coeffs = Dict(2 => -2.0, 4 => 14.0, 6 => 10.0),
         outdir = joinpath(base.outdir, "landau_explicit_246"),
     )
@@ -234,7 +266,7 @@ function example_landau_variants(base)
     # even orders, so this can include 8th and 10th order terms.
     p3 = MT.update_params(
         base;
-        landau_mode = :coupled,
+        landau_mode = :independent,
         landau_coeffs = Dict(2 => -6, 4 => 16.25, 6 => -16.73, 8 => 7.4, 10 => -1.2),
         outdir = joinpath(base.outdir, "landau_246810"),
     )
