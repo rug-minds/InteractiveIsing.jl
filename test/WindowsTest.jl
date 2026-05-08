@@ -45,6 +45,14 @@ end
 
     close(host)
     @test resource.closed[]
+
+    native_host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    native_handle = Windows.panel!(native_host, :test, TestPanel(), (1, 1))
+    native_resource = native_handle[:resource]
+    native_host.open[] = false
+    @test native_host.closed
+    @test native_handle.closed
+    @test !native_resource.closed[]
 end
 
 @testset "PolledObservable setter and polling" begin
@@ -60,7 +68,7 @@ end
     @test po[] == 3
 end
 
-@testset "ContextLinesPanel figure construction" begin
+@testset "InteractiveLinesPanel and ContextLinesPanel figure construction" begin
     ctx = InteractiveIsing.Processes.ProcessContext(
         (;
             demo = InteractiveIsing.Processes.SubContext(:demo, (; x = collect(1:5), y = collect(2:2:6)), (), ()),
@@ -84,6 +92,7 @@ end
         (1, 1),
     )
 
+    @test handle.panel isa Windows.InteractiveLinesPanel
     @test String(handle[:axis].xlabel[]) == "x"
     @test String(handle[:axis].ylabel[]) == "y"
     @test String(handle[:axis].title[]) == "tracked"
@@ -98,7 +107,7 @@ end
 
     ctx.demo.x[1] = 10
     push!(ctx.demo.y, 8, 10)
-    Windows._tick!(host)
+    Windows._poll!(host)
     @test parent(handle[:x_obs][]) === ctx.demo.x
     @test parent(handle[:y_obs][]) === ctx.demo.y
     @test length(handle[:x_obs][]) == 5
@@ -112,6 +121,35 @@ end
     probe = Ref(:probe)
     probe_ctx = Dict(probe => (; xs = [1, 2], ys = [3, 4]))
     @test Windows._context_var_value(probe_ctx, probe => :xs) == [1, 2]
+
+    xs = Float64[]
+    ys = Float64[]
+    mat = Ref([1.0 2.0; 3.0 4.0])
+    owned_host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    owned_handle = Windows.panel!(
+        owned_host,
+        Windows.InteractiveLinesPanel(
+            () -> begin
+                push!(xs, length(xs) + 1)
+                push!(ys, sum(abs2, mat[]))
+                return xs, ys
+            end;
+            update_rate = 0,
+        ),
+        (1, 1),
+    )
+
+    @test parent(owned_handle[:x_obs][]) === xs
+    @test parent(owned_handle[:y_obs][]) === ys
+    @test collect(owned_handle[:x_obs][]) == [1.0]
+    @test collect(owned_handle[:y_obs][]) == [30.0]
+    mat[] .= 2.0
+    Windows._poll!(owned_host)
+    @test collect(owned_handle[:x_obs][]) == [1.0, 2.0]
+    @test collect(owned_handle[:y_obs][]) == [30.0, 16.0]
+
+    close(owned_host)
+    @test owned_host.closed
 end
 
 @testset "ConnectionsPanel figure construction" begin
@@ -133,6 +171,73 @@ end
     @test length(handle[:edge_points][]) == 9
     @test length(handle[:edge_colors][]) == 9
     @test length(handle[:edge_weights]) == 1
+    @test Windows.hasaxis(handle)
+    @test Windows.getaxis(handle) === handle[:axis]
+    @test Windows.hasimage(handle)
+    @test Windows.tofigure(handle) isa Figure
+    export_path = tempname() * ".png"
+    @test Windows.axis_to_png(export_path, handle) == export_path
+    @test isfile(export_path)
+    @test filesize(export_path) > 0
+    rm(export_path; force = true)
+    @test Windows.toimage(export_path, handle; px_per_unit = 1) == export_path
+    @test isfile(export_path)
+    @test filesize(export_path) > 0
+    rm(export_path; force = true)
+
+    close(host)
+    @test host.closed
+end
+
+@testset "AllLayersViewPanel figure construction" begin
+    g = IsingGraph(
+        Layer(2, 3, Continuous(), StateSet(-1.0f0, 1.0f0), Coords(y = 0, x = 0, z = 0)),
+        Layer(2, 3, Continuous(), StateSet(-1.0f0, 1.0f0), Coords(y = 0, x = 1, z = 0));
+        precision = Float32,
+    )
+    host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    handle = Windows.panel!(host, Windows.AllLayersViewPanel(g; labels = false), (1, 1))
+
+    @test Windows.hasaxis(handle)
+    @test Windows.hasimage(handle)
+    @test Windows.getaxis(handle) === handle[:axis]
+    @test length(handle[:placements]) == 2
+    @test length(handle[:plots]) == 2
+    @test handle[:placements][1].x0 == 0.0f0
+    @test handle[:placements][1].x1 == 3.0f0
+    @test handle[:placements][2].x0 == 3.0f0
+    @test handle[:placements][2].x1 == 6.0f0
+    @test Windows.tofigure(handle) isa Figure
+
+    state(g[1]) .= 0.5f0
+    Windows._tick!(host)
+    @test all(handle[:layer_observables][1][] .== 0.5f0)
+
+    duplicate = IsingGraph(
+        Layer(2, 2, Continuous(), StateSet(-1.0f0, 1.0f0), Coords(y = 0, x = 0, z = 0)),
+        Layer(2, 2, Continuous(), StateSet(-1.0f0, 1.0f0), Coords(y = 0, x = 0, z = 0));
+        precision = Float32,
+    )
+    duplicate_host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    @test_throws ArgumentError Windows.panel!(
+        duplicate_host,
+        Windows.AllLayersViewPanel(duplicate),
+        (1, 1),
+    )
+    close(duplicate_host)
+
+    missing_coords = IsingGraph(
+        Layer(2, 2, Continuous(), StateSet(-1.0f0, 1.0f0)),
+        Layer(2, 2, Continuous(), StateSet(-1.0f0, 1.0f0), Coords(y = 0, x = 1, z = 0));
+        precision = Float32,
+    )
+    missing_host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    @test_throws ArgumentError Windows.panel!(
+        missing_host,
+        Windows.AllLayersViewPanel(missing_coords),
+        (1, 1),
+    )
+    close(missing_host)
 
     close(host)
     @test host.closed
@@ -154,14 +259,37 @@ end
     parameter_panel = handle.children[:hamiltonian_parameters]
     entries = parameter_panel[:entries]
     labels = getfield.(entries, :term_label)
+    @test Windows.hasaxis(parameter_panel)
+    @test Windows.getaxis(parameter_panel) === parameter_panel[:display_axis]
+    @test Windows.hasimage(handle)
+    @test Windows.hasimage(handle.children[:status])
+    @test Windows.hasimage(handle.children[:temperature])
+    @test Windows.hasimage(handle.children[:magnetization])
+    @test Windows.tofigure(parameter_panel) isa Figure
+    @test Windows.tofigure(handle) isa Figure
+    @test Windows.tofigure(host) isa Figure
+    export_path = tempname() * ".png"
+    @test Windows.toimage(export_path, handle) == export_path
+    @test isfile(export_path)
+    @test filesize(export_path) > 0
+    rm(export_path; force = true)
+    @test Windows.toimage(export_path, host; px_per_unit = 1) == export_path
+    @test isfile(export_path)
+    @test filesize(export_path) > 0
+    rm(export_path; force = true)
+    @test Windows.fullimage(export_path, host; px_per_unit = 1) == export_path
+    @test isfile(export_path)
+    @test filesize(export_path) > 0
+    rm(export_path; force = true)
     @test !isempty(entries)
     @test :state in getfield.(entries, :name)
     @test :lp in getfield.(entries, :name)
     @test :b in getfield.(entries, :name)
     @test :c ∉ getfield.(entries, :name)
     @test :J ∉ getfield.(entries, :name)
-    @test any(occursin("Quadratic{", label) for label in labels)
-    @test any(occursin("MagField{", label) for label in labels)
+    @test any(occursin("Quadratic", label) for label in labels)
+    @test any(occursin("MagField", label) for label in labels)
+    @test all(!occursin("{", label) for label in labels)
     @test all(!occursin("PolynomialHamiltonian", label) for label in labels)
 
     display_notifications = Ref(0)
@@ -245,7 +373,9 @@ end
     @test :u in getfield.(entries, :name)
     @test Symbol("ρ") in getfield.(entries, :name)
     @test :localpotential ∉ getfield.(entries, :name)
-    @test any(occursin("CoulombHamiltonian{", label) for label in labels)
+    @test any(occursin("CoulombHamiltonian", label) for label in labels)
+    @test all(!occursin("CoulombInternal", label) for label in labels)
+    @test all(!occursin("Parameters", label) for label in labels)
     @test haskey(handle.children, :temperature)
     @test haskey(handle.children[:temperature], :slider)
     @test parameter_panel[:display_is_3d]

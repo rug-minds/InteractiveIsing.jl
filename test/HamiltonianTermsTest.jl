@@ -1,5 +1,6 @@
 using Test
 using InteractiveIsing
+using LinearAlgebra
 using SparseArrays
 
 struct MissingFillArray{T,N} <: AbstractArray{T,N} end
@@ -104,62 +105,81 @@ end
     @test occursin("lp = OffsetArray [Defaulted]", term_type_text)
 end
 
-@testset "GaussianBernoulli Template Semantics" begin
-    g = IsingGraph(3, Continuous(); precision = Float32)
-    spins = Float32[0.25, -0.5, 0.75]
-    InteractiveIsing.graphstate(g) .= spins
+@testset "GaussianBernoulli GRBM Semantics" begin
+    visible = Layer(2, StateSet(-Inf, Inf), Continuous(); periodic = false)
+    hidden = Layer(2, StateSet(0, 1), Discrete(); periodic = false)
+    w = Float64[
+        0.2 -0.1
+        0.3  0.4
+    ]
+    μ = Float64[0.1, -0.2]
+    σ2 = Float64[0.7, 1.3]
+    logσ2 = log.(σ2)
+    b = Float64[0.05, -0.15]
+    g = IsingGraph(visible, hidden, GaussianBernoulli(; w, μ, logσ2, b); precision = Float64)
+    InteractiveIsing.graphstate(g) .= Float64[0.25, -0.5, 1, 0]
 
-    w = sparse(Float32[
-        0.0  0.2 -0.1
-        0.3  0.0  0.4
-       -0.2  0.5  0.0
-    ])
-    self = Float32[1.1, 1.2, 1.3]
-    σ = Float32[0.7, 0.8, 0.9]
-    μ = Float32[0.05, -0.1, 0.2]
-    b = Float32[0.3, -0.4, 0.5]
+    hterm = g.hamiltonian
+    v = Float64[0.25, -0.5]
+    h = Float64[1, 0]
+    logits = b .+ w' * (v ./ σ2)
+    expected_joint = 0.5 * sum((v .- μ) .^ 2 ./ σ2) - dot(v ./ σ2, w * h) - dot(b, h)
+    expected_marginal = 0.5 * sum((v .- μ) .^ 2 ./ σ2) - sum(log1p.(exp.(logits)))
+    expected_joint_grad = (v .- μ .- w * h) ./ σ2
+    expected_marginal_grad = (v .- μ .- w * (1 ./ (1 .+ exp.(-logits)))) ./ σ2
 
-    hterm = GaussianBernoulli(g; w, self, σ, μ, b)
-    proposal = FlipProposal(2, spins[2], Float32(0.125), 1)
+    @test InteractiveIsing.joint_energy(hterm, g) ≈ expected_joint
+    @test InteractiveIsing.calculate(InteractiveIsing.H(), hterm, g) ≈ expected_joint
+    @test InteractiveIsing.marginal_energy(hterm, g) ≈ expected_marginal
+    @test InteractiveIsing.hidden_logits(hterm, g) ≈ logits
+    @test InteractiveIsing.hidden_probabilities(hterm, g) ≈ 1 ./ (1 .+ exp.(-logits))
+    @test InteractiveIsing.visible_energy_gradient(hterm, g) ≈ expected_joint_grad
+    @test InteractiveIsing.marginal_visible_gradient(hterm, g) ≈ expected_marginal_grad
 
-    j = InteractiveIsing.at_idx(proposal)
-    oldstate = spins[j]
-    newstate = InteractiveIsing.to_val(proposal)
-    cum = sum(w[i, j] * spins[i] for i in 1:length(spins))
-    expected_ΔH = (newstate^2 - oldstate^2) * self[j] / σ[j]^2 +
-                  (oldstate - newstate) * (cum + 2 * μ[j] * σ[j] + b[j]) +
-                  Float32(0.5) * (newstate^2 - oldstate^2) +
-                  (oldstate - newstate) * b[j]
-    expected_d_iH = 2 * oldstate * self[j] / σ[j]^2 +
-                    (cum + 2 * μ[j] * σ[j] + b[j]) +
-                    oldstate + b[j]
-    expected_H_i = oldstate^2 * self[j] / σ[j]^2 +
-                   oldstate * (cum + 2 * μ[j] * σ[j] + b[j]) +
-                   Float32(0.5) * oldstate^2 +
-                   oldstate * b[j]
+    visible_proposal = FlipProposal(1, v[1], 0.4, 1)
+    expected_visible_ΔH = ((0.4 - μ[1])^2 - (v[1] - μ[1])^2) / (2 * σ2[1]) -
+                          (0.4 - v[1]) * dot(w[1, :], h) / σ2[1]
+    @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), hterm, g, visible_proposal) ≈ expected_visible_ΔH
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, 1) ≈ expected_joint_grad[1]
 
-    expected_dw = zeros(Float32, size(w))
-    for col in axes(w, 2)
-        for ptr in nzrange(w, col)
-            row = rowvals(w)[ptr]
-            expected_dw[row, col] = spins[row] * spins[col]
-        end
-    end
-    expected_dself = spins .^ 2 ./ σ .^ 2
-    expected_dσ = @. -2 * spins^2 * self / σ^3 + 2 * μ * spins
-    expected_dμ = @. 2 * σ * spins
-    expected_db = 2 .* spins
+    hidden_proposal = FlipProposal(4, 0.0, 1.0, 2)
+    @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), hterm, g, hidden_proposal) ≈ -logits[2]
+    @test_throws ArgumentError InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, 4)
 
-    @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), hterm, g, proposal) ≈ expected_ΔH
-    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, j) ≈ expected_d_iH
-    @test InteractiveIsing.calculate(InteractiveIsing.H_i(), hterm, g, j) ≈ expected_H_i
+    eps_fd = 1e-6
+    state = InteractiveIsing.graphstate(g)
+    old = state[1]
+    state[1] = old + eps_fd
+    e_plus = InteractiveIsing.joint_energy(hterm, g)
+    m_plus = InteractiveIsing.marginal_energy(hterm, g)
+    state[1] = old - eps_fd
+    e_minus = InteractiveIsing.joint_energy(hterm, g)
+    m_minus = InteractiveIsing.marginal_energy(hterm, g)
+    state[1] = old
+    @test (e_plus - e_minus) / (2eps_fd) ≈ expected_joint_grad[1] atol = 1e-7
+    @test (m_plus - m_minus) / (2eps_fd) ≈ expected_marginal_grad[1] atol = 1e-7
 
     deriv = InteractiveIsing.parameter_derivative(hterm, g)
-    @test Matrix(deriv.dw) ≈ expected_dw
-    @test deriv.dself ≈ expected_dself
-    @test deriv.dσ ≈ expected_dσ
-    @test deriv.dμ ≈ expected_dμ
-    @test deriv.db ≈ expected_db
+    @test deriv.dw ≈ -v ./ σ2 .* h'
+    @test deriv.dμ ≈ (μ .- v) ./ σ2
+    expected_dlogσ2 = -0.5 .* (v .- μ) .^ 2 ./ σ2 .+ v .* (w * h) ./ σ2
+    @test deriv.dlogσ2 ≈ expected_dlogσ2
+    @test deriv.db ≈ -h
+
+    sampler = GaussianBernoulliGibbsLangevin(; stepsize = 0.05, langevin_steps = 3, group_steps = 1, adjusted = false)
+    context = InteractiveIsing.Processes.init(sampler, (; model = g))
+    update = InteractiveIsing.Processes.step!(sampler, context)
+    new_state = InteractiveIsing.graphstate(g)
+    @test update.attempted == 1
+    @test update.accepted == 1
+    @test all(isfinite, new_state[InteractiveIsing.visible_indices(hterm, g)])
+    @test all(x -> x == 0.0 || x == 1.0, new_state[InteractiveIsing.hidden_indices(hterm, g)])
+
+    adjusted_sampler = GaussianBernoulliGibbsLangevin(; stepsize = 0.01, langevin_steps = 3, adjusted = true)
+    adjusted_context = InteractiveIsing.Processes.init(adjusted_sampler, (; model = g))
+    adjusted_update = InteractiveIsing.Processes.step!(adjusted_sampler, adjusted_context)
+    @test adjusted_update.attempted == 1
+    @test adjusted_update.accepted in (0, 1)
 end
 
 @testset "Hamiltonian Parameter Derivative Entry Point" begin

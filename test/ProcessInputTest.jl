@@ -28,6 +28,38 @@ using InteractiveIsing.Processes
     step_result = Processes.step!(LocalLangevin(adjusted = false, order = :deterministic), step_ctx)
     @test step_result.attempted == 1
 
+    function single_spin_langevin_change_count(algorithm)
+        graph = IsingGraph(
+            4,
+            Continuous(),
+            StateSet(-10f0, 10f0),
+            Clamping(1f0, fill(0f0, 4));
+            precision = Float32,
+            initial_state = 1f0,
+        )
+        temp!(graph, 0f0)
+        context = Processes.init(algorithm, (;model = graph))
+        before = copy(state(graph))
+        out = Processes.step!(algorithm, context)
+        after = state(graph)
+        return count(i -> before[i] != after[i], eachindex(before)), out
+    end
+
+    for algorithm in (
+        GlobalLangevin(stepsize = 0.1f0, adjusted = false, group_steps = 8),
+        GlobalLangevin(stepsize = 0.1f0, adjusted = true, group_steps = 8),
+        BlockLangevin(stepsize = 0.1f0, adjusted = false, block_size = 3, group_steps = 8),
+        BlockLangevin(stepsize = 0.1f0, adjusted = true, block_size = 3, group_steps = 8),
+        DynamicBlockLangevin(stepsize = 0.1f0, adjusted = false, max_blocksize = 3, group_steps = 8),
+        DynamicBlockLangevin(stepsize = 0.1f0, adjusted = true, max_blocksize = 3, group_steps = 8),
+    )
+        changed, out = single_spin_langevin_change_count(algorithm)
+        @test changed == 1
+        @test out.proposal isa FlipProposal
+        @test out.attempted == 1
+        @test out.accepted == 1
+    end
+
     zero_temp_graph = IsingGraph(
         1,
         1,
