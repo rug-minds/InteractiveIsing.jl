@@ -167,7 +167,7 @@ end
     else
         four_ηT = T(4) * η * max(t, eps(T))
         forward_mean = old_state - drift_step
-        reverse_mean = new_state - drift_step
+        reverse_mean = @inline _local_langevin_reverse_mean(dh, hamiltonian, model, spin_idx, old_state, new_state, η)
         log_forward_q = @inline _mala_log_kernel(new_state, forward_mean, four_ηT)
         log_reverse_q = @inline _mala_log_kernel(old_state, reverse_mean, four_ηT)
         log_acceptance = -ΔE / t + log_reverse_q - log_forward_q
@@ -221,6 +221,48 @@ end
             acceptance_rate = zero(SType), T, η, σ, group_steps = n_group_steps,
             refreshed_gradient = false, gradient_max = zero(SType),
             gradient_rms = zero(SType), reflected_fraction = zero(SType))
+    end
+
+    if use_adjusted
+        gradient_max = zero(SType)
+        gradient_sumsq = zero(SType)
+        @inbounds for spin_idx in active_spins
+            derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+            derivative = @inline _finite_derivative(SType(derivative))
+            dH_prealloc[spin_idx] = derivative
+            gradient_sumsq += derivative * derivative
+            gradient_max = max(gradient_max, abs(derivative))
+        end
+
+        k = @inline rand(rng, 1:n)
+        spin_idx = @inbounds active_spins[k]
+        derivative = @inbounds dH_prealloc[spin_idx]
+        σ = t > zero(SType) ? sqrt(SType(2) * η * t) : zero(SType)
+        proposal, ΔE, accepted, reflected = @inline _langevin_single_spin_proposal!(
+            langevin,
+            rng,
+            dh,
+            hamiltonian,
+            model,
+            layer_views,
+            spin_idx,
+            derivative,
+            η,
+            σ,
+            drift_fraction,
+            t,
+            true,
+        )
+
+        attempted = 1
+        acceptance_rate = SType(accepted)
+        gradient_rms = sqrt(gradient_sumsq / SType(n))
+        reflected_fraction = SType(reflected)
+        schedule_position[] = 0
+        schedule_length[] = 0
+        return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
+            group_steps = n_group_steps, refreshed_gradient = true,
+            gradient_max, gradient_rms, reflected_fraction)
     end
 
     refreshed = active_changed || schedule_position[] == 0 || schedule_position[] > schedule_length[]

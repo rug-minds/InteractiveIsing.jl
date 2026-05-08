@@ -85,6 +85,10 @@ using Random
         [true, false, false, false, true]
     @test langevin_refresh_pattern(BlockLangevin(stepsize = 0.1f0, adjusted = false, block_size = 3), 3) ==
         [true, false, false, true]
+    @test langevin_refresh_pattern(GlobalLangevin(stepsize = 0.1f0, adjusted = true), 4) ==
+        [true, true, true, true, true]
+    @test langevin_refresh_pattern(BlockLangevin(stepsize = 0.1f0, adjusted = true, block_size = 3), 3) ==
+        [true, true, true, true]
 
     function adjusted_langevin_acceptance(algorithm)
         graph = IsingGraph(

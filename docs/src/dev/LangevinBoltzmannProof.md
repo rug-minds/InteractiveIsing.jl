@@ -9,11 +9,11 @@ actual transition kernels used by this code.
 Implementation note: `GlobalLangevin` and `BlockLangevin` now commit one
 single-spin proposal per `Processes.step!`. Their "global" and "block" behavior
 is the derivative refresh scope, not a multi-spin state update. They cache a
-full global or block derivative cycle and consume that cache one spin at a time;
-the adjusted path uses the cached drift in both forward and reverse proposal
-density terms. Sections below that discuss historical all-active or block
-`MultiSpinProposal` kernels are kept as scratch notes until this proof is fully
-rewritten around the current single-spin implementation.
+full global or block derivative cycle only for unadjusted reflected dynamics;
+the adjusted path recomputes the relevant gradient scope at the current state
+for each single-spin MALA proposal. Sections below that discuss historical
+all-active or block `MultiSpinProposal` kernels are kept as scratch notes until
+this proof is fully rewritten around the current single-spin implementation.
 
 ## Target Distribution
 

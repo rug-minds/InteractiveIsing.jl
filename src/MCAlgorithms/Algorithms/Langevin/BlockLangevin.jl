@@ -276,6 +276,58 @@ end
     end
     dh = d_iH()
 
+    if Adjusted
+        m = @inline _draw_langevin_block_size(langevin, context, rng, n_active)
+        if length(block_idxs) < m
+            resize!(block_idxs, m)
+        end
+        @inline _fill_langevin_block!(block_idxs, active_spins, rng, m)
+        @inbounds for pos in 1:m
+            swap_pos = @inline rand(rng, pos:m)
+            block_idxs[pos], block_idxs[swap_pos] = block_idxs[swap_pos], block_idxs[pos]
+        end
+
+        gradient_max = zero(SType)
+        gradient_sumsq = zero(SType)
+        @inbounds for pos in 1:m
+            spin_idx = block_idxs[pos]
+            derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+            derivative = @inline _finite_derivative(SType(derivative))
+            dH_prealloc[spin_idx] = derivative
+            derivatives[pos] = derivative
+            gradient_sumsq += derivative * derivative
+            gradient_max = max(gradient_max, abs(derivative))
+        end
+
+        spin_idx = @inbounds block_idxs[1]
+        derivative = @inbounds derivatives[1]
+        proposal, ΔE, accepted, reflected = @inline _langevin_single_spin_proposal!(
+            langevin,
+            rng,
+            dh,
+            hamiltonian,
+            model,
+            layer_views,
+            spin_idx,
+            derivative,
+            η,
+            σ,
+            drift_fraction,
+            t,
+            true,
+        )
+
+        attempted = 1
+        acceptance_rate = SType(accepted)
+        gradient_rms = sqrt(gradient_sumsq / SType(m))
+        reflected_fraction = SType(reflected)
+        schedule_position[] = 0
+        schedule_length[] = 0
+        return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
+            group_steps = n_group_steps, block_size = m, refreshed_gradient = true,
+            gradient_max, gradient_rms, reflected_fraction)
+    end
+
     refreshed = active_changed || schedule_position[] == 0 || schedule_position[] > schedule_length[]
     if refreshed
         m = @inline _draw_langevin_block_size(langevin, context, rng, n_active)
