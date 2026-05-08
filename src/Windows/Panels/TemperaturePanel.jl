@@ -6,12 +6,16 @@ Panel that displays and edits graph temperature. The value is backed by a
 context temperature changes are reflected in the slider. UI-side changes write
 back to `temp!(g, x)` and compatible process-context temperature variables.
 """
-struct TemperaturePanel{G} <: AbstractPanel
-    graph::G
+struct TemperaturePanel <: AbstractPanel
+    graph::Any
     slider_max::Float64
 end
 
-TemperaturePanel(graph; slider_max = 20.0) = TemperaturePanel(graph, Float64(slider_max))
+image_trait(::Type{TemperaturePanel}) = HasImage()
+
+function TemperaturePanel(graph; slider_max = 20.0)
+    return TemperaturePanel(graph, Float64(slider_max))
+end
 
 function mount!(panel::TemperaturePanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell, halign = :center)
@@ -51,4 +55,9 @@ function mount!(panel::TemperaturePanel, host::WindowHost, cell; kwargs...)
     handle[:label_text] = lift(x -> "T: $(round(x, digits = 2))", po)
     handle[:label] = Label(grid[1, 1], handle[:label_text], fontsize = 18)
     return handle
+end
+
+function toimage!(cell, panel::TemperaturePanel, handle::PanelHandle; kwargs...)
+    value = haskey(handle, :slider) ? handle[:slider].value[] : temp(panel.graph)
+    return Label(cell, "T: $(round(value, digits = 2))", fontsize = 14, tellwidth = false, halign = :center)
 end

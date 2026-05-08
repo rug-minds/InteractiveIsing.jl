@@ -8,8 +8,8 @@ like that layer, or another shape supported by the panel's layer renderer.
 Use `layer_display` instead of constructing this wrapper directly in
 ordinary extension code.
 """
-struct LayerDisplayValue{F}
-    f::F
+struct LayerDisplayValue
+    f::Any
 end
 
 """
@@ -25,12 +25,12 @@ layer, or a `LayerDisplayValue`, which is evaluated for the selected
 layer. `colorrange = :layer` uses the layer state range; `colorrange = :data`
 uses the displayed data range.
 """
-struct HamiltonianDisplaySpec{V}
+struct HamiltonianDisplaySpec
     name::Symbol
     source::Symbol
     origin::Symbol
     info::String
-    value::V
+    value::Any
     colormap::Symbol
     colorrange::Symbol
 end
@@ -121,7 +121,9 @@ InteractiveIsing.Windows.displayable_hamiltonian_parameters(term::MyTerm, g) =
 For fully custom or derived displays, override `hamiltonian_visualizations`
 instead.
 """
-displayable_hamiltonian_parameters(term, g) = _state_sized_parameter_names(term, g)
+function displayable_hamiltonian_parameters(term, g)
+    return _state_sized_parameter_names(term, g)
+end
 
 """
     hamiltonian_visualizations(term, g) -> Vector{HamiltonianDisplaySpec}

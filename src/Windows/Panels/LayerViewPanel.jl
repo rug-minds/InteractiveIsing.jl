@@ -5,10 +5,13 @@ Display panel for the selected graph layer. Two-dimensional layers are shown
 with `image!`; three-dimensional layers are shown with `meshscatter!`. The 3D
 camera orientation is preserved across redraws.
 """
-struct LayerViewPanel{G, O} <: AbstractPanel
-    graph::G
-    layer_idx::O
+struct LayerViewPanel <: AbstractPanel
+    graph::Any
+    layer_idx::Any
 end
+
+axis_trait(::Type{LayerViewPanel}) = HasAxis()
+image_trait(::Type{LayerViewPanel}) = HasImage()
 
 function mount!(panel::LayerViewPanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell)
@@ -61,4 +64,34 @@ function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,3}) where {
     plot = handle[:plot] = meshscatter!(ax, xs, ys, zs, markersize = 0.3, color = obs, colormap = :thermal)
     _bind_layer_colorrange!(plot, obs, layer)
     return handle
+end
+
+function toimage!(cell, panel::LayerViewPanel, handle::PanelHandle; kwargs...)
+    return _with_layer(panel.graph, panel.layer_idx) do layer
+        _layer_view_toimage!(cell, layer, handle)
+    end
+end
+
+function _layer_view_toimage!(cell, layer::AbstractIsingLayer{T,2}, handle) where {T}
+    ax = Axis(cell, xrectzoom = false, yrectzoom = false, aspect = DataAspect())
+    ax.yreversed = @load_preference("makie_y_flip", default = false)
+    vals = _layer_state_values(layer)
+    plot = image!(ax, vals, colormap = :thermal, fxaa = false, interpolate = false)
+    _bind_layer_colorrange!(plot, Observable(vals), layer)
+    reset_limits!(ax)
+    return ax
+end
+
+function _layer_view_toimage!(cell, layer::AbstractIsingLayer{T,3}, handle) where {T}
+    ax = Axis3(cell)
+    if haskey(handle, :axis)
+        _restore_axis3_state!(ax, _axis3_state(handle[:axis]))
+    else
+        _restore_axis3_state!(ax, get(handle.data, :axis3_state, nothing))
+    end
+    xs, ys, zs = _coordinates_3d!(handle, size(layer))
+    vals = _cast_layer_state_vector(layer)
+    plot = meshscatter!(ax, xs, ys, zs, markersize = 0.3, color = vals, colormap = :thermal)
+    _bind_layer_colorrange!(plot, Observable(vals), layer)
+    return ax
 end

@@ -21,22 +21,25 @@ where `coords` is a layer coordinate tuple. `selection_mode = :incident` shows
 edges touching any selected node; `selection_mode = :within` shows only edges
 between selected nodes.
 """
-struct ConnectionsPanel{G,A,L,N,C,R,S} <: AbstractPanel
-    graph::G
+struct ConnectionsPanel <: AbstractPanel
+    graph::Any
     max_edges::Int
     show_nodes::Bool
-    selected_nodes::S
+    selected_nodes::Any
     selection_mode::Symbol
     curved::Bool
     curve_resolution::Int
     curve_amount::Float32
     color_by_strength::Bool
-    colormap::C
-    colorrange::R
-    axis_kwargs::A
-    line_kwargs::L
-    node_kwargs::N
+    colormap::Any
+    colorrange::Any
+    axis_kwargs::Any
+    line_kwargs::Any
+    node_kwargs::Any
 end
+
+axis_trait(::Type{ConnectionsPanel}) = HasAxis()
+image_trait(::Type{ConnectionsPanel}) = HasImage()
 
 function ConnectionsPanel(
     g;
@@ -104,6 +107,31 @@ function mount!(panel::ConnectionsPanel, host::WindowHost, cell; kwargs...)
         end
     end
     return handle
+end
+
+function toimage!(cell, panel::ConnectionsPanel, handle::PanelHandle; kwargs...)
+    total_edges = get(handle.data, :edge_count, 0)
+    nodes = handle[:node_points]
+    edge_points = handle[:edge_points][]
+
+    if _connection_plot_dimension(panel.graph) == 2
+        ax = Axis(cell; _connection_axis_kwargs(panel, total_edges)...)
+    else
+        ax = Axis3(cell; _connection_axis_kwargs(panel, total_edges)...)
+        if haskey(handle, :axis)
+            _restore_axis3_state!(ax, _axis3_state(handle[:axis]))
+        end
+    end
+
+    lines!(ax, edge_points; _connection_line_kwargs(panel, handle)...)
+    if panel.show_nodes
+        scatter!(ax, nodes; _connection_node_kwargs(panel)...)
+        selected = get(handle.data, :selected_nodes, nothing)
+        if !isnothing(selected) && !isempty(selected)
+            scatter!(ax, nodes[collect(selected)]; _selected_connection_node_kwargs(panel)...)
+        end
+    end
+    return ax
 end
 
 function _connection_axis_kwargs(panel::ConnectionsPanel, total_edges)

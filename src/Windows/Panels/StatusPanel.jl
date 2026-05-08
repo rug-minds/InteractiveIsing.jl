@@ -8,10 +8,12 @@ the selected layer.
 The pause label is polled from graph process state, so REPL-side process changes
 are reflected in the UI.
 """
-struct StatusPanel{G, O} <: AbstractPanel
-    graph::G
-    layer_idx::O
+struct StatusPanel <: AbstractPanel
+    graph::Any
+    layer_idx::Any
 end
+
+image_trait(::Type{StatusPanel}) = HasImage()
 
 function mount!(panel::StatusPanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell)
@@ -97,4 +99,18 @@ function mount!(panel::StatusPanel, host::WindowHost, cell; kwargs...)
         end
     end)
     return handle
+end
+
+function toimage!(cell, panel::StatusPanel, handle::PanelHandle; kwargs...)
+    grid = GridLayout(cell, tellheight = false)
+    ups = haskey(handle, :ups) ? round(handle[:ups][], digits = 2) : 0.0
+    upsps = haskey(handle, :upsps) ? round(handle[:upsps][], digits = 2) : 0.0
+    paused = haskey(handle, :graph_paused) ? handle[:graph_paused][] : _graph_paused(panel.graph)
+    Label(grid[1, 1], "Steps per second: $(ups)", fontsize = 12, halign = :left, tellwidth = false)
+    Label(grid[2, 1], "Steps/sec/unit: $(upsps)", fontsize = 12, halign = :left, tellwidth = false)
+    Label(grid[3, 1], paused ? "Paused" : "Running", fontsize = 12, halign = :left, tellwidth = false)
+    if haskey(handle.children, :layer_selector)
+        toimage!(grid[4, 1], handle.children[:layer_selector]; kwargs...)
+    end
+    return grid
 end

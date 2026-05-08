@@ -31,3 +31,12 @@ end
 
 
 export AverageCircular, avg
+
+function hamiltonian_or_nothing(hts, ::Type{T}) where {T}
+    for hterm in InteractiveIsing.hamiltonians(hts)
+        hterm isa T && return hterm
+    end
+    return nothing
+end
+
+export hamiltonian_or_nothing

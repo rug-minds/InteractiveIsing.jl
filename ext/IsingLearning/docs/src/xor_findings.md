@@ -1,163 +1,288 @@
 # XOR Findings
 
-Short notes from the XOR debugging runs so we do not repeat the same sweeps.
+These notes summarize the current XOR direction in `IsingLearning`. They are
+intended to prevent us from repeating the old single-equilibrium tuning loop.
 
-## Training Path
+## Active Training Path
 
-- The active path is `init_mnist_trainer -> _worker_process -> Forward_and_Nudged -> contrastive_gradient -> Optimisers.update`.
-- The old `ComputeGradients.jl`, `ChainRules.jl`, and `ep_train_step!` path was not used by these runs.
-- Input is written by `apply_input`, which turns off layer 1 in the `ToggledIndexSet` and writes the 16-pattern vector into `state(graph[1])`.
-- Output is evaluated by comparing the output vector against the false/true target patterns using dot products.
-- In the `Processes` DSL, the dynamics graph must be passed as `model`, and repeated dynamics must be rebound as `model = @repeat ... dynamics()`. The assignment receives the repeated algorithm output fields; it is not a literal capture of the whole return object.
-- `ext/IsingLearning/examples/xor_manual_step_debug.jl` bypasses `Process` scheduling and directly calls `Processes.step!` on the sampler context for each free/plus/minus phase. This is now the cleanest scheduling-independent debugging path.
+The path used by the current examples is:
+
+```text
+init_mnist_trainer
+-> _worker_process
+-> Forward_and_Nudged
+-> contrastive_gradient
+-> Optimisers.update
+```
+
+The old `ComputeGradients.jl`, `ChainRules.jl`, and `ep_train_step!` path is not
+part of these experiments.
 
 ## Gradient Sign
 
-- `Optimisers.update` subtracts the supplied gradient from parameters.
-- Laborieux et al. define the symmetric EP estimator in the primitive-function convention as `(∂Φ(sβ)/∂θ - ∂Φ(s-β)/∂θ)/(2β)`. With their nudging convention, this is the update direction, i.e. the negative loss gradient.
-- Our relaxation minimizes `H + βC`, so `Φ = -H`.
-- Therefore the loss gradient that should be passed to `Optimisers.update` is `(∂H(sβ)/∂θ - ∂H(s-β)/∂θ)/(2β)`.
-- This is the current core `contrastive_gradient` sign.
-- Scalar analytic check against the actual code conventions: for `H=s²-bs`, `C=1/2(s-y)²`, `b=0.2`, `y=1`, `β=0.01`, the code gives `dL/db ≈ -0.450011`; exact `dL/db = -0.45`.
-- The bespoke-script sign flip (`ISING_XOR_SEARCH_GRADIENT_SIGN=-1`) lowered deterministic XOR MSE in some finite-relaxation runs, but that is not evidence that the converged-equilibrium EP sign is wrong. It is more likely a transient / nonconvergence / architecture effect.
+This is the sign convention to keep unless the core Hamiltonian convention
+changes.
 
-## Local Potentials
+1. The samplers minimize a Hamiltonian `H`.
+2. Positive clamping strength means the nudged dynamics minimize
+   `H(θ, s) + β C(s, y)`.
+3. Negative clamping strength means the anti-nudged dynamics minimize
+   `H(θ, s) - β C(s, y)`.
+4. Equilibrium propagation is often written with a primitive `Φ` that the
+   dynamics maximizes. In this codebase, `Φ = -H`.
+5. The symmetric estimator for the loss gradient to pass to
+   `Optimisers.update` is therefore:
 
-- For bounded continuous states `StateSet(-1, 1)` with `adjusted=true`, local potentials are not needed for boundedness.
-- A grid with local potentials `0.25, 1.0, 4.0` and shallow double wells did not improve XOR separation under bounded adjusted Langevin.
-- For adjusted bounded XOR, use `local_potential=0` and `double_well=0` as the clean baseline.
-- For unbounded Langevin, local potentials are still required to prevent blow-up.
+   ```math
+   \nabla_\theta L
+   \approx
+   \frac{\partial_\theta H(\theta, s_\beta)
+         - \partial_\theta H(\theta, s_{-\beta})}{2\beta}.
+   ```
 
-## Temperature
+6. `Optimisers.update` applies descent, so this is the object that should be
+   supplied as the gradient.
+7. `ext/IsingLearning/src/Gradient.jl` implements this by accumulating
+   parameter derivatives from the plus state and subtracting derivatives from
+   the minus state before the batch collector divides by `2β`.
 
-- Different validation seeds created fake before/after jumps. Use fixed validation seeds or average repeated validation runs.
-- `T=0` removes stochastic sampling noise and gives clearer sign diagnostics, but it can also get stuck.
-- With the mathematically correct core sign, `T=0` worsened MSE in the tested XOR setup. Treat this as a relaxation/architecture failure, not a sign proof.
-- With the flipped bespoke sign, `T=0` gave monotonic MSE decrease but still did not solve XOR. This is useful empirically but should not be moved into the core gradient rule.
-- Small nonzero temperature helps exploration but makes metrics noisy unless evaluation is repeated.
+Scalar analytic check against the code convention: for `H = s^2 - b s`,
+`C = 1/2 (s - y)^2`, `b = 0.2`, `y = 1`, and `β = 0.01`, the code gives
+`dL/db ≈ -0.450011`; the exact derivative is `-0.45`.
 
-## Langevin Variants
+## Why The Old XOR Path Was A Dead End
 
-- `LocalLangevin(adjusted=true)` is the safest Boltzmann-correct bounded sampler, but it is slow.
-- `GlobalLangevin(adjusted=true)` is usually too reject-heavy on bounded high-dimensional states.
-- `BlockLangevin(adjusted=true)` is promising for speed, but it had a masking bug: it cached active spins from init and moved clamped input units after `apply_input`.
-- That bug was fixed by recomputing active spins inside `BlockLangevin.step!`.
+The old XOR debugging stack optimized one or a few relaxed states from a hard,
+bounded, mostly linear Ising system. That is a fragile target:
 
-## Current XOR Failure Mode
+- Bounded linear units tend to behave like threshold units near low temperature.
+- Small output nudges often do not produce a smooth hidden response.
+- When hidden units do respond, the response can be a discontinuous switch
+  rather than a useful infinitesimal susceptibility.
+- Accuracy could briefly reach `1.0` while margins stayed tiny and MSE stayed
+  high, so accuracy alone was not a reliable success criterion.
+- Longer runs and larger relaxation budgets improved some transients but did
+  not make the single-state objective robust.
 
-- With zero local potential and symmetric output patterns, the system strongly tends toward odd symmetry.
-- `(false,false)` and `(true,true)` are opposite input patterns but share the false label; one of those even-parity cases tends to stay wrong.
-- Small random initial magnetic-field bias lowers baseline MSE, but did not immediately fix 3/4 accuracy in the short runs.
-- Next useful knobs are symmetry breaking, readout/target encoding, and better convergence diagnostics before doing larger MNIST runs.
-- The XOR search script now restores the best epoch by validation accuracy first, with MSE only as a tie-breaker. The previous MSE-first rule could discard a higher-accuracy epoch.
-- The search script's per-config training seed is now controlled by `ISING_XOR_SEARCH_BASE_SEED`; the effective seed is `BASE_SEED + config_index`. This matters because stochastic Metropolis/discrete runs can show transient 4/4 validation for one seed and not another.
-- A long pre-patch Metropolis sweep printed one transient `acc=1.0` epoch for `hidden=(16,)`, `out=4`, `bias_scale=0.2`, `lr=0.05`, but rerunning the isolated config after the DSL/restore fixes did not reproduce it. Treat that hit as stochastic/non-reproducible until a fresh run can preserve it.
+The conclusion is not that EP has the wrong sign. The conclusion is that the
+single-equilibrium hard-Ising XOR setup is probably the wrong first debugging
+target.
 
-## Output Clamping
+## Current Direction
 
-- Direct `Clamping` implements `β/2 * sum_i (s_i - y_i)^2`, so it is only faithful when the task loss is direct squared error on output spin values.
-- For a mapped output such as `z = w' * s_out`, the correct squared-error nudging term is `β/2 * (z - y)^2`.
-- This creates cross terms between output spins, so block/global proposals need a custom `MultiSpinProposal` `ΔH`; decomposing into independent spin-MSE terms is not equivalent.
-- `LinearReadoutClamping` now exists in `ext/IsingLearning/src/ReadoutClamping.jl` for this extension-only experiment.
-- A short seed-1 run with `hidden=(16,)`, `out=2`, `bias_scale=0.1`, `relaxation=50` produced an inverted readout for both direct pattern clamping and `LinearReadoutClamping`. That points away from the new readout Hamiltonian as the sole cause.
-- Inspired by Laydevant et al. 2021, `ConstantLinearReadoutNudge` now supports a frozen free-phase readout error:
-  `H = -β * (target - free_score) * (w' * s_out)`.
-- On the current `hidden=(32,)`, `out=8`, bounded continuous baseline, constant nudging did not improve validation accuracy. A small `β in (0.1, 0.5, 1.0)` and `lr in (0.01, 0.02)` sweep still restored the pre-training `0.75` solution as best.
+The current XOR example is `examples/xor_statistical_ep.jl`.
 
-## Architecture Notes
+It intentionally simplifies the task encoding:
 
-- The XOR examples use `AllToAllWeightGenerator` between adjacent layers, so the hidden layer is fully connected to the input layer and the output/readout layer is fully connected to the previous layer. There are no same-layer hidden connections and no input-output skip connection in these architectures.
-- The custom XOR weight generator uses `randn`, so initial weights include both positive and negative values. The default `ReducedBoltzmannArchitecture` weight generator is different: if no generator is passed, it creates positive unit weights.
-- Example-local weight normalization was added with `ISING_XOR_SEARCH_WEIGHT_NORM` and `ISING_XOR_MANUAL_WEIGHT_NORM`. It rescales the signed weight vector to a target RMS after each optimiser update; it does not clip signs or force weights positive.
-- Best practical baseline so far: `hidden=(32,)`, `out=8`, bounded continuous states, adjusted local Langevin, no local potential, no double well.
-- `hidden=(64,)` did not improve XOR accuracy in the tested runs; it mostly increased parameter movement and changed margins.
-- `out=8` was better than `out=16` in the bounded adjusted no-local-potential runs.
-- `out=2` can show apparent jumps between 0.25/0.5/0.75 accuracy depending on validation seed, so it is noisy and not a reliable readout for judging learning.
-- `out=8` consistently starts around 3/4 accuracy and lowers MSE slightly, but still has one parity case wrong.
-- After the `model = @repeat ...` DSL fix, an accuracy-first block-Langevin sweep over `hidden=(32,)`, `out=8`, `bias_scale in (0.05, 0.1, 0.2)`, and three weight seeds still plateaued at 0.75 accuracy. Best MSE was about `1.3538`.
-- A discrete Metropolis probe with `hidden=(32,)`, `out=8`, `bias_scale=0.1`, flipped debug sign, and `relaxation_steps=300` also topped out at 0.75 and had much worse score MSE.
-- Manual stepping confirms the plateau is not just process scheduling. A deterministic manual `hidden=(32,)`, `out=8`, `constant_readout_hterm`, block-Langevin run with random init stayed at `0.5` in a 2-epoch smoke. With `init=ones`, it improved to `0.75` and MSE about `0.94`, but collapsed outputs close to all ones.
-- Manual discrete Metropolis with `hidden=(16,)`, `out=4`, `init=ones`, `bias_scale=0.2`, `lr=0.05`, `β=0.1` also topped out at `0.75`.
+- Input is four bipolar one-hot units, one for each XOR input case.
+- Output is two bipolar one-hot units: false is `[+1, -1]`, true is `[-1, +1]`.
+- The graph is all-to-all input-hidden-output.
+- There is no local potential and no double well in the default setup.
+- Direct `Clamping` is valid because the task loss is directly on the two
+  output spin values.
 
-## Manual Context Stepping
+The important change is statistical averaging:
 
-- `xor_manual_step_debug.jl` now uses `LayeredIsingGraphLayer` and `init_mnist_trainer` to build the same worker graph, `_state` buffers, and sampler context as the threaded path.
-- The manual loop now keeps the full worker `ProcessContext`, extracts the resolved identifiable `@dynamics` wrapper from the worker algorithm, and steps that wrapper directly.
-- The step call is `Processes.step!(dynamics_stepper, context, Processes.Unstable())`; the identifiable wrapper creates the context view and merges the return fields back into the full context.
-- `Unstable()` is intentional here because the first Langevin step adds diagnostics such as `acceptance_rate` and changes the initialized `group_steps` field from the config `Ref` into the scalar returned by `step!`.
-- This gives a scheduling-independent path while still using the real context initialization, input buffers, target buffers, and graph parameter sync helpers.
-- A one-epoch smoke with `relax=2` completed and showed nonzero gradients/updates, so the manual path is currently compiling and stepping through real dynamics contexts.
+- Each training sample is run from multiple initial states.
+- The contrastive gradients are averaged over those repeated relaxations.
+- Evaluation uses repeated relaxations and reports mean output, output
+  variance, MSE, and accuracy.
 
-## Weight-Normalized Architecture Probe
+This is closer to a stochastic/statistical EP diagnostic than to the old
+single-fixed-point search.
 
-Short block-Langevin survey: `constant_readout_hterm`, bounded continuous states, `bias_scale=0.1`, `lr=0.02`, `β=0.1`, `relaxation_steps=50`, `epochs=15`, `weight_norm=0.05`, `weight_seed=2`, `bias_seed=11`.
+## Current Baseline
 
-- `hidden=(32,)`, `out=8`: best of the probe, `0.75` accuracy, score MSE about `1.3637`; best epoch was still epoch 0.
-- `hidden=(64,)`, `out=8`: `0.75` accuracy, score MSE about `1.3758`; not better than hidden 32.
-- `hidden=(16,)`, `out=8`: `0.75` accuracy, score MSE about `1.3984`.
-- `out=4` with hidden 16/32/64 stayed at `0.5` accuracy.
-- Deeper `hidden=(32,16)` was worse in this probe: `out=4` reached only `0.25`, and `out=8` also stayed at `0.25`.
-- Weight normalization controlled the RMS exactly as intended, but it did not by itself create a learning improvement in this short sweep.
+The first useful baseline uses a cold but still finite temperature:
 
-## Paper-Inspired XOR Changes
+```text
+ISING_XOR_STAT_TEMP=0.001
+ISING_XOR_STAT_FREE_RELAXATION=50
+ISING_XOR_STAT_NUDGED_RELAXATION=50
+ISING_XOR_STAT_MINIT=4
+ISING_XOR_STAT_EVAL_REPEATS=16
+ISING_XOR_STAT_EPOCHS=500
+```
 
-- The 2026 architecture paper trains XOR for up to 20,000 epochs and uses `Minit = 5`, i.e. five random initial steady states per data sample per epoch, to handle multistability.
-- `ISING_XOR_SEARCH_MINIT` and `ISING_XOR_MANUAL_MINIT` were added to mirror this averaging in the local XOR scripts.
-- Scalar output (`out=1`) is now supported and is closer to the paper's single-output-node XOR setup.
-- `ISING_XOR_SEARCH_SKIP_WEIGHT_SCALE` adds direct input-output skip weights as an XOR-only architecture experiment. This was inspired by the paper's conclusion that higher-connectivity / skip-like lattices train better.
-- A critical issue with the original global-pattern XOR input is symmetry: `(false,false)` and `(true,true)` are exact negatives but have the same label. Without an additional constant feature, the trained/evaluated response tends to remain odd under `x -> -x`, causing the persistent 0.75 ceiling.
-- `ISING_XOR_SEARCH_INPUT_BIAS=true` appends one clamped constant input unit. With `hidden=(8,)`, `out=1`, `Minit=5`, `weight_norm=0.2`, `β=0.1`, `relax=100`, `weight_seed=2`, and base seed `21000`, the process-based search classified all four XOR inputs (`acc=1.0`) from the first epoch.
-- This is a representability / architecture success, not yet a robust learning success: a small seed sweep with `INPUT_BIAS=true` still produced 0.5 accuracy for several seeds. The current working setup has low margins, so the next target is robustness rather than mere existence.
-- The lower-error run uses `readout_hterm` rather than direct spin-pattern clamping. Exact rerun:
-  `hidden=(16,)`, `out=1`, `readout_target=0.2`, `INPUT_BIAS=true`, `Minit=5`, `weight_norm=0.2`, `lr=0.01`, `β=0.1`, `relax=100`, `BlockLangevin(adjusted=true)`, `weight_seed=2`, `bias_seed=11`, `base_seed=23000`.
-  It kept `acc=1.0` and lowered readout score MSE from `0.051938` to `0.045922` by epoch 450. Final outputs were approximately:
-  false/false `-0.114`, false/true `0.591`, true/false `0.079`, true/true `-0.106` for targets `-0.2, 0.2, 0.2, -0.2`.
-- That `acc=1.0` is not stable under heavier averaging over validation initial states. With the same untrained weights and `EVALUATION_REPEATS=50`, the averaged zero-epoch result was `acc=0.75`, score MSE `0.040384`, and one true case had negative score. So the earlier `acc=1.0` was a low-repeat/seed-dependent classification result, not an "all initial states classify correctly" result.
-- This explains why earlier `acc=1.0` did not imply minimal MSE: classification only needs the readout sign to be correct, while MSE also penalizes the score magnitude relative to the chosen target scale. `readout_target=0.2` is much better matched to the current output magnitudes than the old scalar pattern score target near `±2`.
-- A 10,000 epoch curve was saved from the same random signed `J` setup using `EVALUATION_REPEATS=5` and `LOG_EVERY=100`.
-  The MSE decreased from `0.051938` before training to a restored best of `0.033841` at epoch 5100. The final logged epoch 10000 had MSE `0.037398`, while best-epoch restoration returned the epoch-5100 parameters.
-  Accuracy was not robust throughout the run: it stayed at `1.0` for long stretches, dropped to `0.75` late in training, and returned to `1.0` at the final logged epoch. This supports optimizing readout MSE, but not yet robust classification across relaxation seeds.
-  Artifacts: `ext/IsingLearning/runs/xor_10k_20260504_202044/xor_10k_mse.png` and `xor_10k_mse.csv`.
-- The XOR search now supports `ISING_XOR_SEARCH_OUTPUT_CODE=orthogonal`. In that mode the two bipolar output patterns have dot product zero, and the readout vector is normalized so those extreme patterns score `-1` and `+1`.
-- With orthogonal output patterns, `out=4`, `readout_target=1.0`, and the same `hidden=(16,)`, `BlockLangevin`, `Minit=5`, `weight_norm=0.2`, `lr=0.01`, `β=0.1`, `relax=100` setup, the zero-epoch baseline is now meaningful: score MSE `1.006878`, accuracy `0.75`.
-- That orthogonal/`±1` 10,000 epoch run did not learn with the current hyperparameters. Best restored MSE was only `1.00215` at epoch 300, and the final logged epoch was worse (`1.045016`, accuracy `0.5`). Artifact: `ext/IsingLearning/runs/xor_10k_20260504_203500/xor_10k_mse.png`.
-- Re-running the same orthogonal/`±1` curve with the bespoke debug sign flip (`ISING_XOR_SEARCH_GRADIENT_SIGN=-1`) improved MSE slightly but did not solve XOR: before `1.006878`, best `0.993383` at epoch 9500, accuracy still `0.75`.
-- Relaxed-state diagnostics on the untrained orthogonal setup show that the hidden/output states do not mostly sit at the box extremes after the current relaxation budget. With `relaxation=100`, only about `8-12%` of hidden/output coordinates had `|s| >= 0.9`, while roughly half had `|s| < 0.5`. With `relaxation=1000`, the extreme fraction improved only modestly and remained far from a corner-dominated state. This means the present free relaxation is not behaving like a hard zero-temperature coordinate minimizer.
-- A free-phase equilibration curve was added in `ext/IsingLearning/examples/xor_relaxation_equilibration_curve.jl`.
-  For the untrained orthogonal setup, `stepsize=0.001`, `block_size=8`, and 20 active hidden/output units, one full sweep is `ceil(20/8)=3` block proposals. Over 20,000 full sweeps the free state keeps moving toward the boundary:
-  mean `|s|` rises from `0.5109` to `0.6543`, `frac |s| >= 0.9` rises from `0.1125` to `0.39375`, projected residual falls from `0.4934` to `0.2944`, and energy falls from `-0.4040` to `-6.3239`.
-  The curve has not fully plateaued at 20k sweeps, so the previous `relaxation=100` training phases are very likely far from equilibrium for this sampler/stepsize.
-  Artifact: `ext/IsingLearning/runs/xor_equilibration_20260504_225213/xor_equilibration.png`.
-- Larger stepsizes only help if the effective proposal is accepted/applied. With adjusted block Langevin, `stepsize=0.05` did not improve the 2k-sweep relaxation curve much, consistent with rejection-limited motion. With unadjusted block Langevin, `stepsize=0.05` rapidly extremized the free phase: by 100 full sweeps, mean `|s|` was `0.914`, `frac |s| >= 0.9` was `0.869`, projected residual was `0.0555`, and energy had dropped to `-9.79`; by 2000 full sweeps, mean `|s|` was `0.977` and `frac |s| >= 0.9` was `0.988`.
-  This suggests the EP-style relaxation runs should use a much larger effective step, likely with `adjusted=false`, while Boltzmann-correct adjusted sampling needs separate step-size/acceptance tuning.
+With the default architecture `4 -> 16 -> 2`, a 500-epoch probe moved from MSE
+about `1.00` to about `0.24`, with accuracy reaching `1.0` around epoch 150.
 
-## Bias / Symmetry Breaking
+A 1000-epoch probe with the same settings restored a best point with MSE about
+`0.089` and accuracy `1.0`. That crosses the first practical target for the
+simplified XOR task. Output variance is still noticeable, especially on one
+true case, so the next target is robustness over more validation repeats and
+seeds.
 
-- Zero initial bias keeps a strong symmetry and gives deterministic `T=0` MSE around `1.19` for `hidden=(32,)`, `out=8`.
-- Small random initial magnetic-field bias improves the baseline MSE:
-  - `bias_scale=0.05`, short run, `relax=100`: MSE around `0.943`, still 3/4 accuracy.
-  - Longer `relax=1000` runs with flipped sign still stayed at 3/4, but larger bias plus higher LR improved MSE.
-- In the current longer sweep, `hidden=(32,)`, `out=8`, `bias_scale=0.1`, `lr=0.02`, flipped sign reached the best seen MSE so far, about `1.1409` at epoch 100, then overtrained.
-- Higher LR (`0.02`) can improve faster but overtrains after roughly 50-100 epochs in these runs.
+Artifacts from the first successful probes:
 
-## Best Completed Sweep
+- `ext/IsingLearning/runs/xor_statistical_ep_probe_500_cold/`
+- `ext/IsingLearning/runs/xor_statistical_ep_probe_1000_cold/`
 
-Command family: bounded continuous XOR, adjusted local Langevin, `T=0`, no local potential, no double well, flipped bespoke gradient sign.
+## Multiplexed Pattern Probes
 
-- Best config:
-  - `hidden=(32,)`
-  - `out=8`
-  - `bias_scale=0.1`
-  - `lr=0.02`
-  - `beta=0.05`
-  - `relaxation_steps=1000`
-  - `stepsize=0.005`
-- Result:
-  - Before: MSE `1.192853`, accuracy `0.75`
-  - Best epoch: `100`
-  - Best/after: MSE `1.140863`, accuracy `0.75`, margin `0.372569`
-- Ranking trend:
-  - Hidden 32 beat hidden 64.
-  - Higher bias improved hidden 32.
-  - `lr=0.02` beat `lr=0.005`, but only with best-epoch restoration because later epochs overtrained.
-  - None of the tested configs reached 4/4 XOR classification.
+The distributed 4x4 pattern code works when the input codewords are actually
+mutually orthogonal.
+
+The failed first version used `0.5 * (±vertical + ±horizontal)`. Those are
+distinct multiplexed patterns, but they are not all pairwise orthogonal: cases
+that differ in both signs are anti-correlated. That version lowered MSE but
+collapsed the output margins to mostly the same sign.
+
+The corrected `examples/xor_multiplexed_patterns.jl` uses four Walsh-style
+4x4 input codewords:
+
+- constant
+- vertical
+- horizontal
+- checkerboard = vertical * horizontal
+
+The file now checks this at runtime:
+
+```text
+input_gram_offdiag = 0.0
+output_dot = 0.0
+```
+
+The output targets are direct 4x4 patterns: XOR false is the vertical pattern
+and XOR true is the horizontal pattern. The loss is direct output-spin MSE, and
+classification is nearest output pattern.
+
+Corrected all-to-all result:
+
+- architecture: `4x4 -> 4x4 -> 4x4`
+- 1500 epochs, otherwise the same statistical settings as the successful
+  two-output run
+- MSE went from about `1.05` to logged `0.068`
+- restored best evaluation gave MSE about `0.079`
+- accuracy was `1.0`
+
+Artifact:
+
+- `ext/IsingLearning/runs/xor_multiplexed_patterns_orthogonal_1500/`
+
+The square-local file is `examples/xor_conv_square_patterns.jl`.
+
+The current implementation keeps the normal worker/composite training path but
+uses a specialized index set for the embedded code:
+
+- input layer: `16x16`
+- hidden layer: configurable; the working run uses one `16x16` hidden layer
+- output layer: `16x16`
+- the 4x4 input/output code is embedded on `[3, 7, 11, 15]`
+- input code sites are frozen during free/nudged phases
+- only output code sites are sampled; non-code output sites are zeroed after
+  input application so they do not act as fixed random fields
+- adjacent layers use random square-local connections
+
+Important implementation fixes:
+
+- `Coordinate` iteration now iterates over `c.coords.I`. This preserves the
+  intended semantics and fixes the non-periodic same-layer `WeightGenerator`
+  path that surfaced in the square-local example.
+- The example uses `WeightGeneratorOld` for captured RNG same-layer generators
+  because `DirectMethod` cannot reliably introspect those anonymous keyword
+  closures on the current Julia path.
+- `apply_input` has an optional `:after_apply_input!` graph-addon hook. Existing
+  graphs are unchanged; the square-local example uses it to zero inactive
+  embedded output sites after every reset/input write.
+
+Dead ends checked:
+
+- Two hidden `16x16` layers with random same-layer NN weights did not separate
+  the XOR classes in short probes.
+- Keeping random same-layer NN weights in the one-hidden setup could reach
+  accuracy `1.0`, but parameter growth was unstable and MSE stayed high.
+- One-hot input codes did not improve the local square run; the orthogonal
+  Walsh-style code is not the main blocker.
+- Simply increasing relaxation helps MSE but can hurt class separation if the
+  recurrent random substrate is still present.
+
+Best square-local result so far:
+
+```text
+ISING_XOR_CONV_HIDDEN_LAYERS=1
+ISING_XOR_CONV_INTERNAL_WEIGHT_SCALE=0.0
+ISING_XOR_CONV_BIAS_SCALE=0.0
+ISING_XOR_CONV_FREE_RELAXATION=200
+ISING_XOR_CONV_NUDGED_RELAXATION=200
+ISING_XOR_CONV_BETA=0.2
+ISING_XOR_CONV_LR=0.001
+ISING_XOR_CONV_WEIGHT_DECAY=0.001
+ISING_XOR_CONV_GRAD_CLIP=30
+ISING_XOR_CONV_MINIT=4
+ISING_XOR_CONV_EVAL_REPEATS=32
+```
+
+This run keeps local inter-layer connectivity and the embedded 4x4 multiplexed
+input/output code, but disables random same-layer recurrent weights. It reached
+accuracy `1.0` and logged MSE about `0.104` at 12k epochs. The restored
+checkpoint reevaluation was MSE about `0.122`, accuracy `1.0`, which indicates
+remaining validation variance rather than a sign error.
+
+Artifacts:
+
+- `ext/IsingLearning/runs/xor_conv_nointernal_relax200_beta02_12000/`
+
+Interpretation: the square-local architecture can learn XOR, but the fully
+recurrent random in-layer substrate is too noisy for the present EP estimator.
+For now, use local inter-layer paths first, then reintroduce internal
+connections gradually with normalization or a much smaller scale.
+
+## Hidden Internal Connection Probe
+
+The successful square-local file and trained graph were snapshotted here:
+
+```text
+ext/IsingLearning/runs/snapshots/xor_conv_square_success_20260508_105831/
+```
+
+To test hidden same-layer connectivity without also perturbing the input and
+output substrates, `examples/xor_conv_square_patterns.jl` now has separate
+internal scales:
+
+```text
+ISING_XOR_CONV_INPUT_INTERNAL_WEIGHT_SCALE
+ISING_XOR_CONV_HIDDEN_INTERNAL_WEIGHT_SCALE
+ISING_XOR_CONV_OUTPUT_INTERNAL_WEIGHT_SCALE
+```
+
+The tested setup kept input/output internal scales at `0.0` and enabled only
+hidden-layer NN connections.
+
+Results after 5000 epochs with the same stable square-local settings:
+
+```text
+hidden internal scale 0.005  -> restored MSE about 0.360, accuracy 1.0
+hidden internal scale 0.001  -> restored MSE about 0.331, accuracy 1.0
+hidden internal scale 0.0001 -> restored MSE about 0.386, accuracy 1.0
+no hidden internal edges      -> restored MSE about 0.138 at 5000, accuracy 1.0
+```
+
+The embedded-pattern architecture should also give the input and output
+substrates internal connectivity, not only the hidden layer. Two all-substrate
+runs were checked with `NN = 5`, one hidden layer, input/hidden/output internal
+connections enabled, and the same 200/200 relaxation settings:
+
+```text
+all internal scales 0.001  -> restored MSE about 0.308, accuracy 1.0
+all internal scales 0.0001 -> restored MSE about 0.410, accuracy 1.0
+```
+
+So same-layer internal connections across input/hidden/output do not make the
+task impossible, but with the current random initialization and shared optimizer
+they still hurt output-vector MSE relative to the no-internal-edge control. This
+is not evidence against interconnected layers in general; it means random
+same-layer recurrent weights need additional control before they help. The next
+reasonable step is to add a separate normalization/decay policy for internal
+weights, or initialize internal edges near zero and train them with a smaller
+learning-rate multiplier than inter-layer weights.
+
+## Success Criteria
+
+Use MSE and robustness, not only classification:
+
+- First useful signal: mean-output MSE decreases from initialization.
+- Practical target: accuracy `1.0` and output MSE below `0.1` over repeated
+  initial states.
+- Also watch output standard deviation and free-to-nudged response norm. A
+  low-MSE result with high output variance is not yet robust.

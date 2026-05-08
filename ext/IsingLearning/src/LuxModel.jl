@@ -67,7 +67,7 @@ Equilibrium Propagation (EP).
 The **nudged phase** and **weight update** live in [`ep_train_step!`](@ref),
 which is called from your training loop.
 """
-struct LayeredIsingGraphLayer{G,I,O,B,D,V} <: LuxCore.AbstractLuxLayer
+struct LayeredIsingGraphLayer{G,I,O,B,D,N,V} <: LuxCore.AbstractLuxLayer
     model_graph::G
     input_layer::I
     output_layer::O
@@ -75,8 +75,11 @@ struct LayeredIsingGraphLayer{G,I,O,B,D,V} <: LuxCore.AbstractLuxLayer
     fullsweeps::Int
     nunits::Int
     dynamics_algorithm::D
+    nudged_dynamics_algorithm::N
     validation_algorithm::V
     relaxation_steps::Int
+    free_relaxation_steps::Int
+    nudged_relaxation_steps::Int
 end
 
 function LayeredIsingGraphLayer(graph_init;
@@ -85,12 +88,17 @@ function LayeredIsingGraphLayer(graph_init;
                       β::Real = 0.1f0,
                       fullsweeps::Integer = 50,
                       dynamics_algorithm = Metropolis(),
+                      nudged_dynamics_algorithm = dynamics_algorithm,
                       validation_algorithm = dynamics_algorithm,
-                      relaxation_steps::Union{Nothing, Integer} = nothing)
+                      relaxation_steps::Union{Nothing, Integer} = nothing,
+                      free_relaxation_steps::Union{Nothing, Integer} = nothing,
+                      nudged_relaxation_steps::Union{Nothing, Integer} = nothing)
 
     graph_init = graph_init isa Function ? graph_init() : graph_init
     n_units = nstates(graph_init)
     n_relaxation_steps = isnothing(relaxation_steps) ? fullsweeps * n_units : relaxation_steps
+    n_free_relaxation_steps = isnothing(free_relaxation_steps) ? n_relaxation_steps : free_relaxation_steps
+    n_nudged_relaxation_steps = isnothing(nudged_relaxation_steps) ? n_relaxation_steps : nudged_relaxation_steps
     beta = convert(eltype(graph_init), β)
     LayeredIsingGraphLayer(graph_init,
                  input_idxs,
@@ -99,8 +107,11 @@ function LayeredIsingGraphLayer(graph_init;
                  fullsweeps,
                  n_units,
                  dynamics_algorithm,
+                 nudged_dynamics_algorithm,
                  validation_algorithm,
-                 Int(n_relaxation_steps))
+                 Int(n_relaxation_steps),
+                 Int(n_free_relaxation_steps),
+                 Int(n_nudged_relaxation_steps))
 
 end
 
@@ -147,6 +158,7 @@ function _backward_process(layer::LayeredIsingGraphLayer, g)
             equilibrium_state = copy(state(g)),
         ),
         Input(:dynamics, model = g),
+        Input(:nudged_dynamics, model = g),
         Input(:plus_capture, state = g),
         Input(:minus_capture, state = g);
         repeat = 1,

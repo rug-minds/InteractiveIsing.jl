@@ -5,12 +5,11 @@ using Statistics
 # Run with:
 #     julia --project examples/DynamicBlockLangevin.jl
 #
-# DynamicBlockLangevin chooses a fresh block size for every proposal:
+# DynamicBlockLangevin chooses a fresh derivative block size for every cached
+# block cycle:
 #     m ~ Uniform(1:min(MaxBlockSize, n_active))
 #
-# For adjusted=true this is still a valid MH/MALA proposal as long as the block
-# size distribution does not depend on the current spin values. The block-size
-# probability is then the same forward and backward and cancels in the ratio.
+# Each step then attempts one spin update from that cached block.
 
 const SIDE = 32
 const NSTEPS = 2_000
@@ -46,7 +45,7 @@ function run_steps!(g, algorithm; nsteps = NSTEPS)
 
         accepted += out.accepted
         attempted += out.attempted
-        push!(block_sizes, length(out.proposal.at_idxs))
+        push!(block_sizes, out.block_size)
     end
 
     return (

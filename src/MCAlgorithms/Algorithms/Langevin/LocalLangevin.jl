@@ -169,9 +169,13 @@ end
 @inline function Processes.init(langevin::LocalLangevin{Order,Adjusted}, context::Cont) where {Order,Adjusted,Cont}
     (;model) = context
 
-    for layer in layers(model)
-        statetype(layer) isa Discrete &&
-            error("LocalLangevin requires Continuous layers; layer $(layeridx(layer)) is Discrete. " *
+    active_index_set = index_set(model)
+    active_spins = collect(@inline _active_spin_vector(active_index_set))
+    layer_views = layers(model)
+    for spin_idx in active_spins
+        is_discrete = @inline spin_idx_layer_dispatch(layer -> statetype(layer) isa Discrete, spin_idx, layer_views)
+        is_discrete &&
+            error("LocalLangevin requires Continuous active layers; layer $(spin_idx_to_layer_idx(spin_idx, layer_views)) is Discrete. " *
                   "Use a Metropolis or Heatbath algorithm for discrete spin models.")
     end
 
@@ -180,8 +184,6 @@ end
 
     hamiltonian = init!(hamiltonian, model)
     dH_prealloc = zeros(eltype(model), InteractiveIsing.nstates(model))
-    active_spins = collect(@inline _active_spin_vector(model))
-    layer_views = layers(model)
     T = temp(model)
     SType = eltype(model)
     stepsize_default = SType(langevin.stepsize)
@@ -204,7 +206,7 @@ end
     η = max(stepsize[], eps(SType))
     σ = zero(SType)
 
-    return (;model, hamiltonian, rng, dH_prealloc, active_spins,
+    return (;model, hamiltonian, rng, dH_prealloc, active_index_set, active_spins,
                 layer_views, stepsize, max_drift_fraction, group_steps,
                 adjusted, proposal, ΔE, accepted, attempted, T, η, σ,
                 gradient_max, gradient_rms, reflected_fraction,
@@ -490,9 +492,10 @@ end
     drift_fraction = clamp(max_drift_fraction[], epsT, one(SType))
     dh = d_iH()
     gradient_max = SType(@inline _langevin_unwrap_ref(@inline _langevin_context_value(context, :gradient_max, zero(SType))))
-    active_changed = @inline consume_changed!(model)
+    active_index_set = @inline _langevin_context_value(context, :active_index_set, model)
+    active_changed = @inline consume_changed!(active_index_set)
     if active_changed
-        @inline _set_local_langevin_active_spins!(context.active_spins, @inline _active_spin_vector(model))
+        @inline _set_local_langevin_active_spins!(context.active_spins, @inline _active_spin_vector(active_index_set))
     end
     active_spins = context.active_spins
 

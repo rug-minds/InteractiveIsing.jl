@@ -65,7 +65,7 @@ end
 Create a host around an existing Makie figure. This is useful for tests and for
 embedding panels without opening a GLMakie window.
 """
-function WindowHost(fig::Figure; screen = nothing, fps = 30, polling_rate = 10, open = Observable(true))
+function WindowHost(fig::Figure; screen = nothing, fps = 30, polling_rate = 10, open = Observable(true), start_timers = true)
     host = WindowHost(
         uuid1(),
         fig,
@@ -84,11 +84,36 @@ function WindowHost(fig::Figure; screen = nothing, fps = 30, polling_rate = 10, 
         false,
         false,
     )
+    start_timers && _start_host_timers!(host)
+    register!(host, on(host.open) do isopen
+        isopen || _native_close!(host)
+    end)
+    return host
+end
+
+function _start_host_timers!(host::WindowHost)
+    isnothing(host.frame_timer) || close(host.frame_timer)
+    isnothing(host.poll_timer) || close(host.poll_timer)
     host.frame_timer = PTimer(_ -> _tick!(host), 0.; interval = 1 / host.fps)
     host.poll_timer = PTimer(_ -> _poll!(host), 0.; interval = 1 / host.polling_rate)
+    return host
+end
+
+function _display_host!(host::WindowHost, title)
+    screen = GLMakie.Screen()
+    display(screen, host.figure)
+    GLFW.SetWindowTitle(to_native(screen), title)
+    host.screen = screen
+    host.open = events(host.figure).window_open
     register!(host, on(host.open) do isopen
-        isopen || close(host)
+        isopen || _native_close!(host)
     end)
+    register!(host, on(events(host.figure.scene).keyboardbutton) do _
+        if ispressed(host.figure, (Keyboard.left_super, Keyboard.w)) || ispressed(host.figure, (Keyboard.left_control, Keyboard.w))
+            close(host)
+        end
+    end)
+    _start_host_timers!(host)
     return host
 end
 
@@ -101,18 +126,9 @@ Open a GLMakie screen, display a new figure, and return the owning
 """
 function window(; title = "Interactive Ising Simulation", size = (1500, 1500), fps = 30, polling_rate = 10, kwargs...)
     fig = Figure(; size, kwargs...)
-    screen = GLMakie.Screen()
-    display(screen, fig)
-    GLFW.SetWindowTitle(to_native(screen), title)
-    host = WindowHost(fig; screen, fps, polling_rate, open = events(fig).window_open)
+    host = WindowHost(fig; screen = nothing, fps, polling_rate, open = Observable(true), start_timers = false)
     host.data[:title] = title
-
-    register!(host, on(events(fig.scene).keyboardbutton) do _
-        if ispressed(fig, (Keyboard.left_super, Keyboard.w)) || ispressed(fig, (Keyboard.left_control, Keyboard.w))
-            close(host)
-        end
-    end)
-    return host
+    return _display_host!(host, title)
 end
 
 Base.getindex(host::WindowHost, key::Symbol) = host.data[key]
@@ -126,6 +142,7 @@ Base.haskey(handle::PanelHandle, key::Symbol) = haskey(handle.data, key)
 _typename(value) = nameof(typeof(value))
 _window_title(host::WindowHost) = get(host.data, :title, "untitled")
 
+# TODO: Move shows into separate file
 function Base.show(io::IO, panel::AbstractPanel)
     print(io, _typename(panel), "(...)")
 end
@@ -318,12 +335,15 @@ function _cleanup_resource(resource)
 end
 
 _cleanup_resource!(::Nothing) = nothing
+
+# Does this one make sense?
 _cleanup_resource!(callback::FrameCallback) = filter!(!isequal(callback.callback), callback.host.frame_callbacks)
 function _cleanup_resource!(registration::PolledRegistration)
     filter!(!isequal(registration.observable), registration.host.pollables)
     close(registration.observable)
     return nothing
 end
+# What does it mean to clean a callback?
 _cleanup_resource!(callback::Function) = callback()
 _cleanup_resource!(observer::Observables.ObserverFunction) = off(observer)
 _cleanup_resource!(timer::PTimer) = close(timer)
@@ -361,7 +381,7 @@ function _resume_resource(resource)
     end
     return nothing
 end
-
+## What are these?
 close!(panel::AbstractPanel, handle::PanelHandle) = nothing
 pause!(panel::AbstractPanel, handle::PanelHandle) = nothing
 resume!(panel::AbstractPanel, handle::PanelHandle) = nothing
@@ -388,6 +408,40 @@ function Base.close(handle::PanelHandle)
     return nothing
 end
 
+function _mark_closed!(handle::PanelHandle)
+    handle.closed = true
+    for child in values(handle.children)
+        _mark_closed!(child)
+    end
+    empty!(handle.resources)
+    empty!(handle.children)
+    return nothing
+end
+
+function _native_close!(host::WindowHost)
+    (host.closed || host.closing) && return nothing
+    host.closing = true
+    isnothing(host.frame_timer) || close(host.frame_timer)
+    isnothing(host.poll_timer) || close(host.poll_timer)
+
+    for child in values(host.children)
+        try
+            close!(child.panel, child)
+        catch err
+            @warn "Error while closing native window panel" panel = child.panel exception = (err, catch_backtrace())
+        end
+        _mark_closed!(child)
+    end
+
+    empty!(host.children)
+    empty!(host.resources)
+    empty!(host.frame_callbacks)
+    empty!(host.pollables)
+    host.closed = true
+    host.closing = false
+    return nothing
+end
+
 """
     close(host::WindowHost)
 
@@ -399,8 +453,8 @@ function Base.close(host::WindowHost)
     (host.closed || host.closing) && return nothing
     host.closing = true
     should_close_screen = !isnothing(host.screen) && host.open[]
-    close(host.frame_timer)
-    close(host.poll_timer)
+    isnothing(host.frame_timer) || close(host.frame_timer)
+    isnothing(host.poll_timer) || close(host.poll_timer)
     for child in reverse(collect(values(host.children)))
         close(child)
     end

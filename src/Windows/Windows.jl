@@ -32,18 +32,22 @@ using ..InteractiveIsing: AbstractIsingLayer, Clamping, CoulombHamiltonian,
     CastVec, HamiltonianTerms, IsingGraph, MagField, PTimer, PolynomialHamiltonian,
     PolledObservable, Parameter, SingleLayerGraph, addRandomDefects!, adj, graphidxs,
     hamiltonian, hamiltonians, idxToCoord, inline_layer_dispatch, layers,
-    modulefolder, nstates, origin, parameters, plotCorr, poll!, processes,
+    modulefolder, nstates, origin, parameters, plotCorr, poll!, processes, coords,
     saveGImg, state, stateset, temp, temp!, value, wg
 
 export AbstractPanel, PanelHandle, WindowHost, SimulationPanel, StatusPanel,
-    ConnectionsPanel, ContextLinesPanel, HamiltonianDisplaySpec, HamiltonianParameterPanel,
-    LayerDisplayValue, LayerSelectorPanel, LayerViewPanel, TemperaturePanel, MagnetizationPanel,
-    close!, interface, layer_display, mount!, new_interface, panel!,
-    parameter_display, pause!, register!, register_frame!, register_polled!,
-    restart!, resume!, window, displayable_hamiltonian_parameters,
-    hamiltonian_visualizations
+    AllLayersViewPanel, ConnectionsPanel, ContextLinesPanel, HamiltonianDisplaySpec, HamiltonianParameterPanel,
+    InteractiveLinesPanel, LayerDisplayValue, LayerSelectorPanel, LayerViewPanel,
+    TemperaturePanel, MagnetizationPanel,
+    HasAxis, NoAxis, AxisTrait, HasImage, NoImage, ImageTrait,
+    axis_to_png, axis_trait, axiskey, fullimage, image_trait,
+    close!, getaxis, hasaxis, hasimage, interface, layer_display, mount!, new_interface,
+    panel!, parameter_display, pause!, register!, register_frame!,
+    register_polled!, restart!, resume!, tofigure, toimage, toimage!, window,
+    displayable_hamiltonian_parameters, hamiltonian_visualizations
 
 include("Core.jl")
+include("Interfaces.jl")
 include("Panels/Panels.jl")
 
 """

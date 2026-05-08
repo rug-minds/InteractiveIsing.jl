@@ -4,10 +4,12 @@
 Bottom panel that polls and displays the selected layer magnetization. It also
 contains the defect textbox and selected-layer weight-generator label.
 """
-struct MagnetizationPanel{G, O} <: AbstractPanel
-    graph::G
-    layer_idx::O
+struct MagnetizationPanel <: AbstractPanel
+    graph::Any
+    layer_idx::Any
 end
+
+image_trait(::Type{MagnetizationPanel}) = HasImage()
 
 function mount!(panel::MagnetizationPanel, host::WindowHost, cell; kwargs...)
     grid = GridLayout(cell, tellheight = false, tellwidth = false)
@@ -39,4 +41,13 @@ function mount!(panel::MagnetizationPanel, host::WindowHost, cell; kwargs...)
     wg_text = lift(i -> _with_layer(layer -> "$(wg(layer))", g, i), layer_idx)
     handle[:wf_label] = Label(mid_grid[0, 1], wg_text, fontsize = 12)
     return handle
+end
+
+function toimage!(cell, panel::MagnetizationPanel, handle::PanelHandle; kwargs...)
+    grid = GridLayout(cell, tellheight = false)
+    mag = _magnetization(panel.graph, panel.layer_idx)
+    Label(grid[1, 1], "Magnetization: $(round(mag, digits = 4))", fontsize = 14, halign = :center, tellwidth = false)
+    wg_text = _with_layer(layer -> "$(wg(layer))", panel.graph, panel.layer_idx)
+    Label(grid[2, 1], wg_text, fontsize = 11, halign = :center, tellwidth = false)
+    return grid
 end

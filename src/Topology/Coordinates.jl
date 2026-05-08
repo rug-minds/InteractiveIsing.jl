@@ -54,7 +54,7 @@ Base.:(-)(c1::Coordinate{N}, c2::Coordinate{N}) where N = delta(c1, c2)
 Base.abs(c::Coordinate{N}) where N = Coordinate(abs.(c.coords))
 
 Base.getindex(c::Coordinate, i::Int) = c.coords[i]
-Base.iterate(c::Coordinate, state = 1) = iterate(c.coords, state)
+Base.iterate(c::Coordinate, state = 1) = iterate(c.coords.I, state)
 Base.length(c::Coordinate{N}) where N = N
 Base.size(c::Coordinate{N}) where N = (length(c),)
 
