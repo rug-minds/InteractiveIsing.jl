@@ -31,9 +31,10 @@ g = IsingGraph(
 temp!(g, 18.64f0)
 state(g) .= 0f0
 
-# GlobalLangevin refreshes all active-spin derivatives, then attempts one spin
-# update per step. With unbounded spins there is no out-of-bounds rejection, so
-# the acceptance rate is controlled only by the MH ratio.
+# GlobalLangevin refreshes all active-spin derivatives once per cached cycle,
+# then attempts one spin update per step. With unbounded spins there is no
+# out-of-bounds rejection, so the acceptance rate is controlled only by the MH
+# ratio.
 algorithm = GlobalLangevin(
     stepsize  = 0.001f0,
     adjusted  = true,

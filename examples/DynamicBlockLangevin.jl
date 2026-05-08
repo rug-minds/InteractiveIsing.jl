@@ -5,10 +5,11 @@ using Statistics
 # Run with:
 #     julia --project examples/DynamicBlockLangevin.jl
 #
-# DynamicBlockLangevin chooses a fresh derivative block size for every step:
+# DynamicBlockLangevin chooses a fresh derivative block size for every cached
+# block cycle:
 #     m ~ Uniform(1:min(MaxBlockSize, n_active))
 #
-# Each step then attempts one spin update from that block.
+# Each step then attempts one spin update from that cached block.
 
 const SIDE = 32
 const NSTEPS = 2_000
