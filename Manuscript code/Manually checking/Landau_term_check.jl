@@ -173,8 +173,8 @@ target_x = sort([-bmin, -amin, amin, bmin])
 a1 = -0.2
 b1 = -1.4
 c1 = 1
-d1 = 0
-e1 = 0
+d1 = -1
+e1 = 1
 
 
 Ex1 = range(-1.5, 1.5, length = 1000)

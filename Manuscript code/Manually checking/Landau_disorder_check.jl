@@ -219,7 +219,7 @@ end
 ### struct start: TrianglePulseA (simple four-segment triangular waveform)
 ### Run with TrianlePulseA
 ###  /\
-### /  \    _____
+### /  \    
 ###     \  /
 ###      \/
 
@@ -673,8 +673,8 @@ Temp = 0.15
 a1 = -0.2
 b1 = -1.4
 c1 = 1
-d1 = 0
-e1 = 0
+d1 = -1
+e1 = 1
 
 nspins = xL * yL * zL
 coeff2 = fill(Float32(a1), nspins)
@@ -684,24 +684,26 @@ coeff8 = fill(Float32(d1), nspins)
 coeff10 = fill(Float32(e1), nspins)
 
 # Optional spatial disorder examples. Keep them off for the baseline check.
-apply_weak_landau_disorder = true
+apply_weak_landau_disorder = false
 if apply_weak_landau_disorder
     coeff2 .+= 0.1f0 .* randn(Float32, nspins)
     coeff4 .+= 0.8f0 .* randn(Float32, nspins)
     coeff6 .+= 0.5f0 .* randn(Float32, nspins)
-    # coeff8 .+= 0.01f0 .* randn(Float32, nspins)
-    # coeff10 .+= 0.01f0 .* randn(Float32, nspins)
+    coeff8 .+= 0.2f0 .* randn(Float32, nspins)
+    coeff10 .+= 0.2f0 .* randn(Float32, nspins)
 end
 
-proposal_delta = nothing  # use 0.1, 0.2, 0.5 for LocalProposer(delta)
+proposal_delta = 0.1  # use 0.1, 0.2, 0.5 for LocalProposer(delta)
 proposer_args = isnothing(proposal_delta) ? () : (LocalProposer(proposal_delta),)
 g = IsingGraph(xL, yL, zL, 
         Continuous(), 
         proposer_args...,
         wg5, 
         LatticeConstants(1.0, 1.0, 1.0),
-        Ising(b = UniformArray(0), localpotential = coeff2) + 
+        # Ising(b = UniformArray(0), localpotential = coeff2) + 
+            InteractiveIsing.MagField(b = 1) + InteractiveIsing.Bilinear() + 
             CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + 
+            Quadratic(localpotential = coeff2) +
             Quartic(localpotential = coeff4) + 
             Sextic(localpotential = coeff6) +
             Octic(localpotential = coeff8) +
@@ -719,10 +721,10 @@ interface(g)
 temp!(g, Temp)
 
 # ----- Annealing algorithm -----
-time_fctr= 2
+time_fctr= 1
 Steps_1= 1800
 
-Amp1 = 1.5
+Amp1 = 20
 nrepeats = 2
 pulse1 = TrianglePulseA(Amp1, nrepeats)
 pulse2 = SinPulseA(Amp1, nrepeats)
@@ -730,19 +732,22 @@ pulse3 = Unique(SinPulseA(Amp1, nrepeats))
 AnealingB = LinAnealingB(Temp_aneal, 0f0)
 # algorithm_name = :metropolis
 # algorithm_kwargs = (;)
-algorithm_name = :local_langevin
-algorithm_kwargs = (; stepsize = 0.05f0, adjusted = true)
+# algorithm_name = :local_langevin
+# algorithm_kwargs = (; stepsize = 0.02f0, adjusted = true)
 # algorithm_name = :global_langevin
-# algorithm_kwargs = (; stepsize = 0.01f0, adjusted = false)
-# algorithm_name = :block_langevin
-# algorithm_kwargs = (; stepsize = 0.02f0, block_size = 128, adjusted = false)
+# algorithm_kwargs = (; stepsize = 0.02f0, adjusted = true)
+algorithm_name = :block_langevin
+algorithm_kwargs = (; stepsize = 0.02f0, block_size = 10, adjusted = true)
 dynamics = select_dynamics(g, algorithm_name; algorithm_kwargs)
 
+
 fullsweep = xL*yL*zL
-anneal_time = time_fctr*fullsweep*Steps_1
-pulse_time = time_fctr*fullsweep*Steps_1
-relax_time = time_fctr/2*fullsweep*Steps_1
 point_repeat = fullsweep*time_fctr
+# point_repeat = time_fctr
+anneal_time = point_repeat*Steps_1
+pulse_time = point_repeat*Steps_1
+relax_time = point_repeat*Steps_1/2
+
 
 capture_interval1 = pulse_time/(nrepeats*4)
 capture_interval2 = relax_time/2 
