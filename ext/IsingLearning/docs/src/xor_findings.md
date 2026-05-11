@@ -3,6 +3,97 @@
 These notes summarize the current XOR direction in `IsingLearning`. They are
 intended to prevent us from repeating the old single-equilibrium tuning loop.
 
+## Current Successful Baseline
+
+The current strongest baseline is the honest two-input discrete XOR run:
+
+```text
+ext/IsingLearning/examples/xor_statistical_ep_2input.jl
+ext/IsingLearning/runs/xor_2input_discrete_T05_seed13/
+```
+
+Full run documentation is in
+[`xor_2input_discrete_success.md`](xor_2input_discrete_success.md).
+
+Short version:
+
+- input is the real two-bit code, not four-way one-hot:
+  `[-1, -1]`, `[-1, +1]`, `[+1, -1]`, `[+1, +1]`;
+- output is direct bipolar one-hot: false `[+1, -1]`, true `[-1, +1]`;
+- architecture is `2 -> 16 -> 2`;
+- state set is discrete `{-1, +1}`;
+- dynamics is `IsingMetropolis()` at `T = 0.5`;
+- Hamiltonian is `Bilinear + MagField + Clamping`;
+- there is no local potential and no double well;
+- training uses the verified symmetric EP gradient, not the target-free
+  surrogate;
+- free and nudged phases use `1000` Metropolis proposals each;
+- gradients are averaged over `Minit = 8` random starts per sample;
+- validation averages over `64` random starts.
+
+That run moved from MSE `1.11975`, accuracy `0.25` at epoch 0 to logged MSE
+`0.000244`, accuracy `1.0` around epochs 3500 to 4000. It saved the trained
+graph as:
+
+```text
+ext/IsingLearning/runs/xor_2input_discrete_T05_seed13/xor_statistical_ep_2input_trained_graph.jld2
+```
+
+What made it work:
+
+- discrete spins match the desired discrete output extremes;
+- finite temperature was essential: very low temperature froze the Markov
+  chain, while `T = 0.5` kept the plus/minus response alive;
+- repeated-state statistics made the gradient much less dependent on one
+  stochastic trajectory;
+- direct output clamping avoided the earlier readout/clamping mismatch;
+- the verified EP sign was used.
+
+Remaining caveat: this proves the architecture and learning rule can solve the
+honest XOR case, but seed robustness is not solved yet.
+
+## Continuous Langevin Baseline
+
+Continuous Langevin can also solve the honest two-input XOR task, but it needed
+a different effective-temperature regime from the discrete Metropolis run.
+
+Full run documentation is in
+[`xor_2input_langevin_success.md`](xor_2input_langevin_success.md).
+
+Successful run:
+
+```text
+state = continuous
+dynamics = BlockLangevin(adjusted=false, stepsize=0.1, block_size=8)
+init_mode = zero
+T = 0.001
+β = 1.0
+lr = 0.01
+weight_decay = 0
+free/nudged relaxation = 1000 / 1000
+Minit = 4
+eval repeats = 32
+```
+
+It reached logged MSE `0.0268`, accuracy `1.0` at epoch 1500, and restored
+best MSE about `0.038`, accuracy `1.0`.
+
+The earlier conclusion that Metropolis "worked better" was incomplete. The
+failed Langevin comparison used the Metropolis temperature `T=0.5`, random
+continuous initial states, smaller stepsize, smaller LR, and weight decay. In
+continuous bounded states that kept output means weak and output variance high.
+
+Current interpretation:
+
+- for discrete spins, `T=0.5` is a useful finite-temperature regime;
+- for continuous bounded Langevin, the same `T` is far too noisy for this
+  learned field scale;
+- the relevant quantity is closer to `T / typical |J|`;
+- weight growth and colder dynamics are needed to make the output states sit
+  near the target corners;
+- zero initialization reduced basin variance enough for this small all-to-all
+  test.
+
 ## Active Training Path
 
 The path used by the current examples is:
@@ -70,7 +161,7 @@ target.
 
 ## Current Direction
 
-The current XOR example is `examples/xor_statistical_ep.jl`.
+The first statistical XOR example was `examples/xor_statistical_ep.jl`.
 
 It intentionally simplifies the task encoding:
 
@@ -90,6 +181,29 @@ The important change is statistical averaging:
 
 This is closer to a stochastic/statistical EP diagnostic than to the old
 single-fixed-point search.
+
+That setup remains useful as a plumbing test, but it is not an honest XOR
+benchmark because the four-way one-hot input already separates the four input
+cases linearly. The honest all-to-all baseline is now the two-input discrete
+run documented above.
+
+## Local Checkerboard Double-Well Probe
+
+The local checkerboard experiment now has an optional static double well and
+temperature-annealed sampler wrapper. The local potential is not trainable.
+
+First 2x2 Langevin probes with `Minit = 4`, `500/500` free/nudged relaxation,
+and nudged temperature starting near the double-well barrier did not solve the
+task. The best of the two short probes ended near MSE `1.02`, accuracy `0.5`.
+
+Documentation:
+
+```text
+ext/IsingLearning/docs/src/local_checkerboard_doublewell_anneal.md
+```
+
+Current interpretation: the mechanism runs, but the bottleneck is still weak
+class-separated readout response, not just lack of local extremization.
 
 ## Current Baseline
 
@@ -117,6 +231,19 @@ Artifacts from the first successful probes:
 
 - `ext/IsingLearning/runs/xor_statistical_ep_probe_500_cold/`
 - `ext/IsingLearning/runs/xor_statistical_ep_probe_1000_cold/`
+
+Current Langevin sanity recheck:
+
+- `ext/IsingLearning/runs/xor_langevin_onehot_relax1000_recheck_20260510_031327/`
+- same simple one-hot all-to-all `4 -> 16 -> 2` task;
+- `BlockLangevin(adjusted=false, stepsize=0.05, block_size=8)`;
+- `T=0.001`, `Minit=4`, `eval_repeats=16`;
+- free/nudged relaxation increased to `1000/1000`;
+- restored MSE `0.016789`, accuracy `1.0`.
+
+The old `50/50` relaxation setting no longer reproduces the one-hot success in
+the current code. Treat `1000/1000` as the current Langevin sanity-check
+setting before tuning harder encodings.
 
 ## Multiplexed Pattern Probes
 
@@ -286,3 +413,52 @@ Use MSE and robustness, not only classification:
   initial states.
 - Also watch output standard deviation and free-to-nudged response norm. A
   low-MSE result with high output variance is not yet robust.
+
+## Local Checkerboard Output Pattern Clamping
+
+The local checkerboard experiment now has an experiment-local
+`OutputPatternClamping` term. It nudges only the physical output-code indices:
+
+```math
+H_\mathrm{out} = \frac{\beta}{2}\sum_k (s_{i_k} - y_k)^2
+```
+
+This avoids the generic full-graph `Clamping` problem where non-output states
+would silently be pulled toward zero when the target vector only fills the
+output layer.
+
+The first 2x2 double-well Langevin run with direct output-pattern clamping did
+not improve learning: MSE stayed around `1.1` and accuracy did not exceed random
+levels by the end. That means the scalar readout clamp was not the only failure
+mode in the local checkerboard setup. Keep the output-pattern term, but the
+next local experiments should focus on coupling scale/normalization,
+temperature scale, and possibly a different minimization sampler.
+
+A no-double-well control with the same output-pattern clamping also failed
+(`pattern_clamp_nodw_langevin_20260510_201245`, final MSE about `1.26`,
+accuracy `0.5`). So for now the double well is not the explanation and should
+be ignored while tuning the local checkerboard setup.
+
+A broader no-double-well grid was run next. The best short screen was
+BlockLangevin with `T=0.01`, `stepsize=0.08`, `beta=0.2`, and inter-layer scale
+`0.25`, reaching accuracy `1.0` and MSE about `0.65`. Longer reruns did not
+drive the MSE down; seed-matched longer training stayed around MSE `0.8-0.9`.
+Stronger coupling up to `J=1.0`, no weight decay, and larger LR also failed to
+push the output amplitudes toward `+/-1`.
+
+Current conclusion for local checkerboard: signs can sometimes separate, but
+the physical output pattern remains weak. The next change should probably be
+architectural or estimator-related, not another tiny tweak to the double-well
+or scalar-vs-pattern clamping.
+
+The latest locality scan checked both same-layer `internal_nn` and inter-layer
+`inter_radius`. Short screens found temporary sign-correct points, e.g.
+`internal_nn = 2, inter_radius = 1.01` at `T = 0.01`, `stepsize = 0.08`,
+`beta = 0.2`, and `J = 0.25`, with best MSE about `0.67`. A more averaged
+rerun did not hold up: `Minit = 4` and `150/150` relaxations stayed near MSE
+`0.95` and did not reach accuracy `1.0`. So both locality knobs matter, but the
+current local setup still lacks a robust amplification mechanism.
+
+Next local-checkerboard work should normalize coupling scales by fanout/degree,
+check that learned adjacency remains symmetric after optimizer updates, and
+try discrete Metropolis as a control for the continuous Langevin relaxation.

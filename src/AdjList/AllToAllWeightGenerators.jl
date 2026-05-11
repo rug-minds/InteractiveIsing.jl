@@ -79,11 +79,11 @@ function genLayerConnections(layer1::AbstractIsingLayer{T1,D}, layer2::AbstractI
 
     _fillSparseVecs(layer1, layer2, row_idxs, col_idxs, weights, wg)
 
-    append!(row_idxs, col_idxs)
-    append!(col_idxs, @view(row_idxs[1:end÷2]))
-    append!(weights, weights)
-
-    return row_idxs, col_idxs, weights
+    return (
+        LazyConcatVector(row_idxs, col_idxs),
+        LazyConcatVector(col_idxs, row_idxs),
+        LazyConcatVector(weights, weights),
+    )
 end
 
 function _fillSparseVecs(layer1::AbstractIsingLayer{T1,D}, layer2::AbstractIsingLayer{T2,D}, row_idxs, col_idxs, weights, wg::AllToAllWeightGenerator) where {T1,T2,D}

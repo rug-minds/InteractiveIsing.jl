@@ -1,4 +1,4 @@
-export PowerLawTemperatureSchedule, ScheduledLangevin, ForwardDynamics, NudgedDynamics, Forward_and_Nudged
+export PowerLawTemperatureSchedule, PowerLawStepsizeSchedule, ForwardDynamics, NudgedDynamics, Forward_and_Nudged
 
 @ProcessAlgorithm function setgraph!(isinggraph::G, target) where G
     # resetstate!(isinggraph)
@@ -28,50 +28,44 @@ function _power_law_temperature(progress::Real, start_T::Real, stop_T::Real, pow
     return stop_f32 + (start_f32 - stop_f32) * (1f0 - progress_f32)^power_f32
 end
 
-function _power_law_value(step_idx::Integer, schedule_steps::Integer, start_value::Real, stop_value::Real, power::Real)
-    progress = schedule_steps <= 1 ? 1f0 : clamp(Float32(step_idx) / Float32(schedule_steps - 1), 0f0, 1f0)
-    return Float32(stop_value) + (Float32(start_value) - Float32(stop_value)) * (1f0 - progress)^Float32(power)
+function _power_law_value(progress::Real, start_value::Real, stop_value::Real, power::Real)
+    progress_f32 = clamp(Float32(progress), 0f0, 1f0)
+    start_f32 = Float32(start_value)
+    stop_f32 = Float32(stop_value)
+    power_f32 = Float32(power)
+
+    power_f32 > 0f0 || throw(ArgumentError("power must be positive, got $(power)"))
+    return stop_f32 + (start_f32 - stop_f32) * (1f0 - progress_f32)^power_f32
 end
 
 """
-    ScheduledLangevin(base; start_stepsize, stop_stepsize, schedule_steps, power = 2f0)
+    PowerLawStepsizeSchedule(; start_stepsize = 1f-2, stop_stepsize = 1f-3, power = 2f0)
 
-Wrapper for Langevin MC algorithms that writes a power-law stepsize schedule
-into the wrapped algorithm's `context.stepsize[]` before each step.
+Process-algorithm scheduler that writes a power-law value into a Langevin
+context `stepsize::Ref` before the sampler is stepped.
 
-This is intended for EP debugging where the free phase can use a large
-settling step while the nudged phase uses a smaller perturbative step.
+This is deliberately separate from the sampler. Use it in a composite next to
+the Langevin algorithm, passing the sampler context's `stepsize` ref.
 """
-struct ScheduledLangevin{A,T<:Real} <: InteractiveIsing.IsingMCAlgorithm
-    base::A
-    start_stepsize::T
-    stop_stepsize::T
-    schedule_steps::Int
-    power::T
-end
+@ProcessAlgorithm begin
+    @config start_stepsize::Float32 = 1f-2
+    @config stop_stepsize::Float32 = 1f-3
+    @config power::Float32 = 2f0
 
-function ScheduledLangevin(base; start_stepsize, stop_stepsize, schedule_steps::Integer, power = 2f0)
-    start_stepsize, stop_stepsize, power = promote(start_stepsize, stop_stepsize, power)
-    return ScheduledLangevin(base, start_stepsize, stop_stepsize, Int(schedule_steps), power)
-end
-
-function InteractiveIsing.Processes.init(algorithm::ScheduledLangevin, context)
-    inner = InteractiveIsing.Processes.init(algorithm.base, context)
-    return merge(inner, (; scheduled_step_idx = 0))
-end
-
-function InteractiveIsing.Processes.step!(algorithm::ScheduledLangevin, context)
-    step_idx = getproperty(context, :scheduled_step_idx)
-    η = _power_law_value(
-        step_idx,
-        algorithm.schedule_steps,
-        algorithm.start_stepsize,
-        algorithm.stop_stepsize,
-        algorithm.power,
+    function PowerLawStepsizeSchedule(
+        stepsize,
+        @managed(step_idx = 0),
+        @managed(total_steps = n_steps);
+        @inputs((; n_steps::Int = 1))
     )
-    context.stepsize[] = convert(eltype(context.model), η)
-    update = InteractiveIsing.Processes.step!(algorithm.base, context)
-    return merge(update, (; scheduled_step_idx = step_idx + 1))
+        total = max(total_steps, 1)
+        progress = total == 1 ? 1f0 : Float32(step_idx) / Float32(total - 1)
+        η = _power_law_value(progress, start_stepsize, stop_stepsize, power)
+        stepsize[] = convert(typeof(stepsize[]), η)
+
+        next_step = min(step_idx + 1, total - 1)
+        return (; step_idx = next_step, stepsize = stepsize[])
+    end
 end
 
 """
@@ -148,8 +142,11 @@ end
 function _apply_targets!(clamping::InteractiveIsing.Clamping, isinggraph, y)
     output_layer = isinggraph[end]
     output_idxs = InteractiveIsing.layerrange(output_layer)
+    length(y) == length(output_idxs) || throw(DimensionMismatch("target length $(length(y)) does not match output layer length $(length(output_idxs))"))
     fill!(clamping.y, zero(eltype(clamping.y)))
+    fill!(clamping.mask, zero(eltype(clamping.mask)))
     clamping.y[output_idxs] .= y
+    clamping.mask[output_idxs] .= one(eltype(clamping.mask))
     return clamping
 end
 
@@ -200,14 +197,14 @@ function NudgedDynamics(layer)
         @state equilibrium_state
         @state y
         @state x
-        @alias nudged_dynamics = dynamics_algorithm
+        @alias dynamics = dynamics_algorithm
         @alias plus_capture = plus_capture
         
-        setgraph!(isinggraph = nudged_dynamics.model, target = equilibrium_state)
-        apply_input(nudged_dynamics.model, x)
-        apply_targets(nudged_dynamics.model, y)
-        set_clamping_beta!(nudged_dynamics.model, beta)
-        model = @repeat relaxation_steps nudged_dynamics()
+        setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
+        apply_input(dynamics.model, x)
+        apply_targets(dynamics.model, y)
+        set_clamping_beta!(dynamics.model, beta)
+        model = @repeat relaxation_steps dynamics()
         plus_capture(isinggraph = model)
     end
 
@@ -215,14 +212,14 @@ function NudgedDynamics(layer)
         @state equilibrium_state
         @state y
         @state x
-        @alias nudged_dynamics = dynamics_algorithm
+        @alias dynamics = dynamics_algorithm
         @alias minus_capture = minus_capture
         
-        setgraph!(isinggraph = nudged_dynamics.model, target = equilibrium_state)
-        apply_input(nudged_dynamics.model, x)
-        apply_targets(nudged_dynamics.model, y)
-        set_clamping_beta!(nudged_dynamics.model, -beta)
-        model = @repeat relaxation_steps nudged_dynamics()
+        setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
+        apply_input(dynamics.model, x)
+        apply_targets(dynamics.model, y)
+        set_clamping_beta!(dynamics.model, -beta)
+        model = @repeat relaxation_steps dynamics()
         minus_capture(isinggraph = model)
     end
 
@@ -235,19 +232,19 @@ function NudgedDynamics(layer)
 
         # contrastive_gradient(c1.dynamics.model, c1.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers) 
     end 
-    (;algorithm = final, plus_capture, minus_capture, dynamics = plus.nudged_dynamics)
+    (;algorithm = final, plus_capture, minus_capture, dynamics = plus.dynamics)
 end
 
 function Forward_and_Nudged(layer)
     forward = ForwardDynamics(layer).algorithm
-    nudged = NudgedDynamics(layer).algorithm
+    nudged = NudgedDynamics(layer)
     beta = layer.β
 
     final = @CompositeAlgorithm begin
         @state buffers
 
         @context c1 = forward()
-        @context c2 = nudged()
+        @context c2 = nudged.algorithm()
 
         # Reset clamping after backward phases
         set_clamping_beta!(c1.dynamics.model, zero(beta))

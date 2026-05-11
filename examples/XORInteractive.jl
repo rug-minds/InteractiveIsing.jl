@@ -2,72 +2,40 @@ using InteractiveIsing
 using InteractiveIsing.Processes
 using InteractiveIsing.Windows
 using GLMakie
-using LinearAlgebra
+using Printf
+
+# Interactive demo for the honest 2-input XOR experiment:
+# input bits -> 16 hidden spins -> 2 output spins.
+#
+# The parameters are extracted from:
+# ext/IsingLearning/runs/xor_2input_discrete_T05_seed13/xor_statistical_ep_2input_trained_graph.jld2
+# That run used discrete spins, Metropolis dynamics, T = 0.5, β = 1.0,
+# hidden = 16, and reached repeated-state MSE ≈ 0.0024 with accuracy 1.0.
 
 const XORFloat = Float64
-const XOR_CASES = ((false, false), (false, true), (true, false), (true, true))
 
-xor_case_index(a::Bool, b::Bool) = (a ? 2 : 0) + (b ? 1 : 0) + 1
 xor_target(a::Bool, b::Bool) = xor(a, b) ? XORFloat[-1, 1] : XORFloat[1, -1]
+xor_input(a::Bool, b::Bool) = reshape(XORFloat[a ? 1 : -1, b ? 1 : -1], 1, 2)
 
-function xor_input(a::Bool, b::Bool)
-    input = fill(-one(XORFloat), 2, 2)
-    input[xor_case_index(a, b)] = one(XORFloat)
-    return input
-end
+const XOR_TRAINED_ROWS = Int32[3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 1, 2, 19, 20, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+const XOR_TRAINED_COLS = Int32[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 12, 12, 12, 12, 13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20]
+const XOR_TRAINED_VALS = XORFloat[-0.5604433996826013, -0.6149269568283259, -0.39065105748149304, 0.02572723207768589, 0.6878419884330677, -0.9437288018600382, 1.002338477092773, -0.9407269052604983, 0.7516460363012676, -0.9783003387608045, -0.9082665619564819, 0.9656862236298422, -1.0782671605197574, 0.11650913953320273, 0.559208889594522, -0.7948990047263502, 0.5425509282359142, -0.6702915864705159, 0.5021584087708126, 0.2557750375236546, -0.6359848235649086, 0.9592980926121469, 0.9746674003106934, 0.9178738496903985, 0.8005974526596435, -0.9659098349292364, -0.9834351564726124, -0.9393631159907598, 1.1063328056698831, 0.0302943544335638, -0.544650672405431, -0.76179147019087, -0.5604433996826013, 0.5425509282359142, -0.3438623628806701, 0.22870458912734004, -0.6149269568283259, -0.6702915864705159, -0.3552619461091675, 0.3753763922750342, -0.39065105748149304, 0.5021584087708126, 0.3359500906727113, -0.3285121148375531, 0.02572723207768589, 0.2557750375236546, 0.641565284866686, -0.47296165765309617, 0.6878419884330677, -0.6359848235649086, 0.2731695161895233, -0.3935605576707883, -0.9437288018600382, 0.9592980926121469, -0.41212878578754647, 0.5910266204836354, 1.002338477092773, 0.9746674003106934, -0.6049690573450767, 0.456407639950499, -0.9407269052604983, 0.9178738496903985, 0.5568457603748477, -0.45273013198672696, 0.7516460363012676, 0.8005974526596435, 0.47984423505021084, -0.40939614494437465, -0.9783003387608045, -0.9659098349292364, 0.5767327056698859, -0.4485838248466105, -0.9082665619564819, -0.9834351564726124, -0.5272560144897214, 0.5310311421289996, 0.9656862236298422, -0.9393631159907598, 0.6206442717004053, -0.3320214135918956, -1.0782671605197574, 1.1063328056698831, 0.5243198950277816, -0.6743376376208123, 0.11650913953320273, 0.0302943544335638, -0.1771936775270266, -0.13642147753912973, 0.559208889594522, -0.544650672405431, 0.38582631482786994, -0.2719685791102587, -0.7948990047263502, -0.76179147019087, 0.35144992808922876, -0.5544026254391693, -0.3438623628806701, -0.3552619461091675, 0.3359500906727113, 0.641565284866686, 0.2731695161895233, -0.41212878578754647, -0.6049690573450767, 0.5568457603748477, 0.47984423505021084, 0.5767327056698859, -0.5272560144897214, 0.6206442717004053, 0.5243198950277816, -0.1771936775270266, 0.38582631482786994, 0.35144992808922876, 0.22870458912734004, 0.3753763922750342, -0.3285121148375531, -0.47296165765309617, -0.3935605576707883, 0.5910266204836354, 0.456407639950499, -0.45273013198672696, -0.40939614494437465, -0.4485838248466105, 0.5310311421289996, -0.3320214135918956, -0.6743376376208123, -0.13642147753912973, -0.2719685791102587, -0.5544026254391693]
+const XOR_TRAINED_BIAS = XORFloat[-0.03733438975151456, 0.005456473972866237, -0.5869931750099047, 0.6356437672785586, 0.38514570483978566, -0.07424934497893682, 0.661881484196031, -0.945865440732354, 0.9553156163170093, 0.9041407841563515, -0.7941617691202199, -0.9585002586457465, 0.9158657406847038, 0.9460159929885779, 1.0243522897042012, 0.13684591533946133, 0.6122608854576082, -0.7512375025046275, -0.0681651504612854, 0.14536138441554353]
 
-function push_symmetric!(rows, cols, vals, i, j, value)
-    push!(rows, i)
-    push!(cols, j)
-    push!(vals, value)
-    push!(rows, j)
-    push!(cols, i)
-    push!(vals, value)
-    return nothing
-end
-
-function xor_rbm_adjacency(; input_hidden_scale = 1.2, output_field = 3.0)
-    rows = Int32[]
-    cols = Int32[]
-    vals = XORFloat[]
-
-    # Four hidden units are assigned to each one-hot input case. The ideal hidden
-    # code is +1 for the active case block and -1 elsewhere.
-    for case_idx in 1:4
-        for copy_idx in 1:4
-            hidden_idx = 4 + 4 * (case_idx - 1) + copy_idx
-            for input_idx in 1:4
-                weight = input_idx == case_idx ? input_hidden_scale : -input_hidden_scale
-                push_symmetric!(rows, cols, vals, input_idx, hidden_idx, weight)
-            end
-        end
-    end
-
-    hidden_code = fill(-one(XORFloat), 16, 4)
-    for case_idx in 1:4
-        hidden_code[(4 * case_idx - 3):(4 * case_idx), case_idx] .= one(XORFloat)
-    end
-
-    target_fields = Matrix{XORFloat}(undef, 4, 2)
-    for (case_idx, case) in enumerate(XOR_CASES)
-        target_fields[case_idx, :] .= output_field .* xor_target(case...)
-    end
-
-    # Least-norm hidden-to-output weights whose ideal hidden codes create the
-    # requested output fields.
-    output_weights = hidden_code * inv(hidden_code' * hidden_code) * target_fields
-    for hidden_local_idx in 1:16
-        hidden_idx = 4 + hidden_local_idx
-        push_symmetric!(rows, cols, vals, hidden_idx, 21, output_weights[hidden_local_idx, 1])
-        push_symmetric!(rows, cols, vals, hidden_idx, 22, output_weights[hidden_local_idx, 2])
-    end
-
-    return InteractiveIsing.UndirectedAdjacency(rows, cols, vals, 22, 22; fastwrite = true)
+function xor_trained_adjacency()
+    return InteractiveIsing.UndirectedAdjacency(
+        XOR_TRAINED_ROWS,
+        XOR_TRAINED_COLS,
+        XOR_TRAINED_VALS,
+        20,
+        20;
+        fastwrite = true,
+    )
 end
 
 function xor_rbm_graph()
     input_layer = Layer(
-        2, 2,
+        1, 2,
         StateSet(-one(XORFloat), one(XORFloat)),
         Continuous(),
         Coords(0, 0, 0);
@@ -77,31 +45,27 @@ function xor_rbm_graph()
         4, 4,
         StateSet(-one(XORFloat), one(XORFloat)),
         Continuous(),
-        Coords(0, 1, 0);
+        Coords(0, 3, 0);
         periodic = false,
     )
     output_layer = Layer(
         1, 2,
         StateSet(-one(XORFloat), one(XORFloat)),
         Continuous(),
-        Coords(0, 4, 0);
+        Coords(0, 8, 0);
         periodic = false,
     )
-
-    b = zeros(XORFloat, 22)
-    b[5:20] .= -1.2
 
     g = IsingGraph(
         input_layer,
         hidden_layer,
         output_layer,
-        Bilinear() + MagField(b = b);
+        Bilinear() + MagField(b = copy(XOR_TRAINED_BIAS));
         precision = XORFloat,
-        adj = xor_rbm_adjacency(),
+        adj = xor_trained_adjacency(),
         index_set = g -> ToggledIndexSet(g),
-        initial_state = 0,
     )
-    temp!(g, 0.001)
+    temp!(g, 0.5)
     InteractiveIsing.off!(g.index_set, 1)
     return g
 end
@@ -118,11 +82,15 @@ function output_status(g, a::Bool, b::Bool)
     target = xor_target(a, b)
     prediction = out[2] > out[1]
     mse = sum(abs2, out .- target) / length(target)
-    return string(
-        "input = (", Int(a), ", ", Int(b), ")    xor = ", Int(xor(a, b)),
-        "    output = [", round(out[1]; digits = 3), ", ", round(out[2]; digits = 3), "]",
-        "    prediction = ", Int(prediction),
-        "    MSE = ", round(mse; digits = 4),
+    return @sprintf(
+        "input = (%d, %d)    xor = %d    output = [% .3f, % .3f]    prediction = %d    MSE = %.4f",
+        Int(a),
+        Int(b),
+        Int(xor(a, b)),
+        out[1],
+        out[2],
+        Int(prediction),
+        mse,
     )
 end
 
@@ -134,15 +102,14 @@ end
 
 function xor_interactive()
     g = xor_rbm_graph()
-    dynamics = BlockLangevin(stepsize = 0.05, adjusted = false, block_size = 8)
+    dynamics = LocalLangevin()
 
     bit_a = Observable(false)
     bit_b = Observable(false)
     status = Observable(output_status(g, bit_a[], bit_b[]))
 
-    host = window(title = "Interactive XOR RBM", size = (1200, 800), fps = 30, polling_rate = 10)
+    host = window(title = "Interactive XOR RBM Demo", size = (1200, 800), fps = 30, polling_rate = 10)
     controls = GridLayout(host.figure[1, 1])
-    host.figure[2, 1] = GridLayout()
 
     button_a = Button(
         controls[1, 1],
@@ -164,9 +131,9 @@ function xor_interactive()
             g;
             colormap = :balance,
             labels = true,
-            axis_kwargs = (title = "XOR layers: input | hidden | output",),
+            axis_kwargs = (title = "2-bit XOR: input | hidden | output",),
         ),
-        host.figure[2, 1],
+        (2, 1),
     )
 
     process_ref = Ref{Any}(restart_xor_process!(g, dynamics, bit_a[], bit_b[]))
@@ -184,9 +151,6 @@ function xor_interactive()
     end)
     register!(host, on(button_b.clicks) do _
         set_case!(bit_a[], !bit_b[])
-    end)
-    register!(host, on(host.open) do isopen
-        isopen || Processes.close(g)
     end)
     register_frame!(host) do _
         status[] = output_status(g, bit_a[], bit_b[])

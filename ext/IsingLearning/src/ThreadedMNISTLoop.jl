@@ -165,7 +165,6 @@ function _worker_process(layer, worker_graph)
             equilibrium_state = copy(state(worker_graph)),
         ),
         Input(:dynamics, model = worker_graph),
-        Input(:nudged_dynamics, model = worker_graph),
         Input(:plus_capture, state = worker_graph),
         Input(:minus_capture, state = worker_graph);
         repeat = 1,

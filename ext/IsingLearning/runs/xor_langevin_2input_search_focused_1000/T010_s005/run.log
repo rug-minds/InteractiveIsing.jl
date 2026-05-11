@@ -1,0 +1,33 @@
+  Activating project at `~/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning`
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    2-element Vector{Symbol}:
+│     :equilibrium_state
+│     :x
+└ @ IsingLearning.InteractiveIsing.Processes ~/Documents/GitHub/InteractiveIsing.jl/deps/Processes/src/Widgets/GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    3-element Vector{Symbol}:
+│     :equilibrium_state
+│     :y
+│     :x
+└ @ IsingLearning.InteractiveIsing.Processes ~/Documents/GitHub/InteractiveIsing.jl/deps/Processes/src/Widgets/GeneralState.jl:54
+Running 2-input statistical XOR EP: (epochs = 1000, log_every = 250, minit = 4, eval_repeats = 32, hidden = 16, beta = 1.0, lr = 0.0015, weight_decay = 0.0001, temp = 0.1, stepsize = 0.05, block_size = 8, free_relaxation = 1000, nudged_relaxation = 1000, state = :continuous, dynamics = :langevin, init_mode = :random, training_rule = :ep, target_free_sign = :target_minus_free)
+epoch=0 mse=1.122653 acc=0.25
+    case=(false, false) input=[-1.0, -1.0] target=[1.0, -1.0] mean=[0.1417, 0.2364] std=0.75805
+    case=(false, true) input=[-1.0, 1.0] target=[-1.0, 1.0] mean=[0.0987, -0.4086] std=0.78813
+    case=(true, false) input=[1.0, -1.0] target=[-1.0, 1.0] mean=[0.0881, -0.0714] std=0.76639
+    case=(true, true) input=[1.0, 1.0] target=[1.0, -1.0] mean=[0.1249, -0.3468] std=0.72982
+epoch=1 mse=0.928308 acc=0.5 grad=0.844401 response=0.544109 delta=0.018248
+epoch=250 mse=1.025023 acc=0.5 grad=0.652476 response=0.638639 delta=1.76254
+epoch=500 mse=0.967065 acc=0.5 grad=0.768489 response=0.662023 delta=2.177444
+epoch=750 mse=0.942052 acc=0.75 grad=0.618469 response=0.692072 delta=2.37838
+epoch=1000 mse=1.034918 acc=0.5 grad=0.735146 response=0.714282 delta=2.49445
+restored best mse=0.97877 acc=0.5
+    case=(false, false) input=[-1.0, -1.0] target=[1.0, -1.0] mean=[0.1382, 0.1715] std=0.79554
+    case=(false, true) input=[-1.0, 1.0] target=[-1.0, 1.0] mean=[0.0993, -0.2384] std=0.75202
+    case=(true, false) input=[1.0, -1.0] target=[-1.0, 1.0] mean=[0.0732, 0.1914] std=0.7709
+    case=(true, true) input=[1.0, 1.0] target=[1.0, -1.0] mean=[0.0905, -0.4169] std=0.74768
+Saved CSV: ext/IsingLearning/runs/xor_langevin_2input_search_focused_1000/T010_s005/xor_statistical_ep_2input.csv
+Saved plot: ext/IsingLearning/runs/xor_langevin_2input_search_focused_1000/T010_s005/xor_statistical_ep_2input.png
+Saved graph: ext/IsingLearning/runs/xor_langevin_2input_search_focused_1000/T010_s005/xor_statistical_ep_2input_trained_graph.jld2

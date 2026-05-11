@@ -17,7 +17,7 @@ genLayerConnections(layer::AbstractIsingLayer, wg) = genLayerConnections(layer, 
 Give layer and WeightGenerator
     returns the connections within the layer in row_idxs, col_idxs, and weights
 """
-function genLayerConnections(layer::AbstractLayerData{D}, precision, wg::WeightGenerator, nstates) where {D}
+function genLayerConnections(layer::AbstractLayerData{D}, precision, wg::WeightGenerator{F,NN,Symmetric}, nstates) where {D,F,NN,Symmetric}
     row_idxs = Int32[]
     col_idxs = Int32[]
     weights = Float32[]
@@ -38,22 +38,25 @@ function genLayerConnections(layer::AbstractLayerData{D}, precision, wg::WeightG
 
     n_conns = nstates*blocksize
 
-    sizehint!(col_idxs, 2*n_conns)::Vector{Int32}
-    sizehint!(row_idxs, 2*n_conns)::Vector{Int32}
-    sizehint!(weights, 2*n_conns)::Vector{Float32}
+    sizehint_count = Symmetric ? n_conns ÷ 2 : 2 * n_conns
+    sizehint!(col_idxs, sizehint_count)::Vector{Int32}
+    sizehint!(row_idxs, sizehint_count)::Vector{Int32}
+    sizehint!(weights, sizehint_count)::Vector{Float32}
 
     # Conn_idxs, conn_i,j,k,...
     # conns = ntuple(i -> Prealloc(Int32, blocksize::Int32), D)
     # conn_idxs = Prealloc(Int32, blocksize)
     topology = top(layer)
-    # @show topology
+    if Symmetric
+        _fillSparseVecsSymmetricUnique!(layer, precision, row_idxs, col_idxs, weights, topology, wg)
+        return (
+            LazyConcatVector(row_idxs, col_idxs),
+            LazyConcatVector(col_idxs, row_idxs),
+            LazyConcatVector(weights, weights),
+        )
+    end
+
     _fillSparseVecs(layer, precision, row_idxs, col_idxs, weights, topology, wg)
-    
-
-    # append!(row_idxs, col_idxs)
-    # append!(col_idxs, @view(row_idxs[1:end÷2]))
-    # append!(weights, weights)
-
     return row_idxs, col_idxs, weights
 end
 
@@ -137,7 +140,7 @@ end
 
 
 # # # 2D fallback keeps current behavior.
-# # _fillSparseVecsNew(layer::AbstractLayerData{2}, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {WG} =
+# # _fillSparseVecs(layer::AbstractLayerData{2}, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {WG} =
 # #     _fillSparseVecs(layer, precision, row_idxs, col_idxs, weights, topology, wg)
 
 # """
@@ -372,6 +375,80 @@ function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_i
         end
     end
     return nothing
+end
+
+"""
+    _fillSparseVecsSymmetricUnique!(layer, precision, row_idxs, col_idxs, weights, topology, wg)
+
+Fill only one direction for each intra-layer undirected pair. `genLayerConnections`
+mirrors these triplets with `LazyConcatVector` when the `WeightGenerator` is
+marked symmetric. The kept direction is `global_col_idx < global_row_idx`, so
+random generators are evaluated only once per physical edge.
+"""
+function _fillSparseVecsSymmetricUnique!(layer::AbstractLayerData{D}, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {D,WG}
+    NN = getNN(wg, D)
+    @assert (NN isa Integer || length(NN) == D)
+    NNt = NN isa Integer ? ntuple(_ -> NN, Val(D)) : NN
+
+    pr = parentindices(layer)[1]
+    layer_size = size(layer)
+    LI = LinearIndices(layer_size)
+    ps = whichperiodic(topology)
+    ds = lattice_constants(topology)
+
+    n_offsets = prod(2 .* NNt .+ 1) - 1
+    offsets = Vector{NTuple{D,Int}}(undef, n_offsets)
+    dcs = Vector{DeltaCoordinate{D}}(undef, n_offsets)
+    drs = Vector{Float64}(undef, n_offsets)
+
+    ranges = ntuple(i -> (-NNt[i]):NNt[i], Val(D))
+    o = 1
+    for offset_ci in CartesianIndices(ranges)
+        delta_offset = offset_ci.I
+        all(iszero, delta_offset) && continue
+
+        offsets[o] = delta_offset
+
+        wrapped_offset = ntuple(Val(D)) do i
+            di = delta_offset[i]
+            if ps[i]
+                halfsize = layer_size[i] >>> 1
+                abs(di) > halfsize && (di -= sign(di) * layer_size[i])
+            end
+            di
+        end
+        dcs[o] = DeltaCoordinate(wrapped_offset)
+
+        dr2 = 0.0
+        @inbounds for i in 1:D
+            d = ds[i] * wrapped_offset[i]
+            dr2 += d * d
+        end
+        drs[o] = sqrt(dr2)
+        o += 1
+    end
+
+    for col_idx in 1:length(layer)
+        c1 = Coordinate(topology, col_idx)
+        g_col_idx = pr[col_idx]
+
+        for oi in eachindex(offsets)
+            c2 = @inline offset(topology, c1, offsets[oi]...; check = false)
+            in(c2, topology) || continue
+
+            conn_idx = LI[c2]
+            g_conn_idx = pr[conn_idx]
+            g_col_idx < g_conn_idx || continue
+
+            w = precision(wg(;dr = drs[oi], c1, c2, dc = dcs[oi]))
+            (w == 0 || isnan(w)) && continue
+
+            push!(row_idxs, Int32(g_conn_idx))
+            push!(col_idxs, Int32(g_col_idx))
+            push!(weights, w)
+        end
+    end
+    return row_idxs, col_idxs, weights
 end
 
 # """

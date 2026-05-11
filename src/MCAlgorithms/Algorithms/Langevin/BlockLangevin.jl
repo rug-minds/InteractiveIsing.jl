@@ -120,7 +120,7 @@ DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
     end
 
     hamiltonian = init!(model.hamiltonian, model)
-    rng = Random.MersenneTwister()
+    rng = @inline _langevin_context_value(context, :rng, Random.MersenneTwister())
 
     nstates_model = InteractiveIsing.nstates(model)
     active_index_set = index_set(model)
@@ -179,7 +179,7 @@ end
     end
 
     hamiltonian = init!(model.hamiltonian, model)
-    rng = Random.MersenneTwister()
+    rng = @inline _langevin_context_value(context, :rng, Random.MersenneTwister())
 
     nstates_model = InteractiveIsing.nstates(model)
     active_index_set = index_set(model)
@@ -467,7 +467,7 @@ end
         σ,
         drift_fraction,
         t,
-        Adjusted,
+        Val(Adjusted),
     )
     schedule_position[] = pos + 1
 

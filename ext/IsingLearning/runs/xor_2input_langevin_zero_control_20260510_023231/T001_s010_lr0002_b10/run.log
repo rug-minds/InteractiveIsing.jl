@@ -1,0 +1,49 @@
+  Activating project at `~/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning`
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    2-element Vector{Symbol}:
+│     :equilibrium_state
+│     :x
+└ @ IsingLearning.InteractiveIsing.Processes ~/Documents/GitHub/InteractiveIsing.jl/deps/Processes/src/Widgets/GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    3-element Vector{Symbol}:
+│     :equilibrium_state
+│     :y
+│     :x
+└ @ IsingLearning.InteractiveIsing.Processes ~/Documents/GitHub/InteractiveIsing.jl/deps/Processes/src/Widgets/GeneralState.jl:54
+Running 2-input statistical XOR EP: (epochs = 2000, log_every = 100, minit = 16, eval_repeats = 64, hidden = 16, beta = 1.0, lr = 0.0002, weight_decay = 0.0, temp = 0.001, stepsize = 0.1, block_size = 8, free_relaxation = 80, nudged_relaxation = 80, state = :continuous, dynamics = :langevin, init_mode = :zero, training_rule = :ep, target_free_sign = :target_minus_free)
+epoch=0 mse=1.001268 acc=0.75
+    case=(false, false) input=[-1.0, -1.0] target=[1.0, -1.0] mean=[-0.0435, -0.0438] std=0.03109
+    case=(false, true) input=[-1.0, 1.0] target=[-1.0, 1.0] mean=[-0.0427, -0.0351] std=0.02764
+    case=(true, false) input=[1.0, -1.0] target=[-1.0, 1.0] mean=[-0.0473, -0.0428] std=0.02901
+    case=(true, true) input=[1.0, 1.0] target=[1.0, -1.0] mean=[-0.0508, -0.0409] std=0.02987
+epoch=1 mse=1.003447 acc=0.5 grad=0.13578 response=0.158658 delta=0.002417
+epoch=100 mse=1.000701 acc=0.5 grad=0.106661 response=0.157574 delta=0.174921
+epoch=200 mse=0.996886 acc=0.75 grad=0.086015 response=0.151258 delta=0.301425
+epoch=300 mse=1.002006 acc=0.5 grad=0.072258 response=0.149862 delta=0.395429
+epoch=400 mse=1.001617 acc=0.25 grad=0.071229 response=0.149178 delta=0.464954
+epoch=500 mse=1.000867 acc=0.25 grad=0.061648 response=0.149458 delta=0.519507
+epoch=600 mse=1.000319 acc=0.5 grad=0.046137 response=0.149907 delta=0.556072
+epoch=700 mse=1.003729 acc=0.25 grad=0.04363 response=0.149949 delta=0.58455
+epoch=800 mse=0.999568 acc=0.5 grad=0.040313 response=0.14897 delta=0.608298
+epoch=900 mse=1.000222 acc=0.5 grad=0.032565 response=0.15044 delta=0.623929
+epoch=1000 mse=0.999323 acc=0.75 grad=0.032212 response=0.14857 delta=0.634807
+epoch=1100 mse=0.997954 acc=0.5 grad=0.028479 response=0.150707 delta=0.643868
+epoch=1200 mse=1.002991 acc=0.25 grad=0.026969 response=0.147886 delta=0.650311
+epoch=1300 mse=0.997486 acc=1.0 grad=0.026486 response=0.145394 delta=0.652872
+epoch=1400 mse=1.002289 acc=0.5 grad=0.021325 response=0.145944 delta=0.653709
+epoch=1500 mse=1.001455 acc=0.5 grad=0.023494 response=0.149968 delta=0.658135
+epoch=1600 mse=1.003318 acc=0.25 grad=0.023338 response=0.147295 delta=0.664308
+epoch=1700 mse=0.995552 acc=1.0 grad=0.024557 response=0.147533 delta=0.664585
+epoch=1800 mse=1.002962 acc=0.5 grad=0.024466 response=0.147617 delta=0.666941
+epoch=1900 mse=0.99871 acc=0.5 grad=0.028766 response=0.147281 delta=0.667584
+epoch=2000 mse=1.001705 acc=0.25 grad=0.020622 response=0.142774 delta=0.664169
+restored best mse=1.002046 acc=0.5
+    case=(false, false) input=[-1.0, -1.0] target=[1.0, -1.0] mean=[-0.0021, 0.0049] std=0.02879
+    case=(false, true) input=[-1.0, 1.0] target=[-1.0, 1.0] mean=[0.0013, 0.0014] std=0.02709
+    case=(true, false) input=[1.0, -1.0] target=[-1.0, 1.0] mean=[-0.0029, -0.0027] std=0.02977
+    case=(true, true) input=[1.0, 1.0] target=[1.0, -1.0] mean=[0.0014, 0.0028] std=0.02968
+Saved CSV: ext/IsingLearning/runs/xor_2input_langevin_zero_control_20260510_023231/T001_s010_lr0002_b10/xor_statistical_ep_2input.csv
+Saved plot: ext/IsingLearning/runs/xor_2input_langevin_zero_control_20260510_023231/T001_s010_lr0002_b10/xor_statistical_ep_2input.png
+Saved graph: ext/IsingLearning/runs/xor_2input_langevin_zero_control_20260510_023231/T001_s010_lr0002_b10/xor_statistical_ep_2input_trained_graph.jld2

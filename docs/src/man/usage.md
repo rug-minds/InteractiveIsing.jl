@@ -79,16 +79,20 @@ See [Indexing](@ref) for supporting functions.
 
 ## Generating the weights
 
-The connections for a layer and between layers can be generated using a [WeightGenerator](@ref). A weightgenerator must be constructed using the macro `@WG`. A weightgenerator is a struct that can be used to get a weight based on an arbitrary function of any combination of the following arguments: `[:dr, :x, :y, :z, :dx, :dy, :dz]`, where dr is the relative distance between two spins, x, y and z are the midpoints between two spins that a weight is connecting (counted from the left top) and dx dy and dz are the separate one dimensional, relative distances between two spins. A weight generator expects a string containing a julia anonymous function in the following way
+The connections for a layer and between layers can be generated using
+[Weight Generators](@ref). The usual constructor is the `@WG` macro with a
+keyword-style function:
 
-```
+```julia
 # Create the weightgenerator
-wg_Ising = @WG "dr == 1 ? 1 : 0" NN = 1 # Ising Connections, taking into account only connections 1 spin apart in any direction
+wg_Ising = @WG (; dr) -> dr == 1 ? 1f0 : 0f0 NN = 1
 
-wg = @WG "(dr) -> 1/dr^2" NN = (2,3) #Arbitrary function with two nearest neighbors in x direction, 3 in y
+wg = @WG (; dr) -> 1 / dr^2 NN = (2, 3)
 ```
 
-A weightgenerator can also include additive or multiplicative noise based on arbitrary distributions. See the [WeightGenerator](@ref) page for more information on the usage.
+The supported function arguments are documented on the
+[Weight Generators](@ref) page. Same-layer local generators are symmetric by
+default, which is the normal setting for energy-based Ising models.
 
 To now generate and set the connections within layer `i` we use the function
 ```

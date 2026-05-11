@@ -14,14 +14,14 @@ function _register_graph_close!(handle::PanelHandle, g)
     haskey(close_graphs, g) && return nothing
     close_graphs[g] = true
     onclose!(handle) do _
-        Processes.close(g)
+        _request_graph_process_close!(g)
     end
     return nothing
 end
 
 function _register_process_close!(handle::PanelHandle, process::Processes.AbstractProcess)
     onclose!(handle) do _
-        close(process)
+        _request_process_close!(process)
     end
     return nothing
 end
@@ -170,16 +170,25 @@ function _request_graph_process_close!(g)
     isempty(graph_processes) && return nothing
 
     for process in graph_processes
-        try
-            Processes.shouldrun(process, false)
-        catch err
-            @warn "Could not request process stop" process exception = (err, catch_backtrace())
-        end
+        _request_process_close!(process)
     end
 
     empty!(processes(g))
     _reap_graph_processes_later!(graph_processes)
 
+    return nothing
+end
+
+function _request_process_close!(process::Processes.AbstractProcess)
+    try
+        if applicable(Processes.shouldrun, process, false)
+            Processes.shouldrun(process, false)
+        elseif applicable(close, process)
+            @async close(process)
+        end
+    catch err
+        @warn "Could not request process stop" process_type = typeof(process) exception = (err, catch_backtrace())
+    end
     return nothing
 end
 

@@ -6,14 +6,13 @@ This is a scratch proof for the exact Langevin algorithms implemented in
 The goal is not to prove a generic Langevin method. The goal is to check the
 actual transition kernels used by this code.
 
-Implementation note: `GlobalLangevin` and `BlockLangevin` now commit one
-single-spin proposal per `Processes.step!`. Their "global" and "block" behavior
-is the derivative refresh scope, not a multi-spin state update. They cache a
-full global or block derivative cycle only for unadjusted reflected dynamics;
-the adjusted path recomputes the relevant gradient scope at the current state
-for each single-spin MALA proposal. Sections below that discuss historical
-all-active or block `MultiSpinProposal` kernels are kept as scratch notes until
-this proof is fully rewritten around the current single-spin implementation.
+Implementation note: `GlobalLangevin` and `BlockLangevin` now expose one state
+write per `Processes.step!`, but `adjusted=true` still accepts/rejects at the
+proposal scope: all active spins for global and the selected block for block
+Langevin. Accepted vector proposals are then streamed into the graph one
+`FlipProposal` at a time. Sections below that discuss historical immediate
+`MultiSpinProposal` writes are kept as scratch notes until this proof is fully
+rewritten around the current streamed-write implementation.
 
 ## Target Distribution
 
@@ -467,8 +466,8 @@ leaves `π` invariant.
 
 ## `BlockLangevin(adjusted=true)`
 
-`BlockLangevin` is the same proof as `GlobalLangevin`, restricted to a random
-cyclic block `B` of active indices.
+`BlockLangevin` is the same proof as `GlobalLangevin`, restricted to a block
+`B` drawn from the shuffled active-index order.
 
 For a fixed block `B`, the proposal density is the diagonal Gaussian over the
 coordinates in `B`, with mean

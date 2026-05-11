@@ -1,0 +1,9 @@
+name,temp,stepsize,lr,beta,base_seed,best_epoch,best_mse,best_accuracy,final_epoch,final_mse,final_accuracy,dir
+T050_s005,0.5,0.05,0.0015,1.0,85000,1000.0,0.9304187607944803,0.5,1000.0,0.9304187607944803,0.5,ext/IsingLearning/runs/xor_langevin_2input_search_focused_1000/T050_s005
+T020_s005,0.2,0.05,0.0015,1.0,85100,500.0,0.8741858747295843,0.5,1000.0,1.0306509802421289,0.5,ext/IsingLearning/runs/xor_langevin_2input_search_focused_1000/T020_s005
+T010_s005,0.1,0.05,0.0015,1.0,85200,1.0,0.9283078464289132,0.5,1000.0,1.0349183877538701,0.5,ext/IsingLearning/runs/xor_langevin_2input_search_focused_1000/T010_s005
+T005_s005,0.05,0.05,0.0015,1.0,85300,750.0,0.9367744247016467,1.0,1000.0,0.9559046974141113,0.75,ext/IsingLearning/runs/xor_langevin_2input_search_focused_1000/T005_s005
+T002_s005,0.02,0.05,0.0015,1.0,85400,750.0,1.0084005694906466,0.5,1000.0,1.090167509846606,0.5,ext/IsingLearning/runs/xor_langevin_2input_search_focused_1000/T002_s005
+T010_s010,0.1,0.1,0.0015,1.0,85500,750.0,0.8966842633778496,0.75,1000.0,0.9186627089299219,0.75,ext/IsingLearning/runs/xor_langevin_2input_search_focused_1000/T010_s010
+T005_s010,0.05,0.1,0.0015,1.0,85600,1.0,0.8440977498005127,0.75,1000.0,0.985875364375842,0.5,ext/IsingLearning/runs/xor_langevin_2input_search_focused_1000/T005_s010
+T002_s010,0.02,0.1,0.0015,1.0,85700,750.0,0.8645342655166849,1.0,1000.0,1.0762994410375164,0.5,ext/IsingLearning/runs/xor_langevin_2input_search_focused_1000/T002_s010

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="260" viewBox="0 0 780 260">
+<rect width="780" height="260" fill="white"/>
+<text x="24" y="36" font-family="monospace" font-size="18">field_global4_langevin_F1p0_R0p1_Tf0p005_eta0p08</text>
+<text x="24" y="70" font-family="monospace" font-size="15">side=4, hidden=4, code=4, stride=1</text>
+<text x="24" y="100" font-family="monospace" font-size="15">dynamics=langevin, T=0.005, stepsize=0.08, beta=1.0</text>
+<text x="24" y="130" font-family="monospace" font-size="15">relaxation free/nudged=500/500, Minit=2</text>
+<text x="24" y="160" font-family="monospace" font-size="15">adjacency symmetry error=0.0</text>
+<text x="24" y="190" font-family="monospace" font-size="15">weights: min=-0.7986, max=1.0207, rms=0.2313</text>
+<text x="24" y="220" font-family="monospace" font-size="15">bias: min=-0.1753, max=0.141, rms=0.0666</text>
+</svg>

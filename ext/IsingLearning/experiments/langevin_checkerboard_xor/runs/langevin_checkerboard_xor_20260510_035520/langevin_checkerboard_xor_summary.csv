@@ -1,0 +1,2 @@
+config,side,hidden_side,code_side,code_stride,relaxation,nudged_relaxation,temp,stepsize,best_epoch,best_mse,best_accuracy,best_min_margin,final_mse,final_accuracy,graph
+lgv_4x4_global4,4,4,4,1,1000,1000,0.005,0.05,1000,0.3684722675998919,1.0,0.060878246449756694,0.6368382945746512,0.75,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/langevin_checkerboard_xor/runs/langevin_checkerboard_xor_20260510_035520/lgv_4x4_global4/lgv_4x4_global4_best_graph.jld2

@@ -218,17 +218,17 @@ panel!(
 ## All-Layer Layouts
 
 `AllLayersViewPanel` draws every positioned 2D layer into one shared axis. It
-uses `coords(layer)` as a coarse `(y, x, z)` layer position and plots each
-layer at its global xy rectangle. The panel currently supports only 2D layers.
-Layers need explicit, unique xy coordinates; duplicate or overlapping positions
-throw an error.
+uses `coords(layer)` as a global `(y, x, z)` layer origin and plots each layer
+at `[x, x + width] x [y, y + height]`. The panel currently supports only 2D
+layers. Layers need explicit, unique xy coordinates; duplicate or overlapping
+positions throw an error.
 
 ```julia
 using InteractiveIsing.Windows
 
 g = IsingGraph(
     Layer(32, 32, Continuous(), Coords(y = 0, x = 0, z = 0)),
-    Layer(32, 32, Continuous(), Coords(y = 0, x = 1, z = 0)),
+    Layer(32, 32, Continuous(), Coords(y = 0, x = 32, z = 0)),
 )
 
 host = window(title = "All layers")
@@ -237,6 +237,20 @@ panel!(host, AllLayersViewPanel(g; initial_view = :all), (1, 1))
 
 The resulting axis uses Makie's normal drag-pan and scroll-zoom interactions,
 so it works as one large scrollable map of layer state.
+
+## Close Callbacks
+
+Use `onclose!` for cleanup that should run when a host or panel closes:
+
+```julia
+onclose!(host) do host
+    @info "window closed"
+end
+```
+
+The callback is scheduled asynchronously, so it does not block the GLMakie
+window close event. Built-in graph panels use this to close graph-attached
+processes by requesting that they stop without waiting in the close callback.
 
 ## Public API
 
@@ -250,6 +264,7 @@ InteractiveIsing.Windows.PanelHandle
 InteractiveIsing.Windows.panel!
 InteractiveIsing.Windows.mount!
 InteractiveIsing.Windows.register!
+InteractiveIsing.Windows.onclose!
 InteractiveIsing.Windows.register_frame!
 InteractiveIsing.Windows.register_polled!
 InteractiveIsing.Windows.pause!

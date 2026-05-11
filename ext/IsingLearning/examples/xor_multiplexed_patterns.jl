@@ -168,12 +168,7 @@ end
 
 function xor_layer(graph)
     base_dynamics = II.BlockLangevin(stepsize = STEPSIZE, adjusted = false, block_size = BLOCK_SIZE, group_steps = 1)
-    free_dynamics = ScheduledLangevin(
-        deepcopy(base_dynamics);
-        start_stepsize = STEPSIZE,
-        stop_stepsize = STEPSIZE,
-        schedule_steps = FREE_RELAXATION,
-    )
+    free_dynamics = deepcopy(base_dynamics)
     return LayeredIsingGraphLayer(
         () -> xor_graph();
         input_idxs = II.layerrange(graph[1]),

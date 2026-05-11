@@ -1,0 +1,49 @@
+  Activating project at `~/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning`
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    2-element Vector{Symbol}:
+│     :equilibrium_state
+│     :x
+└ @ IsingLearning.InteractiveIsing.Processes ~/Documents/GitHub/InteractiveIsing.jl/deps/Processes/src/Widgets/GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    3-element Vector{Symbol}:
+│     :equilibrium_state
+│     :y
+│     :x
+└ @ IsingLearning.InteractiveIsing.Processes ~/Documents/GitHub/InteractiveIsing.jl/deps/Processes/src/Widgets/GeneralState.jl:54
+Running 2-input statistical XOR EP: (epochs = 2000, log_every = 100, minit = 16, eval_repeats = 64, hidden = 16, beta = 0.5, lr = 0.0002, weight_decay = 0.0, temp = 0.0005, stepsize = 0.1, block_size = 8, free_relaxation = 80, nudged_relaxation = 80, state = :continuous, dynamics = :langevin, init_mode = :zero, training_rule = :ep, target_free_sign = :target_minus_free)
+epoch=0 mse=0.995544 acc=1.0
+    case=(false, false) input=[-1.0, -1.0] target=[1.0, -1.0] mean=[-0.0441, -0.046] std=0.02286
+    case=(false, true) input=[-1.0, 1.0] target=[-1.0, 1.0] mean=[-0.0484, -0.042] std=0.02602
+    case=(true, false) input=[1.0, -1.0] target=[-1.0, 1.0] mean=[-0.0572, -0.0402] std=0.02139
+    case=(true, true) input=[1.0, 1.0] target=[1.0, -1.0] mean=[-0.045, -0.0461] std=0.02083
+epoch=1 mse=1.003813 acc=0.5 grad=0.137359 response=0.090398 delta=0.002417
+epoch=100 mse=1.000745 acc=0.5 grad=0.109461 response=0.084586 delta=0.177697
+epoch=200 mse=0.999318 acc=0.5 grad=0.094121 response=0.080125 delta=0.306741
+epoch=300 mse=1.000877 acc=0.25 grad=0.079255 response=0.080506 delta=0.398251
+epoch=400 mse=1.000409 acc=0.5 grad=0.062811 response=0.077631 delta=0.467644
+epoch=500 mse=1.002986 acc=0.25 grad=0.05757 response=0.075496 delta=0.515415
+epoch=600 mse=1.000774 acc=0.5 grad=0.057144 response=0.074684 delta=0.554014
+epoch=700 mse=0.999701 acc=0.5 grad=0.045463 response=0.075346 delta=0.580802
+epoch=800 mse=1.000794 acc=0.5 grad=0.03681 response=0.07487 delta=0.603308
+epoch=900 mse=1.000333 acc=0.5 grad=0.034377 response=0.075152 delta=0.620955
+epoch=1000 mse=0.998289 acc=0.75 grad=0.034282 response=0.074283 delta=0.632542
+epoch=1100 mse=0.999584 acc=0.5 grad=0.032683 response=0.074337 delta=0.64493
+epoch=1200 mse=0.998242 acc=0.75 grad=0.037686 response=0.073719 delta=0.650028
+epoch=1300 mse=0.998887 acc=0.75 grad=0.035708 response=0.074406 delta=0.655917
+epoch=1400 mse=0.999882 acc=0.25 grad=0.02369 response=0.073717 delta=0.660803
+epoch=1500 mse=1.001539 acc=0.25 grad=0.025054 response=0.073938 delta=0.666154
+epoch=1600 mse=1.00386 acc=0.5 grad=0.023746 response=0.074201 delta=0.66987
+epoch=1700 mse=1.000858 acc=0.25 grad=0.024703 response=0.073188 delta=0.672659
+epoch=1800 mse=1.00249 acc=0.25 grad=0.023569 response=0.074148 delta=0.674305
+epoch=1900 mse=0.999313 acc=0.75 grad=0.027742 response=0.073758 delta=0.677672
+epoch=2000 mse=1.001035 acc=0.5 grad=0.02681 response=0.075036 delta=0.677822
+restored best mse=1.000496 acc=0.5
+    case=(false, false) input=[-1.0, -1.0] target=[1.0, -1.0] mean=[-0.0469, -0.0435] std=0.02174
+    case=(false, true) input=[-1.0, 1.0] target=[-1.0, 1.0] mean=[-0.0447, -0.0432] std=0.02124
+    case=(true, false) input=[1.0, -1.0] target=[-1.0, 1.0] mean=[-0.0547, -0.0398] std=0.02207
+    case=(true, true) input=[1.0, 1.0] target=[1.0, -1.0] mean=[-0.048, -0.0413] std=0.02392
+Saved CSV: ext/IsingLearning/runs/xor_2input_langevin_zero_control_20260510_023231/T0005_s010_lr0002_b05/xor_statistical_ep_2input.csv
+Saved plot: ext/IsingLearning/runs/xor_2input_langevin_zero_control_20260510_023231/T0005_s010_lr0002_b05/xor_statistical_ep_2input.png
+Saved graph: ext/IsingLearning/runs/xor_2input_langevin_zero_control_20260510_023231/T0005_s010_lr0002_b05/xor_statistical_ep_2input_trained_graph.jld2

@@ -31,6 +31,7 @@ The older experimental files `ComputeGradients.jl`, `ChainRules.jl`, and
 
 - `examples/tiny_mnist.jl`: tiny MNIST smoke test on the active threaded path.
 - `examples/xor_statistical_ep.jl`: statistical XOR experiment using repeated relaxations.
+- `examples/xor_statistical_ep_2input.jl`: honest two-input discrete XOR experiment.
 - `examples/gradient_trace.jl`: gradient tracing/debugging.
 
 ## Notes
@@ -40,6 +41,12 @@ Development findings from the XOR debugging runs are tracked in
 
 The first successful statistical XOR run is documented in
 [`xor_successful_learning.md`](xor_successful_learning.md).
+
+The stronger honest two-input discrete XOR run is documented in
+[`xor_2input_discrete_success.md`](xor_2input_discrete_success.md).
+
+The matching continuous Langevin success case is documented in
+[`xor_2input_langevin_success.md`](xor_2input_langevin_success.md).
 
 The distinction between exact equilibrium propagation and the successful
 short-run contrastive update is explained in

@@ -88,9 +88,6 @@ function WindowHost(fig::Figure; screen = nothing, fps = 30, polling_rate = 10, 
         false,
     )
     start_timers && _start_host_timers!(host)
-    register!(host, on(host.open) do isopen
-        isopen || _native_close!(host)
-    end)
     return host
 end
 
@@ -108,9 +105,6 @@ function _display_host!(host::WindowHost, title)
     GLFW.SetWindowTitle(to_native(screen), title)
     host.screen = screen
     host.open = events(host.figure).window_open
-    register!(host, on(host.open) do isopen
-        isopen || _native_close!(host)
-    end)
     register!(host, on(events(host.figure.scene).keyboardbutton) do _
         if ispressed(host.figure, (Keyboard.left_super, Keyboard.w)) || ispressed(host.figure, (Keyboard.left_control, Keyboard.w))
             close(host)
@@ -344,6 +338,10 @@ end
 
 function _tick!(host::WindowHost)
     (host.closed || host.closing) && return nothing
+    if !host.open[]
+        _schedule_native_close!(host)
+        return nothing
+    end
     for callback in copy(host.frame_callbacks)
         (host.closed || host.closing) && return nothing
         callback(host)
@@ -353,6 +351,10 @@ end
 
 function _poll!(host::WindowHost)
     (host.closed || host.closing) && return nothing
+    if !host.open[]
+        _schedule_native_close!(host)
+        return nothing
+    end
     for observable in copy(host.pollables)
         (host.closed || host.closing) && return nothing
         poll!(observable)
@@ -385,11 +387,7 @@ _cleanup_resource!(timer::PTimer) = close(timer)
 _cleanup_resource!(timer::Timer) = close(timer)
 _cleanup_resource!(po::PolledObservable) = close(po)
 function _cleanup_resource!(process::Processes.AbstractProcess)
-    @async try
-        close(process)
-    catch err
-        @warn "Error while closing window process resource" process_type = typeof(process) exception = (err, catch_backtrace())
-    end
+    _request_process_close!(process)
     return nothing
 end
 _cleanup_resource!(resource) = applicable(close, resource) ? close(resource) : nothing
@@ -523,12 +521,24 @@ function _native_close_handle!(handle::PanelHandle)
     return nothing
 end
 
-function _native_close!(host::WindowHost)
+function _begin_native_close!(host::WindowHost)
     (host.closed || host.closing) && return nothing
     host.closing = true
     isnothing(host.frame_timer) || close(host.frame_timer)
     isnothing(host.poll_timer) || close(host.poll_timer)
+    empty!(host.frame_callbacks)
+    empty!(host.pollables)
+    host.closed = true
+    return host
+end
 
+function _schedule_native_close!(host::WindowHost)
+    _begin_native_close!(host) === nothing && return nothing
+    @async _finish_native_close!(host)
+    return nothing
+end
+
+function _finish_native_close!(host::WindowHost)
     for child in reverse(collect(values(host.children)))
         _native_close_handle!(child)
     end
@@ -539,9 +549,6 @@ function _native_close!(host::WindowHost)
     end
     empty!(host.children)
     empty!(host.resources)
-    empty!(host.frame_callbacks)
-    empty!(host.pollables)
-    host.closed = true
     host.closing = false
     return nothing
 end
@@ -555,6 +562,17 @@ teardown.
 """
 function Base.close(host::WindowHost)
     (host.closed || host.closing) && return nothing
+    if !isnothing(host.screen)
+        _begin_native_close!(host)
+        @async _finish_native_close!(host)
+        try
+            close(host.screen)
+        catch err
+            @warn "Could not close GLMakie screen" exception = (err, catch_backtrace())
+        end
+        return nothing
+    end
+
     host.closing = true
     should_close_screen = !isnothing(host.screen) && host.open[]
     isnothing(host.frame_timer) || close(host.frame_timer)

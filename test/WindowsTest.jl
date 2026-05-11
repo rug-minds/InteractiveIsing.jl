@@ -29,7 +29,7 @@ end
     @test !resource.closed[]
     @test host.children[:test] === handle
     @test handle.slot == (1, 1)
-    @test sprint(show, host) == "WindowHost(\"untitled\", panels=1, resources=1, close_callbacks=0, fps=30.0, polling_rate=10.0, closed=false)"
+    @test sprint(show, host) == "WindowHost(\"untitled\", panels=1, resources=0, close_callbacks=0, fps=30.0, polling_rate=10.0, closed=false)"
     @test sprint(show, handle) == "PanelHandle(TestPanel, slot=(1, 1), children=0, resources=1, close_callbacks=0, closed=false)"
     @test sprint(show, TestPanel()) == "TestPanel(...)"
     @test !occursin("Figure", sprint(show, MIME("text/plain"), host))
@@ -70,6 +70,11 @@ end
     native_handle = Windows.panel!(native_host, :test, TestPanel(), (1, 1))
     native_resource = native_handle[:resource]
     native_host.open[] = false
+    Windows._tick!(native_host)
+    for _ in 1:20
+        native_handle.closed && break
+        sleep(0.01)
+    end
     @test native_host.closed
     @test native_handle.closed
     @test !native_resource.closed[]

@@ -124,18 +124,63 @@ end
     t::T,
     use_adjusted::Bool,
 ) where {T}
+    return use_adjusted ?
+        (@inline _langevin_single_spin_proposal!(langevin, rng, dh, hamiltonian, model, layer_views, spin_idx, derivative, η, σ, drift_fraction, t, Val(true), Val(false))) :
+        (@inline _langevin_single_spin_proposal!(langevin, rng, dh, hamiltonian, model, layer_views, spin_idx, derivative, η, σ, drift_fraction, t, Val(false), Val(true)))
+end
+
+@inline function _langevin_single_spin_proposal!(
+    langevin,
+    rng,
+    dh,
+    hamiltonian,
+    model,
+    layer_views,
+    spin_idx::Int,
+    derivative::T,
+    η::T,
+    σ::T,
+    drift_fraction::T,
+    t::T,
+    adjusted::Val{UseAdjusted},
+) where {T,UseAdjusted}
+    return @inline _langevin_single_spin_proposal!(
+        langevin, rng, dh, hamiltonian, model, layer_views, spin_idx,
+        derivative, η, σ, drift_fraction, t, adjusted, Val(true),
+    )
+end
+
+@inline function _langevin_single_spin_proposal!(
+    langevin,
+    rng,
+    dh,
+    hamiltonian,
+    model,
+    layer_views,
+    spin_idx::Int,
+    derivative::T,
+    η::T,
+    σ::T,
+    drift_fraction::T,
+    t::T,
+    ::Val{UseAdjusted},
+    ::Val{ClipBoundaryDrift},
+) where {T,UseAdjusted,ClipBoundaryDrift}
     spins = @inline InteractiveIsing.graphstate(model)
     low_state, high_state, local_span, layer_idx = @inline _local_langevin_bounds(spin_idx, layer_views)
     local_drift_cap = drift_fraction * local_span
-    drift_step = use_adjusted ? η * derivative : (@inline _langevin_drift_step(η, derivative, local_drift_cap))
+    drift_step = UseAdjusted ? η * derivative : (@inline _langevin_drift_step(η, derivative, local_drift_cap))
 
     old_state = @inbounds spins[spin_idx]
+    if ClipBoundaryDrift && !UseAdjusted
+        drift_step = @inline _langevin_boundary_drift_step(drift_step, old_state, low_state, high_state)
+    end
     noise = σ > zero(T) ? (@inline randn(rng, T)) : zero(T)
     trial_state = old_state - drift_step + σ * noise
     reflected = 0
     ΔE = zero(T)
 
-    if !use_adjusted
+    if !UseAdjusted
         new_state = @inline _reflect_to_bounds(trial_state, low_state, high_state)
         reflected = new_state == trial_state ? 0 : 1
         if t <= zero(T)

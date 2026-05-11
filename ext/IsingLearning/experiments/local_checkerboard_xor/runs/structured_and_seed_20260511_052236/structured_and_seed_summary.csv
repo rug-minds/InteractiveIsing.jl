@@ -1,0 +1,2 @@
+rank,config,best_acc,best_mse,saved,notes
+1,structured_2x2_T0.001_ib2.0_f3.5_o0.8_ob0.4_b0.1_lr0.002,1.0,0.095703125,yes,explicit local A/B/AND hidden seed with fixed input default bias

@@ -90,6 +90,11 @@ using Random
     @test langevin_refresh_pattern(BlockLangevin(stepsize = 0.1f0, adjusted = true, block_size = 3), 3) ==
         [true, false, false, true]
 
+    @test InteractiveIsing._langevin_boundary_drift_step(1f0, -1f0, -1f0, 1f0) == 0f0
+    @test InteractiveIsing._langevin_boundary_drift_step(-1f0, 1f0, -1f0, 1f0) == 0f0
+    @test InteractiveIsing._langevin_boundary_drift_step(-1f0, -1f0, -1f0, 1f0) == -1f0
+    @test InteractiveIsing._langevin_boundary_drift_step(1f0, 1f0, -1f0, 1f0) == 1f0
+
     function ordered_block_shuffle_groups()
         graph = IsingGraph(
             8,

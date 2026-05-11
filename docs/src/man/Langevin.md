@@ -8,7 +8,7 @@ There are three Langevin update types:
 - `LocalLangevin`: proposes one single-spin move per `Processes.step!`.
 - `GlobalLangevin`: refreshes all active-spin derivatives, then proposes one
   single-spin move per `Processes.step!`.
-- `BlockLangevin`: refreshes derivatives on a random cyclic block of active
+- `BlockLangevin`: refreshes derivatives on a shuffled group of active
   spins, then proposes one single-spin move per `Processes.step!`.
 
 The Boltzmann correctness argument for the adjusted algorithms is kept separate
@@ -124,12 +124,12 @@ GlobalLangevin(;
 )
 ```
 
-With `adjusted=false`, `GlobalLangevin` recomputes the derivative for every
-active spin at the start of a cached cycle, shuffles the active indices, then
-consumes that cached gradient one spin per `Processes.step!`. With
-`adjusted=true`, it recomputes the global derivative at the current state for
-each single-spin proposal so the Metropolis adjustment is exact. The proposal is
-stored as a `FlipProposal`.
+`GlobalLangevin` recomputes the derivative for every active spin at the start
+of a proposal cycle. With `adjusted=true`, it constructs and accepts/rejects the
+whole active-spin Langevin proposal at that global level. If accepted, the
+accepted vector proposal is then written as one `FlipProposal` per subsequent
+`Processes.step!`. With `adjusted=false`, it skips the global accept/reject and
+streams reflected single-spin writes from the cached derivative cycle.
 
 For the selected spin `i`, the adjusted proposal is
 
@@ -138,8 +138,8 @@ y_i = x_i - \eta\,\partial_i H(x) + \sqrt{2\eta T}\,\xi,
 \qquad \xi \sim \mathcal{N}(0,1).
 ```
 
-If `adjusted=true`, an out-of-bounds proposal is rejected. Otherwise the
-single-spin proposal is accepted or rejected as one current-gradient
+If `adjusted=true`, an out-of-bounds coordinate rejects the whole global
+proposal. Otherwise the whole vector proposal is accepted or rejected as one
 Metropolis-Hastings/MALA move.
 
 If `adjusted=false`, the selected coordinate is reflected into its layer bounds,
@@ -160,13 +160,16 @@ BlockLangevin(;
 )
 ```
 
-`BlockLangevin` is between local and global Langevin. With `adjusted=false`, it
-refreshes a random cyclic block of active-spin derivatives at the start of a
-cached cycle. If there are `n` active spins and `m = min(block_size, n)`, the
-algorithm chooses a random cyclic offset and takes `m` consecutive active
-indices modulo `n`. It then shuffles that block and consumes one cached
-derivative per `Processes.step!`. With `adjusted=true`, it redraws and
-recomputes the block at the current state for each single-spin proposal.
+`BlockLangevin` is between local and global Langevin. At the start of a proposal
+cycle it refreshes a group of active-spin derivatives from a shuffled
+active-spin order. If there are `n` active spins and `m = min(block_size, n)`,
+the algorithm walks that shuffled order in chunks of `m`, reshuffling when the
+next chunk would overrun the order. The selected group is therefore not a
+spatial block or a run of linear indices. With `adjusted=true`, it constructs
+and accepts/rejects the whole block proposal at that block level, then streams
+accepted block entries as one `FlipProposal` per subsequent `Processes.step!`.
+With `adjusted=false`, it streams reflected
+single-spin writes from the cached block derivative cycle.
 
 The adjusted proposal and acceptance rule are the same as `GlobalLangevin`, but
 the derivative refresh is restricted to the selected block.
@@ -180,9 +183,10 @@ attempts one spin update.
 ## Adjusted Versus Unadjusted
 
 `adjusted=true` means the proposal is accepted with the current-gradient
-Metropolis-Hastings/MALA correction. The global and block variants therefore do
-not consume stale cached derivatives in adjusted mode; the cached scheduler is
-used only for unadjusted reflected dynamics.
+Metropolis-Hastings/MALA correction at the algorithm's proposal scope:
+single-spin for local, all active spins for global, and the selected block for
+block Langevin. Accepted global/block vector proposals are streamed into the
+graph one spin per `Processes.step!` after the proposal-level accept decision.
 
 `adjusted=false` means the proposal is reflected into bounds and accepted
 without a Metropolis-Hastings correction. This can be useful for interactive or

@@ -1,0 +1,13 @@
+rank,config,best_acc,best_mse,saved,notes
+1,structured_2x2_T0.001_ib2.0_f3.5_o0.8_ob0.4_b0.1_lr0.002,1.0,0.060546875,yes,explicit local A/B/AND hidden seed with fixed input default bias
+2,structured_2x2_T0.001_ib2.0_f3.5_o0.7_ob0.6_b0.1_lr0.002,1.0,0.0751953125,yes,explicit local A/B/AND hidden seed with fixed input default bias
+3,structured_2x2_T0.001_ib2.0_f3.5_o0.7_ob0.8_b0.2_lr0.002,1.0,0.0751953125,yes,explicit local A/B/AND hidden seed with fixed input default bias
+4,structured_2x2_T0.001_ib2.0_f3.5_o0.8_ob0.4_b0.2_lr0.002,1.0,0.1103515625,yes,explicit local A/B/AND hidden seed with fixed input default bias
+5,structured_2x2_T0.001_ib2.0_f3.5_o0.7_ob0.6_b0.2_lr0.004,1.0,0.1220703125,yes,explicit local A/B/AND hidden seed with fixed input default bias
+6,structured_2x2_T0.001_ib2.0_f3.5_o0.7_ob0.8_b0.1_lr0.002,1.0,0.134765625,yes,explicit local A/B/AND hidden seed with fixed input default bias
+7,structured_2x2_T0.001_ib2.0_f3.5_o0.7_ob0.8_b0.2_lr0.004,1.0,0.134765625,yes,explicit local A/B/AND hidden seed with fixed input default bias
+8,structured_2x2_T0.001_ib2.0_f3.5_o0.7_ob0.4_b0.1_lr0.002,1.0,0.146484375,yes,explicit local A/B/AND hidden seed with fixed input default bias
+9,structured_2x2_T0.001_ib2.0_f3.5_o0.8_ob0.4_b0.2_lr0.004,1.0,0.154296875,yes,explicit local A/B/AND hidden seed with fixed input default bias
+10,structured_2x2_T0.001_ib2.0_f3.5_o0.7_ob0.4_b0.2_lr0.002,1.0,0.189453125,yes,explicit local A/B/AND hidden seed with fixed input default bias
+11,structured_2x2_T0.001_ib2.0_f3.5_o0.7_ob0.4_b0.2_lr0.004,1.0,0.1953125,yes,explicit local A/B/AND hidden seed with fixed input default bias
+12,structured_2x2_T0.001_ib2.0_f3.5_o0.7_ob0.6_b0.2_lr0.002,1.0,0.2509765625,no,explicit local A/B/AND hidden seed with fixed input default bias

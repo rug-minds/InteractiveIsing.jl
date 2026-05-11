@@ -110,6 +110,15 @@ end
     return clamp(η * derivative, -cap, cap)
 end
 
+@inline function _langevin_boundary_drift_step(drift_step::T, old_state::T, low_state::T, high_state::T) where {T}
+    if old_state <= low_state && drift_step > zero(T)
+        return zero(T)
+    elseif old_state >= high_state && drift_step < zero(T)
+        return zero(T)
+    end
+    return drift_step
+end
+
 @inline function _mala_log_kernel(x, mean, four_ηT)
     dx = x - mean
     return -(dx * dx) / four_ηT
@@ -524,9 +533,12 @@ end
     local_drift_cap = drift_fraction * local_span
     raw_drift_step = η * derivative
     drift_step = Adjusted ? raw_drift_step : (@inline _langevin_drift_step(η, derivative, local_drift_cap))
+    old_state = @inbounds spins[spin_idx]
+    if !Adjusted
+        drift_step = @inline _langevin_boundary_drift_step(drift_step, old_state, low_state, high_state)
+    end
 
     noise = σ > zero(SType) ? (@inline randn(rng, SType)) : zero(SType)
-    old_state = @inbounds spins[spin_idx]
     trial_state = old_state - drift_step + σ * noise
     post_derivative = derivative
     accepted = 0

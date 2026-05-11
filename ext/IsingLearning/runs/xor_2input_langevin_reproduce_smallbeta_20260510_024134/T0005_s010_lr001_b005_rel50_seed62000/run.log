@@ -1,0 +1,49 @@
+  Activating project at `~/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning`
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    2-element Vector{Symbol}:
+│     :equilibrium_state
+│     :x
+└ @ IsingLearning.InteractiveIsing.Processes ~/Documents/GitHub/InteractiveIsing.jl/deps/Processes/src/Widgets/GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    3-element Vector{Symbol}:
+│     :equilibrium_state
+│     :y
+│     :x
+└ @ IsingLearning.InteractiveIsing.Processes ~/Documents/GitHub/InteractiveIsing.jl/deps/Processes/src/Widgets/GeneralState.jl:54
+Running 2-input statistical XOR EP: (epochs = 2000, log_every = 100, minit = 16, eval_repeats = 64, hidden = 16, beta = 0.05, lr = 0.001, weight_decay = 0.0, temp = 0.0005, stepsize = 0.1, block_size = 8, free_relaxation = 50, nudged_relaxation = 50, state = :continuous, dynamics = :langevin, init_mode = :zero, training_rule = :ep, target_free_sign = :target_minus_free)
+epoch=0 mse=1.002229 acc=0.5
+    case=(false, false) input=[-1.0, -1.0] target=[1.0, -1.0] mean=[-0.0288, -0.0251] std=0.01731
+    case=(false, true) input=[-1.0, 1.0] target=[-1.0, 1.0] mean=[-0.0306, -0.0299] std=0.01824
+    case=(true, false) input=[1.0, -1.0] target=[-1.0, 1.0] mean=[-0.0283, -0.0243] std=0.01666
+    case=(true, true) input=[1.0, 1.0] target=[1.0, -1.0] mean=[-0.0317, -0.025] std=0.01825
+epoch=1 mse=0.998059 acc=1.0 grad=0.190216 response=0.034738 delta=0.012083
+epoch=100 mse=0.998959 acc=0.5 grad=0.203634 response=0.029888 delta=0.218217
+epoch=200 mse=1.000358 acc=0.75 grad=0.172622 response=0.025394 delta=0.367275
+epoch=300 mse=0.999381 acc=0.5 grad=0.173139 response=0.022699 delta=0.461909
+epoch=400 mse=0.998416 acc=0.5 grad=0.189155 response=0.020021 delta=0.536277
+epoch=500 mse=0.997581 acc=0.75 grad=0.179767 response=0.01903 delta=0.601646
+epoch=600 mse=0.998068 acc=0.75 grad=0.171319 response=0.018582 delta=0.645102
+epoch=700 mse=1.001598 acc=0.25 grad=0.18317 response=0.017972 delta=0.658703
+epoch=800 mse=1.000334 acc=0.5 grad=0.168254 response=0.018018 delta=0.656607
+epoch=900 mse=1.002583 acc=0.5 grad=0.186541 response=0.017913 delta=0.683673
+epoch=1000 mse=1.002357 acc=0.0 grad=0.197518 response=0.016991 delta=0.683341
+epoch=1100 mse=1.000225 acc=0.75 grad=0.159779 response=0.017216 delta=0.698468
+epoch=1200 mse=1.001755 acc=0.5 grad=0.161946 response=0.016821 delta=0.695591
+epoch=1300 mse=1.000294 acc=0.5 grad=0.150918 response=0.017387 delta=0.680529
+epoch=1400 mse=0.998629 acc=0.5 grad=0.17378 response=0.017183 delta=0.690312
+epoch=1500 mse=1.004114 acc=0.5 grad=0.169188 response=0.017297 delta=0.697302
+epoch=1600 mse=1.001454 acc=0.25 grad=0.175647 response=0.017013 delta=0.695342
+epoch=1700 mse=0.997921 acc=0.5 grad=0.145406 response=0.017125 delta=0.697191
+epoch=1800 mse=1.000369 acc=0.25 grad=0.185614 response=0.017406 delta=0.704317
+epoch=1900 mse=0.999365 acc=0.5 grad=0.177337 response=0.01709 delta=0.715585
+epoch=2000 mse=0.997107 acc=1.0 grad=0.146144 response=0.01739 delta=0.708789
+restored best mse=0.996986 acc=1.0
+    case=(false, false) input=[-1.0, -1.0] target=[1.0, -1.0] mean=[0.0004, -0.0012] std=0.01738
+    case=(false, true) input=[-1.0, 1.0] target=[-1.0, 1.0] mean=[-0.0034, 0.0014] std=0.01646
+    case=(true, false) input=[1.0, -1.0] target=[-1.0, 1.0] mean=[-0.0011, 0.0018] std=0.01617
+    case=(true, true) input=[1.0, 1.0] target=[1.0, -1.0] mean=[0.0004, -0.0025] std=0.01694
+Saved CSV: ext/IsingLearning/runs/xor_2input_langevin_reproduce_smallbeta_20260510_024134/T0005_s010_lr001_b005_rel50_seed62000/xor_statistical_ep_2input.csv
+Saved plot: ext/IsingLearning/runs/xor_2input_langevin_reproduce_smallbeta_20260510_024134/T0005_s010_lr001_b005_rel50_seed62000/xor_statistical_ep_2input.png
+Saved graph: ext/IsingLearning/runs/xor_2input_langevin_reproduce_smallbeta_20260510_024134/T0005_s010_lr001_b005_rel50_seed62000/xor_statistical_ep_2input_trained_graph.jld2

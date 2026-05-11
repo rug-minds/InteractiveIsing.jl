@@ -15,11 +15,12 @@ large global state object.
 - frame callbacks;
 - registered `PolledObservable`s;
 - resource cleanup registrations;
+- close callbacks;
 - child `PanelHandle`s.
 
 A panel object is just a description. A `PanelHandle` is the mounted runtime
 object. Handles store the panel's layout cell, children, registered resources,
-and arbitrary data.
+close callbacks, and arbitrary data.
 
 The normal pattern is:
 
@@ -68,12 +69,23 @@ register_frame!(handle) do host
 end
 
 register_polled!(handle, PolledObservable(initial, _ -> compute_value()))
+
+onclose!(handle) do handle
+    # callback scheduled asynchronously when the panel closes
+end
 ```
 
 When a panel closes, children close first, then the panel-specific `close!`
-hook, then registered resources. Host close stops the frame and polling timers
-before closing children, which avoids callbacks firing while Makie objects are
-being torn down.
+hook, then close callbacks are scheduled, then registered resources are cleaned
+up. Host close stops the frame and polling timers before closing children, which
+avoids callbacks firing while Makie objects are being torn down.
+
+Close callbacks never block the native GLMakie close event. Use them for work
+that may wait, such as closing graph-attached simulation processes.
+
+Built-in panels that store an Ising graph register one nonblocking stop request
+per host. `ContextLinesPanel` also registers a nonblocking stop request when it
+is constructed from a `Processes.AbstractProcess`.
 
 ## Lifecycle Hooks
 

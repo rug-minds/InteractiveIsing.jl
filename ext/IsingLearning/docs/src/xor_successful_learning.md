@@ -56,6 +56,40 @@ Artifacts:
 ext/IsingLearning/runs/xor_statistical_ep_probe_1000_cold/
 ```
 
+## Current Recheck
+
+After the Langevin step semantics and learning utilities changed, the old
+`50/50` relaxation setting no longer reproduces the same behavior. A current
+sanity recheck with the same one-hot all-to-all task solved the problem again
+when the free and nudged phases were lengthened:
+
+```text
+ISING_XOR_SUCCESS_FREE_RELAXATION=1000
+ISING_XOR_SUCCESS_NUDGED_RELAXATION=1000
+ISING_XOR_SUCCESS_EPOCHS=1500
+ISING_XOR_SUCCESS_LR=0.005
+ISING_XOR_SUCCESS_TEMP=0.001
+ISING_XOR_SUCCESS_STEPSIZE=0.05
+```
+
+Run:
+
+```text
+ext/IsingLearning/runs/xor_langevin_onehot_relax1000_recheck_20260510_031327/
+```
+
+Result:
+
+```text
+best logged MSE ≈ 0.012354, accuracy = 1.0
+restored MSE   ≈ 0.016789, accuracy = 1.0
+```
+
+This confirms that the current `BlockLangevin` path can still learn the simple
+all-to-all XOR problem. The practical change is that `50` Langevin calls is no
+longer enough for this file; use roughly `1000/1000` relaxation calls for this
+sanity check.
+
 ## What Made It Work
 
 The important changes were structural, not just more epochs.

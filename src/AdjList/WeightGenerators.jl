@@ -3,21 +3,21 @@ export WeightGeneratorOld, @WGOld
 
 abstract type AbstractWeightGenerator end
 
-struct WeightGenerator{F, NN} <: AbstractWeightGenerator
+struct WeightGenerator{F, NN, Symmetric} <: AbstractWeightGenerator
     func::F
     funcexp::Union{String, Expr, Symbol, Function, Nothing}
     rng::Random.AbstractRNG
 end
 
-function WeightGenerator(func, NN = tuple(1), rng = Random.MersenneTwister(); exp = nothing)
+function WeightGenerator(func, NN = tuple(1), rng = Random.MersenneTwister(); exp = nothing, symmetric::Bool = true)
     func = DirectMethod(func; allowedkwargs = [:dr, :c1, :c2, :dc])
-    WeightGenerator{typeof(func),NN}(func, exp, rng)
+    WeightGenerator{typeof(func),NN,symmetric}(func, exp, rng)
 end
 
 pass_existing_kwargs(wg::WeightGenerator; kwargs...) = pass_existing_kwargs(wg.func; kwargs...)
 
-getNN(wg::WeightGenerator{F, NN}) where {F,NN} = NN
-function getNN(wg::WeightGenerator{F, NN}, dims) where {F,NN}
+getNN(wg::WeightGenerator{F, NN, Symmetric}) where {F,NN,Symmetric} = NN
+function getNN(wg::WeightGenerator{F, NN, Symmetric}, dims) where {F,NN,Symmetric}
     if NN isa Integer
         return ntuple(i -> NN, dims)
     else
@@ -26,26 +26,26 @@ function getNN(wg::WeightGenerator{F, NN}, dims) where {F,NN}
 end
 
 macro WG(func, kwargs...)
-    kwargs = macro_parse_kwargs(kwargs, :NN => Union{Int, NTuple, Symbol}, :rng, NN = 1, rng = MersenneTwister())
+    kwargs = macro_parse_kwargs(kwargs, :NN => Union{Int, NTuple, Symbol}, :rng, :symmetric, NN = 1, rng = MersenneTwister(), symmetric = true)
     funcexp = QuoteNode(remove_line_number_nodes(func))
-    newfunc = quote @inline WeightGenerator($func, $(kwargs[:NN]), $(kwargs[:rng]), exp = $funcexp) end
+    newfunc = quote @inline WeightGenerator($func, $(kwargs[:NN]), $(kwargs[:rng]), exp = $funcexp, symmetric = $(kwargs[:symmetric])) end
 
     return esc(newfunc)
 end
 
 
-@inline function (wg::WeightGenerator{F})(;dr::DR, c1::C1 = nothing, c2::C2 = nothing, dc::DC = nothing) where {F<:DirectMethod, DR, C1, C2, DC}
+@inline function (wg::WeightGenerator{F, NN, Symmetric})(;dr::DR, c1::C1 = nothing, c2::C2 = nothing, dc::DC = nothing) where {F<:DirectMethod, NN, Symmetric, DR, C1, C2, DC}
     return pass_existing_kwargs(wg;dr, c1, c2, dc)
 end
 
 
 
-function WeightGeneratorOld(func, NN = tuple(1), rng = Random.MersenneTwister(); exp = nothing)
-    WeightGenerator{typeof(func),NN}(func, exp, rng)
+function WeightGeneratorOld(func, NN = tuple(1), rng = Random.MersenneTwister(); exp = nothing, symmetric::Bool = true)
+    WeightGenerator{typeof(func),NN,symmetric}(func, exp, rng)
 end
 
 macro WGOld(func, kwargs...)
-    kwargs = macro_parse_kwargs(kwargs, :NN => Union{Int, NTuple, Symbol}, :rng, NN = 1, rng = MersenneTwister())
+    kwargs = macro_parse_kwargs(kwargs, :NN => Union{Int, NTuple, Symbol}, :rng, :symmetric, NN = 1, rng = MersenneTwister(), symmetric = true)
 
     #Function parsing
     # Either anonymous function which has to have a combination of
@@ -86,7 +86,7 @@ macro WGOld(func, kwargs...)
     end
     # End of function parsing
 
-    return esc(:(WeightGenerator($(newfunc), $(kwargs[:NN]), $(kwargs[:rng]), exp = $funcexp)))
+    return esc(:(WeightGenerator($(newfunc), $(kwargs[:NN]), $(kwargs[:rng]), exp = $funcexp, symmetric = $(kwargs[:symmetric]))))
 end
 
 """
@@ -108,9 +108,6 @@ Old version
 end
 
 const IsingWG = @WG dr -> dr == 1 ? 1 : 0 NN=1
-
-
-
 
 
 

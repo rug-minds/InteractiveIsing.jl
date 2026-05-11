@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="260" viewBox="0 0 780 260">
+<rect width="780" height="260" fill="white"/>
+<text x="24" y="36" font-family="monospace" font-size="18">inlaid8_T0p005_eta0p05_r2000</text>
+<text x="24" y="70" font-family="monospace" font-size="15">side=8, hidden=8, code=4, stride=2</text>
+<text x="24" y="100" font-family="monospace" font-size="15">dynamics=langevin, T=0.005, stepsize=0.05, beta=1.0</text>
+<text x="24" y="130" font-family="monospace" font-size="15">relaxation free/nudged=2000/2000, Minit=2</text>
+<text x="24" y="160" font-family="monospace" font-size="15">adjacency symmetry error=0.0</text>
+<text x="24" y="190" font-family="monospace" font-size="15">weights: min=-1.4205, max=1.545, rms=0.3195</text>
+<text x="24" y="220" font-family="monospace" font-size="15">bias: min=-0.0606, max=0.0506, rms=0.0204</text>
+</svg>
