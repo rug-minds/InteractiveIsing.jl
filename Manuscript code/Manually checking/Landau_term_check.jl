@@ -177,6 +177,7 @@ d1 = -1
 e1 = 1
 
 
+
 Ex1 = range(-1.5, 1.5, length = 1000)
 Ex2 = range(-1.0, 1.0, length = 1000)
 Ey1 = [landau_energy(x, a1, b1, c1, d1, e1) for x in Ex1]
