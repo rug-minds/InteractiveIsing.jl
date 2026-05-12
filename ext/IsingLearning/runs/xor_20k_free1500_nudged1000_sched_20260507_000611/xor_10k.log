@@ -1,0 +1,53 @@
+Running bespoke XOR search with 1 config(s)
+config 1/1: (hidden = (16,), out = 4, output_code = :orthogonal, target_mode = :readout_hterm, readout_target = 1.0, lp = 0.0, dw = 0.0, bias = 0.1, skip = 0.0, weight_norm = 0.2, lr = 0.01, beta = 0.05, relaxation = 1500, free_relaxation = 1500, nudged_relaxation = 1000, dynamics = :block, block_size = 8, adjusted = false, stepsize = 0.05, state = :continuous, weight_seed = 2, bias_seed = 11, minit = 1, init_mode = :zero)
+  temperature: start=0.123871 stop=0.0001 mean_col_norm=0.123871
+  regularization: weight_decay=0.0001 weight_norm=0.2
+  relaxation: free=1500 nudged=1000 free_eta=0.12->0.01 nudged_eta=0.01->0.01
+  epoch=1 mse=1.978966 acc=0.5 margin=0.014027 grad=37.873607 grad_w=34.212241 grad_b=16.246004 delta=4.469886 weight_rms=0.2 lr=0.01
+  epoch=500 mse=0.987808 acc=0.25 margin=0.002577 grad=10.107453 grad_w=9.352796 grad_b=3.832207 delta=4.796761 weight_rms=0.2 lr=0.01
+  epoch=1000 mse=0.735224 acc=0.75 margin=0.001091 grad=10.538116 grad_w=10.111246 grad_b=2.968938 delta=5.021688 weight_rms=0.2 lr=0.01
+  epoch=1500 mse=0.710019 acc=1.0 margin=0.007541 grad=6.461075 grad_w=5.976183 grad_b=2.455756 delta=5.216779 weight_rms=0.2 lr=0.01
+  epoch=2000 mse=1.007329 acc=0.5 margin=0.002377 grad=5.235162 grad_w=5.017584 grad_b=1.493577 delta=5.259294 weight_rms=0.2 lr=0.01
+  epoch=2500 mse=0.993859 acc=0.5 margin=0.004349 grad=4.914584 grad_w=4.3341 grad_b=2.317049 delta=5.348575 weight_rms=0.2 lr=0.01
+  epoch=3000 mse=0.740067 acc=0.75 margin=0.005383 grad=7.281391 grad_w=6.623695 grad_b=3.024122 delta=5.486646 weight_rms=0.2 lr=0.01
+  epoch=3500 mse=0.724324 acc=0.75 margin=0.006063 grad=3.945422 grad_w=3.638296 grad_b=1.526158 delta=5.5236 weight_rms=0.2 lr=0.008 lr_adjusted
+  epoch=4000 mse=0.728711 acc=0.75 margin=0.002634 grad=8.16129 grad_w=7.396168 grad_b=3.450123 delta=5.508455 weight_rms=0.2 lr=0.008
+  epoch=4500 mse=0.74576 acc=0.5 margin=0.001079 grad=5.044363 grad_w=4.541528 grad_b=2.195479 delta=5.559772 weight_rms=0.2 lr=0.008
+  epoch=5000 mse=0.749223 acc=0.75 margin=0.005319 grad=6.161089 grad_w=5.857876 grad_b=1.909007 delta=5.621263 weight_rms=0.2 lr=0.008
+  epoch=5500 mse=0.755004 acc=0.5 margin=0.018304 grad=7.209424 grad_w=6.596637 grad_b=2.908639 delta=5.694373 weight_rms=0.2 lr=0.0064 lr_adjusted
+  epoch=6000 mse=0.483306 acc=0.75 margin=0.000123 grad=4.046723 grad_w=3.702922 grad_b=1.63228 delta=5.765749 weight_rms=0.2 lr=0.0064
+  epoch=6500 mse=0.474279 acc=1.0 margin=0.005704 grad=4.530533 grad_w=4.134545 grad_b=1.852367 delta=5.722491 weight_rms=0.2 lr=0.0064
+  epoch=7000 mse=0.737049 acc=0.75 margin=0.005391 grad=3.07186 grad_w=2.887634 grad_b=1.047804 delta=5.688888 weight_rms=0.2 lr=0.0064
+  epoch=7500 mse=0.753467 acc=0.75 margin=0.00388 grad=7.444708 grad_w=7.005114 grad_b=2.520329 delta=5.798942 weight_rms=0.2 lr=0.0064
+  epoch=8000 mse=0.482089 acc=1.0 margin=0.002644 grad=3.351632 grad_w=3.115198 grad_b=1.236518 delta=5.770405 weight_rms=0.2 lr=0.0064
+  epoch=8500 mse=0.729747 acc=1.0 margin=0.002217 grad=2.689312 grad_w=2.569703 grad_b=0.793111 delta=5.744652 weight_rms=0.2 lr=0.00512 lr_adjusted
+  epoch=9000 mse=0.464731 acc=1.0 margin=0.005908 grad=6.756779 grad_w=6.391891 grad_b=2.190385 delta=5.764154 weight_rms=0.2 lr=0.00512
+  epoch=9500 mse=0.468644 acc=1.0 margin=0.006247 grad=3.556839 grad_w=3.290704 grad_b=1.349952 delta=5.758367 weight_rms=0.2 lr=0.00512
+  epoch=10000 mse=0.752405 acc=0.75 margin=0.008287 grad=5.286708 grad_w=4.861489 grad_b=2.077308 delta=5.778457 weight_rms=0.2 lr=0.00512
+  epoch=10500 mse=0.716128 acc=0.75 margin=0.007856 grad=3.426023 grad_w=3.239561 grad_b=1.114844 delta=5.7074 weight_rms=0.2 lr=0.00512
+  epoch=11000 mse=0.713655 acc=0.75 margin=0.007854 grad=2.258166 grad_w=2.066311 grad_b=0.910863 delta=5.737841 weight_rms=0.2 lr=0.004096 lr_adjusted
+  epoch=11500 mse=0.726349 acc=0.75 margin=0.019538 grad=1.694707 grad_w=1.604183 grad_b=0.546468 delta=5.729848 weight_rms=0.2 lr=0.004096
+  epoch=12000 mse=0.734601 acc=0.75 margin=0.006453 grad=1.634395 grad_w=1.500675 grad_b=0.647472 delta=5.697312 weight_rms=0.2 lr=0.004096
+  epoch=12500 mse=0.722408 acc=0.75 margin=0.023723 grad=1.608905 grad_w=1.455624 grad_b=0.685371 delta=5.731752 weight_rms=0.2 lr=0.004096
+  epoch=13000 mse=0.730461 acc=0.75 margin=0.012893 grad=1.316737 grad_w=1.23148 grad_b=0.466105 delta=5.766193 weight_rms=0.2 lr=0.0032768 lr_adjusted
+  epoch=13500 mse=0.735194 acc=0.75 margin=0.013029 grad=1.251829 grad_w=1.1725 grad_b=0.438542 delta=5.719684 weight_rms=0.2 lr=0.0032768
+  epoch=14000 mse=0.731477 acc=0.75 margin=0.020711 grad=1.142259 grad_w=1.037184 grad_b=0.478546 delta=5.694908 weight_rms=0.2 lr=0.0032768
+  epoch=14500 mse=0.731482 acc=0.75 margin=0.016831 grad=1.026301 grad_w=0.964776 grad_b=0.350001 delta=5.699913 weight_rms=0.2 lr=0.0032768
+  epoch=15000 mse=0.725834 acc=0.75 margin=0.019249 grad=0.817813 grad_w=0.743292 grad_b=0.341081 delta=5.691983 weight_rms=0.2 lr=0.00262144 lr_adjusted
+  epoch=15500 mse=0.721001 acc=0.75 margin=0.012216 grad=0.924416 grad_w=0.849184 grad_b=0.365282 delta=5.705138 weight_rms=0.2 lr=0.00262144
+  epoch=16000 mse=0.721774 acc=0.75 margin=0.017968 grad=0.794209 grad_w=0.752087 grad_b=0.255212 delta=5.712046 weight_rms=0.2 lr=0.00262144
+  epoch=16500 mse=0.726131 acc=0.75 margin=0.017322 grad=0.698727 grad_w=0.651951 grad_b=0.251353 delta=5.73164 weight_rms=0.2 lr=0.00262144
+  epoch=17000 mse=0.717018 acc=0.75 margin=0.004147 grad=0.653226 grad_w=0.604408 grad_b=0.247779 delta=5.730661 weight_rms=0.2 lr=0.00209715 lr_adjusted
+  epoch=17500 mse=0.724659 acc=0.75 margin=0.012107 grad=0.732983 grad_w=0.713706 grad_b=0.166998 delta=5.717736 weight_rms=0.2 lr=0.00209715
+  epoch=18000 mse=0.716196 acc=0.75 margin=0.005312 grad=0.606076 grad_w=0.572378 grad_b=0.199279 delta=5.719564 weight_rms=0.2 lr=0.00209715
+  epoch=18500 mse=0.717211 acc=0.75 margin=0.024965 grad=0.560733 grad_w=0.514656 grad_b=0.222601 delta=5.72179 weight_rms=0.2 lr=0.00209715
+  epoch=19000 mse=0.72424 acc=0.75 margin=0.021682 grad=0.591913 grad_w=0.553758 grad_b=0.209076 delta=5.720987 weight_rms=0.2 lr=0.00167772 lr_adjusted
+  epoch=19500 mse=0.718014 acc=0.75 margin=0.016961 grad=0.520554 grad_w=0.469693 grad_b=0.224421 delta=5.747652 weight_rms=0.2 lr=0.00167772
+  epoch=20000 mse=0.705997 acc=0.75 margin=0.001976 grad=0.556649 grad_w=0.522028 grad_b=0.193248 delta=5.740611 weight_rms=0.2 lr=0.00167772
+  before: mse=0.814814 acc=0.75 best: epoch=9000 mse=0.464731 acc=1.0 after: mse=0.464731 spin_mse=1.154421 score_mse=0.464731 acc=1.0 margin=0.005908
+    case=(false, false) truth=false score=-0.005908 target=-1.0 out=[-0.9792, 0.9805, 0.9848, -0.973]
+    case=(false, true) truth=true score=0.966278 target=1.0 out=[-0.9779, -0.947, -0.9458, -0.9867]
+    case=(true, false) truth=true score=0.954242 target=1.0 out=[-0.9223, 0.9368, -0.9515, -0.957]
+    case=(true, true) truth=false score=-0.068618 target=-1.0 out=[-0.9705, -0.9476, -0.8294, 0.9667]
+Top configs:
+#1 hidden=(16,) out=4 target=readout_hterm readout_target=1.0 lp=0.0 output_code=orthogonal dw=0.0 bias=0.1 skip=0.0 weight_norm=0.2 lr=0.01 beta=0.05 relax=1500 free_relax=1500 nudged_relax=1000 dynamics=block block=8 adjusted=false stepsize=0.05 state=continuous weight_seed=2 bias_seed=11 before_mse=0.814814 before_acc=0.75 best_epoch=9000 best_mse=0.464731 best_acc=1.0 after_mse=0.464731 after_spin_mse=1.154421 after_score_mse=0.464731 after_acc=1.0 margin=0.005908

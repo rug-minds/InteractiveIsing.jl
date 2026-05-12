@@ -1,0 +1,50 @@
+Running bespoke XOR search with 1 config(s)
+config 1/1: (hidden = (16,), out = 4, output_code = :orthogonal, target_mode = :readout_hterm, readout_target = 1.0, lp = 0.0, dw = 0.0, bias = 0.1, skip = 0.0, weight_norm = 0.2, lr = 0.01, beta = 0.05, relaxation = 1500, dynamics = :block, block_size = 8, adjusted = false, stepsize = 0.05, state = :continuous, weight_seed = 2, bias_seed = 11, minit = 1, init_mode = :random)
+  epoch=1 mse=0.99667 acc=0.5 margin=9.0e-5 grad=27.680151 delta=4.471008 weight_rms=0.2
+  epoch=500 mse=0.998359 acc=0.5 margin=0.017063 grad=6.20996 delta=4.875943 weight_rms=0.2
+  epoch=1000 mse=1.008581 acc=0.25 margin=0.004665 grad=5.353459 delta=5.165597 weight_rms=0.2
+  epoch=1500 mse=0.757526 acc=0.5 margin=0.009226 grad=4.186004 delta=5.382241 weight_rms=0.2
+  epoch=2000 mse=0.755147 acc=0.5 margin=0.000907 grad=3.775993 delta=5.572652 weight_rms=0.2
+  epoch=2500 mse=0.502727 acc=0.75 margin=0.000262 grad=4.245155 delta=5.608349 weight_rms=0.2
+  epoch=3000 mse=0.748472 acc=0.75 margin=0.003366 grad=4.436222 delta=5.594938 weight_rms=0.2
+  epoch=3500 mse=0.978673 acc=0.75 margin=0.015404 grad=3.857137 delta=5.580854 weight_rms=0.2
+  epoch=4000 mse=0.985412 acc=0.75 margin=0.009977 grad=3.434346 delta=5.539356 weight_rms=0.2
+  epoch=4500 mse=0.992065 acc=0.5 margin=0.01267 grad=4.587576 delta=5.714321 weight_rms=0.2
+  epoch=5000 mse=0.744902 acc=0.75 margin=0.007376 grad=4.521632 delta=5.798394 weight_rms=0.2
+  epoch=5500 mse=0.525599 acc=0.5 margin=0.003061 grad=3.332843 delta=5.784887 weight_rms=0.2
+  epoch=6000 mse=0.494228 acc=1.0 margin=0.005695 grad=3.621109 delta=5.938277 weight_rms=0.2
+  epoch=6500 mse=1.00312 acc=0.5 margin=0.001635 grad=3.825651 delta=6.050325 weight_rms=0.2
+  epoch=7000 mse=1.029671 acc=0.0 margin=0.002344 grad=3.524464 delta=6.251143 weight_rms=0.2
+  epoch=7500 mse=1.013789 acc=0.5 margin=0.001772 grad=3.512897 delta=6.069171 weight_rms=0.2
+  epoch=8000 mse=1.009675 acc=0.5 margin=0.005234 grad=4.772122 delta=6.237733 weight_rms=0.2
+  epoch=8500 mse=0.733941 acc=0.5 margin=0.002052 grad=3.777308 delta=6.467447 weight_rms=0.2
+  epoch=9000 mse=0.747993 acc=0.75 margin=0.006262 grad=3.518045 delta=6.339071 weight_rms=0.2
+  epoch=9500 mse=1.495504 acc=0.5 margin=0.004635 grad=3.039645 delta=6.324136 weight_rms=0.2
+  epoch=10000 mse=0.751193 acc=0.75 margin=0.002928 grad=4.083964 delta=6.378576 weight_rms=0.2
+  epoch=10500 mse=0.743687 acc=0.75 margin=0.007072 grad=3.017804 delta=6.537977 weight_rms=0.2
+  epoch=11000 mse=0.992894 acc=0.5 margin=0.007305 grad=3.362385 delta=6.508366 weight_rms=0.2
+  epoch=11500 mse=0.489773 acc=0.75 margin=4.4e-5 grad=2.791693 delta=6.4096 weight_rms=0.2
+  epoch=12000 mse=0.495292 acc=0.75 margin=0.008057 grad=2.694826 delta=6.610877 weight_rms=0.2
+  epoch=12500 mse=0.748275 acc=0.75 margin=0.003454 grad=2.774624 delta=6.509438 weight_rms=0.2
+  epoch=13000 mse=0.731649 acc=0.75 margin=0.012471 grad=2.83912 delta=6.487471 weight_rms=0.2
+  epoch=13500 mse=0.997247 acc=0.25 margin=0.004509 grad=2.941534 delta=6.76709 weight_rms=0.2
+  epoch=14000 mse=0.9969 acc=0.5 margin=0.000703 grad=2.821311 delta=6.795297 weight_rms=0.2
+  epoch=14500 mse=0.998525 acc=0.25 margin=0.003547 grad=3.027571 delta=6.642446 weight_rms=0.2
+  epoch=15000 mse=0.76452 acc=0.25 margin=0.001038 grad=2.619034 delta=6.571039 weight_rms=0.2
+  epoch=15500 mse=0.751305 acc=0.5 margin=0.002215 grad=2.645148 delta=6.759768 weight_rms=0.2
+  epoch=16000 mse=1.020639 acc=0.25 margin=0.001216 grad=2.968105 delta=6.981947 weight_rms=0.2
+  epoch=16500 mse=0.990633 acc=0.5 margin=0.028888 grad=2.434029 delta=6.971506 weight_rms=0.2
+  epoch=17000 mse=0.720315 acc=1.0 margin=0.002441 grad=3.406951 delta=7.113731 weight_rms=0.2
+  epoch=17500 mse=1.479652 acc=0.5 margin=0.028741 grad=2.770306 delta=7.097877 weight_rms=0.2
+  epoch=18000 mse=2.145355 acc=0.5 margin=0.038668 grad=3.464892 delta=6.961992 weight_rms=0.2
+  epoch=18500 mse=1.799764 acc=0.5 margin=0.857041 grad=3.750262 delta=7.331355 weight_rms=0.2
+  epoch=19000 mse=1.136217 acc=0.75 margin=0.049759 grad=3.146385 delta=7.192535 weight_rms=0.2
+  epoch=19500 mse=1.884534 acc=0.5 margin=0.915304 grad=3.690337 delta=7.512296 weight_rms=0.2
+  epoch=20000 mse=1.214613 acc=0.5 margin=0.038871 grad=3.67589 delta=7.581413 weight_rms=0.2
+  before: mse=1.250005 acc=0.25 best: epoch=6000 mse=0.494228 acc=1.0 after: mse=0.494228 spin_mse=1.174442 score_mse=0.494228 acc=1.0 margin=0.005695
+    case=(false, false) truth=false score=-0.945265 target=-1.0 out=[-0.9227, -0.9223, 0.9987, 0.8919]
+    case=(false, true) truth=true score=0.005695 target=1.0 out=[-0.9488, -0.9325, -0.9868, 0.9755]
+    case=(true, false) truth=true score=0.007481 target=1.0 out=[-0.9804, 0.9065, 0.9652, -0.9802]
+    case=(true, true) truth=false score=-0.986541 target=-1.0 out=[-0.9801, 0.9828, 0.986, 0.9871]
+Top configs:
+#1 hidden=(16,) out=4 target=readout_hterm readout_target=1.0 lp=0.0 output_code=orthogonal dw=0.0 bias=0.1 skip=0.0 weight_norm=0.2 lr=0.01 beta=0.05 relax=1500 dynamics=block block=8 adjusted=false stepsize=0.05 state=continuous weight_seed=2 bias_seed=11 before_mse=1.250005 before_acc=0.25 best_epoch=6000 best_mse=0.494228 best_acc=1.0 after_mse=0.494228 after_spin_mse=1.174442 after_score_mse=0.494228 after_acc=1.0 margin=0.005695
