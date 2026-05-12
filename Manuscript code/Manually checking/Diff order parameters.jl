@@ -50,105 +50,87 @@ function select_dynamics(g, algorithm_name::Symbol; algorithm_kwargs = (;))
     error("Unknown algorithm_name $(repr(algorithm_name)). Use :default, :metropolis, :local_langevin, :global_langevin, or :block_langevin.")
 end
 
-# Weight function variant 1
-function weightfunc1(; dc::T) where {T}
-    prefac = 1
-    d = dc
-    # Always positive coupling (ferromagnetic)
-    return prefac / norm2(d)
+function mean_polarization_zlayer(model, zidx::Integer)
+    return Float32(mean(state(model[1])[:, :, zidx]))
 end
-function weightfunc2(; dc)
-    d = dc
-    dx, dy, dz = d  # 先解包
-    physical_dr2 = sqrt((0.05*dx)^2 + (0.05*dy)^2 + (0.2*dz)^2) 
-    # z 方向保持铁磁 (正耦合)
-    # if dx == 0 && dy == 0
-    #     prefac = 1
-    # elseif dx == 0
-    #     prefac = 1
-    # else
-    #     # xy 平面反铁磁 (负耦合)
-    #     prefac = -1
-    # end
-    prefac = 1
-    return prefac / physical_dr2
-end
-function weightfunc3(; dc)
-    d = dc
-    dx, dy, dz = d  # 先解包
-    physical_dr2 = sqrt((0.3*dx)^2 + (0.3*dy)^2 + (0.3*dz)^2) 
-    # z 方向保持铁磁 (正耦合)
-    if dx == 0 && dy == 0
-        prefac = 1
-    elseif dx == 0
-        prefac = 1
-    else
-        # xy 平面反铁磁 (负耦合)
-        prefac = -1
+
+function staggered_z_polarization(model)
+    s = state(model[1])
+    total = 0.0f0
+    _, _, zL = size(s)
+    @inbounds for z in 1:zL
+        total += (isodd(z) ? 1.0f0 : -1.0f0) * Float32(mean(s[:, :, z]))
     end
-    # prefac = 1
-    return prefac / physical_dr2
+    return total / zL
 end
-function weightfunc_angle_anti(; dc::DC) where DC
-    d = dc
-    dx, dy, dz = d  # 先解包
-    ax=0.2
-    ay=0.2
-    az=0.1
-    rx = ax*dx
-    ry = ay*dy
-    rz = az*dz
 
-    r2 = rx^2 + ry^2 + rz^2
-    r  = sqrt(r2)
 
-    cosθ = rz / r              # 与 z 轴夹角的 cos
-    prefac  = -1 + 3*cosθ^2        # Ising 沿 z 的角度因子
+# Preferred naming:
+# - `wf_*` = weight-function definitions
+# - use `dr` when only scalar physical distance matters
+# - use `dc` when the direction / shell / parity matters
+# `dr` is already built from `LatticeConstants(...)` inside the adjacency builder.
 
-    return prefac / r^3
+
+function wf_ferro_r(J, p; dr)
+    return J / dr^p
 end
-function weightfunc_angle_ferro(; dc)
-    d = dc
-    dx, dy, dz = d  # 先解包
-    ax=0.2
-    ay=0.2
-    az=0.1
-    rx = ax*dx
-    ry = ay*dy
-    rz = az*dz
 
-    r2 = rx^2 + ry^2 + rz^2
-    r  = sqrt(r2)
-
-    cosθ = rz / r              # 与 z 轴夹角的 cos
-    prefac  = -1 + 3*cosθ^2        # Ising 沿 z 的角度因子
-
-    return abs(prefac) / r^3
-end
-# Shell-based coupling + dipolar coupling
-function weightfunc_shell(ax, ay, az, csr, lambda1, lambda2; dc)
+function wf_ferro_NN1(J; dc)
     dx, dy, dz = dc
-    k1  = 1.0
-    k2  = lambda1 * k1
-    k3  = lambda2 * k2
+    s = dx*dx + dy*dy + dz*dz
+    s == 1 || return 0.0
+    return J
+end
 
-    # --- physical distance for dipolar term ---
-    rx = ax * dx
-    ry = ay * dy
-    rz = az * dz
-    r2 = rx^2 + ry^2 + rz^2
+function wf_antiferro3D_r(J, p; dr)
+    return -J / dr^p
+end
 
-    if r2 == 0
-        return 0.0
+function wf_antiferro3D_NN1(J; dc)
+    dx, dy, dz = dc
+    s = dx*dx + dy*dy + dz*dz
+    s == 1 || return 0.0
+    return -J
+end
+
+function wf_antiferroX_r(J; dr, dc)
+    dx, dy, dz = dc
+    prefac = if dx == 0 && dy == 0
+        J
+    elseif dx == 0
+        J
+    else
+        -J
     end
-    r  = sqrt(r2)
+    return prefac / dr
+end
 
-    # --- dipolar angular factor (Ising along z) ---
-    cosθ  = rz / r
-    prefac_dip = -1 + 3 * cosθ^2
-    Jdip = prefac_dip / r^3
+function wf_antiferroXY_r(J; dr, dc)
+    dx, dy, dz = dc
+    prefac = if dx == 0 && dy == 0
+        J
+    else
+        -J
+    end
+    return prefac / dr
+end
 
-    # --- shell-based short-range term ---
+function wf_antiferroDiag_xy_r(J; dr, dc)
+    dx, dy, dz = dc
+    prefac = if dz == 0 && abs(dx) == abs(dy) && dx != 0
+        -J
+    else
+        J
+    end
+    return prefac / dr
+end
+
+function wf_shell_ferro(c_short, lambda_2, lambda_3; dc)
+    dx, dy, dz = dc
+    k1 = 1.0
+    k2 = lambda_2 * k1
+    k3 = lambda_3 * k2
     s = dx*dx + dy*dy + dz*dz
 
     prefac_sr = if s == 1
@@ -161,58 +143,59 @@ function weightfunc_shell(ax, ay, az, csr, lambda1, lambda2; dc)
         0.0
     end
 
-    Jsr = csr * prefac_sr
-    # return Jdip + Jsr
-    return Jsr
-end
-# Skymion-like coupling
-function weightfunc_skymion(; dc)
-    d = dc
-    dx, dy, dz = d  # 先解包
-    # z 方向保持铁磁 (正耦合)
-    prefac = 2
-    if abs(dy) > 0 || abs(dx) > 0
-        prefac = -2
-    end
-    
-    return prefac / norm2(d)
+    return c_short * prefac_sr
 end
 
-function weightfunc_xy_antiferro(ax, ay, az; dc)
-    d = dc
-    dx, dy, dz = d  # 先解包
-    physical_dr2 = sqrt((ax*dx)^2 + (ay*dy)^2 + (az*dz)^2) 
-    # z 方向保持铁磁 (正耦合)
-    if dx == 0 && dy == 0
-        prefac = 1
-    elseif dx == 0
-        prefac = 1
-    else
-        # xy 平面反铁磁 (负耦合)
-        prefac = -1
-    end
-    
-    return prefac / physical_dr2
-end
-
-function weightfunc_xy_dilog_antiferro(; dc)
-    d = dc
-    dx, dy, dz = d
-    
+function wf_xy_checkerboard_antiferro_inv_r2(; dc)
+    dx, dy, dz = dc
     if (abs(dx) + abs(dy)) % 2 == 0
-        return 1.0 / norm2(d)    # 铁磁
+        return 1.0 / norm2(dc)
     else
-        return -1.0 / norm2(d)   # 反铁磁
+        return -1.0 / norm2(dc)
     end
-    
-    return prefac / norm2(d)
 end
 
-function weightfunc4(; dc)
-    prefac = -1
-    d = dc
-    # Always positive coupling (ferromagnetic)
-    return prefac / norm2(d)
+
+function wf_nn_anisotropic_inv_r(Jz, ratio_xy; dr, dc)
+    dx, dy, dz = dc
+    s = dx*dx + dy*dy + dz*dz
+    s == 1 || return 0.0
+    prefac = dz != 0 ? Jz : ratio_xy * Jz
+    return prefac / dr
+end
+
+function wf_layered_afe_nn(Jz, ratio_xy; dc)
+    dx, dy, dz = dc
+    s = dx*dx + dy*dy + dz*dz
+    s == 1 || return 0.0
+    return dz != 0 ? -Jz : ratio_xy * Jz
+end
+
+function wf_shell_competing(c_short, lambda_2, lambda_3; dc)
+    dx, dy, dz = dc
+    s = dx*dx + dy*dy + dz*dz
+    if s == 1
+        return c_short
+    elseif s == 2
+        return -lambda_2 * c_short
+    elseif s == 3
+        return lambda_3 * c_short
+    else
+        return 0.0
+    end
+end
+
+function wf_plane_checkerboard_nn(Jz; dc)
+    dx, dy, dz = dc
+    s = dx*dx + dy*dy + dz*dz
+    s == 1 || return 0.0
+    if dz != 0
+        return Jz
+    elseif (abs(dx) + abs(dy)) == 1
+        return -Jz
+    else
+        return 0.0
+    end
 end
 
 ##################################################################################
@@ -854,7 +837,7 @@ end
 如果使用这个方式，Ising项的c参数和localpotential项的参数就不会耦合在一起了，可以独立调整。
     g = IsingGraph(xL, yL, zL, 
         Continuous(), 
-        wg5, 
+        wg_shell_ferro, 
         LatticeConstants(1.0, 1.0, 1.0),
         Ising(b = StateLike(UniformArray,0), localpotential = StateLike(UniformArray,0)) + 
             CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + 
@@ -933,10 +916,21 @@ xL = 40  # Length in the x-dimension
 yL = 40  # Length in the y-dimension
 zL = 10   # Length in the z-dimension
 
-### weightfunc_shell(dr,c1,c2, ax, ay, az, csr, lambda1, lambda2), Lambda is the ratio between different shells
-wg1 = @WG (; dc) -> weightfunc1(; dc) NN = 3
-wg2 = @WG (; dc) -> weightfunc_skymion(; dc) NN = 3
-wg5 = @WG (; dc) -> weightfunc_shell(1, 1, 1, 1, 0.1, 0.1; dc) NN = 3
+### Preferred naming:
+### - `wf_*` = weight-function definition
+### - `wg_*` = instantiated generator
+### - `dr` already includes `LatticeConstants(...)`
+### - `dc` is the integer lattice offset
+### wg(; dr = ..., c1 = ..., c2 = ..., dc = ...)， c1 and c2 are coodinates for dipoles
+wg_ferro_long = @WG (; dr) -> wf_ferro_inv_r2(; dr) NN = 3
+wg_skyrmion = @WG (; dc) -> wf_skyrmion_like(; dc) NN = 3
+wg_shell_ferro = @WG (; dc) -> wf_shell_ferro(1, 0.1, 0.1; dc) NN = 3
+
+### Other useful examples:
+wg_aniso_nn = @WG (; dc) -> wf_nn_anisotropic(1.0, 0.5; dc) NN = 1
+wg_aniso_nn_decay = @WG (; dr, dc) -> wf_nn_anisotropic_inv_r(1.0, 0.5; dr, dc) NN = 1
+wg_layered_afe = @WG (; dc) -> wf_layered_afe_nn(1.0, 0.5; dc) NN = 1
+wg_shell_competing = @WG (; dc) -> wf_shell_competing(1.0, 0.5, 0.25; dc) NN = 3
 # Output directory for the whole sweep
 outdir = raw"D:\Code\data\Manuscript\Demo1"
 mkpath(outdir)
@@ -975,7 +969,7 @@ proposer_args = isnothing(proposal_delta) ? () : (LocalProposer(proposal_delta),
 g = IsingGraph(xL, yL, zL, 
         Continuous(), 
         proposer_args...,
-        wg5, 
+        wg_shell_ferro, 
         LatticeConstants(1.0, 1.0, 1.0),
         # Ising(b = UniformArray(0), localpotential = coeff2) + 
             InteractiveIsing.MagField(b = 1) + InteractiveIsing.Bilinear() + 
@@ -1051,6 +1045,10 @@ M_Integrate_and_Logger = IntegrateAndLog(Float32, point_repeat)
 B_Logger = ValueLogger(:b)
 T_Logger = ValueLogger(:T)
 Depol_Logger = DepolLogger(:depol)
+PAFEz_Logger = ValueLogger(:P_AFE_z)
+PTop_Logger = ValueLogger(:P_top)
+PMid_Logger = ValueLogger(:P_mid)
+PBot_Logger = ValueLogger(:P_bot)
 Graph_Logger = ImageCapture(:Graph,-1.5,1.5)
 
 
@@ -1066,6 +1064,10 @@ Metro_Pulse = @CompositeAlgorithm begin
         model = dynamics.model,
         hamiltonian = dynamics.hamiltonian,
     )
+    @every point_repeat PAFEz_Logger(value = @transform(staggered_z_polarization, dynamics.model))
+    @every point_repeat PTop_Logger(value = @transform(m -> mean_polarization_zlayer(m, zL), dynamics.model))
+    @every point_repeat PMid_Logger(value = @transform(m -> mean_polarization_zlayer(m, cld(zL, 2)), dynamics.model))
+    @every point_repeat PBot_Logger(value = @transform(m -> mean_polarization_zlayer(m, 1), dynamics.model))
 end
 pulse_part1 = @CompositeAlgorithm begin
     @context metro_pulse = Metro_Pulse()
@@ -1104,9 +1106,32 @@ HJ2 = c[Depol_Logger].interaction_energy
 Hfield2 = c[Depol_Logger].field_energy
 Hpoly2 = c[Depol_Logger].poly_energy
 Hrest2 = Hdep2 .+ HJ2 .+ Hpoly2
+PAFEz2 = c[PAFEz_Logger].values
+Ptop2 = c[PTop_Logger].values
+Pmid2 = c[PMid_Logger].values
+Pbot2 = c[PBot_Logger].values
 # Temp1    = c[T_Logger].values
+
 fVPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax, voltage2, Pr2))
 fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines!(ax, Pr2))
+
+fOrderStep = makieaxis(
+    f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Order parameters"),
+    ax -> lines!(ax, PAFEz2, label = "P_AFE_z"),
+    ax -> lines!(ax, Ptop2, label = "P_top"),
+    ax -> lines!(ax, Pmid2, label = "P_mid"),
+    ax -> lines!(ax, Pbot2, label = "P_bot"),
+    ax -> axislegend(ax),
+)
+
+fOrderV = makieaxis(
+    f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Order parameters"),
+    ax -> lines!(ax, voltage2, PAFEz2, label = "P_AFE_z"),
+    ax -> lines!(ax, voltage2, Ptop2, label = "P_top"),
+    ax -> lines!(ax, voltage2, Pmid2, label = "P_mid"),
+    ax -> lines!(ax, voltage2, Pbot2, label = "P_bot"),
+    ax -> axislegend(ax),
+)
 
 
 fHrestPr = makieaxis(
