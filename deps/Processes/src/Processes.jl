@@ -10,7 +10,7 @@ module Processes
 
     import DataStructures: Queue, dequeue!, enqueue!
 
-    export ProcessAlgorithm, ProcessState, profile_step_return, filter_by_type
+    export ProcessAlgorithm, ProcessState, ParserOption, IfWrapped, profile_step_return, filter_by_type
 
     const DEBUG_MODE = @load_preference("debug", false)
     debug_mode() = @load_preference("debug", false)
@@ -53,7 +53,6 @@ module Processes
     include("Listeners.jl")
 
     include("Process.jl")
-    include("Copy.jl")
     include("InlineProcess.jl")
     include("InlineProcessShowing.jl")
 
@@ -67,6 +66,8 @@ module Processes
 
     include("ProcessStatus.jl")
     include("ProcessInteraction.jl")
+    include("Copy.jl")
+    include("ProcessManager.jl")
     
     # include("ProcessStates/ProcessStates.jl")
     # include("ProcessAlgorithms.jl")
