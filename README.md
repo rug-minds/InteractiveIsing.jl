@@ -1,5 +1,12 @@
-# InteractiveIsing.jl
-[![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://rug-minds.github.io/InteractiveIsing.jl/dev/man/usage/)
+[![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://f-ij.github.io/Processes.jl/stable/)
 
+# Processes.jl
 
-This package provides a flexible platform for 2D and 3D, multilayer simulations of Ising models.
+Processes.jl helps you build repeatable Julia loops from small pieces.
+
+Each piece is a `ProcessAlgorithm` with a `step!` method, or a `ProcessState`
+that prepares shared data. A `Process` builds a context for those pieces, runs
+the loop, and keeps the latest state so you can pause, resume, inspect, copy, or
+update it.
+
+Start with the [documentation](https://f-ij.github.io/Processes.jl/stable/).
