@@ -37,7 +37,7 @@ using ..InteractiveIsing: AbstractIsingLayer, Clamping, CoulombHamiltonian,
 
 export AbstractPanel, PanelHandle, WindowHost, SimulationPanel, StatusPanel,
     AllLayersViewPanel, ConnectionsPanel, ContextLinesPanel, HamiltonianDisplaySpec, HamiltonianParameterPanel,
-    InteractiveLinesPanel, LayerDisplayValue, LayerSelectorPanel, LayerViewPanel,
+    InteractiveLinesPanel, KineticTimePanel, LayerDisplayValue, LayerSelectorPanel, LayerViewPanel,
     TemperaturePanel, MagnetizationPanel,
     HasAxis, NoAxis, AxisTrait, HasImage, NoImage, ImageTrait,
     axis_to_png, axis_trait, axiskey, fullimage, image_trait,

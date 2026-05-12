@@ -58,7 +58,8 @@ end
 
 @inline Base.eltype(::Type{FlipEnergies{T}}) where {T} = T
 
-@inline function _proposal_for_index(proposer, rng, i::Int)
+@inline function _proposal_for_index(proposer, rng, i::Integer)
+    i = Int(i)
     spins = @inline InteractiveIsing.state(proposer.state)
     oldstate = @inbounds spins[i]
     layer_idx = spin_idx_to_layer_idx(i, proposer.layers)
@@ -69,10 +70,11 @@ end
 @inline function _rate_from_delta(r0::T, ΔE::T, t::T) where {T}
     if !(t > zero(T))
         # At T=0, only accept transitions that lower energy
-        return ΔE < zero(T) ? r0 : zero(T)
+        return ΔE <= zero(T) ? r0 : zero(T)
     end
 
-    exponent = clamp(-ΔE / t, T(-700), T(700))
+    ΔE <= zero(T) && return r0
+    exponent = clamp(-ΔE / t, T(-80), zero(T))
     r = r0 * exp(exponent)
     if !isfinite(r) || r < zero(T)
         return zero(T)
@@ -101,7 +103,8 @@ end
     return ft
 end
 
-@inline function refresh_rate!(fe::FlipEnergies{T}, context, i::Int, t::T) where {T}
+@inline function refresh_rate!(fe::FlipEnergies{T}, context, i::Integer, t::T) where {T}
+    i = Int(i)
     (;model, hamiltonian, proposer, rng) = context
 
     @inline proposal = _proposal_for_index(proposer, rng, i)
@@ -140,7 +143,8 @@ end
     return fe
 end
 
-@inline function update_local_rates!(fe::FlipEnergies, context, j::Int, t)
+@inline function update_local_rates!(fe::FlipEnergies, context, j::Integer, t)
+    j = Int(j)
     (;adj) = context
 
     refresh_rate!(fe, context, j, t)
@@ -182,10 +186,34 @@ export KineticMC
 
 @inline update!(::KineticMC, hterm, model, proposal) = update!(Metropolis(), hterm, model, proposal)
 
+@inline function _kinetic_active_count(model)
+    active = @inline sampling_indices(model)
+    return length(active)
+end
+
+"""
+    _kinetic_log_proposal_ratio(proposer, proposal)
+
+Return `log(q(reverse) / q(forward))` for the proposal kernel.
+
+The built-in Ising proposers used here are symmetric, so the default is zero.
+Non-symmetric custom proposers must specialize this method for `KineticMC` to
+be Boltzmann-correct.
+"""
+@inline _kinetic_log_proposal_ratio(proposer, proposal) = zero(eltype(proposal))
+
+@inline function _kinetic_accept(ΔE::T, temperature::T, log_q_ratio::T, rng) where {T}
+    if !(temperature > zero(T))
+        return ΔE <= zero(T)
+    end
+
+    log_acceptance = -ΔE / temperature + log_q_ratio
+    return log_acceptance >= zero(T) || log(rand(rng, T)) < log_acceptance
+end
+
 @inline function Processes.init(algo::KineticMC, context::Cont) where {Cont}
     (;model) = context
 
-    adj = InteractiveIsing.adj(model)
     hamiltonian = model.hamiltonian
     rng = Random.MersenneTwister()
     hamiltonian = init!(hamiltonian, model)
@@ -194,52 +222,56 @@ export KineticMC
 
     T = eltype(model)
     t = T(temp(model))
-    rates = FlipEnergies(model, InteractiveIsing.nstates(model), T(algo.r0))
     lasttemp = Ref(t)
     lastdt = Ref(zero(T))
+    time = Ref(zero(T))
+    active_count = Ref(@inline _kinetic_active_count(model))
     j = 0
     ΔE = zero(T)
     dt = zero(T)
-    totalrate = zero(T)
-    kinetic_context = (;model, adj, hamiltonian, proposer, rng)
-    rebuild_rates!(rates, kinetic_context, t)
+    accepted = 0
+    attempted = 0
+    totalrate = T(algo.r0) * T(active_count[])
 
-    returnargs = (;kinetic_context..., proposal, rates, lasttemp, lastdt, j, ΔE, dt, totalrate)
+    returnargs = (;model, hamiltonian, proposer, rng, proposal, lasttemp, lastdt,
+        time, active_count, j, ΔE, dt, totalrate, accepted, attempted)
     return returnargs
 end
 
 @inline function Processes.step!(kinetic::KineticMC, context::C) where {C}
-    (;model, rates, rng, proposer) = context
+    (;model, rng, proposer) = context
 
-    t = eltype(model)(temp(model))
-    lasttemp = context.lasttemp[]
-    if isfinite(lasttemp) && abs(t - lasttemp) > eps(eltype(model)) * max(abs(t), abs(lasttemp), one(eltype(model)))
-        rebuild_rates!(rates, context, t)
-        context.lasttemp[] = t
-    elseif !isfinite(lasttemp)
-        rebuild_rates!(rates, context, t)
-        context.lasttemp[] = t
+    T = eltype(model)
+    t = T(temp(model))
+    context.lasttemp[] = t
+
+    if @inline consume_changed!(model)
+        context.active_count[] = @inline _kinetic_active_count(model)
     end
 
-    j, totalrate = draw_event_index(rng, rates)
-    if j == 0
-        context.lastdt[] = zero(eltype(model))
-        return (;j = 0, ΔE = zero(eltype(model)), dt = context.lastdt[], totalrate = zero(eltype(model)), proposal = context.proposal)
+    totalrate = T(kinetic.r0) * T(context.active_count[])
+    if !(totalrate > zero(T)) || !isfinite(totalrate)
+        context.lastdt[] = zero(T)
+        yield()
+        return (;j = 0, ΔE = zero(T), dt = context.lastdt[], totalrate = zero(T),
+            proposal = context.proposal, kmc_time = context.time[], accepted = context.accepted,
+            attempted = context.attempted + 1)
     end
 
-    spins = @inline InteractiveIsing.state(model)
-    oldstate = @inbounds spins[j]
-    layer_idx = spin_idx_to_layer_idx(j, proposer.layers)
-    proposal = FlipProposal{eltype(model)}(j, oldstate, @inbounds(rates.targets[j]), layer_idx, false)
-    proposal = @inline accept(proposer, proposal)
-    ΔE = @inbounds rates.ΔEs[j]
+    proposal = @inline rand(rng, proposer)
+    ΔE = T(@inline calculate(ΔH(), context.hamiltonian, model, proposal))
+    log_q_ratio = T(@inline _kinetic_log_proposal_ratio(proposer, proposal))
+    accept_event = @inline _kinetic_accept(ΔE, t, log_q_ratio, rng)
+    if accept_event
+        proposal = @inline accept(proposer, proposal)
+        @inline update!(kinetic, context.hamiltonian, model, proposal)
+    end
 
-    update_local_rates!(rates, context, j, t)
-
-    dt = -log(max(rand(rng, eltype(model)), eps(eltype(model)))) / totalrate
+    dt = -log(max(rand(rng, T), eps(T))) / totalrate
     context.lastdt[] = dt
+    context.time[] += dt
 
-    @inline update!(kinetic, context.hamiltonian, model, proposal)
-
-    return (;j, ΔE, dt, totalrate, proposal)
+    return (;j = at_idx(proposal), ΔE, dt, totalrate, proposal,
+        kmc_time = context.time[], accepted = context.accepted + Int(accept_event),
+        attempted = context.attempted + 1)
 end

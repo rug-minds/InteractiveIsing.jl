@@ -1,6 +1,7 @@
 include("PanelUtils.jl")
 include("HamiltonianDisplays.jl")
 include("HamiltonianParameterPanel.jl")
+include("KineticTimePanel.jl")
 include("SimulationPanel.jl")
 include("StatusPanel.jl")
 include("LayerSelectorPanel.jl")

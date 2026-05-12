@@ -103,6 +103,7 @@ function _display_host!(host::WindowHost, title)
     screen = GLMakie.Screen()
     display(screen, host.figure)
     GLFW.SetWindowTitle(to_native(screen), title)
+    _disable_glmakie_renderloop_close!(screen)
     host.screen = screen
     host.open = events(host.figure).window_open
     register!(host, on(events(host.figure.scene).keyboardbutton) do _
@@ -112,6 +113,106 @@ function _display_host!(host::WindowHost, title)
     end)
     _start_host_timers!(host)
     return host
+end
+
+function _disable_glmakie_renderloop_close!(screen)
+    isnothing(screen) && return nothing
+    try
+        if hasproperty(screen, :close_after_renderloop)
+            screen.close_after_renderloop = false
+        end
+    catch err
+        @warn "Could not disable GLMakie renderloop close" exception = (err, catch_backtrace())
+    end
+    return nothing
+end
+
+function _stop_glmakie_renderloop_without_wait!(screen)
+    isnothing(screen) && return nothing
+    _disable_glmakie_renderloop_close!(screen)
+    try
+        if hasproperty(screen, :stop_renderloop)
+            screen.stop_renderloop[] = true
+        end
+    catch err
+        @warn "Could not request GLMakie renderloop stop" exception = (err, catch_backtrace())
+    end
+    return nothing
+end
+
+function _forget_glmakie_screen!(screen)
+    isnothing(screen) && return nothing
+    try
+        isdefined(GLMakie, :ALL_SCREENS) && delete!(getfield(GLMakie, :ALL_SCREENS), screen)
+        isdefined(GLMakie, :SCREEN_REUSE_POOL) && delete!(getfield(GLMakie, :SCREEN_REUSE_POOL), screen)
+        if isdefined(GLMakie, :SINGLETON_SCREEN)
+            singleton = getfield(GLMakie, :SINGLETON_SCREEN)
+            screen in singleton && empty!(singleton)
+        end
+    catch err
+        @warn "Could not detach GLMakie screen from closeall registry" exception = (err, catch_backtrace())
+    end
+    return nothing
+end
+
+function _destroy_native_glfw_window!(screen)
+    isnothing(screen) && return nothing
+    window = try
+        to_native(screen)
+    catch
+        return nothing
+    end
+
+    try
+        getfield(window, :handle) == C_NULL && return nothing
+    catch
+    end
+
+    try
+        GLFW.SetWindowCloseCallback(window, nothing)
+    catch
+    end
+    try
+        GLFW.HideWindow(window)
+    catch
+    end
+    try
+        GLFW.SetWindowShouldClose(window, true)
+    catch
+    end
+    try
+        GLFW.PollEvents()
+    catch
+    end
+    try
+        GLFW.DestroyWindow(window)
+        try
+            window.handle = C_NULL
+        catch
+        end
+    catch err
+        @warn "Could not destroy native GLFW window" exception = (err, catch_backtrace())
+    end
+    return nothing
+end
+
+function _request_native_window_close!(host::WindowHost)
+    screen = host.screen
+    isnothing(screen) && return nothing
+    _stop_glmakie_renderloop_without_wait!(screen)
+    try
+        host.open[] = false
+    catch
+    end
+    try
+        GLFW.SetWindowShouldClose(to_native(screen), true)
+        GLFW.PollEvents()
+    catch err
+        @warn "Could not request native GLMakie window close" exception = (err, catch_backtrace())
+    end
+    _destroy_native_glfw_window!(screen)
+    _forget_glmakie_screen!(screen)
+    return nothing
 end
 
 """
@@ -415,6 +516,48 @@ _cleanup_native_resource!(po::PolledObservable) = close(po)
 _cleanup_native_resource!(process::Processes.AbstractProcess) = _cleanup_resource!(process)
 _cleanup_native_resource!(resource) = nothing
 
+function _shutdown_runtime_resource(resource)
+    try
+        _shutdown_runtime_resource!(resource)
+    catch err
+        @warn "Error while stopping window runtime resource" resource_type = typeof(resource) exception = (err, catch_backtrace())
+    end
+    return nothing
+end
+
+_shutdown_runtime_resource!(::Nothing) = nothing
+_shutdown_runtime_resource!(::FrameCallback) = nothing
+function _shutdown_runtime_resource!(registration::PolledRegistration)
+    close(registration.observable)
+    return nothing
+end
+_shutdown_runtime_resource!(::Observables.ObserverFunction) = nothing
+_shutdown_runtime_resource!(timer::PTimer) = close(timer)
+_shutdown_runtime_resource!(timer::Timer) = close(timer)
+_shutdown_runtime_resource!(po::PolledObservable) = close(po)
+function _shutdown_runtime_resource!(process::Processes.AbstractProcess)
+    _request_process_close!(process)
+    return nothing
+end
+_shutdown_runtime_resource!(resource) = nothing
+
+function _request_host_owned_process_shutdown!(host::WindowHost)
+    close_graphs = get(host.data, :close_graphs, nothing)
+    if close_graphs !== nothing
+        for g in collect(keys(close_graphs))
+            _request_graph_process_close!(g)
+        end
+    end
+
+    close_processes = get(host.data, :close_processes, nothing)
+    if close_processes !== nothing
+        for process in collect(keys(close_processes))
+            _request_process_close!(process)
+        end
+    end
+    return nothing
+end
+
 function _run_close_callback(owner, callback::CloseCallback)
     @async try
         callback.callback(owner)
@@ -501,31 +644,35 @@ function _mark_closed!(handle::PanelHandle)
     return nothing
 end
 
-function _native_close_handle!(handle::PanelHandle)
+function _shutdown_handle_runtime!(handle::PanelHandle)
     handle.closed && return nothing
     handle.closed = true
     for child in reverse(collect(values(handle.children)))
-        _native_close_handle!(child)
+        _shutdown_handle_runtime!(child)
     end
-    try
-        close!(handle.panel, handle)
-    catch err
-        @warn "Error while closing native window panel" panel = handle.panel exception = (err, catch_backtrace())
-    end
-    _run_close_callbacks!(handle)
     for resource in reverse(handle.resources)
-        _cleanup_native_resource(resource)
+        _shutdown_runtime_resource(resource)
     end
-    empty!(handle.resources)
-    empty!(handle.children)
     return nothing
 end
 
 function _begin_native_close!(host::WindowHost)
     (host.closed || host.closing) && return nothing
     host.closing = true
+    _disable_glmakie_renderloop_close!(host.screen)
+    _forget_glmakie_screen!(host.screen)
     isnothing(host.frame_timer) || close(host.frame_timer)
     isnothing(host.poll_timer) || close(host.poll_timer)
+    for pollable in copy(host.pollables)
+        _shutdown_runtime_resource(pollable)
+    end
+    for resource in reverse(host.resources)
+        _shutdown_runtime_resource(resource)
+    end
+    for child in reverse(collect(values(host.children)))
+        _shutdown_handle_runtime!(child)
+    end
+    _request_host_owned_process_shutdown!(host)
     empty!(host.frame_callbacks)
     empty!(host.pollables)
     host.closed = true
@@ -534,21 +681,13 @@ end
 
 function _schedule_native_close!(host::WindowHost)
     _begin_native_close!(host) === nothing && return nothing
+    _request_native_window_close!(host)
     @async _finish_native_close!(host)
     return nothing
 end
 
 function _finish_native_close!(host::WindowHost)
-    for child in reverse(collect(values(host.children)))
-        _native_close_handle!(child)
-    end
-
     _run_close_callbacks!(host)
-    for resource in reverse(host.resources)
-        _cleanup_native_resource(resource)
-    end
-    empty!(host.children)
-    empty!(host.resources)
     host.closing = false
     return nothing
 end
@@ -565,11 +704,7 @@ function Base.close(host::WindowHost)
     if !isnothing(host.screen)
         _begin_native_close!(host)
         @async _finish_native_close!(host)
-        try
-            close(host.screen)
-        catch err
-            @warn "Could not close GLMakie screen" exception = (err, catch_backtrace())
-        end
+        _request_native_window_close!(host)
         return nothing
     end
 
@@ -577,23 +712,21 @@ function Base.close(host::WindowHost)
     should_close_screen = !isnothing(host.screen) && host.open[]
     isnothing(host.frame_timer) || close(host.frame_timer)
     isnothing(host.poll_timer) || close(host.poll_timer)
-    for child in reverse(collect(values(host.children)))
-        close(child)
+    for pollable in copy(host.pollables)
+        _shutdown_runtime_resource(pollable)
     end
-    empty!(host.children)
-    _run_close_callbacks!(host)
     for resource in reverse(host.resources)
-        _cleanup_resource(resource)
+        _shutdown_runtime_resource(resource)
     end
-    empty!(host.resources)
+    for child in reverse(collect(values(host.children)))
+        _shutdown_handle_runtime!(child)
+    end
+    _request_host_owned_process_shutdown!(host)
+    _run_close_callbacks!(host)
     empty!(host.frame_callbacks)
     empty!(host.pollables)
     if should_close_screen
-        try
-            GLFW.SetWindowShouldClose(to_native(host.screen), true)
-        catch err
-            @warn "Could not close GLMakie screen" exception = (err, catch_backtrace())
-        end
+        _request_native_window_close!(host)
     end
     host.closed = true
     host.closing = false

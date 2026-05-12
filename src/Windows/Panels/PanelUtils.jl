@@ -20,6 +20,8 @@ function _register_graph_close!(handle::PanelHandle, g)
 end
 
 function _register_process_close!(handle::PanelHandle, process::Processes.AbstractProcess)
+    close_processes = get!(handle.host.data, :close_processes, IdDict{Any, Bool}())
+    close_processes[process] = true
     onclose!(handle) do _
         _request_process_close!(process)
     end
@@ -130,6 +132,90 @@ function _poll_temperature!(g, last_graph_temp, last_context_temp)
     end
 
     return graph_temp
+end
+
+_kinetic_number(value::Real) = Float64(value)
+_kinetic_number(value::Base.RefValue{<:Real}) = Float64(value[])
+_kinetic_number(_) = nothing
+
+function _kinetic_totalrate(data)
+    if haskey(data, :events)
+        return _kinetic_number(getproperty(data, :events).totalrate)
+    elseif haskey(data, :rates)
+        return _kinetic_number(getproperty(data, :rates).totalrate)
+    elseif haskey(data, :totalrate)
+        return _kinetic_number(getproperty(data, :totalrate))
+    end
+    return nothing
+end
+
+function _kinetic_lastdt(data)
+    if haskey(data, :lastdt)
+        return _kinetic_number(getproperty(data, :lastdt))
+    elseif haskey(data, :dt)
+        return _kinetic_number(getproperty(data, :dt))
+    end
+    return nothing
+end
+
+function _kinetic_time_snapshot(sc)
+    data = Processes.getdata(sc)
+    has_time = haskey(data, :time) || haskey(data, :kmc_time)
+    has_rate_table = haskey(data, :events) || haskey(data, :rates)
+    (has_time || has_rate_table) || return nothing
+
+    kmc_time = haskey(data, :time) ? _kinetic_number(getproperty(data, :time)) :
+        _kinetic_number(getproperty(data, :kmc_time))
+    isnothing(kmc_time) && return nothing
+
+    dt = _kinetic_lastdt(data)
+    totalrate = _kinetic_totalrate(data)
+    return (; time = kmc_time, dt, totalrate)
+end
+
+function _kinetic_time_snapshot(process::Processes.AbstractProcess)
+    context = try
+        Processes.getcontext(process)
+    catch
+        getfield(process, :context)
+    end
+    context isa Processes.ProcessContext || return nothing
+
+    subcontexts = Processes.get_subcontexts(context)
+    for subcontext_name in reverse(propertynames(subcontexts))
+        subcontext_name === :globals && continue
+        subcontext_name === :_injector && continue
+        snapshot = _kinetic_time_snapshot(getproperty(subcontexts, subcontext_name))
+        isnothing(snapshot) || return snapshot
+    end
+    return nothing
+end
+
+function _kinetic_time_snapshot(g::IsingGraph)
+    for process in reverse(processes(g))
+        snapshot = _kinetic_time_snapshot(process)
+        isnothing(snapshot) || return snapshot
+    end
+    return nothing
+end
+
+function _format_kinetic_value(value)
+    isnothing(value) && return "-"
+    absvalue = abs(value)
+    if absvalue != 0 && (absvalue < 0.001 || absvalue >= 10000)
+        return string(round(value; sigdigits = 4))
+    end
+    return string(round(value; digits = 4))
+end
+
+function _kinetic_time_label(g)
+    snapshot = _kinetic_time_snapshot(g)
+    isnothing(snapshot) && return "KMC time\n-"
+
+    lines = ["KMC time", _format_kinetic_value(snapshot.time)]
+    isnothing(snapshot.dt) || push!(lines, "dt " * _format_kinetic_value(snapshot.dt))
+    isnothing(snapshot.totalrate) || push!(lines, "rate " * _format_kinetic_value(snapshot.totalrate))
+    return join(lines, "\n")
 end
 
 function _total_ticks(g)

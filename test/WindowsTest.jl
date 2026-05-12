@@ -40,11 +40,17 @@ end
     resume!(host)
     @test !host.paused[]
     close(host)
-    @test resource.closed[]
+    @test !resource.closed[]
     @test host.closed
 
     close(host)
-    @test resource.closed[]
+    @test !resource.closed[]
+
+    direct_handle_host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    direct_handle = Windows.panel!(direct_handle_host, TestPanel(), (1, 1))
+    direct_resource = direct_handle[:resource]
+    close(direct_handle)
+    @test direct_resource.closed[]
 
     callback_host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
     callback_done = Channel{Symbol}(1)
@@ -63,8 +69,8 @@ end
     close(callback_host)
     @test take!(callback_done) == :host
     @test callback_owner[] === callback_host
-    @test take!(panel_done) == :panel
-    @test panel_owner[] === callback_handle
+    @test !isready(panel_done)
+    @test panel_owner[] === nothing
 
     native_host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
     native_handle = Windows.panel!(native_host, :test, TestPanel(), (1, 1))

@@ -43,7 +43,10 @@ function mount!(panel::SimulationPanel, host::WindowHost, cell; kwargs...)
         ),
         midgrid[1, 1],
     )
-    panel!(handle, :temperature, TemperaturePanel(panel.graph), midgrid[1, 3])
+    rightgrid = GridLayout(midgrid[1, 3], tellwidth = false, default_rowgap = 8)
+    handle[:rightgrid] = rightgrid
+    panel!(handle, :kinetic_time, KineticTimePanel(panel.graph), rightgrid[1, 1])
+    panel!(handle, :temperature, TemperaturePanel(panel.graph), rightgrid[2, 1])
     colsize!(midgrid, 1, panel.hide_left_buttons ? 0 : 260)
     colsize!(midgrid, 2, Auto(false))
     colsize!(midgrid, 3, 140)
@@ -71,7 +74,11 @@ function toimage!(cell, panel::SimulationPanel, handle::PanelHandle; kwargs...)
         throw(ArgumentError("SimulationPanel has no mounted visual child to export."))
     end
     if haskey(handle.children, :temperature)
-        toimage!(midgrid[1, 2], handle.children[:temperature]; kwargs...)
+        rightgrid = GridLayout(midgrid[1, 2], default_rowgap = 6)
+        if haskey(handle.children, :kinetic_time)
+            toimage!(rightgrid[1, 1], handle.children[:kinetic_time]; kwargs...)
+        end
+        toimage!(rightgrid[2, 1], handle.children[:temperature]; kwargs...)
         colsize!(midgrid, 2, 90)
     end
     colsize!(midgrid, 1, Auto(false))
