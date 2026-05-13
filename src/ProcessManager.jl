@@ -1,6 +1,6 @@
 export ProcessManager, WorkerSlot
 export FlushPolicy, FlushAtEnd, NoFlush, FlushEvery
-export dispatch!, poll!, drain!, run!, resetworker!, reinitworker!, slots, workers
+export dispatch!, poll!, drain!, run!, resetworker!, reinitworker!, slots, workers, copyworker
 
 """
 Policy trait controlling when a `ProcessManager` invokes a recipe `flush!` callback.
@@ -111,9 +111,13 @@ Recipes may be named tuples containing callbacks, or concrete objects that
 overload the callback functions below. The default worker protocol supports
 `Process` workers.
 
-When `workers` is omitted, the recipe must define `makeworker`, and the manager
-creates and owns `nworkers` workers. When `workers` is passed, the manager wraps
-those existing workers in slots and does not create new worker contexts.
+When `workers` is omitted, the recipe must define `makeworker`. The manager calls
+`makeworker` once to create a template worker, then copies that template for the
+remaining slots. The default `Process` copy reuses the template task description
+and deep-copies the runtime context. Recipes can define
+`copyworker(template, idx, manager)` when the default copy is not enough. When
+`workers` is passed, the manager wraps those existing workers in slots and does
+not create new worker contexts.
 
 The `job_type`, `scratch_type`, `result_type`, and `error_type` keywords let
 latency-sensitive code make worker slot fields concrete. Leaving them as `Any`
@@ -151,6 +155,13 @@ function _slot_container(workers, job_type::Type, scratch_type::Type, result_typ
     )
 end
 
+function _owned_worker_values(recipe, nworkers::Integer, build_manager)
+    template = makeworker(recipe, 1, build_manager)
+    return ntuple(Int(nworkers)) do idx
+        idx == 1 ? template : copyworker(recipe, template, idx, build_manager)
+    end
+end
+
 function ProcessManager(recipe; nworkers::Integer = Threads.nthreads(), workers = nothing, config = nothing, state = nothing, flush_policy = FlushAtEnd(), throw::Bool = true, poll_interval::Real = 0.0, job_type::Type = Any, scratch_type::Type = Any, result_type::Type = Any, error_type::Type = Any)
     nworkers > 0 || throw(ArgumentError("`nworkers` must be positive."))
     normalized_policy = _normalize_flush_policy(flush_policy)
@@ -162,7 +173,7 @@ function ProcessManager(recipe; nworkers::Integer = Threads.nthreads(), workers 
     build_manager = ProcessManager(recipe, (), config, prepared_state, normalized_policy, throw, Float64(poll_interval), 0, 0, 0, Any[], false, isnothing(workers))
 
     worker_values = if isnothing(workers)
-        ntuple(idx -> makeworker(recipe, idx, build_manager), Int(nworkers))
+        _owned_worker_values(recipe, nworkers, build_manager)
     else
         collected = collect(workers)
         isempty(collected) && throw(ArgumentError("`workers` must not be empty."))
@@ -248,6 +259,16 @@ function _call_optional_recipe_field(recipe, name::Val, args...)
 end
 
 makeworker(recipe, idx, manager) = _call_recipe_field(recipe, Val(:makeworker), idx, manager)
+function _default_copyworker(template::Process, idx, manager)
+    return _makecopiedprocess(taskdata(template), deepcopy(template.context), template.timeout)
+end
+_default_copyworker(template, idx, manager) = deepcopy(template)
+
+function copyworker(recipe, template, idx, manager)
+    result = _call_optional_recipe_field(recipe, Val(:copyworker), template, idx, manager)
+    return _is_no_recipe_callback(result) ? _default_copyworker(template, idx, manager) : result
+end
+
 function initstate(recipe, config, manager)
     result = _call_optional_recipe_field(recipe, Val(:initstate), config, manager)
     return _is_no_recipe_callback(result) ? nothing : result
