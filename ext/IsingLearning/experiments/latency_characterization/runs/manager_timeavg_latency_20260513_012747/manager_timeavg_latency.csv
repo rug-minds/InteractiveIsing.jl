@@ -1,0 +1,27 @@
+phase,seconds,compile_time,recompile_time,gctime,bytes
+include manager experiment,10.2688125,1.527459171,0.434152251,0.426437792,707244600
+manager init_timeavg_trainer,37.907806292,37.834549103,0.546332584,0.427855331,4706631104
+manager simple_dataset,5.083e-6,0.0,0.0,0.0,256
+manager gradient_buffer,6.959e-6,0.0,0.0,0.0,800
+manager eval: build jobs,9.542e-6,0.0,0.0,0.0,816
+manager eval: sync/reinit workers,0.051005791,0.050898542,0.0,0.0,4498416
+manager eval: allocate output buckets,9.208e-6,0.0,0.0,0.0,224
+manager eval: ProcessManager.run!,11.669040458,11.721175539,0.0,0.091708124,859447248
+manager eval: reduce metrics,0.018969292,0.018803791,0.0,0.0,2685760
+manager train1: zero buffers,0.331188708,0.331000417,0.0,0.0,4673760
+manager train1: build jobs,1.9333e-5,0.0,0.0,0.0,1152
+manager train1: ProcessManager.run!,66.797689667,84.055095792,0.0,0.511172914,2535332176
+manager train1: optimizer update,0.318026,0.317554792,0.0,0.0,122645216
+manager train1: sync/reinit workers,0.026449167,0.026375666,0.0,0.0,1504880
+manager warm init_timeavg_trainer,27.895718333,27.83549065,0.0,0.223360834,3086065312
+manager warm gradient_buffer,9.042e-6,0.0,0.0,0.0,800
+manager eval: build jobs,4.25e-6,0.0,0.0,0.0,816
+manager eval: sync/reinit workers,0.052567667,0.052441124,0.0,0.0,4497904
+manager eval: allocate output buckets,2.333e-6,0.0,0.0,0.0,224
+manager eval: ProcessManager.run!,9.906056167,9.972189832,0.0,0.156313291,585602896
+manager eval: reduce metrics,2.65e-5,0.0,0.0,0.0,960
+manager train101: zero buffers,0.297520375,0.297372999,0.0,0.0,985472
+manager train101: build jobs,5.583e-6,0.0,0.0,0.0,1152
+manager train101: ProcessManager.run!,46.312478958,76.459765462,0.0,0.334054378,1744279168
+manager train101: optimizer update,7.05e-5,0.0,0.0,0.0,5616
+manager train101: sync/reinit workers,0.02688325,0.026805334,0.0,0.0,1848912

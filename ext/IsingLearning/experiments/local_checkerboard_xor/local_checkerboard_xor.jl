@@ -701,9 +701,10 @@ end
 function checkerboard_layer(graph, config::LocalCheckerboardConfig)
     dynamics =
         config.dynamics_mode === :langevin ? II.BlockLangevin(stepsize = config.stepsize, adjusted = false, block_size = config.block_size, group_steps = 1) :
+        config.dynamics_mode === :local_langevin ? II.LocalLangevin(stepsize = config.stepsize, adjusted = false, order = :random, group_steps = 1) :
         config.dynamics_mode === :global_langevin ? II.GlobalLangevin(stepsize = config.stepsize, adjusted = false, group_steps = 1) :
         config.dynamics_mode === :metropolis ? II.IsingMetropolis() :
-        throw(ArgumentError("dynamics_mode must be :langevin, :global_langevin, or :metropolis"))
+        throw(ArgumentError("dynamics_mode must be :langevin, :local_langevin, :global_langevin, or :metropolis"))
 
     return IsingLearning.LayeredIsingGraphLayer(
         () -> checkerboard_graph(config);

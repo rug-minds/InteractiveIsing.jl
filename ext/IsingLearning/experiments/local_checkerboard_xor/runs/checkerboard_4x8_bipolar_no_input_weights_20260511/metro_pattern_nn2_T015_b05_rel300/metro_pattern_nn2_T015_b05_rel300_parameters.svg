@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="260" viewBox="0 0 780 260">
+<rect width="780" height="260" fill="white"/>
+<text x="24" y="36" font-family="monospace" font-size="18">metro_pattern_nn2_T015_b05_rel300</text>
+<text x="24" y="70" font-family="monospace" font-size="15">side=4, hidden=8, code=4, stride=1</text>
+<text x="24" y="100" font-family="monospace" font-size="15">dynamics=metropolis, T=0.015, stepsize=0.05, beta=0.5</text>
+<text x="24" y="130" font-family="monospace" font-size="15">doublewell barrier=0.0, free T x1.0->x1.0, nudged T x1.0->x1.0</text>
+<text x="24" y="160" font-family="monospace" font-size="15">relaxation free/nudged=300/300, Minit=8</text>
+<text x="24" y="190" font-family="monospace" font-size="15">adjacency symmetry error=0.0</text>
+<text x="24" y="220" font-family="monospace" font-size="15">weights: min=-0.5633, max=0.6638, rms=0.1827</text>
+<text x="24" y="250" font-family="monospace" font-size="15">bias: min=-0.8072, max=0.7993, rms=0.3965</text>
+</svg>

@@ -1,0 +1,15 @@
+# Langevin Split-Snapshot XOR Search
+
+This run tests a radical Langevin-only EqProp variant. The free phase captures an early state and a later free endpoint. Plus/minus nudged phases restart from the early state, but the contrastive gradient is computed with the free endpoint graph.
+
+All configs use explicit bipolar frozen input, no input internal weights, output pattern clamping, symmetric adjacency, and no polynomial/double-well local potential.
+
+| Config | Best MSE | Best Acc | Saved | Notes |
+|---|---:|---:|---|---|
+| `simple_local_s020_d035_T020_b10` | 0.820732 | 1.0 | no | split-snapshot Langevin: mode=local_langevin, side=2, hidden=4, stepsize=0.2, max_drift=0.35, Tfactor=0.02, β=1.0, free=500, early=40, nudged=700, nudged_T_bump=3.0 |
+| `simple_local_s040_d060_T020_b10` | 0.571783 | 1.0 | no | split-snapshot Langevin: mode=local_langevin, side=2, hidden=4, stepsize=0.4, max_drift=0.6, Tfactor=0.02, β=1.0, free=500, early=30, nudged=800, nudged_T_bump=4.0 |
+| `simple_local_s080_d100_T015_b10` | 0.716074 | 0.75 | no | split-snapshot Langevin: mode=local_langevin, side=2, hidden=4, stepsize=0.8, max_drift=1.0, Tfactor=0.015, β=1.0, free=600, early=25, nudged=900, nudged_T_bump=5.0 |
+| `simple_local_s120_d100_T010_b15` | 0.791979 | 0.75 | no | split-snapshot Langevin: mode=local_langevin, side=2, hidden=4, stepsize=1.2, max_drift=1.0, Tfactor=0.01, β=1.5, free=700, early=25, nudged=1000, nudged_T_bump=6.0 |
+
+Metrics CSV: `langevin_split_snapshot_metrics.csv`
+Progress PNG: `langevin_split_snapshot_progress.png`

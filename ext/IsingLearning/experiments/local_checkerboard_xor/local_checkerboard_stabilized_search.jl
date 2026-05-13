@@ -26,11 +26,7 @@ Base.@kwdef struct StabilizedSearchConfig
     initial_false_output_bias::Union{Nothing,FT} = nothing
     input_default_bias::Union{Nothing,FT} = nothing
     fix_input_default_bias::Bool = false
-    structured_and_seed::Bool = false
-    structured_feature_scale::FT = FT(1)
-    structured_output_scale::FT = FT(1)
-    structured_output_bias::FT = FT(0.5)
-    structured_zero_interlayer::Bool = true
+    full_bipolar_input::Bool = false
     input_kick::Bool = false
     freeze_inactive_input::Bool = false
     case_repeats::NTuple{4,Int} = (1, 1, 1, 1)
@@ -39,20 +35,27 @@ end
 
 function fresh_checker_dynamics(config::LocalCheckerboardConfig)
     if config.dynamics_mode === :metropolis
-        return II.IsingMetropolis()
+        return II.Metropolis()
     elseif config.dynamics_mode === :langevin
-        return Processes.Unique(II.BlockLangevin(
+        return II.BlockLangevin(
             stepsize = config.stepsize,
             adjusted = false,
             block_size = config.block_size,
             group_steps = 1,
-        ))
+        )
+    elseif config.dynamics_mode === :local_langevin
+        return II.LocalLangevin(
+            stepsize = config.stepsize,
+            adjusted = false,
+            order = :random,
+            group_steps = 1,
+        )
     elseif config.dynamics_mode === :global_langevin
-        return Processes.Unique(II.GlobalLangevin(
+        return II.GlobalLangevin(
             stepsize = config.stepsize,
             adjusted = false,
             group_steps = 1,
-        ))
+        )
     else
         throw(ArgumentError("unsupported dynamics_mode $(config.dynamics_mode)"))
     end
@@ -74,7 +77,42 @@ function stable_prepare_free_state!(g, config::LocalCheckerboardConfig)
     return g
 end
 
+"""
+    stable_apply_input!(g, x, config, search)
+
+Apply the input convention selected by an experiment wrapper.
+
+With `full_bipolar_input=true`, the two XOR bits are embedded directly into the
+two checkerboard masks: bit `0` writes `-1`, bit `1` writes `+1`, and the whole
+input code is frozen. This is the standard fixed-input EqProp condition for the
+checkerboard code.
+
+The older `input_kick`/`freeze_inactive_input` flags are kept only for old
+experiments that intentionally used the "missing bit is free" convention.
+"""
 function stable_apply_input!(g, x, config::LocalCheckerboardConfig, search::StabilizedSearchConfig)
+    if search.full_bipolar_input
+        positions = checker_code_positions(config.side, config.code_side, config.code_stride, config.code_offset)
+        masks = checker_masks(positions)
+        a_idxs = global_idxs_for_positions(g[1], masks.a)
+        b_idxs = global_idxs_for_positions(g[1], masks.b)
+        aval = x[1] > 0 ? one(eltype(II.state(g))) : -one(eltype(II.state(g)))
+        bval = x[2] > 0 ? one(eltype(II.state(g))) : -one(eltype(II.state(g)))
+        s = II.state(g)
+        @inbounds begin
+            for idx in a_idxs
+                s[idx] = aval
+            end
+            for idx in b_idxs
+                s[idx] = bval
+            end
+        end
+        code_set = Set(unique(vcat(a_idxs, b_idxs)))
+        g.index_set.active[] = [idx for idx in g.index_set.all_active if !(idx in code_set)]
+        g.index_set.changed[] = true
+        return g
+    end
+
     apply_checker_input!(g, x, config)
     (search.input_kick || search.freeze_inactive_input) || return g
 
@@ -120,24 +158,22 @@ function StableForwardDynamics(layer, config::LocalCheckerboardConfig, search::S
     dynamics_algorithm = fresh_checker_dynamics(config)
 
     forward = @Routine begin
-        @alias free_dynamics = dynamics_algorithm
+        @alias dynamics = dynamics_algorithm
         @state equilibrium_state = zeros(n_units)
         @state x
 
-        stable_prepare_free_state!(free_dynamics.model, config)
-        stable_apply_input!(free_dynamics.model, x, config, search)
-        model = @repeat relaxation_steps free_dynamics()
+        stable_prepare_free_state!(dynamics.model, config)
+        stable_apply_input!(dynamics.model, x, config, search)
+        model = @repeat relaxation_steps dynamics()
         IsingLearning.copyvector!(equilibrium_state, @transform(m -> II.state(m), model))
     end
-    return (; algorithm = forward, dynamics = forward.free_dynamics)
+    return (; algorithm = forward, dynamics = forward.dynamics)
 end
 
 """
     StableNudgedDynamics(layer, config)
 
-Plus/minus nudged phases without annealing wrappers. The plus and minus
-samplers are fresh `Unique` instances when Metropolis is used, so the Processes
-registry can route them separately.
+    Plus/minus nudged phases without annealing wrappers.
 """
 function StableNudgedDynamics(layer, config::LocalCheckerboardConfig, search::StabilizedSearchConfig = StabilizedSearchConfig(config = config))
     beta = layer.β
@@ -151,14 +187,14 @@ function StableNudgedDynamics(layer, config::LocalCheckerboardConfig, search::St
         @state equilibrium_state
         @state y
         @state x
-        @alias plus_dynamics = plus_dynamics_algorithm
+        @alias dynamics = plus_dynamics_algorithm
         @alias plus_capture = plus_capture
 
-        IsingLearning.setgraph!(isinggraph = plus_dynamics.model, target = equilibrium_state)
-        stable_apply_input!(plus_dynamics.model, x, config, search)
-        checker_apply_targets!(plus_dynamics.model, y)
-        checker_set_clamping_beta!(plus_dynamics.model, beta)
-        model = @repeat relaxation_steps plus_dynamics()
+        IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
+        stable_apply_input!(dynamics.model, x, config, search)
+        checker_apply_targets!(dynamics.model, y)
+        checker_set_clamping_beta!(dynamics.model, beta)
+        model = @repeat relaxation_steps dynamics()
         plus_capture(isinggraph = model)
     end
 
@@ -166,14 +202,14 @@ function StableNudgedDynamics(layer, config::LocalCheckerboardConfig, search::St
         @state equilibrium_state
         @state y
         @state x
-        @alias minus_dynamics = minus_dynamics_algorithm
+        @alias dynamics = minus_dynamics_algorithm
         @alias minus_capture = minus_capture
 
-        IsingLearning.setgraph!(isinggraph = minus_dynamics.model, target = equilibrium_state)
-        stable_apply_input!(minus_dynamics.model, x, config, search)
-        checker_apply_targets!(minus_dynamics.model, y)
-        checker_set_clamping_beta!(minus_dynamics.model, -beta)
-        model = @repeat relaxation_steps minus_dynamics()
+        IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
+        stable_apply_input!(dynamics.model, x, config, search)
+        checker_apply_targets!(dynamics.model, y)
+        checker_set_clamping_beta!(dynamics.model, -beta)
+        model = @repeat relaxation_steps dynamics()
         minus_capture(isinggraph = model)
     end
 
@@ -182,7 +218,7 @@ function StableNudgedDynamics(layer, config::LocalCheckerboardConfig, search::St
         @context c1 = plus()
         @context c2 = minus()
     end
-    return (; algorithm = final, plus_capture, minus_capture, dynamics = plus.plus_dynamics)
+    return (; algorithm = final, plus_capture, minus_capture, dynamics = plus.dynamics)
 end
 
 function StableForwardAndNudged(layer, config::LocalCheckerboardConfig, search::StabilizedSearchConfig = StabilizedSearchConfig(config = config))
@@ -193,10 +229,10 @@ function StableForwardAndNudged(layer, config::LocalCheckerboardConfig, search::
         @state buffers
         @context c1 = forward()
         @context c2 = nudged.algorithm()
-        checker_set_clamping_beta!(c1.free_dynamics.model, zero(beta))
-        IsingLearning.contrastive_gradient(c1.free_dynamics.model, c2.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers)
+        checker_set_clamping_beta!(c1.dynamics.model, zero(beta))
+        IsingLearning.contrastive_gradient(c1.dynamics.model, c2.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers)
     end
-    return (; algorithm = final, plus_capture = nudged.plus_capture, minus_capture = nudged.minus_capture, dynamics = forward.free_dynamics)
+    return (; algorithm = final, plus_capture = nudged.plus_capture, minus_capture = nudged.minus_capture, dynamics = forward.dynamics)
 end
 
 function stable_checker_worker_process(layer, graph, search::StabilizedSearchConfig)
@@ -211,9 +247,7 @@ function stable_checker_worker_process(layer, graph, search::StabilizedSearchCon
             buffers = buffers,
             equilibrium_state = copy(II.state(graph)),
         ),
-        dynamics_input(:free_dynamics, graph, config.base_seed),
-        dynamics_input(:plus_dynamics, graph, config.base_seed + 10_000),
-        dynamics_input(:minus_dynamics, graph, config.base_seed + 20_000),
+        dynamics_input(:dynamics, graph, config.base_seed),
         Input(:plus_capture, state = graph),
         Input(:minus_capture, state = graph);
         repeat = 1,
@@ -229,7 +263,7 @@ function stable_checker_validation_process(layer, graph, search::StabilizedSearc
             x = zeros(FT, 2),
             equilibrium_state = copy(II.state(graph)),
         ),
-        dynamics_input(:free_dynamics, graph, config.base_seed + 50_000);
+        dynamics_input(:dynamics, graph, config.base_seed + 50_000);
         repeat = 1,
     )
 end
@@ -354,85 +388,6 @@ function _zero_between_layers!(graph, layer_a, layer_b)
     return graph
 end
 
-"""
-    apply_structured_and_seed!(graph, config, search)
-
-Install a small hand-structured local XOR feature path:
-
-- hidden feature `hA` receives the input A checkerboard mask;
-- hidden feature `hB` receives the input B checkerboard mask;
-- hidden feature `hAND` receives both masks plus a negative bias, so it turns
-  on only when both input masks are active;
-- output mask B receives `+hA + hB - 2hAND - c`;
-- output mask A receives the opposite field.
-
-The weights remain symmetric because every assignment writes both directions.
-This is an experiment-local architectural seed, not a toolbox change.
-"""
-function apply_structured_and_seed!(graph, config::LocalCheckerboardConfig, search::StabilizedSearchConfig)
-    search.structured_and_seed || return graph
-    config.side >= 2 && config.hidden_side >= 2 ||
-        throw(ArgumentError("structured_and_seed needs at least 2x2 input/hidden/output layers"))
-
-    if search.structured_zero_interlayer
-        _zero_between_layers!(graph, graph[1], graph[2])
-        _zero_between_layers!(graph, graph[2], graph[3])
-    end
-
-    input_positions = checker_code_positions(config.side, config.code_side, config.code_stride, config.code_offset)
-    input_masks = checker_masks(input_positions)
-    input_a = global_idxs_for_positions(graph[1], input_masks.a)
-    input_b = global_idxs_for_positions(graph[1], input_masks.b)
-
-    hidden_positions = checker_code_positions(config.hidden_side, min(config.hidden_side, 2), 1, (1, 1))
-    hidden_masks = checker_masks(hidden_positions)
-    hidden_a_sites = global_idxs_for_positions(graph[2], hidden_masks.a)
-    hidden_b_sites = global_idxs_for_positions(graph[2], hidden_masks.b)
-    hA = first(hidden_a_sites)
-    hAND = length(hidden_a_sites) >= 2 ? hidden_a_sites[2] : hidden_a_sites[1]
-    hB = first(hidden_b_sites)
-
-    output_positions = checker_code_positions(config.side, config.code_side, config.code_stride, config.code_offset)
-    output_masks = checker_masks(output_positions)
-    output_false = global_idxs_for_positions(graph[3], output_masks.a)
-    output_true = global_idxs_for_positions(graph[3], output_masks.b)
-
-    f = search.structured_feature_scale
-    o = search.structured_output_scale
-    @inbounds begin
-        for idx in input_a
-            _set_symmetric_weight!(graph, idx, hA, f / FT(length(input_a)))
-            _set_symmetric_weight!(graph, idx, hAND, f / FT(length(input_a)))
-        end
-        for idx in input_b
-            _set_symmetric_weight!(graph, idx, hB, f / FT(length(input_b)))
-            _set_symmetric_weight!(graph, idx, hAND, f / FT(length(input_b)))
-        end
-        for idx in output_true
-            _set_symmetric_weight!(graph, hA, idx, o)
-            _set_symmetric_weight!(graph, hB, idx, o)
-            _set_symmetric_weight!(graph, hAND, idx, -2o)
-        end
-        for idx in output_false
-            _set_symmetric_weight!(graph, hA, idx, -o)
-            _set_symmetric_weight!(graph, hB, idx, -o)
-            _set_symmetric_weight!(graph, hAND, idx, 2o)
-        end
-    end
-
-    b = II.getparam(graph.hamiltonian, II.MagField, :b)
-    b[hAND] -= f
-    @inbounds for idx in output_false
-        b[idx] += search.structured_output_bias
-    end
-    @inbounds for idx in output_true
-        b[idx] -= search.structured_output_bias
-    end
-    assert_symmetric_adjacency(graph)
-    graph.addons[:structured_and_seed] = (; hA, hB, hAND, input_a, input_b, output_false, output_true)
-    return graph
-end
-
 function train_epoch_stable!(trainer::CheckerTrainer, x, y, batch_gradient, epoch::Integer, search::StabilizedSearchConfig)
     config = search.config
     IsingLearning.zero_buffer!(batch_gradient)
@@ -486,7 +441,6 @@ function run_stabilized_config(search::StabilizedSearchConfig, outdir)
     graph = checkerboard_graph(config)
     apply_input_default_bias!(graph, config, search)
     apply_initial_false_output_bias!(graph, config, search)
-    apply_structured_and_seed!(graph, config, search)
     clip_graph_parameters!(graph, search)
     layer = checkerboard_layer(graph, config)
     trainer = init_stable_checker_trainer(layer, search; graph, optimiser = Optimisers.Adam(config.lr))

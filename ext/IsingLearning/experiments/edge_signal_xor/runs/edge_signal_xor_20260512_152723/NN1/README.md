@@ -1,0 +1,20 @@
+# Edge Signal XOR
+
+Architecture: 2 input spins, one 8x8 hidden layer, one scalar output spin.
+Input spins connect only to the hidden left edge. The output spin connects only to the hidden right edge.
+
+- hidden local NN: `1`
+- epochs/log_every: `1` / `1`
+- Minit/eval repeats: `1` / `1`
+- free/nudged steps: `2` / `2`
+- beta/lr/stepsize: `2.0` / `0.003` / `0.4`
+- temperature fraction of max column interaction: `0.025`
+- response skipped: `true`
+
+Best logged learning result: epoch `1`, MSE `2.060292`, accuracy `0.25`.
+
+Files:
+- `learning_metrics.csv`
+- `learning_progress.png`
+- `initial_graph.jld2`
+- `best_graph.jld2`

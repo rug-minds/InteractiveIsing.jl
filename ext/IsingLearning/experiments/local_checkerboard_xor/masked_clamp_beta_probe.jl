@@ -84,6 +84,12 @@ function masked_clamp_beta_probe_searches()
     ]
 end
 
+"""
+    main()
+
+Run the first masked-clamping beta probe and write the combined metrics,
+summary plot, and run README to an experiment output directory.
+"""
 function main()
     timestamp = Dates.format(now(), "yyyymmdd_HHMMSS")
     outdir = get(ENV, "ISING_MASKED_CLAMP_PROBE_DIR", joinpath(DEFAULT_RUN_ROOT, "masked_clamp_beta_probe_$timestamp"))

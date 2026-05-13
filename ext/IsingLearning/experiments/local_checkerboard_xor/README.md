@@ -93,63 +93,37 @@ julia --project=ext/IsingLearning \
 
 ## Current Results
 
-### Structured Local AND Seed
+### No Architectural Seed Path
 
-A structurally seeded 2x2 local checkerboard run now reaches the target
-validation range:
+The earlier explicit local `A`, `B`, and `AND` parameter seeding path has been
+removed from this experiment folder. Future local checkerboard results should
+come from the graph connectivity, input masks, dynamics, clamping, and learned
+parameters, not from a hand-wired XOR feature route.
 
-- file: `structured_and_seed_search.jl`
-- calibration run: `runs/structured_and_seed_20260511_051030/`
-- short training run: `runs/structured_and_seed_20260511_052236/`
-- best saved graph:
-  `runs/structured_and_seed_20260511_052236/structured_2x2_T0.001_ib2.0_f3.5_o0.8_ob0.4_b0.1_lr0.002/structured_2x2_T0.001_ib2.0_f3.5_o0.8_ob0.4_b0.1_lr0.002_best_graph.jld2`
+### Masked-Clamping Follow-Up
 
-Best short-training result:
+After the generic clamping mask fix, two focused continuous Langevin probes were
+run:
 
-```text
-accuracy = 1.0
-best MSE = 0.095703125
-scores = [-2.0, 1.0, 1.625, -1.375] at the best logged epoch
-```
+- `runs/masked_clamp_beta_probe_20260511/`
+  - scalar readout clamping stayed weak: best MSE `0.914896` at accuracy
+    `0.75`;
+  - output-pattern clamping helped more: best MSE `0.696578` at accuracy
+    `0.75`;
+  - global unadjusted Langevin reached best MSE `0.825742` at accuracy `0.75`.
+- `runs/masked_clamp_targeted_probe_20260511/`
+  - stronger `β` did not improve the result;
+  - hotter `Tfactor=0.03` did not fix the hard case;
+  - longer lower-temperature relaxation (`500/1000`) improved to MSE
+    `0.678949` at accuracy `0.75`;
+  - global unadjusted Langevin with output-pattern clamping was the best point,
+    MSE `0.668761` at accuracy `0.75`.
 
-What made this work:
-
-- inactive input bits are still not frozen, but the input-code sites have a
-  fixed negative magnetic field, so absent bits relax toward `-1`;
-- the hidden layer is seeded by writing explicit weights/biases for local `A`,
-  `B`, and `AND` feature routes;
-- the output uses two local readout channels, one over each output checkerboard
-  mask, instead of forcing all supervision through one scalar difference mode;
-- the run uses a valid discrete all-minus background, not zero init;
-- temperature is very low (`T = 0.001`) relative to the seeded interaction
-  scale, so the seeded local circuit acts as a stable attractor.
-
-This is not yet proof that random local checkerboard graphs learn the feature
-from scratch. It shows the local checkerboard architecture can represent and
-stably run XOR when it has an explicit local `AND` pathway. The previous random
-local searches likely failed because they were asking a shallow local graph to
-discover that pathway and amplify a scalar readout at the same time.
-
-Concretely, this "seed" is not a hidden-state initialization. The hidden states
-still start from the configured all-minus background and relax normally. The
-seed is a set of initial graph parameters written by
-`apply_structured_and_seed!`:
-
-- choose hidden spins `hA`, `hB`, and `hAND` from the hidden `2x2`
-  checkerboard masks;
-- connect input-A sites to `hA` and `hAND` with positive symmetric weights
-  `f / length(input_A)`;
-- connect input-B sites to `hB` and `hAND` with positive symmetric weights
-  `f / length(input_B)`;
-- add a negative magnetic field `b[hAND] -= f`, so `hAND` only turns on
-  robustly when both input masks are active;
-- connect the true output mask as `+hA + hB - 2hAND`;
-- connect the false output mask as `-hA - hB + 2hAND`;
-- add a small false-default output bias.
-
-The successful run used `f = 3.5`, output scale `o = 0.8`, and output bias
-`0.4`. Since `E_J = -1/2 sum_ij J_ij s_i s_j`, positive weights align spins,
-and the hidden/output wiring implements the XOR combination `A + B - 2AB`.
+The masked clamping fix is still important, but these checkerboard probes mostly
+use experiment-local output-only clamping terms, so they do not directly benefit
+as much as the generic direct `Clamping` path. The recurring failure mode is one
+false XOR case remaining on the wrong side while the true `(1,0)` and `(0,1)`
+cases become positive and `(1,1)` becomes negative.
 
 The local checkerboard setup now learns the XOR signs in the small `2x2`
 Metropolis case, but it has not yet reached the desired low readout MSE. The

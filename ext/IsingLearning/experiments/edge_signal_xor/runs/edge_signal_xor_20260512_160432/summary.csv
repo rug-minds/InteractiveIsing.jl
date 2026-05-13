@@ -1,0 +1,2 @@
+best_accuracy,best_epoch,best_mse,nn,outdir
+0.75,1,0.8052201665710008,2,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_signal_xor_20260512_160432/NN2
