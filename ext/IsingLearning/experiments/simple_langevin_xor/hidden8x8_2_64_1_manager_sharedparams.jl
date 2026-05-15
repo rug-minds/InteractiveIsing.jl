@@ -86,6 +86,28 @@ function assert_shared_worker_params_8x8(worker, params)
     return true
 end
 
+"""Reattach a copied worker graph to the shared trainable parameter storage."""
+function relink_shared_graph_8x8!(graph, prototype_graph, params)
+    graph.adj = II.adj(prototype_graph)
+    graph.hamiltonian = shared_hamiltonian_8x8(graph, params)
+    II.temp!(graph, FT(1e-4))
+    return graph
+end
+
+"""
+    shared_worker_context_8x8(template, prototype_graph, params)
+
+Build a fresh context for a copied process without rebuilding the loop
+algorithm. The manager calls this through its `makecontext` hook: task data and
+the resolved composite come from the template worker, while this function makes
+the copied graph read the same trainable `J` and `b` arrays as the prototype.
+"""
+function shared_worker_context_8x8(template, prototype_graph, params)
+    ctx = deepcopy(template.context)
+    relink_shared_graph_8x8!(ctx.dynamics.model, prototype_graph, params)
+    return ctx
+end
+
 """Create one reusable training worker with shared trainable Hamiltonian storage."""
 function make_train_worker_shared_8x8(layer, prototype_graph, params, config::Hidden8x8Config, idx::Integer)
     graph = shared_worker_graph_8x8(prototype_graph, params, config)
@@ -127,7 +149,7 @@ end
 function train_manager_recipe_shared_8x8(layer, prototype_graph)
     return (;
         makeworker = (idx, manager) -> make_train_worker_shared_8x8(layer, prototype_graph, manager.state.params, manager.config, idx),
-        copyworker = (template, idx, manager) -> make_train_worker_shared_8x8(layer, prototype_graph, manager.state.params, manager.config, idx),
+        makecontext = (idx, manager, template) -> shared_worker_context_8x8(template, prototype_graph, manager.state.params),
         prepare! = (slot, job, manager) -> prepare_train_worker_8x8!(slot.worker, manager.state, manager.config, job),
         isdone = (slot, manager) -> Processes8x8.isdone(slot.worker),
         consume! = (slot, job, manager) -> collect_train_response_8x8!(manager.state.current_responses, slot.worker),
@@ -139,7 +161,7 @@ end
 function eval_manager_recipe_shared_8x8(layer, prototype_graph)
     return (;
         makeworker = (idx, manager) -> make_eval_worker_shared_8x8(layer, prototype_graph, manager.state.params, manager.config, idx),
-        copyworker = (template, idx, manager) -> make_eval_worker_shared_8x8(layer, prototype_graph, manager.state.params, manager.config, idx),
+        makecontext = (idx, manager, template) -> shared_worker_context_8x8(template, prototype_graph, manager.state.params),
         prepare! = (slot, job, manager) -> prepare_eval_worker_8x8!(slot.worker, manager.state, manager.config, job),
         isdone = (slot, manager) -> Processes8x8.isdone(slot.worker),
         consume! = (slot, job, manager) -> begin

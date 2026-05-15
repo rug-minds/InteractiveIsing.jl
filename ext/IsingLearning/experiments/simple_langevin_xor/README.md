@@ -132,6 +132,225 @@ is not zero initialization; it is output saturation under random initial-state
 statistics, likely through temperature/stepsize/relaxation and possibly better
 early stopping or optimizer scheduling.
 
+## Stable LocalLangevin Retest
+
+After the Langevin sampler was made more stable near the bounds, the two-output
+control was rerun with the normal route, no split snapshot, and no local
+potential:
+
+```text
+runs/stable_langevin_2_16_2_minit1_long_20260514
+```
+
+Settings:
+
+| parameter | value |
+|---|---:|
+| hidden units | 16 |
+| output units | 2 |
+| temperature | 0.07 |
+| stepsize | 0.8 |
+| beta | 1.0 |
+| learning rate | 0.0006 |
+| free relaxation | 1200 local updates |
+| nudged relaxation | 1200 local updates |
+| random starts per training sample | 1 |
+| validation repeats | 24 |
+| epochs | 3000 |
+
+Result:
+
+| epoch | MSE | accuracy |
+|---:|---:|---:|
+| 0 | 1.030516 | 0.5 |
+| 300 | 0.385842 | 1.0 |
+| 600 | 0.245457 | 1.0 |
+| 2400 | 0.229119 | 1.0 |
+| 2700 | 0.175700 | 1.0 |
+| 3000 | 0.125345 | 1.0 |
+
+Final mean outputs:
+
+```text
+(0,0): [ 0.642, -0.655]
+(0,1): [-0.634,  0.595]
+(1,0): [-0.602,  0.641]
+(1,1): [ 0.689, -0.727]
+```
+
+This is the best current LocalLangevin result in this folder. The important
+change relative to the older averaged runs was not more random-start averaging;
+the `Minit=1` control worked better here. The likely reason is that averaging
+several stochastic trajectories made the gradient less coherent for this small
+system, while the validation repeat average still measures robustness after
+training.
+
+## Scalar `2 -> 4 -> 1` Curriculum
+
+The scalar-output task finally worked from random initialization with a target
+curriculum:
+
+```text
+simple_2_4_1_curriculum.jl
+runs/analyticpath_random_curriculum_20260514
+```
+
+Architecture:
+
+```text
+2 input spins -> 4 hidden spins -> 1 scalar output spin
+```
+
+The successful run used random initial weights, no local potential, unadjusted
+`LocalLangevin`, and direct masked scalar output clamping. The target was not
+set to `±1` immediately. Instead:
+
+| stage | target scale | epochs | learning rate |
+|---:|---:|---:|---:|
+| 1 | 0.25 | 1200 | 0.0010 |
+| 2 | 0.50 | 1200 | 0.0008 |
+| 3 | 1.00 | 2400 | 0.0005 |
+
+Other settings:
+
+| parameter | value |
+|---|---:|
+| temperature | 0.07 |
+| stepsize | 0.8 |
+| beta | 1.0 |
+| free relaxation | 1200 |
+| nudged relaxation | 1200 |
+| Minit | 1 |
+| validation repeats | 24 |
+| initial weight scale | 0.12 |
+
+Results against the full `±1` scalar target:
+
+| epoch | MSE | accuracy | mean outputs |
+|---:|---:|---:|---|
+| 0 | 1.341617 | 0.5 | `[-0.907, -0.990, 0.810, 0.167]` |
+| 600 | 0.560708 | 1.0 | `[-0.128, 0.850, 0.181, -0.112]` |
+| 1500 | 0.217383 | 1.0 | `[-0.194, 0.770, 0.596, -0.944]` |
+| 2400 | 0.118574 | 1.0 | `[-0.403, 0.813, 0.774, -0.822]` |
+| 3000 | 0.064740 | 1.0 | `[-0.776, 0.577, 0.827, -0.988]` |
+| 3600 | 0.030847 | 1.0 | `[-0.661, 0.990, 0.909, -0.989]` |
+
+What made this work:
+
+- Direct full-strength scalar clamping made the output saturate early into the
+  wrong three-positive attractor, after which the gradient became very small.
+- A weak initial target kept the scalar output responsive long enough to learn
+  the XOR sign structure.
+- Once the signs were correct, increasing the target scale to `1.0` improved
+  the output magnitudes instead of trapping the system in the wrong basin.
+- `Minit=1` again worked better than averaging several random-start gradients
+  for this tiny system; validation still averages repeated starts.
+
+The analytic corner-detector control was also checked:
+
+```text
+runs/analytic_2_4_1_stablecheck_20260514
+```
+
+It validates at MSE `0.000107`, accuracy `1.0`, with means
+`[-0.989, 0.991, 0.989, -0.990]`. So the architecture can represent scalar XOR;
+the curriculum is solving the optimization problem from random initialization.
+
+### Best Checkpoint Restore
+
+The scalar run is stochastic after the signs are learned. It can reach a good
+solution and then drift to a worse validation MSE even though accuracy stays
+`1.0`. The curriculum script now stores the best validation parameters and
+restores them at the end.
+
+Confirmed run:
+
+```text
+runs/curriculum_bestrestore_20260514
+```
+
+| event | epoch | MSE | accuracy | mean outputs |
+|---|---:|---:|---:|---|
+| best logged checkpoint | 4500 | 0.038957 | 1.0 | `[-0.741, 0.830, 0.939, -0.763]` |
+| restored best re-eval | 4500 | 0.027362 | 1.0 | `[-0.742, 0.910, 0.989, -0.815]` |
+
+The re-evaluated MSE differs from the logged MSE because validation is still a
+finite stochastic average. The important point is that the restored parameters
+remain in the low-MSE, correct-sign basin.
+
+### Full Target With Smaller Beta
+
+The curriculum is not strictly necessary. A direct full-`±1` target works if
+the clamping strength is reduced. This matters because `target_scale = 0.25`
+and `β = 0.25` are not mathematically identical for the direct clamping term:
+
+```text
+H_clamp = β/2 * (s - y)^2
+        = β/2 * s^2 - β*y*s + constant
+```
+
+Reducing `y` weakens the linear target field `β*y*s` but keeps the clamping
+curvature `β/2 * s^2`. Reducing `β` weakens both the target field and the
+curvature. Even so, the experiment shows that the practical issue was mostly
+too-strong clamping.
+
+Run folder:
+
+```text
+runs/fulltarget_beta_grid_20260514
+```
+
+Shared settings:
+
+| parameter | value |
+|---|---:|
+| target scale | 1.0 |
+| temperature | 0.07 |
+| stepsize | 0.8 |
+| learning rate | 0.0006 |
+| free/nudged relaxation | 1200 / 1200 |
+| Minit | 1 |
+| validation repeats | 24 |
+| epochs | 3000 |
+
+Results:
+
+| beta | best MSE | best accuracy | final MSE | final accuracy | best epoch |
+|---:|---:|---:|---:|---:|---:|
+| 0.1 | 1.093429 | 0.75 | 1.314658 | 0.5 | 300 |
+| 0.2 | 0.000085 | 1.0 | 0.031067 | 1.0 | 2400 |
+| 0.35 | 0.046558 | 1.0 | 0.046558 | 1.0 | 3000 |
+| 0.5 | 0.986385 | 0.75 | 0.986385 | 0.75 | 3000 |
+| 0.75 | 0.105123 | 1.0 | 0.113686 | 1.0 | 2700 |
+
+Interpretation:
+
+- `β = 0.2` is the cleanest direct full-target run so far.
+- `β = 0.1` is too weak to reliably push the system into the correct basin.
+- `β = 0.5` and above often recreate the old failure mode: the scalar output
+  saturates into the wrong branch and the gradient becomes too small or
+  unhelpful.
+- The target curriculum worked because it effectively avoided the same
+  too-strong early nudging regime. It is a stabilization trick, not a
+  representational requirement.
+
+### Nudged Annealing Note
+
+The idea was to briefly increase temperature during the nudged branches so the
+target perturbation can escape a too-strong free attractor. This is physically
+reasonable, but the implementation has to preserve the same Langevin context as
+the free phase. A version with separate plus/minus sampler contexts failed its
+flat-temperature control because the Hamiltonian cache was not guaranteed to
+match the restored free state after `setgraph!`.
+
+Current conclusion:
+
+- The attractor-depth concern is real.
+- Target-scale curriculum plus best-checkpoint restore is already enough for
+  scalar `2 -> 4 -> 1`.
+- Nudged annealing should only be trusted after the no-anneal control exactly
+  reproduces the standard curriculum path.
+
 ## Performance Note
 
 The first version of this experiment accidentally serialized worker trajectories:

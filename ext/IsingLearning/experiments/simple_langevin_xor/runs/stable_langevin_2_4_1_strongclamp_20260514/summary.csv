@@ -1,0 +1,2 @@
+name,beta,lr,weight_scale,temp,stepsize,best_mse,best_acc
+b3_lr0003_w02,3.0,0.0003,0.2,0.07,0.8,0.7572248172983902,0.75

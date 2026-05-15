@@ -1,0 +1,6 @@
+best_accuracy,best_epoch,best_mse,bias_scale,final_accuracy,final_mse,hidden_local_scale,hidden_output_scale,name,outdir,temp_fraction
+0.75,1200,0.8550796581967858,0.01,0.5,1.1702370356785468,0.005,0.4,prev_best_repeat,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_split_input_scout_20260514_141216/prev_best_repeat,0.025
+0.5,0,0.8133826042649215,0.0,0.5,1.0987672565479145,0.005,0.4,zero_bias_same,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_split_input_scout_20260514_141216/zero_bias_same,0.025
+0.75,1,1.1465705168583493,0.0,0.5,1.5540330148064505,0.005,0.55,more_output_same,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_split_input_scout_20260514_141216/more_output_same,0.025
+1.0,1800,0.575124445707173,0.0,0.75,0.5931215625922911,0.005,0.4,lower_T_same,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_split_input_scout_20260514_141216/lower_T_same,0.018
+0.75,600,0.7716074758699356,0.0,0.5,0.8934535968112614,0.0025,0.4,lower_hidden_same,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_split_input_scout_20260514_141216/lower_hidden_same,0.025

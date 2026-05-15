@@ -29,10 +29,13 @@ Base.@kwdef mutable struct TimeAverageXorConfig
     weight_decay::FT = parse(FT, get(ENV, "ISING_TIMEAVG_XOR_WEIGHT_DECAY", "1e-4"))
     grad_clip::FT = parse(FT, get(ENV, "ISING_TIMEAVG_XOR_GRAD_CLIP", "50"))
     temp::FT = parse(FT, get(ENV, "ISING_TIMEAVG_XOR_TEMP", "0.01"))
+    eval_temp::FT = parse(FT, get(ENV, "ISING_TIMEAVG_XOR_EVAL_TEMP", get(ENV, "ISING_TIMEAVG_XOR_TEMP", "0.01")))
     stepsize::FT = parse(FT, get(ENV, "ISING_TIMEAVG_XOR_STEPSIZE", "0.2"))
     max_drift_fraction::FT = parse(FT, get(ENV, "ISING_TIMEAVG_XOR_MAX_DRIFT", "0.6"))
     weight_scale::FT = parse(FT, get(ENV, "ISING_TIMEAVG_XOR_WEIGHT_SCALE", "0.18"))
     bias_scale::FT = parse(FT, get(ENV, "ISING_TIMEAVG_XOR_BIAS_SCALE", "0.02"))
+    train_average_sweeps::Int = parse(Int, get(ENV, "ISING_TIMEAVG_XOR_TRAIN_AVG", "20"))
+    train_sample_every_sweeps::Int = parse(Int, get(ENV, "ISING_TIMEAVG_XOR_TRAIN_EVERY", "1"))
     eval_burnin_sweeps::Int = parse(Int, get(ENV, "ISING_TIMEAVG_XOR_EVAL_BURNIN", "8"))
     eval_average_sweeps::Int = parse(Int, get(ENV, "ISING_TIMEAVG_XOR_EVAL_AVG", "50"))
     eval_sample_every_sweeps::Int = parse(Int, get(ENV, "ISING_TIMEAVG_XOR_EVAL_EVERY", "1"))
@@ -180,6 +183,30 @@ function reusable_average_std(ctx)
     return sqrt(max(zero(FT), ctx.sumsq / ctx.count - μ^2))
 end
 
+"""
+    DerivativeAverager(sign)
+
+Accumulate one sampled Hamiltonian parameter derivative into a worker-local
+gradient buffer. `sign = +1` records the `+β` contribution and `sign = -1`
+records the `-β` contribution, so the buffer stores the unscaled numerator
+`sum(dH_plus) - sum(dH_minus)`.
+"""
+struct DerivativeAverager <: Processes.ProcessAlgorithm
+    sign::Int
+end
+
+Processes.init(::DerivativeAverager, context) = (; count = 0)
+
+function Processes.step!(averager::DerivativeAverager, context)
+    graph = context.model
+    buffers = context.buffers
+    state_vec = II.state(graph)
+    mode = averager.sign > 0 ? II.AccumulateBuffer{+}() : II.SubtractBuffer()
+    II.parameter_derivative(graph.hamiltonian[II.Bilinear], state_vec, dJ = buffers.w, buffermode = mode)
+    II.parameter_derivative(graph.hamiltonian[II.MagField], state_vec, db = buffers.b, buffermode = mode)
+    return (; count = context.count + 1)
+end
+
 """One EqProp training trajectory property for `ProcessManager`."""
 Base.@kwdef struct TrainJob
     sample_idx::Int
@@ -230,7 +257,98 @@ end
 function template_train_worker(layer, prototype_graph, config::TimeAverageXorConfig, worker_idx::Integer)
     sc = simple_config(config)
     graph = managed_worker_graph(prototype_graph, config)
-    return simple_worker_process(layer, graph, sc; split = false)
+    return timeavg_training_worker_process(layer, graph, sc, config)
+end
+
+"""Build one nudged branch that samples derivatives after the normal burn-in."""
+function timeavg_nudged_branch(graph, config::TimeAverageXorConfig, sc::SimpleXorConfig, beta_sign::Int)
+    dynamics_algorithm = simple_dynamics(sc)
+    derivative_averager = DerivativeAverager(beta_sign)
+    capture = IsingLearning.Capturer()
+    sample_interval = config.train_sample_every_sweeps * length(II.sampling_indices(graph.index_set))
+    average_steps = max(1, config.train_average_sweeps) * sample_interval
+    beta_value = beta_sign > 0 ? sc.β : -sc.β
+    sample = if beta_sign > 0
+        Processes.@CompositeAlgorithm begin
+            @state buffers
+            @alias dynamics = dynamics_algorithm
+            @interval 1 dynamics()
+            @alias plus_derivative_averager = derivative_averager
+            @interval sample_interval plus_derivative_averager(model = dynamics.model, buffers = buffers)
+        end
+    else
+        Processes.@CompositeAlgorithm begin
+            @state buffers
+            @alias dynamics = dynamics_algorithm
+            @interval 1 dynamics()
+            @alias minus_derivative_averager = derivative_averager
+            @interval sample_interval minus_derivative_averager(model = dynamics.model, buffers = buffers)
+        end
+    end
+    branch = if beta_sign > 0
+        Processes.@Routine begin
+            @state x
+            @state y
+            @state equilibrium_state
+            @state buffers
+            @alias dynamics = dynamics_algorithm
+            @alias plus_capture = capture
+            IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
+            IsingLearning.apply_input(dynamics.model, x)
+            IsingLearning.apply_targets(dynamics.model, y)
+            IsingLearning.set_clamping_beta!(dynamics.model, beta_value)
+            @repeat sc.nudged_relaxation dynamics()
+            @repeat average_steps sample()
+            plus_capture(isinggraph = dynamics.model)
+        end
+    else
+        Processes.@Routine begin
+            @state x
+            @state y
+            @state equilibrium_state
+            @state buffers
+            @alias dynamics = dynamics_algorithm
+            @alias minus_capture = capture
+            IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
+            IsingLearning.apply_input(dynamics.model, x)
+            IsingLearning.apply_targets(dynamics.model, y)
+            IsingLearning.set_clamping_beta!(dynamics.model, beta_value)
+            @repeat sc.nudged_relaxation dynamics()
+            @repeat average_steps sample()
+            minus_capture(isinggraph = dynamics.model)
+        end
+    end
+    return (; algorithm = branch, dynamics = branch.dynamics, capture)
+end
+
+"""Create one training worker whose EqProp derivative is averaged in time."""
+function timeavg_training_worker_process(layer, graph, sc::SimpleXorConfig, config::TimeAverageXorConfig)
+    forward = simple_forward(layer, sc; split = false).algorithm
+    plus = timeavg_nudged_branch(graph, config, sc, +1)
+    minus = timeavg_nudged_branch(graph, config, sc, -1)
+    beta = layer.β
+    final = Processes.@CompositeAlgorithm begin
+        @state buffers
+        @context c1 = forward()
+        @context c2 = plus.algorithm()
+        @context c3 = minus.algorithm()
+        IsingLearning.set_clamping_beta!(c1.dynamics.model, zero(beta))
+    end
+    algo = Processes.resolve(final)
+    buffers = IsingLearning.gradient_buffer(graph)
+    return Process(
+        algo,
+        Input(:_state;
+            x = zeros(FT, 2),
+            y = zeros(FT, 1),
+            buffers = buffers,
+            equilibrium_state = copy(II.state(graph)),
+        ),
+        dynamics_input(:dynamics, graph, config.base_seed),
+        Input(:plus_capture, state = graph),
+        Input(:minus_capture, state = graph);
+        repeats = 1,
+    )
 end
 
 """Create one fresh worker graph with the current prototype parameters."""
@@ -256,15 +374,16 @@ function train_worker_inputs(graph, config::TimeAverageXorConfig)
     )
 end
 
-"""Copy the template training process while replacing worker-local graph inputs."""
-function copy_train_worker(template::Process, prototype_graph, config::TimeAverageXorConfig)
+"""Resolve process inputs against `template` and build a fresh worker-local context."""
+function worker_context_from_inputs(template::Process, inputs)
+    resolved = Processes._resolve_reinit_inputs(template, inputs...)
+    return Processes.initcontext(Processes.taskdata(template), resolved...)
+end
+
+"""Build a copied training context with worker-local graph inputs."""
+function train_worker_context(template::Process, prototype_graph, config::TimeAverageXorConfig)
     graph = managed_worker_graph(prototype_graph, config)
-    return Processes.copyprocess(
-        template,
-        train_worker_inputs(graph, config)...;
-        keep_inputs = false,
-        keep_overrides = false,
-    )
+    return worker_context_from_inputs(template, train_worker_inputs(graph, config))
 end
 
 """Create one reusable validation worker process with a context-owned averager."""
@@ -302,42 +421,23 @@ function eval_worker_inputs(graph, config::TimeAverageXorConfig, worker_idx::Int
     )
 end
 
-"""Copy the template validation process while replacing worker-local graph inputs."""
-function copy_eval_worker(template::Process, prototype_graph, config::TimeAverageXorConfig, worker_idx::Integer)
+"""Build a copied validation context with worker-local graph inputs."""
+function eval_worker_context(template::Process, prototype_graph, config::TimeAverageXorConfig, worker_idx::Integer)
     graph = managed_worker_graph(prototype_graph, config)
-    return Processes.copyprocess(
-        template,
-        eval_worker_inputs(graph, config, worker_idx)...;
-        keep_inputs = false,
-        keep_overrides = false,
-    )
+    return worker_context_from_inputs(template, eval_worker_inputs(graph, config, worker_idx))
 end
 
 """Synchronize all graph models in a reusable worker context to current params."""
 function sync_worker_params!(worker::Process, params)
-    for name in (:dynamics,)
-        hasproperty(worker.context, name) || continue
-        subctx = getproperty(worker.context, name)
-        hasproperty(subctx, :model) && IsingLearning.sync_graph_params!(subctx.model, params)
-    end
+    IsingLearning.sync_graph_params!(worker.context.dynamics.model, params)
     return worker
 end
 
-"""Rebuild selected dynamics subcontexts after their graph parameters changed."""
-function reinit_worker_dynamics!(worker::Process, names)
-    for name in names
-        hasproperty(worker.context, name) || continue
-        worker.context = Processes.initcontext(worker.context, name)
-    end
-    return worker
-end
-
-"""Synchronize and partially reinitialize every worker owned by a manager."""
-function sync_manager_workers!(manager, params, names)
+"""Synchronize every worker graph owned by a manager."""
+function sync_manager_workers!(manager, params)
     for worker in Processes.workers(manager)
         Processes.isdone(worker) && close(worker)
         sync_worker_params!(worker, params)
-        reinit_worker_dynamics!(worker, names)
     end
     return manager
 end
@@ -363,7 +463,7 @@ end
 function prepare_eval_worker!(worker::Process, trainer::ManagedTimeAvgTrainer, config::TimeAverageXorConfig, job::EvalJob)
     Processes.isdone(worker) && close(worker)
     graph = worker.context.dynamics.model
-    II.temp!(graph, config.temp)
+    II.temp!(graph, config.eval_temp)
     Random.seed!(job.seed)
     simple_initstate!(graph, simple_config(config))
     IsingLearning.apply_input(graph, job.x)
@@ -416,15 +516,9 @@ end
 
 """Recipe used by the persistent training `ProcessManager`."""
 function train_manager_recipe(layer, prototype_graph)
-    template = Ref{Any}(nothing)
     return (;
-        makeworker = (idx, manager) -> begin
-            if isnothing(template[])
-                template[] = template_train_worker(layer, prototype_graph, manager.config, idx)
-                return template[]
-            end
-            return copy_train_worker(template[], prototype_graph, manager.config)
-        end,
+        makeworker = (idx, manager) -> template_train_worker(layer, prototype_graph, manager.config, idx),
+        makecontext = (idx, manager, template) -> train_worker_context(template, prototype_graph, manager.config),
         prepare! = (slot, job, manager) -> prepare_train_worker!(slot.worker, manager.state, manager.config, job),
         isdone = (slot, manager) -> Processes.isdone(slot.worker),
         consume! = (slot, job, manager) -> collect_train_response!(
@@ -437,15 +531,9 @@ end
 
 """Recipe used by the persistent validation `ProcessManager`."""
 function eval_manager_recipe(layer, prototype_graph)
-    template = Ref{Any}(nothing)
     return (;
-        makeworker = (idx, manager) -> begin
-            if isnothing(template[])
-                template[] = template_eval_worker(layer, prototype_graph, manager.config, idx)
-                return template[]
-            end
-            return copy_eval_worker(template[], prototype_graph, manager.config, idx)
-        end,
+        makeworker = (idx, manager) -> template_eval_worker(layer, prototype_graph, manager.config, idx),
+        makecontext = (idx, manager, template) -> eval_worker_context(template, prototype_graph, manager.config, idx),
         prepare! = (slot, job, manager) -> prepare_eval_worker!(slot.worker, manager.state, manager.config, job),
         isdone = (slot, manager) -> Processes.isdone(slot.worker),
         consume! = (slot, job, manager) -> begin
@@ -468,20 +556,21 @@ function train_epoch_managed!(trainer::ManagedTimeAvgTrainer, x, y, batch_gradie
     Processes.run!(trainer.train_manager, jobs)
 
     ntraj = length(jobs)
-    IsingLearning.scale_buffer!(batch_gradient, inv(FT(2) * FT(config.β) * FT(max(ntraj, 1))))
+    nsampled_derivatives = max(1, config.train_average_sweeps) * max(ntraj, 1)
+    IsingLearning.scale_buffer!(batch_gradient, inv(FT(2) * FT(config.β) * FT(nsampled_derivatives)))
     config.weight_decay > 0 && (batch_gradient.w .+= config.weight_decay .* trainer.params.w)
     config.grad_clip > 0 && clamp!(batch_gradient.w, -config.grad_clip, config.grad_clip)
     config.grad_clip > 0 && clamp!(batch_gradient.b, -config.grad_clip, config.grad_clip)
     grad_norm = sqrt(sum(abs2, batch_gradient.w) + sum(abs2, batch_gradient.b))
     trainer.opt_state, trainer.params = Optimisers.update(trainer.opt_state, trainer.params, batch_gradient)
     IsingLearning.sync_graph_params!(trainer.prototype_graph, trainer.params)
-    sync_manager_workers!(trainer.train_manager, trainer.params, (:dynamics,))
+    sync_manager_workers!(trainer.train_manager, trainer.params)
     return (; grad_norm, response_norm = isempty(trainer.current_responses) ? zero(FT) : mean(trainer.current_responses))
 end
 
 """Evaluate time-averaged outputs using reusable `ProcessManager` worker slots."""
 function evaluate_timeavg!(trainer::ManagedTimeAvgTrainer, x, y, config::TimeAverageXorConfig; seed_offset::Integer)
-    sync_manager_workers!(trainer.eval_manager, trainer.params, (:dynamics,))
+    sync_manager_workers!(trainer.eval_manager, trainer.params)
     jobs = eval_jobs(x, config; seed_offset)
     trainer.current_sample_outputs = [NamedTuple{(:mean, :std),Tuple{FT,FT}}[] for _ in axes(x, 2)]
     Processes.run!(trainer.eval_manager, jobs)
@@ -566,7 +655,9 @@ function write_timeavg_readme(path, config::TimeAverageXorConfig, best, csv_path
         println(io, "- free/nudged relaxation: `$(config.free_relaxation)` / `$(config.nudged_relaxation)`")
         println(io, "- beta: `$(config.β)`")
         println(io, "- temperature: `$(config.temp)`")
+        println(io, "- validation temperature: `$(config.eval_temp)`")
         println(io, "- stepsize: `$(config.stepsize)`")
+        println(io, "- nudged derivative samples: `$(config.train_average_sweeps)` every `$(config.train_sample_every_sweeps)` full sweep(s)")
         println(io, "- Minit/eval repeats: `$(config.minit)` / `$(config.eval_repeats)`")
         println(io, "- workers: `$(config.workers)`")
         println(io)
@@ -584,7 +675,7 @@ function write_timeavg_readme(path, config::TimeAverageXorConfig, best, csv_path
 end
 
 """Run the managed relearning experiment."""
-function main(; config::TimeAverageXorConfig = CONFIG)
+function run_timeavg_learning(; config::TimeAverageXorConfig = CONFIG)
     disable_logging(Logging.Warn)
     mkpath(config.outdir)
     trainer = init_timeavg_trainer(config)
@@ -627,6 +718,9 @@ function main(; config::TimeAverageXorConfig = CONFIG)
     println("Saved docs: ", md_path)
     return (; config, rows, best, csv_path, png_path, graph_path, md_path)
 end
+
+"""Script entrypoint for the managed time-average experiment."""
+main(; config::TimeAverageXorConfig = CONFIG) = run_timeavg_learning(config = config)
 
 if abspath(PROGRAM_FILE) == @__FILE__
     main()

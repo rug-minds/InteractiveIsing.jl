@@ -183,6 +183,71 @@ Bigger-graph Metropolis reruns:
     connectivity, and inter-layer fanout does not solve the scalar-readout
     polarization problem under random discrete initialization.
 
+## Stable LocalLangevin Retest
+
+The checkerboard experiments were rerun with the newer, more stable
+`LocalLangevin` sampler. These runs used two-output clamping, no polynomial
+local potential, random starts, and internal layer couplings.
+
+First retest:
+
+```text
+runs/stable_local_langevin_two_readout_20260514
+```
+
+Settings:
+
+| parameter | value |
+|---|---:|
+| temperature | 0.07 |
+| stepsize | 0.8 |
+| beta | 1.0 |
+| learning rate | 0.0008 |
+| free relaxation | 240 |
+| nudged relaxation | 240 |
+| random starts per sample | 6 |
+| validation repeats | 24 |
+
+Best results:
+
+| config | best MSE | best accuracy |
+|---|---:|---:|
+| checker_2x2_global | 0.980957 | 0.75 |
+| checker_4x4_global | 0.976804 | 0.75 |
+
+Stronger retest:
+
+```text
+runs/stable_local_langevin_stronger_20260514
+```
+
+Settings:
+
+| parameter | value |
+|---|---:|
+| temperature | 0.04 |
+| stepsize | 1.2 |
+| beta | 2.0 |
+| learning rate | 0.002 |
+| inter-layer weight scale | 0.16 |
+| internal layer scale | 0.04 |
+| free relaxation | 360 |
+| nudged relaxation | 360 |
+| random starts per sample | 4 |
+| validation repeats | 16 |
+
+Best results:
+
+| config | best MSE | best accuracy |
+|---|---:|---:|
+| checker_2x2_global | 0.956093 | 1.0 |
+| checker_4x4_global | 0.917103 | 0.75 |
+
+The stronger run can briefly classify all four `2x2` cases, but the MSE remains
+near one and the readout margins are small. This is not a solved checkerboard
+recipe. The stable LocalLangevin sampler helps the simple all-to-all two-output
+task much more than this local checkerboard task.
+
 Runs that are now considered diagnostic only:
 
 - `runs/metropolis_2x2_symmetric_nodecay_20260509_213406/`

@@ -1,0 +1,4 @@
+best_accuracy,best_epoch,best_mse,nn,outdir
+0.75,240,0.8128809022081349,1,ext/IsingLearning/experiments/edge_signal_xor/runs/stable_local_langevin_edge_20260514/NN1
+0.75,240,0.7687924406170843,3,ext/IsingLearning/experiments/edge_signal_xor/runs/stable_local_langevin_edge_20260514/NN3
+0.75,0,0.7922036581678387,5,ext/IsingLearning/experiments/edge_signal_xor/runs/stable_local_langevin_edge_20260514/NN5

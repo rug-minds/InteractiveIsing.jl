@@ -1,0 +1,7 @@
+idx,T,eval_T,beta,stepsize,weight_scale,lr,best_epoch,best_mse,best_acc,dir
+1,0.07,0.005,1.0,0.4,0.18,0.0008,1200,0.9712153565345611,0.75,ext/IsingLearning/experiments/output_state_timeavg_xor/runs/stable_langevin_grid_refine_20260514_004753/run_1_T0.07_Te0.005_b1.0_eta0.4_w0.18
+2,0.07,0.005,1.0,0.8,0.18,0.0008,450,1.0287863177802379,0.75,ext/IsingLearning/experiments/output_state_timeavg_xor/runs/stable_langevin_grid_refine_20260514_004753/run_2_T0.07_Te0.005_b1.0_eta0.8_w0.18
+3,0.07,0.005,1.0,0.4,0.3,0.0005,1050,1.0129704028879887,0.75,ext/IsingLearning/experiments/output_state_timeavg_xor/runs/stable_langevin_grid_refine_20260514_004753/run_3_T0.07_Te0.005_b1.0_eta0.4_w0.3
+4,0.12,0.005,2.0,0.4,0.18,0.0008,1350,1.1216252827715276,0.75,ext/IsingLearning/experiments/output_state_timeavg_xor/runs/stable_langevin_grid_refine_20260514_004753/run_4_T0.12_Te0.005_b2.0_eta0.4_w0.18
+5,0.12,0.005,2.0,0.4,0.3,0.0005,1200,1.0263420093527567,0.75,ext/IsingLearning/experiments/output_state_timeavg_xor/runs/stable_langevin_grid_refine_20260514_004753/run_5_T0.12_Te0.005_b2.0_eta0.4_w0.3
+6,0.05,0.005,1.0,0.8,0.24,0.0008,750,0.9815164330031295,0.75,ext/IsingLearning/experiments/output_state_timeavg_xor/runs/stable_langevin_grid_refine_20260514_004753/run_6_T0.05_Te0.005_b1.0_eta0.8_w0.24
