@@ -131,6 +131,10 @@ For graph/process cleanup:
 
 ## Rules For Future Changes
 
+- Do not call `close(host)` directly from Makie/GLMakie input callbacks such as
+  Cmd+W keyboard handlers. Those callbacks run inside GLMakie's event/renderloop
+  handling and can close re-entrantly. Flip `host.open[] = false` and let the
+  host timer perform the same deferred close path as the native window button.
 - Do not call `Processes.close(g)` from a native close callback.
 - Do not call `close(process)` from a native close callback unless it is wrapped
   in a task and cannot block the close event.

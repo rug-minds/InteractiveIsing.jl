@@ -33,8 +33,8 @@ struct CoulombInternal{T,PxyT,IPxyT,N} <: InternalImplementation
     ϵ::T
     du_self::Vector{T}            # per-layer unit charge-pair field jump du[z+1]-du[z]
 
-    Pxy::PxyT                     # plan_rfft for 2D slices
-    iPxy::IPxyT                   # plan_irfft for 2D slices
+    Pxy::PxyT                     # batched plan_rfft over x/y for all z planes
+    iPxy::IPxyT                   # batched unnormalized plan_brfft over x/y for all z planes
 
     mod_upperd::Array{T,3}        # Thomas algorithm modified upper diagonal (cp), size (Nxh, Ny, Nz)
     inv_den::Array{T,3}
@@ -98,8 +98,8 @@ Base.size(c::CoulombHamiltonian) = c.size
             T(constants[3]),                              # az
             one(T),                                       # ϵ
             zeros(T, Nz_dip),                             # du_self
-            plan_rfft(@view(ρ[:, :, 1]), (1, 2); flags = FFTW.MEASURE), # Pxy
-            plan_irfft(@view(uhat[:, :, 1]), Nx, (1, 2); flags = FFTW.MEASURE), # iPxy
+            plan_rfft(ρ, (1, 2); flags = FFTW.MEASURE), # Pxy
+            plan_brfft(uhat, Nx, (1, 2); flags = FFTW.MEASURE), # iPxy
             zeros(T, spectral_size),                      # mod_upperd
             zeros(T, spectral_size),                      # inv_den
             zeros(Complex{T}, spectral_size),             # dp_scratch
@@ -281,7 +281,7 @@ function precompute_du_self!(c::CoulombHamiltonian)
     Nxh = size(c.ρhat, 1)
     invden = c.inv_den
     m_upper = c.mod_upperd
-    scale = -(c.az^2) / c.ϵ
+    scale = -(c.az^2) / (c.ϵ * T(Nx * Ny))
 
     ρtmp = zeros(T, Nx, Ny, Nz)
     ρhat_tmp = similar(c.ρhat)
@@ -295,11 +295,7 @@ function precompute_du_self!(c::CoulombHamiltonian)
         ρtmp[1,1,z] = -one(T)
         ρtmp[1,1,z+1] = one(T)
 
-        for zz in 1:Nz
-            s = @view ρtmp[:, :, zz]
-            sh = @view ρhat_tmp[:, :, zz]
-            mul!(sh, c.Pxy, s)
-        end
+        mul!(ρhat_tmp, c.Pxy, ρtmp)
 
         for ny in 1:Ny, nx in 1:Nxh
             if !isfinite(invden[nx, ny, 1]) || !isfinite(invden[nx, ny, Nz])
@@ -318,11 +314,7 @@ function precompute_du_self!(c::CoulombHamiltonian)
             end
         end
 
-        for zz in 1:Nz
-            uh = @view uhat_tmp[:, :, zz]
-            uview = @view utmp[:, :, zz]
-            mul!(uview, c.iPxy, uh)
-        end
+        mul!(utmp, c.iPxy, uhat_tmp)
 
         c.du_self[z] = utmp[1,1,z+1] - utmp[1,1,z]
 
@@ -355,7 +347,7 @@ function recalc!(c::CoulombHamiltonian)
     uhat = c.uhat
     rho_hat = c.ρhat
     rho = c.ρ
-    Nx, Ny, Nz = size(uhat)
+    Nx, Ny, Nz = size(rho)
     Nxh = size(rho_hat, 1)
     invden = c.inv_den
     m_upper = c.mod_upperd
@@ -364,15 +356,11 @@ function recalc!(c::CoulombHamiltonian)
     T = eltype(u)
     az2 = c.az^2
 
-    # Calculate rho_hat from rho (rFFT in x,y)
-    @inbounds for z in 1:Nz
-        s  = @view rho[:, :, z]
-        sh = @view rho_hat[:, :, z]
-        mul!(sh, c.Pxy, s)
-    end
+    # Calculate rho_hat from rho (batched rFFT in x/y for every z plane)
+    mul!(rho_hat, c.Pxy, rho)
 
     @inbounds for ny in 1:Ny, nx in 1:Nxh
-        scale = -az2 / c.ϵ
+        scale = -az2 / (c.ϵ * T(Nx * Ny))
         dp_scratch[nx,ny,1] = (scale * rho_hat[nx,ny,1]) * invden[nx,ny,1]
 
         # Forward sweep
@@ -387,12 +375,9 @@ function recalc!(c::CoulombHamiltonian)
         end
     end
 
-    # Inverse rFFT in x,y for each z-plane
-    @inbounds for z in 1:Nz
-        uh = @view uhat[:, :, z]
-        uview = @view u[:, :, z]
-        mul!(uview, c.iPxy, uh)
-    end
+    # Unnormalized inverse rFFT in x/y for every z plane. The spectral RHS is
+    # pre-scaled by 1/(Nx*Ny), so `u` is written at the physical scale directly.
+    mul!(u, c.iPxy, uhat)
 
     return u
 end
