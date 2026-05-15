@@ -525,7 +525,8 @@ The unadjusted paths are not proved Boltzmann-correct here.
 In the unadjusted code:
 
 - the drift is capped with `_langevin_drift_step`;
-- out-of-bounds proposals are reflected with `_reflect_to_bounds`;
+- the deterministic drift result is clamped into bounds;
+- stochastic displacement is reflected into bounds with `_reflect_to_bounds`;
 - the proposal is always accepted;
 - no reverse/forward proposal-density ratio is used;
 - no `exp(-ΔH/T)` factor is used.
@@ -539,11 +540,8 @@ Code representation:
   `src/MCAlgorithms/Algorithms/Langevin/GlobalLangevin.jl:136`, and
   `src/MCAlgorithms/Algorithms/Langevin/BlockLangevin.jl:139`.
 - Reflection is `_reflect_to_bounds`, defined in
-  `src/MCAlgorithms/Algorithms/Langevin/LocalLangevin.jl:49-64`, and used in
-  the unadjusted paths at
-  `src/MCAlgorithms/Algorithms/Langevin/LocalLangevin.jl:221`,
-  `src/MCAlgorithms/Algorithms/Langevin/GlobalLangevin.jl:142`, and
-  `src/MCAlgorithms/Algorithms/Langevin/BlockLangevin.jl:143`.
+  `src/MCAlgorithms/Algorithms/Langevin/LocalLangevin.jl`, and applied through
+  `_langevin_unadjusted_state` after deterministic drift clamping.
 - The unadjusted local path constructs an accepted proposal and writes the new
   state directly in `src/MCAlgorithms/Algorithms/Langevin/LocalLangevin.jl:223-228`.
 - The unadjusted global path constructs an accepted `MultiSpinProposal` and

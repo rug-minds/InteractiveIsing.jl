@@ -43,7 +43,8 @@ The common keywords are:
   `Processes.step!` call attempts one spin proposal for each Langevin algorithm;
   it does not divide `stepsize`.
 - `adjusted`: selects between Metropolis-adjusted Langevin and always-accepted
-  reflected Langevin.
+  Langevin with clamped deterministic drift and reflected stochastic
+  displacement.
 
 The returned step context includes:
 
@@ -111,7 +112,8 @@ If `adjusted=false`, the deterministic drift is capped to
 \texttt{max_drift_fraction} \cdot (\texttt{high_state} - \texttt{low_state}),
 ```
 
-then the proposal is reflected into bounds and accepted.
+then the deterministic drift result is clamped into bounds, the stochastic
+displacement is reflected into bounds, and the proposal is accepted.
 
 ## `GlobalLangevin`
 
@@ -142,8 +144,9 @@ If `adjusted=true`, an out-of-bounds coordinate rejects the whole global
 proposal. Otherwise the whole vector proposal is accepted or rejected as one
 Metropolis-Hastings/MALA move.
 
-If `adjusted=false`, the selected coordinate is reflected into its layer bounds,
-written to the graph state, and marked accepted.
+If `adjusted=false`, the selected coordinate's deterministic drift result is
+clamped into its layer bounds. The stochastic displacement is then reflected into
+the bounds, written to the graph state, and marked accepted.
 
 `group_steps` does not repeat proposals inside one `Processes.step!`; each call
 attempts one spin update.
@@ -168,8 +171,9 @@ next chunk would overrun the order. The selected group is therefore not a
 spatial block or a run of linear indices. With `adjusted=true`, it constructs
 and accepts/rejects the whole block proposal at that block level, then streams
 accepted block entries as one `FlipProposal` per subsequent `Processes.step!`.
-With `adjusted=false`, it streams reflected
-single-spin writes from the cached block derivative cycle.
+With `adjusted=false`, it streams always-accepted single-spin writes from the
+cached block derivative cycle using clamped deterministic drift and reflected
+stochastic displacement.
 
 The adjusted proposal and acceptance rule are the same as `GlobalLangevin`, but
 the derivative refresh is restricted to the selected block.
@@ -188,9 +192,10 @@ single-spin for local, all active spins for global, and the selected block for
 block Langevin. Accepted global/block vector proposals are streamed into the
 graph one spin per `Processes.step!` after the proposal-level accept decision.
 
-`adjusted=false` means the proposal is reflected into bounds and accepted
-without a Metropolis-Hastings correction. This can be useful for interactive or
-relaxation dynamics, but it is not an exact Boltzmann sampler in the current
+`adjusted=false` means deterministic drift is clamped into bounds, stochastic
+displacement is reflected into bounds, and the result is accepted without a
+Metropolis-Hastings correction. This can be useful for interactive or relaxation
+dynamics, but it is not an exact Boltzmann sampler in the current
 implementation.
 
 ## Tuners

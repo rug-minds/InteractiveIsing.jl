@@ -27,18 +27,40 @@ screen = GLMakie.Screen()
 display(screen, fig)
 ```
 
-GLMakie's own `close(screen)` implementation already:
+GLMakie's own `close(screen)` implementation:
 
 - sets `screen.window_open[] = false`;
 - stops the renderloop;
 - empties the screen;
 - asks GLFW to close the native window.
 
-Therefore `WindowHost` should not try to manually destroy Makie objects during
-the `window_open=false` callback. That callback happens in the middle of
-GLMakie's own close sequence.
+GLMakie's default renderloop also has `screen.close_after_renderloop = true`.
+When the native close button makes `isopen(screen) == false`, the renderloop
+exits and then calls `close(screen)` itself. For complex interactive figures,
+that means the native close button can still run full `empty!(screen)` cleanup
+even if package code avoids all Makie deletion. This was enough to cause close
+freezes even when graph processes were already paused.
+
+Therefore `WindowHost` disables `close_after_renderloop` for Windows-owned
+screens and does not call `close(screen)` for normal interactive close. The
+host stops package timers and owned processes, hides the native GLFW window,
+marks it should-close, and detaches the screen from GLMakie's `closeall`
+registry so the same expensive cleanup is not retried at Julia exit. The GLFW
+context is deliberately not destroyed during this close path; destroying it can
+race GLMakie's renderloop and produce `Context is not alive anymore!`.
 
 ## Things Tried That Were Bad
+
+### Example-Level `window_open` Cleanup
+
+`examples/XORInteractiveLearning.jl` still had its own
+`on(host.open) do isopen` observer after the generic window lifecycle had been
+fixed. That observer called `Processes.close(graph)` and trainer cleanup when
+the native window set `window_open=false`, which reintroduced the same close
+freeze outside `src/Windows`.
+
+Rule: examples should use `onclose!(host)` and nonblocking stop requests too;
+they should not observe `host.open` directly for cleanup.
 
 ### Closing Makie Objects Explicitly
 
@@ -46,6 +68,8 @@ Deleting axes, plots, or layout contents during window close caused or worsened
 hangs. Makie/GLMakie should own cleanup of its scene graph on close.
 
 Rule: panel close during native window close should not call Makie deletion APIs.
+For interactive Windows-owned GL screens, even GLMakie's own `empty!(screen)` is
+avoided on the close path because it can block for seconds.
 
 ### Blocking Process Close In The Window Callback
 
@@ -64,14 +88,16 @@ Running child close hooks, observer cleanup, resource cleanup, and graph/process
 cleanup directly from the native `window_open=false` observer is too much work
 inside GLMakie's close path.
 
-Rule: the native close observer should do the minimum needed to stop package
-timers/callbacks, then schedule package cleanup asynchronously.
+Rule: host/window close should not recurse through panel handles. It should stop
+package timers and owned processes only. Direct `close(handle)` is still the API
+for explicitly destroying an individual mounted panel.
 
-### Raw `GLFW.SetWindowShouldClose` For Explicit Close
+### Calling Raw GLFW Without Disabling GLMakie Auto-Close
 
-Using raw GLFW close requests bypasses some of GLMakie's own close logic. For an
-explicit `close(host)` on a real GL window, prefer `close(host.screen)` so
-GLMakie runs its normal close sequence.
+Using raw GLFW close requests while leaving `screen.close_after_renderloop =
+true` does not fix the problem: the renderloop can still observe the native
+close and call `close(screen)` itself. Raw GLFW close requests are only useful
+after disabling GLMakie's automatic renderloop close for that screen.
 
 ## Current Approach
 
@@ -82,17 +108,18 @@ For native close:
    `host.open[] == false`, it calls `_schedule_native_close!(host)`.
 3. `_begin_native_close!(host)` marks the host closing/closed, closes the frame
    and polling timers, and clears frame/poll callback registries.
-4. The rest of package cleanup is scheduled with `@async _finish_native_close!(host)`.
-5. `_finish_native_close!` closes panel handles and runs registered close
-   callbacks, but uses a native cleanup path that avoids generic Makie object
-   deletion.
+4. Host close callbacks are scheduled asynchronously.
+5. Panel handles are marked closed so package timers stop calling them, but their
+   `close!` hooks, Makie contents, observer resources, and arbitrary resources
+   are not touched by full-window close.
 
 For explicit close:
 
 1. If `host.screen` exists, `close(host)` first starts the same nonblocking host
    cleanup sequence.
-2. It then calls `close(host.screen)`, letting GLMakie own the actual window
-   shutdown.
+2. It then sets `events(fig).window_open[] = false`, hides and marks the GLFW
+   window should-close, and prevents GLMakie's renderloop from calling
+   `close(screen)` / `empty!(screen)`.
 
 For graph/process cleanup:
 
@@ -110,10 +137,12 @@ For graph/process cleanup:
 - Prefer nonblocking stop requests for graph-attached processes.
 - Do not delete Makie plots, axes, layout blocks, or scenes as part of native
   close cleanup.
+- Do not close panel handles from host/window close. Panel close is for explicit
+  panel teardown, not whole-window teardown.
 - Do not attach substantial package cleanup directly to `window_open=false`.
   Prefer reading `window_open` as state from package-owned timers.
-- Use `close(host.screen)` for explicit real-window close, not raw GLFW close
-  calls.
+- Do not use `close(host.screen)` for normal interactive window shutdown. It
+  runs `empty!(screen)`, which is the freeze-prone cleanup path.
 - If adding a new panel that owns a graph, register graph cleanup through the
   existing `_register_graph_close!` helper.
 - If adding a new panel that owns a process directly, register process cleanup
