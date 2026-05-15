@@ -51,3 +51,7 @@ The matching continuous Langevin success case is documented in
 The distinction between exact equilibrium propagation and the successful
 short-run contrastive update is explained in
 [`xor_short_run_contrast.md`](xor_short_run_contrast.md).
+
+The scalar-output LocalLangevin experiments are documented in
+[`scalar_2_4_1_xor_langevin.md`](scalar_2_4_1_xor_langevin.md) and
+[`hidden8x8_scalar_xor_langevin.md`](hidden8x8_scalar_xor_langevin.md).

@@ -94,6 +94,125 @@ Current interpretation:
 - zero initialization reduced basin variance enough for this small all-to-all
   test.
 
+## Analytic 2 -> 4 -> 1 Scalar XOR
+
+There is an explicit scalar-output solution for the physical two-input
+architecture:
+
+```text
+ext/IsingLearning/experiments/simple_langevin_xor/analytic_2_4_1.jl
+```
+
+Use four hidden units as corner detectors:
+
+```math
+h_{ab} = \operatorname{sign}(a x_1 + b x_2 - 1),
+\qquad (a,b) \in \{(-1,-1),(-1,+1),(+1,-1),(+1,+1)\}.
+```
+
+Then read out:
+
+```math
+y = \operatorname{sign}(-h_{--} + h_{-+} + h_{+-} - h_{++}).
+```
+
+In the code convention `H = -1/2 s^T J s - b^T s`, this is implemented by:
+
+- input-to-hidden weights `A * (a, b)`;
+- hidden bias `-A`;
+- hidden-to-output weights `B * [-1, +1, +1, -1]`;
+- zero output bias.
+
+With `A = 2.0`, `B = 0.75`, continuous `LocalLangevin`, `T = 0.001`,
+`stepsize = 0.2`, and 600 free relaxation steps, the analytic graph evaluates
+immediately at accuracy `1.0` and MSE about `0.016`.
+
+This proves the `2 -> 4 -> 1` architecture is expressive enough. The remaining
+issue is discovery: from random initialization, the same standard
+`Forward_and_Nudged -> contrastive_gradient -> Optimisers.update` path often
+finds the correct signs transiently, but the scalar output margins remain weak
+and MSE usually stalls around `0.5-0.7`. So the current failure is not a lack of
+capacity; it is conditioning/basin discovery for scalar-output EP training.
+
+Latest random-init scalar runs improved this:
+
+```text
+ext/IsingLearning/experiments/simple_langevin_xor/runs/random_beta2_T003_eta03_lr003_long
+ext/IsingLearning/experiments/simple_langevin_xor/runs/random_beta2_T003_eta03_lr002_stability
+ext/IsingLearning/experiments/simple_langevin_xor/runs/random_beta2_T005_eta04_lr005
+```
+
+The useful recipe was not stronger clamping alone. It was a hotter/larger-step
+continuous dynamics regime:
+
+- `β = 2.0`;
+- `T = 0.003` to `0.005`;
+- `LocalLangevin(stepsize = 0.3)` or `0.4`;
+- `1000/1000` free/nudged relaxation steps;
+- `Minit = 8`;
+- no weight decay.
+
+Best observed random-init scalar results:
+
+- `T=0.003`, `stepsize=0.3`, `lr=0.003`: MSE `0.081`, accuracy `1.0` at epoch
+  2000, later drifting to MSE `0.254` by epoch 3000.
+- `T=0.003`, `stepsize=0.3`, `lr=0.002`: MSE `0.101`, accuracy `1.0` at epoch
+  2500 and MSE `0.118`, accuracy `1.0` at epoch 3000.
+- `T=0.005`, `stepsize=0.4`, `lr=0.005`: MSE `0.097`, accuracy `1.0` at epoch
+  800, then degraded.
+
+Interpretation: random EP can solve `2 -> 4 -> 1` without structured
+initialization. The failure mode is overshoot/retention after the margins become
+good. Lowering `lr` from `0.003` to `0.002` made the good region more stable,
+but did not fully eliminate drift.
+
+Relaxation-budget tests were added in:
+
+```text
+ext/IsingLearning/experiments/simple_langevin_xor/relaxation_sweep_2_4_1.jl
+```
+
+The important conclusion is that more sweeps are not automatically better. With
+`β=2`, `T=0.003`, `stepsize=0.3`, `lr=0.002`, and 1200 epochs:
+
+- `300/300` reached accuracy `1.0`, MSE `0.469`;
+- `600/600` reached MSE `0.368`, accuracy `0.75`;
+- `1000/1000` reached MSE `0.456`, accuracy `0.75`;
+- `1500/1000` reached MSE `0.321`, accuracy `0.75`;
+- `1000/1500` reached MSE `0.379`, accuracy `0.75`.
+
+Crossing relaxation with the hotter/faster dynamics was much better:
+
+- `600/600`, `T=0.005`, `stepsize=0.4`, `lr=0.002`, `β=2` reached MSE
+  `0.0526`, accuracy `1.0` at epoch 1500, then drifted upward.
+- `300/300`, `T=0.005`, `stepsize=0.4`, `lr=0.002`, `β=2` reached MSE
+  `0.0738`, accuracy `1.0` at epoch 1600.
+- `600/600`, same but `Minit=16`, reached MSE `0.0603`, accuracy `1.0` at
+  epoch 1500, then drifted upward.
+
+Clamp-strength tests around this recipe:
+
+- `β=1` was too weak: MSE stayed around `0.53` despite accuracy `1.0`.
+- `β=3` was too strong or poorly conditioned: it failed to settle into the
+  correct scalar solution.
+- `β=2` is currently the sweet spot.
+
+Current best practical recipe for random-init scalar `2 -> 4 -> 1`:
+
+```text
+free/nudged = 600/600 or 300/300
+T = 0.005
+stepsize = 0.4
+β = 2
+lr = 0.002
+Minit = 8 or 16
+weight_decay = 0
+```
+
+This solves the task transiently below MSE `0.1`. The remaining missing piece is
+retention: learning should stop, decay LR, or restore best parameters once the
+MSE/margin enters the good basin.
+
 ## Active Training Path
 
 The path used by the current examples is:
