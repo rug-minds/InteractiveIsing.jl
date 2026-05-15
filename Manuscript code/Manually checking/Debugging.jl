@@ -1199,7 +1199,7 @@ g = IsingGraph(xL, yL, zL,
             CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + 
             Quadratic(localpotential = coeff2) +
             Quartic(localpotential = coeff4) + 
-            Sextic(localpotential = coeff6),
+            Sextic(localpotential = coeff6) +
             Octic(localpotential = coeff8) +
             PolynomialHamiltonian(10; localpotential = coeff10), 
         StateSet(-1.5f0, 1.5f0),

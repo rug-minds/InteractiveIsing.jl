@@ -1128,9 +1128,9 @@ end
 #########################################################################
 
 ## ======================== Define simulation ======================== ##
-xL = 5  # Length in the x-dimension
-yL = 5  # Length in the y-dimension
-zL = 5   # Length in the z-dimension
+xL = 10  # Length in the x-dimension
+yL = 10  # Length in the y-dimension
+zL = 10   # Length in the z-dimension
 
 ### Preferred naming:
 ### - `wf_*` = weight-function definition

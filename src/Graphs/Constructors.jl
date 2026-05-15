@@ -46,6 +46,30 @@ function _make_field(spec::Fill, g::AbstractIsingGraph)
     return fill(convert(T, spec.val), nstates(g))
 end
 
+_hamiltonian_arg_summary(h::Hamiltonian) = string(nameof(typeof(h)))
+
+function _hamiltonian_arg_summary(hts::HamiltonianTerms)
+    return string("HamiltonianTerms(", join(_hamiltonian_arg_summary.(hamiltonians(hts)), " + "), ")")
+end
+
+function _parse_hamiltonian_constructor_arg(args...)
+    ham_idxs = findall(x -> x isa Hamiltonian, args)
+    isempty(ham_idxs) && return Ising(), args
+
+    if length(ham_idxs) > 1
+        hams = join(_hamiltonian_arg_summary.(args[ham_idxs]), ", ")
+        throw(ArgumentError(
+            "IsingGraph accepts a single Hamiltonian argument, but got $(length(ham_idxs)): $hams. " *
+            "Combine Hamiltonian terms with `+` in one expression, and check for an accidental comma between terms.",
+        ))
+    end
+
+    ham_idx = only(ham_idxs)
+    ham = args[ham_idx]
+    args = remove_optional_parsed_arg(args, ham_idx)
+    return ham, args
+end
+
 function _parse_multilayer_constructor_args(args)
     layers = filter(x -> x isa IsingLayerData, args)
     between_layer_wgs = Tuple{Int, AbstractWeightGenerator}[]
@@ -88,7 +112,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
     )
 
     #Parse hamiltonian and filter
-    ham, layers = type_parse(Hamiltonian, layers...; default = Ising(), error = false)
+    ham, layers = _parse_hamiltonian_constructor_arg(layers...)
     proposer, layers = type_parse(AbstractProposer, layers...; default = IsingGraphProposer(), error = false)
     layers, between_layer_wgs = _parse_multilayer_constructor_args(layers)
     lengths = map(l -> length(l), layers)
@@ -197,7 +221,7 @@ end
 Single Layer Constructor
 """
 function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, diag = StateLike(OffsetArray, 0), initial_state = nothing, fastwrite = false)
-    ham, args = type_parse(Hamiltonian, args...; default = Ising(), error = false)
+    ham, args = _parse_hamiltonian_constructor_arg(args...)
     proposer, args = type_parse(AbstractProposer, args...; default = IsingGraphProposer(), error = false)
 
     layer = parse_isinglayer(size1, args...; periodic = periodic)
