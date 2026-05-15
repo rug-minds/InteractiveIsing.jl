@@ -176,7 +176,7 @@ process_func = deepcopy(pulse_and_relax)
 process_inputs = InteractiveIsing._merge_graph_inputs(
     process_func,
     g,
-    Input(polarization_logger, initialvalue = sum(state(g))),
+    Init(polarization_logger, initialvalue = sum(state(g))),
 )
 process = Process(
     process_func,

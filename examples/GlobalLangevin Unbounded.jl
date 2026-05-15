@@ -43,7 +43,7 @@ algorithm = GlobalLangevin(
 function langevin_status(g)
     ps = processes(g)
     p = process(g)
-    ctx = isnothing(p) ? nothing : p.context[:GlobalLangevin_1]
+    ctx = isnothing(p) ? nothing : Processes.context(p)[:GlobalLangevin_1]
 
     return (
         temp = temp(g),

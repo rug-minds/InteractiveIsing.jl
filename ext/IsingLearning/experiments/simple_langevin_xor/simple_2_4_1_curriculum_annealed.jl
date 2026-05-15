@@ -218,15 +218,15 @@ function annealed_worker_process(layer, worker_graph, config::Analytic241Config)
     buffers = IsingLearning.gradient_buffer(worker_graph)
     return II.Processes.Process(
         algo,
-        II.Processes.Input(:_state;
+        II.Processes.Init(:_state;
             x = zeros(eltype(worker_graph), xdim),
             y = zeros(eltype(worker_graph), ydim),
             buffers = buffers,
             equilibrium_state = copy(II.state(worker_graph)),
         ),
-        II.Processes.Input(:dynamics, model = worker_graph),
-        II.Processes.Input(:plus_capture, state = worker_graph),
-        II.Processes.Input(:minus_capture, state = worker_graph);
+        II.Processes.Init(:dynamics, model = worker_graph),
+        II.Processes.Init(:plus_capture, state = worker_graph),
+        II.Processes.Init(:minus_capture, state = worker_graph);
         repeat = 1,
     )
 end
@@ -248,11 +248,11 @@ function trainer_241(config::Analytic241Config)
     worker_template_graph = IsingLearning._worker_graph(graph, params)
     worker_template = annealed_worker_process(layer, worker_template_graph, config)
     workers = [worker_template]
-    worker_graphs = [worker.context.dynamics.model for worker in workers]
+    worker_graphs = [Processes.context(worker).dynamics.model for worker in workers]
 
     validation_template_graph = IsingLearning._worker_graph(graph, params)
     validation_worker = IsingLearning._validation_process(layer, validation_template_graph)
-    validation_graph = validation_worker.context.dynamics.model
+    validation_graph = Processes.context(validation_worker).dynamics.model
 
     return IsingLearning.MNISTThreadedTrainer(
         layer,

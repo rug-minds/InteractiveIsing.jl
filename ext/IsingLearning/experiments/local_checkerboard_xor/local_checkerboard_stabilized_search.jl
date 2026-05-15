@@ -241,15 +241,15 @@ function stable_checker_worker_process(layer, graph, search::StabilizedSearchCon
     buffers = IsingLearning.gradient_buffer(graph)
     return Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(FT, 2),
             y = zeros(FT, target_dim(config)),
             buffers = buffers,
             equilibrium_state = copy(II.state(graph)),
         ),
         dynamics_input(:dynamics, graph, config.base_seed),
-        Input(:plus_capture, state = graph),
-        Input(:minus_capture, state = graph);
+        Init(:plus_capture, state = graph),
+        Init(:minus_capture, state = graph);
         repeat = 1,
     )
 end
@@ -259,7 +259,7 @@ function stable_checker_validation_process(layer, graph, search::StabilizedSearc
     algo = Processes.resolve(StableForwardDynamics(layer, config, search).algorithm)
     return Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(FT, 2),
             equilibrium_state = copy(II.state(graph)),
         ),

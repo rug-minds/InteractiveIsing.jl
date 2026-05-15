@@ -39,12 +39,12 @@ function _merge_graph_inputs(func, g::IsingGraph, inputs...)
     for target in targets
         merged_vars = _graph_input_vars(g)
         for (idx, input) in enumerate(inputs)
-            if input isa Processes.Input && Processes.match(getfield(input, :target_algo), target)
+            if input isa Processes.Init && Processes.match(getfield(input, :target_algo), target)
                 used_inputs[idx] = true
                 merged_vars = merge(merged_vars, getfield(input, :vars))
             end
         end
-        push!(merged_inputs, Processes.Input(target, pairs(merged_vars)...))
+        push!(merged_inputs, Processes.Init(target, pairs(merged_vars)...))
     end
 
     for (idx, input) in enumerate(inputs)
@@ -85,7 +85,7 @@ function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.de
     
     func = deepcopy(func)
     process_inputs = _merge_graph_inputs(func, g, inputs...)
-    # process = Process(func, Input(DestructureInput(), structure = g); lifetime)
+    # process = Process(func, Init(DestructureInput(), structure = g); lifetime)
     process = Process(func, process_inputs...; lifetime, repeats, repeat)
     
     ps = processes(g)

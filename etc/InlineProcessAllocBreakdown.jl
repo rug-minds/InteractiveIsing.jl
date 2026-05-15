@@ -10,11 +10,11 @@ function make_example_process(; side_length = 100, temperature = 2.0f0, steps = 
     g = IsingGraph(side_length, side_length, Discrete(), ALLOC_WG)
     temp!(g, temperature)
     algo = g.default_algorithm
-    p = InlineProcess(algo, Input(algo; state = g); lifetime = steps)
+    p = InlineProcess(algo, Init(algo; state = g); lifetime = steps)
     return (; graph = g, process = p)
 end
 
-runtime_context(p::InlineProcess) = Processes.merge_into_globals(p.context, (; process = p))
+runtime_context(p::InlineProcess) = Processes.merge_into_globals(Processes.context(p), (; process = p))
 loop_algo(p::InlineProcess) = p.taskdata.func
 named_algo(p::InlineProcess) = only(Processes.getalgos(loop_algo(p)))
 context_view(p::InlineProcess) = view(runtime_context(p), named_algo(p))

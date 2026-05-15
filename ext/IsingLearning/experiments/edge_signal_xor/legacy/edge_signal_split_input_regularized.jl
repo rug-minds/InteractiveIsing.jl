@@ -74,15 +74,15 @@ function split_input_nudged_temp_worker_process(layer, worker_graph, base_temp::
 
     return Processes.Process(
         algo,
-        Processes.Input(:_state;
+        Processes.Init(:_state;
             x = zeros(eltype(worker_graph), xdim),
             y = zeros(eltype(worker_graph), ydim),
             buffers = buffers,
             equilibrium_state = copy(II.state(worker_graph)),
         ),
-        Processes.Input(:dynamics, model = worker_graph),
-        Processes.Input(:plus_capture, state = worker_graph),
-        Processes.Input(:minus_capture, state = worker_graph);
+        Processes.Init(:dynamics, model = worker_graph),
+        Processes.Init(:plus_capture, state = worker_graph),
+        Processes.Init(:minus_capture, state = worker_graph);
         repeat = 1,
     )
 end

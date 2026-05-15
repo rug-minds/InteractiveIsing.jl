@@ -154,10 +154,10 @@ end
 
 function start_pulse!(g, run::PulseRun; repeats = 1)
     inputs = isnothing(run.Graph_Logger) ?
-        (Input(run.M_Integrator, initialvalue = sum(graph_array(g))),) :
+        (Init(run.M_Integrator, initialvalue = sum(graph_array(g))),) :
         (
-            Input(run.Graph_Logger, filepath = run.capture_dir),
-            Input(run.M_Integrator, initialvalue = sum(graph_array(g))),
+            Init(run.Graph_Logger, filepath = run.capture_dir),
+            Init(run.M_Integrator, initialvalue = sum(graph_array(g))),
         )
 
     return createProcess(

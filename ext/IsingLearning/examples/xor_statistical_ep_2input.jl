@@ -226,15 +226,15 @@ function xor_worker_process(layer, worker_graph)
     buffers = IsingLearning.gradient_buffer(worker_graph)
     return Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(eltype(worker_graph), length(layer.input_layer)),
             y = zeros(eltype(worker_graph), length(layer.output_layer)),
             buffers = buffers,
             equilibrium_state = copy(II.state(worker_graph)),
         ),
-        Input(:dynamics, model = worker_graph),
-        Input(:plus_capture, state = worker_graph),
-        Input(:minus_capture, state = worker_graph);
+        Init(:dynamics, model = worker_graph),
+        Init(:plus_capture, state = worker_graph),
+        Init(:minus_capture, state = worker_graph);
         repeat = 1,
     )
 end
@@ -243,11 +243,11 @@ function xor_validation_process(layer, worker_graph)
     algo = Processes.resolve(XorForwardDynamics(layer; dynamics_algorithm = layer.validation_algorithm).algorithm)
     return Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(eltype(worker_graph), length(layer.input_layer)),
             equilibrium_state = copy(II.state(worker_graph)),
         ),
-        Input(:dynamics, model = worker_graph);
+        Init(:dynamics, model = worker_graph);
         repeat = 1,
     )
 end
@@ -281,10 +281,10 @@ end
 
 function seed_worker!(worker, seed::Integer)
     Random.seed!(seed)
-    hasproperty(worker.context.dynamics, :rng) && Random.seed!(worker.context.dynamics.rng, seed)
-    hasproperty(worker.context, :nudged_dynamics) &&
-        hasproperty(worker.context.nudged_dynamics, :rng) &&
-        Random.seed!(worker.context.nudged_dynamics.rng, seed + 1)
+    hasproperty(Processes.context(worker).dynamics, :rng) && Random.seed!(Processes.context(worker).dynamics.rng, seed)
+    hasproperty(Processes.context(worker), :nudged_dynamics) &&
+        hasproperty(Processes.context(worker).nudged_dynamics, :rng) &&
+        Random.seed!(Processes.context(worker).nudged_dynamics.rng, seed + 1)
     return worker
 end
 
@@ -292,9 +292,9 @@ function initialise_worker_state!(worker)
     if INIT_MODE === :random
         return worker
     elseif INIT_MODE === :zero
-        fill!(II.state(worker.context.dynamics.model), zero(FT))
-        hasproperty(worker.context, :nudged_dynamics) &&
-            fill!(II.state(worker.context.nudged_dynamics.model), zero(FT))
+        fill!(II.state(Processes.context(worker).dynamics.model), zero(FT))
+        hasproperty(Processes.context(worker), :nudged_dynamics) &&
+            fill!(II.state(Processes.context(worker).nudged_dynamics.model), zero(FT))
         return worker
     else
         throw(ArgumentError("ISING_XOR_2IN_INIT_MODE must be random or zero, got $(INIT_MODE)"))
@@ -311,9 +311,9 @@ function run_training_trajectory!(worker, x, y; seed::Integer)
     wait(worker)
     close(worker)
 
-    free_state = worker.context._state.equilibrium_state
-    plus_state = worker.context.plus_capture.captured
-    minus_state = worker.context.minus_capture.captured
+    free_state = Processes.context(worker)._state.equilibrium_state
+    plus_state = Processes.context(worker).plus_capture.captured
+    minus_state = Processes.context(worker).minus_capture.captured
     response = (
         sqrt(sum(abs2, plus_state .- free_state) / FT(length(free_state))) +
         sqrt(sum(abs2, minus_state .- free_state) / FT(length(free_state)))
@@ -348,11 +348,11 @@ end
 
 function collect_target_free_gradient!(dest, worker, trajectories::Integer)
     IsingLearning.zero_buffer!(dest)
-    worker_buffer = worker.context._state.buffers
+    worker_buffer = Processes.context(worker)._state.buffers
     IsingLearning.zero_buffer!(worker_buffer)
-    free_state = worker.context._state.equilibrium_state
-    target_state = worker.context.plus_capture.captured
-    accumulate_target_free_gradient!(worker_buffer, worker.context.dynamics.model, target_state, free_state)
+    free_state = Processes.context(worker)._state.equilibrium_state
+    target_state = Processes.context(worker).plus_capture.captured
+    accumulate_target_free_gradient!(worker_buffer, Processes.context(worker).dynamics.model, target_state, free_state)
     IsingLearning.add_buffer!(dest, worker_buffer)
     IsingLearning.scale_buffer!(dest, inv(FT(trajectories)))
     return dest
@@ -380,13 +380,13 @@ function train_epoch!(trainer, x, y, batch_gradient, epoch::Integer)
             )
             ntraj += 1
             if TRAINING_RULE === :target_free
-                worker_buffer = worker.context._state.buffers
+                worker_buffer = Processes.context(worker)._state.buffers
                 IsingLearning.zero_buffer!(worker_buffer)
                 accumulate_target_free_gradient!(
                     worker_buffer,
-                    worker.context.dynamics.model,
-                    worker.context.plus_capture.captured,
-                    worker.context._state.equilibrium_state,
+                    Processes.context(worker).dynamics.model,
+                    Processes.context(worker).plus_capture.captured,
+                    Processes.context(worker)._state.equilibrium_state,
                 )
                 IsingLearning.add_buffer!(batch_gradient, worker_buffer)
             end

@@ -21,9 +21,9 @@ buffers = (;w = zeros(length(SparseArrays.getnzval(adj(rbm)))), b = zeros(nstate
 algo = dynamics.algorithm
 reg = getregistry(algo)
 reg
-p = InlineProcess(dynamics.algorithm, Input(:_state; buffers, equilibrium_state = copy(state(rbm)), x = xmock, y = ymock),
-    Input(:minus_capture, state = rbm),
-    Input(:dynamics, model = rbm); repeats = 1)
+p = InlineProcess(dynamics.algorithm, Init(:_state; buffers, equilibrium_state = copy(state(rbm)), x = xmock, y = ymock),
+    Init(:minus_capture, state = rbm),
+    Init(:dynamics, model = rbm); repeats = 1)
 rc = run(p)
 @benchmark run(p)
 
@@ -35,9 +35,9 @@ rc = Processes.initcontext(rc, :dynamics, inputs = (;model = rbm))
 full_process = Forward_and_Nudged(lux_model)
 
 fp = resolve(full_process.algorithm)
-p = InlineProcess(fp, Input(:_state; buffers, equilibrium_state = copy(state(rbm)), x = xmock, y = ymock), 
-                    Input(:dynamics, model = rbm), Input(:plus_capture, state = rbm), 
-                    Input(:minus_capture, state = rbm); repeats = 1)
+p = InlineProcess(fp, Init(:_state; buffers, equilibrium_state = copy(state(rbm)), x = xmock, y = ymock),
+                    Init(:dynamics, model = rbm), Init(:plus_capture, state = rbm),
+                    Init(:minus_capture, state = rbm); repeats = 1)
 rc = run(p)
 @benchmark run(p)
 @code_warntype run(p)

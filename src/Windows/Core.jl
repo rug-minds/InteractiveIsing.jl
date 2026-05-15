@@ -188,33 +188,59 @@ function _forget_glmakie_screen!(screen)
     return nothing
 end
 
-function _hide_native_glfw_window!(screen)
+function _window_handle(screen)
     isnothing(screen) && return nothing
-    window = try
+    return try
         to_native(screen)
     catch
-        return nothing
+        nothing
     end
+end
 
+function _window_handle_alive(window)
+    isnothing(window) && return false
     try
-        getfield(window, :handle) == C_NULL && return nothing
+        return getfield(window, :handle) != C_NULL
     catch
+        return true
     end
+end
 
-    try
-        GLFW.SetWindowCloseCallback(window, nothing)
+function _renderloop_done(screen)
+    isnothing(screen) && return true
+    task = try
+        getfield(screen, :rendertask)
     catch
+        nothing
     end
-    try
-        GLFW.HideWindow(window)
-    catch
+    isnothing(task) && return true
+    return istaskdone(task)
+end
+
+function _hide_native_glfw_window_later!(screen)
+    isnothing(screen) && return nothing
+    @async begin
+        for _ in 1:50
+            _renderloop_done(screen) && break
+            sleep(0.02)
+        end
+
+        window = _window_handle(screen)
+        _window_handle_alive(window) || return nothing
+        try
+            GLFW.HideWindow(window)
+        catch
+        end
     end
+    return nothing
+end
+
+function _mark_native_window_should_close!(screen)
+    window = _window_handle(screen)
+    _window_handle_alive(window) || return nothing
+
     try
         GLFW.SetWindowShouldClose(window, true)
-    catch
-    end
-    try
-        GLFW.PollEvents()
     catch
     end
     return nothing
@@ -228,13 +254,8 @@ function _request_native_window_close!(host::WindowHost)
         host.open[] = false
     catch
     end
-    try
-        GLFW.SetWindowShouldClose(to_native(screen), true)
-        GLFW.PollEvents()
-    catch err
-        @warn "Could not request native GLMakie window close" exception = (err, catch_backtrace())
-    end
-    _hide_native_glfw_window!(screen)
+    _mark_native_window_should_close!(screen)
+    _hide_native_glfw_window_later!(screen)
     _forget_glmakie_screen!(screen)
     return nothing
 end

@@ -92,7 +92,7 @@ function make_package_runner(initial_spins; side = SIDE, temperature = TEMP, nst
     temp!(g, temperature)
 
     algo = g.default_algorithm
-    p = InlineProcess(algo, Input(algo; state = g), lifetime = nsteps)
+    p = InlineProcess(algo, Init(algo; state = g), lifetime = nsteps)
     return PackageRunner(g, p, copy(initial_spins), temperature)
 end
 

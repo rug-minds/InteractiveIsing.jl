@@ -346,10 +346,10 @@ end
 
 function seed_worker!(worker, seed::Integer)
     Random.seed!(seed)
-    hasproperty(worker.context.dynamics, :rng) && Random.seed!(worker.context.dynamics.rng, seed)
-    hasproperty(worker.context, :nudged_dynamics) &&
-        hasproperty(worker.context.nudged_dynamics, :rng) &&
-        Random.seed!(worker.context.nudged_dynamics.rng, seed + 1)
+    hasproperty(Processes.context(worker).dynamics, :rng) && Random.seed!(Processes.context(worker).dynamics.rng, seed)
+    hasproperty(Processes.context(worker), :nudged_dynamics) &&
+        hasproperty(Processes.context(worker).nudged_dynamics, :rng) &&
+        Random.seed!(Processes.context(worker).nudged_dynamics.rng, seed + 1)
     return worker
 end
 
@@ -365,9 +365,9 @@ function run_training_trajectory!(worker, x, y; seed::Integer)
 end
 
 function completed_training_response(worker)
-    free_state = worker.context._state.equilibrium_state
-    plus_state = worker.context.plus_capture.captured
-    minus_state = worker.context.minus_capture.captured
+    free_state = Processes.context(worker)._state.equilibrium_state
+    plus_state = Processes.context(worker).plus_capture.captured
+    minus_state = Processes.context(worker).minus_capture.captured
     response = (
         sqrt(sum(abs2, plus_state .- free_state) / FT(length(free_state))) +
         sqrt(sum(abs2, minus_state .- free_state) / FT(length(free_state)))

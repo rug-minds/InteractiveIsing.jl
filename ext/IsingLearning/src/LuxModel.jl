@@ -138,11 +138,11 @@ function _forward_process(layer::LayeredIsingGraphLayer, g)
     algo = resolve(ForwardDynamics(layer; dynamics_algorithm = layer.validation_algorithm).algorithm)
     return Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(eltype(g), length(layer.input_layer)),
             equilibrium_state = copy(state(g)),
         ),
-        Input(:dynamics, model = g);
+        Init(:dynamics, model = g);
         repeat = 1,
     )
 end
@@ -151,16 +151,16 @@ function _backward_process(layer::LayeredIsingGraphLayer, g)
     algo = resolve(Forward_and_Nudged(layer).algorithm)
     return Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(eltype(g), length(layer.input_layer)),
             y = zeros(eltype(g), length(layer.output_layer)),
             buffers = _process_buffers(g),
             equilibrium_state = copy(state(g)),
         ),
-        Input(:dynamics, model = g),
-        Input(:nudged_dynamics, model = g),
-        Input(:plus_capture, state = g),
-        Input(:minus_capture, state = g);
+        Init(:dynamics, model = g),
+        Init(:nudged_dynamics, model = g),
+        Init(:plus_capture, state = g),
+        Init(:minus_capture, state = g);
         repeat = 1,
     )
 end

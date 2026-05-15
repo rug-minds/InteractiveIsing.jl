@@ -61,7 +61,7 @@ function _temperature_vars(sc)
 end
 
 function _process_context_temperature(process::Processes.AbstractProcess)
-    context = getfield(process, :context)
+    context = Processes.context(process)
     context isa Processes.ProcessContext || return nothing
 
     subcontexts = Processes.get_subcontexts(context)
@@ -84,7 +84,7 @@ function _process_context_temperature(g::IsingGraph)
 end
 
 function _set_process_context_temperature!(process::Processes.AbstractProcess, value)
-    context = getfield(process, :context)
+    context = Processes.context(process)
     context isa Processes.ProcessContext || return nothing
 
     subcontexts = Processes.get_subcontexts(context)
@@ -177,7 +177,7 @@ function _kinetic_time_snapshot(process::Processes.AbstractProcess)
     context = try
         Processes.getcontext(process)
     catch
-        getfield(process, :context)
+        Processes.context(process)
     end
     context isa Processes.ProcessContext || return nothing
 

@@ -1053,8 +1053,8 @@ end
 
 # ---- Start simulation2 ----
 createProcess(g, Pulse_and_Relax, lifetime = 1, 
-    # Input(Graph_Logger, filepath = joinpath(outdir, "capture")),
-    Input(M_Integrate_and_Logger, initialvalue = sum(state(g))))
+    # Init(Graph_Logger, filepath = joinpath(outdir, "capture")),
+    Init(M_Integrate_and_Logger, initialvalue = sum(state(g))))
 c = process(g) |> fetch
 
 # ---- Collect data2 ----

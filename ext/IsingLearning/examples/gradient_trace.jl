@@ -91,19 +91,19 @@ function trace_one_sample!()
 
     trainer = init_mnist_trainer(layer; graph, numthreads = 1, optimiser = Optimisers.Adam(1f-3))
     worker = only(trainer.workers)
-    buffer = worker.context._state.buffers
+    buffer = Processes.context(worker)._state.buffers
 
     IsingLearning.zero_buffer!(buffer)
-    worker.context._state.x .= xor_input(false, true)
-    worker.context._state.y .= xor_target(false, true)
+    Processes.context(worker)._state.x .= xor_input(false, true)
+    Processes.context(worker)._state.y .= xor_target(false, true)
     Processes.reset!(worker)
     run(worker)
     wait(worker)
     close(worker)
 
-    g = worker.context.dynamics.model
-    s_plus = Float32.(worker.context.plus_capture.captured)
-    s_minus = Float32.(worker.context.minus_capture.captured)
+    g = Processes.context(worker).dynamics.model
+    s_plus = Float32.(Processes.context(worker).plus_capture.captured)
+    s_minus = Float32.(Processes.context(worker).minus_capture.captured)
     finite_checks("s_plus", s_plus)
     finite_checks("s_minus", s_minus)
     finite_checks("raw weight gradient", buffer.w)

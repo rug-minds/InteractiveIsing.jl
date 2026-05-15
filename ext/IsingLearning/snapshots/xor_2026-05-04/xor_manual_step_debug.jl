@@ -341,7 +341,7 @@ function train_manual!()
     Random.seed!(TRAIN_SEED)
     trainer = manual_trainer()
     worker = only(trainer.workers)
-    context = worker.context
+    context = Processes.context(worker)
     graph = context.dynamics.model
     dynamics_stepper = resolved_dynamics_stepper(worker)
     set_trainer_temperature!(trainer, START_TEMP)
@@ -351,7 +351,7 @@ function train_manual!()
     initial_params = deepcopy(params)
     best_params = deepcopy(params)
     opt_state = trainer.opt_state
-    batch_gradient = worker.context._state.buffers
+    batch_gradient = Processes.context(worker)._state.buffers
 
     context, before = evaluate!(dynamics_stepper, context, x, labels)
     best = (; epoch = 0, metrics = before)

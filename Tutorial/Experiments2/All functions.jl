@@ -654,7 +654,7 @@ c = process(g) |> fetch
 #     (pulse_time, relax_time),
 #     Route(metropolis => pulse1, :hamiltonian, :M),
 # )
-# createProcess(g, Pulse_and_Relax, lifetime = 1, Input(Graph_Logger, filepath = joinpath(outdir, "capture")))
+# createProcess(g, Pulse_and_Relax, lifetime = 1, Init(Graph_Logger, filepath = joinpath(outdir, "capture")))
 # voltage1 = c[B_Logger].values
 # Pr1      = c[M_Integrate_and_Logger].values
 # Temp1    = c[T_Logger].values

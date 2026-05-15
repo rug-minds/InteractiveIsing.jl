@@ -269,7 +269,7 @@ Runs that are now considered diagnostic only:
 Two reproducibility issues were fixed while tuning this experiment:
 
 - `BlockLangevin` now respects a context RNG override via
-  `Input(:dynamics, rng=...)`. Before that, it always constructed its own
+  `Init(:dynamics, rng=...)`. Before that, it always constructed its own
   `MersenneTwister()` in `init`, so shell-level `Random.seed!` did not control
   sampler paths.
 - Worker gradient buffers are now accumulated immediately after each finished

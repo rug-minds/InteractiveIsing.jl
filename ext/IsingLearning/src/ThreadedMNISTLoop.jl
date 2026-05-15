@@ -158,15 +158,15 @@ function _worker_process(layer, worker_graph)
 
     Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(eltype(worker_graph), xdim),
             y = zeros(eltype(worker_graph), ydim),
             buffers = buffers,
             equilibrium_state = copy(state(worker_graph)),
         ),
-        Input(:dynamics, model = worker_graph),
-        Input(:plus_capture, state = worker_graph),
-        Input(:minus_capture, state = worker_graph);
+        Init(:dynamics, model = worker_graph),
+        Init(:plus_capture, state = worker_graph),
+        Init(:minus_capture, state = worker_graph);
         repeat = 1,
     )
 end
@@ -177,11 +177,11 @@ function _validation_process(layer, worker_graph)
 
     Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(eltype(worker_graph), xdim),
             equilibrium_state = copy(state(worker_graph)),
         ),
-        Input(:dynamics, model = worker_graph);
+        Init(:dynamics, model = worker_graph);
         repeat = 1,
     )
 end
@@ -201,18 +201,18 @@ function init_mnist_trainer(
     # println("[threaded-mnist] built worker template process id=", worker_template.id)
     workers = [
         idx == 1 ? worker_template :
-        Processes.copyprocess(worker_template; context = deepcopy(worker_template.context))
+        Processes.copyprocess(worker_template; context = deepcopy(Processes.context(worker_template)))
         for idx in 1:numthreads
     ]
     for (idx, worker) in enumerate(workers)
         # println("[threaded-mnist] worker slot ", idx, " uses process id=", worker.id)
     end
-    worker_graphs = [worker.context.dynamics.model for worker in workers]
+    worker_graphs = [Processes.context(worker).dynamics.model for worker in workers]
 
     validation_template_graph = _worker_graph(graph, params)
     validation_worker = _validation_process(layer, validation_template_graph)
     # println("[threaded-mnist] built validation process id=", validation_worker.id)
-    validation_graph = validation_worker.context.dynamics.model
+    validation_graph = Processes.context(validation_worker).dynamics.model
 
     return MNISTThreadedTrainer(
         layer,
@@ -242,21 +242,21 @@ function close_trainer!(trainer::MNISTThreadedTrainer)
 end
 
 function _write_example!(worker, x, y)
-    context = worker.context
+    context = Processes.context(worker)
     context._state.x .= x
     context._state.y .= y
     return context
 end
 
 function _write_input!(worker, x)
-    context = worker.context
+    context = Processes.context(worker)
     context._state.x .= x
     return context
 end
 
 function _reset_batch_buffers!(trainer)
     for worker in trainer.workers
-        zero_buffer!(worker.context._state.buffers)
+        zero_buffer!(Processes.context(worker)._state.buffers)
     end
     return trainer
 end
@@ -264,7 +264,7 @@ end
 function _collect_batch_gradient!(trainer, dest, batchsize)
     zero_buffer!(dest)
     for worker in trainer.workers
-        add_buffer!(dest, worker.context._state.buffers)
+        add_buffer!(dest, Processes.context(worker)._state.buffers)
     end
     β = trainer.layer.β
     T = eltype(dest.w)
@@ -282,7 +282,7 @@ function _broadcast_params!(trainer)
 end
 
 function _validation_output(trainer)
-    equilibrium_state = trainer.validation_worker.context._state.equilibrium_state
+    equilibrium_state = Processes.context(trainer.validation_worker)._state.equilibrium_state
     return @view equilibrium_state[trainer.layer.output_layer]
 end
 

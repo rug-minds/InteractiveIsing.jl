@@ -56,7 +56,7 @@ end
 function make_train_worker_8x8(layer, prototype_graph, params, config::Hidden8x8Config, idx::Integer)
     graph = managed_worker_graph_8x8(prototype_graph, params, config)
     worker = IsingLearning._worker_process(layer, graph)
-    Random.seed!(worker.context.dynamics.rng, config.base_seed + idx)
+    Random.seed!(Processes.context(worker).dynamics.rng, config.base_seed + idx)
     return worker
 end
 
@@ -64,20 +64,20 @@ end
 function make_eval_worker_8x8(layer, prototype_graph, params, config::Hidden8x8Config, idx::Integer)
     graph = managed_worker_graph_8x8(prototype_graph, params, config)
     worker = IsingLearning._validation_process(layer, graph)
-    Random.seed!(worker.context.dynamics.rng, config.base_seed + 50_000 + idx)
+    Random.seed!(Processes.context(worker).dynamics.rng, config.base_seed + 50_000 + idx)
     return worker
 end
 
 """Seed all RNGs visible from one managed worker context."""
 function seed_managed_worker_8x8!(worker, seed::Integer; seed_global::Bool = true)
     seed_global && Random.seed!(seed)
-    Random.seed!(worker.context.dynamics.rng, seed + 10_000)
+    Random.seed!(Processes.context(worker).dynamics.rng, seed + 10_000)
     return worker
 end
 
 """Synchronize one managed worker graph from the trainer parameter vector."""
 function sync_managed_worker_8x8!(worker, params)
-    IsingLearning.sync_graph_params!(worker.context.dynamics.model, params)
+    IsingLearning.sync_graph_params!(Processes.context(worker).dynamics.model, params)
     return worker
 end
 
@@ -93,7 +93,7 @@ end
 """Zero all worker-local gradient buffers before one managed training epoch."""
 function reset_manager_buffers_8x8!(manager)
     for worker in Processes8x8.workers(manager)
-        IsingLearning.zero_buffer!(worker.context._state.buffers)
+        IsingLearning.zero_buffer!(Processes.context(worker)._state.buffers)
     end
     return manager
 end
@@ -117,9 +117,9 @@ end
 
 """Record the response norm of one completed managed training trajectory."""
 function collect_train_response_8x8!(responses, worker)
-    free_state = worker.context._state.equilibrium_state
-    plus_state = worker.context.plus_capture.captured
-    minus_state = worker.context.minus_capture.captured
+    free_state = Processes.context(worker)._state.equilibrium_state
+    plus_state = Processes.context(worker).plus_capture.captured
+    minus_state = Processes.context(worker).minus_capture.captured
     response = (
         sqrt(sum(abs2, plus_state .- free_state) / FT(length(free_state))) +
         sqrt(sum(abs2, minus_state .- free_state) / FT(length(free_state)))
@@ -132,7 +132,7 @@ end
 function flush_train_buffers_8x8!(manager)
     batch_gradient = manager.state.current_batch_gradient
     for worker in Processes8x8.workers(manager)
-        IsingLearning.add_buffer!(batch_gradient, worker.context._state.buffers)
+        IsingLearning.add_buffer!(batch_gradient, Processes.context(worker)._state.buffers)
     end
     reset_manager_buffers_8x8!(manager)
     return batch_gradient
@@ -185,7 +185,7 @@ function eval_manager_recipe_8x8(layer, prototype_graph)
         prepare! = (slot, job, manager) -> prepare_eval_worker_8x8!(slot.worker, manager.state, manager.config, job),
         isdone = (slot, manager) -> Processes8x8.isdone(slot.worker),
         consume! = (slot, job, manager) -> begin
-            output = only(II.state(slot.worker.context.dynamics.model[end]))
+            output = only(II.state(Processes.context(slot.worker).dynamics.model[end]))
             push!(manager.state.current_sample_outputs[job.sample_idx], output)
         end,
     )

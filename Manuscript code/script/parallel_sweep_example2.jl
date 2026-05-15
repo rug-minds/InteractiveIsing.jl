@@ -155,10 +155,10 @@ end
 
 function start_packaged_pulse!(g, run::PackagedPulseRun; repeats = 1)
     inputs = isnothing(run.Graph_Logger) ?
-        (Input(run.M_Integrate_and_Logger, initialvalue = sum(MT.graph_array(g))),) :
+        (Init(run.M_Integrate_and_Logger, initialvalue = sum(MT.graph_array(g))),) :
         (
-            Input(run.Graph_Logger, filepath = run.capture_dir),
-            Input(run.M_Integrate_and_Logger, initialvalue = sum(MT.graph_array(g))),
+            Init(run.Graph_Logger, filepath = run.capture_dir),
+            Init(run.M_Integrate_and_Logger, initialvalue = sum(MT.graph_array(g))),
         )
 
     return InteractiveIsing.createProcess(
@@ -228,7 +228,7 @@ function start_packaged_anneal!(g, run::PackagedAnnealRun; repeats = 1)
     return InteractiveIsing.createProcess(
         g,
         run.algorithm,
-        Input(run.M_Integrate_and_Logger, initialvalue = sum(MT.graph_array(g)));
+        Init(run.M_Integrate_and_Logger, initialvalue = sum(MT.graph_array(g)));
         repeats,
     )
 end

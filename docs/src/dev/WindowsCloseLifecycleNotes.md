@@ -48,6 +48,9 @@ marks it should-close, and detaches the screen from GLMakie's `closeall`
 registry so the same expensive cleanup is not retried at Julia exit. The GLFW
 context is deliberately not destroyed during this close path; destroying it can
 race GLMakie's renderloop and produce `Context is not alive anymore!`.
+The hide is deferred until the renderloop task has exited, and the close path
+does not call `GLFW.PollEvents()` from package timers because that can race
+GLMakie's own event polling.
 
 ## Things Tried That Were Bad
 
@@ -117,9 +120,9 @@ For explicit close:
 
 1. If `host.screen` exists, `close(host)` first starts the same nonblocking host
    cleanup sequence.
-2. It then sets `events(fig).window_open[] = false`, hides and marks the GLFW
-   window should-close, and prevents GLMakie's renderloop from calling
-   `close(screen)` / `empty!(screen)`.
+2. It then sets `events(fig).window_open[] = false`, marks the GLFW window
+   should-close, defers hiding until the renderloop exits, and prevents GLMakie's
+   renderloop from calling `close(screen)` / `empty!(screen)`.
 
 For graph/process cleanup:
 

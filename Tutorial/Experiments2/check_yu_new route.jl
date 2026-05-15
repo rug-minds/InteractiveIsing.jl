@@ -712,8 +712,8 @@ Pulse_and_Relax = Routine(pulse_part1, relax_part1,
     Route(metropolis => pulse1, :hamiltonian, :M),
 )
 createProcess(g, Pulse_and_Relax, repeats = 1,
-    Input(Graph_Logger, filepath = joinpath(outdir, "capture")),
-    Input(M_Integrator, initialvalue = sum(state(g))))
+    Init(Graph_Logger, filepath = joinpath(outdir, "capture")),
+    Init(M_Integrator, initialvalue = sum(state(g))))
 c = process(g) |> fetch
 
 

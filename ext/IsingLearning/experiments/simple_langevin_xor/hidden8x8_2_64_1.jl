@@ -175,7 +175,7 @@ function scalar_output_8x8!(trainer, x; seed::Integer)
     worker = trainer.validation_worker
     II.Processes.isdone(worker) && close(worker)
     Random.seed!(seed)
-    hasproperty(worker.context.dynamics, :rng) && Random.seed!(worker.context.dynamics.rng, seed)
+    hasproperty(Processes.context(worker).dynamics, :rng) && Random.seed!(Processes.context(worker).dynamics.rng, seed)
     IsingLearning._write_input!(worker, x)
     II.Processes.reset!(worker)
     run(worker)

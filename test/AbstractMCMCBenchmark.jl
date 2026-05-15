@@ -84,7 +84,7 @@ function make_inline_process(func; repeats::Int, inputs = tuple(), overrides = t
     empty_context = Processes.ProcessContext(func)
     reg = Processes.getregistry(empty_context)
 
-    named_inputs = Processes.to_named(reg, filter(x -> x isa Processes.Input, inputs)...)
+    named_inputs = Processes.to_named(reg, filter(x -> x isa Processes.Init, inputs)...)
     named_overrides = Processes.to_named(reg, filter(x -> x isa Processes.Override, overrides)...)
 
     lifetime = Processes.Repeat(repeats)
@@ -105,27 +105,27 @@ end
 function make_interactiveising_process(side_length::Int, temperature::T, spins::AbstractMatrix{T}, nsteps::Int) where T
     g = make_interactiveising_graph(side_length, temperature, spins)
     algo = g.default_algorithm
-    return make_inline_process(algo; repeats = nsteps, inputs = Processes.Input(algo, state = g))
+    return make_inline_process(algo; repeats = nsteps, inputs = Processes.Init(algo, state = g))
 end
 
 function make_warmed_interactiveising_process(side_length::Int, temperature::T, spins::AbstractMatrix{T}, nsteps::Int) where T
     g = make_interactiveising_graph(side_length, temperature, spins)
     algo = g.default_algorithm
 
-    warm_process = make_inline_process(algo; repeats = 1, inputs = Processes.Input(algo, state = g))
+    warm_process = make_inline_process(algo; repeats = 1, inputs = Processes.Init(algo, state = g))
     run(warm_process)
 
     copyto!(state(g), vec(spins))
     temp!(g, temperature)
 
-    process = make_inline_process(algo; repeats = nsteps, inputs = Processes.Input(algo, state = g))
+    process = make_inline_process(algo; repeats = nsteps, inputs = Processes.Init(algo, state = g))
     return (; process, graph = g)
 end
 
 function make_interactiveising_runner(side_length::Int, temperature::T, spins::AbstractMatrix{T}, nsteps::Int) where T
     g = make_interactiveising_graph(side_length, temperature, spins)
     algo = g.default_algorithm
-    process = make_inline_process(algo; repeats = nsteps, inputs = Processes.Input(algo, state = g))
+    process = make_inline_process(algo; repeats = nsteps, inputs = Processes.Init(algo, state = g))
     return (; process, graph = g)
 end
 

@@ -78,7 +78,7 @@ end
 
 """Assert that one worker still aliases the shared trainable parameter arrays."""
 function assert_shared_worker_params_8x8(worker, params)
-    graph = worker.context.dynamics.model
+    graph = Processes.context(worker).dynamics.model
     SparseArrays.getnzval(II.adj(graph)) === params.w ||
         error("worker adjacency weights do not alias shared parameter storage")
     II.getparam(graph.hamiltonian, II.MagField, :b) === params.b ||
@@ -103,7 +103,7 @@ the resolved composite come from the template worker, while this function makes
 the copied graph read the same trainable `J` and `b` arrays as the prototype.
 """
 function shared_worker_context_8x8(template, prototype_graph, params)
-    ctx = deepcopy(template.context)
+    ctx = deepcopy(Processes.context(template))
     relink_shared_graph_8x8!(ctx.dynamics.model, prototype_graph, params)
     return ctx
 end
@@ -112,7 +112,7 @@ end
 function make_train_worker_shared_8x8(layer, prototype_graph, params, config::Hidden8x8Config, idx::Integer)
     graph = shared_worker_graph_8x8(prototype_graph, params, config)
     worker = IsingLearning._worker_process(layer, graph)
-    Random.seed!(worker.context.dynamics.rng, config.base_seed + idx)
+    Random.seed!(Processes.context(worker).dynamics.rng, config.base_seed + idx)
     assert_shared_worker_params_8x8(worker, params)
     return worker
 end
@@ -121,7 +121,7 @@ end
 function make_eval_worker_shared_8x8(layer, prototype_graph, params, config::Hidden8x8Config, idx::Integer)
     graph = shared_worker_graph_8x8(prototype_graph, params, config)
     worker = IsingLearning._validation_process(layer, graph)
-    Random.seed!(worker.context.dynamics.rng, config.base_seed + 50_000 + idx)
+    Random.seed!(Processes.context(worker).dynamics.rng, config.base_seed + 50_000 + idx)
     assert_shared_worker_params_8x8(worker, params)
     return worker
 end
@@ -165,7 +165,7 @@ function eval_manager_recipe_shared_8x8(layer, prototype_graph)
         prepare! = (slot, job, manager) -> prepare_eval_worker_8x8!(slot.worker, manager.state, manager.config, job),
         isdone = (slot, manager) -> Processes8x8.isdone(slot.worker),
         consume! = (slot, job, manager) -> begin
-            output = only(II.state(slot.worker.context.dynamics.model[end]))
+            output = only(II.state(Processes.context(slot.worker).dynamics.model[end]))
             push!(manager.state.current_sample_outputs[job.sample_idx], output)
         end,
     )

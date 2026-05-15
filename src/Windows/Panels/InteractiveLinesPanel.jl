@@ -139,7 +139,7 @@ function _resolved_context_and_close_resources(source::Function)
 end
 
 function _resolved_context_and_close_resources(process::Processes.AbstractProcess)
-    return getfield(process, :context), (process,)
+    return Processes.context(process), (process,)
 end
 
 _resolved_context_and_close_resources(context) = context, ()

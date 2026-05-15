@@ -244,14 +244,14 @@ end
 function run_output!(trainer, x; seed::Integer)
     worker = trainer.validation_worker
     Random.seed!(seed)
-    Random.seed!(worker.context.dynamics.rng, seed)
+    Random.seed!(Processes.context(worker).dynamics.rng, seed)
     IsingLearning._write_input!(worker, x)
-    @assert all(worker.context._state.x .== x)
+    @assert all(Processes.context(worker)._state.x .== x)
     Processes.reset!(worker)
     run(worker)
     wait(worker)
     close(worker)
-    output = copy(worker.context._state.equilibrium_state[trainer.layer.output_layer])
+    output = copy(Processes.context(worker)._state.equilibrium_state[trainer.layer.output_layer])
     all(isfinite, output) || error("non-finite output")
     return output
 end
@@ -309,18 +309,18 @@ function run_minibatch_checked!(trainer, xbatch, ybatch, batch_gradient, config,
         for init_idx in 1:MINIT
             Processes.isdone(worker) && close(worker)
             IsingLearning._write_example!(worker, view(xbatch, :, sample_idx), view(ybatch, :, sample_idx))
-            @assert all(worker.context._state.x .== view(xbatch, :, sample_idx))
-            @assert all(worker.context._state.y .== view(ybatch, :, sample_idx))
-            Random.seed!(worker.context.dynamics.rng, config.seed + 100_000 * epoch + 1000 * sample_idx + init_idx)
+            @assert all(Processes.context(worker)._state.x .== view(xbatch, :, sample_idx))
+            @assert all(Processes.context(worker)._state.y .== view(ybatch, :, sample_idx))
+            Random.seed!(Processes.context(worker).dynamics.rng, config.seed + 100_000 * epoch + 1000 * sample_idx + init_idx)
             Processes.reset!(worker)
             run(worker)
             wait(worker)
             close(worker)
 
-            all(state(worker.context.dynamics.model[1]) .== view(xbatch, :, sample_idx)) ||
+            all(state(Processes.context(worker).dynamics.model[1]) .== view(xbatch, :, sample_idx)) ||
                 error("input layer write was not preserved after sample $sample_idx")
-            all(isfinite, worker.context.plus_capture.captured) || error("non-finite plus phase")
-            all(isfinite, worker.context.minus_capture.captured) || error("non-finite minus phase")
+            all(isfinite, Processes.context(worker).plus_capture.captured) || error("non-finite plus phase")
+            all(isfinite, Processes.context(worker).minus_capture.captured) || error("non-finite minus phase")
         end
     end
 

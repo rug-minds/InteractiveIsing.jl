@@ -189,15 +189,15 @@ function split_snapshot_worker_process(layer, graph, split::SplitSnapshotSearchC
     buffers = IsingLearning.gradient_buffer(graph)
     return Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(FT, 2),
             y = zeros(FT, target_dim(config)),
             buffers = buffers,
             equilibrium_state = copy(II.state(graph)),
         ),
         dynamics_input(:dynamics, graph, config.base_seed),
-        Input(:plus_capture, state = graph),
-        Input(:minus_capture, state = graph);
+        Init(:plus_capture, state = graph),
+        Init(:minus_capture, state = graph);
         repeat = 1,
     )
 end

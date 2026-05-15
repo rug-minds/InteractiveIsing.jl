@@ -871,7 +871,7 @@ function checker_worker_process(layer, graph, config::LocalCheckerboardConfig)
     buffers = IsingLearning.gradient_buffer(graph)
     return Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(FT, 2),
             y = zeros(FT, target_dim(config)),
             buffers = buffers,
@@ -880,8 +880,8 @@ function checker_worker_process(layer, graph, config::LocalCheckerboardConfig)
         dynamics_input(:free_dynamics, graph, config.base_seed),
         dynamics_input(:plus_dynamics, graph, config.base_seed + 10_000),
         dynamics_input(:minus_dynamics, graph, config.base_seed + 20_000),
-        Input(:plus_capture, state = graph),
-        Input(:minus_capture, state = graph);
+        Init(:plus_capture, state = graph),
+        Init(:minus_capture, state = graph);
         repeat = 1,
     )
 end
@@ -890,7 +890,7 @@ function checker_validation_process(layer, graph, config::LocalCheckerboardConfi
     algo = Processes.resolve(CheckerForwardDynamics(layer, config; dynamics_algorithm = layer.validation_algorithm).algorithm)
     return Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(FT, 2),
             equilibrium_state = copy(II.state(graph)),
         ),
@@ -964,8 +964,8 @@ end
 
 function seed_sampler_rng!(worker, seed::Integer)
     for (offset, name) in enumerate((:dynamics, :free_dynamics, :plus_dynamics, :minus_dynamics))
-        hasproperty(worker.context, name) || continue
-        dynamics_context = getproperty(worker.context, name)
+        hasproperty(Processes.context(worker), name) || continue
+        dynamics_context = getproperty(Processes.context(worker), name)
         rng = hasproperty(dynamics_context, :rng) ? getproperty(dynamics_context, :rng) : nothing
         isnothing(rng) || Random.seed!(rng, seed + 10_000 * offset)
     end
@@ -973,12 +973,12 @@ function seed_sampler_rng!(worker, seed::Integer)
 end
 
 function dynamics_input(name::Symbol, graph, seed::Integer)
-    return Input(name, model = graph, rng = Random.MersenneTwister(seed))
+    return Init(name, model = graph, rng = Random.MersenneTwister(seed))
 end
 
 function start_worker!(worker, x, y; seed)
     Random.seed!(seed)
-    context = worker.context
+    context = Processes.context(worker)
     IsingLearning.zero_buffer!(context._state.buffers)
     context._state.x .= x
     context._state.y .= y
@@ -996,24 +996,24 @@ end
 
 function finish_worker!(worker, batch_gradient, responses)
     finish_worker!(worker)
-    free_state = worker.context._state.equilibrium_state
-    plus_state = worker.context.plus_capture.captured
-    minus_state = worker.context.minus_capture.captured
+    free_state = Processes.context(worker)._state.equilibrium_state
+    plus_state = Processes.context(worker).plus_capture.captured
+    minus_state = Processes.context(worker).minus_capture.captured
     push!(responses, (sqrt(mean(abs2, plus_state .- free_state)) + sqrt(mean(abs2, minus_state .- free_state))) / FT(2))
-    IsingLearning.add_buffer!(batch_gradient, worker.context._state.buffers)
+    IsingLearning.add_buffer!(batch_gradient, Processes.context(worker)._state.buffers)
     return worker
 end
 
 function run_validation!(worker, x; seed)
     Random.seed!(seed)
-    context = worker.context
+    context = Processes.context(worker)
     context._state.x .= x
     Processes.reset!(worker)
     seed_sampler_rng!(worker, seed)
     run(worker)
     wait(worker)
     close(worker)
-    return worker.context._state.equilibrium_state
+    return Processes.context(worker)._state.equilibrium_state
 end
 
 function add_weight_decay!(gradient, params, λ::Real)

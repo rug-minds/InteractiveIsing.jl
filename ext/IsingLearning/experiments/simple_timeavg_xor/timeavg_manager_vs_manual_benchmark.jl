@@ -160,7 +160,7 @@ function prepare_train_worker!(worker::Process, trainer::ManualTimeAvgTrainer, c
     Processes.isdone(worker) && close(worker)
     sync_worker_params!(worker, trainer.params)
     seed_worker!(worker, job.seed)
-    IsingLearning.zero_buffer!(worker.context._state.buffers)
+    IsingLearning.zero_buffer!(Processes.context(worker)._state.buffers)
     IsingLearning._write_example!(worker, job.x, job.y)
     Processes.reset!(worker)
     return worker
@@ -175,13 +175,13 @@ subcontext.
 function prepare_eval_worker!(worker::Process, trainer::ManualTimeAvgTrainer, config::TimeAverageXorConfig, job::EvalJob)
     Processes.isdone(worker) && close(worker)
     sync_worker_params!(worker, trainer.params)
-    graph = worker.context.dynamics.model
+    graph = Processes.context(worker).dynamics.model
     II.temp!(graph, config.temp)
     Random.seed!(job.seed)
     simple_initstate!(graph, simple_config(config))
     IsingLearning.apply_input(graph, job.x)
-    hasproperty(worker.context.dynamics, :rng) && Random.seed!(worker.context.dynamics.rng, job.seed + 1)
-    worker.context = Processes.initcontext(worker.context, :output_averager)
+    hasproperty(Processes.context(worker).dynamics, :rng) && Random.seed!(Processes.context(worker).dynamics.rng, job.seed + 1)
+    Processes.context(worker, Processes.initcontext(Processes.context(worker), :output_averager))
     Processes.reset!(worker)
     return worker
 end
@@ -224,7 +224,7 @@ function manual_train_epoch!(trainer::ManualTimeAvgTrainer, x, y, batch_gradient
             view(trainer.train_workers, 1:length(batch)),
             batch,
             (worker, job) -> prepare_train_worker!(worker, trainer, config, job),
-            (worker, job) -> collect_train_result!(batch_gradient, responses, (; context = worker.context, error = nothing)),
+            (worker, job) -> collect_train_result!(batch_gradient, responses, (; context = Processes.context(worker), error = nothing)),
         )
     end
     ntraj = length(jobs)
@@ -255,7 +255,7 @@ function manual_evaluate_timeavg!(trainer::ManualTimeAvgTrainer, x, y, config::T
             batch,
             (worker, job) -> prepare_eval_worker!(worker, trainer, config, job),
             (worker, job) -> begin
-                ctx = worker.context.output_averager
+                ctx = Processes.context(worker).output_averager
                 push!(sample_outputs[job.sample_idx], (;
                     mean = reusable_average_mean(ctx),
                     std = reusable_average_std(ctx),

@@ -5,7 +5,7 @@ include(joinpath(@__DIR__, "..", "simple_langevin_xor", "simple_2_4_1_langevin.j
 
 using Logging
 
-import IsingLearning.InteractiveIsing.Processes: Process, TaskData, Input, Override, NamedInput, NamedOverride,
+import IsingLearning.InteractiveIsing.Processes: Process, TaskData, Init, Override, NamedInput, NamedOverride,
     ProcessContext, normalize_process_algo, getregistry, resolve, get_target_name,
     getinputs, getoverrides, getlifetime, getalgo, taskdata, initcontext,
     processlist, remove_process!, RuntimeListeners, context, task, deletekeys
@@ -338,15 +338,15 @@ function timeavg_training_worker_process(layer, graph, sc::SimpleXorConfig, conf
     buffers = IsingLearning.gradient_buffer(graph)
     return Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(FT, 2),
             y = zeros(FT, 1),
             buffers = buffers,
             equilibrium_state = copy(II.state(graph)),
         ),
         dynamics_input(:dynamics, graph, config.base_seed),
-        Input(:plus_capture, state = graph),
-        Input(:minus_capture, state = graph);
+        Init(:plus_capture, state = graph),
+        Init(:minus_capture, state = graph);
         repeats = 1,
     )
 end
@@ -362,15 +362,15 @@ end
 function train_worker_inputs(graph, config::TimeAverageXorConfig)
     sc = simple_config(config)
     return (
-        Input(:_state;
+        Init(:_state;
             x = zeros(FT, 2),
             y = zeros(FT, 1),
             buffers = IsingLearning.gradient_buffer(graph),
             equilibrium_state = copy(II.state(graph)),
         ),
         dynamics_input(:dynamics, graph, sc.base_seed),
-        Input(:plus_capture, state = graph),
-        Input(:minus_capture, state = graph),
+        Init(:plus_capture, state = graph),
+        Init(:minus_capture, state = graph),
     )
 end
 
@@ -405,14 +405,14 @@ function template_eval_worker(layer, prototype_graph, config::TimeAverageXorConf
     wrapped = Processes.@Routine begin
         @repeat (total_sweeps * sweep_steps) routine()
     end
-    inputs = II._merge_graph_inputs(wrapped, graph, Processes.Input(dynamics, rng = Random.MersenneTwister(config.base_seed + 70_000 + worker_idx)))
+    inputs = II._merge_graph_inputs(wrapped, graph, Processes.Init(dynamics, rng = Random.MersenneTwister(config.base_seed + 70_000 + worker_idx)))
     return Process(Processes.resolve(wrapped), inputs...; repeats = 1)
 end
 
 """Constructor inputs for one copied validation worker."""
 function eval_worker_inputs(graph, config::TimeAverageXorConfig, worker_idx::Integer)
     return (
-        Input(:dynamics;
+        Init(:dynamics;
             isinggraph = graph,
             structure = graph,
             model = graph,
@@ -429,7 +429,7 @@ end
 
 """Synchronize all graph models in a reusable worker context to current params."""
 function sync_worker_params!(worker::Process, params)
-    IsingLearning.sync_graph_params!(worker.context.dynamics.model, params)
+    IsingLearning.sync_graph_params!(Processes.context(worker).dynamics.model, params)
     return worker
 end
 
@@ -445,7 +445,7 @@ end
 """Reset worker-local gradient buffers once before a managed training batch."""
 function reset_manager_buffers!(manager)
     for worker in Processes.workers(manager)
-        IsingLearning.zero_buffer!(worker.context._state.buffers)
+        IsingLearning.zero_buffer!(Processes.context(worker)._state.buffers)
     end
     return manager
 end
@@ -462,13 +462,13 @@ end
 """Prepare one reusable validation worker for a new time-averaged readout."""
 function prepare_eval_worker!(worker::Process, trainer::ManagedTimeAvgTrainer, config::TimeAverageXorConfig, job::EvalJob)
     Processes.isdone(worker) && close(worker)
-    graph = worker.context.dynamics.model
+    graph = Processes.context(worker).dynamics.model
     II.temp!(graph, config.eval_temp)
     Random.seed!(job.seed)
     simple_initstate!(graph, simple_config(config))
     IsingLearning.apply_input(graph, job.x)
-    hasproperty(worker.context.dynamics, :rng) && Random.seed!(worker.context.dynamics.rng, job.seed + 1)
-    worker.context = Processes.initcontext(worker.context, :output_averager)
+    hasproperty(Processes.context(worker).dynamics, :rng) && Random.seed!(Processes.context(worker).dynamics.rng, job.seed + 1)
+    Processes.context(worker, Processes.initcontext(Processes.context(worker), :output_averager))
     Processes.reset!(worker)
     return worker
 end
@@ -508,7 +508,7 @@ end
 function flush_train_buffers!(manager)
     batch_gradient = manager.state.current_batch_gradient
     for worker in Processes.workers(manager)
-        IsingLearning.add_buffer!(batch_gradient, worker.context._state.buffers)
+        IsingLearning.add_buffer!(batch_gradient, Processes.context(worker)._state.buffers)
     end
     reset_manager_buffers!(manager)
     return batch_gradient
@@ -523,7 +523,7 @@ function train_manager_recipe(layer, prototype_graph)
         isdone = (slot, manager) -> Processes.isdone(slot.worker),
         consume! = (slot, job, manager) -> collect_train_response!(
             manager.state.current_responses,
-            (; context = slot.worker.context, error = nothing),
+            (; context = Processes.context(slot.worker), error = nothing),
         ),
         flush! = flush_train_buffers!,
     )
@@ -537,7 +537,7 @@ function eval_manager_recipe(layer, prototype_graph)
         prepare! = (slot, job, manager) -> prepare_eval_worker!(slot.worker, manager.state, manager.config, job),
         isdone = (slot, manager) -> Processes.isdone(slot.worker),
         consume! = (slot, job, manager) -> begin
-            ctx = slot.worker.context.output_averager
+            ctx = Processes.context(slot.worker).output_averager
             push!(manager.state.current_sample_outputs[job.sample_idx], (;
                 mean = reusable_average_mean(ctx),
                 std = reusable_average_std(ctx),

@@ -1302,7 +1302,7 @@ Graph_Logger = ImageCapture(:Graph,-1.5,1.5)
 # end
 
 # createProcess(g, Anealing_step, lifetime = 1,
-#     Input(M_Integrate_and_Logger, initialvalue = sum(state(g))))
+#     Init(M_Integrate_and_Logger, initialvalue = sum(state(g))))
 # c = process(g) |> fetch
 # voltage1 = c[B_Logger].values
 # Pr1 = c[M_Integrate_and_Logger].log
@@ -1433,8 +1433,8 @@ end
 
 # ---- Start simulation2 ----
 createProcess(g, Pulse_and_Relax, lifetime = 1, 
-    # Input(Graph_Logger, filepath = joinpath(outdir, "capture")),
-    Input(M_Integrate_and_Logger, initialvalue = sum(state(g))))
+    # Init(Graph_Logger, filepath = joinpath(outdir, "capture")),
+    Init(M_Integrate_and_Logger, initialvalue = sum(state(g))))
 c = process(g) |> fetch
 
 # ---- Collect data2 ----

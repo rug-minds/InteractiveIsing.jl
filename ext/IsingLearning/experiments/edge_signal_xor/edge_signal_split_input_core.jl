@@ -501,7 +501,7 @@ function run_dynamics_steps!(graph, sampler, nsteps::Integer; seed::Integer)
     routine = II.Processes.@Routine begin
         @repeat nsteps dynamics()
     end
-    inputs = II._merge_graph_inputs(routine, graph, Processes.Input(dynamics, rng = Random.MersenneTwister(seed)))
+    inputs = II._merge_graph_inputs(routine, graph, Processes.Init(dynamics, rng = Random.MersenneTwister(seed)))
     process = Processes.Process(Processes.resolve(routine), inputs...; repeats = 1)
     run(process)
     wait(process)
@@ -535,7 +535,7 @@ function run_transition_response!(trace, graph, sampler, x; graph_kind, nn, sour
     wrapped = II.Processes.@Routine begin
         @repeat total_steps routine()
     end
-    inputs = II._merge_graph_inputs(wrapped, graph, Processes.Input(dynamics, rng = Random.MersenneTwister(seed_base + 2)))
+    inputs = II._merge_graph_inputs(wrapped, graph, Processes.Init(dynamics, rng = Random.MersenneTwister(seed_base + 2)))
     process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
     run(process)
     wait(process)
@@ -892,16 +892,16 @@ function split_input_nudged_temp_worker_process(layer, worker_graph, base_temp::
 
     return Processes.Process(
         algo,
-        Processes.Input(:_state;
+        Processes.Init(:_state;
             x = zeros(eltype(worker_graph), xdim),
             y = zeros(eltype(worker_graph), ydim),
             buffers = buffers,
             clamping_beta = eltype(worker_graph)(layer.β),
             equilibrium_state = copy(II.state(worker_graph)),
         ),
-        Processes.Input(:dynamics, model = worker_graph),
-        Processes.Input(:plus_capture, state = worker_graph),
-        Processes.Input(:minus_capture, state = worker_graph);
+        Processes.Init(:dynamics, model = worker_graph),
+        Processes.Init(:plus_capture, state = worker_graph),
+        Processes.Init(:minus_capture, state = worker_graph);
         repeat = 1,
     )
 end

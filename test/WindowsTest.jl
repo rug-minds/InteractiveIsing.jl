@@ -352,7 +352,7 @@ end
     context_update = (; Metropolis_1 = (; T = Float32(3.0)))
     InteractiveIsing.Processes.context(
         process,
-        InteractiveIsing.Processes.merge_into_subcontexts(getfield(process, :context), context_update),
+        InteractiveIsing.Processes.merge_into_subcontexts(InteractiveIsing.Processes.context(process), context_update),
     )
     Windows._poll!(host)
     @test temperature_panel[:slider].value[] ≈ 3.0f0
@@ -368,7 +368,7 @@ end
 
     temperature_panel[:slider].value[] = 1.5f0
     @test temp(g) ≈ 1.5f0
-    @test getproperty(getproperty(process.context, :Metropolis_1), :T) ≈ 1.5f0
+    @test getproperty(getproperty(Processes.context(process), :Metropolis_1), :T) ≈ 1.5f0
 
     close(host)
     @test host.closed

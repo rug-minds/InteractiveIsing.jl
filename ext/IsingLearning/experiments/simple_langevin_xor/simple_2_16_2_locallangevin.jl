@@ -158,7 +158,7 @@ end
 Create a branch context with its own graph and Langevin RNG.
 """
 function dynamics_input(name::Symbol, graph, seed::Integer)
-    return Input(name, model = graph, rng = Random.MersenneTwister(seed))
+    return Init(name, model = graph, rng = Random.MersenneTwister(seed))
 end
 
 """
@@ -270,15 +270,15 @@ function simple_worker_process(layer, graph, config::SimpleXorConfig; split::Boo
     buffers = IsingLearning.gradient_buffer(graph)
     return Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(FT, 2),
             y = zeros(FT, length(layer.output_layer)),
             buffers = buffers,
             equilibrium_state = copy(II.state(graph)),
         ),
         dynamics_input(:dynamics, graph, config.base_seed),
-        Input(:plus_capture, state = graph),
-        Input(:minus_capture, state = graph);
+        Init(:plus_capture, state = graph),
+        Init(:minus_capture, state = graph);
         repeat = 1,
     )
 end
@@ -292,7 +292,7 @@ function simple_validation_process(layer, graph, config::SimpleXorConfig)
     algo = Processes.resolve(simple_forward(layer, config; split = false).algorithm)
     return Process(
         algo,
-        Input(:_state;
+        Init(:_state;
             x = zeros(FT, 2),
             equilibrium_state = copy(II.state(graph)),
         ),
@@ -334,8 +334,8 @@ Seed all Langevin branch RNGs visible in a worker context.
 function seed_worker!(worker, seed::Integer)
     Random.seed!(seed)
     for (offset, name) in enumerate((:dynamics,))
-        hasproperty(worker.context, name) || continue
-        context = getproperty(worker.context, name)
+        hasproperty(Processes.context(worker), name) || continue
+        context = getproperty(Processes.context(worker), name)
         hasproperty(context, :rng) && Random.seed!(context.rng, seed + 10_000 * offset)
     end
     return worker
@@ -351,7 +351,7 @@ parallel instead of starting and waiting for each trajectory serially.
 function start_training_worker!(worker, x, y; seed::Integer)
     Processes.isdone(worker) && close(worker)
     seed_worker!(worker, seed)
-    IsingLearning.zero_buffer!(worker.context._state.buffers)
+    IsingLearning.zero_buffer!(Processes.context(worker)._state.buffers)
     IsingLearning._write_example!(worker, x, y)
     Processes.reset!(worker)
     run(worker)
@@ -367,15 +367,15 @@ epoch buffer, and record the plus/minus response norm.
 function finish_training_worker!(worker, batch_gradient, responses)
     wait(worker)
     close(worker)
-    free_state = worker.context._state.equilibrium_state
-    plus_state = worker.context.plus_capture.captured
-    minus_state = worker.context.minus_capture.captured
+    free_state = Processes.context(worker)._state.equilibrium_state
+    plus_state = Processes.context(worker).plus_capture.captured
+    minus_state = Processes.context(worker).minus_capture.captured
     response = (
         sqrt(sum(abs2, plus_state .- free_state) / FT(length(free_state))) +
         sqrt(sum(abs2, minus_state .- free_state) / FT(length(free_state)))
     ) / 2
     push!(responses, response)
-    IsingLearning.add_buffer!(batch_gradient, worker.context._state.buffers)
+    IsingLearning.add_buffer!(batch_gradient, Processes.context(worker)._state.buffers)
     return worker
 end
 
