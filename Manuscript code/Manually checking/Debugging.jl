@@ -1157,11 +1157,11 @@ Screening = 1
 Temp_aneal= 2
 Temp = 0.15
 
-a1 = -0.2
-b1 = -1.4
-c1 = 1
-d1 = -1
-e1 = 1
+a1 = -0.3
+b1 = -2.1
+c1 = 1.5
+d1 = 0
+e1 = 0
 linear_field_coeff = 1.0
 defect_field_coeff = 0.0
 
@@ -1174,17 +1174,17 @@ coeff10 = fill(Float32(e1), nspins)
 
 # Optional spatial disorder examples. Keep them off for the baseline check.
 apply_weak_landau_disorder = false
-coeff2_disorder_scale = 0.1f0
-coeff4_disorder_scale = 0.8f0
-coeff6_disorder_scale = 0.5f0
+coeff2_disorder_scale = 0.5f0
+coeff4_disorder_scale = 1f0
+coeff6_disorder_scale = 1f0
 coeff8_disorder_scale = 0.2f0
 coeff10_disorder_scale = 0.2f0
 if apply_weak_landau_disorder
     coeff2 .+= coeff2_disorder_scale .* randn(Float32, nspins)
     coeff4 .+= coeff4_disorder_scale .* randn(Float32, nspins)
     coeff6 .+= coeff6_disorder_scale .* randn(Float32, nspins)
-    coeff8 .+= coeff8_disorder_scale .* randn(Float32, nspins)
-    coeff10 .+= coeff10_disorder_scale .* randn(Float32, nspins)
+    # coeff8 .+= coeff8_disorder_scale .* randn(Float32, nspins)
+    # coeff10 .+= coeff10_disorder_scale .* randn(Float32, nspins)
 end
 
 proposal_delta = 0.1  # use 0.1, 0.2, 0.5 for LocalProposer(delta)
@@ -1199,7 +1199,7 @@ g = IsingGraph(xL, yL, zL,
             CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + 
             Quadratic(localpotential = coeff2) +
             Quartic(localpotential = coeff4) + 
-            Sextic(localpotential = coeff6) +
+            Sextic(localpotential = coeff6),
             Octic(localpotential = coeff8) +
             PolynomialHamiltonian(10; localpotential = coeff10), 
         StateSet(-1.5f0, 1.5f0),
@@ -1235,8 +1235,8 @@ reduced_energy_summary = print_reduced_parameter_summary_reference(;
 time_fctr= 1
 Steps_1= 4000
 
-Amp1 = 5
-nrepeats = 2
+Amp1 = 10
+nrepeats = 3
 pulse1 = TrianglePulseA(Amp1, nrepeats)
 pulse2 = SinPulseA(Amp1, nrepeats)
 pulse3 = Unique(SinPulseA(Amp1, nrepeats))
@@ -1403,14 +1403,14 @@ Metro_Pulse = @CompositeAlgorithm begin
     proposal = @every 1 dynamics()
     @every 1 M_Integrate_and_Logger(Δvalue = @transform(accepted_proposal_delta_base, proposal))
     @every point_repeat B_Logger(value = @transform(x -> x.b[], dynamics.hamiltonian))
-    @every point_repeat Depol_Logger(
-        model = dynamics.model,
-        hamiltonian = dynamics.hamiltonian,
-    )
-    @every point_repeat PAFEz_Logger(value = @transform(staggered_z_polarization, dynamics.model))
-    @every point_repeat PTop_Logger(value = @transform(m -> mean_polarization_zlayer(m, zL), dynamics.model))
-    @every point_repeat PMid_Logger(value = @transform(m -> mean_polarization_zlayer(m, cld(zL, 2)), dynamics.model))
-    @every point_repeat PBot_Logger(value = @transform(m -> mean_polarization_zlayer(m, 1), dynamics.model))
+    # @every point_repeat Depol_Logger(
+    #     model = dynamics.model,
+    #     hamiltonian = dynamics.hamiltonian,
+    # )
+    # @every point_repeat PAFEz_Logger(value = @transform(staggered_z_polarization, dynamics.model))
+    # @every point_repeat PTop_Logger(value = @transform(m -> mean_polarization_zlayer(m, zL), dynamics.model))
+    # @every point_repeat PMid_Logger(value = @transform(m -> mean_polarization_zlayer(m, cld(zL, 2)), dynamics.model))
+    # @every point_repeat PBot_Logger(value = @transform(m -> mean_polarization_zlayer(m, 1), dynamics.model))
 end
 pulse_part1 = @CompositeAlgorithm begin
     @context metro_pulse = Metro_Pulse()
@@ -1440,176 +1440,176 @@ c = process(g) |> fetch
 # ---- Collect data2 ----
 voltage2 = c[B_Logger].values
 Pr2      = c[M_Integrate_and_Logger].log
-depol_mean2 = c[Depol_Logger].means
-depol_median2 = c[Depol_Logger].medians
-depol_max2 = c[Depol_Logger].maxima
-Htotal2 = c[Depol_Logger].total_energy
-Hdep2 = c[Depol_Logger].depol_energy
-HJ2 = c[Depol_Logger].interaction_energy
-Hfield2 = c[Depol_Logger].field_energy
-Hpoly2 = c[Depol_Logger].poly_energy
-Hrest2 = Hdep2 .+ HJ2 .+ Hpoly2
-PAFEz2 = c[PAFEz_Logger].values
-Ptop2 = c[PTop_Logger].values
-Pmid2 = c[PMid_Logger].values
-Pbot2 = c[PBot_Logger].values
+# depol_mean2 = c[Depol_Logger].means
+# depol_median2 = c[Depol_Logger].medians
+# depol_max2 = c[Depol_Logger].maxima
+# Htotal2 = c[Depol_Logger].total_energy
+# Hdep2 = c[Depol_Logger].depol_energy
+# HJ2 = c[Depol_Logger].interaction_energy
+# Hfield2 = c[Depol_Logger].field_energy
+# Hpoly2 = c[Depol_Logger].poly_energy
+# Hrest2 = Hdep2 .+ HJ2 .+ Hpoly2
+# PAFEz2 = c[PAFEz_Logger].values
+# Ptop2 = c[PTop_Logger].values
+# Pmid2 = c[PMid_Logger].values
+# Pbot2 = c[PBot_Logger].values
 # Temp1    = c[T_Logger].values
 
 # Set true when you want GLMakie windows to pop up while figures are created.
-show_figures = false
+show_figures = True
 
 fVPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax, voltage2, Pr2))
 fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines!(ax, Pr2))
 
-fOrderStep = makieaxis(
-    f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Order parameters"),
-    ax -> lines!(ax, PAFEz2, label = "P_AFE_z"),
-    ax -> lines!(ax, Ptop2, label = "P_top"),
-    ax -> lines!(ax, Pmid2, label = "P_mid"),
-    ax -> lines!(ax, Pbot2, label = "P_bot"),
-    ax -> axislegend(ax),
-)
+# fOrderStep = makieaxis(
+#     f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Order parameters"),
+#     ax -> lines!(ax, PAFEz2, label = "P_AFE_z"),
+#     ax -> lines!(ax, Ptop2, label = "P_top"),
+#     ax -> lines!(ax, Pmid2, label = "P_mid"),
+#     ax -> lines!(ax, Pbot2, label = "P_bot"),
+#     ax -> axislegend(ax),
+# )
 
-fOrderV = makieaxis(
-    f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Order parameters"),
-    ax -> lines!(ax, voltage2, PAFEz2, label = "P_AFE_z"),
-    ax -> lines!(ax, voltage2, Ptop2, label = "P_top"),
-    ax -> lines!(ax, voltage2, Pmid2, label = "P_mid"),
-    ax -> lines!(ax, voltage2, Pbot2, label = "P_bot"),
-    ax -> axislegend(ax),
-)
-
-
-fHrestPr = makieaxis(
-    f -> Axis(f[1, 1], xlabel = "Pr", ylabel = "Total H"),
-    ax -> lines!(ax, Pr2, Hrest2)
-)
-
-fHrestV = makieaxis(
-    f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Total H"),
-    ax -> lines!(ax, voltage2, Hrest2)
-)
+# fOrderV = makieaxis(
+#     f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Order parameters"),
+#     ax -> lines!(ax, voltage2, PAFEz2, label = "P_AFE_z"),
+#     ax -> lines!(ax, voltage2, Ptop2, label = "P_top"),
+#     ax -> lines!(ax, voltage2, Pmid2, label = "P_mid"),
+#     ax -> lines!(ax, voltage2, Pbot2, label = "P_bot"),
+#     ax -> axislegend(ax),
+# )
 
 
-fHtotP = makieaxis(
-    f -> Axis(f[1, 1], xlabel = "Pr", ylabel = "Total H"),
-    ax -> lines!(ax, Pr2, Htotal2)
-)
+# fHrestPr = makieaxis(
+#     f -> Axis(f[1, 1], xlabel = "Pr", ylabel = "Total H"),
+#     ax -> lines!(ax, Pr2, Hrest2)
+# )
 
-fHtotV = makieaxis(
-    f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Total H"),
-    ax -> lines!(ax, voltage2, Htotal2)
-)
+# fHrestV = makieaxis(
+#     f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Total H"),
+#     ax -> lines!(ax, voltage2, Hrest2)
+# )
 
-fHtermsPr = makieaxis(
-    f -> Axis(f[1, 1], xlabel = "Pr", ylabel = "Hamiltonian terms"),
-    ax -> lines!(ax, Pr2, HJ2, label = "H_J"),
-    ax -> lines!(ax, Pr2, Hfield2, label = "H_field"),
-    ax -> lines!(ax, Pr2, Hpoly2, label = "H_poly"),
-    ax -> lines!(ax, Pr2, Hdep2, label = "H_dep"),
-    ax -> axislegend(ax),
-)
 
-fHtermsV = makieaxis(
-    f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Hamiltonian terms"),
-    ax -> lines!(ax, voltage2, HJ2, label = "H_J"),
-    ax -> lines!(ax, voltage2, Hfield2, label = "H_field"),
-    ax -> lines!(ax, voltage2, Hpoly2, label = "H_poly"),
-    ax -> lines!(ax, voltage2, Hdep2, label = "H_dep"),
-    ax -> axislegend(ax),
-)
+# fHtotP = makieaxis(
+#     f -> Axis(f[1, 1], xlabel = "Pr", ylabel = "Total H"),
+#     ax -> lines!(ax, Pr2, Htotal2)
+# )
 
-fDepP = makieaxis(
-    f -> Axis(f[1, 1], xlabel = "Pr", ylabel = "Depolarization diagnostic"),
-    ax -> lines!(ax, Pr2, depol_mean2),
-    ax -> lines!(ax, Pr2, depol_median2),
-    ax -> lines!(ax, Pr2, depol_max2),
-)
+# fHtotV = makieaxis(
+#     f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Total H"),
+#     ax -> lines!(ax, voltage2, Htotal2)
+# )
 
-fDepV = makieaxis(
-    f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Depolarization diagnostic"),
-    ax -> lines!(ax, voltage2, depol_mean2),
-    ax -> lines!(ax, voltage2, depol_median2),
-    ax -> lines!(ax, voltage2, depol_max2),
-)
+# fHtermsPr = makieaxis(
+#     f -> Axis(f[1, 1], xlabel = "Pr", ylabel = "Hamiltonian terms"),
+#     ax -> lines!(ax, Pr2, HJ2, label = "H_J"),
+#     ax -> lines!(ax, Pr2, Hfield2, label = "H_field"),
+#     ax -> lines!(ax, Pr2, Hpoly2, label = "H_poly"),
+#     ax -> lines!(ax, Pr2, Hdep2, label = "H_dep"),
+#     ax -> axislegend(ax),
+# )
 
-#######################################################################
+# fHtermsV = makieaxis(
+#     f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Hamiltonian terms"),
+#     ax -> lines!(ax, voltage2, HJ2, label = "H_J"),
+#     ax -> lines!(ax, voltage2, Hfield2, label = "H_field"),
+#     ax -> lines!(ax, voltage2, Hpoly2, label = "H_poly"),
+#     ax -> lines!(ax, voltage2, Hdep2, label = "H_dep"),
+#     ax -> axislegend(ax),
+# )
 
-# ============ SAVE (PNG + XLSX) ============
-save_outputs = true
-save_all_figures = true
-save_excel = true
+# fDepP = makieaxis(
+#     f -> Axis(f[1, 1], xlabel = "Pr", ylabel = "Depolarization diagnostic"),
+#     ax -> lines!(ax, Pr2, depol_mean2),
+#     ax -> lines!(ax, Pr2, depol_median2),
+#     ax -> lines!(ax, Pr2, depol_max2),
+# )
 
-route_name = active_route_name()
-base_name = make_run_basename(route = route_name)
+# fDepV = makieaxis(
+#     f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Depolarization diagnostic"),
+#     ax -> lines!(ax, voltage2, depol_mean2),
+#     ax -> lines!(ax, voltage2, depol_median2),
+#     ax -> lines!(ax, voltage2, depol_max2),
+# )
 
-run_params = params_dataframe(
-    "JIsing" => JIsing,
-    "a1" => a1,
-    "b1" => b1,
-    "c1" => c1,
-    "d1" => d1,
-    "e1" => e1,
-    "linear_field_coeff" => linear_field_coeff,
-    "defect_field_coeff" => defect_field_coeff,
-    "xL" => xL,
-    "yL" => yL,
-    "zL" => zL,
-    "Scale" => Scale,
-    "Screening" => Screening,
-    "Steps_1" => Steps_1,
-    "time_fctr" => time_fctr,
-    "anneal_time" => anneal_time,
-    "pulse_time" => pulse_time,
-    "relax_time" => relax_time,
-    "point_repeat" => point_repeat,
-    "Temp_aneal" => Temp_aneal,
-    "Temp" => Temp,
-    "Amp1" => Amp1,
-    "nrepeats" => nrepeats,
-    "algorithm_name" => string(algorithm_name),
-    "algorithm_kwargs" => string(algorithm_kwargs),
-    "proposal_delta" => string(proposal_delta),
-    "apply_weak_landau_disorder" => apply_weak_landau_disorder,
-    "route_name" => route_name,
-    "base_name" => base_name,
-    "show_figures" => show_figures,
-    "save_all_figures" => save_all_figures,
-    "save_excel" => save_excel,
-    "coeff2_disorder_scale" => coeff2_disorder_scale,
-    "coeff4_disorder_scale" => coeff4_disorder_scale,
-    "coeff6_disorder_scale" => coeff6_disorder_scale,
-    "coeff8_disorder_scale" => coeff8_disorder_scale,
-    "coeff10_disorder_scale" => coeff10_disorder_scale,
-)
+# #######################################################################
 
-landau_coeff_summary = coefficient_summary_dataframe(
-    "P1_MagField" => fill(linear_field_coeff, nspins),
-    "P2_Quadratic" => coeff2,
-    "P4_Quartic" => coeff4,
-    "P6_Sextic" => coeff6,
-    "P8_Octic" => coeff8,
-    "P10_Polynomial" => coeff10,
-)
+# # ============ SAVE (PNG + XLSX) ============
+# save_outputs = true
+# save_all_figures = true
+# save_excel = true
 
-if save_outputs
-    saved = save_experiment_outputs(;
-        outdir,
-        base_name,
-        g,
-        params = run_params,
-        reduced_energy = reduced_energy_summary,
-        landau_coefficients = landau_coeff_summary,
-        save_figures = save_all_figures,
-        save_xlsx = save_excel,
-    )
-    println("Saved Excel: ", saved.xlsx_path)
-    println("Saved figures:")
-    for path in saved.saved_figures
-        println("  ", path)
-    end
-end
-# ============ END SAVE (PNG + XLSX) ============
+# route_name = active_route_name()
+# base_name = make_run_basename(route = route_name)
+
+# run_params = params_dataframe(
+#     "JIsing" => JIsing,
+#     "a1" => a1,
+#     "b1" => b1,
+#     "c1" => c1,
+#     "d1" => d1,
+#     "e1" => e1,
+#     "linear_field_coeff" => linear_field_coeff,
+#     "defect_field_coeff" => defect_field_coeff,
+#     "xL" => xL,
+#     "yL" => yL,
+#     "zL" => zL,
+#     "Scale" => Scale,
+#     "Screening" => Screening,
+#     "Steps_1" => Steps_1,
+#     "time_fctr" => time_fctr,
+#     "anneal_time" => anneal_time,
+#     "pulse_time" => pulse_time,
+#     "relax_time" => relax_time,
+#     "point_repeat" => point_repeat,
+#     "Temp_aneal" => Temp_aneal,
+#     "Temp" => Temp,
+#     "Amp1" => Amp1,
+#     "nrepeats" => nrepeats,
+#     "algorithm_name" => string(algorithm_name),
+#     "algorithm_kwargs" => string(algorithm_kwargs),
+#     "proposal_delta" => string(proposal_delta),
+#     "apply_weak_landau_disorder" => apply_weak_landau_disorder,
+#     "route_name" => route_name,
+#     "base_name" => base_name,
+#     "show_figures" => show_figures,
+#     "save_all_figures" => save_all_figures,
+#     "save_excel" => save_excel,
+#     "coeff2_disorder_scale" => coeff2_disorder_scale,
+#     "coeff4_disorder_scale" => coeff4_disorder_scale,
+#     "coeff6_disorder_scale" => coeff6_disorder_scale,
+#     "coeff8_disorder_scale" => coeff8_disorder_scale,
+#     "coeff10_disorder_scale" => coeff10_disorder_scale,
+# )
+
+# landau_coeff_summary = coefficient_summary_dataframe(
+#     "P1_MagField" => fill(linear_field_coeff, nspins),
+#     "P2_Quadratic" => coeff2,
+#     "P4_Quartic" => coeff4,
+#     "P6_Sextic" => coeff6,
+#     "P8_Octic" => coeff8,
+#     "P10_Polynomial" => coeff10,
+# )
+
+# if save_outputs
+#     saved = save_experiment_outputs(;
+#         outdir,
+#         base_name,
+#         g,
+#         params = run_params,
+#         reduced_energy = reduced_energy_summary,
+#         landau_coefficients = landau_coeff_summary,
+#         save_figures = save_all_figures,
+#         save_xlsx = save_excel,
+#     )
+#     println("Saved Excel: ", saved.xlsx_path)
+#     println("Saved figures:")
+#     for path in saved.saved_figures
+#         println("  ", path)
+#     end
+# end
+# # ============ END SAVE (PNG + XLSX) ============
 
 
 
