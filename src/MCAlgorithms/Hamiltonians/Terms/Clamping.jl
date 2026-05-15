@@ -56,7 +56,7 @@ params(::Type{Clamping}, GraphType) = GatherHamiltonianParams(
     (:mask, Vector{GraphType}, GraphType(1), "Clamping mask"),
 )
 
-@inline function calculate(::H, hterm::Clamping, model::S) where {S <: AbstractIsingGraph}
+@inline function calculate(::H, hterm::Clamping, model)
     spins = @inline graphstate(model)
     total = zero(eltype(model))
     @inbounds for i in eachindex(spins)
@@ -66,7 +66,7 @@ params(::Type{Clamping}, GraphType) = GatherHamiltonianParams(
     return hterm.β[] / 2 * total
 end
 
-@inline function calculate(::H_i, hterm::Clamping, model::S, idx) where {S <: AbstractIsingGraph}
+@inline function calculate(::H_i, hterm::Clamping, model, idx)
     spins = @inline graphstate(model)
     δ = spins[idx] - hterm.y[idx]
     return hterm.β[] * hterm.mask[idx] / 2 * δ * δ
@@ -74,7 +74,7 @@ end
 
 
 # function ΔH(::Clamping, hargs, proposal)
-@inline function calculate(::ΔH, hterm::Clamping, model::S, proposal) where {S <: AbstractIsingGraph}
+@inline function calculate(::ΔH, hterm::Clamping, model, proposal)
     j = at_idx(proposal)
     iszero(hterm.mask[j]) && return zero(eltype(model))
     newstate = to_val(proposal)
@@ -82,7 +82,7 @@ end
     return hterm.β[] * hterm.mask[j] / 2 * (newstate^2 - spins[j]^2 - 2 * hterm.y[j] * (newstate - spins[j]))
 end
 
-@inline function calculate(::d_iH, hterm::Clamping, model::S, s_idx) where {S <: AbstractIsingGraph}
+@inline function calculate(::d_iH, hterm::Clamping, model, s_idx)
     spins = @inline graphstate(model)
     return hterm.β[] * hterm.mask[s_idx] * (spins[s_idx] - hterm.y[s_idx])
 end

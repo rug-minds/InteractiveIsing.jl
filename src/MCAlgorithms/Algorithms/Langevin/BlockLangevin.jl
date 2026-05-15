@@ -13,8 +13,9 @@ gradient refresh while keeping the per-step state mutation to one spin.
 
 `adjusted` is a type parameter because it changes the structure of each cycle:
 `adjusted=true` accepts or rejects the whole block proposal with a MALA
-correction, while `adjusted=false` uses the fast reflected always-accepted
-single-spin stream.
+correction, while `adjusted=false` uses the fast always-accepted single-spin
+stream with deterministic drift clamped to bounds and stochastic displacements
+reflected.
 
 `stepsize` is the proposal size. If a `stepsize` variable is supplied in the
 process context, it overrides this configured default at initialization.

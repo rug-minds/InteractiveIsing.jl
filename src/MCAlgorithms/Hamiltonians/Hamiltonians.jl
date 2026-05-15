@@ -12,6 +12,8 @@ include("Derivatives.jl")
 include("Show.jl")
 
 include("Functionals.jl")
+include("LayerTerms.jl")
+include("LayerTermWrappers.jl")
 
 # include("DeltaH.jl")
 include("Terms/Terms.jl")

@@ -20,7 +20,7 @@ end
     return instantiate(Ising(; c, b, adj, localpotential), g)
 end
 
-@inline function instantiate(hts::HamiltonianTerms, g::AbstractIsingGraph)
+@inline function instantiate(hts::HamiltonianTerms, g)
     return HamiltonianTerms((instantiate.(hamiltonians(hts), Ref(g)))...)
 end
 

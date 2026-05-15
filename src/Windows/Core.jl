@@ -99,11 +99,12 @@ function _start_host_timers!(host::WindowHost)
     return host
 end
 
-function _display_host!(host::WindowHost, title)
-    screen = GLMakie.Screen()
+function _display_host!(host::WindowHost, title; focus = true)
+    screen = GLMakie.Screen(; focus_on_show = focus)
     display(screen, host.figure)
     GLFW.SetWindowTitle(to_native(screen), title)
     _disable_glmakie_renderloop_close!(screen)
+    _focus_native_window!(screen)
     host.screen = screen
     host.open = events(host.figure).window_open
     register!(host, on(events(host.figure.scene).keyboardbutton) do _
@@ -113,6 +114,28 @@ function _display_host!(host::WindowHost, title)
     end)
     _start_host_timers!(host)
     return host
+end
+
+function _focus_native_window!(screen)
+    isnothing(screen) && return nothing
+    window = try
+        to_native(screen)
+    catch
+        return nothing
+    end
+    try
+        GLFW.ShowWindow(window)
+    catch
+    end
+    try
+        GLFW.RequestWindowAttention(window)
+    catch
+    end
+    try
+        GLFW.PollEvents()
+    catch
+    end
+    return nothing
 end
 
 function _disable_glmakie_renderloop_close!(screen)
@@ -155,7 +178,7 @@ function _forget_glmakie_screen!(screen)
     return nothing
 end
 
-function _destroy_native_glfw_window!(screen)
+function _hide_native_glfw_window!(screen)
     isnothing(screen) && return nothing
     window = try
         to_native(screen)
@@ -184,15 +207,6 @@ function _destroy_native_glfw_window!(screen)
         GLFW.PollEvents()
     catch
     end
-    try
-        GLFW.DestroyWindow(window)
-        try
-            window.handle = C_NULL
-        catch
-        end
-    catch err
-        @warn "Could not destroy native GLFW window" exception = (err, catch_backtrace())
-    end
     return nothing
 end
 
@@ -210,7 +224,7 @@ function _request_native_window_close!(host::WindowHost)
     catch err
         @warn "Could not request native GLMakie window close" exception = (err, catch_backtrace())
     end
-    _destroy_native_glfw_window!(screen)
+    _hide_native_glfw_window!(screen)
     _forget_glmakie_screen!(screen)
     return nothing
 end
@@ -222,11 +236,11 @@ end
 Open a GLMakie screen, display a new figure, and return the owning
 `WindowHost`.
 """
-function window(; title = "Interactive Ising Simulation", size = (1500, 1500), fps = 30, polling_rate = 10, kwargs...)
+function window(; title = "Interactive Ising Simulation", size = (1500, 1500), fps = 30, polling_rate = 10, focus = true, kwargs...)
     fig = Figure(; size, kwargs...)
     host = WindowHost(fig; screen = nothing, fps, polling_rate, open = Observable(true), start_timers = false)
     host.data[:title] = title
-    return _display_host!(host, title)
+    return _display_host!(host, title; focus)
 end
 
 Base.getindex(host::WindowHost, key::Symbol) = host.data[key]

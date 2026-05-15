@@ -69,23 +69,23 @@ Octic(c, localpotential) = PolynomialHamiltonian(8; c, localpotential)
 
 # Quadratic(;c = ConstVal(0), localpotential = StateLike(ConstFill, 0)) = Quadratic(c, localpotential)
 
-function instantiate(lh::PolynomialHamiltonian{Order}, g::AbstractIsingGraph) where {Order}
+function instantiate(lh::PolynomialHamiltonian{Order}, g) where {Order}
     params = instantiate(parameters(lh), g)
     return PolynomialHamiltonian{Order, typeof(params)}(params)
 end
 
-@inline function calculate(::ΔH, hterm::LH, model::S, proposal) where {LH <: PolynomialHamiltonian, S <: AbstractIsingGraph}
+@inline function calculate(::ΔH, hterm::LH, model, proposal) where {LH <: PolynomialHamiltonian}
     j = at_idx(proposal)
     spins = @inline graphstate(model)
     return hterm.c[]*hterm.lp[j]*(to_val(proposal)^order(hterm) - spins[j]^order(hterm))
 end
 
-@inline function calculate(::d_iH, hterm::LH, model::S, s_idx) where {LH <: PolynomialHamiltonian, S <: AbstractIsingGraph}
+@inline function calculate(::d_iH, hterm::LH, model, s_idx) where {LH <: PolynomialHamiltonian}
     spins = @inline graphstate(model)
     return order(hterm)*hterm.c[]*hterm.lp[s_idx]*spins[s_idx]^(order(hterm)-1)
 end
 
-@inline function calculate(::H_i, hterm::LH, model::S, idx) where {LH <: PolynomialHamiltonian, S <: AbstractIsingGraph}
+@inline function calculate(::H_i, hterm::LH, model, idx) where {LH <: PolynomialHamiltonian}
     spins = @inline graphstate(model)
     return hterm.c[]*hterm.lp[idx]*spins[idx]^order(hterm)
 end

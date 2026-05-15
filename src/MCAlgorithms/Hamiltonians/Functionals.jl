@@ -14,7 +14,7 @@ The energy of a single unit
 """
 struct H_i <: AbstractLinearFunctional end 
 
-@inline function calculate(hF::AbstractLinearFunctional, hts::HTS, model::S, args...) where {HTS <: AbstractHamiltonianTerms, S <: AbstractIsingGraph}
+@inline function calculate(hF::AbstractLinearFunctional, hts::HTS, model, args...) where {HTS <: AbstractHamiltonianTerms}
     total = zero(eltype(model))
     total = @inline unrollreplace(total, hts...) do ftotal, hamiltonian
         ftotal = ftotal + @inline calculate(hF, hamiltonian, model, args...)
@@ -35,7 +35,7 @@ only implement single-spin `ΔH`, while still allowing specialized
 `MultiSpinProposal` methods to be added where the combined move can be computed
 more directly.
 """
-@inline function calculate(dh::ΔH, hts::HTS, model::S, proposal::MultiSpinProposal) where {HTS <: AbstractHamiltonianTerms, S <: AbstractIsingGraph}
+@inline function calculate(dh::ΔH, hts::HTS, model, proposal::MultiSpinProposal) where {HTS <: AbstractHamiltonianTerms}
     spins = @inline graphstate(model)
     total = zero(eltype(model))
 
@@ -61,7 +61,7 @@ The fallback walks through `subproposals(proposal)`, accumulates the single-spin
 energy changes, temporarily applies accepted intermediate trial values to the
 graph state, and restores the original spin values before returning.
 """
-@inline function calculate(dh::ΔH, hterm::Hamiltonian, model::AbstractIsingGraph, proposal::MultiSpinProposal)
+@inline function calculate(dh::ΔH, hterm::Hamiltonian, model, proposal::MultiSpinProposal)
     spins = @inline graphstate(model)
     total = zero(eltype(model))
 

@@ -11,8 +11,8 @@ spins. `adjusted` and `order` are type parameters, so the inner step specializes
 on the chosen proposal structure. With `adjusted=true`, each proposal uses a
 Metropolis-adjusted Langevin acceptance probability (MALA-style) for Boltzmann
 correctness of the discretized proposal. With `adjusted=false`, moves are always
-accepted after drift limiting and boundary reflection, which is faster but not
-an exact Boltzmann sampler.
+accepted after drift limiting, deterministic boundary clamping, and stochastic
+boundary reflection, which is faster but not an exact Boltzmann sampler.
 
 `stepsize` is the proposal size used by each single-spin Langevin proposal.
 `group_steps` is the number of full sweeps in one internal cycle; it does not
@@ -117,6 +117,20 @@ end
         return zero(T)
     end
     return drift_step
+end
+
+@inline function _langevin_unadjusted_state(
+    old_state::T,
+    drift_step::T,
+    noise_step::T,
+    low_state::T,
+    high_state::T,
+) where {T}
+    drifted_state = clamp(old_state - drift_step, low_state, high_state)
+    noise_trial = drifted_state + noise_step
+    new_state = @inline _reflect_to_bounds(noise_trial, low_state, high_state)
+    reflected = new_state == noise_trial ? 0 : 1
+    return new_state, reflected
 end
 
 @inline function _mala_log_kernel(x, mean, four_ηT)
@@ -346,9 +360,10 @@ end
 """
     _local_langevin_unadjusted!(...)
 
-Apply the fast always-accepted local proposal. It reflects finite proposals back
-into the local state bounds, and at zero temperature backs off a crossing move
-that would otherwise bounce around the local stationary point.
+Apply the fast always-accepted local proposal. It clamps deterministic drift into
+the local state bounds, reflects only the stochastic displacement, and at zero
+temperature backs off a crossing move that would otherwise bounce around the
+local stationary point.
 """
 @inline function _local_langevin_unadjusted!(
     langevin::LocalLangevin,
@@ -359,14 +374,20 @@ that would otherwise bounce around the local stationary point.
     spin_idx::Int,
     layer_idx::Int,
     old_state::T,
-    trial_state::T,
+    drift_step::T,
+    noise_step::T,
     low_state::T,
     high_state::T,
     derivative::T,
     t::T,
 ) where {T}
-    new_state = @inline _reflect_to_bounds(trial_state, low_state, high_state)
-    reflected = new_state == trial_state ? 0 : 1
+    new_state, reflected = @inline _langevin_unadjusted_state(
+        old_state,
+        drift_step,
+        noise_step,
+        low_state,
+        high_state,
+    )
 
     if t <= zero(T)
         post_derivative = derivative
@@ -539,7 +560,8 @@ end
     end
 
     noise = σ > zero(SType) ? (@inline randn(rng, SType)) : zero(SType)
-    trial_state = old_state - drift_step + σ * noise
+    noise_step = σ * noise
+    trial_state = old_state - drift_step + noise_step
     post_derivative = derivative
     accepted = 0
 
@@ -553,7 +575,8 @@ end
             spin_idx,
             layer_idx,
             old_state,
-            trial_state,
+            drift_step,
+            noise_step,
             low_state,
             high_state,
             derivative,

@@ -8,9 +8,9 @@ Global-gradient Langevin Monte Carlo update.
 At the start of each internal cycle, one `Processes.step!` refreshes the
 derivative for all active spins at the current state. That step and subsequent
 steps then consume the cached derivatives one spin at a time. The default
-`adjusted=false` reflects proposals back into the state bounds and accepts them
-directly, which is practical for large bounded systems but not an exact
-Boltzmann sampler.
+`adjusted=false` clamps deterministic drift into the state bounds, reflects
+stochastic displacements back into the state bounds, and accepts moves directly,
+which is practical for large bounded systems but not an exact Boltzmann sampler.
 
 `stepsize` is the proposal size used by each single-spin Langevin proposal.
 `group_steps` is retained for interface compatibility; a `Processes.step!` call
@@ -176,13 +176,19 @@ end
         drift_step = @inline _langevin_boundary_drift_step(drift_step, old_state, low_state, high_state)
     end
     noise = σ > zero(T) ? (@inline randn(rng, T)) : zero(T)
-    trial_state = old_state - drift_step + σ * noise
+    noise_step = σ * noise
+    trial_state = old_state - drift_step + noise_step
     reflected = 0
     ΔE = zero(T)
 
     if !UseAdjusted
-        new_state = @inline _reflect_to_bounds(trial_state, low_state, high_state)
-        reflected = new_state == trial_state ? 0 : 1
+        new_state, reflected = @inline _langevin_unadjusted_state(
+            old_state,
+            drift_step,
+            noise_step,
+            low_state,
+            high_state,
+        )
         if t <= zero(T)
             new_state, _ = @inline _langevin_zero_temp_relax_state(
                 dh,

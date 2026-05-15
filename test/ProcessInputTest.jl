@@ -95,6 +95,33 @@ using Random
     @test InteractiveIsing._langevin_boundary_drift_step(-1f0, -1f0, -1f0, 1f0) == -1f0
     @test InteractiveIsing._langevin_boundary_drift_step(1f0, 1f0, -1f0, 1f0) == 1f0
 
+    function unadjusted_langevin_boundary_state(algorithm)
+        graph = IsingGraph(
+            1,
+            Continuous(),
+            StateSet(-1f0, 1f0),
+            Clamping(1f0, [10f0], [1f0]);
+            precision = Float32,
+            initial_state = 0.9f0,
+        )
+        temp!(graph, 0f0)
+        context = Processes.init(algorithm, (;model = graph))
+        out = Processes.step!(algorithm, context)
+        return state(graph)[1], out
+    end
+
+    for algorithm in (
+        LocalLangevin(stepsize = 0.1f0, adjusted = false, order = :deterministic),
+        GlobalLangevin(stepsize = 0.1f0, adjusted = false),
+        BlockLangevin(stepsize = 0.1f0, adjusted = false, block_size = 1),
+        DynamicBlockLangevin(stepsize = 0.1f0, adjusted = false, max_blocksize = 1),
+    )
+        boundary_state, out = unadjusted_langevin_boundary_state(algorithm)
+        @test boundary_state == 1f0
+        @test out.accepted == 1
+        @test out.reflected_fraction == 0f0
+    end
+
     function ordered_block_shuffle_groups()
         graph = IsingGraph(
             8,
@@ -162,7 +189,7 @@ using Random
         1,
         Continuous(),
         StateSet(-10f0, 10f0),
-        Clamping(1f0, [0f0]);
+        Clamping(1f0, [0f0], [1f0]);
         precision = Float32,
         initial_state = 1f0,
     )

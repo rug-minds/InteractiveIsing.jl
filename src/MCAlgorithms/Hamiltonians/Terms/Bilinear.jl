@@ -26,7 +26,7 @@ end
 @inline Bilinear(g::AbstractIsingGraph) = instantiate(Bilinear(), g)
 
 # function ΔH(::Bilinear, hargs, proposal)
-@inline function calculate(::ΔH, hterm::BL, model::S, proposal) where {BL<:Bilinear, S <: AbstractIsingGraph}
+@inline function calculate(::ΔH, hterm::BL, model, proposal) where {BL<:Bilinear}
     s = @inline graphstate(model)
     J = hterm.J
     j = at_idx(proposal)
@@ -37,7 +37,7 @@ end
 end
 
 # function d_iH(::Bilinear, hargs, s_idx)
-@inline function calculate(::d_iH, hterm::Bilinear, model::S, s_idx) where {S <: AbstractIsingGraph}
+@inline function calculate(::d_iH, hterm::Bilinear, model, s_idx)
     s = @inline graphstate(model)
     J = hterm.J
     total = @inline weighted_neighbors_sum(s_idx, J, s)

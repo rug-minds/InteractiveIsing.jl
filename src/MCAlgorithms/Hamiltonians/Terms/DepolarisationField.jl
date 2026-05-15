@@ -9,14 +9,15 @@ struct DepolInternal{PV,F,S,R} <: InternalImplementation
     surface_NxNy::Int
 end
 
-struct DepolField{P,I} <: HamiltonianTerm
+struct DepolField{P,I} <: LayerTerm
+    layer::Int
     parameters::P
     internal::I
 end
 
 Base.Expr(::DepolField) = :( -(dpf[j]/(surface_NxNy * c[]))*(s[j]) )
 
-@inline function DepolField(; top_layers = 1, bottom_layers = top_layers, c = 1f0, zfunc = z -> exp(-abs(z - 1)))
+@inline function DepolField(; layer = 1, top_layers = 1, bottom_layers = top_layers, c = 1f0, zfunc = z -> exp(-abs(z - 1)))
     params = Parameters(
         parameter(;
             c,
@@ -29,8 +30,8 @@ Base.Expr(::DepolField) = :( -(dpf[j]/(surface_NxNy * c[]))*(s[j]) )
     internal = InternalPlan((; top_layers, bottom_layers, zfunc)) do plan, g
         config = plan.values
         T = eltype(g)
-        pv = HomogeneousParam(zero(T), length(state(g[1])); description = "Depolarisation Field")
-        layer_size = size(g[1])
+        pv = HomogeneousParam(zero(T), length(state(g)); description = "Depolarisation Field")
+        layer_size = size(g)
         nxny = prod(layer_size[1:end-1])
         surface_NxNy = (config.bottom_layers + config.top_layers) * nxny
 
@@ -40,16 +41,18 @@ Base.Expr(::DepolField) = :( -(dpf[j]/(surface_NxNy * c[]))*(s[j]) )
             Int32(config.top_layers),
             Int32(config.bottom_layers),
             layer_size,
-            Ref(T(sum(state(g[1])))),
+            Ref(T(sum(state(g)))),
             surface_NxNy,
         )
     end
-    return DepolField(params, internal)
+    return DepolField(Int(layer), params, internal)
 end
 
-@inline function DepolField(g; top_layers = 1, bottom_layers = top_layers, c = 1f0, zfunc = z -> exp(-(min(abs(z-1), abs(z-size(g[1],3))))))
+@inline DepolField(layer::Integer; kwargs...) = DepolField(; layer, kwargs...)
+
+@inline function DepolField(g; layer = 1, top_layers = 1, bottom_layers = top_layers, c = 1f0, zfunc = z -> exp(-(min(abs(z-1), abs(z-size(g[layer],3))))))
     h = instantiate(
-        DepolField(; top_layers, bottom_layers, c, zfunc),
+        DepolField(; layer, top_layers, bottom_layers, c, zfunc),
         g,
     )
     return init!(h, g)
@@ -58,8 +61,8 @@ end
 @inline Base.CartesianIndices(df::DepolField) = CartesianIndices(df.size)
 @inline Base.LinearIndices(df::DepolField) = LinearIndices(df.size)
 
-@inline get_top_layers(dpf::DepolField, g) = @view state(g[1])[CartesianIndices(dpf.size)[:,:,1:dpf.top_layers]]
-@inline get_bottom_layers(dpf::DepolField, g) = @view state(g[1])[CartesianIndices(dpf.size)[:,:,end - dpf.bottom_layers +1:end]]
+@inline get_top_layers(dpf::DepolField, layer) = @view state(layer)[CartesianIndices(dpf.size)[:,:,1:dpf.top_layers]]
+@inline get_bottom_layers(dpf::DepolField, layer) = @view state(layer)[CartesianIndices(dpf.size)[:,:,end - dpf.bottom_layers +1:end]]
  
 
 @inline function Base.in(j::Integer, dpf::DepolField)
@@ -82,7 +85,7 @@ Get the total Depolarisation (sum of all boundary layer spins scaled by zfunc)
 @inline function get_dpf(dpf, g)
     ll = dpf.top_layers
     rl = dpf.bottom_layers
-    if length(size(g[1])) == 2
+    if length(size(g)) == 2
         return 
     else # 3Dim
 
@@ -101,14 +104,18 @@ Get the total Depolarisation (sum of all boundary layer spins scaled by zfunc)
     end
 end
 
-@inline function init!(dpf::DepolField, g)
-    dpf.dpf[] = get_dpf(dpf, g)
+@inline function init!(dpf::DepolField, g::AbstractIsingGraph)
+    return init!(dpf, boundlayer(dpf, g))
+end
+
+@inline function init!(dpf::DepolField, layer::AbstractIsingLayer)
+    dpf.dpf[] = get_dpf(dpf, layer)
     return dpf
 end
 
-@inline function calculate(::ΔH, dpf::DepolField, model::S, proposal) where {S <: AbstractIsingGraph}
+@inline function _calculate(::ΔH, dpf::DepolField, layer::AbstractIsingLayer, proposal)
     j = at_idx(proposal)
-    T = eltype(model)
+    T = eltype(layer)
     ΔM = delta(proposal)
     D = dpf.dpf[]/dpf.surface_NxNy
     M = dpf.M[]
@@ -121,7 +128,7 @@ end
     return -(D * ΔM + M * ΔD + ΔD * ΔM) / c
 end
 
-@inline function update!(::Metropolis, dpf::DepolField, model, proposal)
+@inline function _update!(::Metropolis, dpf::DepolField, layer::AbstractIsingLayer, proposal)
     if isaccepted(proposal)
         j = at_idx(proposal)
         if j ∈ dpf

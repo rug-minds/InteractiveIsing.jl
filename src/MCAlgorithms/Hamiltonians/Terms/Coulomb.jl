@@ -44,7 +44,8 @@ struct CoulombInternal{T,PxyT,IPxyT,N} <: InternalImplementation
     recalc_tracker::Base.RefValue{Int} # Counter to track when to recalculate potential (for external coupling)
 end
 
-struct CoulombHamiltonian{P,I} <: HamiltonianTerm
+struct CoulombHamiltonian{P,I} <: LayerTerm
+    layer::Int
     parameters::P
     internal::I
 end
@@ -52,6 +53,7 @@ end
 Base.size(c::CoulombHamiltonian) = c.size
 
 @inline function CoulombHamiltonian(;
+    layer = 1,
     scaling = 1.f0,
     screening = Inf32,
     screen_len_top = screening,
@@ -70,13 +72,13 @@ Base.size(c::CoulombHamiltonian) = c.size
     internal = InternalPlan((; screen_len_top, screen_len_bot, recalc)) do plan, g
         config = plan.values
         T = eltype(g)
-        Nx, Ny, Nz_dip = size(g[1])
+        Nx, Ny, Nz_dip = size(g)
         Nz = Nz_dip + 1
         Nxh = Nx ÷ 2 + 1
 
         charge_size = (Nx, Ny, Nz)
         spectral_size = (Nxh, Ny, Nz)
-        constants = lattice_constants(top(g[1]))
+        constants = lattice_constants(top(g))
 
         ρ = zeros(T, charge_size)
         ρhat = zeros(Complex{T}, spectral_size)
@@ -105,12 +107,15 @@ Base.size(c::CoulombHamiltonian) = c.size
             Ref{Int}(1),                                  # recalc_tracker
         )
     end
-    return CoulombHamiltonian(params, internal)
+    return CoulombHamiltonian(Int(layer), params, internal)
 end
+
+@inline CoulombHamiltonian(layer::Integer; kwargs...) = CoulombHamiltonian(; layer, kwargs...)
 
 @inline function CoulombHamiltonian(
     g::AbstractIsingGraph,
     scaling = 1.f0;
+    layer = 1,
     screening = Inf32,
     screen_len_top = screening,
     screen_len_bot = screening,
@@ -118,6 +123,7 @@ end
 )
     h = instantiate(
         CoulombHamiltonian(;
+            layer,
             scaling,
             screening,
             screen_len_top,
@@ -133,19 +139,22 @@ function instantiate(c::CoulombHamiltonian, g::AbstractIsingGraph)
     # `scaling` is stored here as the raw user parameter. Charge conversion is
     # applied later as `c.scaling[] / c.az`, so re-instantiation must rebuild
     # buffers for the new lattice but must not renormalize `scaling` itself.
+    layer = boundlayer(c, g)
     h = CoulombHamiltonian(
-        instantiate(parameters(c), g),
-        instantiate(internal(c), g),
+        layeridx(c),
+        instantiate(parameters(c), layer),
+        instantiate(internal(c), layer),
     )
-    return init!(h, g)
+    return init!(h, layer)
 end
 
 function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
+    return init!(c, boundlayer(c, g))
+end
+
+function init!(c::CoulombHamiltonian, layer::AbstractIsingLayer)
     ρ    = c.ρ
-    spins = graphstate(g)
-    layer1 = g[1]
-    layer_idxs = graphidxs(layer1)
-    linear_idxs = LinearIndices(layer1)
+    spins = graphstate(layer)
 
     Nx, Ny, Nz = size(ρ)
     Nz_dip = Nz - 1
@@ -158,7 +167,7 @@ function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
     # accumulate bound charges from dipoles
     @inbounds for z in 1:Nz_dip
         @inbounds for j in 1:Ny, i in 1:Nx
-            v = spins[layer_idxs[linear_idxs[i, j, z]]]
+            v = spins[i, j, z]
             v = v * scaling # Scaling factor dipole to charge
             ρ[i,j,z]   -= v
             ρ[i,j,z+1] += v
@@ -389,7 +398,7 @@ function recalc!(c::CoulombHamiltonian)
 end
 
 # function ΔH(c::CoulombHamiltonian{T,N}, params, proposal) where {T,N}
-@inline function calculate(::ΔH, c::CoulombHamiltonian, model::S, proposal) where {S <: AbstractIsingGraph}
+@inline function _calculate(::ΔH, c::CoulombHamiltonian, layer::AbstractIsingLayer, proposal)
     T = eltype(c.ρ)
     lattice_size = size(c)
     spin_idx = at_idx(proposal)
@@ -413,7 +422,7 @@ end
     return ΔE_below + ΔE_above + ΔE_self
 end
 
-@inline function calculate(::d_iH, c::CoulombHamiltonian, model::S, s_idx) where {S <: AbstractIsingGraph}
+@inline function _calculate(::d_iH, c::CoulombHamiltonian, layer::AbstractIsingLayer, s_idx)
     lattice_size = size(c)
     charge_coord_below = idxToCoord(s_idx, lattice_size)
     charge_coord_above = (charge_coord_below[1], charge_coord_below[2], charge_coord_below[3] + 1)
@@ -423,7 +432,7 @@ end
     return (c.scaling[] / c.az) * (c.u[charge_coord_above...] - c.u[charge_coord_below...])
 end
 
-update!(::Metropolis, c::CoulombHamiltonian, model::AbstractIsingGraph, proposal::FP) where {FP <: FlipProposal} = begin
+_update!(::Metropolis, c::CoulombHamiltonian, layer::AbstractIsingLayer, proposal::FP) where {FP <: FlipProposal} = begin
     if isaccepted(proposal)
         # 和 ΔH 一样，用自旋所在的 dipole 坐标推两层电荷平面
         spin_idx = at_idx(proposal)

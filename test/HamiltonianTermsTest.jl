@@ -5,6 +5,36 @@ using SparseArrays
 
 struct MissingFillArray{T,N} <: AbstractArray{T,N} end
 
+struct TemplateLayerHookTerm{P} <: InteractiveIsing.LayerTerm
+    layer::Int
+    parameters::P
+end
+
+function TemplateLayerHookTerm(; layer = 1, c = nothing)
+    params = InteractiveIsing.Parameters(
+        InteractiveIsing.parameter(;
+            c,
+            type = Number,
+            default = 1,
+            ensure = InteractiveIsing.ensure_isinggraph_eltype,
+        ),
+    )
+    return TemplateLayerHookTerm(Int(layer), params)
+end
+
+InteractiveIsing._calculate(::InteractiveIsing.d_iH, term::TemplateLayerHookTerm, layer, local_idx) =
+    term.c * local_idx
+
+InteractiveIsing._calculate(::InteractiveIsing.ΔH, term::TemplateLayerHookTerm, layer, proposal) =
+    term.c * getfield(proposal, :at_idx)
+
+struct DirectCalculateLayerTerm <: InteractiveIsing.LayerTerm
+    layer::Int
+end
+
+InteractiveIsing.calculate(::InteractiveIsing.d_iH, ::DirectCalculateLayerTerm, model::InteractiveIsing.AbstractIsingGraph, idx::Integer) =
+    eltype(model)(99)
+
 @testset "Hamiltonian Term Field Access" begin
     g = IsingGraph(2, 2, Continuous(); precision = Float32)
     hts = g.hamiltonian
@@ -80,6 +110,100 @@ end
 
     @test_throws DimensionMismatch IsingGraph(2, 2, Continuous(), Ising(b = [1, 2]); precision = Float32)
     @test_throws ArgumentError IsingGraph(2, 2, Continuous(), Ising(b = MissingFillArray); precision = Float32)
+end
+
+@testset "LayerTerm Hook Semantics" begin
+    layer1 = Layer(2, Continuous(), StateSet(-1, 1); periodic = false)
+    layer2 = Layer(3, Continuous(), StateSet(-1, 1); periodic = false)
+    g = IsingGraph(layer1, layer2, TemplateLayerHookTerm(layer = 2, c = 2); precision = Float64)
+    hterm = g.hamiltonian
+
+    @test InteractiveIsing.layeridx(hterm) == 2
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, 1) == 0.0
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, 4) == 4.0
+
+    outside = FlipProposal(1, 0.0, 1.0, 1)
+    inside = FlipProposal(5, 0.0, 1.0, 2)
+    @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), hterm, g, outside) == 0.0
+    @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), hterm, g, inside) == 6.0
+
+    direct = DirectCalculateLayerTerm(2)
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), direct, g, 1) == 99.0
+end
+
+@testset "ToLayer Wrapper Semantics" begin
+    zero_adj(n) = InteractiveIsing.UndirectedAdjacency(spzeros(Float64, n, n), zeros(Float64, n))
+
+    layer1 = Layer(2, Continuous(), StateSet(-10, 10); periodic = false)
+    layer2 = Layer(3, Continuous(), StateSet(-10, 10); periodic = false)
+    g = IsingGraph(layer1, layer2, ToLayer(2, MagField(b = 1)); precision = Float64, adj = zero_adj(5))
+    InteractiveIsing.graphstate(g) .= Float64[1, 2, 3, 4, 5]
+
+    single = IsingGraph(Layer(3, Continuous(), StateSet(-10, 10); periodic = false), MagField(b = 1); precision = Float64, adj = zero_adj(3))
+    InteractiveIsing.graphstate(single) .= Float64[3, 4, 5]
+
+    outside = FlipProposal(1, 1.0, 7.0, 1)
+    inside = FlipProposal(4, 4.0, 8.0, 2)
+    local_inside = FlipProposal(2, 4.0, 8.0, 1)
+
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), g.hamiltonian, g, 1) == 0.0
+    @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), g.hamiltonian, g, outside) == 0.0
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), g.hamiltonian, g, 4) ≈
+          InteractiveIsing.calculate(InteractiveIsing.d_iH(), single.hamiltonian, single, 2)
+    @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), g.hamiltonian, g, inside) ≈
+          InteractiveIsing.calculate(InteractiveIsing.ΔH(), single.hamiltonian, single, local_inside)
+
+    rows = [4, 1, 3]
+    cols = [3, 3, 1]
+    vals = Float64[2, 10, 10]
+    global_adj = InteractiveIsing.UndirectedAdjacency(sparse(rows, cols, vals, 4, 4), zeros(Float64, 4))
+    bilinear_graph = IsingGraph(
+        Layer(2, Continuous(), StateSet(-10, 10); periodic = false),
+        Layer(2, Continuous(), StateSet(-10, 10); periodic = false),
+        ToLayer(2, Bilinear());
+        precision = Float64,
+        adj = global_adj,
+    )
+    InteractiveIsing.graphstate(bilinear_graph) .= Float64[1, 1, 3, 5]
+    @test InteractiveIsing.calculate(
+        InteractiveIsing.ΔH(),
+        bilinear_graph.hamiltonian,
+        bilinear_graph,
+        FlipProposal(3, 3.0, 4.0, 2),
+    ) ≈ -10.0
+
+    wrapped_ising = IsingGraph(
+        Layer(2, Continuous(), StateSet(-10, 10); periodic = false),
+        Layer(2, Continuous(), StateSet(-10, 10); periodic = false),
+        ToLayer(2, Ising(c = ConstVal(0.0), b = 0.5));
+        precision = Float64,
+        adj = zero_adj(4),
+    )
+    InteractiveIsing.graphstate(wrapped_ising) .= Float64[1, 2, 3, 4]
+    @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), wrapped_ising.hamiltonian, wrapped_ising, FlipProposal(1, 1.0, 7.0, 1)) == 0.0
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), wrapped_ising.hamiltonian, wrapped_ising, 4) ≈ -0.5
+
+    mixed = IsingGraph(
+        Layer(2, Continuous(), StateSet(-10, 10); periodic = false),
+        Layer(2, Continuous(), StateSet(-10, 10); periodic = false),
+        MagField(b = 1) + ToLayer(2, MagField(b = 2));
+        precision = Float64,
+        adj = zero_adj(4),
+    )
+    InteractiveIsing.graphstate(mixed) .= Float64[1, 2, 3, 4]
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), mixed.hamiltonian, mixed, 1) ≈ -1.0
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), mixed.hamiltonian, mixed, 4) ≈ -3.0
+
+    lookup_h = IsingGraph(
+        Layer(2, Continuous(), StateSet(-10, 10); periodic = false),
+        Layer(3, Continuous(), StateSet(-10, 10); periodic = false),
+        MagField(b = 1) + ToLayer(2, Ising(c = ConstVal(0.0), b = 0.5));
+        precision = Float64,
+        adj = zero_adj(5),
+    )
+    found = InteractiveIsing.gethamiltonian(lookup_h.hamiltonian, InteractiveIsing.MagField, 2)
+    @test found isa InteractiveIsing.MagField
+    @test length(found.b) == length(InteractiveIsing.state(lookup_h[2]))
 end
 
 @testset "Hamiltonian Display" begin

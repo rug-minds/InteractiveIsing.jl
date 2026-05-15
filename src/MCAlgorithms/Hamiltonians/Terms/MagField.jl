@@ -83,18 +83,18 @@ function MagField(; b = nothing, c = nothing)
     return MagField(params)
 end
 
-@inline function calculate(::H, hterm::MagField, model::S) where {S <: AbstractIsingGraph}
+@inline function calculate(::H, hterm::MagField, model)
     s = @inline graphstate(model)
     return -hterm.c * dot(hterm.b, s)
 end
 
-@inline function calculate(::ΔH, hterm::MagField, model::S, proposal) where {S <: AbstractIsingGraph}
+@inline function calculate(::ΔH, hterm::MagField, model, proposal)
     j = at_idx(proposal)
     spins = @inline graphstate(model)
     return -hterm.c * hterm.b[j] * (to_val(proposal) - spins[j])
 end
 
-@inline function calculate(::d_iH, hterm::MagField, model::S, s_idx) where {S <: AbstractIsingGraph}
+@inline function calculate(::d_iH, hterm::MagField, model, s_idx)
     return -hterm.c * hterm.b[s_idx]
 end
 
