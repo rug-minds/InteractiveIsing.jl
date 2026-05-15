@@ -17,6 +17,7 @@ using Random
 
 GLMakie.activate!()
 
+const CHECKERBOARD_XOR_WINDOWS = IsingLearning.InteractiveIsing.Windows
 const CHECKERBOARD_XOR_DEFAULT_GRAPH = normpath(joinpath(
     @__DIR__,
     "..",
@@ -203,7 +204,7 @@ function checkerboard_case_status(graph, a::Bool, b::Bool)
 end
 
 function checkerboard_restart_process!(graph, dynamics, a::Bool, b::Bool)
-    Processes.close(graph)
+    CHECKERBOARD_XOR_WINDOWS._request_graph_process_close!(graph)
     checkerboard_apply_case!(graph, a, b)
     checkerboard_repair_discrete_state!(graph)
     return II.createProcess(graph, dynamics)
@@ -282,7 +283,7 @@ function checkerboard_xor_interactive()
         return nothing
     end
     onclose!(host) do _
-        Processes.close(graph)
+        CHECKERBOARD_XOR_WINDOWS._request_graph_process_close!(graph)
     end
 
     return (; graph, host, panel, process = process_ref, bit_a, bit_b)

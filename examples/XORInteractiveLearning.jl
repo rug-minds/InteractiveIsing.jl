@@ -44,6 +44,7 @@ using Printf
 
 GLMakie.activate!()
 
+const XOR_LIVE_WINDOWS = IsingLearning.InteractiveIsing.Windows
 const LIVE_EVAL_EVERY = parse(Int, get(ENV, "ISING_XOR_LIVE_EVAL_EVERY", "1"))
 const LIVE_EPOCHS_PER_TICK = parse(Int, get(ENV, "ISING_XOR_LIVE_EPOCHS_PER_TICK", "1"))
 const LIVE_DISPLAY_STEPSIZE = parse(FT, get(ENV, "ISING_XOR_LIVE_DISPLAY_STEPSIZE", string(STEPSIZE)))
@@ -150,8 +151,21 @@ function live_output_status(graph, a::Bool, b::Bool)
     )
 end
 
+function request_live_graph_process_close!(graph)
+    XOR_LIVE_WINDOWS._request_graph_process_close!(graph)
+    return nothing
+end
+
+function request_live_trainer_close!(trainer)
+    for worker in trainer.workers
+        XOR_LIVE_WINDOWS._request_process_close!(worker)
+    end
+    XOR_LIVE_WINDOWS._request_process_close!(trainer.validation_worker)
+    return nothing
+end
+
 function restart_live_process!(graph, dynamics, a::Bool, b::Bool)
-    Processes.close(graph)
+    request_live_graph_process_close!(graph)
     apply_xor_case_zero!(graph, a, b)
     return II.createProcess(graph, dynamics)
 end
@@ -217,41 +231,49 @@ function learning_status(state)
 end
 
 function start_learning_loop!(state)
-    return @async begin
-        while state.open[]
-            if !state.learning[]
-                sleep(0.05)
-                continue
-            end
+    return errormonitor(@async begin
+        try
+            while state.open[]
+                if !state.learning[]
+                    sleep(0.05)
+                    continue
+                end
 
-            grad_metrics = (; grad_norm = zero(FT), response_norm = zero(FT))
-            for _ in 1:LIVE_EPOCHS_PER_TICK
-                state.epoch[] += 1
-                grad_metrics = train_epoch!(
-                    state.trainer,
-                    state.x,
-                    state.y,
-                    state.batch_gradient,
-                    state.epoch[],
-                )
-            end
+                grad_metrics = (; grad_norm = zero(FT), response_norm = zero(FT))
+                for _ in 1:LIVE_EPOCHS_PER_TICK
+                    state.open[] || break
+                    state.epoch[] += 1
+                    grad_metrics = train_epoch!(
+                        state.trainer,
+                        state.x,
+                        state.y,
+                        state.batch_gradient,
+                        state.epoch[],
+                    )
+                end
 
-            if state.epoch[] == 1 || state.epoch[] % LIVE_EVAL_EVERY == 0
-                metrics = evaluate_xor!(
-                    state.trainer,
-                    state.x,
-                    state.y;
-                    seed_offset = BASE_SEED + EVAL_SEED_OFFSET,
-                )
-                push_live_metric!(
-                    state,
-                    live_metric_row(state.epoch[], metrics, grad_metrics, state.trainer, state.initial_params),
-                )
-            end
+                state.open[] || break
+                if state.epoch[] == 1 || state.epoch[] % LIVE_EVAL_EVERY == 0
+                    metrics = evaluate_xor!(
+                        state.trainer,
+                        state.x,
+                        state.y;
+                        seed_offset = BASE_SEED + EVAL_SEED_OFFSET,
+                    )
+                    state.open[] || break
+                    push_live_metric!(
+                        state,
+                        live_metric_row(state.epoch[], metrics, grad_metrics, state.trainer, state.initial_params),
+                    )
+                end
 
-            yield()
+                yield()
+            end
+        catch err
+            state.open[] || return nothing
+            rethrow()
         end
-    end
+    end)
 end
 
 function xor_interactive_learning()
@@ -280,7 +302,7 @@ function xor_interactive_learning()
         best_epoch = Ref(0),
         best_params = Ref(deepcopy(trainer.params)),
         warmstarted = Ref(warmstarted),
-        open = Observable(true),
+        open = Ref(true),
         lock = ReentrantLock(),
         epochs = FT[],
         mses = FT[],
@@ -357,6 +379,7 @@ function xor_interactive_learning()
     learning_task = start_learning_loop!(state)
 
     function set_case!(a::Bool, b::Bool)
+        state.open[] || return nothing
         bit_a[] = a
         bit_b[] = b
         process_ref[] = restart_live_process!(graph, display_dynamics, a, b)
@@ -365,15 +388,19 @@ function xor_interactive_learning()
     end
 
     register!(host, on(button_a.clicks) do _
+        state.open[] || return nothing
         set_case!(!bit_a[], bit_b[])
     end)
     register!(host, on(button_b.clicks) do _
+        state.open[] || return nothing
         set_case!(bit_a[], !bit_b[])
     end)
     register!(host, on(learning_button.clicks) do _
+        state.open[] || return nothing
         state.learning[] = !state.learning[]
     end)
     register!(host, on(restore_button.clicks) do _
+        state.open[] || return nothing
         state.learning[] = false
         lock(state.lock) do
             trainer.params = deepcopy(state.best_params[])
@@ -387,12 +414,11 @@ function xor_interactive_learning()
         status[] = live_output_status(graph, bit_a[], bit_b[])
         return nothing
     end
-    register!(host, on(host.open) do isopen
-        isopen && return
+    onclose!(host) do _
         state.open[] = false
-        Processes.close(graph)
-        IsingLearning.close_trainer!(trainer)
-    end)
+        request_live_graph_process_close!(graph)
+        request_live_trainer_close!(trainer)
+    end
 
     return (; graph, host, layer_panel, mse_panel, process = process_ref, trainer, learning_task, state)
 end
