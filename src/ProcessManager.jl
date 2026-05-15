@@ -93,7 +93,7 @@ Rebuild the worker context through the normal process init pipeline and return
 the slot. For `Process` workers this delegates to `makecontext!`.
 """
 function reinitworker!(slot::WorkerSlot{<:Process}, inputs_overrides...; kwargs...)
-    slot.worker.algo = init(getalgo(slot.worker), inputs_overrides...; lifetime = lifetime(slot.worker))
+    context(slot.worker, context(init(getalgo(slot.worker), inputs_overrides...; lifetime = lifetime(slot.worker))))
     return slot
 end
 
@@ -163,6 +163,22 @@ function _precompile_processmanager!(::Type{M}, ::Type{Slot}, ::Type{Job}) where
 end
 
 function schedule_processmanager_precompile!(manager::ProcessManager)
+    _is_generating_package_output() && return nothing
+    isempty(slots(manager)) && return nothing
+
+    manager_type = typeof(manager)
+    slot_type = _first_slot_type(slots(manager))
+    job_type = _slot_job_type(first(slots(manager)))
+    signature = (manager_type, slot_type, job_type)
+
+    should_schedule = lock(_PROCESSMANAGER_PRECOMPILE_LOCK) do
+        if !(signature in _PROCESSMANAGER_PRECOMPILE_TYPES)
+            push!(_PROCESSMANAGER_PRECOMPILE_TYPES, signature)
+            return true
+        end
+        return false
+    end
+    should_schedule && Threads.@spawn _precompile_processmanager!(manager_type, slot_type, job_type)
     return nothing
 end
 
