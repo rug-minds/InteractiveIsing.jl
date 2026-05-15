@@ -5,10 +5,15 @@ This page covers the normal runtime flow: create a `Process`, run it, wait for i
 ## Create a Process
 
 ```julia
-p = Process(algo, Input(...), Override(...); repeats = 1_000)
+p = Process(algo, Init(...), Override(...); repeats = 1_000)
 ```
 
-`Process(...)` constructs the runtime context immediately, applying inputs, running `init`, and then applying overrides.
+`Process(...)` resolves the loop algorithm when needed, runs the lifecycle
+`init` path, and stores the algorithm plus its current context on the process.
+
+Persistent context is built from `Init(...)`, `Override(...)`, `@state`, routes,
+shares, and managed state. Runtime `@input` values are not stored at
+construction time.
 
 ## Run and Resume
 
@@ -16,7 +21,32 @@ p = Process(algo, Input(...), Override(...); repeats = 1_000)
 run(p)
 ```
 
-`run(p)` starts the process loop task. If the process was paused, `run(p)` resumes it.
+`run(p)` starts the process loop task. If the process was paused, `run(p)`
+resumes the suspended runtime context; new runtime inputs, init specs, and
+lifetime changes are rejected during resume.
+
+If the loop algorithm declares runtime `@input` values, pass them as run
+keywords:
+
+```julia
+run(p; temperature = 2.0, sweep = 10)
+```
+
+The keywords are converted to a `NamedTuple`, validated against the algorithm's
+runtime input declarations, and merged into `:_input` only for that loop run.
+`Process` stores its current runtime context, so `context(p)` may include
+`:_input` after a run. This is what makes pause/resume a process-level facility.
+
+Initialized loop algorithms can also be run directly:
+
+```julia
+la = init(resolve(algo), Init(MyAlgo; buffer = Float64[]))
+la = run(la; temperature = 2.0)
+```
+
+The returned loop algorithm contains the next persistent context. Use the
+returned value; runtime inputs are stripped before the context is stored back
+on the returned algorithm.
 
 ## Lifetime
 
@@ -35,7 +65,8 @@ For selector syntax used in `Until`, see [Vars (`Var` Selectors)](@ref vars_user
 - `pause(p)`: stop loop while keeping resumable state.
 - `run(p)`: start a new task or resume after pause.
 - `close(p)`: stop the process and collect the final task result into the stored process context.
-- `reinit(p)`: pause, rebuild context through the init pipeline, and run again.
+- `reinit(p)`: compatibility helper that pauses, reruns lifecycle `init`, and runs again.
+- `partialinit(la, specs...)`: rebuild only the targeted algorithms or states on an initialized loop algorithm.
 
 ## Waiting and Fetching
 
@@ -46,7 +77,8 @@ In practice:
 
 - use `wait(p)` when you just want to block until completion,
 - use `fetch(p)` when you want the task's return value,
-- use `getcontext(p)` when you want the process context in the most convenient form for inspection.
+- use `context(p)` for the stored persistent process context,
+- use `getcontext(p)` when you want that context with the process injected into globals.
 
 ## Status Helpers
 
@@ -58,15 +90,19 @@ In practice:
 ## Inline Process
 
 Use `InlineProcess` when you want synchronous execution without a separate process task.
-It accepts the same positional `Input(...)` and `Override(...)` arguments as `Process(...)`:
+It accepts the same positional `Init(...)`/`Input(...)` and `Override(...)`
+arguments as `Process(...)`:
 
 ```julia
-ip = InlineProcess(algo, Input(...), Override(...); repeats = 10_000)
+ip = InlineProcess(algo, Init(...), Override(...); repeats = 10_000)
 run(ip)
 ```
 
 `InlineProcess` also accepts `lifetime = 10_000` and converts it to a repeat
 count. For `Process`, use `repeats = 10_000` or `lifetime = Repeat(10_000)`.
+Unlike `Process`, `InlineProcess` stores a context that can be absorbed back
+into an algorithm, so runtime-only fields such as `:_input` and `process` are
+stripped after the loop.
 
 If you need buffered external updates to context variables, see
 [Interactive Contexts](@ref interactive_user).
