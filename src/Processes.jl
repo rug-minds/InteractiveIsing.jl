@@ -1,7 +1,7 @@
 module Processes
     const modulefolder = @__DIR__
 
-    export getcontext, Process, start, quit
+    export getcontext, context, Process, start, quit
 
     using UUIDs, Preferences, JLD2, MacroTools, StaticArrays, PrecompileTools
 
@@ -42,7 +42,6 @@ module Processes
     include("Context/Context.jl")
 
     include("Lifetime.jl")
-    include("TaskDatas.jl")
     include("InputInterface/InputInterface.jl")
     include("Init.jl")
     include("ConstructorCommon.jl")
@@ -73,9 +72,10 @@ module Processes
     # include("ProcessAlgorithms.jl")
 
     include("LoopAlgorithms/LoopAlgorithms.jl")
+    include("ContextAnalyzer/ContextAnalyzer.jl")
+    include("Inspection/Inspection.jl")
     include("Threaded/Threaded.jl")
     include("LoopAlgorithms/Edit/Edit.jl")
-    include("Worker/Worker.jl")
     include("Packaging/Packaging.jl")
     include("Loops.jl")
     include("Trackers/Trackers.jl")
@@ -84,7 +84,9 @@ module Processes
     include("Saving.jl")
 
     include("GeneratedCode/GeneratedCode.jl")
-    include("Precompile.jl")
+    # Precompile workload is disabled while the LoopAlgorithm lifecycle is being
+    # reshaped; re-enable after the new init/runtime-input paths settle.
+    # include("Precompile.jl")
 
     # @setup_workload begin
     #     @compile_workload begin
