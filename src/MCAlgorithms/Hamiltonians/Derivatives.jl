@@ -1,10 +1,10 @@
 abstract type BufferMode end
 struct OverwriteBuffer <: BufferMode end
 struct AccumulateBuffer{Sign} <: BufferMode end
-AccummulateBuffer() = AccumulateBuffer{+}()
+AccumulateBuffer() = AccumulateBuffer{+}()
 const SubtractBuffer = AccumulateBuffer{-}
-sign(::AccumulateBuffer{+}) = 1
-sign(::AccumulateBuffer{-}) = -1
+Base.sign(::AccumulateBuffer{+}) = 1
+Base.sign(::AccumulateBuffer{-}) = -1
 
 function parameter_derivative(hterm::HamiltonianTerm, model::S; kwargs...) where {S <: AbstractIsingGraph}
     return parameter_derivative(hterm, graphstate(model); kwargs...)
