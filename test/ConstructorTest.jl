@@ -51,3 +51,16 @@ end
     )
     @test all(x -> isapprox(abs(x), 1.0f0; atol = 1f-5), InteractiveIsing.graphstate(quartic_double_well))
 end
+
+@testset "Constructor errors" begin
+    err = try
+        IsingGraph(2, 2, Continuous(), Quadratic(), Quartic(); precision = Float32)
+        nothing
+    catch e
+        e
+    end
+
+    @test err isa ArgumentError
+    @test occursin("single Hamiltonian argument", sprint(showerror, err))
+    @test occursin("accidental comma", sprint(showerror, err))
+end

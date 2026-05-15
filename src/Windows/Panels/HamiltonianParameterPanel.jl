@@ -216,6 +216,8 @@ end
 function _draw_value!(handle, entry::HamiltonianDisplayEntry, cell, val, layer)
     if val isa LayerDisplayValue
         return _draw_layer_display_value!(handle, entry, cell, val, layer)
+    elseif val isa LiveLayerDisplayValue
+        return _draw_live_layer_display_value!(handle, entry, cell, val, layer)
     elseif _is_state_sized(val, handle.panel.graph)
         return _draw_layer_vector!(handle, entry, cell, val, layer)
     else
@@ -238,7 +240,7 @@ function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,2})
         layer;
         colormap = entry.colormap,
         colorrange = _entry_colorrange(entry, _layer_state_values(layer)),
-        use_data_colorrange = entry.colorrange === :data,
+        use_data_colorrange = _uses_data_colorrange(entry),
     )
 end
 
@@ -248,7 +250,7 @@ function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,3})
     xs, ys, zs = _coordinates_3d!(handle, size(layer))
     obs = handle[:display_obs] = Observable(_cast_layer_state_vector(layer))
     handle[:display_is_3d] = true
-    handle[:display_use_data_colorrange] = entry.colorrange === :data
+    handle[:display_use_data_colorrange] = _uses_data_colorrange(entry)
     handle[:display_notify_only] = true
     plot = handle[:display_plot] = meshscatter!(
         ax,
@@ -272,7 +274,7 @@ function _draw_layer_vector!(handle, entry, cell, val, layer)
         layer;
         colormap = entry.colormap,
         colorrange = _entry_colorrange(entry, shaped),
-        use_data_colorrange = entry.colorrange === :data,
+        use_data_colorrange = _uses_data_colorrange(entry),
     )
 end
 
@@ -285,8 +287,23 @@ function _draw_layer_display_value!(handle, entry, cell, val::LayerDisplayValue,
         layer;
         colormap = entry.colormap,
         colorrange = _entry_colorrange(entry, shaped),
-        use_data_colorrange = entry.colorrange === :data,
+        use_data_colorrange = _uses_data_colorrange(entry),
     )
+end
+
+function _draw_live_layer_display_value!(handle, entry, cell, val::LiveLayerDisplayValue, layer)
+    shaped = _layer_values(val, layer)
+    _draw_layer_array!(
+        handle,
+        cell,
+        shaped,
+        layer;
+        colormap = entry.colormap,
+        colorrange = _entry_colorrange(entry, shaped),
+        use_data_colorrange = _uses_data_colorrange(entry),
+    )
+    handle[:display_notify_only] = true
+    return handle
 end
 
 function _draw_layer_array!(
@@ -351,6 +368,10 @@ function _refresh_hamiltonian_display!(handle)
     haskey(handle, :display_entry) || return nothing
 
     if get(handle.data, :display_notify_only, false)
+        vals = _entry_layer_values(handle[:display_entry], handle)
+        if get(handle.data, :display_use_data_colorrange, false) && haskey(handle, :display_plot) && !isnothing(vals)
+            handle[:display_plot].colorrange[] = _entry_colorrange(handle[:display_entry], vals)
+        end
         notify(handle[:display_obs])
         return nothing
     end
@@ -359,7 +380,7 @@ function _refresh_hamiltonian_display!(handle)
     isnothing(vals) && return nothing
     handle[:display_obs][] = handle[:display_is_3d] ? vec(vals) : vals
     if get(handle.data, :display_use_data_colorrange, false) && haskey(handle, :display_plot)
-        handle[:display_plot].colorrange[] = _array_colorrange(vals)
+        handle[:display_plot].colorrange[] = _entry_colorrange(handle[:display_entry], vals)
     end
     return nothing
 end
@@ -372,6 +393,7 @@ end
 
 function _entry_layer_values(entry::HamiltonianDisplayEntry, handle, layer)
     entry.source === :graph && return _layer_state_values(layer)
+    entry.value isa LiveLayerDisplayValue && return _layer_values(entry.value, layer)
     entry.value isa LayerDisplayValue && return _layer_values(entry.value, layer)
     _is_state_sized(entry.value, handle.panel.graph) || return nothing
     return _layer_values(entry.value, layer)
@@ -385,6 +407,7 @@ function _layer_values(val, layer)
 end
 
 _layer_values(val::LayerDisplayValue, layer) = val.f(layer)
+_layer_values(val::LiveLayerDisplayValue, layer) = val.f(layer)
 
 function _set_display_colorrange!(plot, obs, layer, colorrange)
     if isnothing(colorrange)
@@ -407,8 +430,22 @@ function _array_colorrange(vals)
     return (lo, hi)
 end
 
+function _symmetric_array_colorrange(vals)
+    finite_vals = filter(isfinite, vec(vals))
+    isempty(finite_vals) && return (-1.0, 1.0)
+
+    hi = maximum(abs, finite_vals)
+    hi == 0 && return (-1.0, 1.0)
+    return (-hi, hi)
+end
+
+_uses_data_colorrange(entry::HamiltonianDisplayEntry) =
+    entry.colorrange === :data || entry.colorrange === :symmetric_data
+
 _entry_colorrange(entry::HamiltonianDisplayEntry, vals) =
-    entry.colorrange === :data ? _array_colorrange(vals) : nothing
+    entry.colorrange === :data ? _array_colorrange(vals) :
+    entry.colorrange === :symmetric_data ? _symmetric_array_colorrange(vals) :
+    nothing
 
 function toimage!(cell, panel::HamiltonianParameterPanel, handle::PanelHandle; kwargs...)
     entries = handle[:entries]

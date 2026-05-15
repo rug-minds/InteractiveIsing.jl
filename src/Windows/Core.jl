@@ -109,7 +109,7 @@ function _display_host!(host::WindowHost, title; focus = true)
     host.open = events(host.figure).window_open
     register!(host, on(events(host.figure.scene).keyboardbutton) do _
         if ispressed(host.figure, (Keyboard.left_super, Keyboard.w)) || ispressed(host.figure, (Keyboard.left_control, Keyboard.w))
-            close(host)
+            _request_deferred_window_close!(host)
         end
     end)
     _start_host_timers!(host)
@@ -134,6 +134,16 @@ function _focus_native_window!(screen)
     try
         GLFW.PollEvents()
     catch
+    end
+    return nothing
+end
+
+function _request_deferred_window_close!(host::WindowHost)
+    (host.closed || host.closing) && return nothing
+    try
+        host.open[] = false
+    catch err
+        @warn "Could not request deferred window close" exception = (err, catch_backtrace())
     end
     return nothing
 end

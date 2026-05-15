@@ -13,6 +13,17 @@ struct LayerDisplayValue
 end
 
 """
+    LiveLayerDisplayValue(f)
+
+Wrapper for a layer-local display function whose returned array is live,
+externally mutated storage. The panel observes the returned memory directly and
+uses `notify` on refresh instead of replacing the observable value.
+"""
+struct LiveLayerDisplayValue
+    f::Any
+end
+
+"""
     HamiltonianDisplaySpec(name, value; source = :parameter, origin = :owned,
                            info = "", colormap = :viridis,
                            colorrange = :layer)
@@ -23,7 +34,8 @@ interface.
 `value` can be a graph-sized vector, which is split by the selected graph
 layer, or a `LayerDisplayValue`, which is evaluated for the selected
 layer. `colorrange = :layer` uses the layer state range; `colorrange = :data`
-uses the displayed data range.
+uses the displayed data range; `colorrange = :symmetric_data` uses symmetric
+limits around zero from the displayed data.
 """
 struct HamiltonianDisplaySpec
     name::Symbol
@@ -216,16 +228,20 @@ end
 
 function hamiltonian_visualizations(term::CoulombHamiltonian, g)
     return HamiltonianDisplaySpec[
-        layer_display(
+        HamiltonianDisplaySpec(
             :u,
-            _ -> copy(term.u);
+            LiveLayerDisplayValue(_ -> term.u);
+            source = :derived,
+            origin = :internal,
             info = "Electrostatic potential u on charge planes",
             colormap = :viridis,
-            colorrange = :data,
+            colorrange = :symmetric_data,
         ),
-        layer_display(
+        HamiltonianDisplaySpec(
             COULOMB_CHARGES_NAME,
-            _ -> copy(term.ρ);
+            LiveLayerDisplayValue(_ -> term.ρ);
+            source = :derived,
+            origin = :internal,
             info = "Real charge density on charge planes",
             colormap = :viridis,
             colorrange = :data,
