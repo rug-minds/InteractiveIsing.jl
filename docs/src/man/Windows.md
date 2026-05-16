@@ -120,6 +120,70 @@ handle = panel!(host, SimulationPanel(g), (1, 1))
 `panel!` also works on a parent `PanelHandle`, which lets composite panels own
 subpanels.
 
+## Close Debugging
+
+If GLMakie close behavior regresses, use the close-debug example instead of
+changing the close path by guesswork:
+
+```julia
+include("examples/WindowCloseDebugging.jl")
+```
+
+Walk through stripped-down facility windows:
+
+```julia
+open_next!()
+```
+
+After each call, close the native window manually and record whether the REPL
+stays responsive and whether the native window disappears cleanly.
+
+For process-specific close paths, use:
+
+```julia
+open_process_debug!(:public_interface_open_then_langevin)
+open_process_debug!(:simulation_open_then_langevin)
+```
+
+If the full simulation composite reproduces but individual panels do not, use
+the focused suspect sequence:
+
+```julia
+open_next_suspect!()
+```
+
+The current suspect sequence covers only `LayerViewPanel`, `TemperaturePanel`,
+and `KineticTimePanel` combinations.
+
+Current debugging notes:
+
+- `subset_layer_only_langevin` is the smallest reported reproducer.
+- That variant does not mount a panel-owned `PolledObservable`.
+- `subset_layer_only_no_polltimer_langevin` disables the host poll timer for
+  the same reproducer neighborhood.
+- Plain Julia views for the layer state did not fix the freeze.
+- An owned display buffer with per-frame `copyto!` also did not fix the freeze.
+- `subset_layer_only_empty_on_close_langevin` did not freeze in repeated manual
+  open/close testing. The production `LayerViewPanel` now registers its live
+  plot observable as a hot observable so close cleanup swaps the stored value to
+  a zero-sized inert replacement without notifying Makie.
+
+For real example-like graph/algorithm pairs, use:
+
+```julia
+open_scenario_debug!(:example_3d_langevin_coulomb)
+```
+
+The scenario list is printed as `CLOSE_DEBUG_SCENARIOS` when the example is
+loaded. The key distinction is that the generic facility windows use a small
+toy graph, while scenario windows build the larger graph/algorithm combinations
+from the example files and then run:
+
+```julia
+host = interface(g)
+createProcess(g, algorithm)
+```
+
 ## Dynamic Context Lines
 
 `InteractiveLinesPanel` plots two dynamic containers against each other. The
@@ -252,6 +316,26 @@ The callback is scheduled asynchronously, so it does not block the GLMakie
 window close event. Built-in graph panels use this to close graph-attached
 processes by requesting that they stop without waiting in the close callback.
 
+## Hot Observables
+
+Use `register_hot_observable!` for high-frequency Makie observables whose
+stored value may point into simulation-owned memory, for example a plot
+observable containing `view(state(layer), :, :)`.
+
+```julia
+vals = view(state(layer), :, :)
+obs = Observable{typeof(vals)}(vals)
+register_hot_observable!(handle, obs)
+```
+
+On host or panel runtime shutdown, `detach_hot_observable!` replaces the stored
+observable value with `hot_observable_zero(typeof(vals))` without calling
+`notify`. The default implementation dispatches on the observable value type and
+currently handles normal arrays, full-slice `SubArray`s, and `vec(view(...))`
+reshaped arrays. This keeps the observable concretely typed while preventing
+GLMakie close teardown from reading graph memory that may have been updated by
+a process.
+
 ## Public API
 
 ```@docs
@@ -266,6 +350,9 @@ InteractiveIsing.Windows.mount!
 InteractiveIsing.Windows.register!
 InteractiveIsing.Windows.onclose!
 InteractiveIsing.Windows.register_frame!
+InteractiveIsing.Windows.register_hot_observable!
+InteractiveIsing.Windows.hot_observable_zero
+InteractiveIsing.Windows.detach_hot_observable!
 InteractiveIsing.Windows.register_polled!
 InteractiveIsing.Windows.pause!
 InteractiveIsing.Windows.resume!

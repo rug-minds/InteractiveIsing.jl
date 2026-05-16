@@ -387,6 +387,10 @@ function _coordinates_3d!(handle, vals_size)
     end
 end
 
+_layer_state_view(layer) = view(state(layer), ntuple(_ -> (:), ndims(state(layer)))...)
+_layer_state_vector_view(layer) = vec(_layer_state_view(layer))
+_layer_state_float_vector(layer) = Float64.(vec(state(layer)))
+
 function _cast_layer_state_vector(layer)
     layer_state = state(layer)
     unsafe_vector = unsafe_wrap(Vector{eltype(layer_state)}, pointer(layer_state), length(layer_state))

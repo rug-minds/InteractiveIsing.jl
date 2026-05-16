@@ -212,6 +212,12 @@ using Random
 
     @test loop_context[loop[1]].model === g
     @test loop_context[loop[2]].model === g
+    @test Processes.getoptions(loop_process) == Processes.getoptions(Processes.getalgo(loop_process))
+    @test Processes.get_shares(loop_process) == Processes.get_shares(Processes.getalgo(loop_process))
+    @test Processes.get_routes(loop_process) == Processes.get_routes(Processes.getalgo(loop_process))
+    @test Processes.getstates(loop_process) == Processes.getstates(Processes.getalgo(loop_process))
+    @test Processes.getalgos(loop_process) == Processes.getalgos(Processes.getalgo(loop_process))
+    @test keys(loop_process) == keys(Processes.getalgo(loop_process))
 
     kinetic = deepcopy(KineticMC())
     kinetic_inputs = InteractiveIsing._merge_graph_inputs(kinetic, g)

@@ -99,6 +99,45 @@ end
     @test po[] == 3
 end
 
+@testset "PTimer close and wait" begin
+    ticks = Channel{Symbol}(1)
+    timer = PTimer(_ -> put!(ticks, :tick), 0; interval = 0.01)
+    @test take!(ticks) == :tick
+    close(timer)
+    @test Processes.ispaused(timer)
+    @test wait(timer) === nothing
+    Processes.start(timer)
+    @test !Processes.ispaused(timer)
+    @test take!(ticks) == :tick
+    close(timer)
+    @test wait(timer) === nothing
+end
+
+@testset "Hot observable cleanup" begin
+    mat = rand(Float32, 3, 4)
+    mat_view = view(mat, :, :)
+    mat_obs = Observable{typeof(mat_view)}(mat_view)
+    @test Windows.hot_observable_zero(mat_obs) isa typeof(mat_view)
+    Windows.detach_hot_observable!(mat_obs)
+    @test mat_obs[] isa typeof(mat_view)
+    @test size(mat_obs[]) == (0, 0)
+    @test parent(mat_obs[]) !== mat
+
+    cube = rand(Float32, 3, 4, 5)
+    cube_vec = vec(view(cube, :, :, :))
+    vec_obs = Observable{typeof(cube_vec)}(cube_vec)
+    @test Windows.hot_observable_zero(vec_obs) isa typeof(cube_vec)
+    Windows.detach_hot_observable!(vec_obs)
+    @test vec_obs[] isa typeof(cube_vec)
+    @test length(vec_obs[]) == 0
+    @test parent(parent(vec_obs[])) !== cube
+
+    abstract_obs = Observable{AbstractVector{Float64}}([1.0, 2.0])
+    Windows.detach_hot_observable!(abstract_obs)
+    @test abstract_obs[] isa AbstractVector{Float64}
+    @test length(abstract_obs[]) == 0
+end
+
 @testset "InteractiveLinesPanel and ContextLinesPanel figure construction" begin
     ctx = InteractiveIsing.Processes.ProcessContext(
         (;
