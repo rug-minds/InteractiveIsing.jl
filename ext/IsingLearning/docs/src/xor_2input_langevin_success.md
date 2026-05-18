@@ -67,6 +67,46 @@ The `true,false` case is still the weakest and has significant variance, but
 the result is below the `0.1` MSE target and classifies all four cases
 correctly.
 
+## Simple Experiment File Check
+
+The simpler standalone file now reproduces the same result:
+
+```text
+ext/IsingLearning/experiments/simple_langevin_xor/simple_2_16_2_locallangevin.jl
+```
+
+Default run checked on 2026-05-17:
+
+```text
+architecture = 2 -> 16 -> 2
+dynamics = BlockLangevin(adjusted=false, stepsize=0.1, block_size=8)
+init_mode = zero
+T = 0.001
+β = 1.0
+lr = 0.01
+weight_decay = 0
+free/nudged = 1000/1000
+Minit = 4
+weight_seed = 13
+bias_seed = 23
+base_seed = 87300
+```
+
+It reached MSE `0.000124`, accuracy `1.0` by epoch `250`, and finished at
+MSE `0.000123`, accuracy `1.0` at epoch `2000`.
+
+The important fix was to remove the experiment-local plus/minus wiring that
+used runtime `clamping_beta` and separate hand-captured plus/minus branches.
+The file now uses the same proven shape as the working example:
+
+```text
+forward()
+nudged.algorithm()
+contrastive_gradient(free_model, plus_capture, minus_capture, β)
+```
+
+That kept the gradient collection aligned with the shared trainer path.
+
 ## What Changed Relative To Failed Langevin Runs
 
 The important differences were:
@@ -115,4 +155,3 @@ and lets the contrastive signal train a consistent input-to-output map.
   not an exact Boltzmann sampler claim.
 - The `true,false` output variance is still high enough that more validation
   repeats and seed checks are needed before calling this robust.
-

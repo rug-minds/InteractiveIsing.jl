@@ -56,6 +56,47 @@ The red window button therefore runs every `on(events(fig).window_open)` handler
 inside GLMakie's native close callback. Those handlers must not wait, close
 Makie objects, or perform process cleanup inline.
 
+## Final Working Fix
+
+The close freeze stopped after treating live plot observables as hot runtime
+resources.
+
+The failing pattern was:
+
+```julia
+obs = Observable{typeof(vals)}(vals)  # vals points into graph state
+image!(axis, obs)
+register_frame!(handle) do
+    notify(obs)
+end
+```
+
+For `LayerViewPanel`, `vals` is a view into `state(layer)` for 2D layers, or
+`vec(view(...))` for 3D layers. While the window is open, that is exactly what
+we want: it avoids per-frame allocation and lets Makie read the current graph
+state.
+
+The problem was close teardown. Even after package timers were stopped,
+GLMakie's `close(screen)` / `empty!(screen)` still walks plots and cached scene
+objects. If a plot observable still stores a view into graph-owned memory that
+has been updated by a running process, GLMakie's teardown can freeze,
+especially after repeated open/close cycles.
+
+The working rule is:
+
+1. keep the observable concretely typed while live, e.g.
+   `Observable{typeof(view(state(layer), :, :))}`;
+2. register it with `register_hot_observable!(handle, obs)`;
+3. during runtime shutdown, after frame timers stop and before GLMakie screen
+   teardown, call `detach_hot_observable!(obs)`;
+4. `detach_hot_observable!` dispatches on the observable's type parameter and
+   replaces the stored value with a zero-sized inert value of the same type;
+5. the replacement is assigned without `notify`, so close does not queue another
+   render update.
+
+This means the open window still uses fast live views, but GLMakie teardown no
+longer sees plot data pointing into graph state.
+
 ## Things Tried That Were Bad
 
 ### Example-Level `window_open` Cleanup
@@ -440,7 +481,7 @@ manual passes. Interpret failures as "LayerViewPanel plus a running graph
 process" unless a later pass shows that changing only the process algorithm
 changes the outcome.
 
-Current conclusion from these failures:
+Current conclusion:
 
 - copying the layer state into Makie-owned display buffers did not reliably
   remove the historical close freeze;
@@ -454,6 +495,9 @@ Current conclusion from these failures:
   current smallest reproducer;
 - panel-owned `PolledObservable`s are not present in the smallest current
   subset, and the latest no-poll-timer suspect pass did not completely freeze.
+- the fix that helped was not copying while live. It was keeping live views
+  during normal rendering, then detaching hot observables from graph memory with
+  same-type zero-sized replacements during close cleanup.
 
 Keep this earlier mount-order observation in mind, but do not treat it as the
 root cause by itself:

@@ -124,13 +124,14 @@ function SplitSnapshotNudgedDynamics(layer, config::LocalCheckerboardConfig, spl
         @state equilibrium_state
         @state y
         @state x
+        @state nudged_beta = beta
         @alias dynamics = plus_dynamics_algorithm
         @alias plus_capture = plus_capture
 
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
         stable_apply_input!(dynamics.model, x, config, split.search)
         checker_apply_targets!(dynamics.model, y)
-        checker_set_clamping_beta!(dynamics.model, beta)
+        checker_set_clamping_beta!(dynamics.model, nudged_beta)
         model = @repeat relaxation_steps dynamics()
         plus_capture(isinggraph = model)
     end
@@ -139,20 +140,26 @@ function SplitSnapshotNudgedDynamics(layer, config::LocalCheckerboardConfig, spl
         @state equilibrium_state
         @state y
         @state x
+        @state nudged_beta = -beta
         @alias dynamics = minus_dynamics_algorithm
         @alias minus_capture = minus_capture
 
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
         stable_apply_input!(dynamics.model, x, config, split.search)
         checker_apply_targets!(dynamics.model, y)
-        checker_set_clamping_beta!(dynamics.model, -beta)
+        checker_set_clamping_beta!(dynamics.model, nudged_beta)
         model = @repeat relaxation_steps dynamics()
         minus_capture(isinggraph = model)
     end
 
     final = @CompositeAlgorithm begin
+        @input clamping_beta = beta
         @state buffers
+        @alias plus = plus
+        @alias minus = minus
+        plus.nudged_beta = clamping_beta
         @context c1 = plus()
+        minus.nudged_beta = @transform(x -> -x, clamping_beta)
         @context c2 = minus()
     end
     return (; algorithm = final, plus, minus, plus_capture, minus_capture, dynamics = plus.dynamics)
@@ -169,11 +176,21 @@ function SplitSnapshotForwardAndNudged(layer, config::LocalCheckerboardConfig, s
     nudged = SplitSnapshotNudgedDynamics(layer, config, split)
     beta = layer.β
     final = @CompositeAlgorithm begin
+        @input clamping_beta = beta
         @state buffers
+        @alias plus = nudged.plus
+        @alias minus = nudged.minus
+        @alias plus_capture = nudged.plus_capture
+        @alias minus_capture = nudged.minus_capture
         @context c1 = forward()
-        @context c2 = nudged.algorithm()
+        plus.nudged_beta = clamping_beta
+        plus()
+        plus_capture(isinggraph = plus.dynamics.model)
+        minus.nudged_beta = @transform(x -> -x, clamping_beta)
+        minus()
+        minus_capture(isinggraph = minus.dynamics.model)
         checker_set_clamping_beta!(c1.dynamics.model, zero(beta))
-        IsingLearning.contrastive_gradient(c1.dynamics.model, c2.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers)
+        IsingLearning.contrastive_gradient(c1.dynamics.model, plus_capture.captured, minus_capture.captured, clamping_beta, buffers = buffers)
     end
     return (; algorithm = final, plus_capture = nudged.plus_capture, minus_capture = nudged.minus_capture, dynamics = forward.dynamics)
 end

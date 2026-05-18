@@ -818,13 +818,14 @@ function CheckerNudgedDynamics(layer, config::LocalCheckerboardConfig)
         @state equilibrium_state
         @state y
         @state x
+        @state nudged_beta = beta
         @alias plus_dynamics = plus_dynamics_algorithm
         @alias plus_capture = plus_capture
 
         IsingLearning.setgraph!(isinggraph = plus_dynamics.model, target = equilibrium_state)
         apply_checker_input!(plus_dynamics.model, x, config)
         checker_apply_targets!(plus_dynamics.model, y)
-        checker_set_clamping_beta!(plus_dynamics.model, beta)
+        checker_set_clamping_beta!(plus_dynamics.model, nudged_beta)
         model = @repeat relaxation_steps plus_dynamics()
         plus_capture(isinggraph = model)
     end
@@ -833,23 +834,29 @@ function CheckerNudgedDynamics(layer, config::LocalCheckerboardConfig)
         @state equilibrium_state
         @state y
         @state x
+        @state nudged_beta = -beta
         @alias minus_dynamics = minus_dynamics_algorithm
         @alias minus_capture = minus_capture
 
         IsingLearning.setgraph!(isinggraph = minus_dynamics.model, target = equilibrium_state)
         apply_checker_input!(minus_dynamics.model, x, config)
         checker_apply_targets!(minus_dynamics.model, y)
-        checker_set_clamping_beta!(minus_dynamics.model, -beta)
+        checker_set_clamping_beta!(minus_dynamics.model, nudged_beta)
         model = @repeat relaxation_steps minus_dynamics()
         minus_capture(isinggraph = model)
     end
 
     final = @CompositeAlgorithm begin
         @state buffers
+        @input clamping_beta = beta
+        @alias plus = plus
+        @alias minus = minus
+        plus.nudged_beta = clamping_beta
         @context c1 = plus()
+        minus.nudged_beta = @transform(x -> -x, clamping_beta)
         @context c2 = minus()
     end
-    return (; algorithm = final, plus_capture, minus_capture, dynamics = plus.plus_dynamics)
+    return (; algorithm = final, plus, minus, plus_capture, minus_capture, dynamics = plus.plus_dynamics)
 end
 
 function CheckerForwardAndNudged(layer, config::LocalCheckerboardConfig)
@@ -858,10 +865,20 @@ function CheckerForwardAndNudged(layer, config::LocalCheckerboardConfig)
     beta = layer.β
     final = @CompositeAlgorithm begin
         @state buffers
+        @input clamping_beta = beta
+        @alias plus = nudged.plus
+        @alias minus = nudged.minus
+        @alias plus_capture = nudged.plus_capture
+        @alias minus_capture = nudged.minus_capture
         @context c1 = forward()
-        @context c2 = nudged.algorithm()
+        plus.nudged_beta = clamping_beta
+        plus()
+        plus_capture(isinggraph = plus.plus_dynamics.model)
+        minus.nudged_beta = @transform(x -> -x, clamping_beta)
+        minus()
+        minus_capture(isinggraph = minus.minus_dynamics.model)
         checker_set_clamping_beta!(c1.free_dynamics.model, zero(beta))
-        IsingLearning.contrastive_gradient(c1.free_dynamics.model, c2.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers)
+        IsingLearning.contrastive_gradient(c1.free_dynamics.model, plus_capture.captured, minus_capture.captured, clamping_beta, buffers = buffers)
     end
     return (; algorithm = final, plus_capture = nudged.plus_capture, minus_capture = nudged.minus_capture, dynamics = forward.free_dynamics)
 end

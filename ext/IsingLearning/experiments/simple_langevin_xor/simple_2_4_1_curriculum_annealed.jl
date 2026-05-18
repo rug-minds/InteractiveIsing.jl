@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 include(joinpath(@__DIR__, "simple_2_4_1_curriculum.jl"))
 
 using IsingLearning.InteractiveIsing.Processes:
-    @Routine, @CompositeAlgorithm, @repeat, @state, @alias, @context
+    @Routine, @CompositeAlgorithm, @repeat, @state, @alias, @context, @input
 
 const Processes = II.Processes
 
@@ -138,13 +138,14 @@ function annealed_nudged_dynamics(layer, config::Analytic241Config)
         @state equilibrium_state
         @state y
         @state x
+        @state nudged_beta = beta
         @alias dynamics = dynamics_algorithm
         @alias plus_capture = plus_capture
 
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
         IsingLearning.apply_input(dynamics.model, x)
         IsingLearning.apply_targets(dynamics.model, y)
-        IsingLearning.set_clamping_beta!(dynamics.model, beta)
+        IsingLearning.set_clamping_beta!(dynamics.model, nudged_beta)
         II.temp!(dynamics.model, start_T)
         model = @repeat warm_steps dynamics()
         II.temp!(dynamics.model, stop_T)
@@ -157,13 +158,14 @@ function annealed_nudged_dynamics(layer, config::Analytic241Config)
         @state equilibrium_state
         @state y
         @state x
+        @state nudged_beta = -beta
         @alias dynamics = dynamics_algorithm
         @alias minus_capture = minus_capture
 
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
         IsingLearning.apply_input(dynamics.model, x)
         IsingLearning.apply_targets(dynamics.model, y)
-        IsingLearning.set_clamping_beta!(dynamics.model, -beta)
+        IsingLearning.set_clamping_beta!(dynamics.model, nudged_beta)
         II.temp!(dynamics.model, start_T)
         model = @repeat warm_steps dynamics()
         II.temp!(dynamics.model, stop_T)
@@ -174,10 +176,15 @@ function annealed_nudged_dynamics(layer, config::Analytic241Config)
 
     final = @CompositeAlgorithm begin
         @state buffers
+        @input clamping_beta = beta
+        @alias plus = plus
+        @alias minus = minus
+        plus.nudged_beta = clamping_beta
         @context c1 = plus()
+        minus.nudged_beta = @transform(x -> -x, clamping_beta)
         @context c2 = minus()
     end
-    return (; algorithm = final, plus_capture, minus_capture)
+    return (; algorithm = final, plus, minus, plus_capture, minus_capture)
 end
 
 """
@@ -192,14 +199,24 @@ function forward_and_annealed_nudged(layer, config::Analytic241Config)
     beta = layer.β
     final = @CompositeAlgorithm begin
         @state buffers
+        @input clamping_beta = beta
+        @alias plus = nudged.plus
+        @alias minus = nudged.minus
+        @alias plus_capture = nudged.plus_capture
+        @alias minus_capture = nudged.minus_capture
         @context c1 = forward()
-        @context c2 = nudged.algorithm()
+        plus.nudged_beta = clamping_beta
+        plus()
+        plus_capture(isinggraph = plus.dynamics.model)
+        minus.nudged_beta = @transform(x -> -x, clamping_beta)
+        minus()
+        minus_capture(isinggraph = minus.dynamics.model)
         IsingLearning.set_clamping_beta!(c1.dynamics.model, zero(beta))
         IsingLearning.contrastive_gradient(
             c1.dynamics.model,
-            c2.plus_capture.captured,
-            c2.minus_capture.captured,
-            beta,
+            plus_capture.captured,
+            minus_capture.captured,
+            clamping_beta,
             buffers = buffers,
         )
     end

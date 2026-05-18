@@ -34,13 +34,14 @@ function simple_nudged(layer, config::SimpleXorConfig)
         @state equilibrium_state
         @state y
         @state x
+        @state nudged_beta = beta
         @alias dynamics = plus_dynamics_algorithm
         @alias plus_capture = plus_capture
 
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
         IsingLearning.apply_input(dynamics.model, x)
         IsingLearning.apply_targets(dynamics.model, y)
-        IsingLearning.set_clamping_beta!(dynamics.model, beta)
+        IsingLearning.set_clamping_beta!(dynamics.model, nudged_beta)
         II.temp!(dynamics.model, Tn)
         model = @repeat relaxation_steps dynamics()
         II.temp!(dynamics.model, config.temp)
@@ -51,13 +52,14 @@ function simple_nudged(layer, config::SimpleXorConfig)
         @state equilibrium_state
         @state y
         @state x
+        @state nudged_beta = -beta
         @alias dynamics = minus_dynamics_algorithm
         @alias minus_capture = minus_capture
 
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
         IsingLearning.apply_input(dynamics.model, x)
         IsingLearning.apply_targets(dynamics.model, y)
-        IsingLearning.set_clamping_beta!(dynamics.model, -beta)
+        IsingLearning.set_clamping_beta!(dynamics.model, nudged_beta)
         II.temp!(dynamics.model, Tn)
         model = @repeat relaxation_steps dynamics()
         II.temp!(dynamics.model, config.temp)
@@ -66,10 +68,15 @@ function simple_nudged(layer, config::SimpleXorConfig)
 
     final = @CompositeAlgorithm begin
         @state buffers
+        @input clamping_beta = beta
+        @alias plus = plus
+        @alias minus = minus
+        plus.nudged_beta = clamping_beta
         @context c1 = plus()
+        minus.nudged_beta = @transform(x -> -x, clamping_beta)
         @context c2 = minus()
     end
-    return (; algorithm = final, plus_capture, minus_capture, dynamics = plus.dynamics)
+    return (; algorithm = final, plus, minus, plus_capture, minus_capture, dynamics = plus.dynamics)
 end
 
 """
