@@ -406,3 +406,82 @@ This repeated output code did not help. It made even the smaller `4x4` control
 worse in the tested settings. The likely reason is that it adds extra output
 degrees of freedom without adding a structured spatial target; the four output
 spins are still just independent scalar readouts from the edge.
+
+## Low-Beta Nudged Temperature Bump
+
+Hypothesis checked: if `s_plus - s_minus` is too noisy, lower β should keep the
+two nudged trajectories closer, while a short temperature bump at the start of
+the nudged phase should help the system leave the free basin.
+
+Implementation details in `edge_2_8x8_2_langevin.jl`:
+
+- `nudged_temp_factor` sets the temporary nudged temperature.
+- `nudged_temp_warm_fraction` controls how much of the nudged phase uses the
+  temporary temperature.
+- `common_nudged_rng` seeds the plus and minus branches with the same seed for
+  the same sample. The seed changes by epoch, so the optimizer does not see the
+  exact same noise sequence forever.
+
+Runs:
+
+```text
+runs/edge_twoout_grid_20260518_161523
+runs/edge_twoout_grid_20260518_162639
+```
+
+Results on the `4x4` control:
+
+| β | nudged temp | lr | best MSE | best accuracy |
+|---:|---:|---:|---:|---:|
+| `0.05` | `3T` | `0.0002` | `1.736390` | `0.5` |
+| `0.10` | `2T` | `0.0005` | `1.606674` | `0.5` |
+| `0.20` | `2T` | `0.0005` | `1.650243` | `0.5` |
+| `0.50` | `T` | `0.0020` | `1.485912` | `0.5` |
+| `1.00` | `T` | `0.0050` | `1.497626` | `0.5` |
+
+Interpretation: lower β plus a nudged temperature bump did not fix the
+symmetric estimator. It changes the gradient scale and sometimes lowers MSE,
+but it still does not produce class separation. The issue is not simply "β too
+large".
+
+## Weight Decay and Colder Validation
+
+The `weight_decay` config was present but was not actually applied in this
+experiment file. It now adds `λθ` to the local gradient before `Optimisers.Adam`
+updates the parameters.
+
+Runs:
+
+```text
+runs/edge_twoout_grid_20260518_164213
+runs/edge_twoout_grid_20260518_165329
+runs/edge_2_8x8_2_20260518_171659
+```
+
+Results on the `4x4` control:
+
+| β | validation T | weight decay | best MSE | best accuracy |
+|---:|---:|---:|---:|---:|
+| `1.0` | `0.0005` | `0.001` | `1.095935` | `0.515625` |
+| `1.0` | `0.0002` | `0.001` | `1.002882` | `0.554688` |
+| `1.0` | `0.0001` | `0.001` | `1.073422` | `0.5` |
+| `1.0` | `0.0002` | corrected single decay | `1.029300` | `0.515625` |
+
+Interpretation: real weight decay helps keep MSE closer to `1.0`, but it still
+does not solve classification. Colder validation does not reveal a hidden
+low-noise solution; the best accuracy remains near chance.
+
+## Current Conclusion
+
+The corrected masked clamping path, symmetric `+β/-β` estimator, common nudged
+RNG, temperature bumps, weight decay, colder validation, and coupling-scale
+retuning have not reproduced the old successful `4x4` edge run.
+
+The next checks should be structural rather than another small scalar grid:
+
+- inspect per-case free/plus/minus output means to see whether the symmetric
+  branch points in the wrong class direction or just shrinks all outputs;
+- test a spatial output pattern instead of two scalar output spins;
+- test an explicit time-averaged output statistic for validation and learning;
+- compare against the same graph with a Metropolis sampler to isolate whether
+  this is Langevin-specific or edge-readout-specific.

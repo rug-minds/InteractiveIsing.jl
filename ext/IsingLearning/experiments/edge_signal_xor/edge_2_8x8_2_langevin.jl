@@ -51,6 +51,10 @@ Base.@kwdef struct EdgeTwoOutConfig
     output_scale::FT = parse(FT, get(ENV, "EDGE_TWOOUT_OUTPUT_SCALE", "0.40"))
     output_internal_scale::FT = parse(FT, get(ENV, "EDGE_TWOOUT_OUTPUT_INTERNAL_SCALE", "0.0"))
     gradient_mode::Symbol = Symbol(get(ENV, "EDGE_TWOOUT_GRADIENT_MODE", "symmetric"))
+    nudged_temp_factor::FT = parse(FT, get(ENV, "EDGE_TWOOUT_NUDGED_TEMP_FACTOR", "1.0"))
+    nudged_temp_floor_factor::FT = parse(FT, get(ENV, "EDGE_TWOOUT_NUDGED_TEMP_FLOOR_FACTOR", "1.0"))
+    nudged_temp_warm_fraction::FT = parse(FT, get(ENV, "EDGE_TWOOUT_NUDGED_TEMP_WARM_FRACTION", "0.2"))
+    common_nudged_rng::Bool = parse(Bool, get(ENV, "EDGE_TWOOUT_COMMON_NUDGED_RNG", "true"))
     bias_scale::FT = parse(FT, get(ENV, "EDGE_TWOOUT_BIAS_SCALE", "0.05"))
     weight_seed::Int = parse(Int, get(ENV, "EDGE_TWOOUT_WEIGHT_SEED", "1701"))
     bias_seed::Int = parse(Int, get(ENV, "EDGE_TWOOUT_BIAS_SEED", "1703"))
@@ -66,6 +70,12 @@ function edge_difference_gradient!(graph, s_a, s_b, buffers)
     II.parameter_derivative(magfield, s_a, db = buffers.b, buffermode = II.AccumulateBuffer{+}())
     II.parameter_derivative(magfield, s_b, db = buffers.b, buffermode = II.SubtractBuffer())
     return buffers
+end
+
+"""Seed a Langevin context when common-random-number nudged phases are enabled."""
+function edge_seed_nudged_rng!(dynamics_context, seed::Integer, enabled::Bool)
+    enabled && hasproperty(dynamics_context, :rng) && Random.seed!(dynamics_context.rng, seed)
+    return dynamics_context
 end
 
 """Return bipolar two-input XOR samples and two-spin bipolar output targets."""
@@ -265,6 +275,11 @@ end
 function edge_nudged(layer, config::EdgeTwoOutConfig)
     beta = layer.β
     steps = layer.nudged_relaxation_steps
+    warm_steps = clamp(round(Int, config.nudged_temp_warm_fraction * steps), 0, steps)
+    cool_steps = steps - warm_steps
+    start_T = config.temp * config.nudged_temp_factor
+    stop_T = config.temp * config.nudged_temp_floor_factor
+    common_nudged_rng = config.common_nudged_rng
     dynamics_algorithm = edge_twoout_dynamics(config)
     plus_capture = IsingLearning.Capturer()
     minus_capture = IsingLearning.Capturer()
@@ -274,6 +289,7 @@ function edge_nudged(layer, config::EdgeTwoOutConfig)
         @state y
         @state x
         @state nudged_beta = beta
+        @state rng_seed = 1
         @alias dynamics = dynamics_algorithm
         @alias plus_capture = plus_capture
 
@@ -281,7 +297,12 @@ function edge_nudged(layer, config::EdgeTwoOutConfig)
         IsingLearning.apply_input(dynamics.model, x)
         IsingLearning.apply_targets(dynamics.model, y)
         IsingLearning.set_clamping_beta!(dynamics.model, nudged_beta)
-        model = @repeat steps dynamics()
+        edge_seed_nudged_rng!(dynamics, rng_seed, common_nudged_rng)
+        II.temp!(dynamics.model, start_T)
+        model = @repeat warm_steps dynamics()
+        II.temp!(dynamics.model, stop_T)
+        model = @repeat cool_steps dynamics()
+        II.temp!(dynamics.model, config.temp)
         plus_capture(isinggraph = model)
     end
 
@@ -290,6 +311,7 @@ function edge_nudged(layer, config::EdgeTwoOutConfig)
         @state y
         @state x
         @state nudged_beta = -beta
+        @state rng_seed = 1
         @alias dynamics = dynamics_algorithm
         @alias minus_capture = minus_capture
 
@@ -297,7 +319,12 @@ function edge_nudged(layer, config::EdgeTwoOutConfig)
         IsingLearning.apply_input(dynamics.model, x)
         IsingLearning.apply_targets(dynamics.model, y)
         IsingLearning.set_clamping_beta!(dynamics.model, nudged_beta)
-        model = @repeat steps dynamics()
+        edge_seed_nudged_rng!(dynamics, rng_seed, common_nudged_rng)
+        II.temp!(dynamics.model, start_T)
+        model = @repeat warm_steps dynamics()
+        II.temp!(dynamics.model, stop_T)
+        model = @repeat cool_steps dynamics()
+        II.temp!(dynamics.model, config.temp)
         minus_capture(isinggraph = model)
     end
 
@@ -323,14 +350,17 @@ function edge_forward_and_nudged(layer, config::EdgeTwoOutConfig)
         Processes.@CompositeAlgorithm begin
             @input clamping_beta = beta
             @state buffers
+            @state rng_seed = 1
             @alias plus = nudged.plus
             @alias minus = nudged.minus
             @alias plus_capture = nudged.plus_capture
             @alias minus_capture = nudged.minus_capture
             @context c1 = forward()
+            plus.rng_seed = rng_seed
             plus.nudged_beta = clamping_beta
             plus()
             plus_capture(isinggraph = plus.dynamics.model)
+            minus.rng_seed = rng_seed
             minus.nudged_beta = @transform(x -> -x, clamping_beta)
             minus()
             minus_capture(isinggraph = minus.dynamics.model)
@@ -341,10 +371,12 @@ function edge_forward_and_nudged(layer, config::EdgeTwoOutConfig)
         Processes.@CompositeAlgorithm begin
             @input clamping_beta = beta
             @state buffers
+            @state rng_seed = 1
             @alias plus = nudged.plus
             @alias plus_capture = nudged.plus_capture
             @alias minus_capture = nudged.minus_capture
             @context c1 = forward()
+            plus.rng_seed = rng_seed
             plus.nudged_beta = clamping_beta
             plus()
             plus_capture(isinggraph = plus.dynamics.model)
@@ -356,10 +388,12 @@ function edge_forward_and_nudged(layer, config::EdgeTwoOutConfig)
         Processes.@CompositeAlgorithm begin
             @input clamping_beta = beta
             @state buffers
+            @state rng_seed = 1
             @alias plus = nudged.plus
             @alias plus_capture = nudged.plus_capture
             @alias minus_capture = nudged.minus_capture
             @context c1 = forward()
+            plus.rng_seed = rng_seed
             plus.nudged_beta = clamping_beta
             plus()
             plus_capture(isinggraph = plus.dynamics.model)
@@ -383,6 +417,7 @@ function edge_worker_process(layer, worker_graph, config::EdgeTwoOutConfig)
             x = zeros(eltype(worker_graph), length(layer.input_layer)),
             y = zeros(eltype(worker_graph), length(layer.output_layer)),
             buffers = buffers,
+            rng_seed = 1,
             equilibrium_state = copy(II.state(worker_graph)),
         ),
         Processes.Init(:dynamics, model = worker_graph),
@@ -477,8 +512,17 @@ function edge_evaluate!(trainer, x, y, config::EdgeTwoOutConfig)
     )
 end
 
+"""Add L2 decay to the trainable parameter gradients for this local experiment."""
+function edge_apply_weight_decay!(gradient, params, weight_decay)
+    iszero(weight_decay) && return gradient
+    gradient.w .+= weight_decay .* params.w
+    gradient.b .+= weight_decay .* params.b
+    hasproperty(gradient, :α) && hasproperty(params, :α) && (gradient.α .+= weight_decay .* params.α)
+    return gradient
+end
+
 """Run one minibatch while passing the clamping strength as a runtime input."""
-function edge_run_minibatch!(trainer, xbatch, ybatch, batch_gradient, clamping_beta)
+function edge_run_minibatch!(trainer, xbatch, ybatch, batch_gradient, clamping_beta, weight_decay, epoch)
     IsingLearning._reset_batch_buffers!(trainer)
 
     batchsize = size(xbatch, 2)
@@ -494,6 +538,8 @@ function edge_run_minibatch!(trainer, xbatch, ybatch, batch_gradient, clamping_b
         worker = workers[something(worker_idx)]
         Processes.isdone(worker) && close(worker)
         IsingLearning._write_example!(worker, view(xbatch, :, sample_idx), view(ybatch, :, sample_idx))
+        state_context = Processes.context(worker)._state
+        Processes.newdata(state_context, merge(Processes.getdata(state_context), (; rng_seed = 10_000_000 + 100_000 * epoch + sample_idx)))
         Processes.reset!(worker)
         run(worker; clamping_beta = clamping_beta)
     end
@@ -506,6 +552,7 @@ function edge_run_minibatch!(trainer, xbatch, ybatch, batch_gradient, clamping_b
     end
 
     IsingLearning._collect_batch_gradient!(trainer, batch_gradient, batchsize)
+    edge_apply_weight_decay!(batch_gradient, trainer.params, weight_decay)
     trainer.opt_state, trainer.params = Optimisers.update(trainer.opt_state, trainer.params, batch_gradient)
     IsingLearning._broadcast_params!(trainer)
     return nothing
@@ -553,12 +600,7 @@ function train_edge_twoout(config::EdgeTwoOutConfig; outdir)
     println("epoch=0 mse=", round(metrics.mse, digits = 6), " acc=", metrics.acc)
 
     for epoch in 1:config.epochs
-        edge_run_minibatch!(trainer, xbatch, ybatch, batch_gradient, config.β)
-        if config.weight_decay > 0
-            trainer.params.w .*= (one(FT) - config.lr * config.weight_decay)
-            trainer.params.b .*= (one(FT) - config.lr * config.weight_decay)
-            IsingLearning._broadcast_params!(trainer)
-        end
+        edge_run_minibatch!(trainer, xbatch, ybatch, batch_gradient, config.β, config.weight_decay, epoch)
         if epoch == 1 || epoch % config.log_every == 0 || epoch == config.epochs
             metrics = edge_evaluate!(trainer, x, y, config)
             grad_norm = sqrt(sum(abs2, batch_gradient.w) + sum(abs2, batch_gradient.b))

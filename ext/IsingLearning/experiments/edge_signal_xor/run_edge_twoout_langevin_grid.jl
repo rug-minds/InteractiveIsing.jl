@@ -16,7 +16,10 @@ function edge_grid_name(config::EdgeTwoOutConfig)
         "Tv$(config.validation_temp)",
         "eta$(config.stepsize)",
         "b$(config.β)",
+        "nTf$(config.nudged_temp_factor)",
+        "nTfloor$(config.nudged_temp_floor_factor)",
         "lr$(config.lr)",
+        "wd$(config.weight_decay)",
         "gm$(config.gradient_mode)",
         "m$(config.minit)",
         "f$(config.free_relaxation)",
@@ -32,9 +35,9 @@ end
 function edge_grid_write_summary(path, rows)
     headers = [
         "name", "best_mse", "best_acc", "best_epoch", "run_dir",
-        "height", "width", "nn", "temp", "validation_temp", "stepsize", "beta", "lr",
+        "height", "width", "nn", "temp", "validation_temp", "stepsize", "beta", "lr", "weight_decay",
         "gradient_mode", "minit", "free", "nudged", "output_repeats", "input_scale", "hidden_scale", "output_scale",
-        "output_internal_scale",
+        "output_internal_scale", "nudged_temp_factor", "nudged_temp_floor_factor", "nudged_temp_warm_fraction",
     ]
     open(path, "w") do io
         println(io, join(headers, ","))
@@ -59,47 +62,43 @@ function edge_grid_plot(path, rows)
     return path
 end
 
-"""Build the first edge-connected Langevin grid: one 4x4 control and several 8x8 variants."""
+"""Build a compact low-beta grid with a nudged temperature bump."""
 function edge_grid_configs()
     common = (;
         dynamics = :block,
-        epochs = 2000,
-        log_every = 500,
-        eval_repeats = 16,
+        epochs = 3000,
+        log_every = 300,
+        eval_repeats = 32,
         workers = 1,
-        β = 1.0,
-        weight_decay = 0.0,
         block_size = 8,
         bias_scale = 0.05,
         weight_seed = 1701,
         bias_seed = 1703,
         base_seed = 917000,
+        hidden_height = 4,
+        hidden_width = 4,
+        hidden_nn = 5,
+        output_repeats = 1,
+        gradient_mode = :symmetric,
+        minit = 4,
+        free_relaxation = 1000,
+        nudged_relaxation = 1000,
+        output_internal_scale = 0.0,
+        temp = 0.001,
+        stepsize = 0.10,
+        common_nudged_rng = true,
     )
     return EdgeTwoOutConfig[
-        EdgeTwoOutConfig(; common..., hidden_height = 4, hidden_width = 4, hidden_nn = 5,
-            minit = 4, free_relaxation = 1000, nudged_relaxation = 1000,
-            temp = 0.001, stepsize = 0.10, lr = 0.005,
-            input_scale = 0.4, hidden_scale = 0.2, output_scale = 0.4),
-
-        EdgeTwoOutConfig(; common..., hidden_height = 8, hidden_width = 8, hidden_nn = 5,
-            minit = 4, free_relaxation = 2500, nudged_relaxation = 2500,
-            temp = 0.001, stepsize = 0.12, lr = 0.00025,
-            input_scale = 0.5, hidden_scale = 0.2, output_scale = 0.5),
-
-        EdgeTwoOutConfig(; common..., hidden_height = 8, hidden_width = 8, hidden_nn = 5,
-            minit = 8, free_relaxation = 4000, nudged_relaxation = 2000,
-            temp = 0.0008, stepsize = 0.12, lr = 0.00015,
-            input_scale = 0.8, hidden_scale = 0.1, output_scale = 0.8),
-
-        EdgeTwoOutConfig(; common..., hidden_height = 8, hidden_width = 8, hidden_nn = 3,
-            minit = 8, free_relaxation = 4000, nudged_relaxation = 2000,
-            temp = 0.0008, stepsize = 0.12, lr = 0.00015,
-            input_scale = 0.8, hidden_scale = 0.1, output_scale = 0.8),
-
-        EdgeTwoOutConfig(; common..., hidden_height = 8, hidden_width = 8, hidden_nn = 5,
-            minit = 8, free_relaxation = 5000, nudged_relaxation = 3000,
-            temp = 0.0005, stepsize = 0.10, lr = 0.0001,
-            input_scale = 1.0, hidden_scale = 0.05, output_scale = 1.0),
+        EdgeTwoOutConfig(; common..., β = 1.0, lr = 0.005, weight_decay = 1e-3, validation_temp = 0.0002,
+            input_scale = 0.8, hidden_scale = 0.05, output_scale = 0.8, nudged_temp_factor = 1.0),
+        EdgeTwoOutConfig(; common..., β = 1.0, lr = 0.005, weight_decay = 1e-3, validation_temp = 0.0002,
+            input_scale = 0.8, hidden_scale = 0.10, output_scale = 0.8, nudged_temp_factor = 1.0),
+        EdgeTwoOutConfig(; common..., β = 1.0, lr = 0.005, weight_decay = 1e-3, validation_temp = 0.0002,
+            input_scale = 1.2, hidden_scale = 0.05, output_scale = 1.2, nudged_temp_factor = 1.0),
+        EdgeTwoOutConfig(; common..., β = 0.5, lr = 0.003, weight_decay = 1e-3, validation_temp = 0.0002,
+            input_scale = 0.8, hidden_scale = 0.05, output_scale = 0.8, nudged_temp_factor = 1.0),
+        EdgeTwoOutConfig(; common..., β = 0.5, lr = 0.003, weight_decay = 1e-3, validation_temp = 0.0002,
+            input_scale = 1.2, hidden_scale = 0.05, output_scale = 1.2, nudged_temp_factor = 1.0),
     ]
 end
 
@@ -127,6 +126,7 @@ function run_edge_twoout_langevin_grid(configs = edge_grid_configs())
             "stepsize" => config.stepsize,
             "beta" => config.β,
             "lr" => config.lr,
+            "weight_decay" => config.weight_decay,
             "gradient_mode" => config.gradient_mode,
             "minit" => config.minit,
             "free" => config.free_relaxation,
@@ -136,6 +136,9 @@ function run_edge_twoout_langevin_grid(configs = edge_grid_configs())
             "hidden_scale" => config.hidden_scale,
             "output_scale" => config.output_scale,
             "output_internal_scale" => config.output_internal_scale,
+            "nudged_temp_factor" => config.nudged_temp_factor,
+            "nudged_temp_floor_factor" => config.nudged_temp_floor_factor,
+            "nudged_temp_warm_fraction" => config.nudged_temp_warm_fraction,
         )
         push!(rows, row)
         edge_grid_write_summary(joinpath(root, "summary.csv"), rows)
