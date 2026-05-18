@@ -1,4 +1,4 @@
-﻿using InteractiveIsing, GLMakie, FileIO, CairoMakie
+using InteractiveIsing, GLMakie, FileIO, CairoMakie
 using InteractiveIsing.Processes
 import InteractiveIsing as II
 
@@ -264,6 +264,138 @@ function Processes.step!(::TrianglePulseA, context::C) where C
     return (;step = step + 1, pulseval)
 end
 ### struct end: TrianglePulseA
+##################################################################################
+
+##################################################################################
+### struct start: FORCPulseA (preset + triangular test voltage scan)
+### Run with FORCPulseA
+###
+### Curves are concatenated as:
+### 0 -> -Vmax -> 0 -> delta_Vtest -> 0 -> hold at 0
+### 0 -> -Vmax -> 0 -> 2delta_Vtest -> 0 -> hold at 0
+### ...
+### 0 -> -Vmax -> 0 -> +Vmax -> 0 -> hold at 0
+###
+### The negative preset/post branch is the same for every curve.
+### The positive test amplitude increases by delta_Vtest until Vmax.
+### preset_edge_points sets the number of points on the 0 -> -Vmax edge.
+### The voltage step and sweep rate are inferred from that edge.
+### delta_Vtest is the spacing between test amplitudes.
+### zero_hold_points sets how many extra 0-field samples are appended after
+### each test triangle. Use 0 for the original FORC behavior.
+### The time/frequency is set outside by @every point_repeat:
+###     point_repeat = fullsweep * sweeps_per_V
+###     edge_dV = Vmax / (preset_edge_points - 1)
+###     ramp_rate = edge_dV / sweeps_per_V
+###     forc_time = point_repeat * length(forc_values(FORCPulseA(Vmax, preset_edge_points, delta_Vtest, zero_hold_points)))
+###
+### Requirements:
+### - preset_edge_points >= 2, delta_Vtest > 0, and zero_hold_points >= 0.
+### - delta_Vtest controls the number of FORC curves, independently of edge_dV.
+### - The routine repeat time should be at least point_repeat * protocol length.
+
+struct FORCPulseA{T} <: ProcessAlgorithm
+    Vmax::T
+    preset_edge_points::Int
+    delta_Vtest::T
+    zero_hold_points::Int
+end
+FORCPulseA(Vmax, preset_edge_points::Integer) = FORCPulseA(Vmax, preset_edge_points, Vmax / 100)
+function FORCPulseA(Vmax, preset_edge_points::Integer, delta_Vtest)
+    return FORCPulseA(Vmax, preset_edge_points, delta_Vtest, 0)
+end
+function FORCPulseA(Vmax, preset_edge_points::Integer, delta_Vtest, zero_hold_points::Integer)
+    T = promote_type(typeof(Vmax), typeof(delta_Vtest))
+    return FORCPulseA{T}(
+        convert(T, Vmax),
+        Int(preset_edge_points),
+        convert(T, delta_Vtest),
+        Int(zero_hold_points),
+    )
+end
+
+function forc_axis_by_step(v1, v2, edge_dV)
+    edge_dV > 0 || error("edge_dV must be positive.")
+    step = v2 >= v1 ? edge_dV : -edge_dV
+    span = abs(v2 - v1)
+    n_intervals = max(1, round(Int, span / edge_dV))
+    n = n_intervals + 1
+    return collect(LinRange(v1, v2, n))
+end
+
+function forc_axis_by_count(v1, v2, npoints::Integer)
+    npoints >= 2 || error("A FORC edge needs at least 2 points.")
+    return collect(LinRange(v1, v2, Int(npoints)))
+end
+
+function forc_values(fp::FORCPulseA)
+    Vmax = fp.Vmax
+    preset_edge_points = fp.preset_edge_points
+    delta_Vtest = fp.delta_Vtest
+    zero_hold_points = fp.zero_hold_points
+    Vmax > 0 || error("Vmax must be positive.")
+    preset_edge_points >= 2 || error("preset_edge_points must be at least 2.")
+    delta_Vtest > 0 || error("delta_Vtest must be positive.")
+    zero_hold_points >= 0 || error("zero_hold_points must be nonnegative.")
+    edge_dV = Vmax / (preset_edge_points - 1)
+
+    n_end_fields = ceil(Int, Vmax / delta_Vtest)
+    end_fields = [min(i * delta_Vtest, Vmax) for i in 1:n_end_fields]
+    pulse = eltype(end_fields)[]
+    curve_id = Int[]
+    curve_end_field = eltype(end_fields)[]
+
+    for (i, Vend) in enumerate(end_fields)
+        preset_down = forc_axis_by_count(zero(Vmax), -Vmax, preset_edge_points)
+        preset_up = forc_axis_by_count(-Vmax, zero(Vmax), preset_edge_points)
+        test_up = forc_axis_by_step(zero(Vmax), Vend, edge_dV)
+        test_down = forc_axis_by_step(Vend, zero(Vmax), edge_dV)
+        zero_hold = fill(zero(Vmax), zero_hold_points)
+        curve = vcat(preset_down, preset_up[2:end], test_up[2:end], test_down[2:end], zero_hold)
+        append!(pulse, curve)
+        append!(curve_id, fill(i, length(curve)))
+        append!(curve_end_field, fill(Vend, length(curve)))
+    end
+
+    return (;pulse, curve_id, curve_end_field, end_fields, edge_dV, delta_Vtest, zero_hold_points)
+end
+
+function Processes.init(fp::FORCPulseA, args)
+    values = forc_values(fp)
+    pulse = values.pulse
+    curve_id = values.curve_id
+    curve_end_field = values.curve_end_field
+    steps = num_calls(args)
+
+    if steps < length(pulse)
+        pulse = pulse[1:steps]
+        curve_id = curve_id[1:steps]
+        curve_end_field = curve_end_field[1:steps]
+    elseif steps > length(pulse)
+        fix_num = steps - length(pulse)
+        pulse = vcat(pulse, fill(pulse[end], fix_num))
+        curve_id = vcat(curve_id, fill(curve_id[end], fix_num))
+        curve_end_field = vcat(curve_end_field, fill(curve_end_field[end], fix_num))
+    end
+
+    step = 1
+    return (;pulse, curve_id, curve_end_field, step,
+        pulseval = pulse[1],
+        forc_curve = curve_id[1],
+        forc_end_field = curve_end_field[1])
+end
+
+function Processes.step!(::FORCPulseA, context::C) where C
+    (;pulse, curve_id, curve_end_field, step, hamiltonian) = context
+    pulseval = pulse[step]
+    hamiltonian.b[] = pulseval
+
+    return (;step = step + 1,
+        pulseval,
+        forc_curve = curve_id[step],
+        forc_end_field = curve_end_field[step])
+end
+### struct end: FORCPulseA
 ##################################################################################
 
 ##################################################################################
@@ -1128,9 +1260,9 @@ end
 #########################################################################
 
 ## ======================== Define simulation ======================== ##
-xL = 10  # Length in the x-dimension
-yL = 10  # Length in the y-dimension
-zL = 10   # Length in the z-dimension
+xL = 5  # Length in the x-dimension
+yL = 5  # Length in the y-dimension
+zL = 5   # Length in the z-dimension
 
 ### Preferred naming:
 ### - `wf_*` = weight-function definition
@@ -1155,13 +1287,13 @@ JIsing = 1.0
 Scale = 1
 Screening = 1
 Temp_aneal= 2
-Temp = 0.15
+Temp = 0.01
 
-a1 = -0.3
-b1 = -2.1
-c1 = 1.5
-d1 = 0
-e1 = 0
+a1 = -0.4
+b1 = -2.8
+c1 = 2
+d1 = -1
+e1 = 1
 linear_field_coeff = 1.0
 defect_field_coeff = 0.0
 
@@ -1173,18 +1305,18 @@ coeff8 = fill(Float32(d1), nspins)
 coeff10 = fill(Float32(e1), nspins)
 
 # Optional spatial disorder examples. Keep them off for the baseline check.
-apply_weak_landau_disorder = false
-coeff2_disorder_scale = 0.5f0
-coeff4_disorder_scale = 1f0
-coeff6_disorder_scale = 1f0
-coeff8_disorder_scale = 0.2f0
-coeff10_disorder_scale = 0.2f0
+apply_weak_landau_disorder = true
+coeff2_disorder_scale = 0.4f0
+coeff4_disorder_scale = 2.8f0
+coeff6_disorder_scale = 2.0f0
+coeff8_disorder_scale = 1f0
+coeff10_disorder_scale = 1f0
 if apply_weak_landau_disorder
     coeff2 .+= coeff2_disorder_scale .* randn(Float32, nspins)
     coeff4 .+= coeff4_disorder_scale .* randn(Float32, nspins)
     coeff6 .+= coeff6_disorder_scale .* randn(Float32, nspins)
-    # coeff8 .+= coeff8_disorder_scale .* randn(Float32, nspins)
-    # coeff10 .+= coeff10_disorder_scale .* randn(Float32, nspins)
+    coeff8 .+= coeff8_disorder_scale .* randn(Float32, nspins)
+    coeff10 .+= coeff10_disorder_scale .* randn(Float32, nspins)
 end
 
 proposal_delta = 0.1  # use 0.1, 0.2, 0.5 for LocalProposer(delta)
@@ -1231,15 +1363,23 @@ reduced_energy_summary = print_reduced_parameter_summary_reference(;
     Pmax = 1.5,
 )
 
-# ----- Annealing algorithm -----
-time_fctr= 1
+# ----- Annealing / pulse algorithm -----
+time_fctr= 3
 Steps_1= 4000
 
-Amp1 = 10
+Amp1 = 16
 nrepeats = 3
 pulse1 = TrianglePulseA(Amp1, nrepeats)
 pulse2 = SinPulseA(Amp1, nrepeats)
 pulse3 = Unique(SinPulseA(Amp1, nrepeats))
+
+# FORC parameters. preset_edge_points sets the 0 -> -Vmax edge sampling.
+Vmax = 16f0
+preset_edge_points = 1001
+delta_Vtest = 2f0
+zero_hold_points = 20001
+pulse_forc = FORCPulseA(Vmax, preset_edge_points, delta_Vtest, zero_hold_points)
+forc_protocol = forc_values(pulse_forc)
 AnealingB = LinAnealingB(Temp_aneal, 0f0)
 # algorithm_name = :metropolis
 # algorithm_kwargs = (;)
@@ -1257,23 +1397,23 @@ point_repeat = fullsweep*time_fctr
 # point_repeat = time_fctr
 anneal_time = point_repeat*Steps_1
 pulse_time = point_repeat*Steps_1
+forc_time = point_repeat*length(forc_protocol.pulse)
 relax_time = point_repeat*Steps_1/2
 
 
 capture_interval1 = pulse_time/(nrepeats*4)
-capture_interval2 = relax_time/2 
+capture_interval2 = relax_time/2
 # capture_interval3 = relax_time/2 
+
+println("FORC voltage samples: ", length(forc_protocol.pulse))
+println("FORC curves: ", length(forc_protocol.end_fields))
+println("FORC edge dV: ", forc_protocol.edge_dV)
+println("FORC delta Vtest: ", delta_Vtest)
+println("FORC zero-hold samples per curve: ", zero_hold_points)
+println("FORC ramp rate: ", forc_protocol.edge_dV / time_fctr, " V/sweep")
 
 M_Integrate_and_Logger = IntegrateAndLog(Float32, point_repeat)
 B_Logger = ValueLogger(:b)
-# T_Logger = ValueLogger(:T)
-# Depol_Logger = DepolLogger(:depol)
-# PAFEz_Logger = ValueLogger(:P_AFE_z)
-# PTop_Logger = ValueLogger(:P_top)
-# PMid_Logger = ValueLogger(:P_mid)
-# PBot_Logger = ValueLogger(:P_bot)
-# Graph_Logger = ImageCapture(:Graph,-1.5,1.5)
-
 
 
 # ----- Pulse Step -----
@@ -1294,13 +1434,22 @@ pulse_part1 = @CompositeAlgorithm begin
     )
     # @every capture_interval1 Graph_Logger(array = @transform(model -> state(model), metro_pulse.dynamics.model))
 end
+pulse_forc_part = @CompositeAlgorithm begin
+    @context metro_pulse = Metro_Pulse()
+
+    @every point_repeat pulse_forc(
+        hamiltonian = metro_pulse.dynamics.hamiltonian,
+        M = metro_pulse.dynamics.M,
+    )
+end
 relax_part1 = @CompositeAlgorithm begin
     @context metro_pulse = Metro_Pulse()
 
     # @every capture_interval2 Graph_Logger(array = @transform(model -> state(model), metro_pulse.dynamics.model))
 end
 Pulse_and_Relax = @Routine begin
-    @repeat pulse_time pulse_part1()
+    # @repeat pulse_time pulse_part1()
+    @repeat forc_time pulse_forc_part()
     @repeat relax_time relax_part1()
 end
 
@@ -1315,11 +1464,14 @@ voltage2 = c[B_Logger].values
 Pr2      = c[M_Integrate_and_Logger].log
 
 # Set true when you want GLMakie windows to pop up while figures are created.
-show_figures = True
+show_figures = true
 
 fVPr = makieaxis(f -> Axis(f[1, 1], xlabel = "Voltage", ylabel = "Pr"), ax -> lines!(ax, voltage2, Pr2))
 fPr  = makieaxis(f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Pr"), ax -> lines!(ax, Pr2))
-
+fV = makieaxis(
+    f -> Axis(f[1, 1], xlabel = "Step", ylabel = "Voltage"),
+    ax -> lines!(ax, voltage2),
+)
 
 # #######################################################################
 
@@ -1349,12 +1501,19 @@ run_params = params_dataframe(
     "time_fctr" => time_fctr,
     "anneal_time" => anneal_time,
     "pulse_time" => pulse_time,
+    "forc_time" => forc_time,
     "relax_time" => relax_time,
     "point_repeat" => point_repeat,
     "Temp_aneal" => Temp_aneal,
     "Temp" => Temp,
     "Amp1" => Amp1,
     "nrepeats" => nrepeats,
+    "Vmax" => Vmax,
+    "preset_edge_points" => preset_edge_points,
+    "forc_edge_dV" => forc_protocol.edge_dV,
+    "delta_Vtest" => delta_Vtest,
+    "zero_hold_points" => zero_hold_points,
+    "n_forc_curves" => length(forc_protocol.end_fields),
     "algorithm_name" => string(algorithm_name),
     "algorithm_kwargs" => string(algorithm_kwargs),
     "proposal_delta" => string(proposal_delta),
@@ -1398,6 +1557,3 @@ if save_outputs
     end
 end
 # ============ END SAVE (PNG + XLSX) ============
-
-
-

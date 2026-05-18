@@ -239,17 +239,17 @@ function Processes.init(tp::TrianglePulseA, args)
     amp = tp.amp
     numpulses = tp.numpulses
     steps = num_calls(args)
-    num_samples = steps/(4*numpulses)
-    first  = LinRange(0, amp, round(Int,num_samples))
-    second = LinRange(amp, 0, round(Int,num_samples))
-    third  = LinRange(0, -amp, round(Int,num_samples))
-    fourth = LinRange(-amp, 0, round(Int,num_samples))
+    num_samples = floor(Int, steps/(4*numpulses))
+    first  = LinRange(0, amp, num_samples)
+    second = LinRange(amp, 0, num_samples)
+    third  = LinRange(0, -amp, num_samples)
+    fourth = LinRange(-amp, 0, num_samples)
 
     pulse = vcat(first, second, third, fourth)
     pulse = repeat(pulse, numpulses)
 
     fix_num = num_calls(args) - length(pulse)
-    fix_arr = zeros(Int, fix_num)
+    fix_arr = zeros(eltype(pulse), fix_num)
     pulse   = vcat(pulse, fix_arr)
 
     # Predefine storage arrays
