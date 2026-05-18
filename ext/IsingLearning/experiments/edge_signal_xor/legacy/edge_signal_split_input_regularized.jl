@@ -13,13 +13,14 @@ function split_input_nudged_temp_algorithm(layer, base_temp::FT, nudged_temp::FT
         @state equilibrium_state
         @state y
         @state x
+        @state nudged_beta = beta
         @alias dynamics = plus_dynamics_algorithm
         @alias plus_capture = plus_capture
 
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
         IsingLearning.apply_input(dynamics.model, x)
         IsingLearning.apply_targets(dynamics.model, y)
-        IsingLearning.set_clamping_beta!(dynamics.model, beta)
+        IsingLearning.set_clamping_beta!(dynamics.model, nudged_beta)
         II.temp!(dynamics.model, nudged_temp)
         model = @repeat relaxation_steps dynamics()
         II.temp!(dynamics.model, base_temp)
@@ -30,13 +31,14 @@ function split_input_nudged_temp_algorithm(layer, base_temp::FT, nudged_temp::FT
         @state equilibrium_state
         @state y
         @state x
+        @state nudged_beta = -beta
         @alias dynamics = minus_dynamics_algorithm
         @alias minus_capture = minus_capture
 
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
         IsingLearning.apply_input(dynamics.model, x)
         IsingLearning.apply_targets(dynamics.model, y)
-        IsingLearning.set_clamping_beta!(dynamics.model, -beta)
+        IsingLearning.set_clamping_beta!(dynamics.model, nudged_beta)
         II.temp!(dynamics.model, nudged_temp)
         model = @repeat relaxation_steps dynamics()
         II.temp!(dynamics.model, base_temp)
@@ -44,10 +46,15 @@ function split_input_nudged_temp_algorithm(layer, base_temp::FT, nudged_temp::FT
     end
 
     final = Processes.@CompositeAlgorithm begin
+        @input clamping_beta = beta
+        @alias plus = plus
+        @alias minus = minus
+        plus.nudged_beta = clamping_beta
         @context c1 = plus()
+        minus.nudged_beta = @transform(x -> -x, clamping_beta)
         @context c2 = minus()
     end
-    return (; algorithm = final, plus_capture, minus_capture, dynamics = plus.dynamics)
+    return (; algorithm = final, plus, minus, plus_capture, minus_capture, dynamics = plus.dynamics)
 end
 
 """Build free dynamics plus split-input nudged dynamics with a small temp bump."""
@@ -56,11 +63,21 @@ function split_input_forward_and_nudged_temp(layer, base_temp::FT, nudged_temp::
     nudged = split_input_nudged_temp_algorithm(layer, base_temp, nudged_temp)
     beta = layer.β
     final = Processes.@CompositeAlgorithm begin
+        @input clamping_beta = beta
         @state buffers
+        @alias plus = nudged.plus
+        @alias minus = nudged.minus
+        @alias plus_capture = nudged.plus_capture
+        @alias minus_capture = nudged.minus_capture
         @context c1 = forward()
-        @context c2 = nudged.algorithm()
+        plus.nudged_beta = clamping_beta
+        plus()
+        plus_capture(isinggraph = plus.dynamics.model)
+        minus.nudged_beta = @transform(x -> -x, clamping_beta)
+        minus()
+        minus_capture(isinggraph = minus.dynamics.model)
         IsingLearning.set_clamping_beta!(c1.dynamics.model, zero(beta))
-        IsingLearning.contrastive_gradient(c1.dynamics.model, c2.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers)
+        IsingLearning.contrastive_gradient(c1.dynamics.model, plus_capture.captured, minus_capture.captured, clamping_beta, buffers = buffers)
     end
     return (; algorithm = final, plus_capture = nudged.plus_capture, minus_capture = nudged.minus_capture, dynamics = forward.dynamics)
 end

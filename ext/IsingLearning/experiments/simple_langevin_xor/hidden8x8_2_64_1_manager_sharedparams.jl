@@ -152,6 +152,7 @@ function train_manager_recipe_shared_8x8(layer, prototype_graph)
         makecontext = (idx, manager, template) -> shared_worker_context_8x8(template, prototype_graph, manager.state.params),
         prepare! = (slot, job, manager) -> prepare_train_worker_8x8!(slot.worker, manager.state, manager.config, job),
         isdone = (slot, manager) -> Processes8x8.isdone(slot.worker),
+        runarguments = (slot, job, manager) -> (; clamping_beta = manager.config.β),
         consume! = (slot, job, manager) -> collect_train_response_8x8!(manager.state.current_responses, slot.worker),
         flush! = flush_train_buffers_8x8!,
     )

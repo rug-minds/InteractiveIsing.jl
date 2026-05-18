@@ -330,3 +330,59 @@ end
 
     @test external == [2, 5]
 end
+
+@ProcessAlgorithm function ManagerRuntimeJobStep(
+    delta,
+    @managed(total = base);
+    @inputs((; base = 0))
+)
+    total += delta
+    return (; total)
+end
+
+@testset "ProcessManager recipe steps can prepare context and pass runtime inputs" begin
+    algo = @CompositeAlgorithm begin
+        @input delta::Int
+        ManagerRuntimeJobStep(delta = delta)
+    end
+    worker = Process(algo, Init(ManagerRuntimeJobStep; base = 0); repeats = 1)
+    outputs = Int[]
+    before_jobs = Int[]
+    jobs = [
+        (; base = 10, delta = 1),
+        (; base = 20, delta = 2),
+    ]
+    recipe = (;
+        prepare! = (slot, job, manager) -> partialinitworker!(
+            slot,
+            Init(ManagerRuntimeJobStep; base = job.base),
+        ),
+        runarguments = (slot, job, manager) -> begin
+            push!(before_jobs, job.base)
+            (; delta = job.delta)
+        end,
+        consume! = (slot, job, manager) -> push!(
+            outputs,
+            context(slot.worker)[ManagerRuntimeJobStep].total,
+        ),
+    )
+
+    manager = ProcessManager(recipe; workers = [worker], flush_policy = NoFlush())
+    run!(manager, jobs)
+
+    @test outputs == [11, 22]
+    @test before_jobs == [10, 20]
+end
+
+@testset "ProcessManager rejects non-keyword runarguments results" begin
+    worker = Process(ManagerProcessAccumulator(); repeats = 1)
+    recipe = (;
+        runarguments = (slot, job, manager) -> job,
+    )
+    manager = ProcessManager(recipe; workers = [worker], flush_policy = NoFlush(), throw = false)
+
+    dispatch!(manager, 1)
+
+    @test manager.dispatched == 0
+    @test only(slots(manager)).error isa ArgumentError
+end

@@ -215,13 +215,14 @@ function simple_nudged(layer, config::SimpleXorConfig)
         @state equilibrium_state
         @state y
         @state x
+        @state nudged_beta = beta
         @alias dynamics = plus_dynamics_algorithm
         @alias plus_capture = plus_capture
 
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
         IsingLearning.apply_input(dynamics.model, x)
         IsingLearning.apply_targets(dynamics.model, y)
-        IsingLearning.set_clamping_beta!(dynamics.model, beta)
+        IsingLearning.set_clamping_beta!(dynamics.model, nudged_beta)
         model = @repeat relaxation_steps dynamics()
         plus_capture(isinggraph = model)
     end
@@ -230,23 +231,29 @@ function simple_nudged(layer, config::SimpleXorConfig)
         @state equilibrium_state
         @state y
         @state x
+        @state nudged_beta = -beta
         @alias dynamics = minus_dynamics_algorithm
         @alias minus_capture = minus_capture
 
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
         IsingLearning.apply_input(dynamics.model, x)
         IsingLearning.apply_targets(dynamics.model, y)
-        IsingLearning.set_clamping_beta!(dynamics.model, -beta)
+        IsingLearning.set_clamping_beta!(dynamics.model, nudged_beta)
         model = @repeat relaxation_steps dynamics()
         minus_capture(isinggraph = model)
     end
 
     final = @CompositeAlgorithm begin
         @state buffers
+        @input clamping_beta = beta
+        @alias plus = plus
+        @alias minus = minus
+        plus.nudged_beta = clamping_beta
         @context c1 = plus()
+        minus.nudged_beta = @transform(x -> -x, clamping_beta)
         @context c2 = minus()
     end
-    return (; algorithm = final, plus_capture, minus_capture, dynamics = plus.dynamics)
+    return (; algorithm = final, plus, minus, plus_capture, minus_capture, dynamics = plus.dynamics)
 end
 
 """
@@ -262,10 +269,20 @@ function simple_forward_and_nudged(layer, config::SimpleXorConfig; split::Bool =
     beta = layer.β
     final = @CompositeAlgorithm begin
         @state buffers
+        @input clamping_beta = beta
+        @alias plus = nudged.plus
+        @alias minus = nudged.minus
+        @alias plus_capture = nudged.plus_capture
+        @alias minus_capture = nudged.minus_capture
         @context c1 = forward()
-        @context c2 = nudged.algorithm()
+        plus.nudged_beta = clamping_beta
+        plus()
+        plus_capture(isinggraph = plus.dynamics.model)
+        minus.nudged_beta = @transform(x -> -x, clamping_beta)
+        minus()
+        minus_capture(isinggraph = minus.dynamics.model)
         IsingLearning.set_clamping_beta!(c1.dynamics.model, zero(beta))
-        IsingLearning.contrastive_gradient(c1.dynamics.model, c2.plus_capture.captured, c2.minus_capture.captured, beta, buffers = buffers)
+        IsingLearning.contrastive_gradient(c1.dynamics.model, plus_capture.captured, minus_capture.captured, clamping_beta, buffers = buffers)
     end
     return (; algorithm = final, plus_capture = nudged.plus_capture, minus_capture = nudged.minus_capture, dynamics = forward.dynamics)
 end
@@ -358,13 +375,13 @@ Start one training trajectory through the Process scheduler. The caller should
 collect it with `finish_training_worker!`; this lets a batch of workers run in
 parallel instead of starting and waiting for each trajectory serially.
 """
-function start_training_worker!(worker, x, y; seed::Integer)
+function start_training_worker!(worker, x, y, clamping_beta; seed::Integer)
     Processes.isdone(worker) && close(worker)
     seed_worker!(worker, seed)
     IsingLearning.zero_buffer!(Processes.context(worker)._state.buffers)
     IsingLearning._write_example!(worker, x, y)
     Processes.reset!(worker)
-    run(worker)
+    run(worker; clamping_beta)
     return worker
 end
 
@@ -404,7 +421,7 @@ function train_epoch!(trainer, x, y, batch_gradient, epoch::Integer, config::Sim
         worker_idx = mod1(ntraj + 1, length(trainer.workers))
         worker = trainer.workers[worker_idx]
         seed = config.base_seed + 1_000_000 * epoch + 10_000 * sample_idx + init_idx
-        start_training_worker!(worker, view(x, :, sample_idx), view(y, :, sample_idx); seed)
+        start_training_worker!(worker, view(x, :, sample_idx), view(y, :, sample_idx), config.β; seed)
         push!(running, worker)
         ntraj += 1
         if length(running) == length(trainer.workers)

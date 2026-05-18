@@ -501,7 +501,7 @@ function run_dynamics_steps!(graph, sampler, nsteps::Integer; seed::Integer)
     routine = II.Processes.@Routine begin
         @repeat nsteps dynamics()
     end
-    inputs = II._merge_graph_inputs(routine, graph, Processes.Init(dynamics, rng = Random.MersenneTwister(seed)))
+    inputs = II._merge_graph_inputs(routine, graph)
     process = Processes.Process(Processes.resolve(routine), inputs...; repeats = 1)
     run(process)
     wait(process)
@@ -535,7 +535,7 @@ function run_transition_response!(trace, graph, sampler, x; graph_kind, nn, sour
     wrapped = II.Processes.@Routine begin
         @repeat total_steps routine()
     end
-    inputs = II._merge_graph_inputs(wrapped, graph, Processes.Init(dynamics, rng = Random.MersenneTwister(seed_base + 2)))
+    inputs = II._merge_graph_inputs(wrapped, graph)
     process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
     run(process)
     wait(process)
@@ -852,7 +852,7 @@ function split_input_nudged_temp_algorithm(layer, base_temp::FT, nudged_temp::FT
     end
 
     final = Processes.@CompositeAlgorithm begin
-        @state clamping_beta = beta
+        @input clamping_beta = beta
         @alias plus_capture = plus_capture
         @alias minus_capture = minus_capture
         @alias nudged = nudged
@@ -864,7 +864,7 @@ function split_input_nudged_temp_algorithm(layer, base_temp::FT, nudged_temp::FT
         nudged()
         minus_capture(isinggraph = nudged.dynamics.model)
     end
-    return (; algorithm = final, plus_capture, minus_capture, dynamics = nudged.dynamics)
+    return (; algorithm = final, routine = nudged, plus_capture, minus_capture, dynamics = nudged.dynamics)
 end
 
 """Build the free-plus-nudged EqProp routine with a small nudged temp bump."""
@@ -874,11 +874,19 @@ function split_input_forward_and_nudged_temp(layer, base_temp::FT, nudged_temp::
     beta = layer.β
     final = Processes.@CompositeAlgorithm begin
         @state buffers
-        @state clamping_beta = beta
+        @input clamping_beta = beta
+        @alias plus_capture = nudged.plus_capture
+        @alias minus_capture = nudged.minus_capture
+        @alias nudged_routine = nudged.routine
         @context c1 = forward()
-        @context c2 = nudged.algorithm()
+        nudged_routine.nudged_beta = clamping_beta
+        nudged_routine()
+        plus_capture(isinggraph = nudged_routine.dynamics.model)
+        nudged_routine.nudged_beta = @transform(x -> -x, clamping_beta)
+        nudged_routine()
+        minus_capture(isinggraph = nudged_routine.dynamics.model)
         IsingLearning.set_clamping_beta!(c1.dynamics.model, zero(beta))
-        IsingLearning.contrastive_gradient(c1.dynamics.model, c2.plus_capture.captured, c2.minus_capture.captured, clamping_beta, buffers = buffers)
+        IsingLearning.contrastive_gradient(c1.dynamics.model, plus_capture.captured, minus_capture.captured, clamping_beta, buffers = buffers)
     end
     return (; algorithm = final, plus_capture = nudged.plus_capture, minus_capture = nudged.minus_capture, dynamics = forward.dynamics)
 end
@@ -896,7 +904,6 @@ function split_input_nudged_temp_worker_process(layer, worker_graph, base_temp::
             x = zeros(eltype(worker_graph), xdim),
             y = zeros(eltype(worker_graph), ydim),
             buffers = buffers,
-            clamping_beta = eltype(worker_graph)(layer.β),
             equilibrium_state = copy(II.state(worker_graph)),
         ),
         Processes.Init(:dynamics, model = worker_graph),

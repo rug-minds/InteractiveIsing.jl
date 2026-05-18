@@ -99,14 +99,80 @@ function _start_host_timers!(host::WindowHost)
     return host
 end
 
+function _close_notification_timer!(timer; wait_for_close = true)
+    isnothing(timer) && return nothing
+    try
+        if timer isa PTimer
+            close(timer)
+        elseif applicable(close, timer)
+            close(timer)
+        end
+        if wait_for_close
+            try
+                wait(timer)
+            catch
+            end
+        end
+    catch err
+        @warn "Could not stop window notification timer" timer_type = typeof(timer) exception = (err, catch_backtrace())
+    end
+    return nothing
+end
+
+function _stop_host_notification_timers!(host::WindowHost; wait_for_timers = true)
+    frame_timer = host.frame_timer
+    poll_timer = host.poll_timer
+    _close_notification_timer!(frame_timer; wait_for_close = wait_for_timers)
+    _close_notification_timer!(poll_timer; wait_for_close = wait_for_timers)
+    host.frame_timer = nothing
+    host.poll_timer = nothing
+    return (frame_timer, poll_timer)
+end
+
+function _wait_notification_timers!(timers)
+    for timer in timers
+        isnothing(timer) && continue
+        try
+            wait(timer)
+        catch
+        end
+    end
+    return nothing
+end
+
+function _stop_host_notifications!(host::WindowHost; wait_for_timers = true)
+    _stop_host_notification_timers!(host; wait_for_timers)
+
+    for pollable in copy(host.pollables)
+        _shutdown_runtime_resource(pollable)
+    end
+    for resource in reverse(host.resources)
+        _shutdown_runtime_resource(resource)
+    end
+    for child in reverse(collect(values(host.children)))
+        _shutdown_handle_runtime!(child)
+    end
+
+    empty!(host.frame_callbacks)
+    empty!(host.pollables)
+    return nothing
+end
+
 function _display_host!(host::WindowHost, title; focus = true)
+    _clear_glmakie_screen_reuse_pool!()
     screen = GLMakie.Screen(; focus_on_show = focus)
+    _disable_glmakie_screen_reuse!(screen)
     display(screen, host.figure)
     GLFW.SetWindowTitle(to_native(screen), title)
     _disable_glmakie_renderloop_close!(screen)
     _focus_native_window!(screen)
     host.screen = screen
     host.open = events(host.figure).window_open
+    register!(host, on(host.open) do isopen
+        isopen && return nothing
+        _schedule_native_close!(host)
+        return nothing
+    end)
     register!(host, on(events(host.figure.scene).keyboardbutton) do _
         if ispressed(host.figure, (Keyboard.left_super, Keyboard.w)) || ispressed(host.figure, (Keyboard.left_control, Keyboard.w))
             _request_deferred_window_close!(host)
@@ -114,6 +180,29 @@ function _display_host!(host::WindowHost, title; focus = true)
     end)
     _start_host_timers!(host)
     return host
+end
+
+function _clear_glmakie_screen_reuse_pool!()
+    try
+        if isdefined(GLMakie, :SCREEN_REUSE_POOL)
+            empty!(getfield(GLMakie, :SCREEN_REUSE_POOL))
+        end
+    catch err
+        @warn "Could not clear GLMakie screen reuse pool" exception = (err, catch_backtrace())
+    end
+    return nothing
+end
+
+function _disable_glmakie_screen_reuse!(screen)
+    isnothing(screen) && return nothing
+    try
+        if hasproperty(screen, :reuse)
+            screen.reuse = false
+        end
+    catch err
+        @warn "Could not disable GLMakie screen reuse" exception = (err, catch_backtrace())
+    end
+    return nothing
 end
 
 function _focus_native_window!(screen)
@@ -140,123 +229,31 @@ end
 
 function _request_deferred_window_close!(host::WindowHost)
     (host.closed || host.closing) && return nothing
-    try
-        host.open[] = false
-    catch err
-        @warn "Could not request deferred window close" exception = (err, catch_backtrace())
-    end
+    host.open[] = false
     return nothing
 end
 
-function _disable_glmakie_renderloop_close!(screen)
+function _set_glmakie_renderloop_close!(screen, value::Bool)
     isnothing(screen) && return nothing
     try
         if hasproperty(screen, :close_after_renderloop)
-            screen.close_after_renderloop = false
+            screen.close_after_renderloop = value
         end
     catch err
-        @warn "Could not disable GLMakie renderloop close" exception = (err, catch_backtrace())
+        @warn "Could not update GLMakie renderloop close mode" exception = (err, catch_backtrace())
     end
     return nothing
 end
 
-function _stop_glmakie_renderloop_without_wait!(screen)
+_disable_glmakie_renderloop_close!(screen) = _set_glmakie_renderloop_close!(screen, false)
+
+function _close_glmakie_screen_after_runtime_stop!(screen)
     isnothing(screen) && return nothing
-    _disable_glmakie_renderloop_close!(screen)
     try
-        if hasproperty(screen, :stop_renderloop)
-            screen.stop_renderloop[] = true
-        end
+        close(screen; reuse = false)
     catch err
-        @warn "Could not request GLMakie renderloop stop" exception = (err, catch_backtrace())
+        @warn "Could not close GLMakie screen" exception = (err, catch_backtrace())
     end
-    return nothing
-end
-
-function _forget_glmakie_screen!(screen)
-    isnothing(screen) && return nothing
-    try
-        isdefined(GLMakie, :ALL_SCREENS) && delete!(getfield(GLMakie, :ALL_SCREENS), screen)
-        isdefined(GLMakie, :SCREEN_REUSE_POOL) && delete!(getfield(GLMakie, :SCREEN_REUSE_POOL), screen)
-        if isdefined(GLMakie, :SINGLETON_SCREEN)
-            singleton = getfield(GLMakie, :SINGLETON_SCREEN)
-            screen in singleton && empty!(singleton)
-        end
-    catch err
-        @warn "Could not detach GLMakie screen from closeall registry" exception = (err, catch_backtrace())
-    end
-    return nothing
-end
-
-function _window_handle(screen)
-    isnothing(screen) && return nothing
-    return try
-        to_native(screen)
-    catch
-        nothing
-    end
-end
-
-function _window_handle_alive(window)
-    isnothing(window) && return false
-    try
-        return getfield(window, :handle) != C_NULL
-    catch
-        return true
-    end
-end
-
-function _renderloop_done(screen)
-    isnothing(screen) && return true
-    task = try
-        getfield(screen, :rendertask)
-    catch
-        nothing
-    end
-    isnothing(task) && return true
-    return istaskdone(task)
-end
-
-function _hide_native_glfw_window_later!(screen)
-    isnothing(screen) && return nothing
-    @async begin
-        for _ in 1:50
-            _renderloop_done(screen) && break
-            sleep(0.02)
-        end
-
-        window = _window_handle(screen)
-        _window_handle_alive(window) || return nothing
-        try
-            GLFW.HideWindow(window)
-        catch
-        end
-    end
-    return nothing
-end
-
-function _mark_native_window_should_close!(screen)
-    window = _window_handle(screen)
-    _window_handle_alive(window) || return nothing
-
-    try
-        GLFW.SetWindowShouldClose(window, true)
-    catch
-    end
-    return nothing
-end
-
-function _request_native_window_close!(host::WindowHost)
-    screen = host.screen
-    isnothing(screen) && return nothing
-    _stop_glmakie_renderloop_without_wait!(screen)
-    try
-        host.open[] = false
-    catch
-    end
-    _mark_native_window_should_close!(screen)
-    _hide_native_glfw_window_later!(screen)
-    _forget_glmakie_screen!(screen)
     return nothing
 end
 
@@ -406,6 +403,65 @@ function register!(handle::PanelHandle, resource)
     return resource
 end
 
+struct HotObservable
+    observable::Any
+end
+
+"""
+    register_hot_observable!(host_or_handle, observable)
+
+Register a high-frequency Makie observable whose value may point at live
+simulation memory. During runtime shutdown the observable's stored value is
+replaced with an inert zero-sized value derived from the observable type
+parameter, without calling `notify`.
+"""
+function register_hot_observable!(host::WindowHost, observable::Observable)
+    register!(host, HotObservable(observable))
+    return observable
+end
+
+function register_hot_observable!(handle::PanelHandle, observable::Observable)
+    register!(handle, HotObservable(observable))
+    return observable
+end
+
+"""
+    hot_observable_zero(::Type{T})
+    hot_observable_zero(observable::Observable{T})
+
+Allocate an inert zero-sized replacement suitable for an observable value of
+type `T`. This is used during close cleanup to sever references from Makie plots
+to hot simulation memory without issuing another observable notification.
+"""
+hot_observable_zero(observable::Observable{T}) where {T} = hot_observable_zero(T)
+
+function hot_observable_zero(::Type{T}) where {E,N,T<:AbstractArray{E,N}}
+    return zeros(E, ntuple(_ -> 0, N))
+end
+
+function hot_observable_zero(::Type{T}) where {E,N,T<:Array{E,N}}
+    return zeros(E, ntuple(_ -> 0, N))
+end
+
+function hot_observable_zero(::Type{T}) where {E,N,P,I,L,T<:SubArray{E,N,P,I,L}}
+    replacement = view(zeros(E, ntuple(_ -> 0, N)), ntuple(_ -> (:), N)...)
+    replacement isa T && return replacement
+    throw(ArgumentError("Cannot build zero-sized replacement for hot observable value type $T."))
+end
+
+function hot_observable_zero(::Type{T}) where {E,N,P<:SubArray{E,N},T<:Base.ReshapedArray{E,1,P,Tuple{}}}
+    replacement = vec(hot_observable_zero(P))
+    replacement isa T && return replacement
+    throw(ArgumentError("Cannot build zero-sized replacement for hot observable value type $T."))
+end
+
+function detach_hot_observable!(observable::Observable{T}) where {T}
+    replacement = hot_observable_zero(T)
+    replacement isa T || throw(ArgumentError("Replacement value $(typeof(replacement)) is not compatible with observable value type $T."))
+    setfield!(observable, :val, replacement)
+    return observable
+end
+
 struct CloseCallback
     callback::Function
 end
@@ -521,6 +577,10 @@ _cleanup_resource!(::Nothing) = nothing
 
 # Does this one make sense?
 _cleanup_resource!(callback::FrameCallback) = filter!(!isequal(callback.callback), callback.host.frame_callbacks)
+function _cleanup_resource!(resource::HotObservable)
+    detach_hot_observable!(resource.observable)
+    return nothing
+end
 function _cleanup_resource!(registration::PolledRegistration)
     filter!(!isequal(registration.observable), registration.host.pollables)
     close(registration.observable)
@@ -572,6 +632,10 @@ end
 
 _shutdown_runtime_resource!(::Nothing) = nothing
 _shutdown_runtime_resource!(::FrameCallback) = nothing
+function _shutdown_runtime_resource!(resource::HotObservable)
+    detach_hot_observable!(resource.observable)
+    return nothing
+end
 function _shutdown_runtime_resource!(registration::PolledRegistration)
     close(registration.observable)
     return nothing
@@ -704,30 +768,24 @@ end
 function _begin_native_close!(host::WindowHost)
     (host.closed || host.closing) && return nothing
     host.closing = true
-    _disable_glmakie_renderloop_close!(host.screen)
-    _forget_glmakie_screen!(host.screen)
-    isnothing(host.frame_timer) || close(host.frame_timer)
-    isnothing(host.poll_timer) || close(host.poll_timer)
-    for pollable in copy(host.pollables)
-        _shutdown_runtime_resource(pollable)
-    end
-    for resource in reverse(host.resources)
-        _shutdown_runtime_resource(resource)
-    end
-    for child in reverse(collect(values(host.children)))
-        _shutdown_handle_runtime!(child)
-    end
+    _stop_host_notifications!(host; wait_for_timers = true)
     _request_host_owned_process_shutdown!(host)
-    empty!(host.frame_callbacks)
-    empty!(host.pollables)
     host.closed = true
     return host
 end
 
 function _schedule_native_close!(host::WindowHost)
-    _begin_native_close!(host) === nothing && return nothing
-    _request_native_window_close!(host)
-    @async _finish_native_close!(host)
+    (host.closed || get(host.data, :close_scheduled, false)) && return nothing
+    host.data[:close_scheduled] = true
+    host.closing = true
+    screen = host.screen
+    @async begin
+        _stop_host_notifications!(host; wait_for_timers = true)
+        _request_host_owned_process_shutdown!(host)
+        _close_glmakie_screen_after_runtime_stop!(screen)
+        host.closed = true
+        _finish_native_close!(host)
+    end
     return nothing
 end
 
@@ -747,32 +805,14 @@ teardown.
 function Base.close(host::WindowHost)
     (host.closed || host.closing) && return nothing
     if !isnothing(host.screen)
-        _begin_native_close!(host)
-        @async _finish_native_close!(host)
-        _request_native_window_close!(host)
+        host.open[] = false
         return nothing
     end
 
     host.closing = true
-    should_close_screen = !isnothing(host.screen) && host.open[]
-    isnothing(host.frame_timer) || close(host.frame_timer)
-    isnothing(host.poll_timer) || close(host.poll_timer)
-    for pollable in copy(host.pollables)
-        _shutdown_runtime_resource(pollable)
-    end
-    for resource in reverse(host.resources)
-        _shutdown_runtime_resource(resource)
-    end
-    for child in reverse(collect(values(host.children)))
-        _shutdown_handle_runtime!(child)
-    end
+    _stop_host_notifications!(host; wait_for_timers = true)
     _request_host_owned_process_shutdown!(host)
     _run_close_callbacks!(host)
-    empty!(host.frame_callbacks)
-    empty!(host.pollables)
-    if should_close_screen
-        _request_native_window_close!(host)
-    end
     host.closed = true
     host.closing = false
     return nothing

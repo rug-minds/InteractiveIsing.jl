@@ -41,14 +41,18 @@ export AbstractPanel, PanelHandle, WindowHost, SimulationPanel, StatusPanel,
     TemperaturePanel, MagnetizationPanel,
     HasAxis, NoAxis, AxisTrait, HasImage, NoImage, ImageTrait,
     axis_to_png, axis_trait, axiskey, fullimage, image_trait,
-    close!, getaxis, hasaxis, hasimage, interface, layer_display, mount!, new_interface,
-    onclose!, panel!, parameter_display, pause!, register!, register_frame!,
+    close!, detach_hot_observable!, getaxis, hasaxis, hasimage, hot_observable_zero,
+    interface, layer_display, mount!, new_interface, onclose!, panel!,
+    parameter_display, pause!, register!, register_frame!, register_hot_observable!,
     register_polled!, restart!, resume!, tofigure, toimage, toimage!, window,
-    displayable_hamiltonian_parameters, hamiltonian_visualizations
+    displayable_hamiltonian_parameters, hamiltonian_visualizations,
+    close_debug_window_descriptions, close_debug_window_names,
+    open_close_debug_window
 
 include("Core.jl")
 include("Interfaces.jl")
 include("Panels/Panels.jl")
+include("Debugging/CloseDebugWindows.jl")
 
 """
     interface(g; kwargs...) -> WindowHost

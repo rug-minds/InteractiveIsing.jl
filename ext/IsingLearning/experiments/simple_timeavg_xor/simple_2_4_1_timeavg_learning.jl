@@ -291,12 +291,13 @@ function timeavg_nudged_branch(graph, config::TimeAverageXorConfig, sc::SimpleXo
             @state y
             @state equilibrium_state
             @state buffers
+            @state nudged_beta = beta_value
             @alias dynamics = dynamics_algorithm
             @alias plus_capture = capture
             IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
             IsingLearning.apply_input(dynamics.model, x)
             IsingLearning.apply_targets(dynamics.model, y)
-            IsingLearning.set_clamping_beta!(dynamics.model, beta_value)
+            IsingLearning.set_clamping_beta!(dynamics.model, nudged_beta)
             @repeat sc.nudged_relaxation dynamics()
             @repeat average_steps sample()
             plus_capture(isinggraph = dynamics.model)
@@ -307,12 +308,13 @@ function timeavg_nudged_branch(graph, config::TimeAverageXorConfig, sc::SimpleXo
             @state y
             @state equilibrium_state
             @state buffers
+            @state nudged_beta = beta_value
             @alias dynamics = dynamics_algorithm
             @alias minus_capture = capture
             IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
             IsingLearning.apply_input(dynamics.model, x)
             IsingLearning.apply_targets(dynamics.model, y)
-            IsingLearning.set_clamping_beta!(dynamics.model, beta_value)
+            IsingLearning.set_clamping_beta!(dynamics.model, nudged_beta)
             @repeat sc.nudged_relaxation dynamics()
             @repeat average_steps sample()
             minus_capture(isinggraph = dynamics.model)
@@ -328,10 +330,15 @@ function timeavg_training_worker_process(layer, graph, sc::SimpleXorConfig, conf
     minus = timeavg_nudged_branch(graph, config, sc, -1)
     beta = layer.β
     final = Processes.@CompositeAlgorithm begin
+        @input clamping_beta = beta
         @state buffers
+        @alias plus_branch = plus.algorithm
+        @alias minus_branch = minus.algorithm
         @context c1 = forward()
-        @context c2 = plus.algorithm()
-        @context c3 = minus.algorithm()
+        plus_branch.nudged_beta = clamping_beta
+        @context c2 = plus_branch()
+        minus_branch.nudged_beta = @transform(x -> -x, clamping_beta)
+        @context c3 = minus_branch()
         IsingLearning.set_clamping_beta!(c1.dynamics.model, zero(beta))
     end
     algo = Processes.resolve(final)
@@ -376,8 +383,7 @@ end
 
 """Resolve process inputs against `template` and build a fresh worker-local context."""
 function worker_context_from_inputs(template::Process, inputs)
-    resolved = Processes._resolve_reinit_inputs(template, inputs...)
-    return Processes.initcontext(Processes.taskdata(template), resolved...)
+    return Processes.context(Processes.init(Processes.getalgo(template), inputs...))
 end
 
 """Build a copied training context with worker-local graph inputs."""
@@ -405,8 +411,11 @@ function template_eval_worker(layer, prototype_graph, config::TimeAverageXorConf
     wrapped = Processes.@Routine begin
         @repeat (total_sweeps * sweep_steps) routine()
     end
-    inputs = II._merge_graph_inputs(wrapped, graph, Processes.Init(dynamics, rng = Random.MersenneTwister(config.base_seed + 70_000 + worker_idx)))
-    return Process(Processes.resolve(wrapped), inputs...; repeats = 1)
+    return Process(
+        Processes.resolve(wrapped),
+        dynamics_input(:dynamics, graph, config.base_seed + 70_000 + worker_idx);
+        repeats = 1,
+    )
 end
 
 """Constructor inputs for one copied validation worker."""
@@ -521,6 +530,7 @@ function train_manager_recipe(layer, prototype_graph)
         makecontext = (idx, manager, template) -> train_worker_context(template, prototype_graph, manager.config),
         prepare! = (slot, job, manager) -> prepare_train_worker!(slot.worker, manager.state, manager.config, job),
         isdone = (slot, manager) -> Processes.isdone(slot.worker),
+        runarguments = (slot, job, manager) -> (; clamping_beta = manager.config.β),
         consume! = (slot, job, manager) -> collect_train_response!(
             manager.state.current_responses,
             (; context = Processes.context(slot.worker), error = nothing),

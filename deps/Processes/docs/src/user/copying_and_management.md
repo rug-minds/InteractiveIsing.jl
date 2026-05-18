@@ -67,6 +67,38 @@ The manager is meant to be long-lived when worker contexts are expensive. Build
 it once, then call `run!(manager, jobs)` many times. The same slots and workers
 are reused on every call.
 
+### Whole Manager Workflow
+
+A manager run has four parts:
+
+1. Construction creates the fixed worker slots. If you pass `workers = ...`,
+   those worker objects are wrapped as-is. If you omit `workers`, the recipe must
+   define `makeworker`; the manager builds a template worker, then copies it for
+   the other slots. For `Process` workers, `makecontext` can build separate
+   per-slot contexts while keeping the same algorithm.
+2. Dispatch assigns one job to one free slot. The manager stores the job in
+   `slot.job`, clears the previous `slot.result` and `slot.error`, runs
+   `prepare!`, calls `runarguments`, then launches the worker. Use `prepare!` for
+   persistent worker context changes. Use `runarguments` for runtime `@input`
+   values by returning a named tuple, which is passed to
+   `run(slot.worker; kwargs...)`.
+3. Completion is detected by polling. When a slot finishes, the manager runs
+   `finalize!`, `afterrun!`, `consume!`, and `release!`, then marks the slot free
+   so another job can use the same worker.
+4. Flushing is manager-level synchronization. `flush_policy` decides when
+   `flush!` runs. Use `flush!` to merge worker-local buffers into manager state,
+   external storage, or another object.
+
+All lifecycle callbacks run on the thread that is driving the manager. Worker
+tasks may run elsewhere, but `consume!` and `flush!` are manager-side hooks. This
+means users can keep synchronization simple by only merging data after a worker
+has finished.
+
+The recipe is stored directly in `ProcessManager{Recipe,...}`. A named tuple of
+closures therefore keeps the concrete closure types visible to Julia. For lower
+overhead, also pass `job_type`, `result_type`, `scratch_type`, or `error_type`
+when those slot field types are known.
+
 ### Worker Ownership
 
 The usual form is to let the manager create and own its workers:
@@ -145,12 +177,19 @@ For each job, the manager uses this order:
 1. Wait for a free slot.
 2. Store the job in `slot.job`.
 3. Call `prepare!(slot, job, manager)`.
-4. Start the worker.
-5. Poll active workers until one finishes.
-6. Finalize the finished worker.
-7. Call `consume!(slot, job, manager)`.
-8. Call `release!(slot, job, manager)`.
-9. Mark the slot free.
+4. Call `runarguments(slot, job, manager)`.
+5. Call `run(slot.worker; kwargs...)`, where `kwargs` is the named tuple returned
+   by `runarguments`.
+6. Poll active workers until one finishes.
+7. Call `finalize!(slot, job, manager)`, or `wait(slot.worker); close(slot.worker)`
+   if no `finalize!` callback exists.
+8. Call `afterrun!(slot, job, manager)`.
+9. Call `consume!(slot, job, manager)`.
+10. Call `release!(slot, job, manager)`.
+11. Mark the slot free.
+
+If a recipe defines `start!(slot, job, manager)`, that callback replaces steps 4
+and 5. Use `start!` only when you want to take over worker launch completely.
 
 For `Process` workers, the default start/finalize behavior is:
 
@@ -164,18 +203,31 @@ close(slot.worker)
 process returns a context. That makes `consume!` the right place to read final
 worker context values.
 
+If a job needs to affect both persistent context and loop-level runtime inputs,
+use two different steps: prepare the context in `prepare!`, then pass runtime
+inputs from `runarguments`.
+
 ### Recipe Callbacks
 
 A recipe can be a named tuple or an object with methods for these callbacks.
 Callbacks can accept fewer trailing arguments if they do not need all of them.
+The recipe object is stored as a concrete field of the manager, so anonymous
+functions in a named tuple are part of the manager type.
 
 - `initstate(config, manager)`: build `manager.state` from user configuration.
 - `makeworker(idx, manager)`: create worker `idx` when `workers` is not passed.
 - `makecontext(idx, manager, template)`: for manager-owned `Process` workers,
   build the context for slot `idx` from the template worker.
 - `prepare!(slot, job, manager)`: write one job into a worker before it starts.
-- `start!(slot, job, manager)`: custom worker start. Defaults to `run(worker)`
-  for `Process` workers.
+  This is the usual place to mutate context, call `reinitworker!`, or call
+  `partialinitworker!`.
+- `runarguments(slot, job, manager)`: return a named tuple of runtime keyword
+  arguments for the implicit `run(...)` call. This callback may also run
+  arbitrary manager-side code before launch. For example,
+  `(; temperature = job.temperature)` becomes
+  `run(slot.worker; temperature = job.temperature)`.
+- `start!(slot, job, manager)`: advanced custom worker start. If this callback
+  exists, it replaces `runarguments` and the implicit `run(...)` call.
 - `isdone(slot, manager)`: custom completion check. Defaults to
   `isdone(worker)` for `Process` workers.
 - `finalize!(slot, job, manager)`: custom finish step. Defaults to
@@ -208,8 +260,8 @@ prepare! = (slot, job, manager) -> begin
 end
 ```
 
-Use `reinitworker!` when you want to rebuild through the normal process init
-path:
+Use `reinitworker!` when the job should rebuild context through the normal
+process init path:
 
 ```julia
 prepare! = (slot, job, manager) -> reinitworker!(
@@ -218,10 +270,28 @@ prepare! = (slot, job, manager) -> reinitworker!(
 )
 ```
 
-Direct mutation is usually faster. `reinitworker!` is useful when the context
-shape, inputs, or initialized state must be rebuilt. Do not create a new
-`Process` inside `prepare!` unless you intentionally want to give up worker
-context reuse.
+Use `partialinitworker!` when only one target needs to be rebuilt:
+
+```julia
+prepare! = (slot, job, manager) -> partialinitworker!(
+    slot,
+    Init(MyAlgo; x = job.x),
+)
+```
+
+Use `runarguments` for loop-level runtime `@input` values:
+
+```julia
+runarguments = (slot, job, manager) -> (; temperature = job.temperature)
+```
+
+You can use both for the same job. The manager calls `prepare!` first, then
+`runarguments`, then `run(slot.worker; temperature = job.temperature)`.
+
+Direct mutation is usually faster. `reinitworker!` and `partialinitworker!` are
+useful when the context shape, inputs, or initialized state must be rebuilt. Do
+not create a new `Process` inside a callback unless you intentionally want to
+give up worker context reuse.
 
 ### Result Collection
 
@@ -299,12 +369,19 @@ Processes.FlushPolicy
 Processes.FlushAtEnd
 Processes.NoFlush
 Processes.FlushEvery
+Processes.slots
+Processes.workers
+Processes.copyworker
+Processes.prepare!
+Processes.runarguments
+Processes.start!
 Processes.dispatch!
 Processes.poll!
 Processes.drain!
 Processes.run!
 Processes.resetworker!
 Processes.reinitworker!
+Processes.partialinitworker!
 ```
 
 ## Manager-Owned Worker Example

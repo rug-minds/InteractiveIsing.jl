@@ -50,7 +50,9 @@ end
 function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,2}) where {T}
     ax = handle[:axis] = Axis(grid[1, 1], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
     ax.yreversed = @load_preference("makie_y_flip", default = false)
-    obs = handle[:img_obs] = Observable(state(layer))
+    vals = _layer_state_view(layer)
+    obs = handle[:img_obs] = Observable{typeof(vals)}(vals)
+    register_hot_observable!(handle, obs)
     plot = handle[:plot] = image!(ax, obs, colormap = :thermal, fxaa = false, interpolate = false)
     _bind_layer_colorrange!(plot, obs, layer)
     reset_limits!(ax)
@@ -61,7 +63,9 @@ function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,3}) where {
     ax = handle[:axis] = Axis3(grid[1, 1], tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :axis3_state, nothing))
     xs, ys, zs = _coordinates_3d!(handle, size(layer))
-    obs = handle[:img_obs] = Observable(_cast_layer_state_vector(layer))
+    vals = _layer_state_vector_view(layer)
+    obs = handle[:img_obs] = Observable{typeof(vals)}(vals)
+    register_hot_observable!(handle, obs)
     plot = handle[:plot] = meshscatter!(ax, xs, ys, zs, markersize = 0.3, color = obs, colormap = :thermal)
     _bind_layer_colorrange!(plot, obs, layer)
     return handle

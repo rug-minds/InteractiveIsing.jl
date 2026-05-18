@@ -289,6 +289,30 @@ free/nudged sweeps control how much of that response is expressed.
 lr controls whether the good basin is retained after discovery.
 ```
 
+Current default checked on 2026-05-17:
+
+```text
+file = ext/IsingLearning/experiments/simple_langevin_xor/analytic_2_4_1.jl
+init = random
+random_weight_scale = 0.15
+random_bias_scale = 0.05
+free/nudged = 600/600
+T = 0.005
+stepsize = 0.4
+β = 2
+lr = 0.005
+Minit = 8
+weight_decay = 0
+```
+
+The standard minibatch path with these defaults reached MSE `0.06557` and
+accuracy `1.0` at epoch `600`, and finished at MSE `0.08790`, accuracy `1.0` at
+epoch `1200`. The important update from the previous notes is that, with the
+current stable `LocalLangevin`, the too-small random initialization scale often
+falls into an OR-like solution. A moderately larger random weight/bias scale
+gives the hidden units enough initial diversity to discover the `(1,1)` corner
+detector.
+
 ## Next Steps
 
 The next practical improvement should target retention:

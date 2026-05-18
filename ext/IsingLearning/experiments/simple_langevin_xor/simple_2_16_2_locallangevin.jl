@@ -24,26 +24,29 @@ physical bipolar input spins, sixteen hidden spins, and two output spins.
 """
 Base.@kwdef struct SimpleXorConfig
     name::String = "simple_2_16_2"
-    epochs::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_EPOCHS", "600"))
-    log_every::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_LOG_EVERY", "50"))
+    epochs::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_EPOCHS", "2000"))
+    log_every::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_LOG_EVERY", "250"))
     minit::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_MINIT", "4"))
-    eval_repeats::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_EVAL_REPEATS", "16"))
-    workers::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_THREADS", string(max(1, min(Threads.nthreads(), 4)))))
-    free_relaxation::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_FREE", "1200"))
-    nudged_relaxation::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_NUDGED", "1200"))
+    eval_repeats::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_EVAL_REPEATS", "32"))
+    workers::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_THREADS", "1"))
+    free_relaxation::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_FREE", "1000"))
+    nudged_relaxation::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_NUDGED", "1000"))
     early_relaxation::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_EARLY", "20"))
     β::FT = parse(FT, get(ENV, "ISING_SIMPLE_XOR_BETA", "1.0"))
-    lr::FT = parse(FT, get(ENV, "ISING_SIMPLE_XOR_LR", "0.0015"))
-    weight_decay::FT = parse(FT, get(ENV, "ISING_SIMPLE_XOR_WEIGHT_DECAY", "1e-4"))
+    lr::FT = parse(FT, get(ENV, "ISING_SIMPLE_XOR_LR", "0.01"))
+    weight_decay::FT = parse(FT, get(ENV, "ISING_SIMPLE_XOR_WEIGHT_DECAY", "0.0"))
     grad_clip::FT = parse(FT, get(ENV, "ISING_SIMPLE_XOR_GRAD_CLIP", "50"))
-    temp::FT = parse(FT, get(ENV, "ISING_SIMPLE_XOR_TEMP", "0.02"))
-    stepsize::FT = parse(FT, get(ENV, "ISING_SIMPLE_XOR_STEPSIZE", "0.20"))
+    temp::FT = parse(FT, get(ENV, "ISING_SIMPLE_XOR_TEMP", "0.001"))
+    stepsize::FT = parse(FT, get(ENV, "ISING_SIMPLE_XOR_STEPSIZE", "0.10"))
     max_drift_fraction::FT = parse(FT, get(ENV, "ISING_SIMPLE_XOR_MAX_DRIFT", "1.00"))
+    dynamics_mode::Symbol = Symbol(get(ENV, "ISING_SIMPLE_XOR_DYNAMICS", "block"))
+    block_size::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_BLOCK_SIZE", "8"))
     weight_scale::FT = parse(FT, get(ENV, "ISING_SIMPLE_XOR_WEIGHT_SCALE", "0.20"))
     bias_scale::FT = parse(FT, get(ENV, "ISING_SIMPLE_XOR_BIAS_SCALE", "0.05"))
-    weight_seed::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_WEIGHT_SEED", "31"))
-    bias_seed::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_BIAS_SEED", "37"))
-    base_seed::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_BASE_SEED", "73000"))
+    init_mode::Symbol = Symbol(get(ENV, "ISING_SIMPLE_XOR_INIT_MODE", "zero"))
+    weight_seed::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_WEIGHT_SEED", "13"))
+    bias_seed::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_BIAS_SEED", "23"))
+    base_seed::Int = parse(Int, get(ENV, "ISING_SIMPLE_XOR_BASE_SEED", "87300"))
 end
 
 """
@@ -53,7 +56,13 @@ Initialize one free relaxation for this experiment through the normal graph
 reset path. This file intentionally uses random initial states only.
 """
 function simple_initstate!(model, config::SimpleXorConfig)
-    II.resetstate!(model)
+    if config.init_mode === :random
+        II.resetstate!(model)
+    elseif config.init_mode === :zero
+        fill!(II.state(model), zero(eltype(model)))
+    else
+        throw(ArgumentError("ISING_SIMPLE_XOR_INIT_MODE must be random or zero, got $(config.init_mode)"))
+    end
     return model
 end
 
@@ -65,13 +74,7 @@ is always unadjusted `LocalLangevin`, because this test is about energy
 minimization behavior rather than exact Boltzmann sampling.
 """
 function SimpleLayer(graph, config::SimpleXorConfig)
-    dynamics = II.LocalLangevin(
-        stepsize = config.stepsize,
-        max_drift_fraction = config.max_drift_fraction,
-        adjusted = false,
-        order = :random,
-        group_steps = 1,
-    )
+    dynamics = simple_dynamics(config)
     return LayeredIsingGraphLayer(
         () -> simple_graph(config);
         input_idxs = II.layerrange(graph[1]),
@@ -143,13 +146,20 @@ end
 Return one `LocalLangevin` algorithm for a process branch.
 """
 function simple_dynamics(config::SimpleXorConfig)
-    return II.LocalLangevin(
+    config.dynamics_mode === :local && return II.LocalLangevin(
         stepsize = config.stepsize,
         max_drift_fraction = config.max_drift_fraction,
         adjusted = false,
         order = :random,
         group_steps = 1,
     )
+    config.dynamics_mode === :block && return II.BlockLangevin(
+        stepsize = config.stepsize,
+        adjusted = false,
+        block_size = config.block_size,
+        group_steps = 1,
+    )
+    throw(ArgumentError("ISING_SIMPLE_XOR_DYNAMICS must be local or block, got $(config.dynamics_mode)"))
 end
 
 """
@@ -158,7 +168,7 @@ end
 Create a branch context with its own graph and Langevin RNG.
 """
 function dynamics_input(name::Symbol, graph, seed::Integer)
-    return Init(name, model = graph, rng = Random.MersenneTwister(seed))
+    return Init(name, model = graph)
 end
 
 """
@@ -198,14 +208,13 @@ function simple_nudged(layer, config::SimpleXorConfig)
     relaxation_steps = layer.nudged_relaxation_steps
     plus_capture = IsingLearning.Capturer()
     minus_capture = IsingLearning.Capturer()
-    plus_dynamics_algorithm = simple_dynamics(config)
-    minus_dynamics_algorithm = simple_dynamics(config)
+    dynamics_algorithm = simple_dynamics(config)
 
     plus = @Routine begin
         @state equilibrium_state
         @state y
         @state x
-        @alias dynamics = plus_dynamics_algorithm
+        @alias dynamics = dynamics_algorithm
         @alias plus_capture = plus_capture
 
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
@@ -220,7 +229,7 @@ function simple_nudged(layer, config::SimpleXorConfig)
         @state equilibrium_state
         @state y
         @state x
-        @alias dynamics = minus_dynamics_algorithm
+        @alias dynamics = dynamics_algorithm
         @alias minus_capture = minus_capture
 
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
@@ -591,18 +600,20 @@ Document the exact controlled comparison.
 """
 function write_readme(path, config::SimpleXorConfig, results, csv_path, png_path)
     open(path, "w") do io
-        println(io, "# Simple 2->16->2 LocalLangevin XOR")
+        println(io, "# Simple 2->16->2 Langevin XOR")
         println(io)
         println(io, "This run compares normal EqProp against the split-snapshot variant on the smallest useful physical XOR graph: two input spins, four hidden spins, and one two-output spin.")
         println(io)
-        println(io, "Both routes use unadjusted `LocalLangevin`, masked direct output clamping, trainable `Bilinear` weights and `MagField` biases, and no polynomial local potential.")
+        println(io, "The default route uses unadjusted `BlockLangevin`, masked direct output clamping, trainable `Bilinear` weights and `MagField` biases, and no polynomial local potential.")
         println(io)
         println(io, "- Temperature: `$(config.temp)`")
+        println(io, "- Dynamics: `$(config.dynamics_mode)`")
         println(io, "- Stepsize: `$(config.stepsize)`")
+        println(io, "- Block size: `$(config.block_size)`")
         println(io, "- Max drift fraction: `$(config.max_drift_fraction)`")
         println(io, "- Free / early / nudged: `$(config.free_relaxation)` / `$(config.early_relaxation)` / `$(config.nudged_relaxation)`")
         println(io, "- Minit / eval repeats: `$(config.minit)` / `$(config.eval_repeats)`")
-        println(io, "- Init mode: random")
+        println(io, "- Init mode: `$(config.init_mode)`")
         println(io)
         println(io, "| Route | Best MSE | Best Acc |")
         println(io, "|---|---:|---:|")
@@ -619,7 +630,8 @@ end
 """
     main()
 
-Run normal and split-snapshot LocalLangevin on the same simple XOR task.
+Run the normal two-output Langevin XOR route. The split route remains available
+through `ISING_SIMPLE_XOR_ROUTE=split` for diagnostics.
 """
 function main()
     config = SimpleXorConfig()
@@ -630,7 +642,7 @@ function main()
     )
     mkpath(outdir)
     all_rows = Dict{String,Any}[]
-    route_mode = Symbol(get(ENV, "ISING_SIMPLE_XOR_ROUTE", "both"))
+    route_mode = Symbol(get(ENV, "ISING_SIMPLE_XOR_ROUTE", "normal"))
     results = []
     normal = nothing
     split = nothing

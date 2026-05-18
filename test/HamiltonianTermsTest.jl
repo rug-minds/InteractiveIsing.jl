@@ -206,6 +206,125 @@ end
     @test length(found.b) == length(InteractiveIsing.state(lookup_h[2]))
 end
 
+@testset "CosineInteraction Semantics" begin
+    cosine_adj(weight = 1.0) =
+        InteractiveIsing.UndirectedAdjacency(
+            sparse([1, 2], [2, 1], Float64[weight, weight], 2, 2),
+            zeros(Float64, 2),
+        )
+
+    continuous_layer = Layer(2, Continuous(), StateSet(0.0, 1.0); periodic = false)
+    g = IsingGraph(continuous_layer, CosineInteraction(); precision = Float64, adj = cosine_adj(1.5))
+    InteractiveIsing.graphstate(g) .= [0.0, 0.25]
+    hterm = g.hamiltonian
+
+    expected_energy = -1.5 * cos(2π * (0.0 - 0.25))
+    @test InteractiveIsing.calculate(InteractiveIsing.H(), hterm, g) ≈ expected_energy
+
+    proposal = FlipProposal(2, 0.25, 0.5, 1)
+    before = InteractiveIsing.calculate(InteractiveIsing.H(), hterm, g)
+    InteractiveIsing.graphstate(g)[2] = 0.5
+    after = InteractiveIsing.calculate(InteractiveIsing.H(), hterm, g)
+    InteractiveIsing.graphstate(g)[2] = 0.25
+    @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), hterm, g, proposal) ≈ after - before
+
+    eps_fd = 1e-6
+    old = InteractiveIsing.graphstate(g)[1]
+    InteractiveIsing.graphstate(g)[1] = old + eps_fd
+    e_plus = InteractiveIsing.calculate(InteractiveIsing.H(), hterm, g)
+    InteractiveIsing.graphstate(g)[1] = old - eps_fd
+    e_minus = InteractiveIsing.calculate(InteractiveIsing.H(), hterm, g)
+    InteractiveIsing.graphstate(g)[1] = old
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, 1) ≈
+          (e_plus - e_minus) / (2eps_fd) atol = 1e-7
+
+    half_turn = IsingGraph(
+        continuous_layer,
+        CosineInteraction(turns = 0.5);
+        precision = Float64,
+        adj = cosine_adj(1.0),
+    )
+    InteractiveIsing.graphstate(half_turn) .= [0.0, 1.0]
+    @test InteractiveIsing.calculate(InteractiveIsing.H(), half_turn.hamiltonian, half_turn) ≈
+          -cos(-π)
+
+    discrete_a = Layer(1, Discrete(), StateSet(-1.0, 0.0, 1.0); periodic = false)
+    discrete_b = Layer(1, Discrete(), StateSet(-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0); periodic = false)
+    mixed_clock = IsingGraph(discrete_a, discrete_b, CosineInteraction(); precision = Float64, adj = cosine_adj(1.0))
+    InteractiveIsing.graphstate(mixed_clock) .= [-1.0, -2.0]
+    @test InteractiveIsing.calculate(InteractiveIsing.H(), mixed_clock.hamiltonian, mixed_clock) ≈
+          -cos(0 - 2π / 7)
+    @test_throws ArgumentError InteractiveIsing.calculate(InteractiveIsing.d_iH(), mixed_clock.hamiltonian, mixed_clock, 1)
+
+    local_phase = IsingGraph(
+        continuous_layer,
+        CosineInteraction(phase = [0.0, π / 2]);
+        precision = Float64,
+        adj = cosine_adj(1.0),
+    )
+    InteractiveIsing.graphstate(local_phase) .= [0.0, 0.0]
+    @test InteractiveIsing.calculate(InteractiveIsing.H(), local_phase.hamiltonian, local_phase) ≈
+          -cos(π / 2) atol = 1e-15
+
+    upper_phase = sparse([1], [2], [π / 4], 2, 2)
+    upper = IsingGraph(
+        continuous_layer,
+        CosineInteraction(edge_phase = upper_phase, edge_phase_orientation = :upper);
+        precision = Float64,
+        adj = cosine_adj(1.0),
+    )
+    InteractiveIsing.graphstate(upper) .= [0.0, 0.25]
+    @test InteractiveIsing.calculate(InteractiveIsing.H(), upper.hamiltonian, upper) ≈
+          -cos(-π / 2 - π / 4)
+
+    antisymmetric_phase = sparse([1, 2], [2, 1], [π / 4, -π / 4], 2, 2)
+    antisymmetric = IsingGraph(
+        continuous_layer,
+        CosineInteraction(edge_phase = antisymmetric_phase, edge_phase_orientation = :antisymmetric);
+        precision = Float64,
+        adj = cosine_adj(1.0),
+    )
+    InteractiveIsing.graphstate(antisymmetric) .= [0.0, 0.25]
+    @test InteractiveIsing.calculate(InteractiveIsing.H(), antisymmetric.hamiltonian, antisymmetric) ≈
+          -cos(-π / 2 - π / 4)
+
+    raw_phase = sparse([1], [2], [π / 4], 2, 2)
+    raw = IsingGraph(
+        continuous_layer,
+        CosineInteraction(edge_phase = raw_phase, edge_phase_orientation = :raw);
+        precision = Float64,
+        adj = cosine_adj(1.0),
+    )
+    InteractiveIsing.graphstate(raw) .= [0.0, 0.25]
+    @test InteractiveIsing.calculate(InteractiveIsing.H(), raw.hamiltonian, raw) ≈
+          -0.5 * (cos(-π / 2 - π / 4) + cos(π / 2))
+
+    invalid_phase = sparse([1, 2], [2, 1], [π / 4, π / 4], 2, 2)
+    @test_throws ArgumentError IsingGraph(
+        continuous_layer,
+        CosineInteraction(edge_phase = invalid_phase, edge_phase_orientation = :antisymmetric);
+        precision = Float64,
+        adj = cosine_adj(1.0),
+    )
+
+    infinite_layer = Layer(2, Continuous(), StateSet(-Inf, Inf); periodic = false)
+    @test_throws ArgumentError IsingGraph(
+        infinite_layer,
+        CosineInteraction();
+        precision = Float64,
+        adj = cosine_adj(1.0),
+    )
+
+    combo = IsingGraph(
+        continuous_layer,
+        Ising(c = ConstVal(0.0), b = 0) + CosineInteraction();
+        precision = Float64,
+        adj = cosine_adj(1.0),
+    )
+    @test InteractiveIsing.gethamiltonian(combo.hamiltonian, InteractiveIsing.CosineInteraction) isa
+          InteractiveIsing.CosineInteraction
+end
+
 @testset "Hamiltonian Display" begin
     g = IsingGraph(2, 2, Continuous(); precision = Float32)
     hts = g.hamiltonian

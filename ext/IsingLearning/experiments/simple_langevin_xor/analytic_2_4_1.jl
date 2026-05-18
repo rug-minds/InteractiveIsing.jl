@@ -11,6 +11,7 @@ using CairoMakie
 
 const FT = Float64
 const II = IsingLearning.InteractiveIsing
+const Processes = II.Processes
 
 const CASES = ((false, false), (false, true), (true, false), (true, true))
 const DETECTOR_SIGNS = ((-1, -1), (-1, 1), (1, -1), (1, 1))
@@ -24,22 +25,23 @@ standard `Forward_and_Nudged` worker path, so it avoids the stale active-index
 issue in the earlier hand-rolled split-context experiment.
 """
 Base.@kwdef struct Analytic241Config
-    epochs::Int = parse(Int, get(ENV, "ISING_241_EPOCHS", "3000"))
-    log_every::Int = parse(Int, get(ENV, "ISING_241_LOG_EVERY", "100"))
+    epochs::Int = parse(Int, get(ENV, "ISING_241_EPOCHS", "1200"))
+    log_every::Int = parse(Int, get(ENV, "ISING_241_LOG_EVERY", "300"))
     minit::Int = parse(Int, get(ENV, "ISING_241_MINIT", "8"))
-    eval_repeats::Int = parse(Int, get(ENV, "ISING_241_EVAL_REPEATS", "32"))
-    free_relaxation::Int = parse(Int, get(ENV, "ISING_241_FREE", "300"))
-    nudged_relaxation::Int = parse(Int, get(ENV, "ISING_241_NUDGED", "300"))
-    β::FT = parse(FT, get(ENV, "ISING_241_BETA", "1.0"))
+    eval_repeats::Int = parse(Int, get(ENV, "ISING_241_EVAL_REPEATS", "16"))
+    free_relaxation::Int = parse(Int, get(ENV, "ISING_241_FREE", "600"))
+    nudged_relaxation::Int = parse(Int, get(ENV, "ISING_241_NUDGED", "600"))
+    β::FT = parse(FT, get(ENV, "ISING_241_BETA", "2.0"))
     target_scale::FT = parse(FT, get(ENV, "ISING_241_TARGET_SCALE", "1.0"))
-    lr::FT = parse(FT, get(ENV, "ISING_241_LR", "0.002"))
-    weight_decay::FT = parse(FT, get(ENV, "ISING_241_WEIGHT_DECAY", "1e-4"))
-    temp::FT = parse(FT, get(ENV, "ISING_241_TEMP", "0.001"))
-    stepsize::FT = parse(FT, get(ENV, "ISING_241_STEPSIZE", "0.2"))
+    lr::FT = parse(FT, get(ENV, "ISING_241_LR", "0.005"))
+    gradient_sign::FT = parse(FT, get(ENV, "ISING_241_GRADIENT_SIGN", "1.0"))
+    weight_decay::FT = parse(FT, get(ENV, "ISING_241_WEIGHT_DECAY", "0.0"))
+    temp::FT = parse(FT, get(ENV, "ISING_241_TEMP", "0.005"))
+    stepsize::FT = parse(FT, get(ENV, "ISING_241_STEPSIZE", "0.4"))
     input_strength::FT = parse(FT, get(ENV, "ISING_241_INPUT_STRENGTH", "2.0"))
     readout_strength::FT = parse(FT, get(ENV, "ISING_241_READOUT_STRENGTH", "0.75"))
-    random_weight_scale::FT = parse(FT, get(ENV, "ISING_241_RANDOM_WEIGHT_SCALE", "0.05"))
-    random_bias_scale::FT = parse(FT, get(ENV, "ISING_241_RANDOM_BIAS_SCALE", "0.02"))
+    random_weight_scale::FT = parse(FT, get(ENV, "ISING_241_RANDOM_WEIGHT_SCALE", "0.15"))
+    random_bias_scale::FT = parse(FT, get(ENV, "ISING_241_RANDOM_BIAS_SCALE", "0.05"))
     weight_seed::Int = parse(Int, get(ENV, "ISING_241_WEIGHT_SEED", "31"))
     bias_seed::Int = parse(Int, get(ENV, "ISING_241_BIAS_SEED", "37"))
     base_seed::Int = parse(Int, get(ENV, "ISING_241_BASE_SEED", "91000"))
@@ -156,6 +158,11 @@ function trainer_241(config::Analytic241Config)
     layer = layer_241(graph, config)
     optimiser = Optimisers.Adam(config.lr)
     trainer = init_mnist_trainer(layer; graph, numthreads = 1, optimiser)
+    II.temp!(trainer.prototype_graph, config.temp)
+    for worker_graph in trainer.worker_graphs
+        II.temp!(worker_graph, config.temp)
+    end
+    II.temp!(trainer.validation_graph, config.temp)
     return trainer
 end
 
@@ -258,6 +265,47 @@ function push_row!(rows, epoch, metrics, grad_norm)
     return rows
 end
 
+"""Run one repeated XOR batch and optionally flip the collected gradient."""
+function run_minibatch_241!(trainer, xbatch, ybatch, batch_gradient, config::Analytic241Config)
+    if config.gradient_sign == one(FT)
+        IsingLearning._run_minibatch!(trainer, xbatch, ybatch, batch_gradient)
+        return batch_gradient
+    end
+
+    IsingLearning._reset_batch_buffers!(trainer)
+    batchsize = size(xbatch, 2)
+    workers = trainer.workers
+
+    for sample_idx in 1:batchsize
+        while true
+            worker_idx = findfirst(worker -> isnothing(worker.task) || Processes.isdone(worker), workers)
+            isnothing(worker_idx) || break
+            yield()
+        end
+
+        worker = workers[findfirst(worker -> isnothing(worker.task) || Processes.isdone(worker), workers)]
+        Processes.isdone(worker) && close(worker)
+        IsingLearning._write_example!(worker, view(xbatch, :, sample_idx), view(ybatch, :, sample_idx))
+        Processes.reset!(worker)
+        run(worker)
+    end
+
+    for worker in workers
+        if !isnothing(worker.task)
+            wait(worker)
+            close(worker)
+        end
+    end
+
+    IsingLearning._collect_batch_gradient!(trainer, batch_gradient, batchsize)
+    batch_gradient.w .*= config.gradient_sign
+    batch_gradient.b .*= config.gradient_sign
+    hasproperty(batch_gradient, :α) && (batch_gradient.α .*= config.gradient_sign)
+    trainer.opt_state, trainer.params = Optimisers.update(trainer.opt_state, trainer.params, batch_gradient)
+    IsingLearning._broadcast_params!(trainer)
+    return batch_gradient
+end
+
 """Train/evaluate the `2 -> 4 -> 1` scalar XOR experiment."""
 function main()
     config = Analytic241Config()
@@ -280,7 +328,7 @@ function main()
     println("epoch=0 mse=", round(metrics.mse, digits = 6), " acc=", metrics.acc, " means=", round.(metrics.means, digits = 3))
 
     for epoch in 1:config.epochs
-        IsingLearning._run_minibatch!(trainer, xbatch, ybatch, batch_gradient)
+        run_minibatch_241!(trainer, xbatch, ybatch, batch_gradient, config)
         config.weight_decay > 0 && (trainer.params.w .*= (one(FT) - config.lr * config.weight_decay))
         IsingLearning._broadcast_params!(trainer)
         if epoch == 1 || epoch % config.log_every == 0 || epoch == config.epochs
@@ -304,6 +352,10 @@ function main()
         println(io, "- `stepsize = $(config.stepsize)`")
         println(io, "- `β = $(config.β)`")
         println(io, "- target scale = `$(config.target_scale)`")
+        println(io, "- learning rate = `$(config.lr)`")
+        println(io, "- gradient sign = `$(config.gradient_sign)`")
+        println(io, "- random weight scale = `$(config.random_weight_scale)`")
+        println(io, "- random bias scale = `$(config.random_bias_scale)`")
         println(io, "- free/nudged = `$(config.free_relaxation)` / `$(config.nudged_relaxation)`")
         println(io, "- `Minit = $(config.minit)`, eval repeats `$(config.eval_repeats)`")
         println(io)

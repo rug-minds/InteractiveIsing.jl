@@ -110,7 +110,7 @@ function new_interface(
     fig = Figure(; size)
     host = WindowHost(fig; screen = nothing, fps = framerate, polling_rate, open = Observable(true), start_timers = false)
     host[:title] = title
-    host[:simulation] = panel!(host, :simulation, SimulationPanel(g; hide_left_buttons), (1, 1))
     _display_host!(host, title)
+    host[:simulation] = panel!(host, :simulation, SimulationPanel(g; hide_left_buttons), (1, 1))
     return host
 end
