@@ -11,7 +11,7 @@ end
 
 # Data structure for gathering averages and gauging convergence
 include("Plotting.jl")
-include("CorrelationLength.jl")
+# include("CorrelationLength.jl")
 include("Data.jl")
 include("Susceptibility.jl")
 include("User.jl")
