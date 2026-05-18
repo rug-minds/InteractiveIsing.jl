@@ -141,7 +141,7 @@ end
 @testset "InteractiveLinesPanel and ContextLinesPanel figure construction" begin
     ctx = InteractiveIsing.Processes.ProcessContext(
         (;
-            demo = InteractiveIsing.Processes.SubContext(:demo, (; x = collect(1:5), y = collect(2:2:6)), (), ()),
+            demo = InteractiveIsing.Processes.SubContext(:demo, (; x = collect(1:5), y = collect(2:2:6))),
             globals = (;),
         ),
         InteractiveIsing.Processes.NameSpaceRegistry(),

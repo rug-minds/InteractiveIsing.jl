@@ -1,60 +1,17 @@
-@inline _graph_input_vars(g::IsingGraph) = (; isinggraph = g, structure = g, model = g)
-
-@inline _flat_process_algos(algo::Processes.LoopAlgorithm) = Processes.flat_funcs(algo)
+@inline _flat_process_algos(algo::Processes.AbstractLoopAlgorithm) = Processes.flat_funcs(algo)
 @inline _flat_process_algos(algo) = (algo,)
 
 @inline _is_ising_mc_target(algo) = Processes.algotype(algo) <: IsingMCAlgorithm
 
-function _collect_ising_mc_targets(func)
-    targets = ()
-    for algo in _flat_process_algos(func)
-        if _is_ising_mc_target(algo)
-            targets = (targets..., algo)
-        end
-    end
-    return targets
-end
+"""
+    _merge_graph_inputs(func, g::IsingGraph, inputs...)
 
-function _dedupe_targets(targets::Tuple)
-    deduped = Any[]
-    seen = Any[]
-    for target in targets
-        matcher = Processes.match_by(target)
-        if any(==(matcher), seen)
-            continue
-        end
-        push!(seen, matcher)
-        push!(deduped, target)
-    end
-    return tuple(deduped...)
-end
-
+Supply `g` as `model` to every Ising Monte Carlo algorithm inside `func`.
+"""
 function _merge_graph_inputs(func, g::IsingGraph, inputs...)
-    targets = _dedupe_targets(_collect_ising_mc_targets(func))
-    isempty(targets) && return inputs
-
-    used_inputs = falses(length(inputs))
-    merged_inputs = Any[]
-
-    for target in targets
-        merged_vars = _graph_input_vars(g)
-        for (idx, input) in enumerate(inputs)
-            if input isa Processes.Init && Processes.match(getfield(input, :target_algo), target)
-                used_inputs[idx] = true
-                merged_vars = merge(merged_vars, getfield(input, :vars))
-            end
-        end
-        push!(merged_inputs, Processes.Init(target, pairs(merged_vars)...))
-    end
-
-    for (idx, input) in enumerate(inputs)
-        if used_inputs[idx]
-            continue
-        end
-        push!(merged_inputs, input)
-    end
-
-    return tuple(merged_inputs...)
+    targets = filter(_is_ising_mc_target, _flat_process_algos(func))
+    model_inputs = Tuple(Processes.Init(target, model = g) for target in targets)
+    return (model_inputs..., inputs...)
 end
 
 """

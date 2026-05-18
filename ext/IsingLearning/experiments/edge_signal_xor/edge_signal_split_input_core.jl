@@ -502,7 +502,7 @@ function run_dynamics_steps!(graph, sampler, nsteps::Integer; seed::Integer)
         @repeat nsteps dynamics()
     end
     inputs = II._merge_graph_inputs(routine, graph)
-    process = Processes.Process(Processes.resolve(routine), inputs...; repeats = 1)
+    process = Processes.Process(routine, inputs...; repeats = 1)
     run(process)
     wait(process)
     close(process)
@@ -536,7 +536,7 @@ function run_transition_response!(trace, graph, sampler, x; graph_kind, nn, sour
         @repeat total_steps routine()
     end
     inputs = II._merge_graph_inputs(wrapped, graph)
-    process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
+    process = Processes.Process(wrapped, inputs...; repeats = 1)
     run(process)
     wait(process)
     close(process)

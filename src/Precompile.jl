@@ -47,7 +47,7 @@ function _precompile_context_lines()
 
     ctx = Processes.ProcessContext(
         (;
-            demo = Processes.SubContext(:demo, (; x = Float32[1, 2, 3], y = Float32[1, 4, 9]), (), ()),
+            demo = Processes.SubContext(:demo, (; x = Float32[1, 2, 3], y = Float32[1, 4, 9])),
             globals = (;),
         ),
         Processes.NameSpaceRegistry(),

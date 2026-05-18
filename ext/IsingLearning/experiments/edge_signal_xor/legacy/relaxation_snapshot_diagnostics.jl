@@ -208,7 +208,7 @@ function main()
         @repeat total_steps routine()
     end
     inputs = II._merge_graph_inputs(wrapped, graph, Processes.Init(dynamics, rng = Random.MersenneTwister(seed + 1)))
-    process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
+    process = Processes.Process(wrapped, inputs...; repeats = 1)
     run(process)
     wait(process)
     close(process)

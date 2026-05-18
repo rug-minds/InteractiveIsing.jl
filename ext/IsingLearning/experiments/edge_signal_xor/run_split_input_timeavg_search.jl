@@ -64,7 +64,7 @@ function timeavg_scalar_output!(trainer, x, config::EdgeSignalXORConfig; seed::I
         @repeat (total_sweeps * sweep_steps) routine()
     end
     inputs = II._merge_graph_inputs(wrapped, graph, Processes.Init(dynamics, rng = Random.MersenneTwister(seed)))
-    process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
+    process = Processes.Process(wrapped, inputs...; repeats = 1)
     run(process)
     wait(process)
     ctx = Processes.context(process).averager

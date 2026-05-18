@@ -135,7 +135,7 @@ function run_burnin_and_average!(graph, x, config::TimeAverageConfig, burnin_swe
         @repeat total_steps routine()
     end
     inputs = II._merge_graph_inputs(wrapped, graph, Processes.Init(dynamics, rng = Random.MersenneTwister(seed + 2)))
-    process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
+    process = Processes.Process(wrapped, inputs...; repeats = 1)
     run(process)
     wait(process)
     close(process)
