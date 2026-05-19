@@ -1,10 +1,37 @@
-@inline _graph_input_vars(g::IsingGraph) = (; isinggraph = g, structure = g, model = g)
+"""
+    _graph_input_vars(g)
 
+Runtime inputs injected into Ising Monte Carlo algorithms when a graph-backed
+`Process` is created. Only `model` is injected; routes inside the algorithm are
+responsible for forwarding that graph to names like `isinggraph` if needed.
+"""
+@inline _graph_input_vars(g::IsingGraph) = (; model = g)
+
+"""
+    _flat_process_algos(algo)
+
+Return the algorithm nodes that should be scanned for Ising Monte Carlo
+algorithms. Loop algorithms are flattened; non-loop algorithms are treated as a
+single node.
+"""
 @inline _flat_process_algos(algo::Processes.LoopAlgorithm) = Processes.flat_funcs(algo)
 @inline _flat_process_algos(algo) = (algo,)
 
+"""
+    _is_ising_mc_target(algo)
+
+Return whether `algo` is an Ising Monte Carlo algorithm that needs the current
+graph injected as its `model` input.
+"""
 @inline _is_ising_mc_target(algo) = Processes.algotype(algo) <: IsingMCAlgorithm
 
+"""
+    _collect_ising_mc_targets(func)
+
+Collect the Ising Monte Carlo algorithm targets found inside `func`. The result
+is a tuple so it can be passed through the process input construction path
+without introducing vector storage.
+"""
 function _collect_ising_mc_targets(func)
     targets = ()
     for algo in _flat_process_algos(func)
@@ -15,7 +42,14 @@ function _collect_ising_mc_targets(func)
     return targets
 end
 
-function _dedupe_targets(targets::Tuple)
+"""
+    _dedupe_targets(targets::T) where {T<:Tuple}
+
+Remove duplicate process targets by their `Processes.match_by` identity while
+preserving the first occurrence. This prevents injecting the same graph input
+twice for algorithms that appear through multiple flattened views.
+"""
+function _dedupe_targets(targets::T) where {T<:Tuple}
     deduped = Any[]
     seen = Any[]
     for target in targets
@@ -29,6 +63,13 @@ function _dedupe_targets(targets::Tuple)
     return tuple(deduped...)
 end
 
+"""
+    _merge_graph_inputs(func, g, inputs...)
+
+Return `inputs` plus one `Processes.Init` per Ising Monte Carlo algorithm in
+`func`, with `model = g` merged into that target's existing init values. Existing
+user inputs for the same target are preserved and override the injected `model`.
+"""
 function _merge_graph_inputs(func, g::IsingGraph, inputs...)
     targets = _dedupe_targets(_collect_ising_mc_targets(func))
     isempty(targets) && return inputs
@@ -39,9 +80,9 @@ function _merge_graph_inputs(func, g::IsingGraph, inputs...)
     for target in targets
         merged_vars = _graph_input_vars(g)
         for (idx, input) in enumerate(inputs)
-            if input isa Processes.Init && Processes.match(getfield(input, :target_algo), target)
+            if input isa Processes.Init && Processes.match(Processes.get_ref(input), target)
                 used_inputs[idx] = true
-                merged_vars = merge(merged_vars, getfield(input, :vars))
+                merged_vars = merge(merged_vars, Processes.get_vars(input))
             end
         end
         push!(merged_inputs, Processes.Init(target, pairs(merged_vars)...))
