@@ -6,10 +6,76 @@
     @inline merge(contextview, retval) # Merge into view
 end
 
+@inline function step!(sa::IdentifiableAlgo{F}, context::C, routing::StepRouting, ::Stable) where {F, C <: AbstractContext}
+    if isempty(routing.sharedcontexts) && isempty(routing.sharedvars) && isempty(routing.childwiring)
+        return @inline step!(sa, context, Stable())
+    end
+    contextview = @inline view(
+        context,
+        sa;
+        sharedcontexts = routing_sharedcontexts(routing),
+        sharedvars = routing_sharedvars(routing),
+    )
+    retval = @inline step!(getalgo(sa), contextview)
+    @inline merge(contextview, retval)
+end
+
+@inline function step!(sa::IdentifiableAlgo{F}, context::C, routing::StepRouting, process::P, lifetime::LT, ::Stable) where {F, C <: AbstractContext, P<:AbstractProcess, LT<:Lifetime}
+    return @inline step!(sa, context, routing, Stable())
+end
+
+@inline function step!(sa::IdentifiableAlgo{F}, context::C, routing::StepRouting, ::Stable) where {F<:AbstractLoopAlgorithm, C <: AbstractContext}
+    error("Identifiable loop algorithm step! requires explicit process and lifetime. Call step!(sa, context, routing, process, lifetime, Stable()).")
+end
+
+@inline function step!(sa::IdentifiableAlgo{F}, context::C, routing::StepRouting, process::P, lifetime::LT, ::Stable) where {F<:AbstractLoopAlgorithm, C <: AbstractContext, P<:AbstractProcess, LT<:Lifetime}
+    contextview = @inline view(
+        context,
+        sa;
+        sharedcontexts = routing_sharedcontexts(routing),
+        sharedvars = routing_sharedvars(routing),
+    )
+    retval = @inline step!(getalgo(sa), contextview, routing_childwiring(routing), process, lifetime, Stable())
+    @inline merge(contextview, retval)
+end
+
 @inline function step!(sa::IdentifiableAlgo{F}, context::C, ::Unstable) where {F, C <: AbstractContext}
     contextview = @inline view(context, sa)
     retval = @inline step!(getalgo(sa), contextview)
     @inline unstablemerge(contextview, retval) # Merge into view
+end
+
+@inline function step!(sa::IdentifiableAlgo{F}, context::C, routing::StepRouting, ::Unstable) where {F, C <: AbstractContext}
+    if isempty(routing.sharedcontexts) && isempty(routing.sharedvars) && isempty(routing.childwiring)
+        return @inline step!(sa, context, Unstable())
+    end
+    contextview = @inline view(
+        context,
+        sa;
+        sharedcontexts = routing_sharedcontexts(routing),
+        sharedvars = routing_sharedvars(routing),
+    )
+    retval = @inline step!(getalgo(sa), contextview)
+    @inline unstablemerge(contextview, retval)
+end
+
+@inline function step!(sa::IdentifiableAlgo{F}, context::C, routing::StepRouting, process::P, lifetime::LT, ::Unstable) where {F, C <: AbstractContext, P<:AbstractProcess, LT<:Lifetime}
+    return @inline step!(sa, context, routing, Unstable())
+end
+
+@inline function step!(sa::IdentifiableAlgo{F}, context::C, routing::StepRouting, ::Unstable) where {F<:AbstractLoopAlgorithm, C <: AbstractContext}
+    error("Identifiable loop algorithm step! requires explicit process and lifetime. Call step!(sa, context, routing, process, lifetime, Unstable()).")
+end
+
+@inline function step!(sa::IdentifiableAlgo{F}, context::C, routing::StepRouting, process::P, lifetime::LT, ::Unstable) where {F<:AbstractLoopAlgorithm, C <: AbstractContext, P<:AbstractProcess, LT<:Lifetime}
+    contextview = @inline view(
+        context,
+        sa;
+        sharedcontexts = routing_sharedcontexts(routing),
+        sharedvars = routing_sharedvars(routing),
+    )
+    retval = @inline step!(getalgo(sa), contextview, routing_childwiring(routing), process, lifetime, Unstable())
+    @inline unstablemerge(contextview, retval)
 end
 
 @inline _profile_step_algo(sa::AbstractIdentifiableAlgo) = getalgo(sa)
