@@ -180,7 +180,7 @@ _process_precompile_scale(x; scale = 1.0) = x * scale
             Override(_ProcessPrecompileManaged, :x => 2.0, :gain => 3.0),
         )
         resolved_managed_algo = resolve(managed_algo)
-        resolve_process_inputs_overrides(resolved_managed_algo, managed_specs...)
+        resolve_process_inputs_overrides(resolved_managed_algo, managed_specs)
         initialized_managed_algo = Processes.init(managed_algo, managed_specs...; lifetime = Repeat(1))
         getstoredcontext(initialized_managed_algo)
 
@@ -331,11 +331,10 @@ _process_precompile_scale(x; scale = 1.0) = x * scale
         composite_inline = InlineProcess(composite; repeats = 2)
         run(composite_inline)
         run_nogen(composite_inline)
-        generated_context = merge_into_globals(context(composite_inline), (; process = composite_inline))
         loop(
             composite_inline,
             getalgo(composite_inline),
-            generated_context,
+            context(composite_inline),
             lifetime(composite_inline),
             Generated(),
         )

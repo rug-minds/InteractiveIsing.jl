@@ -5,12 +5,14 @@
 Previously args system
 This stores the context of a process
 """
-mutable struct ProcessContext{D,Reg} <: AbstractContext
+mutable struct ProcessContext{D,Reg,R,I} <: AbstractContext
 # struct ProcessContext{D,Reg} <: AbstractContext
     subcontexts::D
     registry::Reg
-    function ProcessContext{D,Reg}(subcontexts::D, registry::Reg) where {D,Reg}
-        new{D,Reg}(subcontexts, registry)
+    _runtime::R
+    _input::I
+    function ProcessContext{D,Reg,R,I}(subcontexts::D, registry::Reg, runtime::R, input::I) where {D,Reg,R,I}
+        new{D,Reg,R,I}(subcontexts, registry, runtime, input)
     end
 end
 
@@ -20,12 +22,13 @@ end
 ########################
 
 """
-A subcontext can share share in two ways:
-    1) Whole subcontext shares:         The entire subcontext is shared between processes
-    2) Variable shares through shared vars: Only specific variables are shared between subcontexts, 
-                                                defined by shared vars with optional aliases
+Named local data bucket for one registered process entity.
+
+Route/share metadata deliberately does not live on `SubContext`. Plan routing is
+applied through `SubContextView` at step time so context shape stays independent
+from execution-plan wiring.
 """
-struct SubContext{Name, T<:NamedTuple, SharedContexts, SharedVars} <: AbstractSubContext
+struct SubContext{Name, T<:NamedTuple} <: AbstractSubContext
     data::T
 end
 
