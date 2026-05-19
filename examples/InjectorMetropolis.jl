@@ -30,7 +30,7 @@ injector_graph = deepcopy(template_graph)
 
 old_process = idle_process(old_graph, Metropolis())
 
-injector_algorithm = SimpleAlgo(
+injector_algorithm = CompositeAlgorithm(
     Injector(),
     :metro => metropolis_nointeract(T = initial_T),
 )

@@ -6,17 +6,13 @@ export CompositeAlgorithm, CompositePlan
 Execution plan that steps child algorithms on fixed intervals.
 
 `CompositeAlgorithm` intentionally stores the executable plan: child algorithms
-(`funcs`), raw route/share buckets aligned with those children (`wiring`),
-top-level raw route/share options (`global_options`), resolved per-child
-`step_wiring`, and the interval cursor (`inc`). Runtime state such as the
-registry, root process states, stored context, inputs, and overrides belongs to
-the concrete `LoopAlgorithm` wrapper created by `resolve`/`init`.
+(`funcs`), plan wiring, and the interval cursor (`inc`). Runtime state such as
+the registry, root process states, stored context, inputs, and overrides belongs
+to the concrete `LoopAlgorithm` wrapper created by `resolve`/`init`.
 """
-struct CompositeAlgorithm{T, Intervals, W, G, SW, id} <: AbstractLoopAlgorithm
+struct CompositeAlgorithm{T, Intervals, W, id} <: AbstractLoopAlgorithm
     funcs::T
     wiring::W
-    global_options::G
-    step_wiring::SW
     inc::Base.RefValue{Int} # Runtime interval cursor.
 end
 
@@ -30,15 +26,13 @@ CompositeAlgorithm(args...) = parse_la_input(CompositeAlgorithm, args...)
 """
 Construct a composite execution plan, wrapping it only when root runtime data exists.
 
-`LocalPlanOption` route/share metadata is split into child-aligned plan wiring;
-plain route/share options are stored as top-level plan routes. States and other
+`LocalPlanOption` route/share metadata is split into child-aligned wiring;
+plain route/share wiring is stored on the plan. States and other
 non-plan options stay on the `LoopAlgorithm` wrapper.
 """
 function LoopAlgorithm(::Type{CompositeAlgorithm}, funcs::F, states::Tuple, options::Tuple, intervals; id = nothing) where F
-    plan_options = _loop_plan_wiring(funcs, options)
-    global_options = _global_plan_options(options)
-    step_wiring = ntuple(_ -> StepRouting(), length(funcs))
-    plan = CompositeAlgorithm{typeof(funcs), intervals, typeof(plan_options), typeof(global_options), typeof(step_wiring), id}(funcs, plan_options, global_options, step_wiring, Ref(1))
+    wiring = PlanWiring(_plan_wiring(options), _plan_child_wiring(funcs, options))
+    plan = CompositeAlgorithm{typeof(funcs), intervals, typeof(wiring), id}(funcs, wiring, Ref(1))
     root_options = _root_loop_options(options)
     return isempty(states) && isempty(root_options) ? plan : LoopAlgorithm(plan; states, options = root_options, id)
 end
@@ -49,9 +43,8 @@ function newfuncs(ca::CompositeAlgorithm, funcs)
 end
 
 function setoptions(ca::CompositeAlgorithm, options)
-    ca = setfield(ca, :wiring, _loop_plan_wiring(getalgos(ca), options))
-    ca = setfield(ca, :global_options, _global_plan_options(options))
-    return setfield(ca, :step_wiring, ntuple(_ -> StepRouting(), length(getalgos(ca))))
+    wiring = PlanWiring(_plan_wiring(options), _plan_child_wiring(getalgos(ca), options))
+    return setfield(ca, :wiring, wiring)
 end
 
 subalgorithms(ca::CompositeAlgorithm) = getfield(ca, :funcs)
@@ -63,10 +56,11 @@ subalgotypes(::Type{CA}) where {FT, CA<:CompositeAlgorithm{FT}} = FT.parameters
 
 
 getinc(ca::CompositeAlgorithm) = getfield(ca, :inc)
-getoptions(ca::CompositeAlgorithm) = _plan_options(getfield(ca, :global_options), getfield(ca, :wiring))
+getwiring(ca::CompositeAlgorithm) = getfield(ca, :wiring)
+getoptions(ca::CompositeAlgorithm) = _all_plan_wiring(global_wiring(getwiring(ca)), child_wiring(getwiring(ca)))
 
-getid(ca::Union{CompositeAlgorithm{T,I,W,G,SW,id}, Type{<:CompositeAlgorithm{T,I,W,G,SW,id}}}) where {T,I,W,G,SW,id} = id
-setid(ca::CA, id = uuid4()) where CA = setparameter(ca, 6, id)
+getid(ca::Union{CompositeAlgorithm{T,I,W,id}, Type{<:CompositeAlgorithm{T,I,W,id}}}) where {T,I,W,id} = id
+setid(ca::CA, id = uuid4()) where {CA<:CompositeAlgorithm} = setparameter(ca, 4, id)
 
 # setname(ca::CA, name::Symbol) where CA <: CompositeAlgorithm = setparameter(ca, 6, name)
 # getname(ca::Union{CompositeAlgorithm{T,I,NSR,O,R,id,CustomName}, Type{<:CompositeAlgorithm{T,I,NSR,O,R,id,CustomName}}}) where {T,I,NSR,O,R,id,CustomName} = CustomName
@@ -85,11 +79,11 @@ interval(ca::Union{CompositeAlgorithm{T,I}, Type{<:CompositeAlgorithm{T,I}}}, id
 @inline function intervals(ca::Union{CompositeAlgorithm{T,I}, Type{<:CompositeAlgorithm{T,I}}}) where {T,I}
     if I isa Tuple
         return I
-    else
+    else 
         return ntuple(_ -> 1, length(T.parameters))
     end
 end
-@inline intervals(ca::Union{CompositeAlgorithm, Type{<:CompositeAlgorithm}}, ::Val{Idx}) where Idx = intervals(ca)[Idx]
+@inline intervals(ca::Union{CompositeAlgorithm, Type{<:CompositeAlgorithm}}, ::Val{Idx}) where Idx = @inline intervals(ca)[Idx]
 
 get_this_interval(args) = interval(getalgo(args.process), algoidx(args))
 
@@ -111,8 +105,8 @@ end
 # intervals(caT::Type{<:CompositeAlgorithm}) = caT.parameters[2]
 get_intervals(ca) = intervals(ca)
 
-hasid(ca::Union{CompositeAlgorithm{T,I,W,G,SW,id}, Type{<:CompositeAlgorithm{T,I,W,G,SW,id}}}) where {T,I,W,G,SW,id} = !isnothing(id)
-id(ca::Union{CompositeAlgorithm{T,I,W,G,SW,id}, Type{<:CompositeAlgorithm{T,I,W,G,SW,id}}}) where {T,I,W,G,SW,id} = id
+hasid(ca::Union{CompositeAlgorithm{T,I,W,id}, Type{<:CompositeAlgorithm{T,I,W,id}}}) where {T,I,W,id} = !isnothing(id)
+id(ca::Union{CompositeAlgorithm{T,I,W,id}, Type{<:CompositeAlgorithm{T,I,W,id}}}) where {T,I,W,id} = id
 
 
 

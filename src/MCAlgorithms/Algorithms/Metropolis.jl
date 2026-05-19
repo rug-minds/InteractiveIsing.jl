@@ -6,7 +6,7 @@ struct Metropolis <: IsingMCAlgorithm end
     return Unique(Metropolis())
     # destr = DestructureInput()
     # metro = Metropolis(tracked = tracked)
-    # package(SimpleAlgo(metro, destr, Route(destr => metro, :isinggraph => :structure)))
+    # package(CompositeAlgorithm(metro, destr, Route(destr => metro, :isinggraph => :structure)))
 end
 
 @inline MetropolisTracked() = Metropolis()

@@ -75,7 +75,7 @@ end
 
 function make_inline_process(func; repeats::Int, inputs = tuple(), overrides = tuple(), threaded = false)
     if !(func isa Processes.LoopAlgorithm)
-        func = Processes.SimpleAlgo(func)
+        func = Processes.CompositeAlgorithm(func)
     end
 
     inputs = inputs isa Tuple ? inputs : (inputs,)

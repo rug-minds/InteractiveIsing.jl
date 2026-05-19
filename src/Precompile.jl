@@ -47,10 +47,11 @@ function _precompile_context_lines()
 
     ctx = Processes.ProcessContext(
         (;
-            demo = Processes.SubContext(:demo, (; x = Float32[1, 2, 3], y = Float32[1, 4, 9]), (), ()),
-            globals = (;),
+            demo = Processes.SubContext(:demo, (; x = Float32[1, 2, 3], y = Float32[1, 4, 9])),
         ),
         Processes.NameSpaceRegistry(),
+        (;),
+        (;),
     )
     host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10, start_timers = false)
     Windows.panel!(
