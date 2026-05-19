@@ -14,7 +14,7 @@ Return the algorithm nodes that should be scanned for Ising Monte Carlo
 algorithms. Loop algorithms are flattened; non-loop algorithms are treated as a
 single node.
 """
-@inline _flat_process_algos(algo::Processes.LoopAlgorithm) = Processes.flat_funcs(algo)
+@inline _flat_process_algos(algo::Processes.AbstractLoopAlgorithm) = Processes.flat_funcs(algo)
 @inline _flat_process_algos(algo) = (algo,)
 
 """

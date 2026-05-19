@@ -205,19 +205,20 @@ using Random
     @test all(>=(0f0), zero_temp_vals)
     @test issorted(abs.(zero_temp_vals); rev = true)
 
-    loop = deepcopy(SimpleAlgo(Unique(Metropolis()), Unique(LocalLangevin())))
+    loop = deepcopy(CompositeAlgorithm(Unique(Metropolis()), Unique(LocalLangevin())))
     loop_inputs = InteractiveIsing._merge_graph_inputs(loop, g)
     loop_process = Process(loop, loop_inputs...; repeats = 1)
     loop_context = getcontext(loop_process)
 
     @test loop_context[loop[1]].model === g
     @test loop_context[loop[2]].model === g
-    @test Processes.getoptions(loop_process) == Processes.getoptions(Processes.getalgo(loop_process))
-    @test Processes.get_shares(loop_process) == Processes.get_shares(Processes.getalgo(loop_process))
-    @test Processes.get_routes(loop_process) == Processes.get_routes(Processes.getalgo(loop_process))
-    @test Processes.getstates(loop_process) == Processes.getstates(Processes.getalgo(loop_process))
-    @test Processes.getalgos(loop_process) == Processes.getalgos(Processes.getalgo(loop_process))
-    @test keys(loop_process) == keys(Processes.getalgo(loop_process))
+    loop_algorithm = Processes.getalgo(loop_process)
+    @test Processes.getoptions(loop_algorithm) == Processes.getoptions(Processes.getplan(loop_algorithm))
+    @test Processes.get_shares(loop_algorithm) == Processes.get_shares(Processes.getplan(loop_algorithm))
+    @test Processes.get_routes(loop_algorithm) == Processes.get_routes(Processes.getplan(loop_algorithm))
+    @test Processes.getstates(loop_algorithm) == ()
+    @test Processes.getalgos(loop_algorithm) == Processes.getalgos(Processes.getplan(loop_algorithm))
+    @test keys(loop_algorithm) == keys(Processes.getplan(loop_algorithm))
 
     kinetic = deepcopy(KineticMC())
     kinetic_inputs = InteractiveIsing._merge_graph_inputs(kinetic, g)
@@ -226,7 +227,7 @@ using Random
 
     @test kinetic_context[kinetic].model === g
 
-    runtime_loop = SimpleAlgo(Unique(Metropolis()), Unique(LocalLangevin()))
+    runtime_loop = CompositeAlgorithm(Unique(Metropolis()), Unique(LocalLangevin()))
     runtime_loop_process = createProcess(g, runtime_loop; lifetime = 1)
     wait(runtime_loop_process)
     @test istaskdone(runtime_loop_process.task)

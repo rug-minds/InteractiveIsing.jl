@@ -141,10 +141,11 @@ end
 @testset "InteractiveLinesPanel and ContextLinesPanel figure construction" begin
     ctx = InteractiveIsing.Processes.ProcessContext(
         (;
-            demo = InteractiveIsing.Processes.SubContext(:demo, (; x = collect(1:5), y = collect(2:2:6)), (), ()),
-            globals = (;),
+            demo = InteractiveIsing.Processes.SubContext(:demo, (; x = collect(1:5), y = collect(2:2:6))),
         ),
         InteractiveIsing.Processes.NameSpaceRegistry(),
+        (;),
+        (;),
     )
     host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
     handle = Windows.panel!(

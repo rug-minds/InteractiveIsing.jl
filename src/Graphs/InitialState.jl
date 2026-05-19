@@ -15,19 +15,19 @@ function initState(g::IsingGraph, initial_state)
     if isnothing(initial_state)
         return initRandomState(g)
     elseif initial_state isa Number
-        return fill(convert(eltype(g), initial_state), size(state(g)))
+        return fill(convert(eltype(g), initial_state), size(graphstate(g)))
     elseif initial_state isa AbstractArray
         length(initial_state) == nstates(g) ||
             throw(ArgumentError("initial_state length $(length(initial_state)) does not match graph state length $(nstates(g))"))
-        out = similar(state(g))
+        out = similar(graphstate(g))
         out[:] .= initial_state[:]
         return out
     elseif initial_state isa Function
         result = initial_state(g)
-        isnothing(result) && return copy(state(g))
+        isnothing(result) && return copy(graphstate(g))
         length(result) == nstates(g) ||
             throw(ArgumentError("initial_state(g) returned length $(length(result)); expected $(nstates(g))"))
-        out = similar(state(g))
+        out = similar(graphstate(g))
         out[:] .= result[:]
         return out
     else
@@ -192,7 +192,7 @@ continuous layers cannot be sampled uniformly, so they are initialized with a
 finite local-potential minimum when the summed local potential is confining.
 """
 function initRandomState(g)
-    _state = similar(state(g))
+    _state = similar(graphstate(g))
     # for layer in unshuffled(layers(g))
     for layer in layers(g)
         _init_layer_state!((@view _state[graphidxs(layer)]), g, layer)

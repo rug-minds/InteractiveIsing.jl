@@ -25,7 +25,7 @@ function dist2(top::SquareTopology, c1::C1, c2::C2) where {C1<:Coordinate, C2<:C
                 d -= sign(d) * size(top)[i]
             end
         end
-        total += (top.ds[i]*d)^2
+        total += (lattice_constants(top)[i]*d)^2
     end
     return total
 end
