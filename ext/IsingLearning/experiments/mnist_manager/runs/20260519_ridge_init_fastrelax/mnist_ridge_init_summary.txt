@@ -1,0 +1,13 @@
+hidden=7840
+train_limit=5000
+validation_limit=1000
+ridge=0.1
+copy_scale=1.0
+output_scale=0.25
+relaxation=39250
+train_accuracy=0.252
+train_mse=8.919526
+validation_accuracy=0.234
+validation_mse=9.200763
+validation_output_mean=-0.24139328
+validation_output_std=0.5942941

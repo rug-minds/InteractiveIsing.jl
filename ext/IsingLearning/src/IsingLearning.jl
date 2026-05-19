@@ -1,7 +1,7 @@
 module IsingLearning
 
 using LuxCore
-using Random: AbstractRNG
+using Random: AbstractRNG, MersenneTwister
 using SparseArrays
 
 using DataStructures

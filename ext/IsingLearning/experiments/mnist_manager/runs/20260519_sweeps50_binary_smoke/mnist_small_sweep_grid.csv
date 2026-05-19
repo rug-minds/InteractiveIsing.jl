@@ -1,0 +1,4 @@
+timestamp,config_id,hidden,epoch,seconds,relaxation,sweeps,minit,digits,target_scale,target_off,target_on,input_low,input_high,skip_scale,pixel_copy_scale,beta,lr,train_accuracy,train_mse,validation_accuracy,validation_mse
+2026-05-19T09:39:09,1,7840,0,0.0,392500,50.0,1,0-1,0.2,-0.2,0.2,-1.0,1.0,0.0,0.8,0.1,0.003,0.515625,8.778905,0.4765625,8.996979
+2026-05-19T09:44:45,1,7840,1,123.6628282,392500,50.0,1,0-1,0.2,-0.2,0.2,-1.0,1.0,0.0,0.8,0.1,0.003,0.546875,7.4940033,0.59375,7.4221816
+2026-05-19T09:50:12,1,7840,2,122.9135779,392500,50.0,1,0-1,0.2,-0.2,0.2,-1.0,1.0,0.0,0.8,0.1,0.003,0.546875,7.4901986,0.59375,7.4216847

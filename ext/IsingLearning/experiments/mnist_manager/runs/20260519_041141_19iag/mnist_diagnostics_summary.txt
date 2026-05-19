@@ -1,0 +1,8 @@
+normal_before=(accuracy = 0.5, classification_error = 0.5, mean_squared_error = 9.176497f0, nsamples = 4)
+normal_after=(accuracy = 0.0, classification_error = 1.0, mean_squared_error = 14.001684f0, nsamples = 4)
+normal_before_outputs=(mean_abs_output = 0.52306163f0, max_abs_output = 0.9756355f0, output_mean = -0.001719417f0, output_std = 0.57902414f0, pred_counts = [1, 0, 0, 2, 0, 0, 0, 1, 0, 0], target_counts = [1, 1, 0, 0, 1, 1, 0, 0, 0, 0], accuracy = 0.0, mse = 13.664412f0)
+normal_after_outputs=(mean_abs_output = 0.46891135f0, max_abs_output = 0.9380053f0, output_mean = -0.06057763f0, output_std = 0.55597997f0, pred_counts = [0, 0, 0, 1, 0, 0, 0, 2, 1, 0], target_counts = [1, 1, 0, 0, 1, 1, 0, 0, 0, 0], accuracy = 0.0, mse = 11.813236f0)
+negative_before=(accuracy = 0.0, classification_error = 1.0, mean_squared_error = 14.312336f0, nsamples = 4)
+negative_after=(accuracy = 0.25, classification_error = 0.75, mean_squared_error = 11.071943f0, nsamples = 4)
+negative_before_outputs=(mean_abs_output = 0.5499509f0, max_abs_output = 0.96778715f0, output_mean = -0.13647388f0, output_std = 0.60721606f0, pred_counts = [1, 0, 1, 0, 0, 0, 0, 1, 0, 1], target_counts = [1, 1, 0, 0, 1, 1, 0, 0, 0, 0], accuracy = 0.25, mse = 11.506142f0)
+negative_after_outputs=(mean_abs_output = 0.49877253f0, max_abs_output = 0.97880495f0, output_mean = -0.0061803027f0, output_std = 0.5791949f0, pred_counts = [0, 1, 0, 0, 0, 0, 0, 0, 1, 2], target_counts = [1, 1, 0, 0, 1, 1, 0, 0, 0, 0], accuracy = 0.0, mse = 13.635861f0)

@@ -15,8 +15,16 @@ const TRAIN_LIMIT = parse(Int, get(ENV, "ISING_MNIST_LIMIT", "1024"))
 const VALIDATION_LIMIT = parse(Int, get(ENV, "ISING_MNIST_VALIDATION_LIMIT", "256"))
 const VALIDATION_SPLIT = Symbol(get(ENV, "ISING_MNIST_VALIDATION_SPLIT", "test"))
 const REQUESTED_WORKER_THREADS = parse(Int, get(ENV, "ISING_MNIST_WORKER_THREADS", "16"))
-const WORKER_THREADS = min(REQUESTED_WORKER_THREADS, nthreads()-1)
+const WORKER_THREADS = max(1, min(REQUESTED_WORKER_THREADS, nthreads()))
 const TRAIN_EVAL_LIMIT = parse(Int, get(ENV, "ISING_MNIST_TRAIN_EVAL_LIMIT", "128"))
+const MNIST_HIDDEN = parse(Int, get(ENV, "ISING_MNIST_HIDDEN", string(MNIST_DEFAULT_HIDDEN)))
+const BATCHSIZE = parse(Int, get(ENV, "ISING_MNIST_BATCHSIZE", "256"))
+const MNIST_TEMP = parse(Float32, get(ENV, "ISING_MNIST_TEMP", "0.005"))
+const MNIST_STEPSIZE = parse(Float32, get(ENV, "ISING_MNIST_STEPSIZE", "0.4"))
+const MNIST_BETA = parse(Float32, get(ENV, "ISING_MNIST_BETA", "2.0"))
+const MNIST_FREE_RELAXATION = parse(Int, get(ENV, "ISING_MNIST_FREE_RELAXATION", "600"))
+const MNIST_NUDGED_RELAXATION = parse(Int, get(ENV, "ISING_MNIST_NUDGED_RELAXATION", "600"))
+const MNIST_LR = parse(Float32, get(ENV, "ISING_MNIST_LR", "0.003"))
 
 function plot_error_curves(stats; validation_label::AbstractString = string(VALIDATION_SPLIT))
     epochs = [entry.epoch for entry in stats]
@@ -53,18 +61,24 @@ function plot_error_curves(stats; validation_label::AbstractString = string(VALI
     return fig
 end
 
-rbm = ReducedBoltzmannArchitecture(784, 100, 10; precision = Float32)
-rbm_copy = GraphFromSource(rbm)
+rbm = MNISTArchitecture(hidden = MNIST_HIDDEN, precision = Float32)
+temp!(rbm, MNIST_TEMP)
 
-layer = LayeredIsingGraphLayer(
-    () -> ReducedBoltzmannArchitecture(784, 100, 10; precision = Float32);
-    input_idxs = layerrange(rbm_copy[1]),
-    output_idxs = layerrange(rbm_copy[end]),
+dynamics = LocalLangevin(stepsize = MNIST_STEPSIZE, adjusted = false)
+layer = MNISTLayer(
+    graph = rbm,
+    β = MNIST_BETA,
+    free_relaxation_steps = MNIST_FREE_RELAXATION,
+    nudged_relaxation_steps = MNIST_NUDGED_RELAXATION,
+    dynamics_algorithm = dynamics,
+    nudged_dynamics_algorithm = deepcopy(dynamics),
+    validation_algorithm = deepcopy(dynamics),
 )
 
-optimiser = Optimisers.Descent(1f-3)
+optimiser = Optimisers.Descent(MNIST_LR)
 
-println("Running threaded MNIST example with $(WORKER_THREADS) worker threads on $(nthreads()) Julia threads for $(EPOCHS) epochs")
+println("Running manager MNIST example $(MNIST_INPUT_DIM) -> $(MNIST_HIDDEN) -> 10 with $(WORKER_THREADS) worker slots on $(nthreads()) Julia threads for $(EPOCHS) epochs")
+println("Dynamics: LocalLangevin(T=$(MNIST_TEMP), stepsize=$(MNIST_STEPSIZE), β=$(MNIST_BETA), free/nudged=$(MNIST_FREE_RELAXATION)/$(MNIST_NUDGED_RELAXATION), lr=$(MNIST_LR))")
 
 params, stats = fit_mnist_threaded!(
     layer;
@@ -72,7 +86,7 @@ params, stats = fit_mnist_threaded!(
     numthreads = WORKER_THREADS,
     optimiser = optimiser,
     epochs = EPOCHS,
-    batchsize = 128,
+    batchsize = BATCHSIZE,
     shuffle = true,
     show_progress = true,
     limit = TRAIN_LIMIT,

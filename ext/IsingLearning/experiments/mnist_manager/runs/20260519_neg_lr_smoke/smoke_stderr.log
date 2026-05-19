@@ -1,0 +1,324 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    2-element Vector{Symbol}:
+│     :equilibrium_state
+│     :x
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    3-element Vector{Symbol}:
+│     :equilibrium_state
+│     :y
+│     :x
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+MNIST epoch 1   6%|███                                   |  ETA: 0:02:32[K
+   batch: 2[K[A
+[K[AMNIST epoch 1   9%|████                                  |  ETA: 0:02:01[K
+   batch: 3[K[A
+[K[AMNIST epoch 1  12%|█████                                 |  ETA: 0:01:44[K
+   batch: 4[K[A
+[K[AMNIST epoch 1  16%|██████                                |  ETA: 0:01:32[K
+   batch: 5[K[A
+[K[AMNIST epoch 1  19%|████████                              |  ETA: 0:01:24[K
+   batch: 6[K[A
+[K[AMNIST epoch 1  22%|█████████                             |  ETA: 0:01:17[K
+   batch: 7[K[A
+[K[AMNIST epoch 1  25%|██████████                            |  ETA: 0:01:12[K
+   batch: 8[K[A
+[K[AMNIST epoch 1  28%|███████████                           |  ETA: 0:01:07[K
+   batch: 9[K[A
+[K[AMNIST epoch 1  31%|████████████                          |  ETA: 0:01:02[K
+   batch: 10[K[A
+[K[AMNIST epoch 1  34%|██████████████                        |  ETA: 0:00:58[K
+   batch: 11[K[A
+[K[AMNIST epoch 1  38%|███████████████                       |  ETA: 0:00:55[K
+   batch: 12[K[A
+[K[AMNIST epoch 1  41%|████████████████                      |  ETA: 0:00:51[K
+   batch: 13[K[A
+[K[AMNIST epoch 1  44%|█████████████████                     |  ETA: 0:00:48[K
+   batch: 14[K[A
+[K[AMNIST epoch 1  47%|██████████████████                    |  ETA: 0:00:45[K
+   batch: 15[K[A
+[K[AMNIST epoch 1  50%|████████████████████                  |  ETA: 0:00:42[K
+   batch: 16[K[A
+[K[AMNIST epoch 1  53%|█████████████████████                 |  ETA: 0:00:39[K
+   batch: 17[K[A
+[K[AMNIST epoch 1  56%|██████████████████████                |  ETA: 0:00:36[K
+   batch: 18[K[A
+[K[AMNIST epoch 1  59%|███████████████████████               |  ETA: 0:00:33[K
+   batch: 19[K[A
+[K[AMNIST epoch 1  62%|████████████████████████              |  ETA: 0:00:31[K
+   batch: 20[K[A
+[K[AMNIST epoch 1  66%|█████████████████████████             |  ETA: 0:00:28[K
+   batch: 21[K[A
+[K[AMNIST epoch 1  69%|███████████████████████████           |  ETA: 0:00:25[K
+   batch: 22[K[A
+[K[AMNIST epoch 1  72%|████████████████████████████          |  ETA: 0:00:23[K
+   batch: 23[K[A
+[K[AMNIST epoch 1  75%|█████████████████████████████         |  ETA: 0:00:20[K
+   batch: 24[K[A
+[K[AMNIST epoch 1  78%|██████████████████████████████        |  ETA: 0:00:17[K
+   batch: 25[K[A
+[K[AMNIST epoch 1  81%|███████████████████████████████       |  ETA: 0:00:15[K
+   batch: 26[K[A
+[K[AMNIST epoch 1  84%|█████████████████████████████████     |  ETA: 0:00:12[K
+   batch: 27[K[A
+[K[AMNIST epoch 1  88%|██████████████████████████████████    |  ETA: 0:00:10[K
+   batch: 28[K[A
+[K[AMNIST epoch 1  91%|███████████████████████████████████   |  ETA: 0:00:07[K
+   batch: 29[K[A
+[K[AMNIST epoch 1  94%|████████████████████████████████████  |  ETA: 0:00:05[K
+   batch: 30[K[A
+[K[AMNIST epoch 1  97%|█████████████████████████████████████ |  ETA: 0:00:02[K
+   batch: 31[K[A
+[K[AMNIST epoch 1 100%|██████████████████████████████████████| Time: 0:01:17[K
+   batch: 32[K
+MNIST epoch 1   6%|███                                   |  ETA: 0:01:08[K
+   batch: 2[K[A
+[K[AMNIST epoch 1   9%|████                                  |  ETA: 0:01:05[K
+   batch: 3[K[A
+[K[AMNIST epoch 1  12%|█████                                 |  ETA: 0:01:03[K
+   batch: 4[K[A
+[K[AMNIST epoch 1  16%|██████                                |  ETA: 0:01:01[K
+   batch: 5[K[A
+[K[AMNIST epoch 1  19%|████████                              |  ETA: 0:00:59[K
+   batch: 6[K[A
+[K[AMNIST epoch 1  22%|█████████                             |  ETA: 0:00:56[K
+   batch: 7[K[A
+[K[AMNIST epoch 1  25%|██████████                            |  ETA: 0:00:54[K
+   batch: 8[K[A
+[K[AMNIST epoch 1  28%|███████████                           |  ETA: 0:00:52[K
+   batch: 9[K[A
+[K[AMNIST epoch 1  31%|████████████                          |  ETA: 0:00:50[K
+   batch: 10[K[A
+[K[AMNIST epoch 1  34%|██████████████                        |  ETA: 0:00:47[K
+   batch: 11[K[A
+[K[AMNIST epoch 1  38%|███████████████                       |  ETA: 0:00:45[K
+   batch: 12[K[A
+[K[AMNIST epoch 1  41%|████████████████                      |  ETA: 0:00:43[K
+   batch: 13[K[A
+[K[AMNIST epoch 1  44%|█████████████████                     |  ETA: 0:00:41[K
+   batch: 14[K[A
+[K[AMNIST epoch 1  47%|██████████████████                    |  ETA: 0:00:38[K
+   batch: 15[K[A
+[K[AMNIST epoch 1  50%|████████████████████                  |  ETA: 0:00:36[K
+   batch: 16[K[A
+[K[AMNIST epoch 1  53%|█████████████████████                 |  ETA: 0:00:34[K
+   batch: 17[K[A
+[K[AMNIST epoch 1  56%|██████████████████████                |  ETA: 0:00:32[K
+   batch: 18[K[A
+[K[AMNIST epoch 1  59%|███████████████████████               |  ETA: 0:00:29[K
+   batch: 19[K[A
+[K[AMNIST epoch 1  62%|████████████████████████              |  ETA: 0:00:27[K
+   batch: 20[K[A
+[K[AMNIST epoch 1  66%|█████████████████████████             |  ETA: 0:00:25[K
+   batch: 21[K[A
+[K[AMNIST epoch 1  69%|███████████████████████████           |  ETA: 0:00:23[K
+   batch: 22[K[A
+[K[AMNIST epoch 1  72%|████████████████████████████          |  ETA: 0:00:20[K
+   batch: 23[K[A
+[K[AMNIST epoch 1  75%|█████████████████████████████         |  ETA: 0:00:18[K
+   batch: 24[K[A
+[K[AMNIST epoch 1  78%|██████████████████████████████        |  ETA: 0:00:16[K
+   batch: 25[K[A
+[K[AMNIST epoch 1  81%|███████████████████████████████       |  ETA: 0:00:14[K
+   batch: 26[K[A
+[K[AMNIST epoch 1  84%|█████████████████████████████████     |  ETA: 0:00:11[K
+   batch: 27[K[A
+[K[AMNIST epoch 1  88%|██████████████████████████████████    |  ETA: 0:00:09[K
+   batch: 28[K[A
+[K[AMNIST epoch 1  91%|███████████████████████████████████   |  ETA: 0:00:07[K
+   batch: 29[K[A
+[K[AMNIST epoch 1  94%|████████████████████████████████████  |  ETA: 0:00:05[K
+   batch: 30[K[A
+[K[AMNIST epoch 1  97%|█████████████████████████████████████ |  ETA: 0:00:02[K
+   batch: 31[K[A
+[K[AMNIST epoch 1 100%|██████████████████████████████████████| Time: 0:01:12[K
+   batch: 32[K
+MNIST epoch 1   6%|███                                   |  ETA: 0:01:08[K
+   batch: 2[K[A
+[K[AMNIST epoch 1   9%|████                                  |  ETA: 0:01:06[K
+   batch: 3[K[A
+[K[AMNIST epoch 1  12%|█████                                 |  ETA: 0:01:03[K
+   batch: 4[K[A
+[K[AMNIST epoch 1  16%|██████                                |  ETA: 0:01:01[K
+   batch: 5[K[A
+[K[AMNIST epoch 1  19%|████████                              |  ETA: 0:00:59[K
+   batch: 6[K[A
+[K[AMNIST epoch 1  22%|█████████                             |  ETA: 0:00:56[K
+   batch: 7[K[A
+[K[AMNIST epoch 1  25%|██████████                            |  ETA: 0:00:54[K
+   batch: 8[K[A
+[K[AMNIST epoch 1  28%|███████████                           |  ETA: 0:00:52[K
+   batch: 9[K[A
+[K[AMNIST epoch 1  31%|████████████                          |  ETA: 0:00:50[K
+   batch: 10[K[A
+[K[AMNIST epoch 1  34%|██████████████                        |  ETA: 0:00:47[K
+   batch: 11[K[A
+[K[AMNIST epoch 1  38%|███████████████                       |  ETA: 0:00:45[K
+   batch: 12[K[A
+[K[AMNIST epoch 1  41%|████████████████                      |  ETA: 0:00:43[K
+   batch: 13[K[A
+[K[AMNIST epoch 1  44%|█████████████████                     |  ETA: 0:00:41[K
+   batch: 14[K[A
+[K[AMNIST epoch 1  47%|██████████████████                    |  ETA: 0:00:38[K
+   batch: 15[K[A
+[K[AMNIST epoch 1  50%|████████████████████                  |  ETA: 0:00:36[K
+   batch: 16[K[A
+[K[AMNIST epoch 1  53%|█████████████████████                 |  ETA: 0:00:34[K
+   batch: 17[K[A
+[K[AMNIST epoch 1  56%|██████████████████████                |  ETA: 0:00:32[K
+   batch: 18[K[A
+[K[AMNIST epoch 1  59%|███████████████████████               |  ETA: 0:00:29[K
+   batch: 19[K[A
+[K[AMNIST epoch 1  62%|████████████████████████              |  ETA: 0:00:27[K
+   batch: 20[K[A
+[K[AMNIST epoch 1  66%|█████████████████████████             |  ETA: 0:00:25[K
+   batch: 21[K[A
+[K[AMNIST epoch 1  69%|███████████████████████████           |  ETA: 0:00:23[K
+   batch: 22[K[A
+[K[AMNIST epoch 1  72%|████████████████████████████          |  ETA: 0:00:20[K
+   batch: 23[K[A
+[K[AMNIST epoch 1  75%|█████████████████████████████         |  ETA: 0:00:18[K
+   batch: 24[K[A
+[K[AMNIST epoch 1  78%|██████████████████████████████        |  ETA: 0:00:16[K
+   batch: 25[K[A
+[K[AMNIST epoch 1  81%|███████████████████████████████       |  ETA: 0:00:14[K
+   batch: 26[K[A
+[K[AMNIST epoch 1  84%|█████████████████████████████████     |  ETA: 0:00:11[K
+   batch: 27[K[A
+[K[AMNIST epoch 1  88%|██████████████████████████████████    |  ETA: 0:00:09[K
+   batch: 28[K[A
+[K[AMNIST epoch 1  91%|███████████████████████████████████   |  ETA: 0:00:07[K
+   batch: 29[K[A
+[K[AMNIST epoch 1  94%|████████████████████████████████████  |  ETA: 0:00:05[K
+   batch: 30[K[A
+[K[AMNIST epoch 1  97%|█████████████████████████████████████ |  ETA: 0:00:02[K
+   batch: 31[K[A
+[K[AMNIST epoch 1 100%|██████████████████████████████████████| Time: 0:01:12[K
+   batch: 32[K
+MNIST epoch 1   6%|███                                   |  ETA: 0:01:10[K
+   batch: 2[K[A
+[K[AMNIST epoch 1   9%|████                                  |  ETA: 0:01:07[K
+   batch: 3[K[A
+[K[AMNIST epoch 1  12%|█████                                 |  ETA: 0:01:04[K
+   batch: 4[K[A
+[K[AMNIST epoch 1  16%|██████                                |  ETA: 0:01:02[K
+   batch: 5[K[A
+[K[AMNIST epoch 1  19%|████████                              |  ETA: 0:00:59[K
+   batch: 6[K[A
+[K[AMNIST epoch 1  22%|█████████                             |  ETA: 0:00:57[K
+   batch: 7[K[A
+[K[AMNIST epoch 1  25%|██████████                            |  ETA: 0:00:55[K
+   batch: 8[K[A
+[K[AMNIST epoch 1  28%|███████████                           |  ETA: 0:00:52[K
+   batch: 9[K[A
+[K[AMNIST epoch 1  31%|████████████                          |  ETA: 0:00:50[K
+   batch: 10[K[A
+[K[AMNIST epoch 1  34%|██████████████                        |  ETA: 0:00:48[K
+   batch: 11[K[A
+[K[AMNIST epoch 1  38%|███████████████                       |  ETA: 0:00:45[K
+   batch: 12[K[A
+[K[AMNIST epoch 1  41%|████████████████                      |  ETA: 0:00:43[K
+   batch: 13[K[A
+[K[AMNIST epoch 1  44%|█████████████████                     |  ETA: 0:00:41[K
+   batch: 14[K[A
+[K[AMNIST epoch 1  47%|██████████████████                    |  ETA: 0:00:39[K
+   batch: 15[K[A
+[K[AMNIST epoch 1  50%|████████████████████                  |  ETA: 0:00:36[K
+   batch: 16[K[A
+[K[AMNIST epoch 1  53%|█████████████████████                 |  ETA: 0:00:34[K
+   batch: 17[K[A
+[K[AMNIST epoch 1  56%|██████████████████████                |  ETA: 0:00:32[K
+   batch: 18[K[A
+[K[AMNIST epoch 1  59%|███████████████████████               |  ETA: 0:00:29[K
+   batch: 19[K[A
+[K[AMNIST epoch 1  62%|████████████████████████              |  ETA: 0:00:27[K
+   batch: 20[K[A
+[K[AMNIST epoch 1  66%|█████████████████████████             |  ETA: 0:00:25[K
+   batch: 21[K[A
+[K[AMNIST epoch 1  69%|███████████████████████████           |  ETA: 0:00:23[K
+   batch: 22[K[A
+[K[AMNIST epoch 1  72%|████████████████████████████          |  ETA: 0:00:20[K
+   batch: 23[K[A
+[K[AMNIST epoch 1  75%|█████████████████████████████         |  ETA: 0:00:18[K
+   batch: 24[K[A
+[K[AMNIST epoch 1  78%|██████████████████████████████        |  ETA: 0:00:16[K
+   batch: 25[K[A
+[K[AMNIST epoch 1  81%|███████████████████████████████       |  ETA: 0:00:14[K
+   batch: 26[K[A
+[K[AMNIST epoch 1  84%|█████████████████████████████████     |  ETA: 0:00:11[K
+   batch: 27[K[A
+[K[AMNIST epoch 1  88%|██████████████████████████████████    |  ETA: 0:00:09[K
+   batch: 28[K[A
+[K[AMNIST epoch 1  91%|███████████████████████████████████   |  ETA: 0:00:07[K
+   batch: 29[K[A
+[K[AMNIST epoch 1  94%|████████████████████████████████████  |  ETA: 0:00:05[K
+   batch: 30[K[A
+[K[AMNIST epoch 1  97%|█████████████████████████████████████ |  ETA: 0:00:02[K
+   batch: 31[K[A
+[K[AMNIST epoch 1 100%|██████████████████████████████████████| Time: 0:01:12[K
+   batch: 32[K
+MNIST epoch 1   6%|███                                   |  ETA: 0:01:08[K
+   batch: 2[K[A
+[K[AMNIST epoch 1   9%|████                                  |  ETA: 0:01:05[K
+   batch: 3[K[A
+[K[AMNIST epoch 1  12%|█████                                 |  ETA: 0:01:03[K
+   batch: 4[K[A
+[K[AMNIST epoch 1  16%|██████                                |  ETA: 0:01:01[K
+   batch: 5[K[A
+[K[AMNIST epoch 1  19%|████████                              |  ETA: 0:00:59[K
+   batch: 6[K[A
+[K[AMNIST epoch 1  22%|█████████                             |  ETA: 0:00:56[K
+   batch: 7[K[A
+[K[AMNIST epoch 1  25%|██████████                            |  ETA: 0:00:54[K
+   batch: 8[K[A
+[K[AMNIST epoch 1  28%|███████████                           |  ETA: 0:00:52[K
+   batch: 9[K[A
+[K[AMNIST epoch 1  31%|████████████                          |  ETA: 0:00:50[K
+   batch: 10[K[A
+[K[AMNIST epoch 1  34%|██████████████                        |  ETA: 0:00:47[K
+   batch: 11[K[A
+[K[AMNIST epoch 1  38%|███████████████                       |  ETA: 0:00:45[K
+   batch: 12[K[A
+[K[AMNIST epoch 1  41%|████████████████                      |  ETA: 0:00:43[K
+   batch: 13[K[A
+[K[AMNIST epoch 1  44%|█████████████████                     |  ETA: 0:00:41[K
+   batch: 14[K[A
+[K[AMNIST epoch 1  47%|██████████████████                    |  ETA: 0:00:38[K
+   batch: 15[K[A
+[K[AMNIST epoch 1  50%|████████████████████                  |  ETA: 0:00:36[K
+   batch: 16[K[A
+[K[AMNIST epoch 1  53%|█████████████████████                 |  ETA: 0:00:34[K
+   batch: 17[K[A
+[K[AMNIST epoch 1  56%|██████████████████████                |  ETA: 0:00:32[K
+   batch: 18[K[A
+[K[AMNIST epoch 1  59%|███████████████████████               |  ETA: 0:00:29[K
+   batch: 19[K[A
+[K[AMNIST epoch 1  62%|████████████████████████              |  ETA: 0:00:27[K
+   batch: 20[K[A
+[K[AMNIST epoch 1  66%|█████████████████████████             |  ETA: 0:00:25[K
+   batch: 21[K[A
+[K[AMNIST epoch 1  69%|███████████████████████████           |  ETA: 0:00:23[K
+   batch: 22[K[A
+[K[AMNIST epoch 1  72%|████████████████████████████          |  ETA: 0:00:20[K
+   batch: 23[K[A
+[K[AMNIST epoch 1  75%|█████████████████████████████         |  ETA: 0:00:18[K
+   batch: 24[K[A
+[K[AMNIST epoch 1  78%|██████████████████████████████        |  ETA: 0:00:16[K
+   batch: 25[K[A
+[K[AMNIST epoch 1  81%|███████████████████████████████       |  ETA: 0:00:14[K
+   batch: 26[K[A
+[K[AMNIST epoch 1  84%|█████████████████████████████████     |  ETA: 0:00:11[K
+   batch: 27[K[A
+[K[AMNIST epoch 1  88%|██████████████████████████████████    |  ETA: 0:00:09[K
+   batch: 28[K[A
+[K[AMNIST epoch 1  91%|███████████████████████████████████   |  ETA: 0:00:07[K
+   batch: 29[K[A
+[K[AMNIST epoch 1  94%|████████████████████████████████████  |  ETA: 0:00:05[K
+   batch: 30[K[A
+[K[AMNIST epoch 1  97%|█████████████████████████████████████ |  ETA: 0:00:02[K
+   batch: 31[K[A
+[K[AMNIST epoch 1 100%|██████████████████████████████████████| Time: 0:01:12[K
+   batch: 32[K

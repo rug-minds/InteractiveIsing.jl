@@ -29,6 +29,31 @@ end
     explicit_graph = IsingGraph(3, 3, Continuous(), StateSet(-Inf32, Inf32); precision = Float32, initial_state = explicit_array)
     @test InteractiveIsing.graphstate(explicit_graph) == explicit_array
 
+    backing_a = fill(0.1f0, 4)
+    backing_b = fill(0.2f0, 5)
+    custom_state = RefConcatVector(backing_a, backing_b)
+    custom_graph = IsingGraph(3, 3, Continuous(), StateSet(-Inf32, Inf32); precision = Float32, state = custom_state)
+    @test InteractiveIsing.graphstate(custom_graph) === custom_state
+    @test refslices(custom_state) === (backing_a, backing_b)
+    @test sliceranges(custom_state) == (1:4, 5:9)
+    @test collect(InteractiveIsing.graphstate(custom_graph)) == [fill(0.1f0, 4); fill(0.2f0, 5)]
+
+    filled_state = RefConcatVector(fill(0.0f0, 4), fill(0.0f0, 5))
+    IsingGraph(3, 3, Continuous(), StateSet(-Inf32, Inf32); precision = Float32, state = filled_state, initial_state = 0.75f0)
+    @test all(==(0.75f0), filled_state)
+
+    filled_state .= 2 .* explicit_array .+ 1
+    @test collect(filled_state) == collect(2 .* explicit_array .+ 1)
+
+    turbo_fill!(filled_state, 0.25f0)
+    @test all(==(0.25f0), filled_state)
+
+    turbo_copyto!(filled_state, explicit_array)
+    @test collect(filled_state) == explicit_array
+
+    turbo_map!(x -> x + 1.0f0, filled_state, explicit_array)
+    @test collect(filled_state) == explicit_array .+ 1.0f0
+
     fallback = IsingGraph(3, 3, Continuous(), StateSet(-Inf32, Inf32), Ising(c = ConstVal(0f0), b = 0); precision = Float32)
     @test all(iszero, InteractiveIsing.graphstate(fallback))
 
