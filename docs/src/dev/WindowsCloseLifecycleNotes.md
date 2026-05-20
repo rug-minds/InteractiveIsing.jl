@@ -87,8 +87,9 @@ The working rule is:
 1. keep the observable concretely typed while live, e.g.
    `Observable{typeof(view(state(layer), :, :))}`;
 2. register it with `register_hot_observable!(handle, obs)`;
-3. during runtime shutdown, after frame timers stop and before GLMakie screen
-   teardown, call `detach_hot_observable!(obs)`;
+3. when close scheduling begins, synchronously call
+   `detach_hot_observable!(obs)` before returning from the package close
+   scheduler;
 4. `detach_hot_observable!` dispatches on the observable's type parameter and
    replaces the stored value with a zero-sized inert value of the same type;
 5. the replacement is assigned without `notify`, so close does not queue another
@@ -96,6 +97,14 @@ The working rule is:
 
 This means the open window still uses fast live views, but GLMakie teardown no
 longer sees plot data pointing into graph state.
+
+The first generalized implementation detached hot observables inside the async
+runtime shutdown task. That was still too late for native close on macOS: the
+GLMakie/GLFW close path can start backend scene teardown before the async task
+has traversed the panel tree. Hot observable detachment is now a separate,
+synchronous, no-notify pass at the front of `_schedule_native_close!`. It does
+not stop timers, close processes, run panel `close!` hooks, or delete Makie
+objects; it only swaps hot observable values away from live runtime memory.
 
 ## Things Tried That Were Bad
 
@@ -191,7 +200,9 @@ For native close:
 
 1. GLMakie or package code sets `host.open[] = false`.
 2. A minimal `window_open` observer marks `host.closing = true`, records that
-   close cleanup has been scheduled, starts an async cleanup task, and returns.
+   close cleanup has been scheduled, synchronously detaches registered hot
+   observables without notifying Makie, starts an async cleanup task, and
+   returns.
 3. Frame and polling callbacks no-op as soon as `host.closing` is true.
 4. The async cleanup task closes and waits for host notification timers, then
    requests owned graph/process shutdown.

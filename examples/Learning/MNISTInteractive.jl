@@ -235,6 +235,8 @@ host = window(
     fps = 30,
     polling_rate = 10,
 )
+MNIST_DEMO_WINDOWS.register_hot_observable!(host, image_obs)
+MNIST_DEMO_WINDOWS.register_hot_observable!(host, output_obs)
 
 controls = GridLayout(host.figure[1, 1])
 digit_slider = Slider(controls[1, 1], range = 0:9, startvalue = selected_digit[], width = 220)
@@ -292,6 +294,11 @@ layer_panel = panel!(
     ),
     (2, 1:2),
 )
+# Keep the frozen input layer in the same raster orientation as the preview
+# without changing the graph state consumed by the checkpoint weights.
+if !layer_panel[:axis].yreversed[]
+    layer_panel[:plots][1].uv_transform = identity
+end
 
 register!(host, on(mnist_digit_slider_changed, digit_slider.value))
 register!(host, on(mnist_digit_button_clicked, digit_button.clicks))
