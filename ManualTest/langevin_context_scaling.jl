@@ -234,7 +234,10 @@ end
 Run all raw contexts concurrently using Julia thread tasks.
 """
 function run_threaded!(instance::I, contexts::C, nsteps::T) where {I<:Processes.AbstractIdentifiableAlgo,C<:AbstractVector,T<:Integer}
-    tasks = map(context -> Threads.@spawn(run_raw_langevin!(instance, context, nsteps)), contexts)
+    tasks = map(eachindex(contexts)) do idx
+        context = contexts[idx]
+        Threads.@spawn run_raw_langevin!($instance, $context, $nsteps)
+    end
     return fetch.(tasks)
 end
 
