@@ -143,6 +143,13 @@ end
     @test live_obs[] isa typeof(mat_view)
     @test size(live_obs[]) == (0, 0)
     @test parent(live_obs[]) !== mat
+
+    scheduled_host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10, start_timers = false)
+    scheduled_obs = Windows.hot_observable!(scheduled_host, view(mat, :, :))
+    Windows._schedule_native_close!(scheduled_host)
+    @test scheduled_obs[] isa typeof(mat_view)
+    @test size(scheduled_obs[]) == (0, 0)
+    @test parent(scheduled_obs[]) !== mat
 end
 
 @testset "InteractiveLinesPanel and ContextLinesPanel figure construction" begin

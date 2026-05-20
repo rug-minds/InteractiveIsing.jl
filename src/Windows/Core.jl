@@ -492,6 +492,51 @@ function detach_hot_observable!(observable::Observable{T}) where {T}
     return observable
 end
 
+"""
+    _detach_hot_observable_resource(resource)
+
+Detach one registered hot observable resource without touching any other
+resource type. This is used at the very beginning of native close scheduling,
+before GLMakie can start freeing plot resources against live simulation memory.
+"""
+_detach_hot_observable_resource(resource::T) where {T} = nothing
+
+function _detach_hot_observable_resource(resource::T) where {T<:HotObservable}
+    try
+        detach_hot_observable!(resource.observable)
+    catch err
+        @warn "Could not detach hot observable before window close" observable_type = typeof(resource.observable) exception = (err, catch_backtrace())
+    end
+    return nothing
+end
+
+"""
+    _detach_hot_observables!(host_or_handle)
+
+Synchronously sever every registered hot observable in a host subtree from live
+runtime memory. This intentionally does not close panels, remove observers,
+delete Makie objects, stop processes, or notify observables.
+"""
+function _detach_hot_observables!(host::T) where {T<:WindowHost}
+    for resource in reverse(host.resources)
+        _detach_hot_observable_resource(resource)
+    end
+    for child in reverse(collect(values(host.children)))
+        _detach_hot_observables!(child)
+    end
+    return nothing
+end
+
+function _detach_hot_observables!(handle::T) where {T<:PanelHandle}
+    for resource in reverse(handle.resources)
+        _detach_hot_observable_resource(resource)
+    end
+    for child in reverse(collect(values(handle.children)))
+        _detach_hot_observables!(child)
+    end
+    return nothing
+end
+
 struct CloseCallback
     callback::Function
 end
@@ -808,6 +853,7 @@ function _schedule_native_close!(host::WindowHost)
     (host.closed || get(host.data, :close_scheduled, false)) && return nothing
     host.data[:close_scheduled] = true
     host.closing = true
+    _detach_hot_observables!(host)
     screen = host.screen
     @async begin
         _stop_host_notifications!(host; wait_for_timers = true)
