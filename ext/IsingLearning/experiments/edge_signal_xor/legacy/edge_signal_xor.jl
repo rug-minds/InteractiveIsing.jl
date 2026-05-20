@@ -501,7 +501,7 @@ function run_dynamics_steps!(graph, sampler, nsteps::Integer; seed::Integer)
     routine = II.Processes.@Routine begin
         @repeat nsteps dynamics()
     end
-    inputs = II._merge_graph_inputs(routine, graph, Processes.Init(dynamics, rng = Random.MersenneTwister(seed)))
+    inputs = (Processes.Init(dynamics, model = graph, rng = Random.MersenneTwister(seed)),)
     process = Processes.Process(Processes.resolve(routine), inputs...; repeats = 1)
     run(process)
     wait(process)
@@ -535,7 +535,7 @@ function run_transition_response!(trace, graph, sampler, x; graph_kind, nn, sour
     wrapped = II.Processes.@Routine begin
         @repeat total_steps routine()
     end
-    inputs = II._merge_graph_inputs(wrapped, graph, Processes.Init(dynamics, rng = Random.MersenneTwister(seed_base + 2)))
+    inputs = (Processes.Init(dynamics, model = graph, rng = Random.MersenneTwister(seed_base + 2)),)
     process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
     run(process)
     wait(process)

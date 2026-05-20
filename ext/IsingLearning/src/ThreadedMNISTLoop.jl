@@ -44,6 +44,115 @@ mutable struct MNISTForwardManager{L,G,M}
     manager::M
 end
 
+"""
+    MNISTContrastiveStep(layer)
+
+Single MNIST equilibrium-propagation training step implemented as a plain
+`ProcessAlgorithm`. It avoids rebuilding the nested `Forward_and_Nudged`
+routine for every worker while preserving the manager-facing `_state` context
+fields used for input, target, and gradient buffers.
+"""
+struct MNISTContrastiveStep{D,N,T} <: ProcessAlgorithm
+    dynamics_algorithm::D
+    nudged_dynamics_algorithm::N
+    β::T
+    input_dim::Int
+    output_dim::Int
+    free_relaxation_steps::Int
+    nudged_relaxation_steps::Int
+end
+
+function MNISTContrastiveStep(layer::LayeredIsingGraphLayer)
+    return MNISTContrastiveStep(
+        deepcopy(layer.dynamics_algorithm),
+        deepcopy(layer.nudged_dynamics_algorithm),
+        layer.β,
+        length(layer.input_layer),
+        length(layer.output_layer),
+        layer.free_relaxation_steps,
+        layer.nudged_relaxation_steps,
+    )
+end
+
+"""
+    _relax_mnist_context!(algorithm, context, nsteps)
+
+Run `nsteps` local dynamics updates against an already initialized dynamics
+context. The graph state is mutated in place and the context buffers are reused.
+"""
+function _relax_mnist_context!(algorithm::A, context::C, nsteps::Integer) where {A,C}
+    for _ in 1:nsteps
+        Processes.step!(algorithm, context)
+    end
+    return context
+end
+
+"""
+    Processes.init(step::MNISTContrastiveStep, context)
+
+Create the persistent worker context for a custom MNIST contrastive step.
+The returned fields live under the algorithm context key, normally `:_state`.
+"""
+function Processes.init(step::MNISTContrastiveStep, context)
+    model = context.model
+    T = eltype(model)
+    x = get(context, :x, zeros(T, step.input_dim))
+    y = get(context, :y, zeros(T, step.output_dim))
+    buffers = get(context, :buffers, gradient_buffer(model))
+    equilibrium_state = get(context, :equilibrium_state, copy(state(model)))
+    plus_state = get(context, :plus_state, similar(equilibrium_state))
+    minus_state = get(context, :minus_state, similar(equilibrium_state))
+
+    free_context = Processes.init(step.dynamics_algorithm, (; model))
+    nudged_context = Processes.init(step.nudged_dynamics_algorithm, (; model))
+
+    return (; model, x, y, buffers, equilibrium_state, plus_state, minus_state, free_context, nudged_context)
+end
+
+"""
+    Processes.step!(step::MNISTContrastiveStep, context)
+
+Run free, positive nudged, and negative nudged phases for one MNIST sample and
+accumulate the symmetric contrastive gradient into `context.buffers`.
+"""
+function Processes.step!(step::MNISTContrastiveStep, context)
+    model = context.model
+    β = step.β
+
+    resetstate!(model)
+    apply_input(model, context.x)
+    _relax_mnist_context!(step.dynamics_algorithm, context.free_context, step.free_relaxation_steps)
+    context.equilibrium_state .= state(model)
+
+    state(model) .= context.equilibrium_state
+    apply_input(model, context.x)
+    apply_targets(model, context.y)
+    set_clamping_beta!(model, β)
+    _relax_mnist_context!(step.nudged_dynamics_algorithm, context.nudged_context, step.nudged_relaxation_steps)
+    context.plus_state .= state(model)
+
+    state(model) .= context.equilibrium_state
+    apply_input(model, context.x)
+    apply_targets(model, context.y)
+    set_clamping_beta!(model, -β)
+    _relax_mnist_context!(step.nudged_dynamics_algorithm, context.nudged_context, step.nudged_relaxation_steps)
+    context.minus_state .= state(model)
+
+    set_clamping_beta!(model, zero(β))
+    contrastive_gradient(model, context.plus_state, context.minus_state, β; buffers = context.buffers)
+    return nothing
+end
+
+"""
+    Processes.cleanup(step::MNISTContrastiveStep, context)
+
+Finalize an MNIST contrastive worker step. The algorithm owns no external
+resources, so cleanup intentionally leaves the persistent buffers untouched.
+"""
+function Processes.cleanup(step::MNISTContrastiveStep, context)
+    return nothing
+end
+
 function gradient_buffer(graph)
     base = (;
         w = zeros(eltype(graph), length(SparseArrays.getnzval(adj(graph)))),
@@ -172,6 +281,56 @@ function _onehot(labels, nclasses::Integer; off_value::T, on_value::T) where {T<
     return y
 end
 
+"""
+    _mnist_output_replicas(layer)
+
+Return how many output spins encode one MNIST digit class. A plain `10`-spin
+output layer has one replica per class; a `40`-spin layer has four.
+"""
+function _mnist_output_replicas(layer::L) where {L<:LayeredIsingGraphLayer}
+    noutputs = length(layer.output_layer)
+    replicas, remainder = divrem(noutputs, MNIST_NCLASSES)
+    remainder == 0 || throw(DimensionMismatch("MNIST output length must be a multiple of $(MNIST_NCLASSES), got $(noutputs)"))
+    replicas > 0 || throw(DimensionMismatch("MNIST output layer must contain at least $(MNIST_NCLASSES) spins"))
+    return replicas
+end
+
+"""
+    _mnist_repeated_targets(labels, replicas; off_value, on_value)
+
+Build MNIST targets with `replicas` adjacent output spins per digit class.
+This supports the `784 -> 120 -> 40` layout from the Ising-machine paper while
+preserving the original one-spin-per-class behavior when `replicas == 1`.
+"""
+function _mnist_repeated_targets(labels, replicas::Integer; off_value::T, on_value::T) where {T<:AbstractFloat}
+    replicas > 0 || throw(ArgumentError("replicas must be positive"))
+    y = fill(off_value, MNIST_NCLASSES * replicas, length(labels))
+    @inbounds for (col, label) in enumerate(labels)
+        first_idx = Int(label) * replicas + 1
+        last_idx = first_idx + replicas - 1
+        y[first_idx:last_idx, col] .= on_value
+    end
+    return y
+end
+
+"""
+    _mnist_class_scores(output)
+
+Reduce a `10 * replicas` MNIST output vector to one score per digit by summing
+the replica spins for each class.
+"""
+function _mnist_class_scores(output::V) where {V<:AbstractVector}
+    replicas, remainder = divrem(length(output), MNIST_NCLASSES)
+    remainder == 0 || throw(DimensionMismatch("MNIST output length must be a multiple of $(MNIST_NCLASSES), got $(length(output))"))
+    scores = zeros(eltype(output), MNIST_NCLASSES)
+    @inbounds for digit_idx in 1:MNIST_NCLASSES
+        first_idx = (digit_idx - 1) * replicas + 1
+        last_idx = first_idx + replicas - 1
+        scores[digit_idx] = sum(view(output, first_idx:last_idx))
+    end
+    return scores
+end
+
 function load_mnist_arrays(layer::LayeredIsingGraphLayer; split::Symbol = :train, limit::Union{Nothing,Int} = nothing)
     images, labels =
         split === :train ? MLDatasets.MNIST(split = :train)[:] :
@@ -182,7 +341,7 @@ function load_mnist_arrays(layer::LayeredIsingGraphLayer; split::Symbol = :train
     output_lo, output_hi = _layer_state_bounds(layer.model_graph[end])
 
     x = _normalize_mnist_images(images, input_lo, input_hi)
-    y = _onehot(labels, 10; off_value = output_lo, on_value = output_hi)
+    y = _mnist_repeated_targets(labels, _mnist_output_replicas(layer); off_value = output_lo, on_value = output_hi)
 
     if !isnothing(limit)
         last_idx = min(limit, size(x, 2))
@@ -220,8 +379,19 @@ function _worker_graph(prototype_graph, params)
     return worker_graph
 end
 
+"""
+    _mnist_worker_state(worker)
+
+Return the mutable subcontext that stores MNIST sample state and gradient
+buffers. The legacy DSL worker names it `:_state`; the custom contrastive worker
+has one process subcontext, so that subcontext is used directly.
+"""
+function _mnist_worker_state(worker::W) where {W}
+    return Processes.context(worker)._state
+end
+
 function _worker_process(layer, worker_graph)
-    algo = resolve(Forward_and_Nudged(layer).algorithm)
+    algo = :_state => MNISTContrastiveStep(layer)
     xdim = length(layer.input_layer)
     ydim = length(layer.output_layer)
     buffers = gradient_buffer(worker_graph)
@@ -229,14 +399,14 @@ function _worker_process(layer, worker_graph)
     Process(
         algo,
         Init(:_state;
+            model = worker_graph,
             x = zeros(eltype(worker_graph), xdim),
             y = zeros(eltype(worker_graph), ydim),
             buffers = buffers,
             equilibrium_state = copy(state(worker_graph)),
-        ),
-        Init(:dynamics, model = worker_graph),
-        Init(:plus_capture, state = worker_graph),
-        Init(:minus_capture, state = worker_graph);
+            plus_state = similar(state(worker_graph)),
+            minus_state = similar(state(worker_graph)),
+        );
         repeat = 1,
     )
 end
@@ -307,7 +477,7 @@ end
 function _mnist_manager_output!(manager, graph)
     output = manager.state.output[]
     output .= vec(state(graph[end]))
-    manager.state.prediction[] = argmax(output) - 1
+    manager.state.prediction[] = argmax(_mnist_class_scores(output)) - 1
     return output
 end
 
@@ -402,7 +572,7 @@ function init_mnist_trainer(
     opt_state = Optimisers.setup(optimiser, params)
     manager = _mnist_training_manager(layer, graph, params, Int(numthreads))
     workers = collect(Processes.workers(manager))
-    worker_graphs = [Processes.context(worker).dynamics.model for worker in workers]
+    worker_graphs = [_mnist_worker_state(worker).model for worker in workers]
 
     validation_template_graph = _worker_graph(graph, params)
     validation_worker = _validation_process(layer, validation_template_graph)
@@ -440,26 +610,26 @@ function close_trainer!(trainer::MNISTThreadedTrainer)
 end
 
 function _write_example!(worker, x, y)
-    context = Processes.context(worker)
-    context._state.x .= x
-    context._state.y .= y
-    return context
+    state_context = _mnist_worker_state(worker)
+    state_context.x .= x
+    state_context.y .= y
+    return state_context
 end
 
 function _write_input!(worker, x)
-    context = Processes.context(worker)
-    context._state.x .= x
-    return context
+    state_context = _mnist_worker_state(worker)
+    state_context.x .= x
+    return state_context
 end
 
 function _reset_batch_buffers!(trainer)
     workers = trainer.workers
     if length(workers) > 1
         Threads.@threads for idx in eachindex(workers)
-            zero_buffer!(Processes.context(workers[idx])._state.buffers)
+            zero_buffer!(_mnist_worker_state(workers[idx]).buffers)
         end
     else
-        zero_buffer_threaded!(Processes.context(only(workers))._state.buffers)
+        zero_buffer_threaded!(_mnist_worker_state(only(workers)).buffers)
     end
     return trainer
 end
@@ -468,7 +638,7 @@ function _collect_batch_gradient!(trainer, dest, batchsize)
     β = trainer.layer.β
     T = eltype(dest.w)
     scale = inv(T(2) * T(β) * T(batchsize))
-    buffers = [Processes.context(worker)._state.buffers for worker in trainer.workers]
+    buffers = [_mnist_worker_state(worker).buffers for worker in trainer.workers]
 
     _threaded_sum_scale!(dest.w, map(buffer -> buffer.w, buffers), scale)
     _sum_scale_small!(dest.b, map(buffer -> buffer.b, buffers), scale)
@@ -476,11 +646,27 @@ function _collect_batch_gradient!(trainer, dest, batchsize)
     return dest
 end
 
+"""
+    _broadcast_params!(trainer)
+
+Copy the latest optimizer-owned parameter arrays into every graph that can be
+used after a minibatch update. Worker graph copies are independent, so they can
+be synchronized in parallel once the manager has drained the current batch.
+"""
 function _broadcast_params!(trainer)
     sync_graph_params!(trainer.prototype_graph, trainer.params)
-    for worker_graph in trainer.worker_graphs
-        sync_graph_params!(worker_graph, trainer.params)
+
+    worker_graphs = trainer.worker_graphs
+    if length(worker_graphs) > 1 && Threads.nthreads() > 1
+        Threads.@threads for idx in eachindex(worker_graphs)
+            sync_graph_params!(worker_graphs[idx], trainer.params)
+        end
+    else
+        for worker_graph in worker_graphs
+            sync_graph_params!(worker_graph, trainer.params)
+        end
     end
+
     sync_graph_params!(trainer.validation_graph, trainer.params)
     return trainer
 end
@@ -513,7 +699,7 @@ function evaluate_mnist!(
         output = _validation_output(trainer)
         target = view(y, :, sample_idx)
         total_squared_error += sum(abs2, output .- target)
-        ncorrect += argmax(output) == argmax(target)
+        ncorrect += argmax(_mnist_class_scores(output)) == argmax(_mnist_class_scores(target))
         progress === nothing || next!(progress; showvalues = [(:sample, sample_idx)])
     end
 

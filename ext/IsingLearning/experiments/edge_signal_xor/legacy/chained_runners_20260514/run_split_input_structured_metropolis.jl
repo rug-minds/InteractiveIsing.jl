@@ -87,7 +87,7 @@ function metropolis_timeavg_scalar_output!(trainer, x, config::EdgeSignalXORConf
     wrapped = Processes.@Routine begin
         @repeat (total_sweeps * sweep_steps) routine()
     end
-    inputs = II._merge_graph_inputs(wrapped, graph, Processes.Init(dynamics, rng = Random.MersenneTwister(seed)))
+    inputs = (Processes.Init(dynamics, model = graph, rng = Random.MersenneTwister(seed)),)
     process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
     run(process)
     wait(process)

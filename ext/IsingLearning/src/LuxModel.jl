@@ -236,10 +236,12 @@ MC updates and clamping-parameter management.
 Example (pseudocode):
 ```julia
 ep = EPClamping(0.1f0, target_vector)
-algo = CompositeAlgorithm(Metropolis(), ep, (N_mc, 1),
-                          Route(ep => Metropolis, ...))
-createProcess(g, dynamics = algo, lifetime = total_steps)
-wait(g)
+mc = Metropolis()
+algo = CompositeAlgorithm(mc, ep, (N_mc, 1),
+                          Route(ep => mc, ...))
+process = Process(algo, Init(mc, model = g); lifetime = total_steps)
+run(process)
+wait(process)
 ```
 """
 struct EPClamping <: ProcessAlgorithm

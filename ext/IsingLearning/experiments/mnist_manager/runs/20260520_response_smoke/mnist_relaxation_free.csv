@@ -1,0 +1,5 @@
+config_id,sample_idx,stepsize,beta,phase,steps,sweeps,state_rms_to_final,hidden_rms_to_final,output_rms_to_final,output_mse_to_target,target_digit,prediction,score_margin
+1,1,0.1,0.1,free,160,1.0,0.0071998276,0.018861722,0.012492865,15.560402,5,8,0.9480045
+1,1,0.1,0.1,free,320,2.0,0.0,0.0,0.0,15.391063,5,8,0.9482503
+1,2,0.1,0.1,free,160,1.0,0.0076197363,0.019654619,0.014536611,18.458427,0,8,0.1358509
+1,2,0.1,0.1,free,320,2.0,0.0,0.0,0.0,18.53864,0,8,0.12056041

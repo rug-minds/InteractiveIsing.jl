@@ -403,8 +403,8 @@ function register!(handle::PanelHandle, resource)
     return resource
 end
 
-struct HotObservable
-    observable::Any
+struct HotObservable{O<:Observable}
+    observable::O
 end
 
 """
@@ -426,6 +426,25 @@ function register_hot_observable!(handle::PanelHandle, observable::Observable)
 end
 
 """
+    hot_observable!(host_or_handle, value)
+
+Create a concretely typed Makie `Observable` for live display data and register
+it for close-time detachment. This keeps panel code from forgetting the runtime
+shutdown policy for observables that point at graph or process-owned memory.
+"""
+function hot_observable!(host::WindowHost, value::T) where {T}
+    observable = Observable{T}(value)
+    register_hot_observable!(host, observable)
+    return observable
+end
+
+function hot_observable!(handle::PanelHandle, value::T) where {T}
+    observable = Observable{T}(value)
+    register_hot_observable!(handle, observable)
+    return observable
+end
+
+"""
     hot_observable_zero(::Type{T})
     hot_observable_zero(observable::Observable{T})
 
@@ -443,6 +462,10 @@ function hot_observable_zero(::Type{T}) where {E,N,T<:Array{E,N}}
     return zeros(E, ntuple(_ -> 0, N))
 end
 
+function hot_observable_zero(::Type{T}) where {In,Out,T<:CastVec{In,Out}}
+    return CastVec{In,Out}(Vector{In}(undef, 0))
+end
+
 function hot_observable_zero(::Type{T}) where {E,N,P,I,L,T<:SubArray{E,N,P,I,L}}
     replacement = view(zeros(E, ntuple(_ -> 0, N)), ntuple(_ -> (:), N)...)
     replacement isa T && return replacement
@@ -455,6 +478,13 @@ function hot_observable_zero(::Type{T}) where {E,N,P<:SubArray{E,N},T<:Base.Resh
     throw(ArgumentError("Cannot build zero-sized replacement for hot observable value type $T."))
 end
 
+"""
+    detach_hot_observable!(observable)
+
+Replace the stored value of a hot observable with a same-type zero-sized value
+without notifying Makie. This severs close-time references to live simulation
+memory after update timers have stopped.
+"""
 function detach_hot_observable!(observable::Observable{T}) where {T}
     replacement = hot_observable_zero(T)
     replacement isa T || throw(ArgumentError("Replacement value $(typeof(replacement)) is not compatible with observable value type $T."))

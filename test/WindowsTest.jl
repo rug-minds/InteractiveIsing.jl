@@ -136,6 +136,13 @@ end
     Windows.detach_hot_observable!(abstract_obs)
     @test abstract_obs[] isa AbstractVector{Float64}
     @test length(abstract_obs[]) == 0
+
+    host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    live_obs = Windows.hot_observable!(host, view(mat, :, :))
+    close(host)
+    @test live_obs[] isa typeof(mat_view)
+    @test size(live_obs[]) == (0, 0)
+    @test parent(live_obs[]) !== mat
 end
 
 @testset "InteractiveLinesPanel and ContextLinesPanel figure construction" begin
@@ -287,6 +294,7 @@ end
     state(g[1]) .= 0.5f0
     Windows._tick!(host)
     @test all(handle[:layer_observables][1][] .== 0.5f0)
+    all_layers_obs = copy(handle[:layer_observables])
 
     duplicate = IsingGraph(
         Layer(2, 2, Continuous(), StateSet(-1.0f0, 1.0f0), Coords(y = 0, x = 0, z = 0)),
@@ -316,6 +324,7 @@ end
 
     close(host)
     @test host.closed
+    @test all(obs -> size(obs[]) == (0, 0), all_layers_obs)
 end
 
 @testset "SimulationPanel figure construction" begin
@@ -386,7 +395,7 @@ end
     @test temperature_panel[:slider].value[] ≈ 2.0f0
 
     algorithm = Metropolis()
-    process_inputs = InteractiveIsing._merge_graph_inputs(algorithm, g)
+    process_inputs = InteractiveIsing._mc_model_inits(algorithm, g)
     process = InteractiveIsing.Processes.Process(algorithm, process_inputs...; repeat = 1)
     push!(processes(g), process)
     context_update = (; Metropolis_1 = (; T = Float32(3.0)))
@@ -468,6 +477,8 @@ end
     parameter_panel = handle.children[:hamiltonian_parameters]
     entries = parameter_panel[:entries]
     labels = getfield.(entries, :term_label)
+    graph_state_obs = parameter_panel[:display_obs]
+    graph_state_type = typeof(graph_state_obs[])
 
     @test :u in getfield.(entries, :name)
     @test Symbol("ρ") in getfield.(entries, :name)
@@ -500,6 +511,8 @@ end
     @test parameter_panel[:display_is_3d]
     @test length(parameter_panel[:display_obs][]) == prod(size(coulomb.ρ))
     ρ_obs = parameter_panel[:display_obs][]
+    ρ_display_obs = parameter_panel[:display_obs]
+    ρ_display_type = typeof(ρ_display_obs[])
     @test pointer(ρ_obs) == pointer(coulomb.ρ)
     Windows._tick!(host)
     @test parameter_panel[:display_obs][] === ρ_obs
@@ -509,4 +522,8 @@ end
 
     close(host)
     @test host.closed
+    @test graph_state_obs[] isa graph_state_type
+    @test length(graph_state_obs[]) == 0
+    @test ρ_display_obs[] isa ρ_display_type
+    @test length(ρ_display_obs[]) == 0
 end

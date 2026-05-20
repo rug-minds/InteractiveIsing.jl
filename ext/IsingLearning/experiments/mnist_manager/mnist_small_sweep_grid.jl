@@ -10,8 +10,11 @@ using Random
 using SparseArrays
 using Statistics
 
+const II = IsingLearning.InteractiveIsing
+
 const WORKERS = parse(Int, get(ENV, "ISING_MNIST_SMALL_WORKERS", "16"))
 const HIDDENS = parse.(Int, split(get(ENV, "ISING_MNIST_SMALL_HIDDENS", "128,512"), ","))
+const OUTPUT_REPLICAS = parse(Int, get(ENV, "ISING_MNIST_SMALL_OUTPUT_REPLICAS", "1"))
 const EPOCHS = parse(Int, get(ENV, "ISING_MNIST_SMALL_EPOCHS", "5"))
 const BATCHSIZE = parse(Int, get(ENV, "ISING_MNIST_SMALL_BATCHSIZE", "128"))
 const TRAIN_LIMIT = parse(Int, get(ENV, "ISING_MNIST_SMALL_TRAIN_LIMIT", "2048"))
@@ -21,6 +24,8 @@ const DIGITS_RAW = get(ENV, "ISING_MNIST_SMALL_DIGITS", "")
 const DIGITS = isempty(DIGITS_RAW) ? collect(0:9) : parse.(Int, split(DIGITS_RAW, ","))
 const MINIT = parse(Int, get(ENV, "ISING_MNIST_SMALL_MINIT", "2"))
 const SWEEPS = parse(Float64, get(ENV, "ISING_MNIST_SMALL_SWEEPS", "2.0"))
+const FREE_SWEEPS = parse(Float64, get(ENV, "ISING_MNIST_SMALL_FREE_SWEEPS", string(SWEEPS)))
+const NUDGED_SWEEPS = parse(Float64, get(ENV, "ISING_MNIST_SMALL_NUDGED_SWEEPS", string(SWEEPS)))
 const TARGET_SCALE = parse(Float32, get(ENV, "ISING_MNIST_SMALL_TARGET_SCALE", "0.2"))
 const WEIGHT_SCALE = parse(Float32, get(ENV, "ISING_MNIST_SMALL_WEIGHT_SCALE", "0.01"))
 const BIAS_SCALE = parse(Float32, get(ENV, "ISING_MNIST_SMALL_BIAS_SCALE", "0.02"))
@@ -47,6 +52,30 @@ function append_row!(path, row)
         println(io, join((getproperty(row, name) for name in names), ","))
     end
     return path
+end
+
+"""
+    strip_weight_generators!(graph)
+
+Remove graph weight-generator closures before checkpointing so saved MNIST
+graphs contain parameters and structure without serializing random closures.
+"""
+function strip_weight_generators!(graph)
+    for layerdata in getfield(graph, :layers)
+        getfield(layerdata, :weightgenerator)[] = nothing
+    end
+    return graph
+end
+
+"""
+    save_mnist_graph(path, graph)
+
+Persist a copy of an MNIST graph checkpoint after stripping generator closures.
+The live trainer graph is not mutated.
+"""
+function save_mnist_graph(path, graph)
+    mkpath(dirname(path))
+    return II.save_isinggraph(path, strip_weight_generators!(deepcopy(graph)))
 end
 
 function scaled_targets!(y)
@@ -114,6 +143,7 @@ end
 function build_trainer(hidden, config_id)
     graph = MNISTArchitecture(
         hidden = hidden,
+        output_replicas = OUTPUT_REPLICAS,
         precision = Float32,
         weight_scale = WEIGHT_SCALE,
         rng = Random.MersenneTwister(10_000 + config_id),
@@ -122,19 +152,21 @@ function build_trainer(hidden, config_id)
     init_pixel_copy_hidden!(graph)
     init_input_output_skip!(graph, 30_000 + config_id)
     temp!(graph, TEMP)
-    relaxation = max(1, round(Int, SWEEPS * active_units(graph)))
+    nactive = active_units(graph)
+    free_relaxation = max(1, round(Int, FREE_SWEEPS * nactive))
+    nudged_relaxation = max(1, round(Int, NUDGED_SWEEPS * nactive))
     dynamics = LocalLangevin(stepsize = STEPSIZE, adjusted = false)
     layer = MNISTLayer(
         graph = graph,
         β = BETA,
-        free_relaxation_steps = relaxation,
-        nudged_relaxation_steps = relaxation,
+        free_relaxation_steps = free_relaxation,
+        nudged_relaxation_steps = nudged_relaxation,
         dynamics_algorithm = dynamics,
         nudged_dynamics_algorithm = deepcopy(dynamics),
         validation_algorithm = deepcopy(dynamics),
     )
     trainer = init_mnist_trainer(layer; graph, numthreads = WORKERS, optimiser = Optimisers.Adam(LR))
-    return graph, layer, trainer, relaxation
+    return graph, layer, trainer, free_relaxation, nudged_relaxation
 end
 
 function add_weight_decay!(gradient, params)
@@ -175,8 +207,10 @@ function evaluate!(trainer, x, y)
         output = IsingLearning._validation_output(trainer)
         target = view(y, :, sample_idx)
         total_squared_error += sum(abs2, output .- target)
-        pred_digit = DIGITS[argmax(view(output, digit_idxs))]
-        target_digit = argmax(target) - 1
+        output_scores = IsingLearning._mnist_class_scores(output)
+        target_scores = IsingLearning._mnist_class_scores(target)
+        pred_digit = DIGITS[argmax(view(output_scores, digit_idxs))]
+        target_digit = argmax(target_scores) - 1
         ncorrect += pred_digit == target_digit
     end
     accuracy = ncorrect / nsamples
@@ -189,8 +223,14 @@ function evaluate!(trainer, x, y)
 end
 
 function run_config(hidden, config_id)
-    graph, layer, trainer, relaxation = build_trainer(hidden, config_id)
+    graph, layer, trainer, free_relaxation, nudged_relaxation = build_trainer(hidden, config_id)
     csv_path = joinpath(OUTDIR, "mnist_small_sweep_grid.csv")
+    checkpoint_dir = joinpath(OUTDIR, "checkpoints", "config_$(config_id)")
+    initial_graph_path = save_mnist_graph(joinpath(checkpoint_dir, "initial_graph.jld2"), trainer.prototype_graph)
+    best_graph_path = joinpath(checkpoint_dir, "best_graph.jld2")
+    final_graph_path = joinpath(checkpoint_dir, "final_graph.jld2")
+    best_validation_mse = Ref(Inf)
+    best_epoch = Ref(0)
     batch_gradient = IsingLearning.gradient_buffer(graph)
     xtrain, ytrain = load_scaled_mnist(layer; split = :train, limit = TRAIN_LIMIT)
     xval, yval = load_scaled_mnist(layer; split = :test, limit = VALIDATION_LIMIT)
@@ -200,14 +240,20 @@ function run_config(hidden, config_id)
     try
         before_train = evaluate!(trainer, xtrain_eval, ytrain_eval)
         before_val = evaluate!(trainer, xval, yval)
+        best_validation_mse[] = Float64(before_val.mean_squared_error)
+        save_mnist_graph(best_graph_path, trainer.prototype_graph)
         append_row!(csv_path, (;
             timestamp = Dates.format(now(), "yyyy-mm-ddTHH:MM:SS"),
             config_id,
             hidden,
+            output_replicas = OUTPUT_REPLICAS,
             epoch = 0,
             seconds = 0.0,
-            relaxation,
+            free_relaxation,
+            nudged_relaxation,
             sweeps = SWEEPS,
+            free_sweeps = FREE_SWEEPS,
+            nudged_sweeps = NUDGED_SWEEPS,
             minit = MINIT,
             digits = join(DIGITS, "-"),
             target_scale = TARGET_SCALE,
@@ -223,6 +269,11 @@ function run_config(hidden, config_id)
             train_mse = before_train.mean_squared_error,
             validation_accuracy = before_val.accuracy,
             validation_mse = before_val.mean_squared_error,
+            initial_graph_path,
+            best_epoch = best_epoch[],
+            best_validation_mse = best_validation_mse[],
+            best_graph_path,
+            final_graph_path = "",
         ))
         println("config=", config_id, " hidden=", hidden, " epoch=0 train=", before_train, " val=", before_val)
         flush(stdout)
@@ -240,10 +291,14 @@ function run_config(hidden, config_id)
                 timestamp = Dates.format(now(), "yyyy-mm-ddTHH:MM:SS"),
                 config_id,
                 hidden,
+                output_replicas = OUTPUT_REPLICAS,
                 epoch,
                 seconds,
-                relaxation,
+                free_relaxation,
+                nudged_relaxation,
                 sweeps = SWEEPS,
+                free_sweeps = FREE_SWEEPS,
+                nudged_sweeps = NUDGED_SWEEPS,
                 minit = MINIT,
                 digits = join(DIGITS, "-"),
                 target_scale = TARGET_SCALE,
@@ -259,11 +314,23 @@ function run_config(hidden, config_id)
                 train_mse = train.mean_squared_error,
                 validation_accuracy = validation.accuracy,
                 validation_mse = validation.mean_squared_error,
+                initial_graph_path,
+                best_epoch = best_epoch[],
+                best_validation_mse = best_validation_mse[],
+                best_graph_path,
+                final_graph_path = "",
             )
+            if Float64(validation.mean_squared_error) < best_validation_mse[]
+                best_validation_mse[] = Float64(validation.mean_squared_error)
+                best_epoch[] = epoch
+                save_mnist_graph(best_graph_path, trainer.prototype_graph)
+                row = merge(row, (; best_epoch = best_epoch[], best_validation_mse = best_validation_mse[]))
+            end
             append_row!(csv_path, row)
             println(row)
             flush(stdout)
         end
+        save_mnist_graph(final_graph_path, trainer.prototype_graph)
     finally
         close_trainer!(trainer)
     end
@@ -274,12 +341,15 @@ println(
     "MNIST small sweep grid workers=", WORKERS,
     " threads=", Threads.nthreads(),
     " hiddens=", HIDDENS,
+    " output_replicas=", OUTPUT_REPLICAS,
     " epochs=", EPOCHS,
     " train_limit=", TRAIN_LIMIT,
     " digits=", DIGITS,
     " batchsize=", BATCHSIZE,
     " minit=", MINIT,
     " sweeps=", SWEEPS,
+    " free_sweeps=", FREE_SWEEPS,
+    " nudged_sweeps=", NUDGED_SWEEPS,
     " target_off/on=", TARGET_OFF, "/", TARGET_ON,
     " input_low/high=", INPUT_LOW, "/", INPUT_HIGH,
     " skip_scale=", SKIP_SCALE,

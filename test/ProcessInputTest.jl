@@ -206,7 +206,7 @@ using Random
     @test issorted(abs.(zero_temp_vals); rev = true)
 
     loop = deepcopy(CompositeAlgorithm(Unique(Metropolis()), Unique(LocalLangevin())))
-    loop_inputs = InteractiveIsing._merge_graph_inputs(loop, g)
+    loop_inputs = InteractiveIsing._mc_model_inits(loop, g)
     loop_process = Process(loop, loop_inputs...; repeats = 1)
     loop_context = getcontext(loop_process)
 
@@ -221,7 +221,7 @@ using Random
     @test keys(loop_algorithm) == keys(Processes.getplan(loop_algorithm))
 
     kinetic = deepcopy(KineticMC())
-    kinetic_inputs = InteractiveIsing._merge_graph_inputs(kinetic, g)
+    kinetic_inputs = InteractiveIsing._mc_model_inits(kinetic, g)
     kinetic_process = Process(kinetic, kinetic_inputs...; repeats = 1)
     kinetic_context = getcontext(kinetic_process)
 

@@ -7,7 +7,7 @@ end
 
 function idle_process(g, algo; repeat = Inf)
     local_algo = deepcopy(algo)
-    inputs = InteractiveIsing._merge_graph_inputs(local_algo, g)
+    inputs = InteractiveIsing._mc_model_inits(local_algo, g)
     p = Process(local_algo, inputs...; repeat)
     push!(processes(g), p)
     return p

@@ -1,8 +1,9 @@
 export ReducedBoltzmannArchitecture, GraphFromSource, GraphFromInit,
-       D_MNIST, MNIST_INPUT_DIM, MNIST_DEFAULT_HIDDEN, MNISTArchitecture, MNISTLayer
+       D_MNIST, MNIST_INPUT_DIM, MNIST_NCLASSES, MNIST_DEFAULT_HIDDEN, MNISTArchitecture, MNISTLayer
 
 const D_MNIST = 28
 const MNIST_INPUT_DIM = D_MNIST^2
+const MNIST_NCLASSES = 10
 const MNIST_DEFAULT_HIDDEN = 10 * MNIST_INPUT_DIM
 
 function ReducedBoltzmannArchitecture(layer_sizes...; precision = Float32, b = nothing, weight_generator = nothing)
@@ -43,23 +44,28 @@ function _mnist_hidden_shape(hidden::Integer)
 end
 
 """
-    MNISTArchitecture(; hidden = MNIST_DEFAULT_HIDDEN, precision = Float32, weight_scale = 0.01, rng = MersenneTwister(0), weight_generator = nothing)
+    MNISTArchitecture(; hidden = MNIST_DEFAULT_HIDDEN, output_replicas = 1, precision = Float32, weight_scale = 0.01, rng = MersenneTwister(0), weight_generator = nothing)
 
 Construct the single-vector MNIST graph architecture:
 
-`D_MNIST^2 -> hidden -> 10`, with `D_MNIST == 28`. The layers are shaped
-for interactive display while keeping those flattened unit counts.
+`D_MNIST^2 -> hidden -> 10 * output_replicas`, with `D_MNIST == 28`.
+The layers are shaped for interactive display while keeping those flattened
+unit counts. `output_replicas = 4` gives four output spins per digit class.
 """
 function MNISTArchitecture(;
     hidden::Integer = MNIST_DEFAULT_HIDDEN,
+    output_replicas::Integer = 1,
     precision = Float32,
     weight_scale::Real = 0.01,
     rng = MersenneTwister(0),
     weight_generator = nothing,
 )
     hidden > 0 || throw(ArgumentError("hidden must be positive, got $(hidden)"))
+    output_replicas > 0 || throw(ArgumentError("output_replicas must be positive, got $(output_replicas)"))
     wg = isnothing(weight_generator) ? _mnist_weight_generator(precision, weight_scale, rng) : weight_generator
     hidden_rows, hidden_cols = _mnist_hidden_shape(Int(hidden))
+    output_units = MNIST_NCLASSES * Int(output_replicas)
+    output_rows, output_cols = _mnist_hidden_shape(output_units)
 
     input_layer = Layer(
         D_MNIST,
@@ -78,8 +84,8 @@ function MNISTArchitecture(;
         periodic = false,
     )
     output_layer = Layer(
-        2,
-        5,
+        output_rows,
+        output_cols,
         StateSet(-one(precision), one(precision)),
         Continuous(),
         Coords(0, D_MNIST + hidden_cols + 4, 0);
@@ -110,6 +116,7 @@ layer as the flattened image input and the last layer as the ten-class output.
 function MNISTLayer(;
     graph = nothing,
     hidden::Integer = MNIST_DEFAULT_HIDDEN,
+    output_replicas::Integer = 1,
     precision = Float32,
     weight_scale::Real = 0.01,
     rng = MersenneTwister(0),
@@ -125,6 +132,7 @@ function MNISTLayer(;
 )
     graph = isnothing(graph) ? MNISTArchitecture(;
         hidden,
+        output_replicas,
         precision,
         weight_scale,
         rng,

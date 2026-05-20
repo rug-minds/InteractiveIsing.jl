@@ -13,6 +13,7 @@ using Statistics
 
 const WORKERS = parse.(Int, split(get(ENV, "ISING_MNIST_PROFILE_WORKERS", "16"), ","))
 const HIDDEN = parse(Int, get(ENV, "ISING_MNIST_PROFILE_HIDDEN", "120"))
+const OUTPUT_REPLICAS = parse(Int, get(ENV, "ISING_MNIST_PROFILE_OUTPUT_REPLICAS", "4"))
 const BATCHSIZE = parse(Int, get(ENV, "ISING_MNIST_PROFILE_BATCHSIZE", "64"))
 const NBATCHES = parse(Int, get(ENV, "ISING_MNIST_PROFILE_BATCHES", "2"))
 const WARMUP_BATCHES = parse(Int, get(ENV, "ISING_MNIST_PROFILE_WARMUP_BATCHES", "1"))
@@ -69,6 +70,7 @@ function build_profile_trainer(nworkers::Integer)
     build_graph_timing = timed_cpu() do
         graph = MNISTArchitecture(
             hidden = HIDDEN,
+            output_replicas = OUTPUT_REPLICAS,
             precision = Float32,
             weight_scale = WEIGHT_SCALE,
             rng = Random.MersenneTwister(10_000 + nworkers),
@@ -100,7 +102,8 @@ function build_profile_trainer(nworkers::Integer)
 end
 
 function make_jobs(xbatch, ybatch)
-    jobs = NamedTuple[]
+    first_job = (; x = view(xbatch, :, first(axes(xbatch, 2))), y = view(ybatch, :, first(axes(ybatch, 2))))
+    jobs = typeof(first_job)[]
     sizehint!(jobs, size(xbatch, 2) * MINIT)
     for sample_idx in axes(xbatch, 2)
         for _ in 1:MINIT
@@ -216,7 +219,7 @@ function profile_apply_input_target!(trainer, jobs)
 end
 
 function profile_syncs!(trainer)
-    graph_list = Any[trainer.prototype_graph]
+    graph_list = typeof(trainer.prototype_graph)[trainer.prototype_graph]
     append!(graph_list, trainer.worker_graphs)
     push!(graph_list, trainer.validation_graph)
 
@@ -238,7 +241,7 @@ function write_warntype_report(path, trainer, jobs, batch_gradient)
     worker = first(trainer.workers)
     slot = first(collect(slots(trainer.manager)))
     job = first(jobs)
-    graph_list = Any[trainer.prototype_graph]
+    graph_list = typeof(trainer.prototype_graph)[trainer.prototype_graph]
     append!(graph_list, trainer.worker_graphs)
     push!(graph_list, trainer.validation_graph)
 
@@ -258,9 +261,9 @@ function write_warntype_report(path, trainer, jobs, batch_gradient)
             println("==== resetworker! ====")
             @code_warntype optimize=true resetworker!(slot)
             println("==== apply_input ====")
-            @code_warntype optimize=true IsingLearning.apply_input(Processes.context(worker).dynamics.model, job.x)
+            @code_warntype optimize=true IsingLearning.apply_input(IsingLearning._mnist_worker_state(worker).model, job.x)
             println("==== apply_targets ====")
-            @code_warntype optimize=true IsingLearning.apply_targets(Processes.context(worker).dynamics.model, job.y)
+            @code_warntype optimize=true IsingLearning.apply_targets(IsingLearning._mnist_worker_state(worker).model, job.y)
             println("==== run! manager ====")
             @code_warntype optimize=true run!(trainer.manager, jobs)
             println("==== _collect_batch_gradient! ====")
@@ -310,7 +313,7 @@ function run_profile(nworkers::Integer)
                 run!(trainer.manager, jobs)
             end
 
-            worker_norms = [buffer_norm(Processes.context(worker)._state.buffers) for worker in trainer.workers]
+            worker_norms = [buffer_norm(IsingLearning._mnist_worker_state(worker).buffers) for worker in trainer.workers]
 
             collect_gradient_timing = timed_cpu() do
                 IsingLearning._collect_batch_gradient!(trainer, batch_gradient, length(jobs))
@@ -328,6 +331,7 @@ function run_profile(nworkers::Integer)
                 batch = measured_batch_idx,
                 warmup_batches = WARMUP_BATCHES,
                 hidden = HIDDEN,
+                output_replicas = OUTPUT_REPLICAS,
                 batchsize = size(xbatch, 2),
                 jobs = length(jobs),
                 minit = MINIT,
@@ -394,6 +398,7 @@ function main()
         "MNIST profiles workers=", WORKERS,
         " threads=", Threads.nthreads(),
         " hidden=", HIDDEN,
+        " output_replicas=", OUTPUT_REPLICAS,
         " batchsize=", BATCHSIZE,
         " nbatches=", NBATCHES,
         " warmup_batches=", WARMUP_BATCHES,

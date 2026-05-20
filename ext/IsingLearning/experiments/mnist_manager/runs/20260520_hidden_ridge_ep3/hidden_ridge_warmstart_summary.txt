@@ -1,0 +1,17 @@
+hidden=120
+output_replicas=4
+train_per_class=100
+validation_per_class=50
+free_sweeps=50.0
+nudged_sweeps=25.0
+stepsize=0.05
+beta=0.1
+ridge=10.0
+target_on=0.5
+target_off=0.0
+before=(accuracy = 0.09, mse = 25.578686f0, pred_counts = [31, 64, 87, 30, 18, 47, 127, 68, 22, 6], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50])
+after_ridge=(accuracy = 0.352, mse = 14.131305f0, pred_counts = [52, 50, 69, 56, 48, 64, 32, 48, 44, 37], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50])
+ep_epochs=3
+ep_epoch_1=(accuracy = 0.31, mse = 14.410993f0, pred_counts = [41, 23, 37, 52, 63, 67, 52, 52, 62, 51], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]) seconds=2.1202769
+ep_epoch_2=(accuracy = 0.334, mse = 14.441566f0, pred_counts = [40, 36, 41, 61, 44, 54, 51, 43, 74, 56], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]) seconds=0.8087355
+ep_epoch_3=(accuracy = 0.346, mse = 14.215303f0, pred_counts = [45, 34, 45, 62, 52, 66, 57, 32, 49, 58], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]) seconds=0.7878371

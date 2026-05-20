@@ -57,13 +57,13 @@ function _draw_all_layers_view!(handle::PanelHandle, cell)
     panel = handle.panel::AllLayersViewPanel
     placements = _all_layer_placements(panel.graph, panel.display_sizes)
     ax = handle[:axis] = Axis(cell; _all_layers_axis_kwargs(panel)...)
-    ax.yreversed = @load_preference("makie_y_flip", default = false)
+    ax.yreversed = @load_preference("makie_y_flip", default = true)
     handle[:placements] = placements
     handle[:layer_observables] = Observable[]
     handle[:plots] = Any[]
 
     for placement in placements
-        obs = Observable(_all_layer_image_state(placement.layer))
+        obs = hot_observable!(handle, _all_layer_image_state(placement.layer))
         push!(handle[:layer_observables], obs)
         plot = image!(
             ax,
@@ -126,6 +126,19 @@ function Base.getindex(view::_LayerVectorGrid, i::Int, j::Int)
     return @inbounds view.data[i + (j - 1) * view.size[1]]
 end
 Base.IndexStyle(::Type{<:_LayerVectorGrid}) = IndexCartesian()
+
+"""
+    hot_observable_zero(::Type{<:_LayerVectorGrid})
+
+Build the close-time inert replacement for a one-dimensional layer grid view
+while preserving the concrete observable value type.
+"""
+function hot_observable_zero(::Type{T}) where {V,T<:_LayerVectorGrid{V}}
+    data = hot_observable_zero(V)
+    replacement = _LayerVectorGrid(data, (0, 0))
+    replacement isa T && return replacement
+    throw(ArgumentError("Cannot build zero-sized replacement for hot observable value type $T."))
+end
 
 _all_layer_image_state(layer::AbstractIsingLayer{<:Any,1}) =
     _LayerVectorGrid(vec(state(layer)), _all_layer_vector_grid_size(layer))

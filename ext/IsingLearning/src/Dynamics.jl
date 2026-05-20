@@ -175,7 +175,7 @@ function ForwardDynamics(layer; dynamics_algorithm = layer.dynamics_algorithm)
         @state equilibrium_state = zeros(n_units)
         @state x
 
-        initstate!(dynamics.model)
+        resetstate!(dynamics.model)
         apply_input(dynamics.model, x)
         model = @repeat relaxation_steps dynamics()
         copyvector!(equilibrium_state, @transform(x -> InteractiveIsing.state(x), model))

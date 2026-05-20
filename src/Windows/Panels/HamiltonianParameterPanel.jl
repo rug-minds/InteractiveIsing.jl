@@ -248,7 +248,7 @@ function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,3})
     ax = handle[:display_axis] = Axis3(cell, tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
     xs, ys, zs = _coordinates_3d!(handle, size(layer))
-    obs = handle[:display_obs] = Observable(_cast_layer_state_vector(layer))
+    obs = handle[:display_obs] = hot_observable!(handle, _cast_layer_state_vector(layer))
     handle[:display_is_3d] = true
     handle[:display_use_data_colorrange] = _uses_data_colorrange(entry)
     handle[:display_notify_only] = true
@@ -301,6 +301,7 @@ function _draw_live_layer_display_value!(handle, entry, cell, val::LiveLayerDisp
         colormap = entry.colormap,
         colorrange = _entry_colorrange(entry, shaped),
         use_data_colorrange = _uses_data_colorrange(entry),
+        hot = true,
     )
     handle[:display_notify_only] = true
     return handle
@@ -314,12 +315,13 @@ function _draw_layer_array!(
     colormap = :viridis,
     colorrange = nothing,
     use_data_colorrange = false,
+    hot = false,
 ) where {T}
     vals_size = size(vals)
     length(vals_size) == 2 || throw(ArgumentError("2D layer display needs a matrix, got size $(vals_size)."))
     ax = handle[:display_axis] = Axis(cell, aspect = DataAspect(), tellheight = true)
     ax.yreversed = @load_preference("makie_y_flip", default = false)
-    obs = handle[:display_obs] = Observable(vals)
+    obs = handle[:display_obs] = hot ? hot_observable!(handle, vals) : Observable(vals)
     handle[:display_is_3d] = false
     handle[:display_use_data_colorrange] = use_data_colorrange
     plot = handle[:display_plot] = image!(ax, obs, colormap = colormap, fxaa = false, interpolate = false)
@@ -336,13 +338,15 @@ function _draw_layer_array!(
     colormap = :viridis,
     colorrange = nothing,
     use_data_colorrange = false,
+    hot = false,
 ) where {T}
     vals_size = size(vals)
     length(vals_size) == 3 || throw(ArgumentError("3D layer display needs a 3D array, got size $(vals_size)."))
     ax = handle[:display_axis] = Axis3(cell, tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
     xs, ys, zs = _coordinates_3d!(handle, vals_size)
-    obs = handle[:display_obs] = Observable(vec(vals))
+    display_vals = vec(vals)
+    obs = handle[:display_obs] = hot ? hot_observable!(handle, display_vals) : Observable(display_vals)
     handle[:display_is_3d] = true
     handle[:display_use_data_colorrange] = use_data_colorrange
     plot = handle[:display_plot] = meshscatter!(ax, xs, ys, zs, markersize = 0.3, color = obs, colormap = colormap)
