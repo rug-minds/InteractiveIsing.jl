@@ -407,3 +407,273 @@ Current best:
 - `runs/20260520_paper_like_continue500pc_lrhalf_e8/best_model.bin`.
 - Balanced `100/class` test accuracy: `90.0%` with 10 free reads, `89.9%` with 30 free reads.
 - This is now a real paper-style MNIST learning loop, and the diagnostics point to normal residual model/parameter limitations rather than a broken learning implementation.
+
+## 2026-05-20 10x Hidden Manager Batch Profile
+
+Profile command target:
+
+- Script: `Profiling.jl`.
+- Run directory: `runs/20260520_profile_10xhidden_15_16_b64_s5`.
+- Julia threads: `16`.
+- Graph: `784 -> 7840 -> 40` (`hidden=7840`, `output_replicas=4`).
+- Batch size: `64`, `MINIT=1`.
+- Relaxation: `5` active-layer sweeps, computed as `39400` LocalLangevin steps per phase.
+- One warmup batch, three measured batches.
+
+Measured averages:
+
+- 15 workers:
+  - manager run: `4.928s` per batch.
+  - reset buffers: `0.024s`.
+  - collect gradient: `0.034s`.
+  - optimiser: `0.115s`.
+  - broadcast/sync: `0.032s`.
+  - approximate full minibatch time: `5.133s`.
+  - manager CPU utilization: about `15.18` CPU threads.
+- 16 workers:
+  - manager run: `5.065s` per batch.
+  - reset buffers: `0.024s`.
+  - collect gradient: `0.037s`.
+  - optimiser: `0.081s`.
+  - broadcast/sync: `0.035s`.
+  - approximate full minibatch time: `5.241s`.
+  - manager CPU utilization: about `16.49` CPU threads.
+
+Interpretation:
+
+- For the 10x hidden graph, 15 workers is slightly faster than 16 workers in this short profile.
+- The batch is dominated by the worker manager run, not data loading, target writing, gradient collection, or parameter sync.
+- Parameter sync for this graph is around `32-35ms` for 17-18 synced graphs, so sync is no longer the bottleneck.
+
+## 2026-05-20 10x Hidden 500-Sweep Batch Timing
+
+Profile target:
+
+- Script: `Profiling.jl`.
+- Run directory: `runs/20260520_profile_10xhidden_15w_b64_s500`.
+- Julia threads: `16`.
+- Workers: `15`.
+- Graph: `784 -> 7840 -> 40`.
+- Batch size: `64`, `MINIT=1`.
+- Relaxation: `500` active-layer sweeps, computed as `3,940,000` LocalLangevin steps per phase.
+- Warmup batches: `0`; measured one full batch directly.
+
+Timing:
+
+- manager run: `455.890s`.
+- reset buffers: `0.059s`.
+- collect gradient: `0.258s`.
+- optimiser: `0.552s`.
+- broadcast/sync: `0.048s`.
+- approximate real minibatch time: `456.81s` (`7.61min`) for batch size 64.
+- manager CPU utilization: about `15.18` CPU threads.
+
+Other setup/profiling measurements:
+
+- graph build: `3.58s`.
+- trainer build: `30.42s`.
+- MNIST load: `4.50s`.
+- isolated worker state write diagnostic: `1.00s` for the batch.
+- isolated input/target apply diagnostic: `0.26s` for the batch.
+
+Interpretation:
+
+- At 500 sweeps, the batch is almost entirely dynamics time. Sync and gradient collection are negligible relative to relaxation.
+- The 5-sweep profile scaled roughly as expected: 500 sweeps puts one 64-example batch around 7.6 minutes with 15 workers.
+
+## 2026-05-20 Process Overhead and 32-Thread Scaling
+
+Single direct process vs one manager worker:
+
+- Added script: `ProcessOverhead.jl`.
+- Run directory: `runs/20260520_process_vs_manager_worker_s5`.
+- Julia threads: `16`.
+- Same `MNISTContrastiveStep` worker algorithm in both cases.
+- Both cases use one MNIST job, `output_replicas=4`, `5` active-layer sweeps, one warmup, three measured repeats.
+
+Measured averages after warmup:
+
+- Hidden `120`:
+  - direct process: `0.00164s`.
+  - one-worker manager: `0.00157s`.
+  - measured overhead: effectively zero/noise (`-0.00007s`).
+- Hidden `7840`:
+  - direct process: `0.20180s`.
+  - one-worker manager: `0.20644s`.
+  - measured overhead: about `0.00464s` (`~2.4%`) for a single job at this short 5-sweep setting.
+
+Interpretation:
+
+- The manager/worker wrapper is not adding meaningful overhead compared with the dynamics. At realistic 500-sweep settings this overhead is completely drowned out.
+- The previous batch timings are dominated by the actual Process work, not the `ProcessManager` lifecycle.
+
+31/32 worker scaling with half batch:
+
+- Run directory: `runs/20260520_profile_10xhidden_15_16_31_32_b32_s500`.
+- Julia threads: `32`.
+- Graph: `784 -> 7840 -> 40`.
+- Batch size: `32`, one measured batch, no warmup batch.
+- Relaxation: `500` active-layer sweeps = `3,940,000` LocalLangevin steps per phase.
+
+Measured batch times:
+
+- 15 workers:
+  - manager run `236.72s`, approximate full minibatch `237.60s`, manager CPU threads `14.81`.
+- 16 workers:
+  - manager run `230.15s`, approximate full minibatch `230.36s`, manager CPU threads `16.66`.
+- 31 workers:
+  - manager run `237.87s`, approximate full minibatch `238.16s`, manager CPU threads `25.39`.
+- 32 workers:
+  - manager run `226.42s`, approximate full minibatch `226.72s`, manager CPU threads `27.28`.
+
+Interpretation:
+
+- Going from 16 to 32 workers on a 32-example batch only improved this one-batch timing by about `1.6%` (`230.36s -> 226.72s`).
+- 31 workers was worse than 16 and 32 in this run.
+- CPU usage rose to about `25-27` effective CPU threads for 31/32 workers, so more logical cores were used, but the runtime barely improved. This suggests the 10x hidden 500-sweep job is hitting memory bandwidth/cache/scheduling limits rather than simply lacking workers.
+- Sync remained tiny (`~0.05s` for 15/16, `~0.08s` for 31/32), so sync is still not the bottleneck.
+
+## 2026-05-20 Long-Relaxation Single Process vs One Worker Latency
+
+Updated `ProcessOverhead.jl` to report both external end-to-end latency and the internal `Process` runtime clock:
+
+- Direct process external latency is measured from just before `run(worker)` through `wait(worker); fetch(worker)`.
+- Direct process internal time is `Processes.runtime(worker)` after `wait/fetch`.
+- Manager external latency is `run!(manager, (job,))` for a one-worker `ProcessManager`.
+- Manager internal time is `Processes.runtime(manager_worker)` after `run!` returns.
+
+Run target:
+
+- Directory: `runs/20260520_process_vs_manager_worker_10x_s500_latency`.
+- Julia threads: `16`.
+- Graph: `784 -> 7840 -> 40`.
+- One MNIST job.
+- Relaxation: `500` active-layer sweeps = `3,940,000` LocalLangevin steps per phase.
+- One warmup, two measured repeats.
+
+Measured averages after warmup:
+
+- Direct process:
+  - external `run + wait + fetch` latency: `16.5391s`.
+  - internal `Processes.runtime(worker)`: `16.5391s`.
+  - external minus internal: about `0.000057s`.
+  - `run(worker)` launch call itself: about `0.0000018s`.
+- One-worker manager:
+  - external `run!(manager, (job,))` latency: `17.1197s`.
+  - internal worker runtime: `17.1197s`.
+  - external minus internal: about `0.000045s`.
+- Direct-vs-manager latency difference: manager was `0.581s` slower on average (`~3.5%`) in this two-sample run.
+
+Interpretation:
+
+- The process internal clock and external wait/fetch latency match to within microseconds once compiled, so the process clock is a good proxy for actual process run latency.
+- The one-worker manager does not add measurable scheduler/wait/fetch overhead outside the worker runtime. The small direct-vs-manager difference appears inside the worker runtime and is likely run-to-run stochastic/dynamics variability plus manager prepare/reset context, not a large lifecycle tax.
+- For batch-scale 500-sweep runs, the overhead is still negligible compared with total dynamics time.
+
+## 2026-05-20 Direct Process Concurrency Check
+
+Purpose:
+
+- Decide whether the poor 10x-hidden scaling is caused by `ProcessManager` scheduling/job distribution or by running many dynamics processes concurrently.
+
+New script:
+
+- `DirectProcessConcurrency.jl`.
+- It builds the same `MNISTContrastiveStep` workers as the manager path, but does not wrap them in a `ProcessManager`.
+- For `N` workers, it writes one job into each worker, calls `run(worker)` on all workers, then `wait/fetch`es them all.
+
+Run target:
+
+- Directory: `runs/20260520_direct_concurrency_10x_16_32_s500`.
+- Julia threads: `32`.
+- Graph: `784 -> 7840 -> 40`.
+- Relaxation: `500` active-layer sweeps = `3,940,000` LocalLangevin steps per phase.
+
+Direct process results:
+
+- 16 direct processes, 16 jobs, one wave:
+  - total external latency: `116.62s`.
+  - mean internal process runtime: `114.99s`.
+  - max internal process runtime: `116.26s`.
+- 32 direct processes, 32 jobs, one wave:
+  - total external latency: `226.77s`.
+  - mean internal process runtime: `222.53s`.
+  - max internal process runtime: `226.77s`.
+
+Comparison to ProcessManager batch-32 profile:
+
+- Manager with 16 workers and 32 jobs took `230.15s`. That is two waves; direct 16-process one-wave latency predicts `2 * 116.62s = 233.24s`, matching the manager result.
+- Manager with 32 workers and 32 jobs took `226.42s`; direct 32-process one-wave latency was `226.77s`, essentially identical.
+
+Interpretation:
+
+- The poor scaling is not caused by `ProcessManager` scheduling or job distribution. Direct concurrent processes without the manager show the same slowdown.
+- Chunking jobs would not help the 32-worker/batch-32 case, because that case is already one scheduling wave. There are no extra waves to eliminate, and task launch overhead is tiny compared with the 226s dynamics latency.
+- For the 16-worker/batch-32 case, chunking two jobs per worker into one task could remove one wave boundary and one task launch per worker, but the direct result predicts the same total runtime because the two waves are dominated by dynamics. It may also hurt load balancing if worker runtimes vary.
+- The bottleneck is inside concurrent dynamics execution, most likely memory/cache/bandwidth pressure from many large `7840`-hidden graph traversals, not manager overhead.
+
+Attempted a 10x-hidden pointer audit for worker graph arrays, but the command timed out during setup. It was killed to avoid leaving background Julia processes.
+
+## 2026-05-20 Manual Raw Langevin Context Scheduling
+
+Purpose:
+
+- Check whether poor 10x-hidden scaling comes from `ProcessManager` or full `Process` scheduling, by bypassing both and manually spawning tasks that only run `Processes.step!(langevin, context)`.
+
+New script:
+
+- `ManualTests/ManualLangevinContextScheduling.jl`.
+- It builds independent graph/context copies, fixes one MNIST input on each graph, warms each context with one step, then schedules one task per context.
+- The measured loop is only `Processes.step!(langevin, context)` repeated for `500` active-layer sweeps.
+- This uses `Processes.init/step!` directly, but avoids `Process`, `ProcessManager`, `MNISTContrastiveStep`, job writing, gradient accumulation, target application, and sync.
+
+Run target:
+
+- Directory: `runs/20260520_manual_context_10x_16_32_s500`.
+- Julia threads: `32`.
+- Graph: `784 -> 7840 -> 40`.
+- One Langevin phase only.
+- Relaxation: `500` active-layer sweeps = `3,940,000` raw `step!` calls per context.
+
+Results:
+
+- 16 contexts:
+  - single context baseline: `3.900s`.
+  - spawned total latency: `26.312s`.
+  - per-task times ranged `25.700s` to `26.279s`.
+  - speedup vs serial execution of 16 contexts: `2.37x`.
+  - slowdown vs ideal one-wave time: `6.75x`.
+- 32 contexts:
+  - single context baseline: `3.990s`.
+  - spawned total latency: `51.820s`.
+  - per-task times ranged `49.137s` to `51.820s`.
+  - speedup vs serial execution of 32 contexts: `2.46x`.
+  - slowdown vs ideal one-wave time: `12.99x`.
+
+Comparison to full contrastive process timings:
+
+- A full MNIST contrastive job has roughly three relaxation phases, so the manual one-phase 32-context timing predicts about `3 * 51.82s = 155.46s` before reset/capture/gradient costs.
+- The previous direct 32-process full contrastive one-wave timing was `226.77s`.
+- The manual test is faster because it removes the extra phases' bookkeeping and gradient work, but it still shows the same qualitative scaling failure before `ProcessManager` enters the picture.
+
+Interpretation:
+
+- The bad scaling is already present in raw concurrent `LocalLangevin` stepping on independent contexts.
+- That makes a manager scheduling bug unlikely as the primary cause.
+- The bottleneck is probably inside the concurrent step workload itself: memory/cache/bandwidth pressure from many large 10x-hidden graphs, random active-spin access, and/or shared runtime resources used by the step implementation.
+
+Follow-up:
+
+- Moved the `@elapsed` timing into a regular helper function and changed the spawned call to use direct `Threads.@spawn` dollar interpolation:
+  - `Threads.@spawn timed_spawn_run!(...)`.
+- Run directory: `runs/20260520_manual_context_spawn_interp_10x_16_32_s500`.
+- 16 contexts:
+  - single context baseline: `4.131s`.
+  - spawned total latency: `26.555s`.
+  - speedup vs serial execution of 16 contexts: `2.49x`.
+- 32 contexts:
+  - single context baseline: `4.063s`.
+  - spawned total latency: `52.107s`.
+  - speedup vs serial execution of 32 contexts: `2.50x`.
+
+Dollar interpolation does not materially change the result. The earlier closure capture was not the source of the poor scaling.

@@ -242,6 +242,19 @@ function run_threaded!(instance::I, contexts::C, nsteps::T) where {I<:Processes.
 end
 
 """
+    run_static_threaded!(algorithm, contexts, nsteps) -> Vector
+
+Run all raw contexts concurrently using Julia's static thread scheduler.
+"""
+function run_static_threaded!(instance::I, contexts::C, nsteps::T) where {I<:Processes.AbstractIdentifiableAlgo,C<:AbstractVector,T<:Integer}
+    results = Vector{Any}(undef, length(contexts))
+    Threads.@threads :static for idx in eachindex(contexts)
+        results[idx] = run_raw_langevin!(instance, contexts[idx], nsteps)
+    end
+    return results
+end
+
+"""
     ns_per_step(seconds, nsteps, runs) -> Float64
 
 Convert elapsed seconds to nanoseconds per raw single-spin Langevin step.
@@ -290,6 +303,8 @@ function print_summary(;
 
     # Pay compilation and first-cycle setup costs before timing.
     run_raw_langevin!(instance, deepcopy(base_context), active_spins)
+    run_threaded!(instance, [deepcopy(base_context)], active_spins)
+    run_static_threaded!(instance, [deepcopy(base_context)], active_spins)
     stable_warmup = stabilize_langevin_context(instance, deepcopy(base_context))
     run_raw_langevin_with_merge!(instance, stable_warmup, 1)
 
@@ -320,6 +335,11 @@ function print_summary(;
         run_threaded!(instance, threaded_contexts, nsteps)
     end
 
+    static_contexts = [deepcopy(base_context) for _ in 1:runs]
+    static_seconds, static_results = elapsed_seconds() do
+        run_static_threaded!(instance, static_contexts, nsteps)
+    end
+
     println("no-merge seconds:       ", round(no_merge_seconds, digits = 4),
         " (", round(ns_per_step(no_merge_seconds, nsteps, 1), digits = 2), " ns/step)")
     println("merge seconds:          ", round(merge_seconds, digits = 4),
@@ -329,14 +349,19 @@ function print_summary(;
     println("single context seconds: ", round(single_seconds, digits = 4))
     println("serial ", runs, " contexts sec: ", round(serial_seconds, digits = 4))
     println("threaded ", runs, " contexts:   ", round(threaded_seconds, digits = 4))
+    println("static ", runs, " contexts:     ", round(static_seconds, digits = 4))
     println()
     println("serial / single:        ", round(serial_seconds / single_seconds, digits = 3), "x")
     println("threaded / single:      ", round(threaded_seconds / single_seconds, digits = 3), "x")
+    println("static / single:        ", round(static_seconds / single_seconds, digits = 3), "x")
     println("serial / threaded:      ", round(serial_seconds / threaded_seconds, digits = 3), "x")
+    println("serial / static:        ", round(serial_seconds / static_seconds, digits = 3), "x")
+    println("static / threaded:      ", round(static_seconds / threaded_seconds, digits = 3), "x wall-time ratio")
     println("ideal threaded/single:  1.0x wall time, ", runs, "x throughput")
     println()
     println("single acceptance:      ", round(single_result.acceptance_rate, digits = 4))
     println("threaded acceptances:   ", round.(getproperty.(threaded_results, :acceptance_rate), digits = 4))
+    println("static acceptances:     ", round.(getproperty.(static_results, :acceptance_rate), digits = 4))
 
     return (;
         no_merge_seconds,
@@ -347,9 +372,11 @@ function print_summary(;
         single_seconds,
         serial_seconds,
         threaded_seconds,
+        static_seconds,
         single_result,
         serial_results,
         threaded_results,
+        static_results,
     )
 end
 
