@@ -1,9 +1,25 @@
+"""
+Raw loop algorithms match by object identity when passed as values.
+
+This keeps existing wrapper surfaces like `IdentifiableAlgo(loopalgo, :name)`
+and routed references from `@context` consistent without introducing any custom
+DSL runtime machinery.
+"""
+@inline function match_by(la::LA) where {LA<:AbstractLoopAlgorithm}
+    if isbits(la)
+        return la
+    end
+    return objectid(la)
+end
+
+"""Loop algorithm types match by their type."""
+@inline match_by(t::Type{<:AbstractLoopAlgorithm}) = t
+
 include("Utils.jl")
 include("Interval.jl")
 include("GetFirst.jl")
 include("PlanOptions.jl")
 include("CompositeAlgorithms.jl")
-include("SimpleAlgo.jl")
 include("Routines.jl")
 include("Recipes.jl")
 include("FinalizedAlgorithm.jl")
@@ -35,19 +51,3 @@ include("Showing.jl")
 #     return getid(claT1) == getid(checkobj)
 # end
 
-"""
-Raw loop algorithms match by object identity when passed as values.
-
-This keeps existing wrapper surfaces like `IdentifiableAlgo(loopalgo, :name)`
-and routed references from `@context` consistent without introducing any custom
-DSL runtime machinery.
-"""
-@inline function match_by(la::LA) where {LA<:AbstractLoopAlgorithm}
-    if isbits(la)
-        return la
-    end
-    return objectid(la)
-end
-
-"""Loop algorithm types match by their type."""
-@inline match_by(t::Type{<:AbstractLoopAlgorithm}) = t

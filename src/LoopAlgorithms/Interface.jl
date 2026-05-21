@@ -1,4 +1,4 @@
-export SimpleAlgo, CompositeAlgorithm, Routine
+export CompositeAlgorithm, Routine
 export step!, init, getmultiplier, getoptions, setoptions, get_shares, get_routes
 
 """
@@ -23,9 +23,15 @@ LoopAlgorithm(plan::LoopAlgorithm; states = getstates(plan), options = getoption
 LoopAlgorithm(plan::Union{CompositeAlgorithm, Routine}; states = (), options = (), registry = nothing, context = nothing, inits = (), overrides = (), id = getid(plan)) =
     LoopAlgorithm{typeof(plan), typeof(states), typeof(options), typeof(registry), typeof(context), typeof(inits), typeof(overrides), id}(plan, states, options, registry, context, inits, overrides)
 
-@inline routing_sharedcontexts(routing::StepRouting) = getfield(routing, :sharedcontexts)
-@inline routing_sharedvars(routing::StepRouting) = getfield(routing, :sharedvars)
-@inline routing_childwiring(routing::StepRouting) = getfield(routing, :childwiring)
+"""Return plan-global wiring inherited by every child."""
+@inline global_wiring(wiring::PlanWiring) = getfield(wiring, :global_wiring)
+
+"""Return child-indexed wiring passed directly to each child."""
+@inline child_wiring(wiring::PlanWiring) = getfield(wiring, :child_wiring)
+
+"""Return whether a plan wiring object carries no usable wiring."""
+Base.isempty(wiring::PlanWiring) =
+    isempty(global_wiring(wiring)) && all(isempty, child_wiring(wiring))
 
 @inline getmultiplier(cla::LoopAlgorithm, obj) = getmultiplier(getregistry(cla), obj)
 @inline Base.getkey(cla::LoopAlgorithm, obj) = getkey(getregistry(cla), obj)
@@ -39,6 +45,7 @@ LoopAlgorithm(plan::Union{CompositeAlgorithm, Routine}; states = (), options = (
 
 @inline getalgos(cla::LoopAlgorithm) = getalgos(getplan(cla))
 @inline getalgo(cla::LoopAlgorithm, idx) = getalgo(getplan(cla), idx)
+@inline getwiring(cla::LoopAlgorithm) = getwiring(getplan(cla))
 @inline subalgorithms(cla::LoopAlgorithm) = subalgorithms(getplan(cla))
 @inline getinc(cla::LoopAlgorithm) = getinc(getplan(cla))
 @inline inc(cla::LoopAlgorithm) = inc(getplan(cla))
@@ -124,9 +131,24 @@ end
 @inline Base.eachindex(la::LoopAlgorithm) = eachindex(getplan(la))
 @inline reset!(la::LoopAlgorithm) = reset!(getplan(la))
 @inline inc!(la::LoopAlgorithm) = inc!(getplan(la))
-@inline step!(la::LoopAlgorithm, context::C, typestable::S = Stable()) where {C<:AbstractContext, S} =
-    error("LoopAlgorithm step! requires explicit process and lifetime. Call step!(la, context, step_wiring, process, lifetime, stability).")
-@inline step!(la::LoopAlgorithm, context::C, step_wiring::SW, typestable::S = Stable()) where {C<:AbstractContext, SW<:Tuple, S} =
-    error("LoopAlgorithm step! requires explicit process and lifetime. Call step!(la, context, step_wiring, process, lifetime, stability).")
-@inline step!(la::LoopAlgorithm, context::C, step_wiring::SW, process::P, lifetime::LT, typestable::S = Stable()) where {C<:AbstractContext, SW<:Tuple, P<:AbstractProcess, LT<:Lifetime, S} =
-    step!(getplan(la), context, step_wiring, process, lifetime, typestable)
+
+"""
+Internal loop-runtime step for a resolved loop algorithm.
+
+The expanded signature is deliberately `_step!` so external process algorithms
+only need to implement the public two-argument `step!(algo, context)`.
+"""
+@inline _step!(la::LA, context::C, step_wiring::W, process::P, lifetime::LT, typestable::S = Stable()) where {LA <: LoopAlgorithm, C <: AbstractContext, W <: PlanWiring, P <: AbstractProcess, LT <: Lifetime, S <: Stability} =
+    _step!(getplan(la), context, step_wiring, process, lifetime, typestable)
+
+"""
+Internal single-step entrypoint for tests and manual loop-plan driving.
+
+This builds the minimal process handle needed by routines and interval logic,
+then enters the same `_step!` chain used by `run`.
+"""
+@inline function _step!(la::LA, context::C, typestable::S = Stable()) where {LA<:AbstractLoopAlgorithm, C<:AbstractContext, S<:Stability}
+    lifetime = get(getglobals(context), :lifetime, Indefinite())
+    process = LoopRunProcess(lifetime)
+    return @inline _step!(la, context, getwiring(la), process, lifetime, typestable)
+end
