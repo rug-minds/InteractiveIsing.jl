@@ -99,10 +99,93 @@ The first call uses `start_T` and the final call uses `stop_T`.
     end
 end
 
+"""
+    _mnist_magfield(isinggraph, field_idx)
+
+Return the `field_idx`th `MagField` in graph Hamiltonian order. MNIST graphs
+may use the first field for learnable base biases and the second field for a
+worker-local precomputed input pattern.
+"""
+function _mnist_magfield(isinggraph::G, field_idx::I) where {G,I<:Integer}
+    seen = 0
+    for hterm in InteractiveIsing.hamiltonians(isinggraph.hamiltonian)
+        if hterm isa InteractiveIsing.MagField
+            seen += 1
+            seen == Int(field_idx) && return hterm
+        end
+    end
+    return nothing
+end
+
+"""Return the learnable base MNIST bias field."""
+function _mnist_base_magfield(isinggraph::G) where {G}
+    field = _mnist_magfield(isinggraph, 1)
+    isnothing(field) && error("MNIST graph has no MagField for learnable base biases")
+    return field
+end
+
+"""Return the optional worker-local MNIST input-pattern field."""
+function _mnist_input_magfield(isinggraph::G) where {G}
+    return _mnist_magfield(isinggraph, 2)
+end
+
+"""
+    precompute_mnist_input_pattern!(isinggraph, dest, x)
+
+Write the local-field pattern induced by MNIST input `x` into `dest`. The
+result can be reused across free/plus/minus phases for one sample.
+"""
+function precompute_mnist_input_pattern!(isinggraph::G, dest::D, x) where {G,D<:AbstractVector}
+    input_idxs = InteractiveIsing.layerrange(isinggraph[1])
+    length(x) == length(input_idxs) ||
+        throw(DimensionMismatch("input length $(length(x)) does not match input layer length $(length(input_idxs))"))
+
+    fill!(dest, zero(eltype(dest)))
+
+    adjacency = adj(isinggraph)
+    colptrs = SparseArrays.getcolptr(adjacency)
+    rowvals = SparseArrays.rowvals(adjacency)
+    nzvals = SparseArrays.nonzeros(adjacency)
+
+    @inbounds for (x_idx, graph_idx) in enumerate(input_idxs)
+        xval = x[x_idx]
+        for ptr in colptrs[graph_idx]:(colptrs[graph_idx + 1] - 1)
+            dest[rowvals[ptr]] += nzvals[ptr] * xval
+        end
+    end
+    return dest
+end
+
+"""
+    apply_input_pattern!(isinggraph, pattern)
+
+Install a precomputed MNIST input field into the graph's second `MagField`.
+The input layer is disabled and its state is cleared so the image is not counted
+both as fixed spins and as a local field.
+"""
+function apply_input_pattern!(isinggraph::G, pattern::P) where {G,P<:AbstractVector}
+    input_field = _mnist_input_magfield(isinggraph)
+    isnothing(input_field) && error("MNIST graph has no second MagField for input patterns")
+    length(pattern) == length(input_field.b) ||
+        throw(DimensionMismatch("pattern length $(length(pattern)) does not match field length $(length(input_field.b))"))
+
+    InteractiveIsing.off!(isinggraph.index_set, 1)
+    input_field.b .= pattern
+    input_state = state(isinggraph[1])
+    fill!(input_state, zero(eltype(input_state)))
+    return isinggraph
+end
+
 function apply_input(isinggraph, x)
     InteractiveIsing.off!(isinggraph.index_set, 1)
-    input_state = state(isinggraph[1])
-    input_state .= reshape(x, size(input_state))
+    input_field = _mnist_input_magfield(isinggraph)
+    if isnothing(input_field)
+        input_state = state(isinggraph[1])
+        input_state .= reshape(x, size(input_state))
+    else
+        precompute_mnist_input_pattern!(isinggraph, input_field.b, x)
+        apply_input_pattern!(isinggraph, input_field.b)
+    end
     hook = get(isinggraph, :after_apply_input!, nothing)
     isnothing(hook) || hook(isinggraph)
     return isinggraph

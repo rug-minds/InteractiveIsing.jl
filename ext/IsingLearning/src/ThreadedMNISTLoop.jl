@@ -25,17 +25,18 @@ struct MNISTDataLoader{TX<:AbstractMatrix, TY<:AbstractMatrix, TI<:AbstractVecto
     indices::TI
 end
 
-mutable struct MNISTThreadedTrainer{L,G,P,S,W<:Process,V<:Process,O,M}
+mutable struct MNISTThreadedTrainer{L,G,P,S,WG,W<:Process,VG,V<:Process,O,M}
     layer::L
     prototype_graph::G
     params::P
     opt_state::S
-    worker_graphs::Vector{G}
+    worker_graphs::Vector{WG}
     workers::Vector{W}
-    validation_graph::G
+    validation_graph::VG
     validation_worker::V
     optimiser::O
     manager::M
+    share_static_model_data::Bool
 end
 
 mutable struct MNISTForwardManager{L,G,M}
@@ -102,11 +103,74 @@ function Processes.init(step::MNISTContrastiveStep, context)
     equilibrium_state = get(context, :equilibrium_state, copy(state(model)))
     plus_state = get(context, :plus_state, similar(equilibrium_state))
     minus_state = get(context, :minus_state, similar(equilibrium_state))
+    input_pattern = get(context, :input_pattern, isnothing(_mnist_input_magfield(model)) ? nothing : zeros(T, nstates(model)))
 
     free_context = Processes.init(step.dynamics_algorithm, (; model))
     nudged_context = Processes.init(step.nudged_dynamics_algorithm, (; model))
 
-    return (; model, x, y, buffers, equilibrium_state, plus_state, minus_state, free_context, nudged_context)
+    return (; model, x, y, buffers, equilibrium_state, plus_state, minus_state, input_pattern, free_context, nudged_context)
+end
+
+"""
+    _apply_mnist_context_input!(model, context)
+
+Apply the input stored in an MNIST worker context. When the graph owns a second
+`MagField`, the context stores the already-precomputed field pattern and this
+only installs that pattern for the current phase.
+"""
+function _apply_mnist_context_input!(model::G, context::C) where {G,C}
+    if hasproperty(context, :input_pattern) && !isnothing(context.input_pattern)
+        apply_input_pattern!(model, context.input_pattern)
+    else
+        apply_input(model, context.x)
+    end
+    return model
+end
+
+"""
+    _accumulate_input_field_edge_gradient!(buffers, model, x, plus_state, minus_state)
+
+Add the bilinear contrastive-gradient terms for edges touching the input layer
+when MNIST input is represented as a precomputed local field. In that mode the
+input layer state is cleared during dynamics to avoid double-counting the image,
+so the generic bilinear derivative cannot see the fixed input values.
+"""
+function _accumulate_input_field_edge_gradient!(
+    buffers::B,
+    model::G,
+    x::X,
+    plus_state::S,
+    minus_state::S,
+) where {B,G,X<:AbstractVector,S<:AbstractVector}
+    input_idxs = InteractiveIsing.layerrange(model[1])
+    input_first = first(input_idxs)
+    input_last = last(input_idxs)
+
+    adjacency = adj(model)
+    colptrs = SparseArrays.getcolptr(adjacency)
+    rowvals = SparseArrays.rowvals(adjacency)
+
+    # Buffers are in the same CSC pointer order as `SparseArrays.nonzeros(adj)`.
+    @inbounds for col_idx in 1:size(adjacency, 2)
+        col_is_input = input_first <= col_idx <= input_last
+        for ptr in colptrs[col_idx]:(colptrs[col_idx + 1] - 1)
+            row_idx = rowvals[ptr]
+            row_is_input = input_first <= row_idx <= input_last
+            col_is_input == row_is_input && continue
+
+            if col_is_input
+                xval = x[col_idx - input_first + 1]
+                other_idx = row_idx
+            else
+                xval = x[row_idx - input_first + 1]
+                other_idx = col_idx
+            end
+
+            buffers.w[ptr] += -oftype(buffers.w[ptr], 0.5) * xval * plus_state[other_idx]
+            buffers.w[ptr] -= -oftype(buffers.w[ptr], 0.5) * xval * minus_state[other_idx]
+        end
+    end
+    return buffers
 end
 
 """
@@ -120,19 +184,19 @@ function Processes.step!(step::MNISTContrastiveStep, context)
     β = step.β
 
     resetstate!(model)
-    apply_input(model, context.x)
+    _apply_mnist_context_input!(model, context)
     _relax_mnist_context!(step.dynamics_algorithm, context.free_context, step.free_relaxation_steps)
     context.equilibrium_state .= state(model)
 
     state(model) .= context.equilibrium_state
-    apply_input(model, context.x)
+    _apply_mnist_context_input!(model, context)
     apply_targets(model, context.y)
     set_clamping_beta!(model, β)
     _relax_mnist_context!(step.nudged_dynamics_algorithm, context.nudged_context, step.nudged_relaxation_steps)
     context.plus_state .= state(model)
 
     state(model) .= context.equilibrium_state
-    apply_input(model, context.x)
+    _apply_mnist_context_input!(model, context)
     apply_targets(model, context.y)
     set_clamping_beta!(model, -β)
     _relax_mnist_context!(step.nudged_dynamics_algorithm, context.nudged_context, step.nudged_relaxation_steps)
@@ -140,6 +204,15 @@ function Processes.step!(step::MNISTContrastiveStep, context)
 
     set_clamping_beta!(model, zero(β))
     contrastive_gradient(model, context.plus_state, context.minus_state, β; buffers = context.buffers)
+    if hasproperty(context, :input_pattern) && !isnothing(context.input_pattern)
+        _accumulate_input_field_edge_gradient!(
+            context.buffers,
+            model,
+            context.x,
+            context.plus_state,
+            context.minus_state,
+        )
+    end
     return nothing
 end
 
@@ -165,7 +238,7 @@ end
 function read_graph_params(graph)
     base = (;
         w = copy(SparseArrays.getnzval(adj(graph))),
-        b = copy(InteractiveIsing.getparam(graph.hamiltonian, InteractiveIsing.MagField, :b)),
+        b = copy(_mnist_base_magfield(graph).b),
     )
     isnothing(hamiltonian_or_nothing(graph.hamiltonian, InteractiveIsing.Quadratic)) && return base
     return merge(base, (; α = copy(diag(adj(graph)))))
@@ -173,7 +246,7 @@ end
 
 function sync_graph_params!(graph, params)
     SparseArrays.getnzval(adj(graph)) .= params.w
-    InteractiveIsing.getparam(graph.hamiltonian, InteractiveIsing.MagField, :b) .= params.b
+    _mnist_base_magfield(graph).b .= params.b
     quadratic = hamiltonian_or_nothing(graph.hamiltonian, InteractiveIsing.Quadratic)
     if isnothing(quadratic)
         hasproperty(params, :α) && error("graph has no Quadratic local potential but params contains α")
@@ -372,10 +445,79 @@ function Base.iterate(loader::MNISTDataLoader, state::Int = 1)
     return ((xbatch, ybatch), last_idx + 1)
 end
 
-function _worker_graph(prototype_graph, params)
+"""
+    _shared_mnist_worker_graph(prototype_graph; input_mode = :state)
+
+Create a worker graph with the same layer layout as `prototype_graph`, fresh
+state, shared adjacency, shared base bias, and optional worker-local input
+field. The prototype graph remains the only graph that receives parameter
+writes after optimizer updates.
+"""
+function _shared_mnist_worker_graph(prototype_graph::G; input_mode::Symbol = :state) where {G}
+    input_b = input_mode === :field ? zeros(eltype(prototype_graph), nstates(prototype_graph)) :
+        input_mode === :state ? nothing :
+        throw(ArgumentError("input_mode must be :state or :field, got $(repr(input_mode))"))
+
+    base_bias = InteractiveIsing.Force(_mnist_base_magfield(prototype_graph).b)
+    hamiltonian = Bilinear() + MagField(b = base_bias)
+    if !isnothing(input_b)
+        hamiltonian = hamiltonian + MagField(b = input_b)
+    end
+    hamiltonian = hamiltonian + Clamping(
+        β = InteractiveIsing.UniformArray(zero(eltype(prototype_graph))),
+        y = g -> InteractiveIsing.filltype(Vector, zero(eltype(prototype_graph)), statelen(g)),
+    )
+
+    worker_graph = IsingGraph(
+        getfield(prototype_graph, :layers)...,
+        hamiltonian;
+        precision = eltype(prototype_graph),
+        adj = adj(prototype_graph),
+        index_set = g -> ToggledIndexSet(g),
+    )
+    InteractiveIsing.temp!(worker_graph, prototype_graph.temp)
+    return worker_graph
+end
+
+"""
+    _worker_graph(prototype_graph, params; share_static_model_data = false, input_mode = :state)
+
+Create the graph owned by one MNIST worker. In shared mode this supports any
+MNIST-like layered graph with input first and output last; copied mode preserves
+the previous deep-copy behavior.
+"""
+function _worker_graph(prototype_graph, params; share_static_model_data::Bool = false, input_mode::Symbol = :state)
+    if share_static_model_data
+        return _shared_mnist_worker_graph(prototype_graph; input_mode)
+    end
+
     worker_graph = deepcopy(prototype_graph)
     sync_graph_params!(worker_graph, params)
     InteractiveIsing.temp!(worker_graph, prototype_graph.temp)
+    return worker_graph
+end
+
+"""
+    _sync_worker_graph_params!(worker_graph, prototype_graph, params)
+
+Synchronize copied worker parameter arrays after a minibatch. Arrays shared
+with the prototype graph are skipped because `sync_graph_params!` on the
+prototype has already updated them.
+"""
+function _sync_worker_graph_params!(worker_graph::WG, prototype_graph::PG, params) where {WG,PG}
+    SparseArrays.getnzval(adj(worker_graph)) === SparseArrays.getnzval(adj(prototype_graph)) ||
+        (SparseArrays.getnzval(adj(worker_graph)) .= params.w)
+
+    worker_bias = _mnist_base_magfield(worker_graph).b
+    prototype_bias = _mnist_base_magfield(prototype_graph).b
+    worker_bias === prototype_bias || (worker_bias .= params.b)
+
+    quadratic = hamiltonian_or_nothing(worker_graph.hamiltonian, InteractiveIsing.Quadratic)
+    if !isnothing(quadratic)
+        hasproperty(params, :α) || error("graph has Quadratic local potential but params has no α")
+        diag(adj(worker_graph)) .= params.α
+        InteractiveIsing.getparam(worker_graph.hamiltonian, InteractiveIsing.Quadratic, :lp) .= params.α
+    end
     return worker_graph
 end
 
@@ -406,6 +548,7 @@ function _worker_process(layer, worker_graph)
             equilibrium_state = copy(state(worker_graph)),
             plus_state = similar(state(worker_graph)),
             minus_state = similar(state(worker_graph)),
+            input_pattern = isnothing(_mnist_input_magfield(worker_graph)) ? nothing : zeros(eltype(worker_graph), nstates(worker_graph)),
         );
         repeat = 1,
     )
@@ -459,6 +602,7 @@ function MNISTThreadedTrainer(
     validation_graph,
     validation_worker,
     optimiser,
+    share_static_model_data::Bool = false,
 )
     return MNISTThreadedTrainer(
         layer,
@@ -471,6 +615,7 @@ function MNISTThreadedTrainer(
         validation_worker,
         optimiser,
         _mnist_training_manager(workers),
+        share_static_model_data,
     )
 end
 
@@ -565,16 +710,41 @@ function init_mnist_trainer(
     graph = layer.model_graph,
     numthreads::Integer = Threads.nthreads(),
     optimiser = Optimisers.Descent(1f-3),
+    share_static_model_data::Bool = false,
+    input_mode::Symbol = :state,
 )
     numthreads > 0 || throw(ArgumentError("numthreads must be positive"))
 
     params = read_graph_params(graph)
     opt_state = Optimisers.setup(optimiser, params)
-    manager = _mnist_training_manager(layer, graph, params, Int(numthreads))
+    recipe = (;
+        makeworker = (idx, manager) -> _worker_process(
+            layer,
+            _worker_graph(
+                graph,
+                params;
+                share_static_model_data = manager.config.share_static_model_data,
+                input_mode = manager.config.input_mode,
+            ),
+        ),
+        prepare! = (slot, job, manager) -> begin
+            _write_example!(slot.worker, job.x, job.y)
+            resetworker!(slot)
+            return nothing
+        end,
+    )
+    manager = ProcessManager(
+        recipe;
+        nworkers = Int(numthreads),
+        config = (; share_static_model_data, input_mode),
+        worker_init = share_static_model_data ? Processes.MakeEachWorker() : Processes.CopyFirstWorker(),
+        flush_policy = NoFlush(),
+        poll_interval = 0.0,
+    )
     workers = collect(Processes.workers(manager))
     worker_graphs = [_mnist_worker_state(worker).model for worker in workers]
 
-    validation_template_graph = _worker_graph(graph, params)
+    validation_template_graph = _worker_graph(graph, params; share_static_model_data, input_mode)
     validation_worker = _validation_process(layer, validation_template_graph)
     # println("[threaded-mnist] built validation process id=", validation_worker.id)
     validation_graph = Processes.context(validation_worker).dynamics.model
@@ -590,6 +760,7 @@ function init_mnist_trainer(
         validation_worker,
         optimiser,
         manager,
+        share_static_model_data,
     )
 end
 
@@ -613,12 +784,18 @@ function _write_example!(worker, x, y)
     state_context = _mnist_worker_state(worker)
     state_context.x .= x
     state_context.y .= y
+    if hasproperty(state_context, :input_pattern) && !isnothing(state_context.input_pattern)
+        precompute_mnist_input_pattern!(state_context.model, state_context.input_pattern, x)
+    end
     return state_context
 end
 
 function _write_input!(worker, x)
     state_context = _mnist_worker_state(worker)
     state_context.x .= x
+    if hasproperty(state_context, :input_pattern) && !isnothing(state_context.input_pattern)
+        precompute_mnist_input_pattern!(state_context.model, state_context.input_pattern, x)
+    end
     return state_context
 end
 
@@ -659,15 +836,15 @@ function _broadcast_params!(trainer)
     worker_graphs = trainer.worker_graphs
     if length(worker_graphs) > 1 && Threads.nthreads() > 1
         Threads.@threads for idx in eachindex(worker_graphs)
-            sync_graph_params!(worker_graphs[idx], trainer.params)
+            _sync_worker_graph_params!(worker_graphs[idx], trainer.prototype_graph, trainer.params)
         end
     else
         for worker_graph in worker_graphs
-            sync_graph_params!(worker_graph, trainer.params)
+            _sync_worker_graph_params!(worker_graph, trainer.prototype_graph, trainer.params)
         end
     end
 
-    sync_graph_params!(trainer.validation_graph, trainer.params)
+    _sync_worker_graph_params!(trainer.validation_graph, trainer.prototype_graph, trainer.params)
     return trainer
 end
 

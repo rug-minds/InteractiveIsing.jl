@@ -44,13 +44,17 @@ function _mnist_hidden_shape(hidden::Integer)
 end
 
 """
-    MNISTArchitecture(; hidden = MNIST_DEFAULT_HIDDEN, output_replicas = 1, precision = Float32, weight_scale = 0.01, rng = MersenneTwister(0), weight_generator = nothing)
+    MNISTArchitecture(; hidden = MNIST_DEFAULT_HIDDEN, output_replicas = 1, precision = Float32, weight_scale = 0.01, rng = MersenneTwister(0), weight_generator = nothing, adj = nothing, b = nothing, input_b = nothing)
 
 Construct the single-vector MNIST graph architecture:
 
 `D_MNIST^2 -> hidden -> 10 * output_replicas`, with `D_MNIST == 28`.
 The layers are shaped for interactive display while keeping those flattened
 unit counts. `output_replicas = 4` gives four output spins per digit class.
+Pass `adj` to reuse an existing adjacency through the public `IsingGraph`
+constructor while still allocating fresh graph state and local Hamiltonian
+buffers. Pass `b` to reuse the learnable base magnetic-field storage, and
+pass `input_b` to add a second `MagField` used for per-sample input patterns.
 """
 function MNISTArchitecture(;
     hidden::Integer = MNIST_DEFAULT_HIDDEN,
@@ -59,6 +63,9 @@ function MNISTArchitecture(;
     weight_scale::Real = 0.01,
     rng = MersenneTwister(0),
     weight_generator = nothing,
+    adj = nothing,
+    b = nothing,
+    input_b = nothing,
 )
     hidden > 0 || throw(ArgumentError("hidden must be positive, got $(hidden)"))
     output_replicas > 0 || throw(ArgumentError("output_replicas must be positive, got $(output_replicas)"))
@@ -92,9 +99,16 @@ function MNISTArchitecture(;
         periodic = false,
     )
 
-    bias = g -> InteractiveIsing.filltype(Vector, zero(precision), statelen(g))
+    bias = isnothing(b) ? (g -> InteractiveIsing.filltype(Vector, zero(precision), statelen(g))) :
+        b isa AbstractArray ? InteractiveIsing.Force(b) : b
+    input_bias = isnothing(input_b) ? nothing : input_b
     clamping_target = g -> InteractiveIsing.filltype(Vector, zero(precision), statelen(g))
     clamping_beta = InteractiveIsing.UniformArray(zero(precision))
+    hamiltonian = Bilinear() + MagField(b = bias)
+    if !isnothing(input_bias)
+        hamiltonian = hamiltonian + MagField(b = input_bias)
+    end
+    hamiltonian = hamiltonian + Clamping(β = clamping_beta, y = clamping_target)
 
     return IsingGraph(
         input_layer,
@@ -102,7 +116,8 @@ function MNISTArchitecture(;
         hidden_layer,
         deepcopy(wg),
         output_layer,
-        Bilinear() + MagField(b = bias) + Clamping(β = clamping_beta, y = clamping_target);
+        hamiltonian;
+        adj,
         index_set = g -> ToggledIndexSet(g),
     )
 end

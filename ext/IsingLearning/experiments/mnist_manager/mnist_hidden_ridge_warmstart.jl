@@ -99,7 +99,12 @@ function build_trainer()
     temp!(graph, TEMP)
     free_relaxation = max(1, round(Int, FREE_SWEEPS * active_units(graph)))
     nudged_relaxation = max(1, round(Int, NUDGED_SWEEPS * active_units(graph)))
-    dynamics = LocalLangevin(stepsize = STEPSIZE, adjusted = false)
+    dynamics = LocalLangevin(
+        stepsize = STEPSIZE,
+        max_drift_fraction = 0.15f0,
+        adjusted = false,
+        order = :cyclic,
+    )
     layer = MNISTLayer(
         graph = graph,
         β = BETA,
@@ -109,7 +114,14 @@ function build_trainer()
         nudged_dynamics_algorithm = deepcopy(dynamics),
         validation_algorithm = deepcopy(dynamics),
     )
-    trainer = init_mnist_trainer(layer; graph, numthreads = WORKERS, optimiser = Optimisers.Adam(LR))
+    trainer = init_mnist_trainer(
+        layer;
+        graph,
+        numthreads = WORKERS,
+        optimiser = Optimisers.Adam(LR),
+        share_static_model_data = true,
+        input_mode = :field,
+    )
     return graph, layer, trainer
 end
 
@@ -158,7 +170,9 @@ function install_readout!(graph::G, W::WMat, b::BVec) where {G,WMat<:AbstractMat
     for output_pos in eachindex(output_idxs)
         output_idx = output_idxs[output_pos]
         for hidden_pos in eachindex(hidden_idxs)
-            A[output_idx, hidden_idxs[hidden_pos]] = W[output_pos, hidden_pos]
+            hidden_idx = hidden_idxs[hidden_pos]
+            A[output_idx, hidden_idx] = W[output_pos, hidden_pos]
+            A[hidden_idx, output_idx] = W[output_pos, hidden_pos]
         end
     end
     bias = InteractiveIsing.getparam(graph.hamiltonian, InteractiveIsing.MagField, :b)

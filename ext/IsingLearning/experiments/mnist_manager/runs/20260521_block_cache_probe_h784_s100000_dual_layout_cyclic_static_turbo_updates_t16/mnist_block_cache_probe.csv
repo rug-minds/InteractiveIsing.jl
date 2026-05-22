@@ -1,0 +1,2 @@
+timestamp,hidden,contexts,threads,order,schedule,sweeps,nsteps,graph_states,graph_edges,single_seconds,parallel_seconds,min_task_seconds,mean_task_seconds,max_task_seconds,speedup_vs_serial_all
+2026-05-21T18:26:54,784,16,16,cyclic,static,100000.0,82400000,1608,1292032,0.7227779,0.9510018,0.8671377,0.8900770375000001,0.9366727,12.160278140377862

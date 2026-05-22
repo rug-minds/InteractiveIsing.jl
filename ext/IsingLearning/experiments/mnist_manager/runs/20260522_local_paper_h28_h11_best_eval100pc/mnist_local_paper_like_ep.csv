@@ -1,0 +1,2 @@
+timestamp,epoch,seconds,train_accuracy,train_loss,skipped,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
+2026-05-22T03:17:52,0,0.0,missing,missing,missing,0.706,4.838,90-141-138-151-65-48-114-109-89-55,0.706,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_best_eval100pc\best_model.bin,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_best_eval100pc\final_model.bin

@@ -1,0 +1,12 @@
+# Local Paper-Like MNIST EP
+- architecture: `784 -> 64 -> 36 -> 40`
+- output layout: `replica_digit`
+- local radius: `2`, internal radius: `1`, output internal radius: `1`
+- train/test per class: `1` / `1`
+- free/nudge reads: `1` / `1`
+- free/nudge sweeps: `2` / `2`
+- beta: `5.0`
+- train internal couplings: `true`
+- learning rates W0/W12/W2O/W11/W22/WOO/B: `0.01`, `0.01`, `0.01`, `0.001`, `0.001`, `0.001`, `0.001`
+- init gains W0/W12/W2O/W11/W22/WOO: `0.5`, `0.25`, `0.25`, `0.0`, `0.0`, `0.0`
+- loaded checkpoint: `none`

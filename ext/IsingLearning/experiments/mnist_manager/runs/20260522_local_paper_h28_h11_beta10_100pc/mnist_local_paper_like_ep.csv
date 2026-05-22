@@ -1,0 +1,10 @@
+timestamp,epoch,seconds,train_accuracy,train_loss,skipped,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
+2026-05-22T04:03:07,0,0.0,missing,missing,missing,0.095,39.96,10-57-6-45-13-40-3-14-1-11,0.095,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_beta10_100pc\best_model.bin,
+2026-05-22T04:03:30,1,21.2528679,0.277,12.558,195,0.295,13.04,21-10-6-2-1-138-12-0-0-10,0.295,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_beta10_100pc\best_model.bin,
+2026-05-22T04:03:49,2,16.5051402,0.473,9.054,426,0.39,9.59,15-3-21-5-35-87-9-25-0-0,0.39,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_beta10_100pc\best_model.bin,
+2026-05-22T04:04:05,3,14.8663204,0.556,7.488,523,0.645,5.38,27-24-20-23-14-27-15-12-3-35,0.645,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_beta10_100pc\best_model.bin,
+2026-05-22T04:04:21,4,14.0613455,0.611,6.42,583,0.57,7.22,29-14-26-32-28-35-21-12-2-1,0.645,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_beta10_100pc\best_model.bin,
+2026-05-22T04:04:36,5,13.1503678,0.678,5.43,657,0.72,4.67,23-24-11-8-25-21-28-20-6-34,0.72,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_beta10_100pc\best_model.bin,
+2026-05-22T04:04:50,6,12.5522194,0.714,4.808,693,0.705,5.32,31-20-26-17-13-13-24-25-16-15,0.72,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_beta10_100pc\best_model.bin,
+2026-05-22T04:05:04,7,12.5809763,0.703,4.962,686,0.665,5.68,18-19-5-20-25-42-30-20-14-7,0.72,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_beta10_100pc\best_model.bin,
+2026-05-22T04:05:18,8,12.0584113,0.742,4.25,729,0.745,4.25,25-31-15-15-24-14-10-26-26-14,0.745,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_beta10_100pc\best_model.bin,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_beta10_100pc\final_model.bin

@@ -1,0 +1,10 @@
+timestamp,epoch,seconds,train_accuracy,train_loss,skipped,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
+2026-05-22T03:22:41,0,0.0,missing,missing,missing,0.1,39.89,18-59-9-50-6-31-4-8-3-12,0.1,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_50pc\best_model.bin,
+2026-05-22T03:22:56,1,12.3066093,0.204,13.088,56,0.22,11.97,15-20-10-0-0-151-2-2-0-0,0.22,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_50pc\best_model.bin,
+2026-05-22T03:23:06,2,8.9871478,0.42,9.464,162,0.305,9.04,141-7-13-17-10-1-0-0-0-11,0.305,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_50pc\best_model.bin,
+2026-05-22T03:23:16,3,8.0929362,0.502,8.12,220,0.245,12.57,7-3-16-135-6-0-5-3-2-23,0.305,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_50pc\best_model.bin,
+2026-05-22T03:23:25,4,7.5332687,0.558,7.432,265,0.505,8.3,30-52-3-18-57-18-12-1-0-9,0.505,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_50pc\best_model.bin,
+2026-05-22T03:23:34,5,7.0324437,0.628,5.904,296,0.675,5.16,31-41-16-11-13-18-19-27-8-16,0.675,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_50pc\best_model.bin,
+2026-05-22T03:23:42,6,6.6129626,0.656,5.484,317,0.7,4.95,17-18-30-28-14-15-20-12-35-11,0.7,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_50pc\best_model.bin,
+2026-05-22T03:23:50,7,6.2499006,0.73,4.244,361,0.675,5.38,26-22-32-18-20-28-25-1-14-14,0.7,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_50pc\best_model.bin,
+2026-05-22T03:23:58,8,6.0572843,0.74,4.172,365,0.73,3.81,38-28-10-23-21-18-14-18-15-15,0.73,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_50pc\best_model.bin,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_50pc\final_model.bin

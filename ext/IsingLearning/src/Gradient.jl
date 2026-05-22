@@ -15,7 +15,7 @@ function contrastive_gradient(graph, s_plus, s_minus, β::Real; buffers = nothin
     end
 
     polynomial_ham = hamiltonian_or_nothing(graph.hamiltonian, InteractiveIsing.Quadratic)
-    magfield = graph.hamiltonian[InteractiveIsing.MagField]
+    magfield = _mnist_base_magfield(graph)
     bilinear = graph.hamiltonian[InteractiveIsing.Bilinear]
 
     # Laborieux et al. 2021 use the symmetric EP estimator

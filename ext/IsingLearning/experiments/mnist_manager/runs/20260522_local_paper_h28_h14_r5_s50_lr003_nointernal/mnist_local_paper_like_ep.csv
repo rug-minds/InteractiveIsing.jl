@@ -1,0 +1,10 @@
+timestamp,epoch,seconds,train_accuracy,train_loss,skipped,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
+2026-05-22T03:02:05,0,0.0,missing,missing,missing,0.06,41.28,9-9-9-2-6-4-2-5-0-4,0.06,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_nointernal\best_model.bin,
+2026-05-22T03:02:12,1,6.0255566,0.125,14.6,13,0.1,14.32,0-0-0-0-1-49-0-0-0-0,0.1,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_nointernal\best_model.bin,
+2026-05-22T03:02:17,2,4.36149,0.25,12.46,24,0.16,13.92,4-0-0-0-0-0-0-0-0-46,0.16,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_nointernal\best_model.bin,
+2026-05-22T03:02:22,3,4.2731935,0.275,11.54,39,0.26,13.32,19-1-0-1-28-0-1-0-0-0,0.26,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_nointernal\best_model.bin,
+2026-05-22T03:02:27,4,3.8710856,0.39,9.98,59,0.34,9.36,14-9-12-2-0-0-8-5-0-0,0.34,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_nointernal\best_model.bin,
+2026-05-22T03:02:31,5,3.4951067,0.51,8.05,86,0.4,9.04,8-3-0-11-3-19-0-4-0-2,0.4,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_nointernal\best_model.bin,
+2026-05-22T03:02:35,6,3.4305495,0.5,7.69,91,0.4,8.88,11-1-1-0-1-0-2-0-10-24,0.4,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_nointernal\best_model.bin,
+2026-05-22T03:02:38,7,3.226777,0.585,7.13,107,0.62,5.28,14-8-0-4-5-5-3-4-5-2,0.62,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_nointernal\best_model.bin,
+2026-05-22T03:02:42,8,3.3243096,0.55,7.39,100,0.46,10.04,7-1-8-4-10-13-2-1-2-2,0.62,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_nointernal\best_model.bin,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_nointernal\final_model.bin

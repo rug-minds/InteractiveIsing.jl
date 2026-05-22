@@ -171,7 +171,12 @@ function build_trainer(config::C) where {C<:NamedTuple}
     nactive = active_units(graph)
     free_relaxation = max(1, round(Int, config.free_sweeps * nactive))
     nudged_relaxation = max(1, round(Int, config.nudged_sweeps * nactive))
-    dynamics = LocalLangevin(stepsize = config.stepsize, adjusted = false)
+    dynamics = LocalLangevin(
+        stepsize = config.stepsize,
+        max_drift_fraction = 0.15f0,
+        adjusted = false,
+        order = :cyclic,
+    )
     layer = MNISTLayer(
         graph = graph,
         β = config.beta,
@@ -181,7 +186,14 @@ function build_trainer(config::C) where {C<:NamedTuple}
         nudged_dynamics_algorithm = deepcopy(dynamics),
         validation_algorithm = deepcopy(dynamics),
     )
-    trainer = init_mnist_trainer(layer; graph, numthreads = WORKERS, optimiser = Optimisers.Adam(config.lr))
+    trainer = init_mnist_trainer(
+        layer;
+        graph,
+        numthreads = WORKERS,
+        optimiser = Optimisers.Adam(config.lr),
+        share_static_model_data = true,
+        input_mode = :field,
+    )
     return graph, layer, trainer, free_relaxation, nudged_relaxation
 end
 
