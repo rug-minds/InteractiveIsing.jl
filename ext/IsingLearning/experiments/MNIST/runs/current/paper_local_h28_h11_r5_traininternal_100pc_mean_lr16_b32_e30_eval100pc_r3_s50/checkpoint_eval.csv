@@ -1,0 +1,2 @@
+timestamp,checkpoint,test_per_class,free_reads,free_sweeps,seconds,accuracy,loss,pred_counts
+2026-05-24T03:09:33,ext/IsingLearning/experiments/MNIST/runs/current/paper_local_h28_h11_r5_traininternal_100pc_mean_lr16_b32_e30/best_model.bin,100,3,50,9.2999211,0.719,4.478,96-90-219-108-64-90-87-94-64-88

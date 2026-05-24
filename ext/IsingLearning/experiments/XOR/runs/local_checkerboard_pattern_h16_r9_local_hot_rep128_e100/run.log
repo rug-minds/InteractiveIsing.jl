@@ -1,0 +1,16 @@
+Running 1 local CNN-like XOR config(s)
+[1/1] h16_r9_open
+h16_r9_open epoch=0 mse=1.031984 acc=0.25 min_margin=-0.0812 best_margin=-0.0812
+h16_r9_open epoch=10 mse=1.089255 acc=0.25 min_margin=-0.1376 best_margin=-0.0812
+h16_r9_open epoch=20 mse=0.96101 acc=0.75 min_margin=-0.0484 best_margin=-0.0484
+h16_r9_open epoch=30 mse=0.929066 acc=0.75 min_margin=-0.0405 best_margin=-0.0405
+h16_r9_open epoch=40 mse=1.055122 acc=0.75 min_margin=-0.3661 best_margin=-0.0405
+h16_r9_open epoch=50 mse=0.96327 acc=0.75 min_margin=-0.0814 best_margin=-0.0405
+h16_r9_open epoch=60 mse=1.128522 acc=0.5 min_margin=-0.2375 best_margin=-0.0405
+h16_r9_open epoch=70 mse=1.03052 acc=0.25 min_margin=-0.0536 best_margin=-0.0405
+h16_r9_open epoch=80 mse=1.047918 acc=0.5 min_margin=-0.1038 best_margin=-0.0405
+h16_r9_open epoch=90 mse=0.963457 acc=0.75 min_margin=-0.051 best_margin=-0.0405
+h16_r9_open epoch=100 mse=1.03365 acc=0.25 min_margin=-0.0409 best_margin=-0.0405
+saved metrics ext/IsingLearning/experiments/XOR/runs/local_checkerboard_pattern_h16_r9_local_hot_rep128_e100\metrics.csv
+saved summary ext/IsingLearning/experiments/XOR/runs/local_checkerboard_pattern_h16_r9_local_hot_rep128_e100\summary.csv
+saved note ext/IsingLearning/experiments/XOR/runs/local_checkerboard_pattern_h16_r9_local_hot_rep128_e100\README.md

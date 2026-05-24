@@ -1,0 +1,3 @@
+config,nn,best_mse,best_accuracy,best_epoch,best_min_margin,best_margin_epoch,first_all_correct_epoch,run_dir
+nn5,5,0.6317998,1.0,80,0.05814591,80,20,ext/IsingLearning/experiments/XOR/runs/edge_twoclass_zero_side16_nn5_nn8_diag_e80\nn5
+nn8,8,0.22446956,1.0,80,0.3381408,80,20,ext/IsingLearning/experiments/XOR/runs/edge_twoclass_zero_side16_nn5_nn8_diag_e80\nn8

@@ -1,0 +1,36 @@
+Running 1 local CNN-like XOR config(s)
+[1/1] h16_r9_open
+h16_r9_open epoch=0 mse=0.941831 acc=0.5 min_margin=-0.0934 best_margin=-0.0934
+h16_r9_open epoch=5 mse=1.181111 acc=0.25 min_margin=-0.2058 best_margin=-0.0934
+h16_r9_open epoch=10 mse=0.911928 acc=1.0 min_margin=0.0122 best_margin=0.0122
+h16_r9_open epoch=15 mse=1.180866 acc=0.0 min_margin=-0.1719 best_margin=0.0122
+h16_r9_open epoch=20 mse=0.921579 acc=0.75 min_margin=-0.0854 best_margin=0.0122
+h16_r9_open epoch=25 mse=0.829487 acc=0.75 min_margin=-0.0234 best_margin=0.0122
+h16_r9_open epoch=30 mse=0.972569 acc=0.75 min_margin=-0.0558 best_margin=0.0122
+h16_r9_open epoch=35 mse=0.969571 acc=0.5 min_margin=-0.1013 best_margin=0.0122
+h16_r9_open epoch=40 mse=1.104246 acc=0.25 min_margin=-0.0926 best_margin=0.0122
+h16_r9_open epoch=45 mse=0.900817 acc=0.5 min_margin=-0.0597 best_margin=0.0122
+h16_r9_open epoch=50 mse=0.851111 acc=1.0 min_margin=0.0288 best_margin=0.0288
+h16_r9_open epoch=55 mse=1.042457 acc=0.25 min_margin=-0.122 best_margin=0.0288
+h16_r9_open epoch=60 mse=0.918112 acc=0.5 min_margin=-0.0926 best_margin=0.0288
+h16_r9_open epoch=65 mse=0.873572 acc=0.75 min_margin=-0.1027 best_margin=0.0288
+h16_r9_open epoch=70 mse=0.858994 acc=0.75 min_margin=-0.0714 best_margin=0.0288
+h16_r9_open epoch=75 mse=0.931623 acc=0.75 min_margin=-0.0744 best_margin=0.0288
+h16_r9_open epoch=80 mse=0.984028 acc=0.75 min_margin=-0.1063 best_margin=0.0288
+h16_r9_open epoch=85 mse=0.886157 acc=1.0 min_margin=0.0377 best_margin=0.0377
+h16_r9_open epoch=90 mse=0.970828 acc=0.5 min_margin=-0.0854 best_margin=0.0377
+h16_r9_open epoch=95 mse=1.198812 acc=0.0 min_margin=-0.2743 best_margin=0.0377
+h16_r9_open epoch=100 mse=1.03284 acc=0.5 min_margin=-0.1233 best_margin=0.0377
+h16_r9_open epoch=105 mse=0.780203 acc=1.0 min_margin=0.0154 best_margin=0.0377
+h16_r9_open epoch=110 mse=1.125339 acc=0.25 min_margin=-0.1824 best_margin=0.0377
+h16_r9_open epoch=115 mse=0.860762 acc=0.75 min_margin=-0.0628 best_margin=0.0377
+h16_r9_open epoch=120 mse=0.841924 acc=0.75 min_margin=-0.0101 best_margin=0.0377
+h16_r9_open epoch=125 mse=1.122536 acc=0.25 min_margin=-0.1047 best_margin=0.0377
+h16_r9_open epoch=130 mse=1.051201 acc=0.5 min_margin=-0.1249 best_margin=0.0377
+h16_r9_open epoch=135 mse=1.09537 acc=0.25 min_margin=-0.1146 best_margin=0.0377
+h16_r9_open epoch=140 mse=0.914458 acc=0.75 min_margin=-0.0897 best_margin=0.0377
+h16_r9_open epoch=145 mse=1.022297 acc=0.75 min_margin=-0.1412 best_margin=0.0377
+h16_r9_open epoch=150 mse=1.131707 acc=0.5 min_margin=-0.2115 best_margin=0.0377
+saved metrics ext/IsingLearning/experiments/XOR/runs/local_checkerboard_pattern_h16_r9_fast_decay_e150\metrics.csv
+saved summary ext/IsingLearning/experiments/XOR/runs/local_checkerboard_pattern_h16_r9_fast_decay_e150\summary.csv
+saved note ext/IsingLearning/experiments/XOR/runs/local_checkerboard_pattern_h16_r9_fast_decay_e150\README.md

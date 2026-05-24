@@ -1,0 +1,3 @@
+config,hidden_side,radius,periodic,epoch,mse,output_mse,accuracy,all_correct,min_margin,mean_margin,best_mse,best_epoch,best_min_margin,best_margin_epoch,first_all_correct_epoch,gradient_norm,parameter_norm,update_norm,elapsed_seconds,predictions,scores,margins,per_case_mse
+h8_r1_open,8,1,false,0,1.1252158,1.0399287,0.5,false,-0.20636815,-0.053537875,1.1252158,0,-0.20636815,0,-1,NaN,5.845350729647271,NaN,5.204,1|1|1|1,0.128|0.1165|0.0038|0.2064,-0.128|0.1165|0.0038|-0.2064,1.0923|0.9274|1.0482|1.0918
+h8_r1_open,8,1,false,1,0.9907199,1.0307829,0.75,false,-0.18295527,0.011508092,0.9907199,1,-0.18295527,1,-1,0.7633853774951183,5.847112494028336,0.08579436758632919,8.673,1|1|1|0,0.183|0.028|0.0848|-0.1162,-0.183|0.028|0.0848|0.1162,1.1991|1.0146|0.9445|0.9651

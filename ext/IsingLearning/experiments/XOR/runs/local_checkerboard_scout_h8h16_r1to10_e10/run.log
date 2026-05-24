@@ -1,0 +1,85 @@
+Running 20 local CNN-like XOR config(s)
+[1/20] h8_r1_open
+h8_r1_open epoch=0 mse=1.07432 acc=0.25 min_margin=-0.078 best_margin=-0.078
+h8_r1_open epoch=5 mse=1.024045 acc=0.25 min_margin=-0.0516 best_margin=-0.0516
+h8_r1_open epoch=10 mse=1.101563 acc=0.25 min_margin=-0.1302 best_margin=-0.0516
+[2/20] h8_r2_open
+h8_r2_open epoch=0 mse=0.988234 acc=0.5 min_margin=-0.085 best_margin=-0.085
+h8_r2_open epoch=5 mse=1.066343 acc=0.25 min_margin=-0.0811 best_margin=-0.0811
+h8_r2_open epoch=10 mse=0.93422 acc=0.5 min_margin=-0.0146 best_margin=-0.0146
+[3/20] h8_r3_open
+h8_r3_open epoch=0 mse=0.989366 acc=0.5 min_margin=-0.0677 best_margin=-0.0677
+h8_r3_open epoch=5 mse=0.930147 acc=0.75 min_margin=-0.0691 best_margin=-0.0677
+h8_r3_open epoch=10 mse=0.927163 acc=0.75 min_margin=-0.1077 best_margin=-0.0677
+[4/20] h8_r4_open
+h8_r4_open epoch=0 mse=1.181818 acc=0.0 min_margin=-0.135 best_margin=-0.135
+h8_r4_open epoch=5 mse=0.991619 acc=0.5 min_margin=-0.0518 best_margin=-0.0518
+h8_r4_open epoch=10 mse=0.951354 acc=0.75 min_margin=-0.0161 best_margin=-0.0161
+[5/20] h8_r5_open
+h8_r5_open epoch=0 mse=1.001385 acc=0.5 min_margin=-0.0531 best_margin=-0.0531
+h8_r5_open epoch=5 mse=1.006033 acc=0.5 min_margin=-0.0973 best_margin=-0.0531
+h8_r5_open epoch=10 mse=0.975173 acc=0.5 min_margin=-0.0551 best_margin=-0.0531
+[6/20] h8_r6_open
+h8_r6_open epoch=0 mse=0.98125 acc=0.5 min_margin=-0.1273 best_margin=-0.1273
+h8_r6_open epoch=5 mse=1.027625 acc=0.25 min_margin=-0.0603 best_margin=-0.0603
+h8_r6_open epoch=10 mse=1.142885 acc=0.0 min_margin=-0.1424 best_margin=-0.0603
+[7/20] h8_r7_open
+h8_r7_open epoch=0 mse=0.932631 acc=0.75 min_margin=-0.0445 best_margin=-0.0445
+h8_r7_open epoch=5 mse=1.014023 acc=0.75 min_margin=-0.0938 best_margin=-0.0445
+h8_r7_open epoch=10 mse=0.991816 acc=0.75 min_margin=-0.0753 best_margin=-0.0445
+[8/20] h8_r8_open
+h8_r8_open epoch=0 mse=0.998133 acc=0.75 min_margin=-0.0391 best_margin=-0.0391
+h8_r8_open epoch=5 mse=0.912173 acc=1.0 min_margin=0.0038 best_margin=0.0038
+h8_r8_open epoch=10 mse=1.031509 acc=0.5 min_margin=-0.1519 best_margin=0.0038
+[9/20] h8_r9_open
+h8_r9_open epoch=0 mse=1.002203 acc=0.25 min_margin=-0.0243 best_margin=-0.0243
+h8_r9_open epoch=5 mse=1.031685 acc=0.25 min_margin=-0.043 best_margin=-0.0243
+h8_r9_open epoch=10 mse=1.123233 acc=0.0 min_margin=-0.0808 best_margin=-0.0243
+[10/20] h8_r10_open
+h8_r10_open epoch=0 mse=1.03231 acc=0.25 min_margin=-0.0384 best_margin=-0.0384
+h8_r10_open epoch=5 mse=0.946183 acc=0.75 min_margin=-0.0496 best_margin=-0.0384
+h8_r10_open epoch=10 mse=0.961074 acc=0.75 min_margin=-0.0329 best_margin=-0.0329
+[11/20] h16_r1_open
+h16_r1_open epoch=0 mse=0.997812 acc=0.5 min_margin=-0.0752 best_margin=-0.0752
+h16_r1_open epoch=5 mse=0.994016 acc=0.5 min_margin=-0.0515 best_margin=-0.0515
+h16_r1_open epoch=10 mse=0.97455 acc=0.5 min_margin=-0.0621 best_margin=-0.0515
+[12/20] h16_r2_open
+h16_r2_open epoch=0 mse=0.984366 acc=0.75 min_margin=-0.0492 best_margin=-0.0492
+h16_r2_open epoch=5 mse=1.036696 acc=0.25 min_margin=-0.0911 best_margin=-0.0492
+h16_r2_open epoch=10 mse=1.043467 acc=0.5 min_margin=-0.0548 best_margin=-0.0492
+[13/20] h16_r3_open
+h16_r3_open epoch=0 mse=1.050874 acc=0.5 min_margin=-0.1214 best_margin=-0.1214
+h16_r3_open epoch=5 mse=0.958396 acc=0.75 min_margin=-0.0166 best_margin=-0.0166
+h16_r3_open epoch=10 mse=1.065852 acc=0.25 min_margin=-0.1183 best_margin=-0.0166
+[14/20] h16_r4_open
+h16_r4_open epoch=0 mse=1.011848 acc=0.5 min_margin=-0.0599 best_margin=-0.0599
+h16_r4_open epoch=5 mse=1.048142 acc=0.5 min_margin=-0.1091 best_margin=-0.0599
+h16_r4_open epoch=10 mse=1.022466 acc=0.75 min_margin=-0.1314 best_margin=-0.0599
+[15/20] h16_r5_open
+h16_r5_open epoch=0 mse=1.042142 acc=0.5 min_margin=-0.0863 best_margin=-0.0863
+h16_r5_open epoch=5 mse=1.00442 acc=0.5 min_margin=-0.0231 best_margin=-0.0231
+h16_r5_open epoch=10 mse=1.060106 acc=0.25 min_margin=-0.0981 best_margin=-0.0231
+[16/20] h16_r6_open
+h16_r6_open epoch=0 mse=1.041417 acc=0.75 min_margin=-0.1677 best_margin=-0.1677
+h16_r6_open epoch=5 mse=1.044055 acc=0.5 min_margin=-0.1345 best_margin=-0.1345
+h16_r6_open epoch=10 mse=1.067646 acc=0.5 min_margin=-0.1104 best_margin=-0.1104
+[17/20] h16_r7_open
+h16_r7_open epoch=0 mse=1.009585 acc=0.5 min_margin=-0.0811 best_margin=-0.0811
+h16_r7_open epoch=5 mse=1.005955 acc=0.5 min_margin=-0.0838 best_margin=-0.0811
+h16_r7_open epoch=10 mse=0.969025 acc=0.75 min_margin=-0.1374 best_margin=-0.0811
+[18/20] h16_r8_open
+h16_r8_open epoch=0 mse=0.931955 acc=1.0 min_margin=0.0138 best_margin=0.0138
+h16_r8_open epoch=5 mse=1.021536 acc=0.5 min_margin=-0.0702 best_margin=0.0138
+h16_r8_open epoch=10 mse=0.985049 acc=0.75 min_margin=-0.0821 best_margin=0.0138
+[19/20] h16_r9_open
+h16_r9_open epoch=0 mse=1.018505 acc=0.5 min_margin=-0.0479 best_margin=-0.0479
+h16_r9_open epoch=5 mse=0.909067 acc=1.0 min_margin=0.0103 best_margin=0.0103
+h16_r9_open epoch=10 mse=0.967084 acc=0.5 min_margin=-0.0915 best_margin=0.0103
+[20/20] h16_r10_open
+h16_r10_open epoch=0 mse=1.119879 acc=0.25 min_margin=-0.1613 best_margin=-0.1613
+h16_r10_open epoch=5 mse=0.946833 acc=0.75 min_margin=-0.0342 best_margin=-0.0342
+h16_r10_open epoch=10 mse=1.128067 acc=0.5 min_margin=-0.2043 best_margin=-0.0342
+saved metrics ext/IsingLearning/experiments/XOR/runs/local_checkerboard_scout_h8h16_r1to10_e10\metrics.csv
+saved summary ext/IsingLearning/experiments/XOR/runs/local_checkerboard_scout_h8h16_r1to10_e10\summary.csv
+saved plot ext/IsingLearning/experiments/XOR/runs/local_checkerboard_scout_h8h16_r1to10_e10\learning_summary.png
+saved note ext/IsingLearning/experiments/XOR/runs/local_checkerboard_scout_h8h16_r1to10_e10\README.md

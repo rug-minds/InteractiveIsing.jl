@@ -1,0 +1,14 @@
+Running 1 local CNN-like XOR config(s)
+[1/1] h16_r9_open
+h16_r9_open epoch=0 mse=1.018503 acc=0.25 min_margin=-0.0281 best_margin=-0.0281
+h16_r9_open epoch=10 mse=0.993615 acc=0.5 min_margin=-0.0181 best_margin=-0.0181
+h16_r9_open epoch=20 mse=0.967097 acc=0.75 min_margin=-0.0076 best_margin=-0.0076
+h16_r9_open epoch=30 mse=1.004072 acc=0.75 min_margin=-0.0346 best_margin=-0.0076
+h16_r9_open epoch=40 mse=1.055175 acc=0.25 min_margin=-0.0439 best_margin=-0.0076
+h16_r9_open epoch=50 mse=0.978416 acc=0.5 min_margin=-0.0141 best_margin=-0.0076
+h16_r9_open epoch=60 mse=0.979987 acc=0.5 min_margin=-0.0219 best_margin=-0.0076
+h16_r9_open epoch=70 mse=1.030725 acc=0.25 min_margin=-0.0293 best_margin=-0.0076
+h16_r9_open epoch=80 mse=0.9763 acc=0.5 min_margin=-0.0173 best_margin=-0.0076
+saved metrics ext/IsingLearning/experiments/XOR/runs/local_checkerboard_pattern_h16_r9_rep256_eval128_e80\metrics.csv
+saved summary ext/IsingLearning/experiments/XOR/runs/local_checkerboard_pattern_h16_r9_rep256_eval128_e80\summary.csv
+saved note ext/IsingLearning/experiments/XOR/runs/local_checkerboard_pattern_h16_r9_rep256_eval128_e80\README.md

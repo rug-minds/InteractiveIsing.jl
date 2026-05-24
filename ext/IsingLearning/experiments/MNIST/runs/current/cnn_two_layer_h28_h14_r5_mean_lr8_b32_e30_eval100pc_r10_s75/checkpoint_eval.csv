@@ -1,0 +1,2 @@
+timestamp,checkpoint,test_per_class,free_reads,free_sweeps,seconds,accuracy,loss,pred_counts
+2026-05-24T03:42:55,ext/IsingLearning/experiments/MNIST/runs/current/cnn_two_layer_h28_h14_r5_mean_lr8_b32_e30/cnn_h1_28_h2_14_r5/best_model.bin,100,10,75,47.3568125,0.854,2.312,101-98-68-127-98-93-104-89-119-103

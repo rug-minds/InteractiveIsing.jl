@@ -3,6 +3,7 @@ module IsingLearning
 using LuxCore
 using Random: AbstractRNG, MersenneTwister
 using SparseArrays
+using LinearAlgebra: diag
 
 using DataStructures
 using ChainRules, ChainRulesCore

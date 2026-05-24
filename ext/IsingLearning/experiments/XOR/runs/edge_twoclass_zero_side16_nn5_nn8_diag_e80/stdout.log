@@ -1,0 +1,25 @@
+Running 2 edge-application XOR config(s)
+[1/2] nn5
+nn5 epoch=0 mse=1.082285 acc=0.5 min_margin=-0.2945 best_margin=-0.2945
+nn5 epoch=10 mse=0.94661 acc=0.5 min_margin=-0.1009 best_margin=-0.1009
+nn5 epoch=20 mse=0.85309 acc=1.0 min_margin=0.0106 best_margin=0.0106
+nn5 epoch=30 mse=0.854185 acc=1.0 min_margin=0.029 best_margin=0.029
+nn5 epoch=40 mse=0.859864 acc=0.75 min_margin=-0.073 best_margin=0.029
+nn5 epoch=50 mse=0.709812 acc=0.75 min_margin=-0.1926 best_margin=0.029
+nn5 epoch=60 mse=0.663433 acc=1.0 min_margin=0.0369 best_margin=0.0369
+nn5 epoch=70 mse=0.662119 acc=0.75 min_margin=-0.0221 best_margin=0.0369
+nn5 epoch=80 mse=0.6318 acc=1.0 min_margin=0.0581 best_margin=0.0581
+[2/2] nn8
+nn8 epoch=0 mse=1.181274 acc=0.25 min_margin=-0.3995 best_margin=-0.3995
+nn8 epoch=10 mse=0.603149 acc=0.75 min_margin=-0.0414 best_margin=-0.0414
+nn8 epoch=20 mse=0.426077 acc=1.0 min_margin=0.0348 best_margin=0.0348
+nn8 epoch=30 mse=0.426918 acc=1.0 min_margin=0.0896 best_margin=0.0896
+nn8 epoch=40 mse=0.434045 acc=1.0 min_margin=0.1285 best_margin=0.1285
+nn8 epoch=50 mse=0.383556 acc=1.0 min_margin=0.1436 best_margin=0.1436
+nn8 epoch=60 mse=0.299385 acc=1.0 min_margin=0.203 best_margin=0.203
+nn8 epoch=70 mse=0.262684 acc=1.0 min_margin=0.2962 best_margin=0.2962
+nn8 epoch=80 mse=0.22447 acc=1.0 min_margin=0.3381 best_margin=0.3381
+saved metrics ext/IsingLearning/experiments/XOR/runs/edge_twoclass_zero_side16_nn5_nn8_diag_e80\metrics.csv
+saved summary ext/IsingLearning/experiments/XOR/runs/edge_twoclass_zero_side16_nn5_nn8_diag_e80\summary.csv
+saved plot ext/IsingLearning/experiments/XOR/runs/edge_twoclass_zero_side16_nn5_nn8_diag_e80\learning_summary.png
+saved note ext/IsingLearning/experiments/XOR/runs/edge_twoclass_zero_side16_nn5_nn8_diag_e80\README.md

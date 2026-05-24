@@ -1,0 +1,5 @@
+config,radius,periodic,hidden_side,best_mse,best_accuracy,best_epoch,best_min_margin,best_margin_epoch,first_all_correct_epoch,run_dir
+h8_r2_open,2,false,8,0.9431207,1.0,10,0.013475895,10,10,ext/IsingLearning/experiments/XOR/runs/local_checkerboard_pattern_beta1_h8h16_r2r5_rep128_e80\h8_r2_open
+h8_r5_open,5,false,8,0.9270774,1.0,40,0.020199597,40,40,ext/IsingLearning/experiments/XOR/runs/local_checkerboard_pattern_beta1_h8h16_r2r5_rep128_e80\h8_r5_open
+h16_r2_open,2,false,16,0.9386804,0.75,10,-0.00029456615,10,-1,ext/IsingLearning/experiments/XOR/runs/local_checkerboard_pattern_beta1_h8h16_r2r5_rep128_e80\h16_r2_open
+h16_r5_open,5,false,16,0.9296478,0.75,20,0.009113431,50,50,ext/IsingLearning/experiments/XOR/runs/local_checkerboard_pattern_beta1_h8h16_r2r5_rep128_e80\h16_r5_open

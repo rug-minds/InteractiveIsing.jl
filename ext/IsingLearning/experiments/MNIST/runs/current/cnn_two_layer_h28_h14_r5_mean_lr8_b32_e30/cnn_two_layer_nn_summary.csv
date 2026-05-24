@@ -1,0 +1,2 @@
+config,hidden1_side,hidden2_side,radius,train_per_class,test_per_class,epochs,batchsize,workers,best_epoch,best_test_accuracy,best_test_loss,final_test_accuracy,final_train_accuracy,best_path,run_dir
+cnn_h1_28_h2_14_r5,28,14,5,100,20,30,32,32,27,0.8,3.28,0.68,0.833,ext/IsingLearning/experiments/MNIST/runs/current/cnn_two_layer_h28_h14_r5_mean_lr8_b32_e30\cnn_h1_28_h2_14_r5\best_model.bin,ext/IsingLearning/experiments/MNIST/runs/current/cnn_two_layer_h28_h14_r5_mean_lr8_b32_e30\cnn_h1_28_h2_14_r5

@@ -1,6 +1,4 @@
 export graph_view,
-       graph_port_forward!,
-       contrastive_gradients,
        apply_sgd_update,
        contrastive_train_step!,
        fit_contrastive!
@@ -8,115 +6,124 @@ export graph_view,
 using ProgressMeter: Progress, ProgressUnknown, next!, finish!
 
 """
-    graph_view(g, idxs) -> Vector{Float32}
+    graph_view(graph, idxs)
 
-Read a slice of the graph state and materialize it as a dense vector.
-This is the main bridge between the graph world and ordinary Lux-style
-vector activations.
+Materialize `state(graph)[idxs]` as a dense `Float32` vector for use as a Lux
+activation or experiment metric.
 """
-function graph_view(g, idxs)
-    return Float32.(copy(state(g)[idxs]))
+function graph_view(graph::G, idxs::I) where {G,I}
+    return Float32.(copy(state(graph)[idxs]))
 end
 
 """
-    graph_port_forward!(g, input_idxs, output_idxs, x; clamp_input!, run_dynamics!) -> y
+    apply_sgd_update(ps, grads; η = 1f-3)
 
-Generic "port" abstraction for a graph-owning Lux layer.
-
-- `x` is treated like the activation coming from a normal Lux layer.
-- `clamp_input!` pins that activation into the graph.
-- `run_dynamics!` advances the custom Monte Carlo / simulation dynamics.
-- The return value is a dense readout vector that can feed into the next
-  Lux layer.
-
-This is the practical pattern for composing your graph with standard Lux
-primitives:
-
-```julia
-model = Lux.Chain(
-    encoder,
-    graph_layer,  # internally calls graph_port_forward!
-    decoder,
-)
-```
-
-If you need multiple views into the same graph, prefer one graph-owning
-layer with multiple helper ports instead of several independent Lux layers.
-Independent Lux layers would each allocate their own `st.graph`.
+Apply a plain SGD update to a parameter NamedTuple. This is intentionally small;
+experiments that need Adam or momentum should use `Optimisers.update`.
 """
-function graph_port_forward!(
-    g,
-    input_idxs,
-    output_idxs,
-    x;
-    clamp_input!,
-    run_dynamics!,
-)
-    clamp_input!(g, input_idxs, x)
-    run_dynamics!(g)
-    return graph_view(g, output_idxs)
-end
-
-"""
-    apply_sgd_update(ps, grads; η) -> ps_new
-
-Minimal parameter update for custom contrastive learning.
-Swap this out for `Optimisers.update` later if you want momentum, Adam, etc.
-"""
-function apply_sgd_update(ps, grads; η::Real = 1f-3)
+function apply_sgd_update(ps::P, grads::G; η::Real = 1f-3) where {P,G}
     ηf = Float32(η)
-    return (
-        weights = ps.weights .- ηf .* grads.weights,
-        biases = ps.biases .- ηf .* grads.biases,
+    updated = (;
+        w = ps.w .- ηf .* grads.w,
+        b = ps.b .- ηf .* grads.b,
     )
+    hasproperty(ps, :α) || return updated
+    return merge(updated, (; α = ps.α .- ηf .* grads.α))
 end
 
-function _progress_tracker(data; enabled::Bool, desc::AbstractString)
+"""Set every gradient-buffer array to zero before a new sample or minibatch."""
+function clear_gradient_buffer!(buffer::B) where {B}
+    fill!(buffer.w, zero(eltype(buffer.w)))
+    fill!(buffer.b, zero(eltype(buffer.b)))
+    hasproperty(buffer, :α) && fill!(buffer.α, zero(eltype(buffer.α)))
+    return buffer
+end
+
+"""Return a scaled copy of a contrastive-gradient buffer."""
+function scaled_gradient(buffer::B, scale::T) where {B,T<:Real}
+    grad = (;
+        w = copy(buffer.w) .* scale,
+        b = copy(buffer.b) .* scale,
+    )
+    hasproperty(buffer, :α) || return grad
+    return merge(grad, (; α = copy(buffer.α) .* scale))
+end
+
+"""
+    contrastive_train_step!(layer, x, target, ps, st; β = layer.β, η = 1f-3)
+
+Run one single-example contrastive update using the reusable
+`st.contrastive_process` prepared by the Lux layer. The process context owns the
+graph, sample buffers, state captures, sampler contexts, and gradient buffers.
+"""
+function contrastive_train_step!(
+    layer::L,
+    x::X,
+    target::Y,
+    ps::P,
+    st::S;
+    β::Real = layer.β,
+    η::Real = 1f-3,
+    update_rule = apply_sgd_update,
+) where {L<:LayeredIsingGraphLayer,X,Y,P,S}
+    graph = st.graph
+    sync_params!(graph, ps)
+
+    process = st.contrastive_process
+    context = Processes.context(process)._state
+    context.x .= x
+    context.y .= target
+    clear_gradient_buffer!(context.buffers)
+
+    Processes.reset!(process)
+    run(process)
+    wait(process)
+
+    scale = inv(Float32(2) * Float32(β))
+    grads = scaled_gradient(context.buffers, scale)
+    ps_new = update_rule(ps, grads; η)
+    output = Float32.(copy(@view context.equilibrium_state[layer.output_layer]))
+    return ps_new, st, (; y = output, grads)
+end
+
+"""Create a progress tracker that works for sized and unsized iterables."""
+function contrastive_progress(data::D; enabled::Bool, desc::AbstractString) where {D}
     enabled || return nothing
-
     try
-        return Progress(length(data); desc = desc)
+        return Progress(length(data); desc)
     catch
+        return ProgressUnknown(; desc)
     end
-
-    return ProgressUnknown(; desc = desc)
 end
 
-function _progress_step!(progress, nsteps::Integer, total_loss::Real)
+"""Advance a progress tracker with the current running mean loss."""
+function contrastive_progress_step!(progress, nsteps::Integer, total_loss::Real)
     progress === nothing && return nothing
-
-    mean_loss = total_loss / max(nsteps, 1)
-    next!(progress; showvalues = [(:step, nsteps), (:mean_loss, mean_loss)])
+    mean_loss = total_loss / max(Int(nsteps), 1)
+    next!(progress; showvalues = [(:step, Int(nsteps)), (:mean_loss, mean_loss)])
     return nothing
 end
-
-
 
 """
     fit_contrastive!(layer, data, ps, st; kwargs...) -> (ps, st, stats)
 
-Run a simple custom epoch over `(x, target)` pairs.
-
-This is intentionally not tied to Lux AD. The graph layer still follows the
-Lux parameter/state split, but the learning signal comes from your own
-contrastive Monte Carlo procedure.
+Run a clean custom contrastive loop over `(x, target)` pairs. This keeps Lux's
+parameter/state split but uses explicit process-based learning instead of AD.
 """
 function fit_contrastive!(
-    layer::LayeredIsingGraphLayer,
+    layer::L,
     data,
     ps,
     st;
     β::Real = layer.β,
     η::Real = 1f-3,
-    run_free_phase! = _missing_free_phase!,
-    run_nudged_phase! = _missing_nudged_phase!,
     update_rule = apply_sgd_update,
     show_progress::Bool = true,
     progress_desc::AbstractString = "Contrastive training",
-)
+) where {L<:LayeredIsingGraphLayer}
     total_loss = 0f0
     nsteps = 0
-    progress = _progress_tracker(data; enabled = show_progress, desc = progress_desc)
+    progress = contrastive_progress(data; enabled = show_progress, desc = progress_desc)
 
     for (x, target) in data
         ps, st, aux = contrastive_train_step!(
@@ -125,20 +132,16 @@ function fit_contrastive!(
             target,
             ps,
             st;
-            β = β,
-            η = η,
-            run_free_phase! = run_free_phase!,
-            run_nudged_phase! = run_nudged_phase!,
-            update_rule = update_rule,
+            β,
+            η,
+            update_rule,
         )
-
         total_loss += sum(abs2, aux.y .- Float32.(target))
         nsteps += 1
-        _progress_step!(progress, nsteps, total_loss)
+        contrastive_progress_step!(progress, nsteps, total_loss)
     end
 
     progress === nothing || finish!(progress)
     mean_loss = nsteps == 0 ? 0f0 : total_loss / nsteps
     return ps, st, (; mean_loss, nsteps)
 end
-

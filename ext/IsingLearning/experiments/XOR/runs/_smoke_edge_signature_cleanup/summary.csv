@@ -1,0 +1,2 @@
+config,nn,best_mse,best_accuracy,best_epoch,best_min_margin,best_margin_epoch,first_all_correct_epoch,run_dir
+nn5,5,0.99741524,0.75,0,-0.010530431,1,-1,ext/IsingLearning/experiments/XOR/runs/_smoke_edge_signature_cleanup\nn5
