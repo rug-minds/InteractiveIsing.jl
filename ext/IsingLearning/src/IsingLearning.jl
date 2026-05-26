@@ -18,6 +18,7 @@ using .InteractiveIsing: state, adj, setparam!, getparam, setSpins!, nStates
 using .InteractiveIsing.Processes
 
 include("Utils.jl")
+include("Tools/LearningProcessTools.jl")
 include("LuxModel.jl")
 include("LearningLoop.jl")
 include("CaptureState.jl")

@@ -1,0 +1,64 @@
+julia :   Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+At line:25 char:1
++ julia -t 32 --project=ext\IsingLearning ext\IsingLearning\experiments ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (  Activating pr...\IsingLearning`:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Running 2 local CNN-like XOR config(s)
+[1/2] h8_r9
+h8_r9 epoch=0 mse=0.138788 acc=1.0 min_margin=1.2218 best_margin=1.2218
+h8_r9 epoch=10 mse=0.13906 acc=1.0 min_margin=1.2236 best_margin=1.2236
+h8_r9 epoch=20 mse=0.135126 acc=1.0 min_margin=1.226 best_margin=1.226
+h8_r9 epoch=30 mse=0.135771 acc=1.0 min_margin=1.224 best_margin=1.226
+h8_r9 epoch=40 mse=0.138653 acc=1.0 min_margin=1.2162 best_margin=1.226
+h8_r9 epoch=50 mse=0.133109 acc=1.0 min_margin=1.1996 best_margin=1.226
+h8_r9 epoch=60 mse=0.118574 acc=1.0 min_margin=1.2272 best_margin=1.2272
+h8_r9 epoch=70 mse=0.134911 acc=1.0 min_margin=1.1838 best_margin=1.2272
+h8_r9 epoch=80 mse=0.131115 acc=1.0 min_margin=1.2224 best_margin=1.2272
+h8_r9 epoch=90 mse=0.138719 acc=1.0 min_margin=1.2169 best_margin=1.2272
+h8_r9 epoch=100 mse=0.132118 acc=1.0 min_margin=1.2305 best_margin=1.2305
+h8_r9 epoch=110 mse=0.140785 acc=1.0 min_margin=1.2268 best_margin=1.2305
+h8_r9 epoch=120 mse=0.126603 acc=1.0 min_margin=1.191 best_margin=1.2305
+h8_r9 epoch=130 mse=0.140419 acc=1.0 min_margin=1.2205 best_margin=1.2305
+h8_r9 epoch=140 mse=0.139735 acc=1.0 min_margin=1.2289 best_margin=1.2305
+h8_r9 epoch=150 mse=0.131292 acc=1.0 min_margin=1.2233 best_margin=1.2305
+h8_r9 epoch=160 mse=0.14045 acc=1.0 min_margin=1.2222 best_margin=1.2305
+h8_r9 epoch=170 mse=0.135655 acc=1.0 min_margin=1.2237 best_margin=1.2305
+h8_r9 epoch=180 mse=0.140567 acc=1.0 min_margin=1.2309 best_margin=1.2309
+h8_r9 epoch=190 mse=0.141846 acc=1.0 min_margin=1.2267 best_margin=1.2309
+h8_r9 epoch=200 mse=0.139014 acc=1.0 min_margin=1.2325 best_margin=1.2325
+h8_r9 epoch=210 mse=0.138554 acc=1.0 min_margin=1.2329 best_margin=1.2329
+h8_r9 epoch=220 mse=0.137745 acc=1.0 min_margin=1.2318 best_margin=1.2329
+h8_r9 epoch=230 mse=0.14111 acc=1.0 min_margin=1.2243 best_margin=1.2329
+h8_r9 epoch=240 mse=0.140356 acc=1.0 min_margin=1.2249 best_margin=1.2329
+[2/2] h8_r10
+h8_r10 epoch=0 mse=0.077881 acc=1.0 min_margin=1.0655 best_margin=1.0655
+h8_r10 epoch=10 mse=0.100231 acc=1.0 min_margin=1.0215 best_margin=1.0655
+h8_r10 epoch=20 mse=0.118363 acc=1.0 min_margin=1.1135 best_margin=1.1135
+h8_r10 epoch=30 mse=0.127246 acc=1.0 min_margin=1.0039 best_margin=1.1135
+h8_r10 epoch=40 mse=0.14034 acc=1.0 min_margin=1.1513 best_margin=1.1513
+h8_r10 epoch=50 mse=0.139708 acc=1.0 min_margin=1.0832 best_margin=1.1513
+h8_r10 epoch=60 mse=0.150444 acc=1.0 min_margin=1.065 best_margin=1.1513
+h8_r10 epoch=70 mse=0.136796 acc=1.0 min_margin=1.1518 best_margin=1.1518
+h8_r10 epoch=80 mse=0.13657 acc=1.0 min_margin=1.0806 best_margin=1.1518
+h8_r10 epoch=90 mse=0.138704 acc=1.0 min_margin=1.1679 best_margin=1.1679
+h8_r10 epoch=100 mse=0.15376 acc=1.0 min_margin=1.1451 best_margin=1.1679
+h8_r10 epoch=110 mse=0.15455 acc=1.0 min_margin=1.1734 best_margin=1.1734
+h8_r10 epoch=120 mse=0.154023 acc=1.0 min_margin=1.1432 best_margin=1.1734
+h8_r10 epoch=130 mse=0.16258 acc=1.0 min_margin=1.1504 best_margin=1.1734
+h8_r10 epoch=140 mse=0.174324 acc=1.0 min_margin=1.1405 best_margin=1.1734
+h8_r10 epoch=150 mse=0.179956 acc=1.0 min_margin=1.1313 best_margin=1.1734
+h8_r10 epoch=160 mse=0.158023 acc=1.0 min_margin=1.1589 best_margin=1.1734
+h8_r10 epoch=170 mse=0.16375 acc=1.0 min_margin=1.1565 best_margin=1.1734
+h8_r10 epoch=180 mse=0.15581 acc=1.0 min_margin=1.1405 best_margin=1.1734
+h8_r10 epoch=190 mse=0.18038 acc=1.0 min_margin=1.1608 best_margin=1.1734
+h8_r10 epoch=200 mse=0.168792 acc=1.0 min_margin=1.1614 best_margin=1.1734
+h8_r10 epoch=210 mse=0.163506 acc=1.0 min_margin=1.1722 best_margin=1.1734
+h8_r10 epoch=220 mse=0.164685 acc=1.0 min_margin=1.1405 best_margin=1.1734
+h8_r10 epoch=230 mse=0.152624 acc=1.0 min_margin=1.1698 best_margin=1.1734
+h8_r10 epoch=240 mse=0.132547 acc=1.0 min_margin=1.1609 best_margin=1.1734
+saved metrics ext/IsingLearning/experiments/XOR/checkerboard-local-cnn-two-hidden-layers/experiments/current/local_checkerboard_two_class_h8_r9_r10_second_resume_best_margin_e240_lr0p0005_lr_decay0p999\metrics.csv
+saved summary ext/IsingLearning/experiments/XOR/checkerboard-local-cnn-two-hidden-layers/experiments/current/local_checkerboard_two_class_h8_r9_r10_second_resume_best_margin_e240_lr0p0005_lr_decay0p999\summary.csv
+saved plot C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\XOR\checkerboard-local-cnn-two-hidden-layers\experiments\current\local_checkerboard_two_class_h8_r9_r10_second_resume_best_margin_e240_lr0p0005_lr_decay0p999\learning_summary.png
+saved note ext/IsingLearning/experiments/XOR/checkerboard-local-cnn-two-hidden-layers/experiments/current/local_checkerboard_two_class_h8_r9_r10_second_resume_best_margin_e240_lr0p0005_lr_decay0p999\README.md

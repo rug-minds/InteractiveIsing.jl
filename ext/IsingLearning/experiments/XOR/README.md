@@ -1,8 +1,8 @@
 # XOR Experiments
 
-This folder is the clean starting point for new shareable learning runs. The
-training files default to `32` `ProcessManager` workers; start Julia with
-`-t 32` for the intended run shape.
+This folder indexes the XOR learning experiments. Each runnable experiment lives
+in its own architecture-named folder with its script, run data, plots, and any
+architecture schematic for that family.
 
 The archived exploratory folders were moved to:
 
@@ -10,33 +10,34 @@ The archived exploratory folders were moved to:
 ext/IsingLearning/ExperimentsOld
 ```
 
-## Files
+## Experiment Folders
 
-- `xor_process_baseline.jl`: small all-to-all XOR baseline using
-  `ProcessManager`, `LayeredIsingGraphLayer`, worker-local input averaging,
-  and the current contrastive learning API.
-- `xor_manager_input_averaging.jl`: clean `2 -> 4 -> 2xR` XOR demonstrator
-  using `ProcessManager`, the standard `LayerContrastiveStep`, and worker-local
-  repeat averaging before a single `FlushAtEnd()` gradient merge.
-- `xor_local_cnn_like_grid.jl`: local CNN-like checkerboard XOR comparison for
-  `8x8 -> HxH -> HxH -> 4x4`, sweeping local radius and hidden-layer
-  periodicity with aggregate metrics, snapshots, final parameters, and plots.
-  Its defaults use the first robust local recipe: zero-start `BlockLangevin`
-  and a replicated two-class output code.
-- `xor_edge_application_grid.jl`: edge-application XOR revival. A checkerboard
-  input line drives one edge of a `16x16` layer, the opposite edge is read out
-  with a replicated two-class line by default, and hidden NN is swept up to 10.
-  It uses the same manager-backed zero-start `BlockLangevin` recipe as the
-  robust local checkerboard run.
-- `plot_run_results.jl`: post-processes every recognized `metrics.csv` and
-  `summary.csv` under `runs` and writes PNG plots beside the CSV files.
+- `two-input-2x2-hidden-majority-vote-baseline`: small `2 -> 2x2 -> 4` all-to-all ProcessManager/Adam baseline with majority-vote output replicas.
+- `all-to-all-input-averaged-readout`: direct `2 -> 4 -> 2xR` all-to-all ProcessManager demonstrator with worker-local repeat averaging.
+- `checkerboard-local-cnn-two-hidden-layers`: local checkerboard input on an `8x8 -> HxH -> HxH -> 4x4` CNN-like Ising architecture.
+- `edge-driven-single-layer-readout`: edge-applied XOR input driving a `16x16` layer with the opposite edge used as the readout.
+- `diagnostics`: smoke, sanity, scout, and timing material that is not part of the result experiment trees.
+
+Within architecture folders, `experiments/current/<experiment-name>` contains
+the retained successful experiment data, generated per-run PNG plots, and a copy
+of the Julia simulation file used for that experiment. Leaf configuration metric
+plots are flattened into the parent experiment folder with names like
+`h8_r9_metrics.png`. `aggregate_plots` contains cross-experiment comparisons,
+and `schematic.png` is the generated architecture figure when that experiment
+has one.
+
+## Utilities
+
+- `plot_run_results.jl`: post-processes CSV files under the architecture folders and writes per-run PNGs into `experiments/current`.
+- `../plot_architecture_schematics.jl`: regenerates the schematic PNGs inside the architecture folders.
 
 Run from the repository root:
 
 ```powershell
-julia -t 32 --project=ext/IsingLearning ext/IsingLearning/experiments/XOR/xor_process_baseline.jl
-julia -t 32 --project=ext/IsingLearning ext/IsingLearning/experiments/XOR/xor_manager_input_averaging.jl
-julia -t 32 --project=ext/IsingLearning ext/IsingLearning/experiments/XOR/xor_local_cnn_like_grid.jl
-julia -t 32 --project=ext/IsingLearning ext/IsingLearning/experiments/XOR/xor_edge_application_grid.jl
+julia -t 32 --project=ext/IsingLearning ext/IsingLearning/experiments/XOR/two-input-2x2-hidden-majority-vote-baseline/plotting.jl
+julia -t 32 --project=ext/IsingLearning ext/IsingLearning/experiments/XOR/all-to-all-input-averaged-readout/xor_manager_input_averaging.jl
+julia -t 32 --project=ext/IsingLearning ext/IsingLearning/experiments/XOR/checkerboard-local-cnn-two-hidden-layers/xor_local_cnn_like_grid.jl
+julia -t 32 --project=ext/IsingLearning ext/IsingLearning/experiments/XOR/edge-driven-single-layer-readout/xor_edge_application_grid.jl
 julia --project=ext/IsingLearning ext/IsingLearning/experiments/XOR/plot_run_results.jl
+julia --project=ext/IsingLearning ext/IsingLearning/experiments/plot_architecture_schematics.jl
 ```

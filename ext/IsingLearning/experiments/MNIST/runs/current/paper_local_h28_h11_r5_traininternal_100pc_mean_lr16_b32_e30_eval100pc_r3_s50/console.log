@@ -1,3 +1,0 @@
-  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-(timestamp = "2026-05-24T03:09:33", checkpoint = "ext/IsingLearning/experiments/MNIST/runs/current/paper_local_h28_h11_r5_traininternal_100pc_mean_lr16_b32_e30/best_model.bin", test_per_class = 100, free_reads = 3, free_sweeps = 50, seconds = 9.2999211, accuracy = 0.719, loss = 4.478f0, pred_counts = "96-90-219-108-64-90-87-94-64-88")

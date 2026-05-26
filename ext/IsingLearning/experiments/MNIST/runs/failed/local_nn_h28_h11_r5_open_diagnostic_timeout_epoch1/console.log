@@ -1,6 +1,0 @@
-  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-Running 1 MNIST local NN config(s)
-threads = 32, workers = 32, batchsize = 256, epochs = 12
-[1/1] r5_open
-Epoch 1 train: classification_error = 0.91796875, mean_squared_error = 15.645475, accuracy = 0.08203125
-Epoch 1 validation: classification_error = 0.9296875, mean_squared_error = 15.656058, accuracy = 0.0703125

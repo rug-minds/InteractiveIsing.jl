@@ -1,3 +1,0 @@
-config,radius,periodic,hidden_side,best_mse,best_accuracy,best_epoch,best_min_margin,best_margin_epoch,first_all_correct_epoch,run_dir
-h8_r8_open,8,false,8,0.044284396,1.0,80,0.63584864,80,25,ext/IsingLearning/experiments/XOR/runs/local_checkerboard_twoclass_zero_h8_r8r9_rep64_s20_e80\h8_r8_open
-h8_r9_open,9,false,8,0.33636203,0.75,80,-0.03564602,80,-1,ext/IsingLearning/experiments/XOR/runs/local_checkerboard_twoclass_zero_h8_r8r9_rep64_s20_e80\h8_r9_open

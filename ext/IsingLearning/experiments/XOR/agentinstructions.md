@@ -4,7 +4,9 @@ Use of this file: operational rules for future agents before running or editing 
 
 - Do diagnostic runs before broad grids. If the metrics are not learning, stop and inspect instead of burning compute.
 - Use `ProcessManager` for the new XOR experiments.
+- Keep `ProcessManager` workers deployable as normal loop algorithms. Write custom `ProcessAlgorithm`s only for unit operations, then compose phases with `@Routine` and `@CompositeAlgorithm` instead of packing a whole training step into one bespoke algorithm.
 - Use Adam by default for XOR experiments. Only use SGD/descent when explicitly comparing optimizers.
+- The small direct baseline is `two-input-2x2-hidden-majority-vote-baseline`: `2`-spin input, all-to-all `2x2` hidden layer, and four output replicas reduced by majority vote.
 - For 32 workers, schedule 32 manager jobs per epoch so work can actually run in parallel.
 - Use multiple random initializations/repeats per XOR case.
 - Do not schedule one job per random init. Put a few random initializations/repeats inside each worker `ProcessAlgorithm` execution and average them in that worker-local buffer.
@@ -17,13 +19,21 @@ Use of this file: operational rules for future agents before running or editing 
 - When LocalLangevin-only runs bounce, compare with `BlockLangevin` in the same manager file instead of changing the manager path.
 - Accuracy alone is not enough. Log per-case predictions, scores, margins, MSE, and whether all four cases are correct.
 - Best-MSE bar plots without stable learning curves or seed robustness are not useful results.
-- CSVs alone are not a complete result. If a run folder has `metrics.csv` or `summary.csv` without matching PNGs, run `plot_run_results.jl` before calling it done.
+- CSVs alone are not a complete result. Every CSV produced by an XOR experiment needs a matching PNG plot. Aggregate/comparison CSVs plot to the family `aggregate_plots` folder; per-run CSVs plot into the same `experiments/current/<experiment-name>` subfolder as the CSV.
+- Generated folder names must explain what they contain. Do not create standalone plot folders named only `majority`, `pattern`, or `two_class`; use names like `output_majority_vote`, `output_spatial_pattern_target`, and `output_replicated_two_class`.
+- Plot labels and generated plot filenames must not expose default/internal suffixes like `_open`. Only include boundary condition words when they distinguish a comparison, such as `periodic` versus the default open boundary.
+- Every aggregate experiment family needs a generated input-pattern and architecture schematic at `schematic.png` in its architecture folder. Regenerate it with `ext/IsingLearning/experiments/plot_architecture_schematics.jl` after adding a new architecture family.
+- Do not produce SVGs unless explicitly requested.
+- Keep smoke, sanity, scout, and diagnostic outputs under `ext/IsingLearning/experiments/XOR/diagnostics/runs`; do not mix them with result experiments.
+- Aggregate plots must use line styles and stroke widths as well as colors. Current convention: NN/radius 1-3 solid/thinner, 4-7 dashed/medium, 8+ dotted/thicker.
 - For the local checkerboard XOR architecture, compare hidden sizes `8x8` and `16x16` and local NN/radius up to `10`.
 - If majority-vote output only gives transient tiny-margin correctness, use the replicated `two_class` output before doing another broad grid; `pattern` is useful as a diagnostic but was not robust here.
 - When high-repeat validation rejects logged best checkpoints, test continuous zero initialization before sweeping more hyperparameters. Training and validation init modes must match.
-- For the local CNN-like checkerboard file, the first robust recipe is `output_mode=two_class`, `init_mode=zero`, `hidden=8x8`, `radius=8`, `BlockLangevin`, 20 free/nudged sweeps, 32 jobs per epoch, Adam, and high-repeat validation of `best_margin_params.bin`.
+- For `checkerboard-local-cnn-two-hidden-layers/xor_local_cnn_like_grid.jl`, the first robust recipe is `output_mode=two_class`, `init_mode=zero`, `hidden=8x8`, `radius=8`, `BlockLangevin`, 20 free/nudged sweeps, 32 jobs per epoch, Adam, and high-repeat validation of `best_margin_params.bin`.
+- For checkerboard continuations, use `ISING_XOR_CNN_RESUME_DIR` and `ISING_XOR_CNN_RESUME_FILE=best_margin_params.bin` instead of restarting from scratch. If the final logged epoch is a new best, continue with lower LR before changing architecture.
+- Validate promising checkerboard checkpoints with `checkerboard-local-cnn-two-hidden-layers/validate_checkerboard_checkpoints.jl` at 1024 repeats before treating them as generalizing.
 - Do not treat nearby radii as interchangeable. In the first zero-start two-class run, radius 8 solved with a wide margin while radius 9 still missed one case by epoch 80.
-- For the edge-input file, use the replicated `two_class` output as the default. The old scalar majority edge readout is still an option, but it was not the solved recipe.
+- For `edge-driven-single-layer-readout/xor_edge_application_grid.jl`, use the replicated `two_class` output as the default. The old scalar majority edge readout is still an option, but it was not the solved recipe.
 - For edge-input diagnostics, start with `side=16`, `init_mode=zero`, `dynamics=block`, `free/nudged=20`, `β=1`, Adam `lr=0.002`, decay `0.995`, weight decay `1e-4`, 64 repeats per case, and 32 jobs per epoch.
 - In the first clean edge-input sweep, NN `6`, `7`, and `9` solved robustly; NN `1-4` did not. Validate promising edge checkpoints with at least 512 evaluation repeats before treating them as useful.
 - Keep learning history, final params, best params, best-margin params, and snapshots when requested.
