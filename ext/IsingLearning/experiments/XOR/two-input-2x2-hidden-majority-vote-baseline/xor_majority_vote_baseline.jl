@@ -691,16 +691,30 @@ function evaluate_majority(layer::L, ps::P, st::S, x::X, y::Y, targets::Z, confi
     outputs = zeros(FT, size(y))
     vote_scores = zeros(FT, length(targets))
     graph = st.graph
-    dynamics = deepcopy(layer.validation_algorithm)
-    dynamics_context = Processes.init(dynamics, (; model = graph))
+    dynamics_algorithm = deepcopy(layer.validation_algorithm)
+    validation_steps = layer.relaxation_steps
+    init_mode = config.init_mode
+    validation = Processes.resolve(Processes.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @state x
+
+        InitializeMajorityState!(dynamics.model, init_mode)
+        IsingLearning.apply_input(dynamics.model, x)
+        @repeat validation_steps dynamics()
+    end)
+    process = Processes.Process(
+        validation,
+        Processes.Init(:_state; x = zeros(FT, size(x, 1))),
+        Processes.Init(:dynamics; model = graph);
+        repeat = 1,
+    )
+    context = worker_context(process)
     IsingLearning.sync_params!(graph, ps)
     for repeat_idx in 1:config.eval_repeats
         for sample_idx in axes(x, 2)
-            initialize_majority_state_body!(graph, config.init_mode)
-            IsingLearning.apply_input(graph, view(x, :, sample_idx))
-            for step_idx in 1:layer.relaxation_steps
-                Processes.step!(dynamics, dynamics_context)
-            end
+            context.x .= view(x, :, sample_idx)
+            run(process)
+            wait(process)
             out = IsingLearning.graph_view(graph, layer.output_layer)
             outputs[:, sample_idx] .+= out
             vote_scores[sample_idx] += mean(out) >= zero(FT) ? one(FT) : -one(FT)

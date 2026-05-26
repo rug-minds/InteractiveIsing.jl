@@ -125,26 +125,34 @@ function plot_config_label(label::S) where {S<:AbstractString}
     nn_match = match(r"^nn(\d+)$", label)
     !isnothing(nn_match) && return "NN $(nn_match.captures[1])"
 
-    hidden_radius_match = match(r"^h(\d+)_r(\d+)(?:_(open|periodic))?$", label)
+    radius_pair_match = match(r"^r1_(\d+)_r2_(\d+)(?:_periodic)?$", label)
+    if !isnothing(radius_pair_match)
+        r1, r2 = radius_pair_match.captures
+        suffix = endswith(label, "_periodic") ? ", periodic" : ""
+        return "r1=$(r1), r2=$(r2)" * suffix
+    end
+
+    hidden_radius_match = match(r"^h(\d+)_r(\d+)(?:_periodic)?$", label)
     if !isnothing(hidden_radius_match)
-        hidden, radius, boundary = hidden_radius_match.captures
-        suffix = boundary == "periodic" ? ", periodic" : ""
+        hidden, radius = hidden_radius_match.captures
+        suffix = endswith(label, "_periodic") ? ", periodic" : ""
         return "$(hidden)x$(hidden), r$(radius)" * suffix
     end
 
-    return replace(label, r"_open\b" => "", "_" => " ")
+    return replace(label, "_" => " ")
 end
 
 """Return true for a leaf configuration folder that should not become a plot subfolder."""
 function is_leaf_config_label(label::S) where {S<:AbstractString}
     occursin(r"^nn\d+$", label) && return true
-    occursin(r"^h\d+_r\d+(?:_(?:open|periodic))?$", label) && return true
+    occursin(r"^r1_\d+_r2_\d+(?:_periodic)?$", label) && return true
+    occursin(r"^h\d+_r\d+(?:_periodic)?$", label) && return true
     return false
 end
 
 """Return a filename-safe configuration label without default boundary words."""
 function plot_file_label(label::S) where {S<:AbstractString}
-    return replace(label, r"_open\b" => "")
+    return label
 end
 
 """Save one plot as the requested PNG file."""
@@ -433,14 +441,9 @@ function plot_family_aggregates()
     mkpath(checker_out)
     checker_specs = (
         (
-            root = joinpath(CHECKERBOARD_ROOT, "experiments", "current", "local_checkerboard_twoclass_h8_r7to10_resume_bestmargin_e200_lr001_decay998"),
-            stem = "output_replicated_two_class_h8_r7to10",
-            title = "checkerboard replicated two-class output 8x8 radius 7-10",
-        ),
-        (
-            root = joinpath(CHECKERBOARD_ROOT, "experiments", "current", "local_checkerboard_twoclass_h8_r9r10_resume2_bestmargin_e240_lr0005_decay999"),
-            stem = "output_replicated_two_class_h8_r9r10",
-            title = "checkerboard replicated two-class output 8x8 radius 9-10",
+            root = joinpath(CHECKERBOARD_ROOT, "experiments", "current", "input_8x8_hidden1_8x8_hidden2_4x4_output_4x4_two_class"),
+            stem = "input_8x8_hidden1_8x8_hidden2_4x4_output_4x4_two_class_r1_1to5_r2_1to2",
+            title = "checkerboard two-class output 8x8 to 4x4 r1/r2 grid",
         ),
     )
     for spec in checker_specs
@@ -455,7 +458,7 @@ function plot_family_aggregates()
     open(joinpath(checker_out, "README.md"), "w") do io
         println(io, "# Checkerboard Aggregate Plots")
         println(io)
-        println(io, "Use of this folder: aggregate checkerboard comparison PNGs only. Solid/thinner lines are NN/radius 1-3, dashed/medium lines are 4-7, dotted/thicker lines are 8+.")
+        println(io, "Use of this folder: aggregate checkerboard comparison PNGs only. Current checkerboard runs compare the `8x8 -> 8x8 -> 4x4 -> 4x4` architecture over `r1=1:5` and `r2=1:2`.")
     end
 
     edge_run = joinpath(EDGE_ROOT, "experiments", "current", "edge_twoclass_zero_side16_nn1to10_e160")

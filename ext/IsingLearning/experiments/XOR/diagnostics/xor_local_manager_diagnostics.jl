@@ -30,7 +30,7 @@ function sharing_counts(manager::M) where {M<:Processes.ProcessManager}
     nz_ids = UInt[]
     bias_ids = UInt[]
     for worker in Processes.workers(manager)
-        model = worker_context(worker).base_context.model
+        model = Processes.context(worker).dynamics.model
         push!(adj_ids, objectid(II.adj(model)))
         push!(nz_ids, objectid(SparseArrays.nonzeros(II.adj(model))))
         push!(bias_ids, objectid(II.getparam(model.hamiltonian, II.MagField, :b)))
@@ -70,9 +70,9 @@ function time_local_cnn_setting(workers::Integer; radius::Integer, periodic::Boo
     batch_times = Float64[]
     try
         # One warm-up batch removes first-use scheduler and generated-code noise.
-        warmup_seconds = @elapsed run_cnn_batch!(manager, jobs, config)
+        warmup_seconds = @elapsed run_cnn_batch!(manager, jobs, config, 1)
         for _ in 1:Int(nbatches)
-            push!(batch_times, @elapsed run_cnn_batch!(manager, jobs, config))
+            push!(batch_times, @elapsed run_cnn_batch!(manager, jobs, config, 1))
         end
         after = evaluate_cnn_xor(layer, manager.state.params[], st, x, y, config)
         return (;

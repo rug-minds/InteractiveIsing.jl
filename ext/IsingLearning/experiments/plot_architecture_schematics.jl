@@ -113,11 +113,11 @@ function save_xor_checkerboard_schematic(outdir::P) where {P<:AbstractString}
     end
     layers = [
         (name = "Input", detail = "8x8 checkerboard fields", width = 1.4, height = 1.4, color = (:dodgerblue3, 0.35)),
-        (name = "Hidden 1", detail = "8x8 or 16x16", width = 1.8, height = 1.8, color = (:seagreen, 0.35)),
-        (name = "Hidden 2", detail = "6x6 in CNN-like runs", width = 1.45, height = 1.45, color = (:goldenrod3, 0.35)),
+        (name = "Hidden 1", detail = "8x8 local r1", width = 1.8, height = 1.8, color = (:seagreen, 0.35)),
+        (name = "Hidden 2", detail = "4x4 local r2", width = 1.15, height = 1.15, color = (:goldenrod3, 0.35)),
         (name = "Output", detail = "4x4 target/vote", width = 1.15, height = 1.15, color = (:firebrick, 0.35)),
     ]
-    draw_architecture!(fig, (3, 1:4), "Checkerboard/local XOR architecture", layers, ["local radius sweep", "local radius sweep", "readout"])
+    draw_architecture!(fig, (3, 1:4), "Checkerboard/local XOR architecture", layers, ["r1 = 1..5", "r2 = 1..2", "r2 readout"])
     path = joinpath(outdir, "schematic.png")
     save(path, fig)
     return path
@@ -156,11 +156,11 @@ function save_xor_edge_schematic(outdir::P) where {P<:AbstractString}
         heatmap!(ax, pattern; colormap = :balance, colorrange = (-1, 1))
     end
     layers = [
-        (name = "Input edge", detail = "16x1 checkerboard line", width = 0.55, height = 2.3, color = (:dodgerblue3, 0.35)),
-        (name = "Propagation layer", detail = "16x16 local NN sweep", width = 2.2, height = 2.2, color = (:seagreen, 0.35)),
-        (name = "Output edge", detail = "16x1 majority/two-class line", width = 0.55, height = 2.3, color = (:firebrick, 0.35)),
+        (name = "Input layer", detail = "separate 16x1 line", width = 0.55, height = 2.3, color = (:dodgerblue3, 0.35)),
+        (name = "Dynamic layer", detail = "full 16x16 live field", width = 2.2, height = 2.2, color = (:seagreen, 0.35)),
+        (name = "Output layer", detail = "separate 16x1 line", width = 0.55, height = 2.3, color = (:firebrick, 0.35)),
     ]
-    draw_architecture!(fig, (3, 1:4), "Edge application architecture", layers, ["edge fanout", "edge readout"])
+    draw_architecture!(fig, (3, 1:4), "Edge application architecture", layers, ["fanout to left edge", "readout from right edge"])
     path = joinpath(outdir, "schematic.png")
     save(path, fig)
     return path

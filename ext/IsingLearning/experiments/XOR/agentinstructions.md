@@ -21,20 +21,23 @@ Use of this file: operational rules for future agents before running or editing 
 - Best-MSE bar plots without stable learning curves or seed robustness are not useful results.
 - CSVs alone are not a complete result. Every CSV produced by an XOR experiment needs a matching PNG plot. Aggregate/comparison CSVs plot to the family `aggregate_plots` folder; per-run CSVs plot into the same `experiments/current/<experiment-name>` subfolder as the CSV.
 - Generated folder names must explain what they contain. Do not create standalone plot folders named only `majority`, `pattern`, or `two_class`; use names like `output_majority_vote`, `output_spatial_pattern_target`, and `output_replicated_two_class`.
-- Plot labels and generated plot filenames must not expose default/internal suffixes like `_open`. Only include boundary condition words when they distinguish a comparison, such as `periodic` versus the default open boundary.
+- Plot labels and generated plot filenames must not expose default/internal boundary suffixes. Only include boundary condition words when they distinguish a comparison, such as `periodic` versus the default boundary.
 - Every aggregate experiment family needs a generated input-pattern and architecture schematic at `schematic.png` in its architecture folder. Regenerate it with `ext/IsingLearning/experiments/plot_architecture_schematics.jl` after adding a new architecture family.
 - Do not produce SVGs unless explicitly requested.
 - Keep smoke, sanity, scout, and diagnostic outputs under `ext/IsingLearning/experiments/XOR/diagnostics/runs`; do not mix them with result experiments.
 - Aggregate plots must use line styles and stroke widths as well as colors. Current convention: NN/radius 1-3 solid/thinner, 4-7 dashed/medium, 8+ dotted/thicker.
-- For the local checkerboard XOR architecture, compare hidden sizes `8x8` and `16x16` and local NN/radius up to `10`.
+- For the local checkerboard XOR architecture, keep the architecture folder reusable and name result subfolders by architecture. The current active architecture experiment is `8x8` checkerboard input -> `8x8` hidden1 -> `4x4` hidden2 -> `4x4` two-class output.
 - If majority-vote output only gives transient tiny-margin correctness, use the replicated `two_class` output before doing another broad grid; `pattern` is useful as a diagnostic but was not robust here.
 - When high-repeat validation rejects logged best checkpoints, test continuous zero initialization before sweeping more hyperparameters. Training and validation init modes must match.
-- For `checkerboard-local-cnn-two-hidden-layers/xor_local_cnn_like_grid.jl`, the first robust recipe is `output_mode=two_class`, `init_mode=zero`, `hidden=8x8`, `radius=8`, `BlockLangevin`, 20 free/nudged sweeps, 32 jobs per epoch, Adam, and high-repeat validation of `best_margin_params.bin`.
+- For `checkerboard-local-cnn-two-hidden-layers/xor_local_cnn_like_grid.jl`, sweep separate architecture radii: `r1=1:5` for input/hidden1 locality and `r2=1:2` for hidden2/readout locality. Use `output_mode=two_class`, `init_mode=zero`, `BlockLangevin`, 20 free/nudged sweeps, 32 jobs per epoch, Adam, and high-repeat validation of `best_margin_params.bin`.
 - For checkerboard continuations, use `ISING_XOR_CNN_RESUME_DIR` and `ISING_XOR_CNN_RESUME_FILE=best_margin_params.bin` instead of restarting from scratch. If the final logged epoch is a new best, continue with lower LR before changing architecture.
 - Validate promising checkerboard checkpoints with `checkerboard-local-cnn-two-hidden-layers/validate_checkerboard_checkpoints.jl` at 1024 repeats before treating them as generalizing.
 - Do not treat nearby radii as interchangeable. In the first zero-start two-class run, radius 8 solved with a wide margin while radius 9 still missed one case by epoch 80.
 - For `edge-driven-single-layer-readout/xor_edge_application_grid.jl`, use the replicated `two_class` output as the default. The old scalar majority edge readout is still an option, but it was not the solved recipe.
 - For edge-input diagnostics, start with `side=16`, `init_mode=zero`, `dynamics=block`, `free/nudged=20`, `β=1`, Adam `lr=0.002`, decay `0.995`, weight decay `1e-4`, 64 repeats per case, and 32 jobs per epoch.
-- In the first clean edge-input sweep, NN `6`, `7`, and `9` solved robustly; NN `1-4` did not. Validate promising edge checkpoints with at least 512 evaluation repeats before treating them as useful.
+- The edge-input architecture uses separate `16x1` input and output layers around a full dynamic `16x16` field; do not document it as frozen first/last columns of the dynamic field.
+- Edge-input NN comparisons need multiple seeds per NN. Use `ISING_XOR_EDGE_SEEDS` or the default five-seed grid before treating an NN value as robust.
+- In the first clean edge-input sweep, NN `6`, `7`, and `9` solved in one seed; NN `1-4` did not. Validate promising edge conclusions with repeated seeds and at least 512 evaluation repeats before treating them as useful.
 - Keep learning history, final params, best params, best-margin params, and snapshots when requested.
+- After a run succeeds, write `success.md` in that experiment run folder. Use it to explain what made the run work: architecture choices, optimizer settings, initialization, dynamics, repeats/jobs, validation checks, and any failed assumptions that were corrected. Keep the architecture `README.md` focused on experiment motivation and design rather than run-result dumps.
 - Update this file whenever a structural experiment mistake is found.

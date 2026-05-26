@@ -97,8 +97,6 @@ struct PaperMNISTJob{X<:AbstractVector,Y<:AbstractVector}
     y::Y
 end
 
-struct PaperMNISTWorkerStep <: Processes.ProcessAlgorithm end
-
 mutable struct PaperMNISTManagerState{M,G}
     model::M
     batch_gradient::G
@@ -106,6 +104,29 @@ mutable struct PaperMNISTManagerState{M,G}
     ncorrect::Base.RefValue{Int}
     nskipped::Base.RefValue{Int}
     total_loss::Base.RefValue{PMNIST_FT}
+end
+
+"""Construct the configured single-step dynamics algorithm for phase routines."""
+function mnist_dynamics_algorithm()
+    name = lowercase(strip(get(ENV, "ISING_MNIST_PM_DYNAMICS", "metropolis")))
+    if name == "metropolis"
+        return II.Metropolis()
+    elseif name == "local_langevin"
+        stepsize = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LANGEVIN_STEPSIZE", "0.1"))
+        adjusted = parse(Bool, lowercase(get(ENV, "ISING_MNIST_PM_LANGEVIN_ADJUSTED", "false")))
+        order = Symbol(get(ENV, "ISING_MNIST_PM_LANGEVIN_ORDER", "random"))
+        return II.LocalLangevin(; stepsize, adjusted, order)
+    elseif name == "global_langevin"
+        stepsize = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LANGEVIN_STEPSIZE", "0.1"))
+        adjusted = parse(Bool, lowercase(get(ENV, "ISING_MNIST_PM_LANGEVIN_ADJUSTED", "false")))
+        return II.GlobalLangevin(; stepsize, adjusted)
+    elseif name == "block_langevin"
+        stepsize = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LANGEVIN_STEPSIZE", "0.1"))
+        adjusted = parse(Bool, lowercase(get(ENV, "ISING_MNIST_PM_LANGEVIN_ADJUSTED", "false")))
+        block_size = parse(Int, get(ENV, "ISING_MNIST_PM_LANGEVIN_BLOCK_SIZE", "256"))
+        return II.BlockLangevin(; stepsize, adjusted, block_size)
+    end
+    throw(ArgumentError("unknown ISING_MNIST_PM_DYNAMICS=`$name`"))
 end
 
 """Parse a comma-separated integer list."""
@@ -491,52 +512,160 @@ function worker_context(worker::W) where {W}
     return Processes.context(worker)._state
 end
 
-"""Initialize one persistent worker process context."""
-function Processes.init(::PaperMNISTWorkerStep, context)
-    model = context.model
-    x = get(context, :x, zeros(PMNIST_FT, PMNIST_INPUT_DIM))
-    y = get(context, :y, zeros(PMNIST_FT, PMNIST_NCLASSES * model.config.output_replicas))
-    gradient = get(context, :gradient, gradient_buffer(model))
-    metropolis_context = Processes.init(II.Metropolis(), (; model = model.graph))
-    return (;
-        model,
-        x,
-        y,
-        gradient,
-        metropolis_context,
-        nsamples = Ref(0),
-        ncorrect = Ref(0),
-        nskipped = Ref(0),
-        total_loss = Ref(0f0),
-    )
-end
-
-"""Accumulate one paper-style EP sample gradient inside a manager worker."""
-function Processes.step!(::PaperMNISTWorkerStep, context)
-    stats = accumulate_sample_gradient!(context.gradient, context.model, context.x, context.y, context.metropolis_context)
-    context.nsamples[] += 1
-    context.ncorrect[] += stats.correct ? 1 : 0
-    context.nskipped[] += stats.skipped ? 1 : 0
-    context.total_loss[] += stats.loss
+"""Update worker-local counters after one contrastive sample."""
+function update_worker_stats!(
+    nsamples::Base.RefValue{I},
+    ncorrect::Base.RefValue{J},
+    nskipped::Base.RefValue{K},
+    total_loss::Base.RefValue{T},
+    stats::S,
+) where {I<:Integer,J<:Integer,K<:Integer,T<:Real,S}
+    nsamples[] += 1
+    ncorrect[] += stats.correct ? 1 : 0
+    nskipped[] += stats.skipped ? 1 : 0
+    total_loss[] += stats.loss
     return nothing
 end
 
-"""Keep the reusable worker context alive across manager jobs."""
-function Processes.cleanup(::PaperMNISTWorkerStep, context)
-    return nothing
+"""Return the number of dynamics steps used for a configured sweep count."""
+function phase_steps(model::M, sweeps::I) where {M<:PaperMNISTModel,I<:Integer}
+    return max(1, Int(sweeps) * length(II.state(model.graph)))
+end
+
+"""Build one temperature-scheduled free-phase dynamics step."""
+function free_phase_step_algorithm(dynamics_algorithm::D, temperature_algorithm::T) where {D,T}
+    return Processes.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @alias free_temperature = temperature_algorithm
+
+        free_temperature(dynamics.model)
+        dynamics()
+    end
+end
+
+"""Build one temperature-scheduled nudged-phase dynamics step."""
+function nudged_phase_step_algorithm(dynamics_algorithm::D, temperature_algorithm::T) where {D,T}
+    return Processes.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @alias nudge_temperature = temperature_algorithm
+
+        nudge_temperature(dynamics.model)
+        dynamics()
+    end
+end
+
+"""Build the reusable free-phase routine."""
+function free_phase_algorithm(
+    dynamics_algorithm::D,
+    temperature_algorithm::T,
+    steps::I,
+) where {D,T,I<:Integer}
+    phase_step = free_phase_step_algorithm(dynamics_algorithm, temperature_algorithm)
+    return Processes.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @alias phase_step = phase_step
+        @state mnist_model
+        @state x
+        @state free_state
+        @state free_best_energy
+        @state rng
+
+        RandomizeGraphState!(dynamics.model, rng)
+        apply_sample_bias!(mnist_model, x)
+        @repeat steps phase_step()
+        CaptureBestEnergyState!(dynamics.model, free_best_energy, free_state)
+    end
+end
+
+"""Build the reusable nudged-phase routine."""
+function nudged_phase_algorithm(
+    dynamics_algorithm::D,
+    temperature_algorithm::T,
+    steps::I,
+) where {D,T,I<:Integer}
+    phase_step = nudged_phase_step_algorithm(dynamics_algorithm, temperature_algorithm)
+    return Processes.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @alias phase_step = phase_step
+        @state mnist_model
+        @state x
+        @state y
+        @state free_state
+        @state nudged_state
+        @state nudged_best_energy
+
+        SetGraphState!(dynamics.model, free_state)
+        apply_nudged_sample_bias!(mnist_model, x, y)
+        @repeat steps phase_step()
+        CaptureBestEnergyState!(dynamics.model, nudged_best_energy, nudged_state)
+    end
+end
+
+"""Build the reusable LoopAlgorithm that fills one worker buffer."""
+function paper_worker_algorithm(
+    dynamics_algorithm::D,
+    config::C,
+    nstates::I,
+) where {D,C<:PaperMNISTManagerConfig,I<:Integer}
+    free_steps = max(1, config.free_sweeps * Int(nstates))
+    nudge_steps = max(1, config.nudge_sweeps * Int(nstates))
+    free_reads = max(1, config.free_reads)
+    nudge_reads = max(1, config.nudge_reads)
+    free_temperature = GeometricTemperatureSchedule(; start_T = config.hot_temp, stop_T = config.cold_temp, n_steps = free_steps)
+    nudge_temperature = ReverseAnnealTemperatureSchedule(; cold_T = config.cold_temp, peak_T = config.reverse_temp, n_steps = nudge_steps)
+    free_phase = free_phase_algorithm(dynamics_algorithm, free_temperature, free_steps)
+    nudged_phase = nudged_phase_algorithm(dynamics_algorithm, nudge_temperature, nudge_steps)
+    return Processes.@Routine begin
+        @alias free_phase = free_phase
+        @alias nudged_phase = nudged_phase
+        @state mnist_model
+        @state x
+        @state y
+        @state gradient
+        @state free_state
+        @state nudged_state
+        @state free_best_energy
+        @state nudged_best_energy
+        @state rng
+        @state nsamples
+        @state ncorrect
+        @state nskipped
+        @state total_loss
+
+        ResetBestEnergyCapture!(free_best_energy, free_state)
+        @repeat free_reads free_phase()
+
+        ResetBestEnergyCapture!(nudged_best_energy, nudged_state)
+        @repeat nudge_reads nudged_phase()
+
+        stats = finish_contrastive_sample!(gradient, mnist_model, x, y, free_state, nudged_state)
+        update_worker_stats!(nsamples, ncorrect, nskipped, total_loss, stats)
+    end
 end
 
 """Create one reusable manager-owned paper-style worker."""
-function paper_worker(source::M, worker_idx::I) where {M<:PaperMNISTModel,I<:Integer}
+function paper_worker(source::M, worker_idx::I, dynamics_algorithm::D) where {M<:PaperMNISTModel,I<:Integer,D}
     model = worker_model(source, worker_idx)
+    graph_state = II.state(model.graph)
+    algorithm = Processes.resolve(paper_worker_algorithm(deepcopy(dynamics_algorithm), model.config, length(graph_state)))
     return Processes.Process(
-        :_state => PaperMNISTWorkerStep(),
+        algorithm,
         Processes.Init(:_state;
-            model,
+            mnist_model = model,
             x = zeros(PMNIST_FT, PMNIST_INPUT_DIM),
             y = zeros(PMNIST_FT, PMNIST_NCLASSES * source.config.output_replicas),
             gradient = gradient_buffer(model),
-        );
+            free_state = similar(graph_state),
+            nudged_state = similar(graph_state),
+            free_best_energy = Ref(PMNIST_FT(Inf)),
+            nudged_best_energy = Ref(PMNIST_FT(Inf)),
+            rng = model.rng,
+            nsamples = Ref(0),
+            ncorrect = Ref(0),
+            nskipped = Ref(0),
+            total_loss = Ref(0f0),
+        ),
+        Processes.Init(:dynamics; model = model.graph);
         repeat = 1,
     )
 end
@@ -544,8 +673,9 @@ end
 """Create the ProcessManager for paper-style MNIST minibatches."""
 function paper_manager(source::M) where {M<:PaperMNISTModel}
     state = PaperMNISTManagerState(source, gradient_buffer(source), Ref(0), Ref(0), Ref(0), Ref(0f0))
+    dynamics_algorithm = mnist_dynamics_algorithm()
     recipe = (;
-        makeworker = (idx, manager) -> paper_worker(manager.state.model, idx),
+        makeworker = (idx, manager) -> paper_worker(manager.state.model, idx, dynamics_algorithm),
         prepare! = (slot, job, manager) -> begin
             ctx = worker_context(slot.worker)
             ctx.x .= job.x
@@ -629,90 +759,9 @@ function apply_sample_bias!(
     return model
 end
 
-"""Reset sampled spins to random Ising states."""
-function randomize_state!(model::M) where {M<:PaperMNISTModel}
-    s = II.state(model.graph)
-    @inbounds for idx in eachindex(s)
-        s[idx] = rand(model.rng, Bool) ? 1f0 : -1f0
-    end
-    return model
-end
-
-"""Evaluate the package Hamiltonian for choosing the lowest-energy read."""
-function graph_energy(model::M) where {M<:PaperMNISTModel}
-    s = II.state(model.graph)
-    b = II.getparam(model.graph.hamiltonian, II.MagField, :b)
-    A = II.adj(model.graph)
-    colptrs = SparseArrays.getcolptr(A)
-    rowvals = SparseArrays.rowvals(A)
-    nzvals = SparseArrays.nonzeros(A)
-    energy = 0f0
-    @inbounds for col in 1:size(A, 2)
-        for ptr in colptrs[col]:(colptrs[col + 1] - 1)
-            energy -= 0.5f0 * nzvals[ptr] * s[rowvals[ptr]] * s[col]
-        end
-    end
-    @inbounds for idx in eachindex(s)
-        energy -= b[idx] * s[idx]
-    end
-    return energy
-end
-
-"""Run one full active-spin Metropolis sweep."""
-function metropolis_sweep!(context::C, nactive::I) where {C,I<:Integer}
-    algorithm = II.Metropolis()
-    for _ in 1:Int(nactive)
-        Processes.step!(algorithm, context)
-    end
-    return context
-end
-
-"""Run a cooling or reverse-annealing schedule."""
-function anneal!(model::M, context::C, sweeps::I; reverse::Bool = false) where {M<:PaperMNISTModel,C,I<:Integer}
-    config = model.config
-    total = max(Int(sweeps), 1)
-    nactive = length(II.state(model.graph))
-    for sweep in 1:total
-        progress = total == 1 ? 1f0 : PMNIST_FT(sweep - 1) / PMNIST_FT(total - 1)
-        T = if reverse
-            progress <= 0.5f0 ?
-                config.cold_temp + (progress / 0.5f0) * (config.reverse_temp - config.cold_temp) :
-                config.reverse_temp + ((progress - 0.5f0) / 0.5f0) * (config.cold_temp - config.reverse_temp)
-        else
-            config.hot_temp * (config.cold_temp / config.hot_temp)^progress
-        end
-        II.temp!(model.graph, T)
-        metropolis_sweep!(context, nactive)
-    end
-    II.temp!(model.graph, config.cold_temp)
-    return model
-end
-
-"""Sample one free or nudged phase and return the lowest-energy state."""
-function sample_phase!(
-    model::M,
-    context::C,
-    x::X;
-    target = nothing,
-    beta::Real = 0,
-    reads::I,
-    sweeps::J,
-    initial_state = nothing,
-    reverse::Bool = false,
-) where {M<:PaperMNISTModel,C,X<:AbstractVector,I<:Integer,J<:Integer}
-    best_energy = Inf32
-    best_state = copy(II.state(model.graph))
-    for _ in 1:Int(reads)
-        isnothing(initial_state) ? randomize_state!(model) : (II.state(model.graph) .= initial_state)
-        apply_sample_bias!(model, x; target, beta)
-        anneal!(model, context, sweeps; reverse)
-        energy = graph_energy(model)
-        if energy < best_energy
-            best_energy = energy
-            best_state .= II.state(model.graph)
-        end
-    end
-    return best_state, best_energy
+"""Apply per-sample input fields and the configured output nudge."""
+function apply_nudged_sample_bias!(model::M, x::X, target::Y) where {M<:PaperMNISTModel,X<:AbstractVector,Y<:AbstractVector}
+    return apply_sample_bias!(model, x; target, beta = model.config.β)
 end
 
 """Average output replicas into one score per digit."""
@@ -725,16 +774,16 @@ function class_scores(output::V, replicas::I) where {V<:AbstractVector,I<:Intege
     return scores
 end
 
-"""Accumulate the paper-style one-sided EP gradient for one sample."""
-function accumulate_sample_gradient!(
+"""Accumulate the paper-style gradient from already sampled free/nudged states."""
+function finish_contrastive_sample!(
     gradient::G,
     model::M,
     x::X,
     y::Y,
-    metropolis_context::C,
-) where {G<:NamedTuple,M<:PaperMNISTModel,X<:AbstractVector,Y<:AbstractVector,C}
+    free_state::F,
+    nudged_state::N,
+) where {G<:NamedTuple,M<:PaperMNISTModel,X<:AbstractVector,Y<:AbstractVector,F<:AbstractVector,N<:AbstractVector}
     config = model.config
-    free_state, _ = sample_phase!(model, metropolis_context, x; reads = config.free_reads, sweeps = config.free_sweeps)
     free_h1 = copy(@view free_state[model.hidden1_idxs])
     free_h2 = copy(@view free_state[model.hidden2_idxs])
     free_o = copy(@view free_state[model.output_idxs])
@@ -744,17 +793,6 @@ function accumulate_sample_gradient!(
         return (; loss, correct, skipped = true)
     end
 
-    nudged_state, _ = sample_phase!(
-        model,
-        metropolis_context,
-        x;
-        target = y,
-        beta = config.β,
-        reads = config.nudge_reads,
-        sweeps = config.nudge_sweeps,
-        initial_state = free_state,
-        reverse = true,
-    )
     nudged_h1 = @view nudged_state[model.hidden1_idxs]
     nudged_h2 = @view nudged_state[model.hidden2_idxs]
     nudged_o = @view nudged_state[model.output_idxs]
@@ -813,17 +851,61 @@ function batch_jobs(x::X, y::Y, indices::V) where {X<:AbstractMatrix,Y<:Abstract
     return jobs
 end
 
+"""Build a free-phase LoopAlgorithm for validation sampling."""
+function validation_free_phase_algorithm(
+    dynamics_algorithm::D,
+    config::C,
+    nstates::I,
+) where {D,C<:PaperMNISTManagerConfig,I<:Integer}
+    free_steps = max(1, config.free_sweeps * Int(nstates))
+    free_reads = max(1, config.free_reads)
+    free_temperature = GeometricTemperatureSchedule(; start_T = config.hot_temp, stop_T = config.cold_temp, n_steps = free_steps)
+    free_phase = free_phase_algorithm(dynamics_algorithm, free_temperature, free_steps)
+    return Processes.@Routine begin
+        @alias free_phase = free_phase
+        @state mnist_model
+        @state x
+        @state free_state
+        @state free_best_energy
+        @state rng
+
+        ResetBestEnergyCapture!(free_best_energy, free_state)
+        @repeat free_reads free_phase()
+    end
+end
+
+"""Create one reusable process for free-phase validation sampling."""
+function free_phase_process(model::M, dynamics_algorithm::D) where {M<:PaperMNISTModel,D}
+    graph_state = II.state(model.graph)
+    algorithm = Processes.resolve(validation_free_phase_algorithm(deepcopy(dynamics_algorithm), model.config, length(graph_state)))
+    return Processes.Process(
+        algorithm,
+        Processes.Init(:_state;
+            mnist_model = model,
+            x = zeros(PMNIST_FT, PMNIST_INPUT_DIM),
+            free_state = similar(graph_state),
+            free_best_energy = Ref(PMNIST_FT(Inf)),
+            rng = model.rng,
+        ),
+        Processes.Init(:dynamics; model = model.graph);
+        repeat = 1,
+    )
+end
+
 """Evaluate balanced accuracy and output loss with free-phase sampling."""
 function evaluate(model::M, x::X, y::Y) where {M<:PaperMNISTModel,X<:AbstractMatrix,Y<:AbstractMatrix}
     config = model.config
-    context = Processes.init(II.Metropolis(), (; model = model.graph))
+    process = free_phase_process(model, mnist_dynamics_algorithm())
+    context = worker_context(process)
     correct = 0
     loss = 0f0
     pred_counts = zeros(Int, PMNIST_NCLASSES)
     for sample_idx in axes(x, 2)
         target = view(y, :, sample_idx)
-        free_state, _ = sample_phase!(model, context, view(x, :, sample_idx); reads = config.free_reads, sweeps = config.free_sweeps)
-        output = @view free_state[model.output_idxs]
+        context.x .= view(x, :, sample_idx)
+        run(process)
+        wait(process)
+        output = @view context.free_state[model.output_idxs]
         pred = argmax(class_scores(output, config.output_replicas))
         truth = argmax(class_scores(target, config.output_replicas))
         pred_counts[pred] += 1
