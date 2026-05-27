@@ -31,9 +31,9 @@ using ..Processes
 using ..InteractiveIsing: AbstractIsingLayer, AbstractLayerTopology, Clamping, CoulombHamiltonian,
     CastVec, HamiltonianTerms, IsingGraph, MagField, PTimer, PolynomialHamiltonian,
     PolledObservable, Parameter, SingleLayerGraph, addRandomDefects!, adj, graphidxs,
-    hamiltonian, hamiltonians, idxToCoord, inline_layer_dispatch, layers, modulefolder,
+    Coordinate, hamiltonian, hamiltonians, idxToCoord, inline_layer_dispatch, layers, modulefolder,
     nstates, origin, parameters, plotCorr, poll!, processes, coords, saveGImg, state,
-    stateset, temp, temp!, topology, value, wg
+    stateset, temp, temp!, topology, value, wg, woorldcoordinate
 
 export AbstractPanel, PanelHandle, WindowHost, SimulationPanel, StatusPanel,
     AllLayersViewPanel, ConnectionsPanel, ContextLinesPanel, HamiltonianDisplaySpec, HamiltonianParameterPanel,

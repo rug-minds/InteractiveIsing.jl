@@ -14,6 +14,7 @@ function close_debug_window_names()
         :host_polled_label,
         :static_layer,
         :layer_view,
+        :all_layers_view,
         :temperature,
         :status,
         :magnetization,
@@ -22,6 +23,7 @@ function close_debug_window_names()
         :simulation_full,
         :public_interface,
         :layer_view_running_langevin,
+        :all_layers_view_running_langevin,
         :status_running_langevin,
         :simulation_running_langevin,
         :public_interface_running_langevin,
@@ -33,6 +35,7 @@ function close_debug_window_names()
         :simulation_async_close_graph,
         :subset_status_layer_langevin,
         :subset_layer_only_langevin,
+        :all_layers_view_open_then_langevin,
         :subset_layer_only_empty_on_close_langevin,
         :subset_layer_only_copy_langevin,
         :subset_layer_only_no_polltimer_langevin,
@@ -65,6 +68,7 @@ function close_debug_window_descriptions()
         (name = :host_polled_label, needs_graph = false, description = "Normal WindowHost; polling timer updates a PolledObservable-backed Label."),
         (name = :static_layer, needs_graph = true, description = "Graph state plot once, no frame notify and no graph close registration."),
         (name = :layer_view, needs_graph = true, description = "Existing LayerViewPanel only: graph state plot, frame notify, graph close registration."),
+        (name = :all_layers_view, needs_graph = true, description = "Existing AllLayersViewPanel only: all positioned layer plots, frame notify, graph close registration."),
         (name = :temperature, needs_graph = true, description = "Existing TemperaturePanel only: slider + graph-backed PolledObservable."),
         (name = :status, needs_graph = true, description = "Existing StatusPanel only: step counter, pause button, graph pause polling."),
         (name = :magnetization, needs_graph = true, description = "Existing MagnetizationPanel only: magnetization polling + textbox."),
@@ -73,6 +77,7 @@ function close_debug_window_descriptions()
         (name = :simulation_full, needs_graph = true, description = "Full default SimulationPanel, equivalent to interface(g)."),
         (name = :public_interface, needs_graph = true, description = "The exact public interface(g) entrypoint."),
         (name = :layer_view_running_langevin, needs_graph = true, description = "LayerViewPanel only, but starts a LocalLangevin process before opening."),
+        (name = :all_layers_view_running_langevin, needs_graph = true, description = "AllLayersViewPanel only, but starts a LocalLangevin process before opening."),
         (name = :status_running_langevin, needs_graph = true, description = "StatusPanel only, but starts a LocalLangevin process before opening."),
         (name = :simulation_running_langevin, needs_graph = true, description = "SimulationPanel with a LocalLangevin process already running."),
         (name = :public_interface_running_langevin, needs_graph = true, description = "Exact interface(g) with a LocalLangevin process already running."),
@@ -84,6 +89,7 @@ function close_debug_window_descriptions()
         (name = :simulation_async_close_graph, needs_graph = true, description = "SimulationPanel plus an explicit async close(g) callback."),
         (name = :subset_status_layer_langevin, needs_graph = true, description = "Subset composite: StatusPanel + LayerViewPanel, then starts a graph process (LocalLangevin by default)."),
         (name = :subset_layer_only_langevin, needs_graph = true, description = "Subset composite: LayerViewPanel only, then starts a graph process (LocalLangevin by default)."),
+        (name = :all_layers_view_open_then_langevin, needs_graph = true, description = "AllLayersViewPanel only, then starts a graph process. This is the closest generic suspect for MNIST-style all-layer windows."),
         (name = :subset_layer_only_empty_on_close_langevin, needs_graph = true, description = "Layer panel only, then starts a graph process. During shutdown it swaps the plot observable value to an empty array before GLMakie close."),
         (name = :subset_layer_only_copy_langevin, needs_graph = true, description = "Copy-buffer layer panel only, then starts a graph process. Tests whether decoupling Makie from live graph state fixes close freezes."),
         (name = :subset_layer_only_no_polltimer_langevin, needs_graph = true, description = "LayerViewPanel only with host poll timer disabled, then starts a graph process (LocalLangevin by default)."),
@@ -119,6 +125,7 @@ function open_close_debug_window(g, name::Symbol; kwargs...)
     isnothing(g) && throw(ArgumentError("close-debug window $name requires a graph."))
     name === :static_layer && return _debug_static_layer(g; kwargs...)
     name === :layer_view && return _debug_layer_view(g; kwargs...)
+    name === :all_layers_view && return _debug_all_layers_view(g; kwargs...)
     name === :temperature && return _debug_temperature(g; kwargs...)
     name === :status && return _debug_status(g; kwargs...)
     name === :magnetization && return _debug_magnetization(g; kwargs...)
@@ -127,6 +134,7 @@ function open_close_debug_window(g, name::Symbol; kwargs...)
     name === :simulation_full && return _debug_simulation(g; hide_left_buttons = false, kwargs...)
     name === :public_interface && return _debug_public_interface(g; kwargs...)
     name === :layer_view_running_langevin && return _debug_with_process(g, _debug_layer_view; kwargs...)
+    name === :all_layers_view_running_langevin && return _debug_with_process(g, _debug_all_layers_view; kwargs...)
     name === :status_running_langevin && return _debug_with_process(g, _debug_status; kwargs...)
     name === :simulation_running_langevin && return _debug_with_process(g, gg -> _debug_simulation(gg; hide_left_buttons = false); kwargs...)
     name === :public_interface_running_langevin && return _debug_with_process(g, _debug_public_interface; kwargs...)
@@ -138,6 +146,7 @@ function open_close_debug_window(g, name::Symbol; kwargs...)
     name === :simulation_async_close_graph && return _debug_simulation_async_close_graph(g; kwargs...)
     name === :subset_status_layer_langevin && return _debug_subset_then_langevin(g; status = true, layer = true, kinetic = false, temperature = false, hamiltonian = false, magnetization = false, kwargs...)
     name === :subset_layer_only_langevin && return _debug_subset_then_langevin(g; status = false, layer = true, kinetic = false, temperature = false, hamiltonian = false, magnetization = false, kwargs...)
+    name === :all_layers_view_open_then_langevin && return _debug_open_then_process(g, _debug_all_layers_view, _debug_langevin_algorithm(); kwargs...)
     name === :subset_layer_only_empty_on_close_langevin && return _debug_open_then_process(g, _debug_empty_on_close_layer_view, _debug_langevin_algorithm(); kwargs...)
     name === :subset_layer_only_copy_langevin && return _debug_open_then_process(g, _debug_copy_layer_view, _debug_langevin_algorithm(); kwargs...)
     name === :subset_layer_only_no_polltimer_langevin && return _debug_subset_then_langevin(g; status = false, layer = true, kinetic = false, temperature = false, hamiltonian = false, magnetization = false, start_poll_timer = false, kwargs...)
@@ -663,6 +672,42 @@ function _debug_layer_view(g; title = _debug_title(:layer_view), kwargs...)
     host[:layer_idx] = layer_idx
     host[:layer_view] = panel!(host, :layer_view, LayerViewPanel(g, layer_idx), (1, 1))
     return host
+end
+
+"""
+    _debug_all_layers_view(g; kwargs...) -> WindowHost
+
+Open the production `AllLayersViewPanel` by itself. Tests the MNIST-like path
+where several layer plots are notified from one frame callback.
+"""
+function _debug_all_layers_view(g; title = _debug_title(:all_layers_view), size = (1200, 820), kwargs...)
+    _debug_ensure_layer_coords!(g)
+    host = _debug_host(; title, size, kwargs...)
+    host[:all_layers_view] = panel!(host, :all_layers_view, AllLayersViewPanel(g), (1, 1))
+    return host
+end
+
+"""
+    _debug_ensure_layer_coords!(g)
+
+Assign simple non-overlapping xy coordinates to graph layers that do not
+already have coordinates. This keeps the all-layers close-debug window usable
+with ordinary toy graphs.
+"""
+function _debug_ensure_layer_coords!(g::T) where {T}
+    x = 0
+    for layer in layers(g)
+        has_coords = try
+            !isnothing(coords(layer))
+        catch
+            false
+        end
+        if !has_coords
+            _debug_package_module().setcoords!(layer; x, y = 0, z = 0)
+        end
+        x += maximum(size(layer)) + 2
+    end
+    return g
 end
 
 """

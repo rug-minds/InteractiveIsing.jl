@@ -229,7 +229,14 @@ end
 
 function _request_deferred_window_close!(host::WindowHost)
     (host.closed || host.closing) && return nothing
-    host.open[] = false
+    get(host.data, :deferred_close_requested, false) && return nothing
+    host.data[:deferred_close_requested] = true
+    _trace_close!(host, :deferred_close_requested)
+    @async begin
+        yield()
+        (host.closed || host.closing) && return nothing
+        host.open[] = false
+    end
     return nothing
 end
 
@@ -742,6 +749,68 @@ function _request_host_owned_process_shutdown!(host::WindowHost)
     return nothing
 end
 
+"""
+    _trace_close!(host, phase)
+
+Record an optional close-lifecycle phase for debugging native window freezes.
+Tracing is disabled unless `host.data[:close_trace]` is set to `true` or to a
+callback function. The trace path must stay lightweight because it can run from
+the native `window_open=false` observer.
+"""
+function _trace_close!(host::WindowHost, phase::Symbol)
+    tracer = get(host.data, :close_trace, nothing)
+    isnothing(tracer) && return nothing
+
+    row = (;
+        time = time(),
+        phase,
+        open = try
+            host.open[]
+        catch
+            missing
+        end,
+        closing = host.closing,
+        closed = host.closed,
+        hot_observables = _hot_observable_count(host),
+    )
+    log = get!(host.data, :close_trace_log, Any[])
+    previous_time = isempty(log) ? row.time : last(log).time
+    push!(log, row)
+
+    if tracer === true
+        println(
+            "[Windows close] ",
+            row.phase,
+            " dt=",
+            round(row.time - previous_time; digits = 4),
+            " open=",
+            row.open,
+            " closing=",
+            row.closing,
+            " closed=",
+            row.closed,
+            " hot=",
+            row.hot_observables,
+        )
+    elseif tracer isa Function
+        tracer(row)
+    end
+    return nothing
+end
+
+"""
+    _hot_observable_count(owner)
+
+Count registered hot observables in a host or handle subtree for close tracing.
+"""
+function _hot_observable_count(owner::T) where {T}
+    total = count(resource -> resource isa HotObservable, owner.resources)
+    for child in values(owner.children)
+        total += _hot_observable_count(child)
+    end
+    return total
+end
+
 function _run_close_callback(owner, callback::CloseCallback)
     @async try
         callback.callback(owner)
@@ -850,15 +919,27 @@ function _begin_native_close!(host::WindowHost)
 end
 
 function _schedule_native_close!(host::WindowHost)
-    (host.closed || get(host.data, :close_scheduled, false)) && return nothing
+    _trace_close!(host, :schedule_enter)
+    if host.closed || get(host.data, :close_scheduled, false)
+        _trace_close!(host, :schedule_ignored)
+        return nothing
+    end
     host.data[:close_scheduled] = true
     host.closing = true
+    _trace_close!(host, :before_hot_detach)
     _detach_hot_observables!(host)
+    _trace_close!(host, :after_hot_detach)
     screen = host.screen
     @async begin
+        _trace_close!(host, :async_start)
+        _trace_close!(host, :before_stop_notifications)
         _stop_host_notifications!(host; wait_for_timers = true)
+        _trace_close!(host, :after_stop_notifications)
         _request_host_owned_process_shutdown!(host)
+        _trace_close!(host, :after_process_shutdown_request)
+        _trace_close!(host, :before_glmakie_close)
         _close_glmakie_screen_after_runtime_stop!(screen)
+        _trace_close!(host, :after_glmakie_close)
         host.closed = true
         _finish_native_close!(host)
     end
@@ -866,8 +947,11 @@ function _schedule_native_close!(host::WindowHost)
 end
 
 function _finish_native_close!(host::WindowHost)
+    _trace_close!(host, :before_finish_close)
     _run_close_callbacks!(host)
+    _trace_close!(host, :after_close_callbacks)
     host.closing = false
+    _trace_close!(host, :finish_done)
     return nothing
 end
 

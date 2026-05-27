@@ -66,7 +66,7 @@ end
 function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,3}) where {T}
     ax = handle[:axis] = Axis3(grid[1, 1], tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :axis3_state, nothing))
-    xs, ys, zs = _coordinates_3d!(handle, size(layer))
+    xs, ys, zs = _coordinates_3d!(handle, layer)
     vals = _layer_state_vector_view(layer)
     obs = handle[:img_obs] = hot_observable!(handle, vals)
     plot = handle[:plot] = meshscatter!(ax, xs, ys, zs, markersize = 0.3, color = obs, colormap = :thermal)
@@ -97,7 +97,7 @@ function _layer_view_toimage!(cell, layer::AbstractIsingLayer{T,3}, handle) wher
     else
         _restore_axis3_state!(ax, get(handle.data, :axis3_state, nothing))
     end
-    xs, ys, zs = _coordinates_3d!(handle, size(layer))
+    xs, ys, zs = _coordinates_3d!(handle, layer)
     vals = _cast_layer_state_vector(layer)
     plot = meshscatter!(ax, xs, ys, zs, markersize = 0.3, color = vals, colormap = :thermal)
     _bind_layer_colorrange!(plot, Observable(vals), layer)

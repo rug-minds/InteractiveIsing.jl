@@ -384,6 +384,10 @@ end
     @test any(occursin("MagField", label) for label in labels)
     @test all(!occursin("{", label) for label in labels)
     @test all(!occursin("PolynomialHamiltonian", label) for label in labels)
+    graph_state_obs = parameter_panel[:display_obs]
+    graph_state_type = typeof(graph_state_obs[])
+    @test graph_state_obs isa Observable{graph_state_type}
+    @test graph_state_type === Matrix{Float32}
 
     display_notifications = Ref(0)
     on(parameter_panel[:display_obs]) do _
@@ -428,6 +432,8 @@ end
 
     close(host)
     @test host.closed
+    @test graph_state_obs[] isa graph_state_type
+    @test size(graph_state_obs[]) == (0, 0)
 end
 
 @testset "SimulationPanel hidden left buttons" begin

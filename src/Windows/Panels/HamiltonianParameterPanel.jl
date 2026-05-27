@@ -241,13 +241,14 @@ function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,2})
         colormap = entry.colormap,
         colorrange = _entry_colorrange(entry, _layer_state_values(layer)),
         use_data_colorrange = _uses_data_colorrange(entry),
+        hot = true,
     )
 end
 
 function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,3}) where {T}
     ax = handle[:display_axis] = Axis3(cell, tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
-    xs, ys, zs = _coordinates_3d!(handle, size(layer))
+    xs, ys, zs = _coordinates_3d!(handle, layer)
     obs = handle[:display_obs] = hot_observable!(handle, _cast_layer_state_vector(layer))
     handle[:display_is_3d] = true
     handle[:display_use_data_colorrange] = _uses_data_colorrange(entry)
@@ -275,6 +276,7 @@ function _draw_layer_vector!(handle, entry, cell, val, layer)
         colormap = entry.colormap,
         colorrange = _entry_colorrange(entry, shaped),
         use_data_colorrange = _uses_data_colorrange(entry),
+        hot = true,
     )
 end
 
@@ -350,7 +352,7 @@ function _draw_layer_array!(
     length(vals_size) == 3 || throw(ArgumentError("3D layer display needs a 3D array, got size $(vals_size)."))
     ax = handle[:display_axis] = Axis3(cell, tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
-    xs, ys, zs = _coordinates_3d!(handle, vals_size)
+    xs, ys, zs = vals_size == size(layer) ? _coordinates_3d!(handle, layer) : _coordinates_3d!(handle, vals_size)
     display_vals = vec(vals)
     obs = handle[:display_obs] = hot ? hot_observable!(handle, display_vals) : Observable(display_vals)
     handle[:display_is_3d] = true
