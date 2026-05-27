@@ -256,6 +256,7 @@ function _fillSparseVecsOLD(layer::AbstractLayerData{D}, precision, row_idxs, co
     layer_size = size(layer)
     LI = LinearIndices(layer_size)
     ps = whichperiodic(topology)
+    translation_invariant = is_translation_invariant(topology)
 
     n_offsets = prod(2 .* NNt .+ 1) - 1
     offsets = Vector{NTuple{D,Int}}(undef, n_offsets)
@@ -281,7 +282,7 @@ function _fillSparseVecsOLD(layer::AbstractLayerData{D}, precision, row_idxs, co
         # Let the topology define the metric so non-square lattices get the
         # correct distance for weight-generator shells.
         dcs[o] = DeltaCoordinate(wrapped_offset)
-        drs[o] = delta_distance(topology, dcs[o])
+        drs[o] = translation_invariant ? delta_distance(topology, dcs[o]) : NaN
         o += 1
     end
 
@@ -293,7 +294,8 @@ function _fillSparseVecsOLD(layer::AbstractLayerData{D}, precision, row_idxs, co
             c2 = @inline offset(topology, c1, offsets[oi]...; check = false)
             in(c2, topology) || continue
 
-            w = precision(wg(;dr = drs[oi], c1, c2, dc = dcs[oi]))
+            dr = translation_invariant ? drs[oi] : dist(topology, c1, c2)
+            w = precision(wg(;dr, c1, c2, dc = dcs[oi]))
             (w == 0 || isnan(w)) && continue
 
             conn_idx = LI[c2]
@@ -316,6 +318,7 @@ function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_i
     layer_size = size(layer)
     LI = LinearIndices(layer_size)
     ps = whichperiodic(topology)
+    translation_invariant = is_translation_invariant(topology)
 
     n_offsets = prod(2 .* NNt .+ 1) - 1
     offsets = Vector{NTuple{D,Int}}(undef, n_offsets)
@@ -341,7 +344,7 @@ function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_i
         # Let the topology define the metric so non-square lattices get the
         # correct distance for weight-generator shells.
         dcs[o] = DeltaCoordinate(wrapped_offset)
-        drs[o] = delta_distance(topology, dcs[o])
+        drs[o] = translation_invariant ? delta_distance(topology, dcs[o]) : NaN
         o += 1
     end
 
@@ -353,7 +356,8 @@ function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_i
             c2 = @inline offset(topology, c1, offsets[oi]...; check = false)
             in(c2, topology) || continue
 
-            w = precision(wg(;dr = drs[oi], c1, c2, dc = dcs[oi]))
+            dr = translation_invariant ? drs[oi] : dist(topology, c1, c2)
+            w = precision(wg(;dr, c1, c2, dc = dcs[oi]))
             (w == 0 || isnan(w)) && continue
 
             conn_idx = LI[c2]
@@ -384,6 +388,7 @@ function _fillSparseVecsSymmetricUnique!(layer::AbstractLayerData{D}, precision,
     layer_size = size(layer)
     LI = LinearIndices(layer_size)
     ps = whichperiodic(topology)
+    translation_invariant = is_translation_invariant(topology)
 
     n_offsets = prod(2 .* NNt .+ 1) - 1
     offsets = Vector{NTuple{D,Int}}(undef, n_offsets)
@@ -409,7 +414,7 @@ function _fillSparseVecsSymmetricUnique!(layer::AbstractLayerData{D}, precision,
         # Let the topology define the metric so non-square lattices get the
         # correct distance for weight-generator shells.
         dcs[o] = DeltaCoordinate(wrapped_offset)
-        drs[o] = delta_distance(topology, dcs[o])
+        drs[o] = translation_invariant ? delta_distance(topology, dcs[o]) : NaN
         o += 1
     end
 
@@ -425,7 +430,8 @@ function _fillSparseVecsSymmetricUnique!(layer::AbstractLayerData{D}, precision,
             g_conn_idx = pr[conn_idx]
             g_col_idx < g_conn_idx || continue
 
-            w = precision(wg(;dr = drs[oi], c1, c2, dc = dcs[oi]))
+            dr = translation_invariant ? drs[oi] : dist(topology, c1, c2)
+            w = precision(wg(;dr, c1, c2, dc = dcs[oi]))
             (w == 0 || isnan(w)) && continue
 
             push!(row_idxs, Int32(g_conn_idx))

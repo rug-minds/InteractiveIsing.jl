@@ -27,16 +27,13 @@ Convert an axial hexagonal coordinate into the shared world-coordinate space.
     return WoorldCoordinate(origin(top) + wrapped[1] * v1 + wrapped[2] * v2)
 end
 
-@generated function woorldcoordinate(top::LatticeTopology{T,U,D,P}, coord::Coordinate{D}) where {T,U,D,P}
-    terms = [:(wrapped[$i] * top[$i]) for i in 1:D]
-    sumexp = terms[1]
-    for term in terms[2:end]
-        sumexp = :($sumexp + $term)
-    end
-    return quote
-        wrapped = wrap(top, coord)
-        WoorldCoordinate(origin(top) + $sumexp)
-    end
+"""
+    woorldcoordinate(top, coord)
+
+Convert a general lattice coordinate into world space using the topology layout.
+"""
+@inline function woorldcoordinate(top::T, coord::Coordinate{D}) where {Kind,Layout,U,D,P,T<:LatticeTopology{Kind,Layout,U,D,P}}
+    return WoorldCoordinate(_lattice_world_position(top, coord))
 end
 
 @inline woorldcoordinate(top::AbstractLayerTopology{U,D}, coord::CartesianIndex{D}) where {U,D} =

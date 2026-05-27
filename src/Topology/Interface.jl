@@ -1,6 +1,27 @@
 ndims(lt::AbstractLayerTopology) = length(size(lt))
 ndims(lt::Type{<:AbstractLayerTopology{U,DIM}}) where {U,DIM} = DIM
 
+"""
+    size(top)
+
+Return the coordinate extents stored by a layer topology.
+"""
+Base.size(top::AbstractLayerTopology) = top.size
+
+"""
+    size(top, i)
+
+Return the coordinate extent along axis `i` for a layer topology.
+"""
+Base.size(top::AbstractLayerTopology, i) = size(top)[i]
+
+"""
+    periodic(top)
+
+Return the periodicity type encoded in a layer topology.
+"""
+@inline periodic(::AbstractLayerTopology{U}) where U = U
+
 @inline periodic(lt::AbstractLayerTopology{U}, symb) where U = periodic(U(), symb)
 @inline periodicaxes(lt::AbstractLayerTopology{U}) where U = periodicaxes(U(), length(size(lt)))
 @inline periodicaxes(lt::Type{<:AbstractLayerTopology{U,DIM}}) where {U,DIM} = periodicaxes(U(), DIM)

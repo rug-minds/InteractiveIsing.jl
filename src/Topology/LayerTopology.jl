@@ -1,5 +1,6 @@
-
-export LatticeType, Square, Rectangular, Oblique, Hexagonal, Rhombic, AnyLattice, AbstractLayerTopology, periodic, latticetype
+export LatticeType, Square, Rectangular, Oblique, Hexagonal, Rhombic, AnyLattice, AbstractLayerTopology
+export AbstractLatticeLayout, DirectLatticeLayout, ZigZagRows, ZigZagColumns
+export LatticeTopology, primitive_vectors, covectors, latticetype
 
 struct Square <: LatticeType end
 struct Rectangular <: LatticeType end
@@ -8,145 +9,429 @@ struct Hexagonal <: LatticeType end
 struct Rhombic <: LatticeType end
 struct AnyLattice <: LatticeType end
 
+abstract type AbstractLatticeLayout end
 
 """
-General non-square layer topology
+Direct coordinate layout for `LatticeTopology`.
+
+Coordinate deltas map linearly onto the primitive vectors, so `[N, 0]` means
+`N` steps along the first primitive vector.
 """
-mutable struct LatticeTopology{T <: LatticeType, U, Dim, Precision} <: AbstractLayerTopology{U, Dim} 
-    pvecs::NTuple{Dim, SVector{Dim, Precision}}
-    covecs::NTuple{Dim, SVector{Dim, Precision}}
-    size::NTuple{Dim, Int32}
-    origin::SVector{Dim, Precision}
+struct DirectLatticeLayout <: AbstractLatticeLayout end
 
-    # This function uses SMatrix Inverse to calculate the covectors
-    function LatticeTop(_size::NTuple{D}, vecs::NTuple{D, <:AbstractArray}; periodic = nothing, precision = Float32, origin = SVector(ntuple(i->precision(0), D))) where D
-        # D = length(_size)
-        vecs = Vector{SVector{D, precision}}(undef, D)
-        for i in 1:D
-            if i <= length(vecs)
-                vecs[i] = SVector{D, precision}(vecs[i]...)
-            else
-                vecs[i] = SVector{D, precision}([i == j ? one(precision) : zero(precision) for j in 1:D])
-            end
-        end
-        vecs = tuple(vecs...)
-        m = SMatrix{D, D, precision}(vecs...)
-        covs = tuple(eachcol(inv(m))...)  # Calculate the covectors using the inverse of the matrix
+"""
+Row-staggered coordinate layout for `LatticeTopology`.
 
-        return new{Square, U, D, precision}(vecs, covs, _size, origin; periodic)
-    end
+Rows advance along the first primitive vector. Every other row is shifted by
+half of the second primitive vector, producing the usual zigzag row layout.
+For three-dimensional topologies the third coordinate is left unstaggered.
+"""
+struct ZigZagRows <: AbstractLatticeLayout end
 
-    function LatticeTopology(_size::Tuple, 
-        vec1::Union{Nothing,AbstractArray} = nothing, 
-        vec2::Union{Nothing,AbstractArray} = nothing, 
-        vec3::Union{Nothing,AbstractArray} = nothing; 
-        periodic::Union{Nothing, Bool, Tuple} = nothing, 
-        origin::Union{Nothing, AbstractArray} = nothing)
+"""
+Column-staggered coordinate layout for `LatticeTopology`.
 
-        D = length(_size)
-        
-        ##### Calculate the covectors
-        if D == 2 
-            # Assert either none given or both
-            @assert (isnothing(vec1) && isnothing(vec2)) || (!isnothing(vec1) && !isnothing(vec2))
+Columns advance along the second primitive vector. Every other column is shifted
+by half of the first primitive vector. For three-dimensional topologies the
+third coordinate is left unstaggered.
+"""
+struct ZigZagColumns <: AbstractLatticeLayout end
 
-            if !isnothing(origin)
-                origin = SVector{D, eltype(origin)}(origin...)
-            else
-                origin = SVector{D, Float32}(ntuple(i->0f0, D)...)
-            end
+"""
+    LatticeTopology(size, vecs...; layout = DirectLatticeLayout(), periodic = true, origin = nothing, precision = nothing, lattice_type = AnyLattice)
 
-             #calculation of covectors
+General two- or three-dimensional lattice topology backed by primitive vectors
+and reciprocal covectors. The `Layout` type parameter controls whether layer
+coordinates map directly to primitive-vector multiples or use a staggered
+zigzag embedding.
+"""
+mutable struct LatticeTopology{
+    Kind<:LatticeType,
+    Layout<:AbstractLatticeLayout,
+    U,
+    Dim,
+    P<:AbstractFloat,
+    V,
+    C,
+    O,
+} <: AbstractLayerTopology{U,Dim}
+    pvecs::V
+    covecs::C
+    size::NTuple{Dim,Int}
+    origin::O
+end
 
-            # If all nothing just set to square
-            if isnothing(vec1) && isnothing(vec2)
-                vecs = SVector.((1f0,0f0), (0f0,1f0))
-                covs = SVector.((1f0,0f0), (0f0,1f0))
+"""
+    LatticeTopology(size, vecs...; kwargs...)
 
-                return new{Square, U, 2, Float32}(vecs, covs, _size)
-            end
+Construct a general lattice topology from `Dim` primitive vectors. If no vectors
+are supplied, the identity basis is used. `layout` may be a layout object, a
+layout type, or one of `:direct`, `:zigzag_rows`, or `:zigzag_columns`.
+"""
+function LatticeTopology(
+    size::S,
+    vecs...;
+    primitive_vectors = nothing,
+    layout = DirectLatticeLayout(),
+    periodic::Union{Bool,<:Tuple,Nothing} = true,
+    origin = nothing,
+    precision = nothing,
+    lattice_type::Type{<:LatticeType} = AnyLattice,
+) where {S<:Tuple}
+    D = length(size)
+    @assert D in (2, 3) "LatticeTopology currently supports only two- and three-dimensional layers"
 
-            y1 = 1/(vec1[1]-(vec1[2]*vec2[1]/vec2[2]))
-            x1 = 1/(vec1[2]-(vec1[1]*vec2[2]/vec2[1]))
-            y2 = 1/(vec2[1]-(vec2[2]*vec1[1]/vec1[2]))
-            x2 = 1/(vec2[2]-(vec2[1]*vec1[2]/vec1[1]))
-            
-            cov1 = SVector((y1, x1))
-            cov2 = SVector(y2, x2)
-            
-            if !isnothing(periodic)
-                if periodic isa Bool
-                    ptype = periodic ? Periodic : NonPeriodic
-                elseif periodic isa Tuple
-                    ptype = PartPeriodic(periodic...)
-                end
-            else
-                ptype = Periodic
-            end
+    layout_instance = _lattice_layout(layout)
+    raw_vecs = _lattice_vector_args(size, vecs, primitive_vectors)
+    P = _lattice_precision(raw_vecs, origin, precision)
+    pvecs = _lattice_primitive_vectors(Val(D), P, raw_vecs)
+    covecs = _lattice_covectors(pvecs)
+    origin_vec = _lattice_origin(Val(D), P, origin)
+    size_int = ntuple(i -> Int(size[i]), Val(D))
+    U = _lattice_periodicity_type(periodic)
+    Layout = typeof(layout_instance)
 
-            if vec1 == [1,0] && vec2 == [0,1]
-                lattice_type = Square
-            end
-                
-        
-            # return new{lattice_type, ptype, typeof(layer)}(layer, (vec1, vec2), (cov1, cov2))
-            return new{lattice_type, ptype, D, Float32}( Float32.(vec1, vec2), Float32.(cov1, cov2), _size)
-        elseif DIMS(layer) == 3
-            # Assert either none given or all
-            @assert (isnothing(vec1) && isnothing(vec2) && isnothing(vec3)) || (!isnothing(vec1) && !isnothing(vec2) && !isnothing(vec3))
+    return LatticeTopology{
+        lattice_type,
+        Layout,
+        U,
+        D,
+        P,
+        typeof(pvecs),
+        typeof(covecs),
+        typeof(origin_vec),
+    }(pvecs, covecs, size_int, origin_vec)
+end
 
-            if isnothing(vec1) && isnothing(vec2) && isnothing(vec3)
-                vecs = SVector.((1f0,0f0,0f0), (0f0,1f0,0f0), (0f0,0f0,1f0))
-                covs = SVector.((1f0,0f0,0f0), (0f0,1f0,0f0), (0f0,0f0,1f0))
+"""
+    _lattice_layout(layout)
 
-                return new{Square, U, 3, Float32}(vecs, covs, _size)
-            end
+Normalize public layout arguments into singleton layout values.
+"""
+function _lattice_layout(layout::L) where {L<:AbstractLatticeLayout}
+    return layout
+end
 
-            #calculation of covectors
-            # det(A) = a(ei - fh) - b(di - fg) + c(dh - eg)
-            det = vec1[1]*(vec2[2]*vec3[3] - vec2[3]*vec3[2]) - vec2[1]*(vec1[2]*vec3[3] - vec3[2]*vec1[3]) + vec3[1]*(vec1[2]*vec2[3] - vec2[2]*vec1[3])
-            entries1 = ((vec2[2]*vec3[3] - vec3[2]*vec2[3])/det, -(vec1[2]*vec3[3]-vec3[2]*vec1[3])/det, (vec1[2]*vec2[3]-vec2[2]*vec1[3])/det) 
-            entries2 = (-(vec2[1]*vec3[3] - vec3[1]*vec2[3])/det, (vec1[1]*vec3[3]-vec3[1]*vec1[3])/det, -(vec1[1]*vec2[3]-vec2[1]*vec1[3])/det)
-            entries3 = ((vec2[1]*vec3[2] - vec3[1]*vec2[2])/det, -(vec1[1]*vec3[2]-vec3[1]*vec1[2])/det, (vec1[1]*vec2[2]-vec2[1]*vec1[2])/det)
-            cov1 = SVector(entries1)
-            cov2 = SVector(entries2)
-            cov3 = SVector(entries3)
+"""
+    _lattice_layout(layout_type)
 
-            if !isnothing(periodic)
-                ptype = periodic ? Periodic : NonPeriodic
-            else
-                ptype = Periodic
-            end
+Instantiate a lattice layout passed as a type.
+"""
+function _lattice_layout(::Type{L}) where {L<:AbstractLatticeLayout}
+    return L()
+end
 
-            #TODO Add support for other lattices
-            lattice_type = AnyLattice
-            
-            return new{AnyLattice, ptype, D, Float32}( Float32.(vec1, vec2, vec3), Float32.(cov1, cov2, cov3), _size)
-        end
-       
+"""
+    _lattice_layout(layout_symbol)
+
+Map compact symbol names to lattice layout values.
+"""
+function _lattice_layout(layout::Symbol)
+    layout === :direct && return DirectLatticeLayout()
+    layout === :zigzag_rows && return ZigZagRows()
+    layout === :zigzag_columns && return ZigZagColumns()
+    throw(ArgumentError("Unknown lattice layout $layout. Use :direct, :zigzag_rows, or :zigzag_columns."))
+end
+
+"""
+    _lattice_vector_args(size, positional_vecs, keyword_vecs)
+
+Resolve primitive vectors from positional or keyword constructor arguments.
+"""
+function _lattice_vector_args(size::Tuple, vecs::Tuple, primitive_vectors)
+    D = length(size)
+    if !isnothing(primitive_vectors)
+        isempty(vecs) || throw(ArgumentError("Pass primitive vectors either positionally or by keyword, not both."))
+        @assert length(primitive_vectors) == D "primitive_vectors must contain one vector per topology dimension"
+        return tuple(primitive_vectors...)
+    elseif isempty(vecs)
+        return nothing
+    elseif length(vecs) == 1 && vecs[1] isa Tuple && length(vecs[1]) == D
+        return vecs[1]
+    else
+        @assert length(vecs) == D "LatticeTopology needs either zero vectors or one vector per topology dimension"
+        return vecs
     end
 end
 
-@Setter!Getter LatticeTopology size
-Base.size(top::AbstractLayerTopology) = top.size
-Base.size(top, i) = top.size[i]
-
-
-LatticeTopology(tp::AbstractLayerTopology; periodic::Bool) = AbstractLayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2]; periodic)
-LatticeTopology(tp::AbstractLayerTopology, pt::Type{<:PeriodicityType}) = AbstractLayerTopology(tp.layer, tp.pvecs[1], tp.pvecs[2], periodic = pt == Periodic ? true : false)
-
-# changePeriodicity = 
-
-periodic(top::AbstractLayerTopology{T,U}) where {T,U} = T
-latticetype(top::AbstractLayerTopology{T,U}) where {T,U} = U
-
 """
-Calculate the position based on indices and primitive vectors.
+    _lattice_precision(raw_vecs, origin, precision)
+
+Choose the floating-point precision used by lattice vectors and coordinates.
 """
-function coord(pvecs, i,j)
-    return i*pvecs[1] + j*pvecs[2]
+function _lattice_precision(raw_vecs, origin, precision)
+    !isnothing(precision) && return precision
+
+    P = Float32
+    if !isnothing(raw_vecs)
+        for vec in raw_vecs
+            P = promote_type(P, typeof(float(first(vec))))
+        end
+    end
+    if !isnothing(origin)
+        P = promote_type(P, typeof(float(first(origin))))
+    end
+    return P
 end
 
-function coordinate_generator(top::AbstractLayerTopology)
-    
+"""
+    _lattice_primitive_vectors(dim, precision, raw_vecs)
+
+Convert primitive-vector inputs into a statically sized tuple of `SVector`s.
+"""
+function _lattice_primitive_vectors(::Val{D}, ::Type{P}, raw_vecs) where {D,P}
+    if isnothing(raw_vecs)
+        return ntuple(Val(D)) do i
+            SVector{D,P}(ntuple(j -> i == j ? one(P) : zero(P), Val(D)))
+        end
+    end
+
+    return ntuple(Val(D)) do i
+        @assert length(raw_vecs[i]) == D "Primitive vector $i has length $(length(raw_vecs[i])); expected $D"
+        SVector{D,P}(ntuple(j -> P(raw_vecs[i][j]), Val(D)))
+    end
+end
+
+"""
+    _lattice_covectors(pvecs)
+
+Return covectors dual to the primitive-vector basis.
+"""
+function _lattice_covectors(pvecs::NTuple{D,SVector{D,P}}) where {D,P}
+    basis = reduce(hcat, pvecs)
+    invbasis = inv(basis)
+    return ntuple(Val(D)) do i
+        SVector{D,P}(ntuple(j -> P(invbasis[i, j]), Val(D)))
+    end
+end
+
+"""
+    _lattice_origin(dim, precision, origin)
+
+Convert an optional origin into a statically sized vector.
+"""
+function _lattice_origin(::Val{D}, ::Type{P}, origin) where {D,P}
+    if isnothing(origin)
+        return SVector{D,P}(ntuple(_ -> zero(P), Val(D)))
+    end
+    @assert length(origin) == D "origin must have one entry per topology dimension"
+    return SVector{D,P}(ntuple(i -> P(origin[i]), Val(D)))
+end
+
+"""
+    _lattice_periodicity_type(periodic)
+
+Encode public periodicity arguments as a concrete periodicity type.
+"""
+function _lattice_periodicity_type(periodic::Bool)
+    return periodic ? Periodic : NonPeriodic
+end
+
+"""
+    _lattice_periodicity_type(periodic)
+
+Treat `nothing` as fully periodic for consistency with existing topology constructors.
+"""
+function _lattice_periodicity_type(::Nothing)
+    return Periodic
+end
+
+"""
+    _lattice_periodicity_type(periodic_axes)
+
+Encode a tuple of periodic axes as `PartPeriodic`.
+"""
+function _lattice_periodicity_type(periodic_axes::Tuple)
+    return PartPeriodic(periodic_axes...)
+end
+
+"""
+    primitive_vectors(top)
+
+Return the primitive vectors stored by a general lattice topology.
+"""
+@inline function primitive_vectors(top::T) where {T<:LatticeTopology}
+    return top.pvecs
+end
+
+"""
+    covectors(top)
+
+Return the reciprocal covectors stored by a general lattice topology.
+"""
+@inline function covectors(top::T) where {T<:LatticeTopology}
+    return top.covecs
+end
+
+"""
+    origin(top)
+
+Return the world-space origin of a general lattice topology.
+"""
+@inline function origin(top::T) where {T<:LatticeTopology}
+    return top.origin
+end
+
+"""
+    lattice_constants(top)
+
+Return the current primitive-vector lengths for a general lattice topology.
+"""
+function lattice_constants(top::T) where {T<:LatticeTopology}
+    return map(norm, primitive_vectors(top))
+end
+
+"""
+    setdist!(top, lattice_constants)
+
+Rescale each primitive vector to the requested length and refresh covectors.
+"""
+function setdist!(top::T, lattice_constants::NTuple{D}) where {Kind,Layout,U,D,P,T<:LatticeTopology{Kind,Layout,U,D,P}}
+    top.pvecs = ntuple(Val(D)) do i
+        old_length = norm(top.pvecs[i])
+        old_length == 0 && throw(ArgumentError("Cannot rescale a zero primitive vector."))
+        return top.pvecs[i] * (P(lattice_constants[i]) / old_length)
+    end
+    top.covecs = _lattice_covectors(top.pvecs)
+    return top
+end
+
+"""
+    latticetype(top)
+
+Return the lattice-family marker encoded in a `LatticeTopology` type.
+"""
+@inline function latticetype(::T) where {Kind,Layout,U,D,P,T<:LatticeTopology{Kind,Layout,U,D,P}}
+    return Kind
+end
+
+"""
+    is_translation_invariant(top)
+
+Return whether metric distances depend only on coordinate deltas.
+"""
+@inline function is_translation_invariant(::T) where {T<:AbstractLayerTopology}
+    return true
+end
+
+"""
+    is_translation_invariant(top)
+
+Row- and column-staggered layouts need the anchor coordinate to compute metric
+distances, because the half-step offset alternates with parity.
+"""
+@inline function is_translation_invariant(::T) where {Kind,U,D,P,T<:LatticeTopology{Kind,ZigZagRows,U,D,P}}
+    return false
+end
+
+@inline function is_translation_invariant(::T) where {Kind,U,D,P,T<:LatticeTopology{Kind,ZigZagColumns,U,D,P}}
+    return false
+end
+
+"""
+    _layout_coefficients(layout, coord)
+
+Return coordinate coefficients before multiplication by primitive vectors.
+"""
+function _layout_coefficients(::L, coord::C) where {D,L<:DirectLatticeLayout,C<:Coordinate{D}}
+    return ntuple(i -> coord[i], Val(D))
+end
+
+"""
+    _layout_coefficients(layout, coord)
+
+Return row-staggered coefficients for two- and three-dimensional coordinates.
+"""
+function _layout_coefficients(::L, coord::C) where {D,L<:ZigZagRows,C<:Coordinate{D}}
+    @assert D in (2, 3) "ZigZagRows supports only two- and three-dimensional coordinates"
+    shift = isodd(coord[1] - 1) ? 0.5 : 0.0
+    return ntuple(i -> i == 2 ? coord[i] + shift : coord[i], Val(D))
+end
+
+"""
+    _layout_coefficients(layout, coord)
+
+Return column-staggered coefficients for two- and three-dimensional coordinates.
+"""
+function _layout_coefficients(::L, coord::C) where {D,L<:ZigZagColumns,C<:Coordinate{D}}
+    @assert D in (2, 3) "ZigZagColumns supports only two- and three-dimensional coordinates"
+    shift = isodd(coord[2] - 1) ? 0.5 : 0.0
+    return ntuple(i -> i == 1 ? coord[i] + shift : coord[i], Val(D))
+end
+
+"""
+    _lattice_world_position(top, coord; wrap_coordinate = true)
+
+Map a topology coordinate into world coordinates without allocating dynamic
+arrays. `wrap_coordinate = false` is used for periodic image searches.
+"""
+function _lattice_world_position(
+    top::T,
+    coord::C;
+    wrap_coordinate::Bool = true,
+) where {Kind,Layout,U,D,P,T<:LatticeTopology{Kind,Layout,U,D,P},C<:Coordinate{D}}
+    c = wrap_coordinate ? wrap(top, coord) : coord
+    coefficients = _layout_coefficients(Layout(), c)
+    position = origin(top)
+
+    # Accumulate in world space so all layouts share the same vector backend.
+    for i in 1:D
+        position += P(coefficients[i]) * top.pvecs[i]
+    end
+    return position
+end
+
+"""
+    in(coord, top)
+
+Return whether `coord` lies inside a non-periodic general lattice topology.
+"""
+function Base.in(coord, top::LatticeTopology{Kind,Layout,NonPeriodic}) where {Kind,Layout}
+    return all(1 .<= coord .<= size(top))
+end
+
+"""
+    in(coord, top)
+
+Return true for a fully periodic general lattice topology because all
+coordinates wrap.
+"""
+@inline function Base.in(coord, top::T) where {Kind,Layout,T<:LatticeTopology{Kind,Layout,Periodic}}
+    return true
+end
+
+"""
+    in(coord, top)
+
+Return whether `coord` lies inside all non-periodic axes of a partly periodic
+general lattice topology.
+"""
+function Base.in(coord, top::T) where {Kind,Layout,P<:PartPeriodic,T<:LatticeTopology{Kind,Layout,P}}
+    _isin = true
+    for (i, isperiodic) in enumerate(whichperiodic(top))
+        !_isin && break
+        isperiodic && continue
+        _isin &= (1 <= coord[i] <= size(top, i))
+    end
+    return _isin
+end
+
+# Return the shortest coordinate delta for translation-invariant lattice layouts.
+# Staggered layouts need the anchor coordinate, so the raw delta is unchanged.
+function (top::LatticeTopology{Kind,Layout,U,D,P})(delta::DC) where {Kind,Layout,U,D,P,DC<:DeltaCoordinate{D}}
+    is_translation_invariant(top) || return delta
+
+    best = delta
+    best_dist2 = delta_distance2(top, delta)
+    ranges = ntuple(i -> periodic(U(), Val(i)) ? (-1:1) : (0:0), Val(D))
+
+    for shift_ci in CartesianIndices(ranges)
+        shifted = DeltaCoordinate(ntuple(i -> delta[i] + shift_ci[i] * size(top, i), Val(D)))
+        shifted_dist2 = delta_distance2(top, shifted)
+        if shifted_dist2 < best_dist2
+            best = shifted
+            best_dist2 = shifted_dist2
+        end
+    end
+    return best
 end

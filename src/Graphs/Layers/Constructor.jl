@@ -53,6 +53,7 @@ function parse_isinglayer(args...; periodic = true)
 
     # Parse optional Lattice Constants
     latconst_idx = findfirst(x -> x isa LatticeConstants, args)
+    has_latconst = !isnothing(latconst_idx)
     latconst = latconst_idx |> isnothing ? nothing : args[latconst_idx].constants
     args = remove_optional_parsed_arg(args, latconst_idx)
     if isnothing(latconst)
@@ -64,7 +65,9 @@ function parse_isinglayer(args...; periodic = true)
     # Parse optional Topology
     topology_idx = findfirst(x -> x isa AbstractLayerTopology, args)
     topology = topology_idx |> isnothing ? SquareTopology(size; periodic) : args[topology_idx]
-    setdist!(topology, ds)
+    if isnothing(topology_idx) || has_latconst
+        setdist!(topology, ds)
+    end
     args = remove_optional_parsed_arg(args, topology_idx)
 
     # Parse optional Coords
@@ -85,5 +88,4 @@ function parse_isinglayer(args...; periodic = true)
 
     return IsingLayerData(size, stype, stateset, weightgen, topology, coords)
 end
-
 
