@@ -107,7 +107,7 @@ function default_checkpoint_path()
         "..",
         "ext",
         "IsingLearning",
-        "experiments",
+        "ExperimentsOld",
         "mnist_manager",
         "runs",
         "20260520_paper_like_continue500pc_lrhalf_e8",

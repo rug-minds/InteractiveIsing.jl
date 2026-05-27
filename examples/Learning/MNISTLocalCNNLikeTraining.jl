@@ -32,7 +32,7 @@ const LOCAL_MNIST_CHECKPOINT = get(
         "..",
         "ext",
         "IsingLearning",
-        "experiments",
+        "ExperimentsOld",
         "mnist_manager",
         "runs",
         "20260522_local_paper_h28_h11_1000pc_continue_lr0001_reads5",
@@ -231,7 +231,7 @@ function randomize_local_mnist_state!(graph::G, rng::R) where {G,R<:Random.Abstr
 end
 
 graph = build_local_mnist_demo_graph()
-checkpoint_params = install_local_mnist_parameters!(graph, LOCAL_MNIST_CHECKPOINT)
+checkpoint_params = Base.invokelatest(install_local_mnist_parameters!, graph, LOCAL_MNIST_CHECKPOINT)
 
 dynamics = LocalLangevin(
     stepsize = LOCAL_MNIST_STEPSIZE,

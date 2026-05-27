@@ -32,7 +32,7 @@ const MNIST_DEMO_CHECKPOINT = get(
         "..",
         "ext",
         "IsingLearning",
-        "experiments",
+        "ExperimentsOld",
         "mnist_manager",
         "runs",
         "20260520_paper_like_continue500pc_lrhalf_e8",
@@ -134,7 +134,7 @@ InteractiveIsing.setcoords!(graph[2]; x = 90, y = 0, z = 0)
 InteractiveIsing.setcoords!(graph[3]; x = 530, y = 0, z = 0)
 InteractiveIsing.temp!(graph, MNIST_DEMO_TEMP)
 InteractiveIsing.off!(graph.index_set, 1)
-checkpoint_params = install_paper_mnist_parameters!(graph, MNIST_DEMO_CHECKPOINT)
+checkpoint_params = Base.invokelatest(install_paper_mnist_parameters!, graph, MNIST_DEMO_CHECKPOINT)
 
 dynamics = LocalLangevin(
     stepsize = MNIST_DEMO_STEPSIZE,
