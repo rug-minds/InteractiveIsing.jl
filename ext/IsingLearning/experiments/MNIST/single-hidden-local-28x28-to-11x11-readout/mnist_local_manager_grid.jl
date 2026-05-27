@@ -37,11 +37,11 @@ const PMNIST_INPUT_SIDE = 28
 const PMNIST_INPUT_DIM = PMNIST_INPUT_SIDE^2
 const PMNIST_NCLASSES = 10
 
-Base.@kwdef struct PaperMNISTManagerConfig
-    name::String = "r7_manager"
+Base.@kwdef struct LocalMNISTManagerConfig{T<:AbstractFloat,S<:AbstractString}
+    name::S = get(ENV, "ISING_MNIST_PM_NAME", "local_manager")
     workers::Int = parse(Int, get(ENV, "ISING_MNIST_PM_WORKERS", "32"))
-    epochs::Int = parse(Int, get(ENV, "ISING_MNIST_PM_EPOCHS", "10"))
-    batchsize::Int = parse(Int, get(ENV, "ISING_MNIST_PM_BATCHSIZE", "64"))
+    epochs::Int = parse(Int, get(ENV, "ISING_MNIST_PM_EPOCHS", "200"))
+    batchsize::Int = parse(Int, get(ENV, "ISING_MNIST_PM_BATCHSIZE", "32"))
     train_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_PM_TRAIN_PER_CLASS", "100"))
     test_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_PM_TEST_PER_CLASS", "20"))
     hidden1_side::Int = parse(Int, get(ENV, "ISING_MNIST_PM_H1_SIDE", "28"))
@@ -54,44 +54,44 @@ Base.@kwdef struct PaperMNISTManagerConfig
     nudge_reads::Int = parse(Int, get(ENV, "ISING_MNIST_PM_NUDGE_READS", "3"))
     free_sweeps::Int = parse(Int, get(ENV, "ISING_MNIST_PM_FREE_SWEEPS", "50"))
     nudge_sweeps::Int = parse(Int, get(ENV, "ISING_MNIST_PM_NUDGE_SWEEPS", "50"))
-    β::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_BETA", "5.0"))
-    target_on::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_TARGET_ON", "1.0"))
-    target_off::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_TARGET_OFF", "-1.0"))
-    lr_w0::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_W0", "0.003"))
-    lr_w12::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_W12", "0.003"))
-    lr_w2o::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_W2O", "0.003"))
-    lr_w11::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_W11", "0.001"))
-    lr_w22::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_W22", "0.001"))
-    lr_woo::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_WOO", "0.001"))
-    lr_b::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_B", "0.0003"))
-    optimizer::String = lowercase(get(ENV, "ISING_MNIST_PM_OPTIMIZER", "adam"))
-    gain_w0::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_GAIN_W0", "0.5"))
-    gain_w12::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_GAIN_W12", "0.25"))
-    gain_w2o::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_GAIN_W2O", "0.25"))
-    gain_w11::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_GAIN_W11", "0.0"))
-    gain_w22::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_GAIN_W22", "0.0"))
-    gain_woo::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_GAIN_WOO", "0.0"))
-    internal_scale::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_INTERNAL_SCALE", "0.0"))
-    output_internal_scale::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_OUTPUT_INTERNAL_SCALE", "0.0"))
+    β::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_BETA", "5.0"))
+    target_on::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_TARGET_ON", "1.0"))
+    target_off::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_TARGET_OFF", "-1.0"))
+    lr_w0::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_W0", "0.004"))
+    lr_w12::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_W12", "0.004"))
+    lr_w2o::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_W2O", "0.004"))
+    lr_w11::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_W11", "0.001"))
+    lr_w22::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_W22", "0.001"))
+    lr_woo::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_WOO", "0.001"))
+    lr_b::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_LR_B", "0.0004"))
+    optimizer::S = lowercase(get(ENV, "ISING_MNIST_PM_OPTIMIZER", "adam"))
+    gain_w0::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_GAIN_W0", "0.5"))
+    gain_w12::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_GAIN_W12", "0.25"))
+    gain_w2o::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_GAIN_W2O", "0.25"))
+    gain_w11::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_GAIN_W11", "0.0"))
+    gain_w22::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_GAIN_W22", "0.0"))
+    gain_woo::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_GAIN_WOO", "0.0"))
+    internal_scale::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_INTERNAL_SCALE", "0.0"))
+    output_internal_scale::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_OUTPUT_INTERNAL_SCALE", "0.0"))
     train_internal::Bool = parse(Bool, lowercase(get(ENV, "ISING_MNIST_PM_TRAIN_INTERNAL", "false")))
-    weight_clip::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_WEIGHT_CLIP", "1.0"))
-    bias_clip::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_BIAS_CLIP", "1.0"))
-    applied_bias_clip::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_APPLIED_BIAS_CLIP", "4.0"))
-    hot_temp::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_HOT_TEMP", "5.0"))
-    cold_temp::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_COLD_TEMP", "0.01"))
-    reverse_temp::PMNIST_FT = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_REVERSE_TEMP", "1.0"))
-    gradient_normalization::Symbol = Symbol(get(ENV, "ISING_MNIST_PM_GRADIENT_NORMALIZATION", "sum"))
+    weight_clip::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_WEIGHT_CLIP", "1.0"))
+    bias_clip::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_BIAS_CLIP", "1.0"))
+    applied_bias_clip::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_APPLIED_BIAS_CLIP", "4.0"))
+    hot_temp::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_HOT_TEMP", "5.0"))
+    cold_temp::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_COLD_TEMP", "0.01"))
+    reverse_temp::T = parse(PMNIST_FT, get(ENV, "ISING_MNIST_PM_REVERSE_TEMP", "1.0"))
+    gradient_normalization::Symbol = Symbol(get(ENV, "ISING_MNIST_PM_GRADIENT_NORMALIZATION", "mean"))
     progress::Bool = parse(Bool, lowercase(get(ENV, "ISING_MNIST_PM_PROGRESS", "true")))
-    progress_every::Int = parse(Int, get(ENV, "ISING_MNIST_PM_PROGRESS_EVERY", "1"))
+    progress_every::Int = parse(Int, get(ENV, "ISING_MNIST_PM_PROGRESS_EVERY", "10"))
     seed::Int = parse(Int, get(ENV, "ISING_MNIST_PM_SEED", "2468"))
-    outdir::String = get(
+    outdir::S = get(
         ENV,
         "ISING_MNIST_PM_OUTDIR",
         joinpath(@__DIR__, "experiments", "current", "mnist_local_manager_" * Dates.format(now(), "yyyymmdd_HHMMSS")),
     )
 end
 
-mutable struct PaperMNISTModel{C,G,E,R}
+mutable struct LocalMNISTModel{C,G,E,R}
     config::C
     graph::G
     edge_groups::E
@@ -102,12 +102,12 @@ mutable struct PaperMNISTModel{C,G,E,R}
     rng::R
 end
 
-struct PaperMNISTJob{X<:AbstractVector,Y<:AbstractVector}
+struct LocalMNISTJob{X<:AbstractVector,Y<:AbstractVector}
     x::X
     y::Y
 end
 
-mutable struct PaperMNISTManagerState{M,G,P,O}
+mutable struct LocalMNISTManagerState{M,G,P,O}
     model::M
     batch_gradient::G
     optimizer_gradient::G
@@ -155,12 +155,12 @@ function parse_int_list(value::S, default::V) where {S<:AbstractString,V<:Abstra
 end
 
 """Return a shallow config copy with selected fields replaced."""
-function copy_config(config::C; kwargs...) where {C<:PaperMNISTManagerConfig}
+function copy_config(config::C; kwargs...) where {C<:LocalMNISTManagerConfig}
     fields = Dict{Symbol,Any}(field => getfield(config, field) for field in fieldnames(C))
     for (field, value) in kwargs
         fields[field] = value
     end
-    return PaperMNISTManagerConfig(; fields...)
+    return LocalMNISTManagerConfig(; fields...)
 end
 
 """Append one named tuple to a CSV file."""
@@ -175,7 +175,7 @@ function append_row!(path::P, row::R) where {P<:AbstractString,R<:NamedTuple}
 end
 
 """Print a timestamped progress checkpoint and flush stdout immediately."""
-function progress_log(config::C, message::S; t0 = nothing, kwargs...) where {C<:PaperMNISTManagerConfig,S<:AbstractString}
+function progress_log(config::C, message::S; t0 = nothing, kwargs...) where {C<:LocalMNISTManagerConfig,S<:AbstractString}
     config.progress || return nothing
     details = String[]
     isnothing(t0) || push!(details, string("elapsed_s=", round(time() - Float64(t0); digits = 3)))
@@ -189,7 +189,7 @@ function progress_log(config::C, message::S; t0 = nothing, kwargs...) where {C<:
 end
 
 """Return true when an indexed progress checkpoint should be printed."""
-function should_log_progress(config::C, idx::I, total::J) where {C<:PaperMNISTManagerConfig,I<:Integer,J<:Integer}
+function should_log_progress(config::C, idx::I, total::J) where {C<:LocalMNISTManagerConfig,I<:Integer,J<:Integer}
     idx == 1 && return true
     idx == total && return true
     return config.progress_every > 0 && idx % config.progress_every == 0
@@ -372,7 +372,7 @@ function sampled_graph(
     rng::R;
     shared_adj = nothing,
     shared_base_bias = nothing,
-) where {C<:PaperMNISTManagerConfig,R<:Random.AbstractRNG}
+) where {C<:LocalMNISTManagerConfig,R<:Random.AbstractRNG}
     output_rows, output_cols = factor_shape(PMNIST_NCLASSES * config.output_replicas)
     zero_wg = II.AllToAllWeightGenerator((; dr, c1, c2, dc) -> 0f0)
     input = II.Layer(PMNIST_INPUT_SIDE, PMNIST_INPUT_SIDE, II.StateSet(-1f0, 1f0), II.Discrete(), II.Coords(0, 0, 0); periodic = false)
@@ -401,7 +401,7 @@ function sampled_graph(
 end
 
 """Initialize trainable local-MNIST parameters directly in `J` and `MagField.b`."""
-function init_model(config::C, seed::I = config.seed) where {C<:PaperMNISTManagerConfig,I<:Integer}
+function init_model(config::C, seed::I = config.seed) where {C<:LocalMNISTManagerConfig,I<:Integer}
     t_model = time()
     rng = Random.MersenneTwister(Int(seed))
     t_graph = time()
@@ -454,11 +454,11 @@ function init_model(config::C, seed::I = config.seed) where {C<:PaperMNISTManage
     progress_log(config, "model edge groups built"; t0 = t_groups)
     progress_log(config, "model initialized"; t0 = t_model, stored_entries = length(SparseArrays.nonzeros(A)))
 
-    return PaperMNISTModel(config, graph, edge_groups, input_idxs, hidden1_idxs, hidden2_idxs, output_idxs, rng)
+    return LocalMNISTModel(config, graph, edge_groups, input_idxs, hidden1_idxs, hidden2_idxs, output_idxs, rng)
 end
 
 """Load a serialized manager checkpoint and install compatible graph parameters."""
-function resume_model!(model::M, path::P) where {M<:PaperMNISTModel,P<:AbstractString}
+function resume_model!(model::M, path::P) where {M<:LocalMNISTModel,P<:AbstractString}
     isempty(path) && return model
     isfile(path) || throw(ArgumentError("resume checkpoint does not exist: `$path`"))
     saved = open(path, "r") do io
@@ -477,10 +477,10 @@ function resume_model!(model::M, path::P) where {M<:PaperMNISTModel,P<:AbstractS
 end
 
 """Create a worker model with local state/fields and shared `J`/base-field pointers."""
-function worker_model(source::M, worker_idx::I) where {M<:PaperMNISTModel,I<:Integer}
+function worker_model(source::M, worker_idx::I) where {M<:LocalMNISTModel,I<:Integer}
     rng = Random.MersenneTwister(source.config.seed + 10_000 + Int(worker_idx))
     graph = sampled_graph(source.config, rng; shared_adj = II.adj(source.graph), shared_base_bias = base_magfield(source.graph).b)
-    return PaperMNISTModel(
+    return LocalMNISTModel(
         source.config,
         graph,
         source.edge_groups,
@@ -493,7 +493,7 @@ function worker_model(source::M, worker_idx::I) where {M<:PaperMNISTModel,I<:Int
 end
 
 """Allocate a gradient buffer matching all trainable parameter arrays."""
-function gradient_buffer(model::M) where {M<:PaperMNISTModel}
+function gradient_buffer(model::M) where {M<:LocalMNISTModel}
     return (;
         w = zeros(PMNIST_FT, length(SparseArrays.nonzeros(II.adj(model.graph)))),
         b = zeros(PMNIST_FT, length(base_magfield(model.graph).b)),
@@ -517,7 +517,7 @@ function add_gradient!(dest::D, src::S) where {D<:NamedTuple,S<:NamedTuple}
 end
 
 """Return the trainable array tuple owned by a local-MNIST model."""
-function trainable_params(model::M) where {M<:PaperMNISTModel}
+function trainable_params(model::M) where {M<:LocalMNISTModel}
     return (;
         w = copy(SparseArrays.nonzeros(II.adj(model.graph))),
         b = copy(base_magfield(model.graph).b),
@@ -525,7 +525,7 @@ function trainable_params(model::M) where {M<:PaperMNISTModel}
 end
 
 """Construct the configured Optimisers.jl rule for one parameter group."""
-function optimizer_rule(config::C, lr::T) where {C<:PaperMNISTManagerConfig,T<:Real}
+function optimizer_rule(config::C, lr::T) where {C<:LocalMNISTManagerConfig,T<:Real}
     optimizer = lowercase(config.optimizer)
     if optimizer == "adam"
         return Optimisers.Adam(PMNIST_FT(lr))
@@ -536,7 +536,7 @@ function optimizer_rule(config::C, lr::T) where {C<:PaperMNISTManagerConfig,T<:R
 end
 
 """Create one optimizer state per trainable parameter array."""
-function optimizer_states(config::C, params::P) where {C<:PaperMNISTManagerConfig,P<:NamedTuple}
+function optimizer_states(config::C, params::P) where {C<:LocalMNISTManagerConfig,P<:NamedTuple}
     return (;
         w = Optimisers.setup(optimizer_rule(config, config.lr_w12), params.w),
         b = Optimisers.setup(optimizer_rule(config, config.lr_b), params.b),
@@ -549,7 +549,7 @@ function write_optimizer_gradient!(
     src::S,
     config::C,
     nsamples::I,
-) where {D<:NamedTuple,S<:NamedTuple,C<:PaperMNISTManagerConfig,I<:Integer}
+) where {D<:NamedTuple,S<:NamedTuple,C<:LocalMNISTManagerConfig,I<:Integer}
     scale = config.gradient_normalization === :mean ? inv(PMNIST_FT(max(nsamples, 1))) :
         config.gradient_normalization === :sum ? one(PMNIST_FT) :
         throw(ArgumentError("gradient_normalization must be :sum or :mean, got $(config.gradient_normalization)"))
@@ -561,7 +561,7 @@ function write_optimizer_gradient!(
 end
 
 """Install updated parameter arrays and enforce graph-level clipping."""
-function install_params!(model::M, params::P) where {M<:PaperMNISTModel,P<:NamedTuple}
+function install_params!(model::M, params::P) where {M<:LocalMNISTModel,P<:NamedTuple}
     config = model.config
     SparseArrays.nonzeros(II.adj(model.graph)) .= clamp.(params.w, -config.weight_clip, config.weight_clip)
     base_magfield(model.graph).b .= clamp.(params.b, -config.bias_clip, config.bias_clip)
@@ -616,7 +616,7 @@ function update_worker_stats!(
 end
 
 """Return the number of single dynamics steps used for a configured sweep count."""
-function phase_steps(model::M, sweeps::I) where {M<:PaperMNISTModel,I<:Integer}
+function phase_steps(model::M, sweeps::I) where {M<:LocalMNISTModel,I<:Integer}
     return max(1, Int(sweeps) * length(II.state(model.graph)))
 end
 
@@ -694,7 +694,7 @@ function local_worker_algorithm(
     dynamics_algorithm::D,
     config::C,
     nstates::I,
-) where {D,C<:PaperMNISTManagerConfig,I<:Integer}
+) where {D,C<:LocalMNISTManagerConfig,I<:Integer}
     free_steps = max(1, config.free_sweeps * Int(nstates))
     nudge_steps = max(1, config.nudge_sweeps * Int(nstates))
     free_reads = max(1, config.free_reads)
@@ -732,18 +732,13 @@ function local_worker_algorithm(
 end
 
 """Create one reusable manager-owned local-MNIST worker."""
-function local_worker(source::M, worker_idx::I, dynamics_algorithm::D) where {M<:PaperMNISTModel,I<:Integer,D}
+function local_worker(source::M, worker_idx::I, algorithm::A) where {M<:LocalMNISTModel,I<:Integer,A}
     log_worker = should_log_progress(source.config, worker_idx, source.config.workers)
     t_worker = time()
     t_model = time()
     model = worker_model(source, worker_idx)
     log_worker && progress_log(source.config, "worker model initialized"; t0 = t_model, worker = worker_idx)
     graph_state = II.state(model.graph)
-    free_steps = phase_steps(model, model.config.free_sweeps)
-    nudge_steps = phase_steps(model, model.config.nudge_sweeps)
-    t_resolve = time()
-    algorithm = Processes.resolve(local_worker_algorithm(deepcopy(dynamics_algorithm), model.config, length(graph_state)))
-    log_worker && progress_log(source.config, "worker algorithm resolved"; t0 = t_resolve, worker = worker_idx)
     t_process = time()
     proc = Processes.Process(
         algorithm,
@@ -771,11 +766,11 @@ function local_worker(source::M, worker_idx::I, dynamics_algorithm::D) where {M<
 end
 
 """Create the ProcessManager for local-MNIST minibatches."""
-function local_manager(source::M) where {M<:PaperMNISTModel}
+function local_manager(source::M) where {M<:LocalMNISTModel}
     t_manager = time()
     progress_log(source.config, "manager construction started"; workers = source.config.workers)
     params = trainable_params(source)
-    state = PaperMNISTManagerState(
+    state = LocalMNISTManagerState(
         source,
         gradient_buffer(source),
         gradient_buffer(source),
@@ -788,11 +783,14 @@ function local_manager(source::M) where {M<:PaperMNISTModel}
         Ref(0f0),
     )
     dynamics_algorithm = mnist_dynamics_algorithm()
+    t_resolve = time()
+    worker_algorithm = Processes.resolve(local_worker_algorithm(deepcopy(dynamics_algorithm), source.config, length(II.state(source.graph))))
+    progress_log(source.config, "worker algorithm resolved"; t0 = t_resolve)
     recipe = (;
         makeworker = (idx, manager) -> begin
             should_log_progress(manager.config, idx, manager.config.workers) &&
                 progress_log(manager.config, "manager constructing worker"; worker = idx, workers = manager.config.workers)
-            worker = local_worker(manager.state.model, idx, dynamics_algorithm)
+            worker = local_worker(manager.state.model, idx, worker_algorithm)
             should_log_progress(manager.config, idx, manager.config.workers) &&
                 progress_log(manager.config, "manager constructed worker"; worker = idx, workers = manager.config.workers)
             return worker
@@ -814,7 +812,7 @@ function local_manager(source::M) where {M<:PaperMNISTModel}
         flush_policy = Processes.FlushAtEnd(),
         worker_init = Processes.MakeEachWorker(),
         poll_interval = 0.0,
-        job_type = PaperMNISTJob{Vector{PMNIST_FT},Vector{PMNIST_FT}},
+        job_type = LocalMNISTJob{Vector{PMNIST_FT},Vector{PMNIST_FT}},
     )
     progress_log(source.config, "manager constructed"; t0 = t_manager, workers = source.config.workers)
     return manager
@@ -879,7 +877,7 @@ function install_sample_bias!(
     x::X,
     target = nothing,
     beta::Real = 0,
-) where {M<:PaperMNISTModel,X<:AbstractVector}
+) where {M<:LocalMNISTModel,X<:AbstractVector}
     length(x) == length(model.input_idxs) ||
         throw(DimensionMismatch("input length $(length(x)) does not match input layer length $(length(model.input_idxs))"))
     II.off!(model.graph.index_set, 1)
@@ -910,7 +908,7 @@ function install_nudged_sample_bias!(
     model::M,
     x::X,
     target::Y,
-) where {M<:PaperMNISTModel,X<:AbstractVector,Y<:AbstractVector}
+) where {M<:LocalMNISTModel,X<:AbstractVector,Y<:AbstractVector}
     return install_sample_bias!(model, x, target, model.config.β)
 end
 
@@ -932,7 +930,7 @@ function accumulate_local_contrastive_gradient!(
     y::Y,
     free_state::F,
     nudged_state::N,
-) where {G<:NamedTuple,M<:PaperMNISTModel,X<:AbstractVector,Y<:AbstractVector,F<:AbstractVector,N<:AbstractVector}
+) where {G<:NamedTuple,M<:LocalMNISTModel,X<:AbstractVector,Y<:AbstractVector,F<:AbstractVector,N<:AbstractVector}
     config = model.config
     free_h1 = @view free_state[model.hidden1_idxs]
     free_h2 = @view free_state[model.hidden2_idxs]
@@ -1013,7 +1011,7 @@ function finish_contrastive_sample!(
     y::Y,
     free_state::F,
     nudged_state::N,
-) where {G<:NamedTuple,M<:PaperMNISTModel,X<:AbstractVector,Y<:AbstractVector,F<:AbstractVector,N<:AbstractVector}
+) where {G<:NamedTuple,M<:LocalMNISTModel,X<:AbstractVector,Y<:AbstractVector,F<:AbstractVector,N<:AbstractVector}
     config = model.config
     free_o = @view free_state[model.output_idxs]
     correct = argmax(class_scores(free_o, config.output_replicas)) == argmax(class_scores(y, config.output_replicas))
@@ -1026,7 +1024,7 @@ function finish_contrastive_sample!(
 end
 
 """Load a balanced MNIST subset with `[0, 1]` inputs and repeated output labels."""
-function balanced_mnist(split::Symbol, per_class::I, config::C) where {I<:Integer,C<:PaperMNISTManagerConfig}
+function balanced_mnist(split::Symbol, per_class::I, config::C) where {I<:Integer,C<:LocalMNISTManagerConfig}
     dataset = split === :train ? MLDatasets.MNIST(split = :train) :
         split === :test ? MLDatasets.MNIST(split = :test) :
         throw(ArgumentError("split must be :train or :test"))
@@ -1036,8 +1034,15 @@ function balanced_mnist(split::Symbol, per_class::I, config::C) where {I<:Intege
         push!(buckets[Int(labels[idx]) + 1], idx)
     end
     keep = Int[]
+    rng = Random.MersenneTwister(hash((config.seed, split, Int(per_class))))
     for digit in 1:PMNIST_NCLASSES
-        append!(keep, @view buckets[digit][1:Int(per_class)])
+        length(buckets[digit]) >= Int(per_class) ||
+            throw(ArgumentError("split $(split) has only $(length(buckets[digit])) samples for digit $(digit - 1)"))
+
+        # Shuffle each class bucket once so reduced runs stay representative.
+        digit_indices = copy(buckets[digit])
+        Random.shuffle!(rng, digit_indices)
+        append!(keep, @view digit_indices[1:Int(per_class)])
     end
     x = Matrix{PMNIST_FT}(undef, PMNIST_INPUT_DIM, length(keep))
     y = fill(config.target_off, PMNIST_NCLASSES * config.output_replicas, length(keep))
@@ -1053,9 +1058,9 @@ end
 
 """Split selected sample indices into concrete manager jobs."""
 function batch_jobs(x::X, y::Y, indices::V) where {X<:AbstractMatrix,Y<:AbstractMatrix,V<:AbstractVector{Int}}
-    jobs = PaperMNISTJob{Vector{PMNIST_FT},Vector{PMNIST_FT}}[]
+    jobs = LocalMNISTJob{Vector{PMNIST_FT},Vector{PMNIST_FT}}[]
     for sample_idx in indices
-        push!(jobs, PaperMNISTJob(copy(view(x, :, sample_idx)), copy(view(y, :, sample_idx))))
+        push!(jobs, LocalMNISTJob(copy(view(x, :, sample_idx)), copy(view(y, :, sample_idx))))
     end
     return jobs
 end
@@ -1065,7 +1070,7 @@ function validation_free_phase_algorithm(
     dynamics_algorithm::D,
     config::C,
     nstates::I,
-) where {D,C<:PaperMNISTManagerConfig,I<:Integer}
+) where {D,C<:LocalMNISTManagerConfig,I<:Integer}
     free_steps = max(1, config.free_sweeps * Int(nstates))
     free_reads = max(1, config.free_reads)
     free_temperature = GeometricTemperatureSchedule(; start_T = config.hot_temp, stop_T = config.cold_temp, n_steps = free_steps)
@@ -1084,7 +1089,7 @@ function validation_free_phase_algorithm(
 end
 
 """Create one reusable process for free-phase validation sampling."""
-function free_phase_process(model::M, dynamics_algorithm::D) where {M<:PaperMNISTModel,D}
+function free_phase_process(model::M, dynamics_algorithm::D) where {M<:LocalMNISTModel,D}
     graph_state = II.state(model.graph)
     algorithm = Processes.resolve(validation_free_phase_algorithm(deepcopy(dynamics_algorithm), model.config, length(graph_state)))
     return Processes.Process(
@@ -1102,7 +1107,7 @@ function free_phase_process(model::M, dynamics_algorithm::D) where {M<:PaperMNIS
 end
 
 """Evaluate balanced accuracy and output loss with free-phase sampling."""
-function evaluate(model::M, x::X, y::Y) where {M<:PaperMNISTModel,X<:AbstractMatrix,Y<:AbstractMatrix}
+function evaluate(model::M, x::X, y::Y) where {M<:LocalMNISTModel,X<:AbstractMatrix,Y<:AbstractMatrix}
     config = model.config
     process = free_phase_process(model, mnist_dynamics_algorithm())
     context = Processes.context(process)._state
@@ -1126,7 +1131,7 @@ function evaluate(model::M, x::X, y::Y) where {M<:PaperMNISTModel,X<:AbstractMat
 end
 
 """Serialize trainable parameters."""
-function save_model(path::P, model::M) where {P<:AbstractString,M<:PaperMNISTModel}
+function save_model(path::P, model::M) where {P<:AbstractString,M<:LocalMNISTModel}
     mkpath(dirname(path))
     open(path, "w") do io
         serialize(io, (;
@@ -1141,16 +1146,16 @@ end
 """Load CairoMakie only when plots are written."""
 function ensure_cairomakie()
     mod = @__MODULE__
-    isdefined(mod, :CairoMakie) || Core.eval(mod, :(using CairoMakie))
-    return getfield(mod, :CairoMakie)
+    isdefined(mod, :CairoMakie) || Base.invokelatest(Core.eval, mod, :(using CairoMakie))
+    return Base.invokelatest(getfield, mod, :CairoMakie)
 end
 
 """Plot a run's train/test accuracy and loss curves without timing diagnostics."""
 function plot_metrics(path::P, rows::R) where {P<:AbstractString,R<:AbstractVector}
     CM = ensure_cairomakie()
     fig = CM.Figure(size = (1200, 760))
-    ax_acc = CM.Axis(fig[1, 1], xlabel = "epoch", ylabel = "accuracy", title = "Local MNIST manager accuracy")
-    ax_loss = CM.Axis(fig[2, 1], xlabel = "epoch", ylabel = "loss", title = "Loss")
+    ax_acc = CM.Axis(fig[1, 1], xlabel = "epoch", ylabel = "accuracy", title = "Single-hidden local MNIST accuracy")
+    ax_loss = CM.Axis(fig[2, 1], xlabel = "epoch", ylabel = "loss", title = "Mean squared output error")
     train_rows = [row for row in rows if !ismissing(row.train_accuracy)]
     if !isempty(train_rows)
         CM.lines!(ax_acc, [row.epoch for row in train_rows], [row.train_accuracy for row in train_rows], label = "train", color = :steelblue)
@@ -1187,9 +1192,9 @@ function plot_diagnostics(path::P, rows::R) where {P<:AbstractString,R<:Abstract
 end
 
 """Write run settings and manager details."""
-function write_settings!(path::P, config::C) where {P<:AbstractString,C<:PaperMNISTManagerConfig}
+function write_settings!(path::P, config::C) where {P<:AbstractString,C<:LocalMNISTManagerConfig}
     open(path, "w") do io
-        println(io, "# Local MNIST ProcessManager")
+        println(io, "# Single-Hidden Local MNIST")
         println(io)
         println(io, "- architecture: inactive input layer `784`, sampled layers `$(config.hidden1_side^2) -> $(config.hidden2_side^2) -> $(PMNIST_NCLASSES * config.output_replicas)`")
         println(io, "- radius: `$(config.local_radius)`")
@@ -1213,7 +1218,7 @@ function write_settings!(path::P, config::C) where {P<:AbstractString,C<:PaperMN
 end
 
 """Run one ProcessManager-backed local MNIST experiment."""
-function run_config!(config::C) where {C<:PaperMNISTManagerConfig}
+function run_config!(config::C) where {C<:LocalMNISTManagerConfig}
     t_run = time()
     progress_log(
         config,
@@ -1227,7 +1232,7 @@ function run_config!(config::C) where {C<:PaperMNISTManagerConfig}
     )
     t_setup = time()
     mkpath(config.outdir)
-    write_settings!(joinpath(config.outdir, "local_manager_settings.md"), config)
+    write_settings!(joinpath(config.outdir, "settings.md"), config)
     progress_log(config, "run output initialized"; t0 = t_setup)
     t_train = time()
     xtrain, ytrain = balanced_mnist(:train, config.train_per_class, config)
@@ -1248,9 +1253,9 @@ function run_config!(config::C) where {C<:PaperMNISTManagerConfig}
     t_manager = time()
     manager = local_manager(source)
     progress_log(config, "manager ready"; t0 = t_manager, workers = config.workers)
-    csv_path = joinpath(config.outdir, "mnist_local_manager.csv")
-    best_path = joinpath(config.outdir, "best_model.bin")
-    final_path = joinpath(config.outdir, "final_model.bin")
+    csv_path = joinpath(config.outdir, "metrics.csv")
+    best_path = joinpath(config.outdir, "best_params.bin")
+    final_path = joinpath(config.outdir, "final_params.bin")
     best_accuracy = Ref(-Inf)
     rows = NamedTuple[]
 
@@ -1363,7 +1368,7 @@ function run_config!(config::C) where {C<:PaperMNISTManagerConfig}
         save_model(final_path, source)
         progress_log(config, "final checkpoint saved"; t0 = t_final, path = final_path)
         t_plots = time()
-        plot_metrics(joinpath(config.outdir, "manager_learning_summary.png"), rows)
+        plot_metrics(joinpath(config.outdir, "progress.png"), rows)
         plot_diagnostics(joinpath(config.outdir, "diagnostics", "epoch_time.png"), rows)
         progress_log(config, "plots saved"; t0 = t_plots)
         progress_log(config, "run finished"; t0 = t_run, best_accuracy = round(best_accuracy[]; digits = 4), outdir = config.outdir)
@@ -1378,15 +1383,17 @@ end
 
 """Run a radius grid using the ProcessManager local-MNIST recipe."""
 function main()
-    base = PaperMNISTManagerConfig()
+    base = LocalMNISTManagerConfig()
     base.workers > 0 || throw(ArgumentError("ISING_MNIST_PM_WORKERS must be positive"))
     base.batchsize > 0 || throw(ArgumentError("ISING_MNIST_PM_BATCHSIZE must be positive"))
     Threads.nthreads() < base.workers && @warn "Julia was started with fewer threads than requested manager workers" threads = Threads.nthreads() workers = base.workers
     radii = parse_int_list(get(ENV, "ISING_MNIST_PM_RADII", "1,2,3,4,5,6,7,8,9,10"), collect(1:10))
+    root_outdir = haskey(ENV, "ISING_MNIST_PM_OUTDIR") ? base.outdir :
+        joinpath(@__DIR__, "experiments", "current", "radius_1_to_10_e$(base.epochs)_" * Dates.format(now(), "yyyymmdd_HHMMSS"))
     results = NamedTuple[]
     for radius in radii
         name = "r$(radius)"
-        outdir = joinpath(base.outdir, name)
+        outdir = joinpath(root_outdir, name)
         config = copy_config(base; name, local_radius = radius, outdir)
         push!(results, run_config!(config))
     end
