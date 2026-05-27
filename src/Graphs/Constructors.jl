@@ -117,6 +117,38 @@ function graph_constructor_state_storage(state_storage, precision, total_length)
 end
 
 """
+    instantiate_adjacency_from_triplets(adjtype, rows, cols, vals, total_length; diag, fastwrite)
+
+Build the graph adjacency from generated sparse triplets using the requested
+adjacency storage type.
+"""
+function instantiate_adjacency_from_triplets(
+    ::Type{T},
+    rows,
+    cols,
+    vals,
+    total_length::I;
+    diag = nothing,
+    fastwrite::B = false,
+) where {T <: UndirectedAdjacency, I <: Integer, B <: Bool}
+    sparse_connections = sparse(rows, cols, vals, total_length, total_length)
+    return UndirectedAdjacency(sparse_connections, diag; fastwrite)
+end
+
+function instantiate_adjacency_from_triplets(
+    adjtype::Type{T},
+    rows,
+    cols,
+    vals,
+    total_length::I;
+    diag = nothing,
+    fastwrite::B = false,
+) where {T <: AbstractSparseMatrix, I <: Integer, B <: Bool}
+    sparse_connections = sparse(rows, cols, vals, total_length, total_length)
+    return convert(adjtype, sparse_connections)
+end
+
+"""
     IsingGraph(layers...; precision = Float32, state = nothing, initial_state = nothing, ...)
 
 Construct a graph from one or more layers, with optional between-layer weight
@@ -177,7 +209,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         layers
     )
 
-    if isnothing(adj)
+    if isnothing(adj) || adj isa Type
         rows, cols, vals = init_connection_triplets_from_layers(precision, total_length, layers...)
         for (layer_idx, wg) in between_layer_wgs
             layerrows, layercols, layervals = genLayerConnections(g_for_shape[layer_idx], g_for_shape[layer_idx + 1], wg)
@@ -185,9 +217,9 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
             append!(cols, layercols)
             append!(vals, layervals)
         end
-        sparse_connections = sparse(rows, cols, vals, total_length, total_length)
         diag = diag(g_for_shape)
-        adj = UndirectedAdjacency(sparse_connections, diag; fastwrite)
+        adjtype = isnothing(adj) ? UndirectedAdjacency : adj
+        adj = instantiate_adjacency_from_triplets(adjtype, rows, cols, vals, total_length; diag, fastwrite)
     else
         @assert size(adj, 1) == total_length "Adjacency matrix size must match total number of nodes in the graph\nexpected $(total_length)x$(total_length), got $(size(adj))"
     end

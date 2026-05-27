@@ -28,12 +28,12 @@ using SparseArrays
 using UUIDs
 
 using ..Processes
-using ..InteractiveIsing: AbstractIsingLayer, Clamping, CoulombHamiltonian,
+using ..InteractiveIsing: AbstractIsingLayer, AbstractLayerTopology, Clamping, CoulombHamiltonian,
     CastVec, HamiltonianTerms, IsingGraph, MagField, PTimer, PolynomialHamiltonian,
     PolledObservable, Parameter, SingleLayerGraph, addRandomDefects!, adj, graphidxs,
-    hamiltonian, hamiltonians, idxToCoord, inline_layer_dispatch, layers,
-    modulefolder, nstates, origin, parameters, plotCorr, poll!, processes, coords,
-    saveGImg, state, stateset, temp, temp!, value, wg
+    hamiltonian, hamiltonians, idxToCoord, inline_layer_dispatch, layers, modulefolder,
+    nstates, origin, parameters, plotCorr, poll!, processes, coords, saveGImg, state,
+    stateset, temp, temp!, topology, value, wg
 
 export AbstractPanel, PanelHandle, WindowHost, SimulationPanel, StatusPanel,
     AllLayersViewPanel, ConnectionsPanel, ContextLinesPanel, HamiltonianDisplaySpec, HamiltonianParameterPanel,
@@ -45,7 +45,8 @@ export AbstractPanel, PanelHandle, WindowHost, SimulationPanel, StatusPanel,
     hot_observable_zero,
     interface, layer_display, mount!, new_interface, onclose!, panel!,
     parameter_display, pause!, register!, register_frame!, register_hot_observable!,
-    register_polled!, restart!, resume!, tofigure, toimage, toimage!, window,
+    register_polled!, restart!, resume!, tofigure, toimage, toimage!,
+    topology_layer_display!, window,
     displayable_hamiltonian_parameters, hamiltonian_visualizations,
     close_debug_window_descriptions, close_debug_window_names,
     open_close_debug_window

@@ -16,6 +16,17 @@ Base.size(c::WoorldCoordinate{N}) where N = (N,)
     WoorldCoordinate(ntuple(i -> origin(top)[i] + lattice_constants(top)[i] * wrapped[i], Val(D)))
 end
 
+"""
+    woorldcoordinate(top, coord)
+
+Convert an axial hexagonal coordinate into the shared world-coordinate space.
+"""
+@inline function woorldcoordinate(top::T, coord::Coordinate{2}) where {T<:HexagonalTopology}
+    wrapped = wrap(top, coord)
+    v1, v2 = primitive_vectors(top)
+    return WoorldCoordinate(origin(top) + wrapped[1] * v1 + wrapped[2] * v2)
+end
+
 @generated function woorldcoordinate(top::LatticeTopology{T,U,D,P}, coord::Coordinate{D}) where {T,U,D,P}
     terms = [:(wrapped[$i] * top[$i]) for i in 1:D]
     sumexp = terms[1]

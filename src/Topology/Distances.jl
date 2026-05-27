@@ -30,6 +30,77 @@ function dist2(top::SquareTopology, c1::C1, c2::C2) where {C1<:Coordinate, C2<:C
     return total
 end
 
+"""
+    delta_distance(top, dc)
+
+Calculate the metric distance represented by a coordinate-space delta on `top`.
+"""
+@inline delta_distance(top::T, dc::DeltaCoordinate{D}) where {D,T<:AbstractLayerTopology} =
+    sqrt(delta_distance2(top, dc))
+
+"""
+    delta_distance2(top, dc)
+
+Calculate the squared metric distance represented by a coordinate-space delta on
+any topology that exposes orthogonal `lattice_constants`.
+"""
+function delta_distance2(top::T, dc::DeltaCoordinate{D}) where {D,T<:AbstractLayerTopology}
+    total = 0.0
+    constants = lattice_constants(top)
+    @inbounds for i in 1:D
+        d = constants[i] * dc[i]
+        total += d * d
+    end
+    return total
+end
+
+"""
+    delta_distance2(top, dc)
+
+Calculate the squared metric distance represented by a coordinate-space delta on
+an orthogonal topology.
+"""
+function delta_distance2(top::T, dc::DeltaCoordinate{D}) where {D,T<:SquareTopology}
+    total = 0.0
+    @inbounds for i in 1:D
+        d = lattice_constants(top)[i] * dc[i]
+        total += d * d
+    end
+    return total
+end
+
+"""
+    delta_distance2(top, dc)
+
+Calculate the squared metric distance represented by an axial-coordinate delta
+on a hexagonal topology.
+"""
+function delta_distance2(top::T, dc::DeltaCoordinate{2}) where {T<:HexagonalTopology}
+    a1, a2 = lattice_constants(top)
+    q = dc[1]
+    r = dc[2]
+    return a1 * a1 * q * q + a1 * a2 * q * r + a2 * a2 * r * r
+end
+
+"""
+    dist(top, c1, c2)
+
+Calculate the metric distance between two hexagonal-topology coordinates.
+"""
+@inline dist(top::T, c1::C1, c2::C2) where {T<:HexagonalTopology,C1<:Coordinate,C2<:Coordinate} =
+    sqrt(dist2(top, c1, c2))
+
+"""
+    dist2(top, c1, c2)
+
+Calculate the squared minimum-image distance between two coordinates on a
+hexagonal topology.
+"""
+function dist2(top::T, c1::C1, c2::C2) where {T<:HexagonalTopology,C1<:Coordinate,C2<:Coordinate}
+    raw_delta = DeltaCoordinate(c2[1] - c1[1], c2[2] - c1[2])
+    return delta_distance2(top, top(raw_delta))
+end
+
 
 """
 Calculate the squared distance between two coordinates on different topoligies
