@@ -22,6 +22,7 @@ const EDGE_HIDDEN_RNG_REF = Ref(Random.MersenneTwister(1))
 
 Base.@kwdef struct EdgeApplicationConfig
     name::String = "nn3"
+    seed_index::Int = 1
     epochs::Int = parse(Int, get(ENV, "ISING_XOR_EDGE_EPOCHS", "160"))
     workers::Int = parse(Int, get(ENV, "ISING_XOR_EDGE_WORKERS", "32"))
     log_every::Int = parse(Int, get(ENV, "ISING_XOR_EDGE_LOG_EVERY", "10"))
@@ -54,6 +55,9 @@ Base.@kwdef struct EdgeApplicationConfig
     bias_scale::FT = parse(FT, get(ENV, "ISING_XOR_EDGE_BIAS_SCALE", "0.05"))
     init_mode::Symbol = Symbol(lowercase(get(ENV, "ISING_XOR_EDGE_INIT_MODE", "zero")))
     seed::Int = parse(Int, get(ENV, "ISING_XOR_EDGE_SEED", "7103"))
+    resume_dir::String = get(ENV, "ISING_XOR_EDGE_RESUME_DIR", "")
+    resume_file::String = get(ENV, "ISING_XOR_EDGE_RESUME_FILE", "final_params.bin")
+    start_epoch::Int = parse(Int, get(ENV, "ISING_XOR_EDGE_START_EPOCH", "0"))
     outdir::String = get(
         ENV,
         "ISING_XOR_EDGE_OUTDIR",
@@ -61,7 +65,7 @@ Base.@kwdef struct EdgeApplicationConfig
             @__DIR__,
             "experiments",
             "current",
-            "xor_edge_application_" * Dates.format(now(), "yyyymmdd_HHMMSS"),
+            "separate_input_output_lines_side16_nn1to10_seeds1to5_e160",
         ),
     )
 end
@@ -73,21 +77,6 @@ struct EdgeApplicationJob{X<:AbstractVector,Y<:AbstractVector}
     repeats::Int
 end
 
-struct AveragedEdgeContrastiveStep{S} <: Processes.ProcessAlgorithm
-    base::S
-end
-
-struct EdgeContrastiveStep{D,N,T,I} <: Processes.ProcessAlgorithm
-    dynamics_algorithm::D
-    nudged_dynamics_algorithm::N
-    β::T
-    input_dim::Int
-    output_dim::Int
-    free_relaxation_steps::Int
-    nudged_relaxation_steps::Int
-    init_mode::I
-end
-
 mutable struct EdgeManagerState{P,B,O}
     params::Base.RefValue{P}
     batch_gradient::B
@@ -95,10 +84,20 @@ mutable struct EdgeManagerState{P,B,O}
     opt_state::O
 end
 
+"""Return the number of graph spins used to convert sweeps into process steps."""
+function edge_nunits(config::C) where {C<:EdgeApplicationConfig}
+    return 2 * config.side + config.side^2
+end
+
 """Parse a comma-separated integer list, returning `default` if the value is empty."""
 function parse_int_list(value::S, default::V) where {S<:AbstractString,V<:AbstractVector{Int}}
     isempty(strip(value)) && return default
     return [parse(Int, strip(part)) for part in split(value, ",") if !isempty(strip(part))]
+end
+
+"""Return a fixed-width seed suffix for readable run folder names."""
+function seed_label(seed_index::Integer)
+    return "seed" * lpad(string(seed_index), 2, '0')
 end
 
 """Return a copy of `config` with selected fields replaced."""
@@ -298,88 +297,109 @@ function edge_xor_layer(graph::G, config::C) where {G,C<:EdgeApplicationConfig}
     )
 end
 
-"""Create the edge contrastive step with configurable free-state init."""
-function EdgeContrastiveStep(layer::L, config::C) where {L<:LayeredIsingGraphLayer,C<:EdgeApplicationConfig}
-    return EdgeContrastiveStep(
-        deepcopy(layer.dynamics_algorithm),
-        deepcopy(layer.nudged_dynamics_algorithm),
-        layer.β,
-        length(layer.input_layer),
-        length(layer.output_layer),
-        layer.free_relaxation_steps,
-        layer.nudged_relaxation_steps,
-        config.init_mode,
-    )
+"""Accumulate one plus/minus contrastive gradient into a reusable buffer."""
+function accumulate_layer_contrastive_gradient!(
+    isinggraph::G,
+    plus_state::P,
+    minus_state::M,
+    beta::T,
+    buffers::B,
+) where {G,P<:AbstractVector,M<:AbstractVector,T<:Real,B}
+    IsingLearning.contrastive_gradient(isinggraph, plus_state, minus_state, beta; buffers)
+    return buffers
 end
 
-"""Initialize reusable storage for one edge contrastive worker."""
-function Processes.init(step::E, context) where {E<:EdgeContrastiveStep}
-    model = context.model
-    T = eltype(model)
-    x = get(context, :x, zeros(T, step.input_dim))
-    y = get(context, :y, zeros(T, step.output_dim))
-    buffers = get(context, :buffers, IsingLearning.layer_gradient_buffer(model))
-    equilibrium_state = get(context, :equilibrium_state, copy(II.state(model)))
-    plus_state = get(context, :plus_state, similar(equilibrium_state))
-    minus_state = get(context, :minus_state, similar(equilibrium_state))
-    free_context = Processes.init(step.dynamics_algorithm, (; model))
-    nudged_context = Processes.init(step.nudged_dynamics_algorithm, (; model))
-    return (; model, x, y, buffers, equilibrium_state, plus_state, minus_state, free_context, nudged_context)
-end
+"""Build one reusable free-phase routine for an edge XOR worker."""
+function edge_free_phase_algorithm(dynamics_algorithm::D, init_mode, steps::I) where {D,I<:Integer}
+    return Processes.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @state x
+        @state equilibrium_state
 
-"""Run free, positive-nudged, and negative-nudged phases for one edge sample."""
-function Processes.step!(step::E, context) where {E<:EdgeContrastiveStep}
-    model = context.model
-    β = step.β
-
-    initialize_edge_state!(model, step.init_mode)
-    IsingLearning.apply_input(model, context.x)
-    IsingLearning.relax_context!(step.dynamics_algorithm, context.free_context, step.free_relaxation_steps)
-    context.equilibrium_state .= II.state(model)
-
-    II.state(model) .= context.equilibrium_state
-    IsingLearning.apply_input(model, context.x)
-    IsingLearning.apply_targets(model, context.y)
-    IsingLearning.set_clamping_beta!(model, β)
-    IsingLearning.relax_context!(step.nudged_dynamics_algorithm, context.nudged_context, step.nudged_relaxation_steps)
-    context.plus_state .= II.state(model)
-
-    II.state(model) .= context.equilibrium_state
-    IsingLearning.apply_input(model, context.x)
-    IsingLearning.apply_targets(model, context.y)
-    IsingLearning.set_clamping_beta!(model, -β)
-    IsingLearning.relax_context!(step.nudged_dynamics_algorithm, context.nudged_context, step.nudged_relaxation_steps)
-    context.minus_state .= II.state(model)
-
-    IsingLearning.set_clamping_beta!(model, zero(β))
-    IsingLearning.contrastive_gradient(model, context.plus_state, context.minus_state, β; buffers = context.buffers)
-    return nothing
-end
-
-"""Keep the edge contrastive context reusable."""
-function Processes.cleanup(step::E, context) where {E<:EdgeContrastiveStep}
-    return nothing
-end
-
-"""Initialize the worker-local repeat wrapper around the edge contrastive step."""
-function Processes.init(step::AveragedEdgeContrastiveStep{S}, context) where {S}
-    base_context = Processes.init(step.base, context)
-    repeats = get(context, :repeats, Ref(1))
-    repeats_ref = repeats isa Base.RefValue ? repeats : Ref(Int(repeats))
-    return (; base_context, repeats = repeats_ref)
-end
-
-"""Run multiple input-averaging repeats inside one managed worker execution."""
-function Processes.step!(step::AveragedEdgeContrastiveStep{S}, context) where {S}
-    @inbounds for _ in 1:context.repeats[]
-        Processes.step!(step.base, context.base_context)
+        initialize_edge_state!(dynamics.model, init_mode)
+        IsingLearning.apply_input(dynamics.model, x)
+        @repeat steps dynamics()
+        CopyGraphState!(equilibrium_state, dynamics.model)
     end
-    return nothing
 end
 
-"""Keep the repeat wrapper context reusable across manager jobs."""
-function Processes.cleanup(step::AveragedEdgeContrastiveStep{S}, context) where {S}
-    return nothing
+"""Build one reusable positive-nudge phase routine for an edge XOR worker."""
+function edge_plus_phase_algorithm(nudged_dynamics_algorithm::D, beta::T, steps::I) where {D,T<:Real,I<:Integer}
+    return Processes.@Routine begin
+        @alias nudged_dynamics = nudged_dynamics_algorithm
+        @state x
+        @state y
+        @state equilibrium_state
+        @state plus_state
+
+        SetGraphState!(nudged_dynamics.model, equilibrium_state)
+        IsingLearning.apply_input(nudged_dynamics.model, x)
+        IsingLearning.apply_targets(nudged_dynamics.model, y)
+        IsingLearning.set_clamping_beta!(nudged_dynamics.model, beta)
+        @repeat steps nudged_dynamics()
+        CopyGraphState!(plus_state, nudged_dynamics.model)
+    end
+end
+
+"""Build one reusable negative-nudge phase routine for an edge XOR worker."""
+function edge_minus_phase_algorithm(nudged_dynamics_algorithm::D, beta::T, steps::I) where {D,T<:Real,I<:Integer}
+    return Processes.@Routine begin
+        @alias nudged_dynamics = nudged_dynamics_algorithm
+        @state x
+        @state y
+        @state equilibrium_state
+        @state minus_state
+
+        SetGraphState!(nudged_dynamics.model, equilibrium_state)
+        IsingLearning.apply_input(nudged_dynamics.model, x)
+        IsingLearning.apply_targets(nudged_dynamics.model, y)
+        IsingLearning.set_clamping_beta!(nudged_dynamics.model, -beta)
+        @repeat steps nudged_dynamics()
+        CopyGraphState!(minus_state, nudged_dynamics.model)
+    end
+end
+
+"""Build one reusable contrastive-sample routine for an edge XOR worker."""
+function edge_sample_algorithm(
+    free_phase,
+    plus_phase,
+    minus_phase,
+    beta::T,
+) where {T<:Real}
+    return Processes.@Routine begin
+        @alias free_phase = free_phase
+        @alias plus_phase = plus_phase
+        @alias minus_phase = minus_phase
+        @state buffers
+        @state plus_state
+        @state minus_state
+
+        free_phase()
+        plus_phase()
+        minus_phase()
+        IsingLearning.set_clamping_beta!(minus_phase.nudged_dynamics.model, zero(beta))
+        accumulate_layer_contrastive_gradient!(minus_phase.nudged_dynamics.model, plus_state, minus_state, beta, buffers)
+    end
+end
+
+"""Build the reusable LoopAlgorithm used by each edge XOR worker."""
+function edge_worker_algorithm(layer::L, config::C) where {L<:LayeredIsingGraphLayer,C<:EdgeApplicationConfig}
+    dynamics_algorithm = deepcopy(layer.dynamics_algorithm)
+    nudged_dynamics_algorithm = deepcopy(layer.nudged_dynamics_algorithm)
+    free_steps = layer.free_relaxation_steps
+    nudged_steps = layer.nudged_relaxation_steps
+    β = layer.β
+    init_mode = config.init_mode
+    free_phase = edge_free_phase_algorithm(dynamics_algorithm, init_mode, free_steps)
+    plus_phase = edge_plus_phase_algorithm(nudged_dynamics_algorithm, β, nudged_steps)
+    minus_phase = edge_minus_phase_algorithm(nudged_dynamics_algorithm, β, nudged_steps)
+    sample_once = edge_sample_algorithm(free_phase, plus_phase, minus_phase, β)
+    return Processes.@Routine begin
+        @alias sample_once = sample_once
+        @state repeats
+
+        @repeat repeats[] sample_once()
+    end
 end
 
 """Return the mutable training context stored in one worker."""
@@ -405,17 +425,23 @@ function worker_graph(prototype::G, ps::P, config::C) where {G,P,C<:EdgeApplicat
     return graph
 end
 
-"""Build one reusable averaged contrastive process worker."""
-function averaged_worker(layer::L, graph::G, config::C) where {L<:LayeredIsingGraphLayer,G,C<:EdgeApplicationConfig}
-    step = AveragedEdgeContrastiveStep(EdgeContrastiveStep(layer, config))
+"""Build one reusable LoopAlgorithm process worker."""
+function edge_worker(layer::L, graph::G, config::C) where {L<:LayeredIsingGraphLayer,G,C<:EdgeApplicationConfig}
+    graph_state = II.state(graph)
+    algorithm = Processes.resolve(edge_worker_algorithm(layer, config))
     return Processes.Process(
-        :_state => step,
+        algorithm,
         Processes.Init(:_state;
-            model = graph,
             x = zeros(eltype(graph), length(layer.input_layer)),
             y = zeros(eltype(graph), length(layer.output_layer)),
+            buffers = IsingLearning.layer_gradient_buffer(graph),
+            equilibrium_state = similar(graph_state),
+            plus_state = similar(graph_state),
+            minus_state = similar(graph_state),
             repeats = Ref(1),
-        );
+        ),
+        Processes.Init(:dynamics; model = graph),
+        Processes.Init(:nudged_dynamics; model = graph);
         repeat = 1,
     )
 end
@@ -458,7 +484,7 @@ end
 function clear_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
     clear_buffer!(manager.state.batch_gradient)
     for worker in Processes.workers(manager)
-        clear_buffer!(worker_context(worker).base_context.buffers)
+        clear_buffer!(worker_context(worker).buffers)
     end
     return manager
 end
@@ -467,7 +493,7 @@ end
 function flush_edge_buffers!(manager::M) where {M<:Processes.ProcessManager}
     clear_buffer!(manager.state.batch_gradient)
     for worker in Processes.workers(manager)
-        ctx = worker_context(worker).base_context
+        ctx = worker_context(worker)
         add_buffer!(manager.state.batch_gradient, ctx.buffers)
         clear_buffer!(ctx.buffers)
     end
@@ -501,7 +527,7 @@ end
 """Install updated shared parameters once after a manager batch."""
 function sync_worker_params!(manager::M, ps::P) where {M<:Processes.ProcessManager,P}
     worker = first(Processes.workers(manager))
-    IsingLearning.sync_params!(worker_context(worker).base_context.model, ps)
+    IsingLearning.sync_params!(Processes.context(worker).dynamics.model, ps)
     return manager
 end
 
@@ -513,11 +539,11 @@ function edge_xor_manager(layer::L, graph::G, ps::P, config::C) where {L<:Layere
         throw(ArgumentError("unknown XOR optimizer `$(config.optimizer)`; use `adam` or `descent`"))
     state = EdgeManagerState(Ref(ps), parameter_buffer(ps), Ref(0), Optimisers.setup(optimiser, ps))
     recipe = (;
-        makeworker = (idx, manager) -> averaged_worker(layer, worker_graph(graph, manager.state.params[], manager.config), manager.config),
+        makeworker = (idx, manager) -> edge_worker(layer, worker_graph(graph, manager.state.params[], manager.config), manager.config),
         prepare! = (slot, job, manager) -> begin
             ctx = worker_context(slot.worker)
-            ctx.base_context.x .= job.x
-            ctx.base_context.y .= job.y
+            ctx.x .= job.x
+            ctx.y .= job.y
             ctx.repeats[] = job.repeats
             Processes.resetworker!(slot)
             return nothing
@@ -539,9 +565,9 @@ end
 """Create manager jobs, defaulting to enough chunks to fill the workers.
 
 Each job stores the number of random-start repeats to run. The worker-side
-`AveragedEdgeContrastiveStep` executes those repeats inside one
-`ProcessAlgorithm` step, so a 32-worker run gets 32 scheduled jobs without
-turning each random init into its own manager job.
+LoopAlgorithm executes those repeats inside one scheduled manager job, so a
+32-worker run gets 32 scheduled jobs without turning each random init into
+its own manager job.
 """
 function edge_xor_jobs(config::C, x::X, y::Y) where {C<:EdgeApplicationConfig,X<:AbstractMatrix,Y<:AbstractMatrix}
     chunks_per_case = config.chunks_per_case > 0 ?
@@ -679,16 +705,23 @@ function append_metrics!(path::P, row) where {P<:AbstractString}
     return path
 end
 
-"""Return the list of NN configs selected for this run."""
+"""Return selected NN and seed-repeat configs for an edge robustness run."""
+function edge_configs(base::C, nns::N, seed_indices::S) where {C<:EdgeApplicationConfig,N<:AbstractVector{Int},S<:AbstractVector{Int}}
+    configs = EdgeApplicationConfig[]
+    for nn in nns, seed_index in seed_indices
+        name = "nn$(nn)_$(seed_label(seed_index))"
+        seed = base.seed + 10_000 * seed_index + 101 * nn
+        push!(configs, copy_config(base; name, local_nn = nn, seed_index, seed))
+    end
+    return configs
+end
+
+"""Return the default NN/seed configs selected by environment variables."""
 function experiment_configs(base::C) where {C<:EdgeApplicationConfig}
     nns = parse_int_list(get(ENV, "ISING_XOR_EDGE_NNS", "1,2,3,4,5,6,7,8,9,10"), collect(1:10))
+    seed_indices = parse_int_list(get(ENV, "ISING_XOR_EDGE_SEEDS", "1,2,3,4,5"), collect(1:5))
     limit = parse(Int, get(ENV, "ISING_XOR_EDGE_LIMIT", "0"))
-    configs = EdgeApplicationConfig[]
-    for nn in nns
-        name = "nn$(nn)"
-        seed = base.seed + 101 * nn
-        push!(configs, copy_config(base; name, local_nn = nn, seed))
-    end
+    configs = edge_configs(base, nns, seed_indices)
     if limit > 0
         resize!(configs, min(limit, length(configs)))
     end
@@ -746,48 +779,66 @@ function plot_results(outdir::P, rows::R, summary_rows::S) where {P<:AbstractStr
     return path
 end
 
-"""Write a compact markdown summary for the NN comparison."""
-function write_summary_note!(path::P, base::C, summary_rows::S, plot_path) where {P<:AbstractString,C<:EdgeApplicationConfig,S<:AbstractVector}
-    open(path, "w") do io
-        println(io, "# Edge Application XOR Grid")
-        println(io)
-        println(io, "Static checkerboard evidence is applied on the left edge of a `$(base.side)x$(base.side)` propagation layer.")
-        println(io, "The output is read from an opposite edge line with the configured target code clamped during learning.")
-        println(io)
-        println(io, "- output mode: `$(base.output_mode)`")
-        if base.output_mode === :majority
-            println(io, "- output target: all output spins `-1` for XOR false and `+1` for XOR true")
-        else
-            println(io, "- output target: replicated two-class edge code, first half false and second half true")
-        end
-        println(io, "- compared hidden NN values: `$(get(ENV, "ISING_XOR_EDGE_NNS", "1,2,3,4,5,6,7,8,9,10"))`")
-        println(io, "- edge fanout: `$(base.edge_fanout)`")
-        println(io, "- epochs per config: `$(base.epochs)`")
-        println(io, "- free/nudged sweeps: `$(base.free_sweeps)` / `$(base.nudged_sweeps)`")
-        println(io, "- workers: `$(base.workers)`")
-        println(io, "- repeats per case: `$(base.repeats_per_case)`")
-        println(io, "- chunks per case: `$(base.chunks_per_case == 0 ? cld(base.workers, length(EDGE_XOR_CASES)) : base.chunks_per_case)`")
-        println(io, "- snapshots every epochs: `$(base.snapshot_every == 0 ? "disabled" : string(base.snapshot_every))`")
-        println(io, "- optimizer: `$(base.optimizer)`")
-        println(io, "- optimizer learning rate: `$(base.lr)`")
-        println(io, "- optimizer lr decay/min: `$(base.lr_decay)` / `$(base.lr_min)`")
-        println(io, "- weight decay on couplings: `$(base.weight_decay)`")
-        println(io, "- dynamics: `$(base.dynamics)`")
-        println(io, "- block size: `$(base.block_size)`")
-        println(io, "- init mode: `$(base.init_mode)`")
-        println(io)
-        println(io, "## Best Results")
-        println(io)
-        println(io, "| Rank | Config | NN | Best Margin | Best Accuracy | First All-Correct | Best MSE |")
-        println(io, "|---:|---|---:|---:|---:|---:|---:|")
-        for (rank, row) in enumerate(sort(summary_rows; by = row -> row.best_min_margin, rev = true))
-            println(io, "| $rank | `$(row.config)` | $(row.nn) | $(round(row.best_min_margin; digits = 6)) | $(round(row.best_accuracy; digits = 3)) | $(row.first_all_correct_epoch) | $(round(row.best_mse; digits = 6)) |")
-        end
-        println(io)
-        !isnothing(plot_path) && println(io, "Plot: `$(relpath(plot_path, dirname(path)))`")
-        println(io, "Metrics: `metrics.csv`")
-        println(io, "Summary: `summary.csv`")
+"""Plot the learning history for one NN/seed configuration inside its folder."""
+function plot_config_results(run_dir::P, rows::R, config::C) where {P<:AbstractString,R<:AbstractVector,C<:EdgeApplicationConfig}
+    isempty(rows) && return nothing
+
+    fig = Figure(size = (1200, 850))
+    title = "NN $(config.local_nn), $(seed_label(config.seed_index))"
+    ax_mse = Axis(fig[1, 1], xlabel = "epoch", ylabel = "score MSE", title = title)
+    ax_acc = Axis(fig[2, 1], xlabel = "epoch", ylabel = "accuracy", title = "Truth-table accuracy")
+    ax_margin = Axis(fig[3, 1], xlabel = "epoch", ylabel = "min margin", title = "Worst-case margin")
+
+    epochs = [row.epoch for row in rows]
+    lines!(ax_mse, epochs, [row.mse for row in rows], color = :steelblue, linewidth = 2.6)
+    lines!(ax_acc, epochs, [row.accuracy for row in rows], color = :seagreen, linewidth = 2.6)
+    lines!(ax_margin, epochs, [row.min_margin for row in rows], color = :firebrick, linewidth = 2.6)
+    hlines!(ax_acc, [1.0], color = (:gray30, 0.45), linestyle = :dash)
+    hlines!(ax_margin, [0.0], color = (:gray30, 0.45), linestyle = :dash)
+
+    path = joinpath(run_dir, "learning_curve.png")
+    save_edge_plot(path, fig)
+    return path
+end
+
+"""Return one robustness row per NN by aggregating seed summaries."""
+function nn_robustness_rows(summary_rows::S) where {S<:AbstractVector}
+    nns = sort(unique(row.nn for row in summary_rows))
+    rows = NamedTuple[]
+    for nn in nns
+        subset = [row for row in summary_rows if row.nn == nn]
+        solved = [row for row in subset if row.best_accuracy == 1.0 && row.best_min_margin > 0 && row.best_mse < 0.1]
+        push!(
+            rows,
+            (;
+                nn,
+                runs = length(subset),
+                solved = length(solved),
+                solved_fraction = length(solved) / length(subset),
+                best_mse = minimum(row.best_mse for row in subset),
+                mean_best_mse = mean(row.best_mse for row in subset),
+                best_min_margin = maximum(row.best_min_margin for row in subset),
+                mean_best_min_margin = mean(row.best_min_margin for row in subset),
+            ),
+        )
     end
+    return rows
+end
+
+"""Plot NN robustness across repeated seeds."""
+function plot_robustness_results(outdir::P, robustness_rows::R) where {P<:AbstractString,R<:AbstractVector}
+    isempty(robustness_rows) && return nothing
+
+    fig = Figure(size = (1450, 900))
+    xvals = [row.nn for row in robustness_rows]
+    ax_success = Axis(fig[1, 1], xlabel = "NN", ylabel = "solved seed fraction", title = "Robustness across seeds")
+    ax_mse = Axis(fig[2, 1], xlabel = "NN", ylabel = "mean best MSE", title = "Mean best MSE")
+    ax_margin = Axis(fig[3, 1], xlabel = "NN", ylabel = "mean best min margin", title = "Mean best margin")
+    barplot!(ax_success, xvals, [row.solved_fraction for row in robustness_rows], color = :seagreen)
+    barplot!(ax_mse, xvals, [row.mean_best_mse for row in robustness_rows], color = :steelblue)
+    barplot!(ax_margin, xvals, [row.mean_best_min_margin for row in robustness_rows], color = :firebrick)
+    path = joinpath(outdir, "robustness_summary.png")
+    save_edge_plot(path, fig)
     return path
 end
 
@@ -802,14 +853,26 @@ function save_snapshot!(run_dir::P, epoch::Integer, ps::S, config::C, metrics::M
     return path
 end
 
+"""Load resumed parameters for one NN/seed config when a resume directory is set."""
+function maybe_resume_params(ps::P, config::C) where {P,C<:EdgeApplicationConfig}
+    isempty(config.resume_dir) && return ps
+    path = joinpath(config.resume_dir, config.name, config.resume_file)
+    isfile(path) || throw(ArgumentError("resume file `$path` does not exist"))
+    payload = open(deserialize, path)
+    hasproperty(payload, :ps) || throw(ArgumentError("resume file `$path` does not contain a `ps` field"))
+    return payload.ps
+end
+
 """Run one NN configuration and return metric rows plus summary."""
 function run_config!(config::C, root_outdir::P) where {C<:EdgeApplicationConfig,P<:AbstractString}
     run_dir = joinpath(root_outdir, config.name)
+    isdir(run_dir) && rm(run_dir; recursive = true, force = true)
     mkpath(run_dir)
 
     graph = edge_xor_graph(config)
     layer = edge_xor_layer(graph, config)
     ps = LuxCore.initialparameters(Random.MersenneTwister(config.seed + 20), layer)
+    ps = maybe_resume_params(ps, config)
     st = LuxCore.initialstates(Random.MersenneTwister(config.seed + 21), layer)
     x, y = edge_xor_dataset(config, FT)
     jobs = edge_xor_jobs(config, x, y)
@@ -829,13 +892,14 @@ function run_config!(config::C, root_outdir::P) where {C<:EdgeApplicationConfig,
 
     try
         for epoch in 0:config.epochs
+            absolute_epoch = config.start_epoch + epoch
             should_snapshot = config.snapshot_every > 0 && epoch % config.snapshot_every == 0
             should_record = epoch == 0 || epoch % config.log_every == 0 || should_snapshot || epoch == config.epochs
             if should_record
                 metrics = evaluate_edge_xor(layer, manager.state.params[], st, x, y, config)
                 if metrics.mse < best_mse
                     best_mse = metrics.mse
-                    best_epoch = epoch
+                    best_epoch = absolute_epoch
                     best_accuracy = metrics.accuracy
                     open(joinpath(run_dir, "best_params.bin"), "w") do io
                         serialize(io, (; ps = manager.state.params[], config, metrics, cases = EDGE_XOR_CASES))
@@ -843,19 +907,21 @@ function run_config!(config::C, root_outdir::P) where {C<:EdgeApplicationConfig,
                 end
                 if metrics.min_margin > best_min_margin
                     best_min_margin = metrics.min_margin
-                    best_margin_epoch = epoch
+                    best_margin_epoch = absolute_epoch
                     open(joinpath(run_dir, "best_margin_params.bin"), "w") do io
                         serialize(io, (; ps = manager.state.params[], config, metrics, cases = EDGE_XOR_CASES))
                     end
                 end
                 if metrics.all_correct && first_all_correct_epoch < 0
-                    first_all_correct_epoch = epoch
+                    first_all_correct_epoch = absolute_epoch
                 end
-                should_snapshot && save_snapshot!(run_dir, epoch, manager.state.params[], config, metrics)
+                should_snapshot && save_snapshot!(run_dir, absolute_epoch, manager.state.params[], config, metrics)
                 row = (;
                     config = config.name,
                     nn = config.local_nn,
-                    epoch,
+                    seed_index = config.seed_index,
+                    seed = config.seed,
+                    epoch = absolute_epoch,
                     mse = metrics.mse,
                     output_mse = metrics.output_mse,
                     accuracy = metrics.accuracy,
@@ -898,11 +964,14 @@ function run_config!(config::C, root_outdir::P) where {C<:EdgeApplicationConfig,
     open(joinpath(run_dir, "final_params.bin"), "w") do io
         serialize(io, (; ps = manager.state.params[], config, cases = EDGE_XOR_CASES))
     end
+    config.plot && plot_config_results(run_dir, rows, config)
     return (;
         rows,
         summary = (;
             config = config.name,
             nn = config.local_nn,
+            seed_index = config.seed_index,
+            seed = config.seed,
             best_mse,
             best_accuracy,
             best_epoch,
@@ -930,16 +999,14 @@ function write_aggregate_csvs!(outdir::P, rows::R, summary_rows::S) where {P<:Ab
     return (; metrics_path, summary_path)
 end
 
-"""Run the full edge-application NN comparison."""
-function main()
-    base = EdgeApplicationConfig()
+"""Run an edge-application NN comparison for a prepared config set."""
+function run_edge_grid!(base::C, configs::S = experiment_configs(base)) where {C<:EdgeApplicationConfig,S<:AbstractVector{EdgeApplicationConfig}}
     base.workers > 0 || throw(ArgumentError("ISING_XOR_EDGE_WORKERS must be positive"))
     base.repeats_per_case > 0 || throw(ArgumentError("ISING_XOR_EDGE_REPEATS must be positive"))
     Threads.nthreads() < base.workers && @warn "Julia was started with fewer threads than requested manager workers" threads = Threads.nthreads() workers = base.workers
     base.side > 1 || throw(ArgumentError("ISING_XOR_EDGE_SIDE must be at least 2"))
     base.output_mode === :two_class && isodd(base.side) && throw(ArgumentError("two_class edge output mode needs an even ISING_XOR_EDGE_SIDE"))
 
-    configs = experiment_configs(base)
     isempty(configs) && throw(ArgumentError("no edge application configs selected"))
     mkpath(base.outdir)
 
@@ -953,14 +1020,26 @@ function main()
         push!(summary_rows, result.summary)
     end
 
+    robustness_rows = nn_robustness_rows(summary_rows)
     csvs = write_aggregate_csvs!(base.outdir, all_rows, summary_rows)
+    robustness_path = joinpath(base.outdir, "robustness_summary.csv")
+    isfile(robustness_path) && rm(robustness_path)
+    for row in robustness_rows
+        append_metrics!(robustness_path, row)
+    end
     plot_path = base.plot ? plot_results(base.outdir, all_rows, summary_rows) : nothing
-    note_path = write_summary_note!(joinpath(base.outdir, "README.md"), base, summary_rows, plot_path)
+    robustness_plot_path = base.plot ? plot_robustness_results(base.outdir, robustness_rows) : nothing
     println("saved metrics ", csvs.metrics_path)
     println("saved summary ", csvs.summary_path)
+    println("saved robustness ", robustness_path)
     !isnothing(plot_path) && println("saved plot ", plot_path)
-    println("saved note ", note_path)
-    return (; outdir = base.outdir, rows = all_rows, summary_rows, plot_path, note_path)
+    !isnothing(robustness_plot_path) && println("saved robustness plot ", robustness_plot_path)
+    return (; outdir = base.outdir, rows = all_rows, summary_rows, robustness_rows, plot_path, robustness_plot_path)
+end
+
+"""Run the full edge-application NN comparison."""
+function main()
+    return run_edge_grid!(EdgeApplicationConfig())
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__

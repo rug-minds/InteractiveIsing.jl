@@ -1,5 +1,0 @@
-config,radius,periodic,hidden_side,best_mse,best_accuracy,best_epoch,best_min_margin,best_margin_epoch,first_all_correct_epoch,run_dir
-h8_r7,7,false,8,0.06282423,1.0,10,0.9554761,40,0,ext/IsingLearning/experiments/XOR/checkerboard-local-cnn-two-hidden-layers/experiments/current/local_checkerboard_two_class_h8_r7_to_r10_resume_best_margin_e200_lr0p001_lr_decay0p998/h8_r7
-h8_r8,8,false,8,0.12536147,1.0,0,1.1238952,120,0,ext/IsingLearning/experiments/XOR/checkerboard-local-cnn-two-hidden-layers/experiments/current/local_checkerboard_two_class_h8_r7_to_r10_resume_best_margin_e200_lr0p001_lr_decay0p998/h8_r8
-h8_r9,9,false,8,0.05217444,1.0,0,1.2207861,180,0,ext/IsingLearning/experiments/XOR/checkerboard-local-cnn-two-hidden-layers/experiments/current/local_checkerboard_two_class_h8_r7_to_r10_resume_best_margin_e200_lr0p001_lr_decay0p998/h8_r9
-h8_r10,10,false,8,0.042092927,1.0,100,1.0790174,200,0,ext/IsingLearning/experiments/XOR/checkerboard-local-cnn-two-hidden-layers/experiments/current/local_checkerboard_two_class_h8_r7_to_r10_resume_best_margin_e200_lr0p001_lr_decay0p998/h8_r10

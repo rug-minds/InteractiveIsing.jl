@@ -1,5 +1,6 @@
 using Test
 using InteractiveIsing
+using SparseArrays
 
 const BETWEEN_LAYER_WG = @WG (;dr) -> 1.0f0 NN = 1
 
@@ -16,6 +17,29 @@ const BETWEEN_LAYER_WG = @WG (;dr) -> 1.0f0 NN = 1
     @test Matrix(adj(g)[l2_idxs, l2_idxs]) == zeros(Float32, 2, 2)
     @test Matrix(adj(g)[l2_idxs, l1_idxs]) == ones(Float32, 2, 2)
     @test Matrix(adj(g)[l1_idxs, l2_idxs]) == ones(Float32, 2, 2)
+end
+
+@testset "Constructor Adjacency Storage Type" begin
+    l1 = Layer(2, Continuous(); periodic = false)
+    l2 = Layer(2, Continuous(); periodic = false)
+
+    sparse_graph = IsingGraph(l1, BETWEEN_LAYER_WG, l2; precision = Float32, adj = SparseMatrixCSC)
+    @test adj(sparse_graph) isa SparseMatrixCSC{Float32,Int32}
+    @test Matrix(adj(sparse_graph)) == [
+        0f0 0f0 1f0 1f0
+        0f0 0f0 1f0 1f0
+        1f0 1f0 0f0 0f0
+        1f0 1f0 0f0 0f0
+    ]
+
+    concrete_sparse_graph = IsingGraph(l1, BETWEEN_LAYER_WG, l2; precision = Float32, adj = SparseMatrixCSC{Float64,Int64})
+    @test adj(concrete_sparse_graph) isa SparseMatrixCSC{Float64,Int64}
+
+    regenerated = IsingGraph(l1, l2; precision = Float32, adj = SparseMatrixCSC)
+    @test adj(regenerated) isa SparseMatrixCSC{Float32,Int32}
+    genAdj!(regenerated[1], regenerated[2], BETWEEN_LAYER_WG)
+    @test adj(regenerated) isa SparseMatrixCSC{Float32,Int32}
+    @test Matrix(adj(regenerated)) == Matrix(adj(sparse_graph))
 end
 
 @testset "Initial State" begin

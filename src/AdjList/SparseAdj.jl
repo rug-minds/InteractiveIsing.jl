@@ -256,7 +256,6 @@ function _fillSparseVecsOLD(layer::AbstractLayerData{D}, precision, row_idxs, co
     layer_size = size(layer)
     LI = LinearIndices(layer_size)
     ps = whichperiodic(topology)
-    ds = lattice_constants(topology)
 
     n_offsets = prod(2 .* NNt .+ 1) - 1
     offsets = Vector{NTuple{D,Int}}(undef, n_offsets)
@@ -279,14 +278,10 @@ function _fillSparseVecsOLD(layer::AbstractLayerData{D}, precision, row_idxs, co
             end
             di
         end
+        # Let the topology define the metric so non-square lattices get the
+        # correct distance for weight-generator shells.
         dcs[o] = DeltaCoordinate(wrapped_offset)
-
-        dr2 = 0.0
-        @inbounds for i in 1:D
-            d = ds[i] * wrapped_offset[i]
-            dr2 += d * d
-        end
-        drs[o] = sqrt(dr2)
+        drs[o] = delta_distance(topology, dcs[o])
         o += 1
     end
 
@@ -321,7 +316,6 @@ function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_i
     layer_size = size(layer)
     LI = LinearIndices(layer_size)
     ps = whichperiodic(topology)
-    ds = lattice_constants(topology)
 
     n_offsets = prod(2 .* NNt .+ 1) - 1
     offsets = Vector{NTuple{D,Int}}(undef, n_offsets)
@@ -344,14 +338,10 @@ function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_i
             end
             di
         end
+        # Let the topology define the metric so non-square lattices get the
+        # correct distance for weight-generator shells.
         dcs[o] = DeltaCoordinate(wrapped_offset)
-
-        dr2 = 0.0
-        @inbounds for i in 1:D
-            d = ds[i] * wrapped_offset[i]
-            dr2 += d * d
-        end
-        drs[o] = sqrt(dr2)
+        drs[o] = delta_distance(topology, dcs[o])
         o += 1
     end
 
@@ -394,7 +384,6 @@ function _fillSparseVecsSymmetricUnique!(layer::AbstractLayerData{D}, precision,
     layer_size = size(layer)
     LI = LinearIndices(layer_size)
     ps = whichperiodic(topology)
-    ds = lattice_constants(topology)
 
     n_offsets = prod(2 .* NNt .+ 1) - 1
     offsets = Vector{NTuple{D,Int}}(undef, n_offsets)
@@ -417,14 +406,10 @@ function _fillSparseVecsSymmetricUnique!(layer::AbstractLayerData{D}, precision,
             end
             di
         end
+        # Let the topology define the metric so non-square lattices get the
+        # correct distance for weight-generator shells.
         dcs[o] = DeltaCoordinate(wrapped_offset)
-
-        dr2 = 0.0
-        @inbounds for i in 1:D
-            d = ds[i] * wrapped_offset[i]
-            dr2 += d * d
-        end
-        drs[o] = sqrt(dr2)
+        drs[o] = delta_distance(topology, dcs[o])
         o += 1
     end
 

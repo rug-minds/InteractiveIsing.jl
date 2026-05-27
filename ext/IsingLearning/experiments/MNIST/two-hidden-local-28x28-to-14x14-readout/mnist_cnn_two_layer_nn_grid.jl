@@ -3,27 +3,21 @@ Pkg.activate(joinpath(@__DIR__, "..", "..", ".."))
 
 include(joinpath(@__DIR__, "mnist_local_paper_manager_grid.jl"))
 
-"""Build the two-hidden-layer CNN-style MNIST configuration grid.
-
-The sampled graph is hidden1-hidden2-output. Pixels enter hidden1 as fields,
-hidden1 connects locally to hidden2, and hidden2 connects densely to replicated
-class outputs. `local_radius` is the square NN/fanout radius used for both
-input-to-hidden1 and hidden1-to-hidden2 maps.
-"""
-function cnn_two_layer_configs(base::C, root::P) where {C<:PaperMNISTManagerConfig,P<:AbstractString}
-    hidden2_sides = parse_int_list(get(ENV, "ISING_MNIST_CNN_H2_SIDES", string(base.hidden2_side)), [base.hidden2_side])
-    radii = parse_int_list(get(ENV, "ISING_MNIST_CNN_RADII", string(base.local_radius)), [base.local_radius])
-    configs = PaperMNISTManagerConfig[]
-    for hidden2_side in hidden2_sides, radius in radii
-        name = "cnn_h1_$(base.hidden1_side)_h2_$(hidden2_side)_r$(radius)"
+"""Build the selected two-hidden `(r1, r2)` configuration grid."""
+function two_hidden_configs(base::C, root::P) where {C<:LocalMNISTManagerConfig,P<:AbstractString}
+    default_pairs = [(1, 1), (3, 2), (5, 3), (7, 4), (10, 5)]
+    pairs = parse_radius_pairs(get(ENV, "ISING_MNIST_2H_PAIRS", "1:1,3:2,5:3,7:4,10:5"), default_pairs)
+    configs = LocalMNISTManagerConfig[]
+    for (r1, r2) in pairs
+        name = "r1_$(r1)_r2_$(r2)"
         outdir = joinpath(root, name)
-        push!(configs, copy_config(base; name, hidden2_side, local_radius = radius, outdir))
+        push!(configs, copy_config(base; name, input_hidden_radius = r1, hidden_hidden_radius = r2, outdir))
     end
     return configs
 end
 
-"""Return one summary row from one completed CNN-style run."""
-function cnn_summary_row(result::R) where {R}
+"""Return one compact summary row from one completed two-hidden run."""
+function two_hidden_summary_row(result::R) where {R}
     rows = result.rows
     best = first(rows)
     for row in rows
@@ -34,7 +28,8 @@ function cnn_summary_row(result::R) where {R}
         config = config.name,
         hidden1_side = config.hidden1_side,
         hidden2_side = config.hidden2_side,
-        radius = config.local_radius,
+        r1 = config.input_hidden_radius,
+        r2 = config.hidden_hidden_radius,
         train_per_class = config.train_per_class,
         test_per_class = config.test_per_class,
         epochs = config.epochs,
@@ -50,76 +45,71 @@ function cnn_summary_row(result::R) where {R}
     )
 end
 
-"""Plot learning curves and best accuracy for a CNN-style MNIST grid."""
-function plot_cnn_grid(root::P, results::R, summaries::S) where {P<:AbstractString,R<:AbstractVector,S<:AbstractVector}
-    fig = Figure(size = (1450, 900))
-    ax_test = Axis(fig[1, 1], xlabel = "epoch", ylabel = "test accuracy", title = "CNN-style MNIST test accuracy")
-    ax_train = Axis(fig[2, 1], xlabel = "epoch", ylabel = "train accuracy", title = "Training accuracy")
-    ax_loss = Axis(fig[1, 2], xlabel = "epoch", ylabel = "test loss", title = "Test loss")
-    ax_best = Axis(fig[2, 2], xlabel = "configuration", ylabel = "best test accuracy", title = "Best by NN/fanout")
+"""Plot learning curves and best accuracy for the selected two-hidden grid."""
+function plot_two_hidden_grid(root::P, results::R, summaries::S) where {P<:AbstractString,R<:AbstractVector,S<:AbstractVector}
+    CM = ensure_cairomakie()
+    fig = CM.Figure(size = (1450, 900))
+    ax_test = CM.Axis(fig[1, 1], xlabel = "epoch", ylabel = "test accuracy", title = "Two-hidden MNIST test accuracy")
+    ax_train = CM.Axis(fig[2, 1], xlabel = "epoch", ylabel = "train accuracy", title = "Training accuracy")
+    ax_loss = CM.Axis(fig[1, 2], xlabel = "epoch", ylabel = "test loss", title = "Test loss")
+    ax_best = CM.Axis(fig[2, 2], xlabel = "configuration", ylabel = "best test accuracy", title = "Best by r1/r2")
 
-    palette = Makie.wong_colors()
+    palette = CM.Makie.wong_colors()
     for (idx, result) in enumerate(results)
         color = palette[mod1(idx, length(palette))]
         label = result.config.name
         rows = result.rows
         train_rows = [row for row in rows if !ismissing(row.train_accuracy)]
-        lines!(ax_test, [row.epoch for row in rows], [row.test_accuracy for row in rows], color = color, label = label)
-        lines!(ax_train, [row.epoch for row in train_rows], [row.train_accuracy for row in train_rows], color = color)
-        lines!(ax_loss, [row.epoch for row in rows], [row.test_loss for row in rows], color = color)
+        CM.lines!(ax_test, [row.epoch for row in rows], [row.test_accuracy for row in rows], color = color, label = label)
+        CM.lines!(ax_train, [row.epoch for row in train_rows], [row.train_accuracy for row in train_rows], color = color)
+        CM.lines!(ax_loss, [row.epoch for row in rows], [row.test_loss for row in rows], color = color)
     end
 
     sorted = sort(summaries; by = row -> row.best_test_accuracy, rev = true)
     xvals = 1:length(sorted)
-    barplot!(ax_best, xvals, [row.best_test_accuracy for row in sorted], color = :steelblue)
+    CM.barplot!(ax_best, xvals, [row.best_test_accuracy for row in sorted], color = :steelblue)
     ax_best.xticks = (xvals, [row.config for row in sorted])
     ax_best.xticklabelrotation = pi / 3
-    axislegend(ax_test, position = :rb, nbanks = 2)
+    CM.axislegend(ax_test, position = :rb, nbanks = 2)
 
-    path = joinpath(root, "cnn_two_layer_nn_summary.png")
-    save(path, fig)
+    path = joinpath(root, "pair_summary.png")
+    CM.save(path, fig)
     return path
 end
 
-"""Write the aggregate summary for a CNN-style MNIST grid."""
-function write_cnn_note!(path::P, base::C, summaries::S, plot_path::Q) where {P<:AbstractString,C<:PaperMNISTManagerConfig,S<:AbstractVector,Q<:AbstractString}
+"""Write the exact grid settings needed to reproduce the selected pair sweep."""
+function write_grid_settings!(path::P, base::C, configs::V) where {P<:AbstractString,C<:LocalMNISTManagerConfig,V<:AbstractVector}
+    pair_labels = ["$(config.input_hidden_radius):$(config.hidden_hidden_radius)" for config in configs]
     open(path, "w") do io
-        println(io, "# MNIST CNN-Style Two-Layer NN Grid")
+        println(io, "# Two-Hidden Local MNIST Pair Grid")
         println(io)
-        println(io, "Use of this folder: compare local square NN/fanout radii for the two-hidden-layer CNN-style MNIST architecture.")
-        println(io)
-        println(io, "- architecture family: `28^2 input fields -> $(base.hidden1_side)^2 hidden1 -> H2^2 hidden2 -> $(PMNIST_NCLASSES * base.output_replicas) outputs`")
-        println(io, "- hidden2 sides: `$(get(ENV, "ISING_MNIST_CNN_H2_SIDES", string(base.hidden2_side)))`")
-        println(io, "- local NN/fanout radii: `$(get(ENV, "ISING_MNIST_CNN_RADII", string(base.local_radius)))`")
+        println(io, "- architecture family: `28^2 input fields -> $(base.hidden1_side)^2 hidden1 -> $(base.hidden2_side)^2 hidden2 -> $(PMNIST_NCLASSES * base.output_replicas) outputs`")
+        println(io, "- selected pairs: `$(join(pair_labels, ", "))`")
         println(io, "- workers / batchsize / epochs: `$(base.workers)` / `$(base.batchsize)` / `$(base.epochs)`")
         println(io, "- train/test per class: `$(base.train_per_class)` / `$(base.test_per_class)`")
+        println(io, "- optimizer: `$(base.optimizer)`")
+        println(io, "- learning rates W0/W12/W2O/B: `$(base.lr_w0)` / `$(base.lr_w12)` / `$(base.lr_w2o)` / `$(base.lr_b)`")
+        println(io, "- free/nudge sweeps: `$(base.free_sweeps)` / `$(base.nudge_sweeps)`")
+        println(io, "- beta: `$(base.β)`")
         println(io, "- gradient normalization: `$(base.gradient_normalization)`")
-        println(io)
-        println(io, "| Rank | Config | H2 Side | NN Radius | Best Test Accuracy | Best Epoch | Final Test Accuracy |")
-        println(io, "|---:|---|---:|---:|---:|---:|---:|")
-        for (rank, row) in enumerate(sort(summaries; by = row -> row.best_test_accuracy, rev = true))
-            println(io, "| $rank | `$(row.config)` | $(row.hidden2_side) | $(row.radius) | $(round(row.best_test_accuracy; digits = 4)) | $(row.best_epoch) | $(round(row.final_test_accuracy; digits = 4)) |")
-        end
-        println(io)
-        println(io, "Plot: `$(basename(plot_path))`")
-        println(io, "Summary: `cnn_two_layer_nn_summary.csv`")
     end
     return path
 end
 
-"""Run the CNN-style two-hidden-layer MNIST NN/fanout grid."""
+"""Run the selected two-hidden `(r1, r2)` grid."""
 function main()
-    base = PaperMNISTManagerConfig()
+    base = LocalMNISTManagerConfig()
     root = get(
         ENV,
-        "ISING_MNIST_CNN_OUTDIR",
-        joinpath(@__DIR__, "experiments", "current", "cnn_two_layer_nn_grid_" * Dates.format(now(), "yyyymmdd_HHMMSS")),
+        "ISING_MNIST_2H_GRID_OUTDIR",
+        joinpath(@__DIR__, "experiments", "current", "r1_r2_pair_grid_e$(base.epochs)_" * Dates.format(now(), "yyyymmdd_HHMMSS")),
     )
     mkpath(root)
     Threads.nthreads() < base.workers && @warn "Julia was started with fewer threads than requested manager workers" threads = Threads.nthreads() workers = base.workers
 
-    configs = cnn_two_layer_configs(base, root)
-    println("Running ", length(configs), " CNN-style MNIST config(s)")
+    configs = two_hidden_configs(base, root)
+    write_grid_settings!(joinpath(root, "grid_settings.md"), base, configs)
+    println("Running ", length(configs), " two-hidden MNIST config(s)")
     println("root = ", root)
     results = NamedTuple[]
     summaries = NamedTuple[]
@@ -127,20 +117,18 @@ function main()
         println("[$idx/", length(configs), "] ", config.name)
         result = run_config!(config)
         push!(results, result)
-        push!(summaries, cnn_summary_row(result))
+        push!(summaries, two_hidden_summary_row(result))
     end
 
-    summary_path = joinpath(root, "cnn_two_layer_nn_summary.csv")
+    summary_path = joinpath(root, "pair_summary.csv")
     isfile(summary_path) && rm(summary_path)
     for row in summaries
         append_row!(summary_path, row)
     end
-    plot_path = plot_cnn_grid(root, results, summaries)
-    note_path = write_cnn_note!(joinpath(root, "README.md"), base, summaries, plot_path)
+    plot_path = plot_two_hidden_grid(root, results, summaries)
     println("saved summary ", summary_path)
     println("saved plot ", plot_path)
-    println("saved note ", note_path)
-    return (; root, results, summaries, plot_path, note_path)
+    return (; root, results, summaries, plot_path)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__

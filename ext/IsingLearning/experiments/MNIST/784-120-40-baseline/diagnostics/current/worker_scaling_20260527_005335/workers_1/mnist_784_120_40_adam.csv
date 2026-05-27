@@ -1,0 +1,2 @@
+timestamp,epoch,seconds,train_accuracy,train_loss,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
+2026-05-27T00:54:39,0,0.0,0.105,67.3195,0.114,67.381424,35-90-87-53-144-201-240-61-24-65,0.114,C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\diagnostics\current\worker_scaling_20260527_005335\workers_1\best_checkpoint.bin,

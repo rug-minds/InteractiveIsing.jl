@@ -23,8 +23,8 @@ const CNN_HIDDEN1_RNG_REF = Ref(Random.MersenneTwister(1))
 const CNN_HIDDEN2_RNG_REF = Ref(Random.MersenneTwister(2))
 
 Base.@kwdef struct LocalCNNXORConfig
-    name::String = "r3"
-    epochs::Int = parse(Int, get(ENV, "ISING_XOR_CNN_EPOCHS", "80"))
+    name::String = "r1_1_r2_1"
+    epochs::Int = parse(Int, get(ENV, "ISING_XOR_CNN_EPOCHS", "100"))
     workers::Int = parse(Int, get(ENV, "ISING_XOR_CNN_WORKERS", "32"))
     log_every::Int = parse(Int, get(ENV, "ISING_XOR_CNN_LOG_EVERY", "10"))
     snapshot_every::Int = parse(Int, get(ENV, "ISING_XOR_CNN_SNAPSHOT_EVERY", "20"))
@@ -34,10 +34,11 @@ Base.@kwdef struct LocalCNNXORConfig
     eval_repeats::Int = parse(Int, get(ENV, "ISING_XOR_CNN_EVAL_REPEATS", "64"))
     input_side::Int = parse(Int, get(ENV, "ISING_XOR_CNN_INPUT_SIDE", "8"))
     hidden1_side::Int = parse(Int, get(ENV, "ISING_XOR_CNN_HIDDEN1_SIDE", "8"))
-    hidden2_side::Int = parse(Int, get(ENV, "ISING_XOR_CNN_HIDDEN2_SIDE", "6"))
+    hidden2_side::Int = parse(Int, get(ENV, "ISING_XOR_CNN_HIDDEN2_SIDE", "4"))
     output_side::Int = parse(Int, get(ENV, "ISING_XOR_CNN_OUTPUT_SIDE", "4"))
     output_mode::Symbol = Symbol(lowercase(get(ENV, "ISING_XOR_CNN_OUTPUT_MODE", "two_class")))
-    local_radius::Int = parse(Int, get(ENV, "ISING_XOR_CNN_RADIUS", "3"))
+    layer1_radius::Int = parse(Int, get(ENV, "ISING_XOR_CNN_LAYER1_RADIUS", get(ENV, "ISING_XOR_CNN_RADIUS", "1")))
+    layer2_radius::Int = parse(Int, get(ENV, "ISING_XOR_CNN_LAYER2_RADIUS", "1"))
     hidden_periodic::Bool = parse(Bool, lowercase(get(ENV, "ISING_XOR_CNN_HIDDEN_PERIODIC", "false")))
     free_sweeps::Int = parse(Int, get(ENV, "ISING_XOR_CNN_FREE_SWEEPS", "20"))
     nudged_sweeps::Int = parse(Int, get(ENV, "ISING_XOR_CNN_NUDGED_SWEEPS", "20"))
@@ -65,7 +66,7 @@ Base.@kwdef struct LocalCNNXORConfig
             @__DIR__,
             "experiments",
             "current",
-            "xor_local_cnn_like_" * Dates.format(now(), "yyyymmdd_HHMMSS"),
+            "input_8x8_hidden1_8x8_hidden2_4x4_output_4x4_two_class",
         ),
     )
 end
@@ -75,21 +76,6 @@ struct LocalCNNXORJob{X<:AbstractVector,Y<:AbstractVector}
     x::X
     y::Y
     repeats::Int
-end
-
-struct AveragedCNNContrastiveStep{S} <: Processes.ProcessAlgorithm
-    base::S
-end
-
-struct CNNContrastiveStep{D,N,T,I} <: Processes.ProcessAlgorithm
-    dynamics_algorithm::D
-    nudged_dynamics_algorithm::N
-    β::T
-    input_dim::Int
-    output_dim::Int
-    free_relaxation_steps::Int
-    nudged_relaxation_steps::Int
-    init_mode::I
 end
 
 mutable struct LocalCNNManagerState{P,B,O}
@@ -251,9 +237,10 @@ function cnn_xor_dataset(config::C, ::Type{T} = FT) where {C<:LocalCNNXORConfig,
     return x, y
 end
 
-"""Build the local CNN-like graph: `8x8 -> HxH -> HxH -> 4x4` by default."""
+"""Build the local CNN-like graph: `8x8 -> 8x8 -> 4x4 -> 4x4` by default."""
 function cnn_xor_graph(config::C) where {C<:LocalCNNXORConfig}
-    radius = config.local_radius
+    layer1_radius = config.layer1_radius
+    layer2_radius = config.layer2_radius
     reference_side = config.input_side
     rng_inter_01 = Random.MersenneTwister(config.seed)
     rng_inter_12 = Random.MersenneTwister(config.seed + 1)
@@ -275,7 +262,7 @@ function cnn_xor_graph(config::C) where {C<:LocalCNNXORConfig}
         config.hidden1_side,
         config.hidden1_side,
         II.StateSet(-one(FT), one(FT)),
-        hidden1_internal_generator(radius, config.hidden_internal_scale, rng_hidden_1),
+        hidden1_internal_generator(layer1_radius, config.hidden_internal_scale, rng_hidden_1),
         II.Continuous(),
         centered_topology(config.hidden1_side, reference_side; periodic = config.hidden_periodic),
         II.Coords(0, 100, 0);
@@ -285,7 +272,7 @@ function cnn_xor_graph(config::C) where {C<:LocalCNNXORConfig}
         config.hidden2_side,
         config.hidden2_side,
         II.StateSet(-one(FT), one(FT)),
-        hidden2_internal_generator(radius, config.hidden_internal_scale, rng_hidden_2),
+        hidden2_internal_generator(layer2_radius, config.hidden_internal_scale, rng_hidden_2),
         II.Continuous(),
         centered_topology(config.hidden2_side, reference_side; periodic = config.hidden_periodic),
         II.Coords(0, 220, 0);
@@ -307,11 +294,11 @@ function cnn_xor_graph(config::C) where {C<:LocalCNNXORConfig}
     mask = g -> II.filltype(Vector, zero(FT), II.statelen(g))
     graph = II.IsingGraph(
         input,
-        inter_layer_generator(radius, config.inter_weight_scale, rng_inter_01),
+        inter_layer_generator(layer1_radius, config.inter_weight_scale, rng_inter_01),
         hidden1,
-        inter_layer_generator(radius, config.inter_weight_scale, rng_inter_12),
+        inter_layer_generator(layer2_radius, config.inter_weight_scale, rng_inter_12),
         hidden2,
-        inter_layer_generator(radius, config.inter_weight_scale, rng_inter_2o),
+        inter_layer_generator(layer2_radius, config.inter_weight_scale, rng_inter_2o),
         output,
         II.Bilinear() + II.MagField(b = bias) + II.Clamping(β = II.UniformArray(zero(FT)), y = target, mask = mask);
         precision = FT,
@@ -372,88 +359,109 @@ function cnn_xor_layer(graph::G, config::C) where {G,C<:LocalCNNXORConfig}
     )
 end
 
-"""Create the local contrastive step with configurable free-state init."""
-function CNNContrastiveStep(layer::L, config::C) where {L<:LayeredIsingGraphLayer,C<:LocalCNNXORConfig}
-    return CNNContrastiveStep(
-        deepcopy(layer.dynamics_algorithm),
-        deepcopy(layer.nudged_dynamics_algorithm),
-        layer.β,
-        length(layer.input_layer),
-        length(layer.output_layer),
-        layer.free_relaxation_steps,
-        layer.nudged_relaxation_steps,
-        config.init_mode,
-    )
+"""Accumulate one plus/minus contrastive gradient into a reusable buffer."""
+function accumulate_layer_contrastive_gradient!(
+    isinggraph::G,
+    plus_state::P,
+    minus_state::M,
+    beta::T,
+    buffers::B,
+) where {G,P<:AbstractVector,M<:AbstractVector,T<:Real,B}
+    IsingLearning.contrastive_gradient(isinggraph, plus_state, minus_state, beta; buffers)
+    return buffers
 end
 
-"""Initialize reusable storage for one configurable-init contrastive worker."""
-function Processes.init(step::CNNContrastiveStep, context)
-    model = context.model
-    T = eltype(model)
-    x = get(context, :x, zeros(T, step.input_dim))
-    y = get(context, :y, zeros(T, step.output_dim))
-    buffers = get(context, :buffers, IsingLearning.layer_gradient_buffer(model))
-    equilibrium_state = get(context, :equilibrium_state, copy(II.state(model)))
-    plus_state = get(context, :plus_state, similar(equilibrium_state))
-    minus_state = get(context, :minus_state, similar(equilibrium_state))
-    free_context = Processes.init(step.dynamics_algorithm, (; model))
-    nudged_context = Processes.init(step.nudged_dynamics_algorithm, (; model))
-    return (; model, x, y, buffers, equilibrium_state, plus_state, minus_state, free_context, nudged_context)
-end
+"""Build one reusable free-phase routine for a local CNN XOR worker."""
+function cnn_free_phase_algorithm(dynamics_algorithm::D, init_mode, steps::I) where {D,I<:Integer}
+    return Processes.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @state x
+        @state equilibrium_state
 
-"""Run free, positive-nudged, and negative-nudged phases for one sample."""
-function Processes.step!(step::CNNContrastiveStep, context)
-    model = context.model
-    β = step.β
-
-    initialize_cnn_state!(model, step.init_mode)
-    IsingLearning.apply_input(model, context.x)
-    IsingLearning.relax_context!(step.dynamics_algorithm, context.free_context, step.free_relaxation_steps)
-    context.equilibrium_state .= II.state(model)
-
-    II.state(model) .= context.equilibrium_state
-    IsingLearning.apply_input(model, context.x)
-    IsingLearning.apply_targets(model, context.y)
-    IsingLearning.set_clamping_beta!(model, β)
-    IsingLearning.relax_context!(step.nudged_dynamics_algorithm, context.nudged_context, step.nudged_relaxation_steps)
-    context.plus_state .= II.state(model)
-
-    II.state(model) .= context.equilibrium_state
-    IsingLearning.apply_input(model, context.x)
-    IsingLearning.apply_targets(model, context.y)
-    IsingLearning.set_clamping_beta!(model, -β)
-    IsingLearning.relax_context!(step.nudged_dynamics_algorithm, context.nudged_context, step.nudged_relaxation_steps)
-    context.minus_state .= II.state(model)
-
-    IsingLearning.set_clamping_beta!(model, zero(β))
-    IsingLearning.contrastive_gradient(model, context.plus_state, context.minus_state, β; buffers = context.buffers)
-    return nothing
-end
-
-"""Keep the configurable-init contrastive context reusable."""
-function Processes.cleanup(step::CNNContrastiveStep, context)
-    return nothing
-end
-
-"""Initialize the worker-local input-averaging wrapper."""
-function Processes.init(step::AveragedCNNContrastiveStep{S}, context) where {S}
-    base_context = Processes.init(step.base, context)
-    repeats = get(context, :repeats, Ref(1))
-    repeats_ref = repeats isa Base.RefValue ? repeats : Ref(Int(repeats))
-    return (; base_context, repeats = repeats_ref)
-end
-
-"""Run several random-start contrastive repeats inside one worker execution."""
-function Processes.step!(step::AveragedCNNContrastiveStep{S}, context) where {S}
-    @inbounds for _ in 1:context.repeats[]
-        Processes.step!(step.base, context.base_context)
+        initialize_cnn_state!(dynamics.model, init_mode)
+        IsingLearning.apply_input(dynamics.model, x)
+        @repeat steps dynamics()
+        CopyGraphState!(equilibrium_state, dynamics.model)
     end
-    return nothing
 end
 
-"""Keep the averaged worker context reusable."""
-function Processes.cleanup(step::AveragedCNNContrastiveStep{S}, context) where {S}
-    return nothing
+"""Build one reusable positive-nudge phase routine for a local CNN XOR worker."""
+function cnn_plus_phase_algorithm(nudged_dynamics_algorithm::D, beta::T, steps::I) where {D,T<:Real,I<:Integer}
+    return Processes.@Routine begin
+        @alias nudged_dynamics = nudged_dynamics_algorithm
+        @state x
+        @state y
+        @state equilibrium_state
+        @state plus_state
+
+        SetGraphState!(nudged_dynamics.model, equilibrium_state)
+        IsingLearning.apply_input(nudged_dynamics.model, x)
+        IsingLearning.apply_targets(nudged_dynamics.model, y)
+        IsingLearning.set_clamping_beta!(nudged_dynamics.model, beta)
+        @repeat steps nudged_dynamics()
+        CopyGraphState!(plus_state, nudged_dynamics.model)
+    end
+end
+
+"""Build one reusable negative-nudge phase routine for a local CNN XOR worker."""
+function cnn_minus_phase_algorithm(nudged_dynamics_algorithm::D, beta::T, steps::I) where {D,T<:Real,I<:Integer}
+    return Processes.@Routine begin
+        @alias nudged_dynamics = nudged_dynamics_algorithm
+        @state x
+        @state y
+        @state equilibrium_state
+        @state minus_state
+
+        SetGraphState!(nudged_dynamics.model, equilibrium_state)
+        IsingLearning.apply_input(nudged_dynamics.model, x)
+        IsingLearning.apply_targets(nudged_dynamics.model, y)
+        IsingLearning.set_clamping_beta!(nudged_dynamics.model, -beta)
+        @repeat steps nudged_dynamics()
+        CopyGraphState!(minus_state, nudged_dynamics.model)
+    end
+end
+
+"""Build one reusable contrastive-sample routine for a local CNN XOR worker."""
+function cnn_sample_algorithm(
+    free_phase,
+    plus_phase,
+    minus_phase,
+    beta::T,
+) where {T<:Real}
+    return Processes.@Routine begin
+        @alias free_phase = free_phase
+        @alias plus_phase = plus_phase
+        @alias minus_phase = minus_phase
+        @state buffers
+        @state plus_state
+        @state minus_state
+
+        free_phase()
+        plus_phase()
+        minus_phase()
+        IsingLearning.set_clamping_beta!(minus_phase.nudged_dynamics.model, zero(beta))
+        accumulate_layer_contrastive_gradient!(minus_phase.nudged_dynamics.model, plus_state, minus_state, beta, buffers)
+    end
+end
+
+"""Build the reusable LoopAlgorithm used by each local CNN XOR worker."""
+function cnn_worker_algorithm(layer::L, config::C) where {L<:LayeredIsingGraphLayer,C<:LocalCNNXORConfig}
+    dynamics_algorithm = deepcopy(layer.dynamics_algorithm)
+    nudged_dynamics_algorithm = deepcopy(layer.nudged_dynamics_algorithm)
+    free_steps = layer.free_relaxation_steps
+    nudged_steps = layer.nudged_relaxation_steps
+    β = layer.β
+    init_mode = config.init_mode
+    free_phase = cnn_free_phase_algorithm(dynamics_algorithm, init_mode, free_steps)
+    plus_phase = cnn_plus_phase_algorithm(nudged_dynamics_algorithm, β, nudged_steps)
+    minus_phase = cnn_minus_phase_algorithm(nudged_dynamics_algorithm, β, nudged_steps)
+    sample_once = cnn_sample_algorithm(free_phase, plus_phase, minus_phase, β)
+    return Processes.@Routine begin
+        @alias sample_once = sample_once
+        @state repeats
+
+        @repeat repeats[] sample_once()
+    end
 end
 
 """Return the mutable state subcontext of one manager-owned worker."""
@@ -479,17 +487,23 @@ function worker_graph(prototype::G, ps::P, config::C) where {G,P,C<:LocalCNNXORC
     return graph
 end
 
-"""Build one reusable Process worker for the local CNN-like contrastive step."""
-function averaged_worker(layer::L, graph::G, config::C) where {L<:LayeredIsingGraphLayer,G,C<:LocalCNNXORConfig}
-    step = AveragedCNNContrastiveStep(CNNContrastiveStep(layer, config))
+"""Build one reusable LoopAlgorithm process worker for the local CNN-like contrastive step."""
+function cnn_worker(layer::L, graph::G, config::C) where {L<:LayeredIsingGraphLayer,G,C<:LocalCNNXORConfig}
+    graph_state = II.state(graph)
+    algorithm = Processes.resolve(cnn_worker_algorithm(layer, config))
     return Processes.Process(
-        :_state => step,
+        algorithm,
         Processes.Init(:_state;
-            model = graph,
             x = zeros(eltype(graph), length(layer.input_layer)),
             y = zeros(eltype(graph), length(layer.output_layer)),
+            buffers = IsingLearning.layer_gradient_buffer(graph),
+            equilibrium_state = similar(graph_state),
+            plus_state = similar(graph_state),
+            minus_state = similar(graph_state),
             repeats = Ref(1),
-        );
+        ),
+        Processes.Init(:dynamics; model = graph),
+        Processes.Init(:nudged_dynamics; model = graph);
         repeat = 1,
     )
 end
@@ -532,7 +546,7 @@ end
 function clear_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
     clear_buffer!(manager.state.batch_gradient)
     for worker in Processes.workers(manager)
-        clear_buffer!(worker_context(worker).base_context.buffers)
+        clear_buffer!(worker_context(worker).buffers)
     end
     return manager
 end
@@ -541,7 +555,7 @@ end
 function flush_cnn_buffers!(manager::M) where {M<:Processes.ProcessManager}
     clear_buffer!(manager.state.batch_gradient)
     for worker in Processes.workers(manager)
-        ctx = worker_context(worker).base_context
+        ctx = worker_context(worker)
         add_buffer!(manager.state.batch_gradient, ctx.buffers)
         clear_buffer!(ctx.buffers)
     end
@@ -575,7 +589,7 @@ end
 """Install updated shared parameters once after a manager batch."""
 function sync_worker_params!(manager::M, ps::P) where {M<:Processes.ProcessManager,P}
     worker = first(Processes.workers(manager))
-    IsingLearning.sync_params!(worker_context(worker).base_context.model, ps)
+    IsingLearning.sync_params!(Processes.context(worker).dynamics.model, ps)
     return manager
 end
 
@@ -587,11 +601,11 @@ function cnn_xor_manager(layer::L, graph::G, ps::P, config::C) where {L<:Layered
         throw(ArgumentError("unknown XOR optimizer `$(config.optimizer)`; use `adam` or `descent`"))
     state = LocalCNNManagerState(Ref(ps), parameter_buffer(ps), Ref(0), Optimisers.setup(optimiser, ps))
     recipe = (;
-        makeworker = (idx, manager) -> averaged_worker(layer, worker_graph(graph, manager.state.params[], manager.config), manager.config),
+        makeworker = (idx, manager) -> cnn_worker(layer, worker_graph(graph, manager.state.params[], manager.config), manager.config),
         prepare! = (slot, job, manager) -> begin
             ctx = worker_context(slot.worker)
-            ctx.base_context.x .= job.x
-            ctx.base_context.y .= job.y
+            ctx.x .= job.x
+            ctx.y .= job.y
             ctx.repeats[] = job.repeats
             Processes.resetworker!(slot)
             return nothing
@@ -613,9 +627,9 @@ end
 """Create manager jobs, defaulting to enough chunks to fill the workers.
 
 Each job stores the number of random-start repeats to run. The worker-side
-`AveragedCNNContrastiveStep` executes those repeats inside one
-`ProcessAlgorithm` step, so a 32-worker run gets 32 scheduled jobs without
-turning each random init into its own manager job.
+LoopAlgorithm executes those repeats inside one scheduled manager job, so a
+32-worker run gets 32 scheduled jobs without turning each random init into
+its own manager job.
 """
 function cnn_xor_jobs(config::C, x::X, y::Y) where {C<:LocalCNNXORConfig,X<:AbstractMatrix,Y<:AbstractMatrix}
     chunks_per_case = config.chunks_per_case > 0 ?
@@ -763,25 +777,26 @@ function append_metrics!(path::P, row) where {P<:AbstractString}
     return path
 end
 
-"""Return the grid of hidden size, local radius, and periodicity configs to run."""
+"""Return the `8x8 -> 4x4` architecture grid over layer-1 and layer-2 radii."""
 function experiment_configs(base::C) where {C<:LocalCNNXORConfig}
-    hidden_sides = parse_int_list(get(ENV, "ISING_XOR_CNN_HIDDEN_SIDES", "8,16"), [8, 16])
-    radii = parse_int_list(get(ENV, "ISING_XOR_CNN_RADII", "1,2,3,4,5,6,7,8,9,10"), collect(1:10))
+    layer1_radii = parse_int_list(get(ENV, "ISING_XOR_CNN_LAYER1_RADII", "1,2,3,4,5"), collect(1:5))
+    layer2_radii = parse_int_list(get(ENV, "ISING_XOR_CNN_LAYER2_RADII", "1,2"), collect(1:2))
     periodic_values = parse_bool_list(get(ENV, "ISING_XOR_CNN_PERIODIC", "false"), [false])
     limit = parse(Int, get(ENV, "ISING_XOR_CNN_LIMIT", "0"))
 
     configs = LocalCNNXORConfig[]
-    for hidden_side in hidden_sides, periodic in periodic_values, radius in radii
-        name = periodic ? "h$(hidden_side)_r$(radius)_periodic" : "h$(hidden_side)_r$(radius)"
-        seed = base.seed + 10_000 * hidden_side + 101 * radius + (periodic ? 1_000_000 : 0)
+    for periodic in periodic_values, layer1_radius in layer1_radii, layer2_radius in layer2_radii
+        name = periodic ? "r1_$(layer1_radius)_r2_$(layer2_radius)_periodic" : "r1_$(layer1_radius)_r2_$(layer2_radius)"
+        seed = base.seed + 10_000 * layer1_radius + 101 * layer2_radius + (periodic ? 1_000_000 : 0)
         push!(
             configs,
             copy_config(
                 base;
                 name,
-                hidden1_side = hidden_side,
-                hidden2_side = hidden_side,
-                local_radius = radius,
+                hidden1_side = 8,
+                hidden2_side = 4,
+                layer1_radius,
+                layer2_radius,
                 hidden_periodic = periodic,
                 seed,
             ),
@@ -805,14 +820,14 @@ function save_checkerboard_plot(path::P, fig) where {P<:AbstractString}
     return path
 end
 
-"""Return line style and width for a radius group."""
-function checkerboard_line_style(radius::Integer)
-    radius <= 3 && return (:solid, 2.0)
-    radius <= 7 && return (:dash, 2.8)
+"""Return line style and width for a layer-1 radius group."""
+function checkerboard_line_style(layer1_radius::Integer)
+    layer1_radius <= 2 && return (:solid, 2.0)
+    layer1_radius <= 4 && return (:dash, 2.8)
     return (:dot, 3.6)
 end
 
-"""Plot learning curves, accuracy, margins, and the best margin comparison."""
+"""Plot aggregate learning curves, accuracy, margins, and best-margin comparison."""
 function plot_results(outdir::P, rows::R, summary_rows::S) where {P<:AbstractString,R<:AbstractVector,S<:AbstractVector}
     isempty(rows) && return nothing
 
@@ -827,8 +842,8 @@ function plot_results(outdir::P, rows::R, summary_rows::S) where {P<:AbstractStr
     for (idx, config_name) in enumerate(configs)
         subset = [row for row in rows if row.config == config_name]
         color = palette[mod1(idx, length(palette))]
-        radius = isempty(subset) ? 0 : subset[1].radius
-        style, width = checkerboard_line_style(radius)
+        layer1_radius = isempty(subset) ? 0 : subset[1].layer1_radius
+        style, width = checkerboard_line_style(layer1_radius)
         lines!(ax_mse, [row.epoch for row in subset], [row.mse for row in subset], color = color, label = config_name, linestyle = style, linewidth = width)
         lines!(ax_acc, [row.epoch for row in subset], [row.accuracy for row in subset], color = color, linestyle = style, linewidth = width)
         lines!(ax_margin, [row.epoch for row in subset], [row.min_margin for row in subset], color = color, linestyle = style, linewidth = width)
@@ -842,6 +857,28 @@ function plot_results(outdir::P, rows::R, summary_rows::S) where {P<:AbstractStr
     axislegend(ax_mse, position = :rt, nbanks = 2)
 
     path = checkerboard_summary_plot_path(outdir)
+    save_checkerboard_plot(path, fig)
+    return path
+end
+
+"""Plot the learning history for one `r1/r2` configuration inside its run folder."""
+function plot_config_results(run_dir::P, rows::R, config::C) where {P<:AbstractString,R<:AbstractVector,C<:LocalCNNXORConfig}
+    isempty(rows) && return nothing
+
+    fig = Figure(size = (1200, 850))
+    title = "$(config.name): r1=$(config.layer1_radius), r2=$(config.layer2_radius)"
+    ax_mse = Axis(fig[1, 1], xlabel = "epoch", ylabel = "score MSE", title = title)
+    ax_acc = Axis(fig[2, 1], xlabel = "epoch", ylabel = "accuracy", title = "Truth-table accuracy")
+    ax_margin = Axis(fig[3, 1], xlabel = "epoch", ylabel = "min margin", title = "Worst-case margin")
+
+    epochs = [row.epoch for row in rows]
+    lines!(ax_mse, epochs, [row.mse for row in rows], color = :steelblue, linewidth = 2.6)
+    lines!(ax_acc, epochs, [row.accuracy for row in rows], color = :seagreen, linewidth = 2.6)
+    lines!(ax_margin, epochs, [row.min_margin for row in rows], color = :firebrick, linewidth = 2.6)
+    hlines!(ax_acc, [1.0], color = (:gray30, 0.45), linestyle = :dash)
+    hlines!(ax_margin, [0.0], color = (:gray30, 0.45), linestyle = :dash)
+
+    path = joinpath(run_dir, "learning_curve.png")
     save_checkerboard_plot(path, fig)
     return path
 end
@@ -869,9 +906,10 @@ function maybe_resume_params(ps::P, config::C) where {P,C<:LocalCNNXORConfig}
     return payload.ps
 end
 
-"""Run one configured radius/periodicity experiment and return metric rows."""
+"""Run one configured `r1/r2` architecture variant and return metric rows."""
 function run_config!(config::C, root_outdir::P) where {C<:LocalCNNXORConfig,P<:AbstractString}
     run_dir = joinpath(root_outdir, config.name)
+    isdir(run_dir) && rm(run_dir; recursive = true, force = true)
     mkpath(run_dir)
 
     graph = cnn_xor_graph(config)
@@ -922,8 +960,12 @@ function run_config!(config::C, root_outdir::P) where {C<:LocalCNNXORConfig,P<:A
                 should_snapshot && save_snapshot!(run_dir, epoch, manager.state.params[], config, metrics)
                 row = (;
                     config = config.name,
-                    hidden_side = config.hidden1_side,
-                    radius = config.local_radius,
+                    input_side = config.input_side,
+                    hidden1_side = config.hidden1_side,
+                    hidden2_side = config.hidden2_side,
+                    output_side = config.output_side,
+                    layer1_radius = config.layer1_radius,
+                    layer2_radius = config.layer2_radius,
                     periodic = config.hidden_periodic,
                     epoch,
                     mse = metrics.mse,
@@ -968,13 +1010,18 @@ function run_config!(config::C, root_outdir::P) where {C<:LocalCNNXORConfig,P<:A
     open(joinpath(run_dir, "final_params.bin"), "w") do io
         serialize(io, (; ps = manager.state.params[], config, cases = CNN_XOR_CASES))
     end
+    config.plot && plot_config_results(run_dir, rows, config)
     return (;
         rows,
         summary = (;
             config = config.name,
-            radius = config.local_radius,
+            input_side = config.input_side,
+            hidden1_side = config.hidden1_side,
+            hidden2_side = config.hidden2_side,
+            output_side = config.output_side,
+            layer1_radius = config.layer1_radius,
+            layer2_radius = config.layer2_radius,
             periodic = config.hidden_periodic,
-            hidden_side = config.hidden1_side,
             best_mse,
             best_accuracy,
             best_epoch,
@@ -999,7 +1046,7 @@ function write_aggregate_csvs!(outdir::P, rows::R, summary_rows::S) where {P<:Ab
     return (; metrics_path, summary_path)
 end
 
-"""Run the full local-radius and hidden-periodicity comparison."""
+"""Run the `8x8 -> 8x8 -> 4x4 -> 4x4` checkerboard radius-grid experiment."""
 function main()
     base = LocalCNNXORConfig()
     base.workers > 0 || throw(ArgumentError("ISING_XOR_CNN_WORKERS must be positive"))
@@ -1017,7 +1064,7 @@ function main()
 
     all_rows = NamedTuple[]
     summary_rows = NamedTuple[]
-    println("Running $(length(configs)) local CNN-like XOR config(s)")
+    println("Running $(length(configs)) checkerboard 8x8-to-4x4 CNN-like XOR config(s)")
     for (idx, config) in enumerate(configs)
         println("[$idx/$(length(configs))] $(config.name)")
         result = run_config!(config, base.outdir)

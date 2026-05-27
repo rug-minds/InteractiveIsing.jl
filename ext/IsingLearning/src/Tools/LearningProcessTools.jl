@@ -1,6 +1,6 @@
 export SetGraphState!, CopyGraphState!, RandomizeGraphState!,
        GeometricTemperatureSchedule, ReverseAnnealTemperatureSchedule,
-       ResetBestEnergyCapture!, CaptureBestEnergyState!, graph_energy
+       ResetRef!, ResetBestEnergyCapture!, CaptureBestEnergyState!, graph_energy
 
 # Process tool that writes a stored state vector into an Ising graph.
 @ProcessAlgorithm function SetGraphState!(isinggraph, target)
@@ -23,10 +23,15 @@ end
     return nothing
 end
 
+# Process tool that resets a reusable scalar `Ref` owned by another algorithm.
+@ProcessAlgorithm function ResetRef!(target::Base.RefValue, value)
+    target[] = convert(typeof(target[]), value)
+    return nothing
+end
+
 """Return the graph energy for Bilinear + MagField Ising graphs."""
 function graph_energy(isinggraph::G) where {G}
     s = state(isinggraph)
-    b = getparam(isinggraph.hamiltonian, InteractiveIsing.MagField, :b)
     A = adj(isinggraph)
     colptrs = SparseArrays.getcolptr(A)
     rowvals = SparseArrays.rowvals(A)
@@ -37,8 +42,12 @@ function graph_energy(isinggraph::G) where {G}
             energy -= eltype(s)(0.5) * nzvals[ptr] * s[rowvals[ptr]] * s[col]
         end
     end
-    @inbounds for idx in eachindex(s)
-        energy -= b[idx] * s[idx]
+    for hterm in InteractiveIsing.hamiltonians(isinggraph.hamiltonian)
+        hterm isa InteractiveIsing.MagField || continue
+        b = hterm.b
+        @inbounds for idx in eachindex(s)
+            energy -= hterm.c * b[idx] * s[idx]
+        end
     end
     return energy
 end
@@ -47,23 +56,24 @@ end
     GeometricTemperatureSchedule(; start_T, stop_T)
 
 Process scheduler that writes a geometric temperature schedule into a graph.
-Reset its `step_idx` owned field before reusing it for a new phase.
+Reset its `step_idx` owned ref before reusing it for a new phase.
 """
 @ProcessAlgorithm begin
     @config start_T::Float32 = 5f0
     @config stop_T::Float32 = 1f-2
+    @config n_steps::Int = 1
 
     function GeometricTemperatureSchedule(
         isinggraph,
-        @managed(step_idx = 0),
-        @managed(total_steps = n_steps);
-        @inputs((; n_steps::Int = 1))
+        @managed(step_idx = Ref(0)),
+        @managed(total_steps = n_steps),
     )
         total = max(total_steps, 1)
-        progress = total == 1 ? 1f0 : Float32(step_idx) / Float32(total - 1)
+        progress = total == 1 ? 1f0 : Float32(step_idx[]) / Float32(total - 1)
         current_T = start_T * (stop_T / start_T)^progress
         InteractiveIsing.temp!(isinggraph, current_T)
-        return (; step_idx = min(step_idx + 1, total - 1), current_T)
+        step_idx[] = step_idx[] >= total - 1 ? 0 : step_idx[] + 1
+        return (; current_T)
     end
 end
 
@@ -71,27 +81,28 @@ end
     ReverseAnnealTemperatureSchedule(; cold_T, peak_T)
 
 Process scheduler that warms from `cold_T` to `peak_T`, then cools back down.
-Reset its `step_idx` owned field before reusing it for a new phase.
+Reset its `step_idx` owned ref before reusing it for a new phase.
 """
 @ProcessAlgorithm begin
     @config cold_T::Float32 = 1f-2
     @config peak_T::Float32 = 1f0
+    @config n_steps::Int = 1
 
     function ReverseAnnealTemperatureSchedule(
         isinggraph,
-        @managed(step_idx = 0),
-        @managed(total_steps = n_steps);
-        @inputs((; n_steps::Int = 1))
+        @managed(step_idx = Ref(0)),
+        @managed(total_steps = n_steps),
     )
         total = max(total_steps, 1)
-        progress = total == 1 ? 1f0 : Float32(step_idx) / Float32(total - 1)
+        progress = total == 1 ? 1f0 : Float32(step_idx[]) / Float32(total - 1)
         current_T = if progress <= 0.5f0
             cold_T + (progress / 0.5f0) * (peak_T - cold_T)
         else
             peak_T + ((progress - 0.5f0) / 0.5f0) * (cold_T - peak_T)
         end
         InteractiveIsing.temp!(isinggraph, current_T)
-        return (; step_idx = min(step_idx + 1, total - 1), current_T)
+        step_idx[] = step_idx[] >= total - 1 ? 0 : step_idx[] + 1
+        return (; current_T)
     end
 end
 

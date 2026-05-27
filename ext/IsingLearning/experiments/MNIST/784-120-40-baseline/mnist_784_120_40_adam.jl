@@ -22,12 +22,12 @@ const NCLASSES = IsingLearning.MNIST_NCLASSES
 
 Base.@kwdef struct InputFieldMNISTConfig{T<:AbstractFloat,S<:AbstractString}
     workers::Int = parse(Int, get(ENV, "ISING_MNIST_IF_WORKERS", "32"))
-    epochs::Int = parse(Int, get(ENV, "ISING_MNIST_IF_EPOCHS", "60"))
-    batchsize::Int = parse(Int, get(ENV, "ISING_MNIST_IF_BATCHSIZE", "64"))
-    train_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_IF_TRAIN_PER_CLASS", "100"))
-    test_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_IF_TEST_PER_CLASS", "10"))
-    train_eval_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_IF_TRAIN_EVAL_PER_CLASS", "10"))
-    eval_every::Int = parse(Int, get(ENV, "ISING_MNIST_IF_EVAL_EVERY", "1"))
+    epochs::Int = parse(Int, get(ENV, "ISING_MNIST_IF_EPOCHS", "200"))
+    batchsize::Int = parse(Int, get(ENV, "ISING_MNIST_IF_BATCHSIZE", "128"))
+    train_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_IF_TRAIN_PER_CLASS", "5421"))
+    test_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_IF_TEST_PER_CLASS", "892"))
+    train_eval_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_IF_TRAIN_EVAL_PER_CLASS", "100"))
+    eval_every::Int = parse(Int, get(ENV, "ISING_MNIST_IF_EVAL_EVERY", "5"))
     hidden::Int = parse(Int, get(ENV, "ISING_MNIST_IF_HIDDEN", "120"))
     output_replicas::Int = parse(Int, get(ENV, "ISING_MNIST_IF_OUTPUT_REPLICAS", "4"))
     sweeps::T = parse(FT, get(ENV, "ISING_MNIST_IF_SWEEPS", "500"))
@@ -103,6 +103,12 @@ function scale_buffer!(buffer::B, scale::T) where {B,T<:Real}
     return buffer
 end
 
+"""Write one runtime beta value into a worker-local reference."""
+function set_beta_ref!(beta_ref::R, beta::T) where {R<:Base.RefValue,T<:Real}
+    beta_ref[] = beta
+    return nothing
+end
+
 """Normalize raw MNIST images to `[0, 1]` input-field intensities."""
 function normalize_images(images::A, ::Type{T}) where {A,T<:AbstractFloat}
     x = T.(images)
@@ -132,10 +138,15 @@ function balanced_mnist(split::Symbol, per_class::I, config::C) where {I<:Intege
     end
 
     keep = Int[]
+    rng = Random.MersenneTwister(hash((config.seed, split, Int(per_class))))
     for digit in 1:NCLASSES
         length(buckets[digit]) >= Int(per_class) ||
             throw(ArgumentError("split $(split) has only $(length(buckets[digit])) samples for digit $(digit - 1)"))
-        append!(keep, @view buckets[digit][1:Int(per_class)])
+
+        # Shuffle class buckets once so reduced runs are still representative.
+        digit_indices = copy(buckets[digit])
+        Random.shuffle!(rng, digit_indices)
+        append!(keep, @view digit_indices[1:Int(per_class)])
     end
 
     xall = normalize_images(images, FT)
@@ -183,40 +194,90 @@ function build_layer(config::C) where {C<:InputFieldMNISTConfig}
     return (; graph, layer, relaxation_steps)
 end
 
-"""Build the routable single-sample input-field equilibrium-propagation step."""
-function input_field_contrastive_algorithm(layer::L) where {L<:IsingLearning.LayeredIsingGraphLayer}
+# Accumulate the one-sided MNIST input-field gradient into one worker buffer.
+function accumulate_input_field_gradient!(
+    isinggraph::G,
+    nudged_state,
+    equilibrium_state,
+    x,
+    buffers,
+    β::T,
+) where {G,T<:Real}
+    IsingLearning.contrastive_gradient(isinggraph, nudged_state, equilibrium_state, β; buffers = buffers)
+    IsingLearning._accumulate_input_field_edge_gradient!(buffers, isinggraph, x, nudged_state, equilibrium_state)
+    return
+end
+
+"""Build the free-phase input-field routine for one MNIST sample."""
+function input_field_free_phase_algorithm(layer::L) where {L<:IsingLearning.LayeredIsingGraphLayer}
     dynamics_algorithm = deepcopy(layer.dynamics_algorithm)
-    β = layer.β
-    zero_β = zero(β)
     free_steps = layer.free_relaxation_steps
+    n_units = layer.nunits
+
+    return Processes.@Routine begin
+        @state x
+        @state equilibrium_state = zeros(n_units)
+        @alias dynamics = dynamics_algorithm
+
+        # Fold the image into the worker-local input field, then relax once.
+        II.resetstate!(dynamics.model)
+        IsingLearning.apply_input(dynamics.model, x)
+        model = @repeat free_steps dynamics()
+        IsingLearning.copyvector!(equilibrium_state, @transform(graph -> II.state(graph), model))
+    end
+end
+
+"""Build the positive-nudged input-field routine for one MNIST sample."""
+function input_field_nudged_phase_algorithm(layer::L, beta_ref::R) where {L<:IsingLearning.LayeredIsingGraphLayer,R<:Base.RefValue}
+    dynamics_algorithm = deepcopy(layer.nudged_dynamics_algorithm)
     nudged_steps = layer.nudged_relaxation_steps
     n_units = layer.nunits
 
     return Processes.@Routine begin
         @state x
         @state y
-        @state buffers
-        @state equilibrium_state = zeros(n_units)
+        @state equilibrium_state
         @state nudged_state = zeros(n_units)
         @alias dynamics = dynamics_algorithm
 
-        # Free phase with the image folded into a worker-local input field.
-        II.resetstate!(dynamics.model)
-        IsingLearning.apply_input(dynamics.model, x)
-        model = @repeat free_steps dynamics()
-        IsingLearning.copyvector!(equilibrium_state, @transform(graph -> II.state(graph), model))
-
-        # Positive nudge from the free equilibrium.
+        # Restart from the free equilibrium, add the target nudge, then relax.
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
         IsingLearning.apply_input(dynamics.model, x)
         IsingLearning.apply_targets(dynamics.model, y)
-        IsingLearning.set_clamping_beta!(dynamics.model, β)
+        IsingLearning.set_clamping_beta!(dynamics.model, beta_ref[])
         model = @repeat nudged_steps dynamics()
         IsingLearning.copyvector!(nudged_state, @transform(graph -> II.state(graph), model))
 
-        IsingLearning.set_clamping_beta!(dynamics.model, zero_β)
-        IsingLearning.contrastive_gradient(dynamics.model, nudged_state, equilibrium_state, β; buffers = buffers)
-        IsingLearning._accumulate_input_field_edge_gradient!(buffers, dynamics.model, x, nudged_state, equilibrium_state)
+        # Reset clamping so the worker can be rerun without rebuilding state.
+        IsingLearning.set_clamping_beta!(dynamics.model, zero(beta_ref[]))
+    end
+end
+
+"""Build the composite single-sample input-field equilibrium-propagation step."""
+function input_field_contrastive_algorithm(layer::L) where {L<:IsingLearning.LayeredIsingGraphLayer}
+    default_β = layer.β
+    beta_ref = Ref(default_β)
+    free_phase = input_field_free_phase_algorithm(layer)
+    nudged_phase = input_field_nudged_phase_algorithm(layer, beta_ref)
+
+    return Processes.@CompositeAlgorithm begin
+        @state x
+        @state y
+        @state buffers
+        @input beta::FT = default_β
+
+        @context free_context = free_phase()
+        set_beta_ref!(beta_ref, beta)
+        @context nudged_context = nudged_phase()
+
+        accumulate_input_field_gradient!(
+            nudged_context.dynamics.model,
+            nudged_context.nudged_state,
+            free_context.equilibrium_state,
+            x,
+            buffers,
+            beta,
+        )
     end
 end
 
@@ -313,6 +374,7 @@ function input_field_manager(layer::L, source::G, config::C) where {L<:IsingLear
             Processes.resetworker!(slot)
             return nothing
         end,
+        runarguments = (slot, job, manager) -> (; beta = manager.config.β),
         flush! = flush_manager_buffers!,
     )
     return Processes.ProcessManager(
@@ -449,6 +511,8 @@ function run_config!(config::C) where {C<:InputFieldMNISTConfig}
     config.epochs >= 0 || throw(ArgumentError("ISING_MNIST_IF_EPOCHS must be nonnegative"))
     config.hidden == 120 || @warn "baseline paper hidden count is 120" hidden = config.hidden
     config.output_replicas == 4 || @warn "baseline paper output count is 40, i.e. four replicas per digit" output_replicas = config.output_replicas
+    config.train_per_class < 5421 && @warn "this run uses a subsampled balanced training split, so it is not the full balanced MNIST baseline" train_per_class = config.train_per_class
+    config.test_per_class < 892 && @warn "this run uses a subsampled balanced test split, so reported accuracy will be noisy" test_per_class = config.test_per_class
     Threads.nthreads() < config.workers && @warn "Julia was started with fewer threads than requested manager workers" threads = Threads.nthreads() workers = config.workers
 
     mkpath(config.outdir)
@@ -504,13 +568,13 @@ function run_config!(config::C) where {C<:InputFieldMNISTConfig}
 
             # Validation is intentionally not run every epoch; on larger held-out sets it can dominate training time.
             should_eval_train = config.train_eval_per_class > 0 &&
-                (epoch == config.epochs || (epoch > 0 && config.eval_every > 0 && mod(epoch, config.eval_every) == 0))
+                (epoch == 0 || epoch == config.epochs || (epoch > 0 && config.eval_every > 0 && mod(epoch, config.eval_every) == 0))
             if should_eval_train
                 train = evaluate(validator, xtrain_eval, ytrain_eval, config)
                 train_accuracy = train.accuracy
                 train_loss = train.loss
             end
-            should_eval_test = epoch == config.epochs ||
+            should_eval_test = epoch == 0 || epoch == config.epochs ||
                 (epoch > 0 && config.eval_every > 0 && mod(epoch, config.eval_every) == 0)
             if should_eval_test
                 println("epoch ", epoch, " evaluating")

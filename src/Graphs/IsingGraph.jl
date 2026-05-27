@@ -113,7 +113,23 @@ export nstates
     return newadj
 end
 @inline adj!(g::IsingGraph, newadj) = adj(g, newadj)
-set_adj!(g::IsingGraph, vecs::Tuple) = adj(g, UndirectedAdjacency(adj(g), vecs...))
+
+"""
+    instantiate_adjacency_like(previous_adj, vecs)
+
+Rebuild generated sparse triplets using the same adjacency storage family as
+`previous_adj`.
+"""
+@inline function instantiate_adjacency_like(previous_adj::UA, vecs::Tuple) where {UA <: UndirectedAdjacency}
+    return UndirectedAdjacency(previous_adj, vecs...)
+end
+
+function instantiate_adjacency_like(previous_adj::SP, vecs::Tuple) where {SP <: AbstractSparseMatrix}
+    rows, cols, vals = vecs
+    return instantiate_adjacency_from_triplets(typeof(previous_adj), rows, cols, vals, size(previous_adj, 1))
+end
+
+set_adj!(g::IsingGraph, vecs::Tuple) = adj(g, instantiate_adjacency_like(adj(g), vecs))
 
 # @forwardfields IsingGraph GraphData d
 hasDefects(::AbstractRange{<:Integer}) = false

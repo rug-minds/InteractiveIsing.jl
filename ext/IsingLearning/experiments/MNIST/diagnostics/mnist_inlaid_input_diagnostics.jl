@@ -65,8 +65,6 @@ struct InlaidRelaxJob{X<:AbstractVector{INLAID_FT}}
     x::X
 end
 
-struct InlaidRelaxStep <: Processes.ProcessAlgorithm end
-
 mutable struct InlaidDiagnosticState{M}
     model::M
     elapsed::Base.RefValue{Float64}
@@ -242,18 +240,22 @@ end
 
 """Run full active-spin Metropolis sweeps with a geometric cooling schedule."""
 function anneal_inlaid!(model::M, context::C, sweeps::I) where {M<:InlaidDiagnosticModel,C,I<:Integer}
-    total = max(Int(sweeps), 1)
-    nactive = length(model.active_idxs)
-    algorithm = II.Metropolis()
-    for sweep in 1:total
-        progress = total == 1 ? 1f0 : INLAID_FT(sweep - 1) / INLAID_FT(total - 1)
-        temp = model.config.hot_temp * (model.config.cold_temp / model.config.hot_temp)^progress
-        II.temp!(model.graph, temp)
-        for _ in 1:nactive
-            Processes.step!(algorithm, context)
+    steps = max(1, Int(sweeps) * length(model.active_idxs))
+    dynamics_algorithm = II.Metropolis()
+    temperature = GeometricTemperatureSchedule(; start_T = model.config.hot_temp, stop_T = model.config.cold_temp, n_steps = steps)
+    algorithm = Processes.resolve(Processes.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @alias relax_temperature = temperature
+
+        @repeat steps begin
+            relax_temperature(dynamics.model)
+            dynamics()
         end
-    end
-    II.temp!(model.graph, model.config.cold_temp)
+        II.temp!(dynamics.model, model.config.cold_temp)
+    end)
+    process = Processes.Process(algorithm, Processes.Init(:dynamics; model = model.graph); repeat = 1)
+    run(process)
+    wait(process)
     return model
 end
 
@@ -269,45 +271,80 @@ function class_scores(model::M) where {M<:InlaidDiagnosticModel}
     return scores
 end
 
+"""Copy fixed inlaid pixel states into a reusable diagnostic buffer."""
+function copy_pixel_state!(dest::D, model::M) where {D<:AbstractVector,M<:InlaidDiagnosticModel}
+    dest .= @view II.state(model.graph)[model.pixel_idxs]
+    return dest
+end
+
+"""Assert that a diagnostic relaxation did not modify fixed pixel states."""
+function assert_pixel_state!(model::M, expected::E) where {M<:InlaidDiagnosticModel,E<:AbstractVector}
+    all(expected .== @view II.state(model.graph)[model.pixel_idxs]) || error("Inlaid pixel states changed during relaxation")
+    return nothing
+end
+
+"""Accumulate diagnostic timing and checksum counters for one worker job."""
+function update_diagnostic_stats!(
+    elapsed::Base.RefValue{F},
+    jobs::Base.RefValue{I},
+    checksum::Base.RefValue{T},
+    started_at::U,
+    model::M,
+) where {F<:Real,I<:Integer,T<:Real,U<:Integer,M<:InlaidDiagnosticModel}
+    elapsed[] += (time_ns() - started_at) / 1.0e9
+    jobs[] += 1
+    checksum[] += sum(class_scores(model))
+    return nothing
+end
+
+"""Build one temperature-scheduled diagnostic relaxation routine."""
+function inlaid_relax_algorithm(config::C, nactive::I) where {C<:InlaidDiagnosticConfig,I<:Integer}
+    steps = max(1, Int(config.sweeps) * Int(nactive))
+    temperature = GeometricTemperatureSchedule(; start_T = config.hot_temp, stop_T = config.cold_temp, n_steps = steps)
+    dynamics_algorithm = II.Metropolis()
+    return Processes.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @alias relax_temperature = temperature
+        @state inlaid_model
+        @state x
+        @state pixel_state
+        @state elapsed
+        @state jobs
+        @state checksum
+
+        started_at = time_ns()
+        apply_inlaid_pattern!(inlaid_model, x)
+        copy_pixel_state!(pixel_state, inlaid_model)
+        randomize_live_state!(inlaid_model)
+        @repeat steps begin
+            relax_temperature(dynamics.model)
+            dynamics()
+        end
+        II.temp!(dynamics.model, inlaid_model.config.cold_temp)
+        assert_pixel_state!(inlaid_model, pixel_state)
+        update_diagnostic_stats!(elapsed, jobs, checksum, started_at, inlaid_model)
+    end
+end
+
 """Return the mutable process subcontext used by a manager worker."""
 function worker_context(worker::W) where {W}
     return Processes.context(worker)._state
 end
 
-"""Initialize one reusable inlaid-input diagnostic worker."""
-function Processes.init(::InlaidRelaxStep, context)
-    model = context.model
-    x = get(context, :x, zeros(INLAID_FT, INLAID_INPUT_SIDE^2))
-    metropolis_context = Processes.init(II.Metropolis(), (; model = model.graph))
-    return (; model, x, metropolis_context, elapsed = Ref(0.0), jobs = Ref(0), checksum = Ref(0f0))
-end
-
-"""Run one synthetic relaxation job inside a persistent worker context."""
-function Processes.step!(::InlaidRelaxStep, context)
-    start = time_ns()
-    apply_inlaid_pattern!(context.model, context.x)
-    before_pixels = copy(@view II.state(context.model.graph)[context.model.pixel_idxs])
-    randomize_live_state!(context.model)
-    anneal_inlaid!(context.model, context.metropolis_context, context.model.config.sweeps)
-    after_pixels = @view II.state(context.model.graph)[context.model.pixel_idxs]
-    all(before_pixels .== after_pixels) || error("Inlaid pixel states changed during relaxation")
-    context.elapsed[] += (time_ns() - start) / 1.0e9
-    context.jobs[] += 1
-    context.checksum[] += sum(class_scores(context.model))
-    return nothing
-end
-
-"""Keep manager-owned diagnostic workers alive across jobs."""
-function Processes.cleanup(::InlaidRelaxStep, context)
-    return nothing
-end
-
 """Create one reusable manager-owned inlaid-input worker."""
-function inlaid_worker(source::M, worker_idx::I) where {M<:InlaidDiagnosticModel,I<:Integer}
+function inlaid_worker(source::M, worker_idx::I, algorithm::A) where {M<:InlaidDiagnosticModel,I<:Integer,A}
     model = worker_model(source, worker_idx)
     return Processes.Process(
-        :_state => InlaidRelaxStep(),
-        Processes.Init(:_state; model, x = zeros(INLAID_FT, INLAID_INPUT_SIDE^2));
+        algorithm,
+        Processes.Init(:_state;
+            inlaid_model = model,
+            x = zeros(INLAID_FT, INLAID_INPUT_SIDE^2),
+            pixel_state = zeros(INLAID_FT, length(model.pixel_idxs)),
+            elapsed = Ref(0.0),
+            jobs = Ref(0),
+            checksum = Ref(0f0),
+        ),
+        Processes.Init(:dynamics; model = model.graph);
         repeat = 1,
     )
 end
@@ -315,8 +352,9 @@ end
 """Create a ProcessManager for inlaid-input diagnostic relaxation jobs."""
 function inlaid_manager(source::M, nworkers::I) where {M<:InlaidDiagnosticModel,I<:Integer}
     state = InlaidDiagnosticState(source, Ref(0.0), Ref(0), Ref(0f0))
+    algorithm = Processes.resolve(inlaid_relax_algorithm(source.config, length(source.active_idxs)))
     recipe = (;
-        makeworker = (idx, manager) -> inlaid_worker(manager.state.model, idx),
+        makeworker = (idx, manager) -> inlaid_worker(manager.state.model, idx, algorithm),
         prepare! = (slot, job, manager) -> begin
             ctx = worker_context(slot.worker)
             ctx.x .= job.x

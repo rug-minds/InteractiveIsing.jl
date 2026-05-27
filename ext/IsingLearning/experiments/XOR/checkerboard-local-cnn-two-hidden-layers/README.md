@@ -1,85 +1,78 @@
 # Checkerboard Local CNN-Like XOR
 
-This experiment tests whether a local, spatial Ising architecture can learn XOR
-when the two input bits are embedded as checkerboard patterns instead of two
-scalar spins.
+This folder is for checkerboard XOR experiments that use a local, CNN-like
+spatial Ising graph. The input bits are not scalar spins: each truth-table case
+is embedded as an `8x8` checkerboard field, so the graph has to move spatial
+evidence through local hidden layers before producing the XOR class.
 
-The architecture is:
+The active experiment is one architecture:
 
 ```text
-8x8 checkerboard input -> HxH hidden layer -> HxH hidden layer -> 4x4 output
+8x8 checkerboard input -> 8x8 hidden1 -> 4x4 hidden2 -> 4x4 two-class output
 ```
 
-Both hidden layers use local inter-layer connectivity. The main sweep changes
-the hidden side length and the local connection radius. The retained current
-runs use `H = 8` and non-periodic hidden layers.
+The architecture is fixed while the local connectivity is swept:
+
+- `r1`: local radius for input -> hidden1 and hidden1 recurrent couplings.
+- `r2`: local radius for hidden1 -> hidden2, hidden2 recurrent couplings, and
+  hidden2 -> output readout couplings.
+
+The current grid is `r1 = 1:5` and `r2 = 1:2`. Those ten combinations are one
+experiment because they test the same architecture, not ten different model
+families.
 
 ## Motivation
 
-The earlier scalar XOR experiments show whether a small graph can learn a clean
-truth table. This checkerboard experiment is a harder spatial version: each XOR
-case is presented as an image-like field, then the model has to move information
-through two local hidden layers before producing a two-class output code.
+Earlier checkerboard runs mixed hidden sizes, restart histories, and radius
+ranges. That made the folder hard to read and made the results hard to compare.
+This reset keeps one architecture fixed and asks a cleaner question: which
+locality pairing lets the `8x8 -> 4x4` checkerboard architecture learn XOR?
 
-This makes it useful for debugging MNIST-like local architectures without paying
-the cost and ambiguity of the full MNIST task.
+The `8x8 -> 4x4` reduction is intentionally smaller than the older equal-size
+hidden-layer runs. It is a first test of whether the CNN-like compression can
+learn before trying larger or deeper variants.
 
-## Output And Metrics
+## Output Code
 
-The retained runs use `two_class` output mode. The `4x4` output layer is split
-into two replicated class regions. XOR false targets class `0`; XOR true targets
-class `1`.
+The output layer is `4x4` and uses `two_class` targets. Half of the output
+sites represent XOR false and half represent XOR true. The class score is the
+mean of the matching output region, so the important metrics are:
 
-The main metric is score MSE over the four XOR cases. Accuracy and margin are
-logged as separate diagnostics:
-
-- `accuracy`: whether the two-class decision is correct.
+- `mse`: score MSE over the four XOR truth-table cases.
+- `accuracy`: whether the two-class decision is correct for each case.
 - `min_margin`: the weakest signed class margin across the four cases.
-- `best_min_margin`: the best worst-case margin seen during a run.
 
-High accuracy by itself is not enough. The useful checkpoints are the ones with
-positive margins on all four cases, because those are more stable when
-validation is repeated.
+Positive `min_margin` on all four cases matters more than a transient accuracy
+hit, because it is more likely to survive repeated stochastic validation.
 
-## Training Setup
+## Training
 
-The script uses the process manager with reusable contrastive workers. Each
-worker runs free and nudged phases, accumulates a local contrastive gradient, and
-the manager applies an Adam update after each batch.
+`xor_local_cnn_like_grid.jl` runs the grid through the process manager. Each
+worker executes reusable contrastive process algorithms for free and nudged
+phases, accumulates worker-local gradients, and the manager applies Adam.
 
-The important optimizer fields are:
+Default settings for this experiment are:
 
-- `lr`: the initial Adam learning rate.
-- `lr_decay`: multiplicative decay applied to the learning rate at each update.
-- `lr_min`: lower bound on the decayed learning rate.
-- `weight_decay`: L2 penalty on trainable couplings before the optimizer step.
+- 32 workers.
+- 100 epochs.
+- 64 repeats per XOR case.
+- 20 free sweeps and 20 nudged sweeps.
+- Adam with `lr = 0.002`, `lr_decay = 0.995`, `lr_min = 0.0002`.
+- coupling weight decay `1e-4`.
+- zero initialization before each trajectory.
 
-Folder names now spell out learning-rate decay explicitly. For example,
-`lr_decay0p999` means `lr_decay = 0.999`, so update `k` uses approximately
-`lr * 0.999^(k-1)` until `lr_min` is reached.
+Run it with:
 
-## Current Runs
-
-`local_checkerboard_two_class_zero_init_h8_r8_r9_repeats64_sweeps20_epochs80`
-is the original zero-initialized short run for radii 8 and 9. Radius 8 learned
-well; radius 9 did not.
-
-`local_checkerboard_two_class_h8_r7_to_r10_resume_best_margin_e200_lr0p001_lr_decay0p998`
-continues from best-margin checkpoints and compares radii 7 through 10 for 200
-epochs. It is the best retained sweep overall; radius 10 reaches the lowest MSE
-in this folder.
-
-`local_checkerboard_two_class_h8_r9_r10_second_resume_best_margin_e240_lr0p0005_lr_decay0p999`
-is a second continuation for radii 9 and 10 with a smaller initial learning rate
-and gentler learning-rate decay. It checks whether the larger-radius runs become
-more stable with slower updates.
+```powershell
+julia -t 32 --project=ext/IsingLearning ext/IsingLearning/experiments/XOR/checkerboard-local-cnn-two-hidden-layers/xor_local_cnn_like_grid.jl
+```
 
 ## Files
 
-- `xor_local_cnn_like_grid.jl`: experiment script. It no longer writes README
-  summaries; it writes metrics, checkpoints, and plots only.
-- `validate_checkerboard_checkpoints.jl`: high-repeat validation for saved
-  checkpoints.
-- `schematic.png`: architecture schematic.
-- `experiments/current`: retained run folders.
-- `aggregate_plots`: comparison plots collected from current runs.
+- `schematic.png`: architecture schematic for the active `8x8 -> 4x4`
+  checkerboard experiment.
+- `xor_local_cnn_like_grid.jl`: training and plotting script for this grid.
+- `validate_checkerboard_checkpoints.jl`: high-repeat checkpoint validation.
+- `experiments/current/input_8x8_hidden1_8x8_hidden2_4x4_output_4x4_two_class`:
+  current result folder for this architecture. Each `r1_*_r2_*` subfolder holds
+  metrics, checkpoints, and a learning plot for that radius pairing.

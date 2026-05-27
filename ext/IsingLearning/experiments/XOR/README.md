@@ -14,17 +14,16 @@ ext/IsingLearning/ExperimentsOld
 
 - `two-input-2x2-hidden-majority-vote-baseline`: small `2 -> 2x2 -> 4` all-to-all ProcessManager/Adam baseline with majority-vote output replicas.
 - `all-to-all-input-averaged-readout`: direct `2 -> 4 -> 2xR` all-to-all ProcessManager demonstrator with worker-local repeat averaging.
-- `checkerboard-local-cnn-two-hidden-layers`: local checkerboard input on an `8x8 -> HxH -> HxH -> 4x4` CNN-like Ising architecture.
+- `checkerboard-local-cnn-two-hidden-layers`: local checkerboard input on the current `8x8 -> 8x8 -> 4x4 -> 4x4` CNN-like Ising architecture, with `r1/r2` radius combinations in the architecture run folder.
 - `edge-driven-single-layer-readout`: edge-applied XOR input driving a `16x16` layer with the opposite edge used as the readout.
 - `diagnostics`: smoke, sanity, scout, and timing material that is not part of the result experiment trees.
 
 Within architecture folders, `experiments/current/<experiment-name>` contains
-the retained successful experiment data, generated per-run PNG plots, and a copy
-of the Julia simulation file used for that experiment. Leaf configuration metric
-plots are flattened into the parent experiment folder with names like
-`h8_r9_metrics.png`. `aggregate_plots` contains cross-experiment comparisons,
-and `schematic.png` is the generated architecture figure when that experiment
-has one.
+the retained experiment data and generated PNG plots. Leaf configuration folders
+hold their own metrics, checkpoints, and learning plots. Architecture-level
+comparisons belong in the architecture experiment folder unless a separate
+aggregate family is explicitly documented. `schematic.png` is the generated
+architecture figure when that experiment has one.
 
 ## Utilities
 
