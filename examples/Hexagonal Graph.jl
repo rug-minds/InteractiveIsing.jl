@@ -14,9 +14,9 @@ end
 # nearest-neighbor rows instead of the axial-coordinate parallelogram.
 row_spacing = sqrt(3f0) / 2
 top = LatticeTopology(
-    (40, 40),
-    (0f0, row_spacing),
-    (1f0, 0f0);
+    (0f0, row_spacing, 0f0),
+    (1f0, 0f0, 0f0),
+    (0f0, 0f0, 1f0);
     layout = ZigZagRows(),
     periodic = true,
     lattice_type = Hexagonal,
@@ -26,14 +26,15 @@ wg = @WG zigzag_hexagonal_isingweights NN = 1
 g = IsingGraph(
     40,
     40,
+    10,
     Continuous(),
     LocalProposer(0.5f0),
     wg,
     top,
     StateSet(-1f0, 1f0),
     Ising(c = ConstVal(0f0), b = 0f0, localpotential = 0f0);
-    periodic = true,
+    periodic = true
 )
 
-interface(g)
+host = interface(g)
 createProcess(g)

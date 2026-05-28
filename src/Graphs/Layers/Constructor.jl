@@ -32,8 +32,8 @@ args:
         -> DEFAULT: nothing
     - (OPTIONAL) statetype: Discrete() or Continuous()
         -> DEFAULT: Discrete()
-    - (OPTIONAL) LatticeConstants(d1, d2, ...) for distance calculations in weightgenerators
-        -> DEFAULT: 1.0 for each dimension
+    - (OPTIONAL) LatticeConstants(d1, d2, ...) for default SquareTopology distance calculations
+        -> DEFAULT: 1.0 for each dimension. This cannot be combined with an explicit topology.
     
 """
 function parse_isinglayer(args...; periodic = true)
@@ -53,20 +53,19 @@ function parse_isinglayer(args...; periodic = true)
 
     # Parse optional Lattice Constants
     latconst_idx = findfirst(x -> x isa LatticeConstants, args)
-    has_latconst = !isnothing(latconst_idx)
     latconst = latconst_idx |> isnothing ? nothing : args[latconst_idx].constants
     args = remove_optional_parsed_arg(args, latconst_idx)
-    if isnothing(latconst)
-        ds = tuple(fill(1.0, length(size))...)
-    else
-        ds = latconst
-    end
 
     # Parse optional Topology
     topology_idx = findfirst(x -> x isa AbstractLayerTopology, args)
-    topology = topology_idx |> isnothing ? SquareTopology(size; periodic) : args[topology_idx]
-    if isnothing(topology_idx) || has_latconst
-        setdist!(topology, ds)
+    if !isnothing(topology_idx) && !isnothing(latconst_idx)
+        throw(ArgumentError("LatticeConstants is only a convenience argument for the default SquareTopology. Do not pass it together with an explicit topology."))
+    end
+    topology = if isnothing(topology_idx)
+        constants = isnothing(latconst) ? tuple(fill(1.0, length(size))...) : latconst
+        SquareTopology(size; lattice_constants = constants, periodic)
+    else
+        sizeto(args[topology_idx], size)
     end
     args = remove_optional_parsed_arg(args, topology_idx)
 
@@ -88,4 +87,3 @@ function parse_isinglayer(args...; periodic = true)
 
     return IsingLayerData(size, stype, stateset, weightgen, topology, coords)
 end
-

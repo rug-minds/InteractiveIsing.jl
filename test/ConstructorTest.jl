@@ -101,6 +101,28 @@ end
     @test all(x -> isapprox(abs(x), 1.0f0; atol = 1f-5), InteractiveIsing.graphstate(quartic_double_well))
 end
 
+@testset "Topology sizing" begin
+    square_template_graph = IsingGraph(
+        3,
+        3,
+        Continuous(),
+        SquareTopology(; lattice_constants = (2.0f0, 3.0f0), periodic = false);
+        periodic = false,
+    )
+    @test size(topology(square_template_graph[1])) == (3, 3)
+    @test InteractiveIsing.lattice_constants(topology(square_template_graph[1])) == [2.0f0, 3.0f0]
+
+    lattice_template_graph = IsingGraph(
+        3,
+        3,
+        Continuous(),
+        LatticeTopology((2.0f0, 0.0f0), (0.0f0, 3.0f0); periodic = false);
+        periodic = false,
+    )
+    @test size(topology(lattice_template_graph[1])) == (3, 3)
+    @test InteractiveIsing.lattice_constants(topology(lattice_template_graph[1])) == (2.0f0, 3.0f0)
+end
+
 @testset "Constructor errors" begin
     err = try
         IsingGraph(2, 2, Continuous(), Quadratic(), Quartic(); precision = Float32)
@@ -112,4 +134,14 @@ end
     @test err isa ArgumentError
     @test occursin("single Hamiltonian argument", sprint(showerror, err))
     @test occursin("accidental comma", sprint(showerror, err))
+
+    explicit_topology_error = try
+        IsingGraph(2, 2, Continuous(), LatticeTopology((1.0f0, 0.0f0), (0.0f0, 1.0f0)), LatticeConstants(1.0f0, 1.0f0))
+        nothing
+    catch e
+        e
+    end
+
+    @test explicit_topology_error isa ArgumentError
+    @test occursin("LatticeConstants is only a convenience argument", sprint(showerror, explicit_topology_error))
 end

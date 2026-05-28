@@ -227,7 +227,15 @@ function _focus_native_window!(screen)
     return nothing
 end
 
-function _request_deferred_window_close!(host::WindowHost)
+"""
+    _request_deferred_window_close!(host)
+
+Request a native window close from outside the Makie `window_open` observer.
+The actual `host.open[] = false` write is deferred to a fresh task so callers
+such as Cmd+W handlers and explicit `close(host)` do not run the GLMakie close
+observer inline on the current callback stack.
+"""
+function _request_deferred_window_close!(host::T) where {T<:WindowHost}
     (host.closed || host.closing) && return nothing
     get(host.data, :deferred_close_requested, false) && return nothing
     host.data[:deferred_close_requested] = true
@@ -960,12 +968,14 @@ end
 
 Close a window host once. Frame and polling timers stop before child panels are
 closed, so callbacks cannot keep notifying Makie objects during native window
-teardown.
+teardown. For displayed GLMakie windows this is non-blocking: the close request
+is deferred to the host close observer, then runtime resources are stopped from
+the native close path.
 """
 function Base.close(host::WindowHost)
     (host.closed || host.closing) && return nothing
     if !isnothing(host.screen)
-        host.open[] = false
+        _request_deferred_window_close!(host)
         return nothing
     end
 

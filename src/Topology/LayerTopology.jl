@@ -38,12 +38,13 @@ third coordinate is left unstaggered.
 struct ZigZagColumns <: AbstractLatticeLayout end
 
 """
-    LatticeTopology(size, vecs...; layout = DirectLatticeLayout(), periodic = true, origin = nothing, precision = nothing, lattice_type = AnyLattice)
+    LatticeTopology([size], vecs...; layout = DirectLatticeLayout(), periodic = true, origin = nothing, precision = nothing, lattice_type = AnyLattice)
 
 General two- or three-dimensional lattice topology backed by primitive vectors
 and reciprocal covectors. The `Layout` type parameter controls whether layer
 coordinates map directly to primitive-vector multiples or use a staggered
-zigzag embedding.
+zigzag embedding. Omitting `size` creates a topology template that is sized by
+`sizeto` when it is inserted into a layer.
 """
 mutable struct LatticeTopology{
     Kind<:LatticeType,
@@ -62,14 +63,14 @@ mutable struct LatticeTopology{
 end
 
 """
-    LatticeTopology(size, vecs...; kwargs...)
+    LatticeTopology([size], vecs...; kwargs...)
 
-Construct a general lattice topology from `Dim` primitive vectors. If no vectors
-are supplied, the identity basis is used. `layout` may be a layout object, a
-layout type, or one of `:direct`, `:zigzag_rows`, or `:zigzag_columns`.
+Construct a general lattice topology from `Dim` primitive vectors. If `size` is
+omitted, the topology is created as an unsized template. `layout` may be a layout
+object, a layout type, or one of `:direct`, `:zigzag_rows`, or `:zigzag_columns`.
 """
 function LatticeTopology(
-    size::S,
+    size::NTuple{D,<:Integer},
     vecs...;
     primitive_vectors = nothing,
     layout = DirectLatticeLayout(),
@@ -77,17 +78,88 @@ function LatticeTopology(
     origin = nothing,
     precision = nothing,
     lattice_type::Type{<:LatticeType} = AnyLattice,
-) where {S<:Tuple}
-    D = length(size)
-    @assert D in (2, 3) "LatticeTopology currently supports only two- and three-dimensional layers"
+) where {D}
+    if _lattice_unsized_vector_call(size, vecs, primitive_vectors)
+        return LatticeTopology(
+            (size, vecs...);
+            primitive_vectors,
+            layout,
+            periodic,
+            origin,
+            precision,
+            lattice_type,
+        )
+    end
+    raw_vecs = _lattice_vector_args(Val(D), vecs, primitive_vectors)
+    return _lattice_topology(
+        ntuple(i -> Int(size[i]), Val(D));
+        raw_vecs,
+        layout,
+        periodic,
+        origin,
+        precision,
+        lattice_type,
+    )
+end
 
+function LatticeTopology(
+    vecs...;
+    primitive_vectors = nothing,
+    layout = DirectLatticeLayout(),
+    periodic::Union{Bool,<:Tuple,Nothing} = true,
+    origin = nothing,
+    precision = nothing,
+    lattice_type::Type{<:LatticeType} = AnyLattice,
+)
+    raw_vecs = _lattice_vector_args_without_size(vecs, primitive_vectors)
+    D = _lattice_dimension(raw_vecs, origin)
+    raw_vecs = isnothing(raw_vecs) ? nothing : _lattice_vector_args(Val(D), raw_vecs, nothing)
+    return _lattice_topology(
+        ntuple(_ -> 0, Val(D));
+        raw_vecs,
+        layout,
+        periodic,
+        origin,
+        precision,
+        lattice_type,
+    )
+end
+
+"""
+    _lattice_unsized_vector_call(first_arg, rest_args, primitive_vectors)
+
+Disambiguate unsized calls like `LatticeTopology((1, 0), (0, 1))` from sized
+calls. If the number of tuple arguments equals the tuple length, interpret them
+as primitive vectors.
+"""
+function _lattice_unsized_vector_call(first_arg::Tuple, rest_args::Tuple, primitive_vectors)
+    isnothing(primitive_vectors) || return false
+    isempty(rest_args) && return false
+    length(rest_args) == length(first_arg) - 1 || return false
+    all(arg -> arg isa Tuple && length(arg) == length(first_arg), rest_args) || return false
+    return true
+end
+
+"""
+    _lattice_topology(size, raw_vecs; kwargs...)
+
+Build a `LatticeTopology` after size and vector inputs have been normalized.
+"""
+function _lattice_topology(
+    size::NTuple{D,Int};
+    raw_vecs = nothing,
+    layout = DirectLatticeLayout(),
+    periodic::Union{Bool,<:Tuple,Nothing} = true,
+    origin = nothing,
+    precision = nothing,
+    lattice_type::Type{<:LatticeType} = AnyLattice,
+) where {D}
+    @assert D in (2, 3) "LatticeTopology currently supports only two- and three-dimensional layers"
     layout_instance = _lattice_layout(layout)
-    raw_vecs = _lattice_vector_args(size, vecs, primitive_vectors)
     P = _lattice_precision(raw_vecs, origin, precision)
     pvecs = _lattice_primitive_vectors(Val(D), P, raw_vecs)
     covecs = _lattice_covectors(pvecs)
     origin_vec = _lattice_origin(Val(D), P, origin)
-    size_int = ntuple(i -> Int(size[i]), Val(D))
     U = _lattice_periodicity_type(periodic)
     Layout = typeof(layout_instance)
 
@@ -100,7 +172,7 @@ function LatticeTopology(
         typeof(pvecs),
         typeof(covecs),
         typeof(origin_vec),
-    }(pvecs, covecs, size_int, origin_vec)
+    }(pvecs, covecs, size, origin_vec)
 end
 
 """
@@ -134,12 +206,11 @@ function _lattice_layout(layout::Symbol)
 end
 
 """
-    _lattice_vector_args(size, positional_vecs, keyword_vecs)
+    _lattice_vector_args(dim, positional_vecs, keyword_vecs)
 
 Resolve primitive vectors from positional or keyword constructor arguments.
 """
-function _lattice_vector_args(size::Tuple, vecs::Tuple, primitive_vectors)
-    D = length(size)
+function _lattice_vector_args(::Val{D}, vecs::Tuple, primitive_vectors) where {D}
     if !isnothing(primitive_vectors)
         isempty(vecs) || throw(ArgumentError("Pass primitive vectors either positionally or by keyword, not both."))
         @assert length(primitive_vectors) == D "primitive_vectors must contain one vector per topology dimension"
@@ -151,6 +222,45 @@ function _lattice_vector_args(size::Tuple, vecs::Tuple, primitive_vectors)
     else
         @assert length(vecs) == D "LatticeTopology needs either zero vectors or one vector per topology dimension"
         return vecs
+    end
+end
+
+"""
+    _lattice_vector_args_without_size(positional_vecs, keyword_vecs)
+
+Resolve primitive vectors for an unsized lattice topology template.
+"""
+function _lattice_vector_args_without_size(vecs::Tuple, primitive_vectors)
+    if !isnothing(primitive_vectors)
+        isempty(vecs) || throw(ArgumentError("Pass primitive vectors either positionally or by keyword, not both."))
+        return tuple(primitive_vectors...)
+    elseif isempty(vecs)
+        return nothing
+    elseif length(vecs) == 1 && vecs[1] isa Tuple && all(v -> v isa Tuple, vecs[1])
+        return vecs[1]
+    else
+        return vecs
+    end
+end
+
+"""
+    _lattice_dimension(raw_vecs, origin)
+
+Infer the dimension of an unsized lattice topology template.
+"""
+function _lattice_dimension(raw_vecs, origin)
+    if !isnothing(raw_vecs)
+        D = length(raw_vecs)
+        @assert D in (2, 3) "LatticeTopology currently supports only two- and three-dimensional layers"
+        all(v -> length(v) == D, raw_vecs) ||
+            throw(ArgumentError("Each primitive vector must have length $D for a $D-dimensional LatticeTopology."))
+        return D
+    elseif !isnothing(origin)
+        D = length(origin)
+        @assert D in (2, 3) "LatticeTopology currently supports only two- and three-dimensional layers"
+        return D
+    else
+        throw(ArgumentError("Unsized LatticeTopology needs primitive vectors or an origin to infer dimension."))
     end
 end
 
@@ -294,6 +404,33 @@ function setdist!(top::T, lattice_constants::NTuple{D}) where {Kind,Layout,U,D,P
     end
     top.covecs = _lattice_covectors(top.pvecs)
     return top
+end
+
+"""
+    sizeto(top, size)
+
+Return a `LatticeTopology` with the same geometry and layout sized to a layer.
+Unsized templates have zero extents; fully sized topologies must already match.
+"""
+function sizeto(top::T, layer_size::NTuple{D,<:Integer}) where {Kind,Layout,U,D,P,T<:LatticeTopology{Kind,Layout,U,D,P}}
+    requested_size = ntuple(i -> Int(layer_size[i]), Val(D))
+    current_size = size(top)
+    if current_size == requested_size
+        return top
+    elseif all(iszero, current_size)
+        return LatticeTopology{
+            Kind,
+            Layout,
+            U,
+            D,
+            P,
+            typeof(top.pvecs),
+            typeof(top.covecs),
+            typeof(top.origin),
+        }(top.pvecs, top.covecs, requested_size, top.origin)
+    else
+        throw(ArgumentError("Explicit topology size $(current_size) does not match layer size $(requested_size)."))
+    end
 end
 
 """

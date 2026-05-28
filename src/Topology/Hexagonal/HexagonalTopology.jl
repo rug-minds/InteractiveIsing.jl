@@ -9,14 +9,15 @@ struct HexagonalTopology{U,S,L,O,Orientation} <: AbstractLayerTopology{U,2}
 end
 
 """
-    HexagonalTopology(size; lattice_constant = 1.0, lattice_constants = nothing, origin = (0.0, 0.0), orientation = :pointy, periodic = true)
+    HexagonalTopology([size]; lattice_constant = 1.0, lattice_constants = nothing, origin = (0.0, 0.0), orientation = :pointy, periodic = true)
 
 Create a two-dimensional axial-coordinate hexagonal topology. The default
 `:pointy` orientation uses primitive vectors `(a, 0)` and `(a/2, sqrt(3)a/2)`,
 so the axial offsets `(1, 0)`, `(0, 1)`, and `(1, -1)` are nearest neighbors.
+Omitting `size` creates an unsized topology template.
 """
 function HexagonalTopology(
-    size::S;
+    size::S = (0, 0);
     lattice_constant = 1.0,
     lattice_constants = nothing,
     origin = (0.0, 0.0),
@@ -77,6 +78,28 @@ Update the axial-axis lattice constants in-place and return `top`.
 function setdist!(lt::T, lattice_constants::NTuple{2}) where {Periodicity,S,L,O,Orientation,T<:HexagonalTopology{Periodicity,S,L,O,Orientation}}
     lt.lattice_constants .= lattice_constants
     return lt
+end
+
+"""
+    sizeto(top, size)
+
+Return a hexagonal topology sized to a layer. Unsized templates have zero
+extents; fully sized topologies must already match.
+"""
+function sizeto(top::T, layer_size::NTuple{2,<:Integer}) where {Periodicity,S,L,O,Orientation,T<:HexagonalTopology{Periodicity,S,L,O,Orientation}}
+    requested_size = (Int(layer_size[1]), Int(layer_size[2]))
+    current_size = size(top)
+    if current_size == requested_size
+        return top
+    elseif all(iszero, current_size)
+        return HexagonalTopology{Periodicity,typeof(requested_size),L,O,Orientation}(
+            requested_size,
+            copy(top.lattice_constants),
+            top.origin,
+        )
+    else
+        throw(ArgumentError("Explicit topology size $(current_size) does not match layer size $(requested_size)."))
+    end
 end
 
 """
