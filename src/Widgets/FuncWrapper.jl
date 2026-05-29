@@ -78,6 +78,32 @@ function _step!(fw::FW, context::C, wiring::W, process::P, lifetime::LT, stabili
 end
 
 """
+Step a resolved `FuncWrapper` child using its explicit plan namespace.
+
+Resolved plans keep the namespace outside the wrapper value, so generated and
+non-generated child stepping must view the context through `Namespace{Name}`.
+"""
+function _step!(fw::FW, context::C, wiring::W, namespace::Namespace{Name}, process::P, lifetime::LT, stability::S = Stable()) where {FW<:FuncWrapper, C<:AbstractContext, W<:Wiring{Tuple{}, Tuple{}}, Name, P<:AbstractProcess, LT<:Lifetime, S<:Stability}
+    contextview = @inline view(context, fw, namespace)
+
+    retval = @inline step!(fw, contextview)
+    return @inline merge_funcwrapper_return(contextview, context, retval, stability)
+end
+
+function _step!(fw::FW, context::C, wiring::W, namespace::Namespace{Name}, process::P, lifetime::LT, stability::S = Stable()) where {FW<:FuncWrapper, C<:AbstractContext, W<:Wiring, Name, P<:AbstractProcess, LT<:Lifetime, S<:Stability}
+    contextview = @inline view(
+        context,
+        fw,
+        namespace;
+        sharedcontexts = (@inline shares(wiring)),
+        sharedvars = (@inline routes(wiring)),
+    )
+
+    retval = @inline step!(fw, contextview)
+    return @inline merge_funcwrapper_return(contextview, context, retval, stability)
+end
+
+"""
 Merge a `FuncWrapper` return into the correct runtime target.
 
 Outputs whose names already resolve in the wrapper view are routed/shared/local
