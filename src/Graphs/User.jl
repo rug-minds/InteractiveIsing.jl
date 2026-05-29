@@ -116,7 +116,7 @@ function overlayNoise!(layer::IsingLayer, p; noise_values = [-1, 1])
 end
 
 overlayNoise!(g, layeridx::Integer, p; noise_values = [-1, 1]) = overlayNoise!(layers(g)[layeridx], p; noise_values)
-resetstate!(g::IsingGraph) = state(g) .= initRandomState(g)
+resetstate!(g::IsingGraph) = graphstate(g) .= initRandomState(g)
 resetstate!(l::IsingLayer) = state(l)[:] .= rand(l, length(state(l)))
 #TODO: This is a shitty implementation
 resetstate!(layers::IsingLayer...) = for l in layers; resetstate!(l); end

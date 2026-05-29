@@ -179,7 +179,7 @@ end
 @inline function IsingKinetic(; r0 = 1.0)
     destr = DestructureInput()
     kinetic = KineticMC(r0 = r0)
-    package(SimpleAlgo(kinetic, destr, Route(destr => kinetic, :isinggraph => :model)))
+    package(CompositeAlgorithm(kinetic, destr, Route(destr => kinetic, :isinggraph => :model)))
 end
 
 export KineticMC

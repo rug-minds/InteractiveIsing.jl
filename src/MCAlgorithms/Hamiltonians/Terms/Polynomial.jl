@@ -22,6 +22,36 @@ const Octic{P} = PolynomialHamiltonian{8, P}
 
 order(::Union{PolynomialHamiltonian{Order}, Type{<:PolynomialHamiltonian{Order}}}) where Order = Order
 
+"""
+    default_local_potential(g)
+
+Return the graph-level local polynomial potential used by `Quadratic` when the
+caller does not pass `localpotential`.
+"""
+function default_local_potential(g::G) where {G <: AbstractIsingGraph}
+    A = adj(g)
+
+    # UndirectedAdjacency can store local potentials separately from the sparse
+    # coupling matrix. Plain matrices do not, so they use the neutral default.
+    if A isa UndirectedAdjacency && separate_diagonal(A)
+        return getfield(A, :diag)
+    end
+
+    return ConstFill(zero(eltype(g)), statelen(g))
+end
+
+function default_local_potential(layer::L) where {L <: AbstractIsingLayer}
+    A = adj(layer)
+
+    # Layer-scoped Hamiltonians see a local adjacency view. If it has no
+    # separate diagonal, the neutral local potential is zero on this layer.
+    if A isa UndirectedAdjacency && separate_diagonal(A)
+        return getfield(A, :diag)
+    end
+
+    return ConstFill(zero(eltype(layer)), statelen(layer))
+end
+
 function PolynomialHamiltonian(order; c = nothing, localpotential = nothing)
     lp = localpotential
     params = Parameters(
@@ -35,7 +65,7 @@ function PolynomialHamiltonian(order; c = nothing, localpotential = nothing)
         parameter(;
             lp,
             type = AbstractArray,
-            default = g -> adj(g).diag,
+            default = default_local_potential,
             default_type = Vector,
             ensure = (ensure_isinggraph_state_length, ensure_isinggraph_eltype),
             info = "Local polynomial potential l_i",

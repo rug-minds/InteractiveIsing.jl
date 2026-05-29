@@ -1,0 +1,7 @@
+timestamp,epoch,seconds,train_accuracy,train_loss,skipped,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
+2026-05-20T03:18:46,0,0.0,missing,missing,missing,0.08,40.88,5-7-0-12-2-3-13-4-4-0,0.08,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_10pc_r3_s20\best_model.bin,
+2026-05-20T03:18:48,1,1.2128115,0.1,32.0,0,0.1,32.0,0-0-0-50-0-0-0-0-0-0,0.1,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_10pc_r3_s20\best_model.bin,
+2026-05-20T03:18:48,2,0.1470502,0.1,32.0,0,0.1,32.0,0-0-0-50-0-0-0-0-0-0,0.1,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_10pc_r3_s20\best_model.bin,
+2026-05-20T03:18:49,3,0.1414212,0.1,32.0,0,0.1,32.0,0-0-0-50-0-0-0-0-0-0,0.1,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_10pc_r3_s20\best_model.bin,
+2026-05-20T03:18:49,4,0.1470993,0.1,32.0,0,0.1,32.0,0-0-0-50-0-0-0-0-0-0,0.1,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_10pc_r3_s20\best_model.bin,
+2026-05-20T03:18:49,5,0.1402793,0.1,32.0,0,0.1,32.0,0-0-0-50-0-0-0-0-0-0,0.1,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_10pc_r3_s20\best_model.bin,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_10pc_r3_s20\final_model.bin

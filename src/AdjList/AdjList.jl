@@ -1,6 +1,7 @@
 include("Utils.jl")
 # include("WeightGenerator.jl")
 include("UndirectedAdjacency/UndirectedAdjacency.jl")
+include("SparseMatrixCSC/SparseMatrixCSC.jl")
 include("WeightGenerators.jl")
 include("ConnectionGenerators.jl")
 include("SparseAdj.jl")

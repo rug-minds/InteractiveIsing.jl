@@ -1,0 +1,13 @@
+hidden=120
+output_replicas=4
+train_per_class=100
+validation_per_class=50
+free_sweeps=50.0
+nudged_sweeps=25.0
+stepsize=0.05
+beta=0.1
+ridge=1.0
+target_on=0.5
+target_off=0.0
+before=(accuracy = 0.094, mse = 25.805643f0, pred_counts = [30, 69, 76, 22, 21, 52, 130, 63, 32, 5], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50])
+after_ridge=(accuracy = 0.358, mse = 14.219391f0, pred_counts = [58, 53, 47, 46, 50, 62, 41, 49, 50, 44], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50])

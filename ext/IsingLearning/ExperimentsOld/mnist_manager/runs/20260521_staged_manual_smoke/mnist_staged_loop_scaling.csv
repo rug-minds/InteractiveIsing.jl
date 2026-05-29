@@ -1,0 +1,6 @@
+timestamp,stage,workers,threads,hidden,output_replicas,batchsize,sweeps,order,relaxation_steps,graph_states,graph_edges,total_seconds,min_task_seconds,mean_task_seconds,max_task_seconds
+2026-05-21T23:12:33,manual_field_update,1,2,120,4,4,1.0,cyclic,160,944,197760,0.026593,0.0001604,0.0001604,0.0001604
+2026-05-21T23:12:35,manual_prepost_update,1,2,120,4,4,1.0,cyclic,160,944,197760,0.0249169,0.000241,0.000241,0.000241
+2026-05-21T23:12:36,manual_prepost_noise,1,2,120,4,4,1.0,cyclic,160,944,197760,0.0251547,0.0002976,0.0002976,0.0002976
+2026-05-21T23:12:38,manual_prepost_noise_refresh,1,2,120,4,4,1.0,cyclic,160,944,197760,0.0258009,0.0003625,0.0003625,0.0003625
+2026-05-21T23:12:39,one_relax,1,2,120,4,4,1.0,cyclic,160,944,197760,0.0247143,0.0004363,0.0004363,0.0004363

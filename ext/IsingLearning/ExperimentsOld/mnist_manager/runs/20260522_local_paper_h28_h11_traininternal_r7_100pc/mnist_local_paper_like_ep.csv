@@ -1,0 +1,10 @@
+timestamp,epoch,seconds,train_accuracy,train_loss,skipped,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
+2026-05-22T03:46:31,0,0.0,missing,missing,missing,0.075,39.23,26-45-15-41-14-19-4-24-0-12,0.075,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_r7_100pc\best_model.bin,
+2026-05-22T03:46:57,1,23.6462563,0.342,10.588,186,0.26,12.32,9-22-2-1-1-158-7-0-0-0,0.26,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_r7_100pc\best_model.bin,
+2026-05-22T03:47:17,2,17.9715654,0.482,8.138,416,0.31,10.46,15-4-10-0-14-128-13-16-0-0,0.31,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_r7_100pc\best_model.bin,
+2026-05-22T03:47:35,3,16.3251434,0.576,6.738,527,0.49,8.48,21-23-13-13-103-3-0-13-11-0,0.49,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_r7_100pc\best_model.bin,
+2026-05-22T03:47:52,4,15.0669189,0.651,5.502,624,0.59,6.43,33-3-28-48-32-19-10-17-6-4,0.59,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_r7_100pc\best_model.bin,
+2026-05-22T03:48:08,5,14.24014,0.682,5.052,663,0.72,4.04,28-20-23-11-35-12-21-23-17-10,0.72,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_r7_100pc\best_model.bin,
+2026-05-22T03:48:23,6,13.5308863,0.731,4.22,707,0.65,5.58,21-6-35-19-7-55-18-20-2-17,0.72,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_r7_100pc\best_model.bin,
+2026-05-22T03:48:38,7,13.162697,0.756,3.846,739,0.715,4.51,21-26-4-30-14-16-26-24-26-13,0.72,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_r7_100pc\best_model.bin,
+2026-05-22T03:48:53,8,13.2613551,0.74,4.074,726,0.74,4.49,26-17-18-3-21-22-16-29-36-12,0.74,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_r7_100pc\best_model.bin,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_traininternal_r7_100pc\final_model.bin

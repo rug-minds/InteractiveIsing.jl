@@ -83,6 +83,17 @@ image_trait(panel::AbstractPanel) = image_trait(typeof(panel))
 image_trait(handle::PanelHandle) = image_trait(handle.panel)
 
 """
+    topology_layer_display!(handle, cell, topology, vals, layer; kwargs...)
+
+Draw an interactive two-dimensional layer display into `cell`. The Windows
+framework calls this API, while concrete packages extend it for their topology
+types.
+"""
+function topology_layer_display!(handle::PanelHandle, cell, top::T, vals, layer; kwargs...) where {T<:AbstractLayerTopology}
+    throw(ArgumentError("No Windows layer display is registered for topology $(typeof(top))."))
+end
+
+"""
     axiskey(panel_or_panel_type) -> Symbol
 
 Data key used by `getaxis` when `axis_trait(panel) isa HasAxis`. The default is

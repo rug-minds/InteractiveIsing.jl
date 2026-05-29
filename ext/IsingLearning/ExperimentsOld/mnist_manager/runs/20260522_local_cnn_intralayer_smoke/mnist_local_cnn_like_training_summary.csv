@@ -1,0 +1,2 @@
+timestamp,architecture,local_radius,hidden_internal_radius,output_internal_radius,workers,threads,epochs,batchsize,sweeps,relaxation_steps,graph_states,graph_edges,train_limit,validation_limit,elapsed_seconds,elapsed_minutes,checkpoint
+2026-05-22T02:56:29,784-784-784-40,1,1,1,2,4,1,4,1.0,1608,2392,101742,8,none,9.5850601,0.15975100166666667,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_cnn_intralayer_smoke\mnist_local_cnn_like_training.bin

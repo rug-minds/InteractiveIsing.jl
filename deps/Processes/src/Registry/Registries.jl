@@ -148,7 +148,7 @@ end
 Add multiple objects to the registry with the same multiplier
 """
 function addall(reg::NSR, objs::O, mults::M) where {NSR<:NameSpaceRegistry,O<:Tuple,M<:Tuple}
-    reg = unrollreplace(reg, zip(objs, mults)...) do r, obj_mult
+    reg = unrollreplace(reg, (zip(objs, mults)...,)) do r, obj_mult
         obj, mult = obj_mult
         newreg, _ = add(r, obj, mult)
         return newreg
@@ -209,6 +209,17 @@ end
 @inline function get_by_matcher(reg::NameSpaceRegistry, matcher)
     all_entries = all_algos(reg)
     return _get_by_matcher(matcher, all_entries)
+end
+
+"""
+Return all registered entries whose algorithm type is a subtype of `T`.
+
+The result preserves registry entries, so algorithms are usually returned as
+their keyed `IdentifiableAlgo` wrappers. For wrappers, matching uses the wrapped
+algorithm type rather than the wrapper type.
+"""
+@inline function Base.findall(::Type{T}, reg::NameSpaceRegistry) where {T}
+    return flat_collect_broadcast(entry -> findall(T, entry), getentries(reg))
 end
 
 """

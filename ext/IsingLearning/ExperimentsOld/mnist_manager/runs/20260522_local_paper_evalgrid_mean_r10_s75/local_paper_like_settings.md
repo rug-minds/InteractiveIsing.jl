@@ -1,0 +1,14 @@
+# Local Paper-Like MNIST EP
+- architecture: `784 -> 784 -> 121 -> 40`
+- output layout: `factor`
+- local radius: `5`, internal radius: `1`, output internal radius: `1`
+- train/test per class: `1` / `100`
+- free/nudge reads: `10` / `3`
+- free/nudge sweeps: `75` / `50`
+- beta: `5.0`
+- target on/off: `1.0`, `-1.0`
+- eval mode: `mean_reads`
+- train internal couplings: `true`
+- learning rates W0/W12/W2O/W11/W22/WOO/B: `0.01`, `0.01`, `0.01`, `0.001`, `0.001`, `0.001`, `0.001`
+- init gains W0/W12/W2O/W11/W22/WOO: `0.5`, `0.25`, `0.25`, `0.0`, `0.0`, `0.0`
+- loaded checkpoint: `ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_continue_lr0005/best_model.bin`

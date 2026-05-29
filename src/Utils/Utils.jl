@@ -18,6 +18,7 @@ include("SimpleAverage.jl")
 include("CastVec.jl")
 include("CastViewMatrix.jl")
 include("LazyConcatVector.jl")
+include("RefConcatVector.jl")
 #TODO: Make module
 # include("Processes/Processes.jl")
 include("ExpressionTools/ExpressionTools.jl")

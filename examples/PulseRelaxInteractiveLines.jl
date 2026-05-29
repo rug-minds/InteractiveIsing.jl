@@ -173,9 +173,8 @@ end
 
 Processes.close(g)
 process_func = deepcopy(pulse_and_relax)
-process_inputs = InteractiveIsing._merge_graph_inputs(
-    process_func,
-    g,
+process_inputs = (
+    InteractiveIsing._mc_model_inits(process_func, g)...,
     Init(polarization_logger, initialvalue = sum(state(g))),
 )
 process = Process(

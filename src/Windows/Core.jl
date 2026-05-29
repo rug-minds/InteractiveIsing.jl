@@ -227,9 +227,24 @@ function _focus_native_window!(screen)
     return nothing
 end
 
-function _request_deferred_window_close!(host::WindowHost)
+"""
+    _request_deferred_window_close!(host)
+
+Request a native window close from outside the Makie `window_open` observer.
+The actual `host.open[] = false` write is deferred to a fresh task so callers
+such as Cmd+W handlers and explicit `close(host)` do not run the GLMakie close
+observer inline on the current callback stack.
+"""
+function _request_deferred_window_close!(host::T) where {T<:WindowHost}
     (host.closed || host.closing) && return nothing
-    host.open[] = false
+    get(host.data, :deferred_close_requested, false) && return nothing
+    host.data[:deferred_close_requested] = true
+    _trace_close!(host, :deferred_close_requested)
+    @async begin
+        yield()
+        (host.closed || host.closing) && return nothing
+        host.open[] = false
+    end
     return nothing
 end
 
@@ -403,8 +418,8 @@ function register!(handle::PanelHandle, resource)
     return resource
 end
 
-struct HotObservable
-    observable::Any
+struct HotObservable{O<:Observable}
+    observable::O
 end
 
 """
@@ -426,6 +441,25 @@ function register_hot_observable!(handle::PanelHandle, observable::Observable)
 end
 
 """
+    hot_observable!(host_or_handle, value)
+
+Create a concretely typed Makie `Observable` for live display data and register
+it for close-time detachment. This keeps panel code from forgetting the runtime
+shutdown policy for observables that point at graph or process-owned memory.
+"""
+function hot_observable!(host::WindowHost, value::T) where {T}
+    observable = Observable{T}(value)
+    register_hot_observable!(host, observable)
+    return observable
+end
+
+function hot_observable!(handle::PanelHandle, value::T) where {T}
+    observable = Observable{T}(value)
+    register_hot_observable!(handle, observable)
+    return observable
+end
+
+"""
     hot_observable_zero(::Type{T})
     hot_observable_zero(observable::Observable{T})
 
@@ -443,6 +477,10 @@ function hot_observable_zero(::Type{T}) where {E,N,T<:Array{E,N}}
     return zeros(E, ntuple(_ -> 0, N))
 end
 
+function hot_observable_zero(::Type{T}) where {In,Out,T<:CastVec{In,Out}}
+    return CastVec{In,Out}(Vector{In}(undef, 0))
+end
+
 function hot_observable_zero(::Type{T}) where {E,N,P,I,L,T<:SubArray{E,N,P,I,L}}
     replacement = view(zeros(E, ntuple(_ -> 0, N)), ntuple(_ -> (:), N)...)
     replacement isa T && return replacement
@@ -455,11 +493,63 @@ function hot_observable_zero(::Type{T}) where {E,N,P<:SubArray{E,N},T<:Base.Resh
     throw(ArgumentError("Cannot build zero-sized replacement for hot observable value type $T."))
 end
 
+"""
+    detach_hot_observable!(observable)
+
+Replace the stored value of a hot observable with a same-type zero-sized value
+without notifying Makie. This severs close-time references to live simulation
+memory after update timers have stopped.
+"""
 function detach_hot_observable!(observable::Observable{T}) where {T}
     replacement = hot_observable_zero(T)
     replacement isa T || throw(ArgumentError("Replacement value $(typeof(replacement)) is not compatible with observable value type $T."))
     setfield!(observable, :val, replacement)
     return observable
+end
+
+"""
+    _detach_hot_observable_resource(resource)
+
+Detach one registered hot observable resource without touching any other
+resource type. This is used at the very beginning of native close scheduling,
+before GLMakie can start freeing plot resources against live simulation memory.
+"""
+_detach_hot_observable_resource(resource::T) where {T} = nothing
+
+function _detach_hot_observable_resource(resource::T) where {T<:HotObservable}
+    try
+        detach_hot_observable!(resource.observable)
+    catch err
+        @warn "Could not detach hot observable before window close" observable_type = typeof(resource.observable) exception = (err, catch_backtrace())
+    end
+    return nothing
+end
+
+"""
+    _detach_hot_observables!(host_or_handle)
+
+Synchronously sever every registered hot observable in a host subtree from live
+runtime memory. This intentionally does not close panels, remove observers,
+delete Makie objects, stop processes, or notify observables.
+"""
+function _detach_hot_observables!(host::T) where {T<:WindowHost}
+    for resource in reverse(host.resources)
+        _detach_hot_observable_resource(resource)
+    end
+    for child in reverse(collect(values(host.children)))
+        _detach_hot_observables!(child)
+    end
+    return nothing
+end
+
+function _detach_hot_observables!(handle::T) where {T<:PanelHandle}
+    for resource in reverse(handle.resources)
+        _detach_hot_observable_resource(resource)
+    end
+    for child in reverse(collect(values(handle.children)))
+        _detach_hot_observables!(child)
+    end
+    return nothing
 end
 
 struct CloseCallback
@@ -667,6 +757,68 @@ function _request_host_owned_process_shutdown!(host::WindowHost)
     return nothing
 end
 
+"""
+    _trace_close!(host, phase)
+
+Record an optional close-lifecycle phase for debugging native window freezes.
+Tracing is disabled unless `host.data[:close_trace]` is set to `true` or to a
+callback function. The trace path must stay lightweight because it can run from
+the native `window_open=false` observer.
+"""
+function _trace_close!(host::WindowHost, phase::Symbol)
+    tracer = get(host.data, :close_trace, nothing)
+    isnothing(tracer) && return nothing
+
+    row = (;
+        time = time(),
+        phase,
+        open = try
+            host.open[]
+        catch
+            missing
+        end,
+        closing = host.closing,
+        closed = host.closed,
+        hot_observables = _hot_observable_count(host),
+    )
+    log = get!(host.data, :close_trace_log, Any[])
+    previous_time = isempty(log) ? row.time : last(log).time
+    push!(log, row)
+
+    if tracer === true
+        println(
+            "[Windows close] ",
+            row.phase,
+            " dt=",
+            round(row.time - previous_time; digits = 4),
+            " open=",
+            row.open,
+            " closing=",
+            row.closing,
+            " closed=",
+            row.closed,
+            " hot=",
+            row.hot_observables,
+        )
+    elseif tracer isa Function
+        tracer(row)
+    end
+    return nothing
+end
+
+"""
+    _hot_observable_count(owner)
+
+Count registered hot observables in a host or handle subtree for close tracing.
+"""
+function _hot_observable_count(owner::T) where {T}
+    total = count(resource -> resource isa HotObservable, owner.resources)
+    for child in values(owner.children)
+        total += _hot_observable_count(child)
+    end
+    return total
+end
+
 function _run_close_callback(owner, callback::CloseCallback)
     @async try
         callback.callback(owner)
@@ -775,14 +927,27 @@ function _begin_native_close!(host::WindowHost)
 end
 
 function _schedule_native_close!(host::WindowHost)
-    (host.closed || get(host.data, :close_scheduled, false)) && return nothing
+    _trace_close!(host, :schedule_enter)
+    if host.closed || get(host.data, :close_scheduled, false)
+        _trace_close!(host, :schedule_ignored)
+        return nothing
+    end
     host.data[:close_scheduled] = true
     host.closing = true
+    _trace_close!(host, :before_hot_detach)
+    _detach_hot_observables!(host)
+    _trace_close!(host, :after_hot_detach)
     screen = host.screen
     @async begin
+        _trace_close!(host, :async_start)
+        _trace_close!(host, :before_stop_notifications)
         _stop_host_notifications!(host; wait_for_timers = true)
+        _trace_close!(host, :after_stop_notifications)
         _request_host_owned_process_shutdown!(host)
+        _trace_close!(host, :after_process_shutdown_request)
+        _trace_close!(host, :before_glmakie_close)
         _close_glmakie_screen_after_runtime_stop!(screen)
+        _trace_close!(host, :after_glmakie_close)
         host.closed = true
         _finish_native_close!(host)
     end
@@ -790,8 +955,11 @@ function _schedule_native_close!(host::WindowHost)
 end
 
 function _finish_native_close!(host::WindowHost)
+    _trace_close!(host, :before_finish_close)
     _run_close_callbacks!(host)
+    _trace_close!(host, :after_close_callbacks)
     host.closing = false
+    _trace_close!(host, :finish_done)
     return nothing
 end
 
@@ -800,12 +968,14 @@ end
 
 Close a window host once. Frame and polling timers stop before child panels are
 closed, so callbacks cannot keep notifying Makie objects during native window
-teardown.
+teardown. For displayed GLMakie windows this is non-blocking: the close request
+is deferred to the host close observer, then runtime resources are stopped from
+the native close path.
 """
 function Base.close(host::WindowHost)
     (host.closed || host.closing) && return nothing
     if !isnothing(host.screen)
-        host.open[] = false
+        _request_deferred_window_close!(host)
         return nothing
     end
 

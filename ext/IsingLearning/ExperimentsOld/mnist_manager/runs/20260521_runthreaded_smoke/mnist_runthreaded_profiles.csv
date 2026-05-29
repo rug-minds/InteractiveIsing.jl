@@ -1,0 +1,4 @@
+timestamp,workers,threads,mode,batch,warmup_batches,hidden,output_replicas,batchsize,jobs,sweeps,relaxation,graph_states,graph_edges,run_seconds,run_cpu_threads,active_workers,min_worker_norm,mean_worker_norm,max_worker_norm
+2026-05-21T14:08:05,2,2,normal,1,0,120,4,4,4,1.0,160,944,197760,1.6439567,2.1385143538147933,2,11.292244,12.131192,12.97014
+2026-05-21T14:08:06,2,2,dynamic,1,0,120,4,4,4,1.0,160,944,197760,0.1447487,1.1874027193335759,2,11.672284,11.709489,11.746694
+2026-05-21T14:08:06,2,2,greedy,1,0,120,4,4,4,1.0,160,944,197760,0.1088481,1.7225840414302132,2,10.583813,11.318464,12.053117

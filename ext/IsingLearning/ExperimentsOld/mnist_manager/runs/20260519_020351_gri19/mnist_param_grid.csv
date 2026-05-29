@@ -1,0 +1,2 @@
+timestamp,config_id,workers,hidden,train_limit,batchsize,nbatches,relaxation,stepsize,temp,beta,lr,train_seconds,before_train_error,after_train_error,delta_train_error,before_train_mse,after_train_mse,delta_train_mse,before_val_error,after_val_error,delta_val_error,before_val_mse,after_val_mse,delta_val_mse
+2026-05-19T02:04:36,1,2,4,8,4,2,1,0.2,0.005,2.0,0.003,6.6372609,1.0,1.0,0.0,11.699102,16.778982,5.0798798,0.75,0.75,0.0,13.810249,9.277435,-4.532814

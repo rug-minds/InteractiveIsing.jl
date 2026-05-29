@@ -1,8 +1,9 @@
 module IsingLearning
 
 using LuxCore
-using Random: AbstractRNG
+using Random: AbstractRNG, MersenneTwister
 using SparseArrays
+using LinearAlgebra: diag
 
 using DataStructures
 using ChainRules, ChainRulesCore
@@ -17,6 +18,7 @@ using .InteractiveIsing: state, adj, setparam!, getparam, setSpins!, nStates
 using .InteractiveIsing.Processes
 
 include("Utils.jl")
+include("Tools/LearningProcessTools.jl")
 include("LuxModel.jl")
 include("LearningLoop.jl")
 include("CaptureState.jl")

@@ -1,0 +1,11 @@
+# Paper-Like MNIST EP
+- hidden: `120`
+- output replicas: `4`
+- train/test per class: `1` / `100`
+- free/nudge reads: `10` / `10`
+- free/nudge sweeps: `100` / `100`
+- beta: `5.0`
+- learning rates W0/W1/B0/B1: `0.01`, `0.01`, `0.001`, `0.001`
+- gains W0/W1: `0.5`, `0.25`
+- clips weight/bias/applied_bias: `1.0`, `1.0`, `4.0`
+- temps hot/reverse/cold: `5.0`, `1.0`, `0.01`

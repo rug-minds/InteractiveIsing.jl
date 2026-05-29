@@ -15,26 +15,17 @@ end
 
 image_trait(::Type{StatusPanel}) = HasImage()
 
-function mount!(panel::StatusPanel, host::WindowHost, cell; kwargs...)
-    grid = GridLayout(cell)
-    handle = PanelHandle(panel, host, grid)
-    g = panel.graph
-    _register_graph_close!(handle, g)
-
-    Box(grid[1, 1:3], visible = false)
-    colsize!(grid, 1, Relative(1 / 3))
-    colsize!(grid, 2, Relative(1 / 3))
-    colsize!(grid, 3, Relative(1 / 3))
-
-    ups = handle[:ups] = Observable(0.0)
-    upsps = handle[:upsps] = Observable(0.0)
+function _steps_per_second_observables!(owner, g)
+    host = owner isa WindowHost ? owner : owner.host
+    ups = Observable(0.0)
+    upsps = Observable(0.0)
     fps = max(1, round(Int, host.fps))
     last_update = Ref(_total_ticks(g))
     last_time = Ref(time_ns())
     update_deltas = CircularBuffer{Float64}(fps)
     time_deltas = CircularBuffer{Float64}(fps)
 
-    register_frame!(handle) do _
+    register_frame!(owner) do _
         ticks = _total_ticks(g)
         now = time_ns()
         prev = last_update[]
@@ -54,6 +45,24 @@ function mount!(panel::StatusPanel, host::WindowHost, cell; kwargs...)
         upsps[] = ups[] / max(nstates(g), 1)
         return nothing
     end
+
+    return ups, upsps
+end
+
+function mount!(panel::StatusPanel, host::WindowHost, cell; kwargs...)
+    grid = GridLayout(cell)
+    handle = PanelHandle(panel, host, grid)
+    g = panel.graph
+    _register_graph_close!(handle, g)
+
+    Box(grid[1, 1:3], visible = false)
+    colsize!(grid, 1, Relative(1 / 3))
+    colsize!(grid, 2, Relative(1 / 3))
+    colsize!(grid, 3, Relative(1 / 3))
+
+    ups, upsps = _steps_per_second_observables!(handle, g)
+    handle[:ups] = ups
+    handle[:upsps] = upsps
 
     countergrid = GridLayout(grid[1, 1], tellheight = false, tellwidth = false)
     Label(countergrid[1, 1], "Steps per second", padding = (0, 0, 0, 0), fontsize = 12, halign = :left, valign = :top, tellheight = false, tellwidth = false)

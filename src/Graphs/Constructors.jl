@@ -95,11 +95,68 @@ function _parse_multilayer_constructor_args(args)
 end
 
 """
-Multi Layer Constructor
-    First the Layers,
-    If there's weight generators in between the layers, use those to set connections between layers
+    graph_constructor_state_storage(state, precision, total_length)
 
+Return `(storage, should_initialize)` for the public `IsingGraph` constructors.
+When `state === nothing`, allocate the default dense storage and mark it for
+normal initialization. When a custom state vector is supplied, validate that it
+can be used as graph storage and preserve it as-is unless `initial_state` is
+also supplied by the caller.
+"""
+function graph_constructor_state_storage(state_storage, precision, total_length)
+    if isnothing(state_storage)
+        return zeros(precision, total_length), true
+    end
+    state_storage isa AbstractVector ||
+        throw(ArgumentError("state must be an AbstractVector; got $(typeof(state_storage))."))
+    length(state_storage) == total_length ||
+        throw(ArgumentError("state length $(length(state_storage)) does not match graph state length $total_length"))
+    eltype(state_storage) <: AbstractFloat ||
+        throw(ArgumentError("state eltype must be an AbstractFloat; got $(eltype(state_storage))."))
+    return state_storage, false
+end
 
+"""
+    instantiate_adjacency_from_triplets(adjtype, rows, cols, vals, total_length; diag, fastwrite)
+
+Build the graph adjacency from generated sparse triplets using the requested
+adjacency storage type.
+"""
+function instantiate_adjacency_from_triplets(
+    ::Type{T},
+    rows,
+    cols,
+    vals,
+    total_length::I;
+    diag = nothing,
+    fastwrite::B = false,
+) where {T <: UndirectedAdjacency, I <: Integer, B <: Bool}
+    sparse_connections = sparse(rows, cols, vals, total_length, total_length)
+    return UndirectedAdjacency(sparse_connections, diag; fastwrite)
+end
+
+function instantiate_adjacency_from_triplets(
+    adjtype::Type{T},
+    rows,
+    cols,
+    vals,
+    total_length::I;
+    diag = nothing,
+    fastwrite::B = false,
+) where {T <: AbstractSparseMatrix, I <: Integer, B <: Bool}
+    sparse_connections = sparse(rows, cols, vals, total_length, total_length)
+    return convert(adjtype, sparse_connections)
+end
+
+"""
+    IsingGraph(layers...; precision = Float32, state = nothing, initial_state = nothing, ...)
+
+Construct a graph from one or more layers, with optional between-layer weight
+generators between adjacent layer arguments. `state` may be any
+`AbstractVector{<:AbstractFloat}` with the total graph length; it is used
+directly as the graph state storage. `initial_state` controls values written
+into that storage. If custom `state` is supplied without `initial_state`, its
+current contents are preserved.
 """
 function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamiltonian, AbstractProposer}...;
     precision = Float32, 
@@ -107,6 +164,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
     diag = StateLike(OffsetArray, 0),
     index_set = nothing,
     initial_state = nothing,
+    state = nothing,
     fastwrite = false,
     callback! = identity,
     )
@@ -117,6 +175,8 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
     layers, between_layer_wgs = _parse_multilayer_constructor_args(layers)
     lengths = map(l -> length(l), layers)
     total_length = sum(lengths)
+    state_storage, initialize_state = graph_constructor_state_storage(state, precision, total_length)
+    graph_precision = eltype(state_storage)
 
     # Fix the layers first
     layers = ntuple(length(layers)) do i
@@ -132,11 +192,11 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
 
     g_for_shape =  IsingGraph(
         # State
-        zeros(precision, total_length),
+        state_storage,
         # Adjacency
         UndirectedAdjacency(total_length, total_length),
         # Temp
-        precision(1.0),
+        graph_precision(1.0),
         # Proposer
         proposer,
         # Default Algo
@@ -149,7 +209,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         layers
     )
 
-    if isnothing(adj)
+    if isnothing(adj) || adj isa Type
         rows, cols, vals = init_connection_triplets_from_layers(precision, total_length, layers...)
         for (layer_idx, wg) in between_layer_wgs
             layerrows, layercols, layervals = genLayerConnections(g_for_shape[layer_idx], g_for_shape[layer_idx + 1], wg)
@@ -157,9 +217,9 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
             append!(cols, layercols)
             append!(vals, layervals)
         end
-        sparse_connections = sparse(rows, cols, vals, total_length, total_length)
         diag = diag(g_for_shape)
-        adj = UndirectedAdjacency(sparse_connections, diag; fastwrite)
+        adjtype = isnothing(adj) ? UndirectedAdjacency : adj
+        adj = instantiate_adjacency_from_triplets(adjtype, rows, cols, vals, total_length; diag, fastwrite)
     else
         @assert size(adj, 1) == total_length "Adjacency matrix size must match total number of nodes in the graph\nexpected $(total_length)x$(total_length), got $(size(adj))"
     end
@@ -172,11 +232,11 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
 
     g_with_adj = IsingGraph(
         # State
-        zeros(precision, total_length),
+        state_storage,
         # Adjacency
         adj,
         # Temp
-        precision(1.0),
+        graph_precision(1.0),
         # Proposer
         proposer,
         # Default Algo
@@ -194,11 +254,11 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
     # Construct the graph
     g = IsingGraph(
         # State
-        zeros(precision, total_length),
+        state_storage,
         # Adjacency
         adj,
         # Temp
-        precision(1.0),
+        graph_precision(1.0),
         # Proposer
         proposer,
         # Default Algo
@@ -211,7 +271,9 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         layers
     )
     
-    state(g) .= initState(g, initial_state)
+    if initialize_state || !isnothing(initial_state)
+        graphstate(g) .= initState(g, initial_state)
+    end
     # g.hamiltonian = instantiate(ham, g)
     callback!(g)
     return g
@@ -220,11 +282,11 @@ end
 """
 Single Layer Constructor
 """
-function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, diag = StateLike(OffsetArray, 0), initial_state = nothing, fastwrite = false)
+function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, diag = StateLike(OffsetArray, 0), initial_state = nothing, state = nothing, fastwrite = false)
     ham, args = _parse_hamiltonian_constructor_arg(args...)
     proposer, args = type_parse(AbstractProposer, args...; default = IsingGraphProposer(), error = false)
 
     layer = parse_isinglayer(size1, args...; periodic = periodic)
 
-    return IsingGraph(ham, proposer, layer; precision, adj, diag, initial_state)
+    return IsingGraph(ham, proposer, layer; precision, adj, diag, initial_state, state, fastwrite)
 end

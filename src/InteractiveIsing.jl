@@ -42,6 +42,7 @@ include("Makie/Makie.jl")
 include("Images.jl")
 
 include("Windows/Windows.jl")
+include("Topology/TopologyDisplayExtensions.jl")
 
 include("Precompile.jl")
 

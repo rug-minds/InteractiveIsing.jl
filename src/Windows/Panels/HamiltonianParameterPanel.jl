@@ -198,7 +198,7 @@ function _clear_hamiltonian_display!(handle)
             delete!(handle.data, key)
         end
     end
-    for key in (:display_obs, :display_entry, :display_is_3d, :display_plot, :display_use_data_colorrange, :display_notify_only)
+    for key in (:display_obs, :display_entry, :display_is_3d, :display_vectorized, :display_plot, :display_use_data_colorrange, :display_notify_only)
         delete!(handle.data, key)
     end
     return handle
@@ -241,14 +241,15 @@ function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,2})
         colormap = entry.colormap,
         colorrange = _entry_colorrange(entry, _layer_state_values(layer)),
         use_data_colorrange = _uses_data_colorrange(entry),
+        hot = true,
     )
 end
 
 function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,3}) where {T}
     ax = handle[:display_axis] = Axis3(cell, tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
-    xs, ys, zs = _coordinates_3d!(handle, size(layer))
-    obs = handle[:display_obs] = Observable(_cast_layer_state_vector(layer))
+    xs, ys, zs = _coordinates_3d!(handle, layer)
+    obs = handle[:display_obs] = hot_observable!(handle, _cast_layer_state_vector(layer))
     handle[:display_is_3d] = true
     handle[:display_use_data_colorrange] = _uses_data_colorrange(entry)
     handle[:display_notify_only] = true
@@ -275,6 +276,7 @@ function _draw_layer_vector!(handle, entry, cell, val, layer)
         colormap = entry.colormap,
         colorrange = _entry_colorrange(entry, shaped),
         use_data_colorrange = _uses_data_colorrange(entry),
+        hot = true,
     )
 end
 
@@ -301,6 +303,7 @@ function _draw_live_layer_display_value!(handle, entry, cell, val::LiveLayerDisp
         colormap = entry.colormap,
         colorrange = _entry_colorrange(entry, shaped),
         use_data_colorrange = _uses_data_colorrange(entry),
+        hot = true,
     )
     handle[:display_notify_only] = true
     return handle
@@ -314,18 +317,25 @@ function _draw_layer_array!(
     colormap = :viridis,
     colorrange = nothing,
     use_data_colorrange = false,
+    hot = false,
 ) where {T}
-    vals_size = size(vals)
-    length(vals_size) == 2 || throw(ArgumentError("2D layer display needs a matrix, got size $(vals_size)."))
-    ax = handle[:display_axis] = Axis(cell, aspect = DataAspect(), tellheight = true)
-    ax.yreversed = @load_preference("makie_y_flip", default = false)
-    obs = handle[:display_obs] = Observable(vals)
     handle[:display_is_3d] = false
     handle[:display_use_data_colorrange] = use_data_colorrange
-    plot = handle[:display_plot] = image!(ax, obs, colormap = colormap, fxaa = false, interpolate = false)
-    _set_display_colorrange!(plot, obs, layer, colorrange)
-    reset_limits!(ax)
-    return handle
+    return topology_layer_display!(
+        handle,
+        cell,
+        topology(layer),
+        vals,
+        layer;
+        axis_key = :display_axis,
+        obs_key = :display_obs,
+        plot_key = :display_plot,
+        vectorized_key = :display_vectorized,
+        colormap,
+        colorrange,
+        hot,
+        yflip_default = false,
+    )
 end
 
 function _draw_layer_array!(
@@ -336,13 +346,15 @@ function _draw_layer_array!(
     colormap = :viridis,
     colorrange = nothing,
     use_data_colorrange = false,
+    hot = false,
 ) where {T}
     vals_size = size(vals)
     length(vals_size) == 3 || throw(ArgumentError("3D layer display needs a 3D array, got size $(vals_size)."))
     ax = handle[:display_axis] = Axis3(cell, tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
-    xs, ys, zs = _coordinates_3d!(handle, vals_size)
-    obs = handle[:display_obs] = Observable(vec(vals))
+    xs, ys, zs = vals_size == size(layer) ? _coordinates_3d!(handle, layer) : _coordinates_3d!(handle, vals_size)
+    display_vals = vec(vals)
+    obs = handle[:display_obs] = hot ? hot_observable!(handle, display_vals) : Observable(display_vals)
     handle[:display_is_3d] = true
     handle[:display_use_data_colorrange] = use_data_colorrange
     plot = handle[:display_plot] = meshscatter!(ax, xs, ys, zs, markersize = 0.3, color = obs, colormap = colormap)
@@ -378,7 +390,10 @@ function _refresh_hamiltonian_display!(handle)
 
     vals = _entry_layer_values(handle[:display_entry], handle)
     isnothing(vals) && return nothing
-    handle[:display_obs][] = handle[:display_is_3d] ? vec(vals) : vals
+    handle[:display_obs][] =
+        get(handle.data, :display_vectorized, false) ? vec(vals) :
+        handle[:display_is_3d] ? vec(vals) :
+        vals
     if get(handle.data, :display_use_data_colorrange, false) && haskey(handle, :display_plot)
         handle[:display_plot].colorrange[] = _entry_colorrange(handle[:display_entry], vals)
     end

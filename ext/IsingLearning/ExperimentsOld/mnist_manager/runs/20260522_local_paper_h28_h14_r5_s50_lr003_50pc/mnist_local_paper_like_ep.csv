@@ -1,0 +1,14 @@
+timestamp,epoch,seconds,train_accuracy,train_loss,skipped,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
+2026-05-22T03:05:31,0,0.0,missing,missing,missing,0.1,40.9,17-19-19-8-10-3-5-6-3-10,0.1,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\best_model.bin,
+2026-05-22T03:05:46,1,12.5848733,0.182,13.564,39,0.23,13.06,55-5-0-1-33-0-3-0-0-3,0.23,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\best_model.bin,
+2026-05-22T03:05:56,2,9.2628705,0.398,9.86,164,0.29,13.22,10-5-6-0-17-59-1-0-2-0,0.29,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\best_model.bin,
+2026-05-22T03:06:05,3,8.4161487,0.516,8.016,228,0.34,10.44,8-3-58-0-15-12-0-3-0-1,0.34,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\best_model.bin,
+2026-05-22T03:06:14,4,7.6394401,0.612,6.26,287,0.57,6.94,17-12-5-5-8-0-3-29-21-0,0.57,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\best_model.bin,
+2026-05-22T03:06:23,5,7.5378429,0.622,6.096,295,0.45,8.64,15-0-32-1-1-10-4-13-2-22,0.57,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\best_model.bin,
+2026-05-22T03:06:31,6,7.3641618,0.64,5.688,308,0.44,8.92,21-6-2-4-0-0-5-18-3-41,0.57,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\best_model.bin,
+2026-05-22T03:06:39,7,6.8924506,0.706,4.62,344,0.62,6.16,10-10-19-9-1-0-7-4-11-29,0.62,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\best_model.bin,
+2026-05-22T03:06:47,8,6.7743016,0.722,4.608,353,0.53,7.52,17-4-5-2-11-17-4-29-3-8,0.62,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\best_model.bin,
+2026-05-22T03:06:54,9,6.4669375,0.77,3.78,375,0.74,4.12,10-10-9-11-5-1-9-12-17-16,0.74,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\best_model.bin,
+2026-05-22T03:07:01,10,6.418751,0.778,3.536,379,0.71,4.56,13-10-5-7-13-5-12-17-17-1,0.74,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\best_model.bin,
+2026-05-22T03:07:09,11,6.2452789,0.798,3.364,393,0.7,4.74,14-8-5-1-6-16-17-8-7-18,0.74,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\best_model.bin,
+2026-05-22T03:07:16,12,6.2099142,0.804,3.052,395,0.66,5.24,12-7-10-3-0-13-5-18-10-22,0.74,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\best_model.bin,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h14_r5_s50_lr003_50pc\final_model.bin

@@ -1,10 +1,28 @@
-@inline _graph_input_vars(g::IsingGraph) = (; isinggraph = g, structure = g, model = g)
+"""
+    _flat_process_algos(algo)
 
-@inline _flat_process_algos(algo::Processes.LoopAlgorithm) = Processes.flat_funcs(algo)
+Return the algorithm nodes that should be scanned for Ising Monte Carlo
+algorithms. Loop algorithms are flattened; non-loop algorithms are treated as a
+single node.
+"""
+@inline _flat_process_algos(algo::Processes.AbstractLoopAlgorithm) = Processes.flat_funcs(algo)
 @inline _flat_process_algos(algo) = (algo,)
 
+"""
+    _is_ising_mc_target(algo)
+
+Return whether `algo` is an Ising Monte Carlo algorithm that needs the current
+graph injected as its `model` input.
+"""
 @inline _is_ising_mc_target(algo) = Processes.algotype(algo) <: IsingMCAlgorithm
 
+"""
+    _collect_ising_mc_targets(func)
+
+Collect the Ising Monte Carlo algorithm targets found inside `func`. The result
+is a tuple so it can be passed through the process input construction path
+without introducing vector storage.
+"""
 function _collect_ising_mc_targets(func)
     targets = ()
     for algo in _flat_process_algos(func)
@@ -15,46 +33,21 @@ function _collect_ising_mc_targets(func)
     return targets
 end
 
-function _dedupe_targets(targets::Tuple)
-    deduped = Any[]
-    seen = Any[]
+"""
+    _mc_model_inits(func, g)
+
+Create one `Processes.Init` per Ising Monte Carlo algorithm in `func`, assigning
+`g` as that algorithm's `model`. User inputs are deliberately not inspected or
+merged here; `createProcess` splats them into `Process` unchanged after these
+graph-model inputs.
+"""
+function _mc_model_inits(func::F, g::G) where {F,G<:IsingGraph}
+    targets = _collect_ising_mc_targets(func)
+    graph_inputs = ()
     for target in targets
-        matcher = Processes.match_by(target)
-        if any(==(matcher), seen)
-            continue
-        end
-        push!(seen, matcher)
-        push!(deduped, target)
+        graph_inputs = (graph_inputs..., Processes.Init(target, model = g))
     end
-    return tuple(deduped...)
-end
-
-function _merge_graph_inputs(func, g::IsingGraph, inputs...)
-    targets = _dedupe_targets(_collect_ising_mc_targets(func))
-    isempty(targets) && return inputs
-
-    used_inputs = falses(length(inputs))
-    merged_inputs = Any[]
-
-    for target in targets
-        merged_vars = _graph_input_vars(g)
-        for (idx, input) in enumerate(inputs)
-            if input isa Processes.Init && Processes.match(getfield(input, :target_algo), target)
-                used_inputs[idx] = true
-                merged_vars = merge(merged_vars, getfield(input, :vars))
-            end
-        end
-        push!(merged_inputs, Processes.Init(target, pairs(merged_vars)...))
-    end
-
-    for (idx, input) in enumerate(inputs)
-        if used_inputs[idx]
-            continue
-        end
-        push!(merged_inputs, input)
-    end
-
-    return tuple(merged_inputs...)
+    return graph_inputs
 end
 
 """
@@ -84,9 +77,9 @@ function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.de
     end
     
     func = deepcopy(func)
-    process_inputs = _merge_graph_inputs(func, g, inputs...)
+    graph_inputs = _mc_model_inits(func, g)
     # process = Process(func, Init(DestructureInput(), structure = g); lifetime)
-    process = Process(func, process_inputs...; lifetime, repeats, repeat)
+    process = Process(func, graph_inputs..., inputs...; lifetime, repeats, repeat)
     
     ps = processes(g)
     push!(ps, process)

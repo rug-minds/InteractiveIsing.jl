@@ -65,8 +65,13 @@ LoopAlgorithm(  func1, func2, func3, ...,
                 tuple(interval1, interval2, interval3, ...),
                 processstate1, processstate2, ..., 
                 options1, option2, ...)
+
+Plain `Route` and `Share` options are stored on the top-level plan as global
+routing metadata. DSL expansion can pass `LocalPlanOption` values when a
+route/share belongs to a specific child plan node. Non-routing options stay on
+the `LoopAlgorithm` runtime wrapper.
 """
-function parse_la_input(laType::Type{LA}, args...) where {LA<:LoopAlgorithm}
+function parse_la_input(laType::Type{LA}, args...) where {LA<:AbstractLoopAlgorithm}
     collected_options = tuple()
 
     ######### ALGORITHMS #########
@@ -93,9 +98,10 @@ function parse_la_input(laType::Type{LA}, args...) where {LA<:LoopAlgorithm}
     end
     @assert !isempty(processalgos) "At least one ProcessAlgorithm must be provided, but got: $(args)"
 
-    # Collect options from all LoopAlgorithms
+    # Nested plans keep their local route/share metadata. Resolved wrappers may
+    # still carry already-materialized options, so preserve those when composed.
     for algo in processalgos
-        if algo isa LoopAlgorithm
+        if algo isa LoopAlgorithm && isresolved(algo)
             collected_options = (unique(collected_options)..., update_option_keys(algo)...)
         end
     end
@@ -112,13 +118,12 @@ function parse_la_input(laType::Type{LA}, args...) where {LA<:LoopAlgorithm}
             end
             args = args[2:end] # Remove the intervals from the arguments list for further processing
         elseif iscomposite(laType)
-            intervals_or_repeats = IntervalOnes{length(processalgos)}
-            intervals_or_repeats = ntuple(i -> round(Int, intervals_or_repeats[i]), length(processalgos))
+            intervals_or_repeats = ntuple(_ -> Interval(1), length(processalgos))
 
         end
 
     elseif iscomposite(laType)
-        intervals_or_repeats = IntervalOnes{length(processalgos)}
+        intervals_or_repeats = ntuple(_ -> Interval(1), length(processalgos))
     else
         error("For routines, please pass the number of repeats after all ProcessAlgorithms as a tuple, even if it's just one repeat, e.g. (10,). Got: $firstargs")
     end
@@ -127,9 +132,6 @@ function parse_la_input(laType::Type{LA}, args...) where {LA<:LoopAlgorithm}
     if iscomposite(laType)
 
         processalgos, intervals_or_repeats = flatten_comp_funcs(processalgos, tuple(intervals_or_repeats...))
-        if all(x -> x == 1, intervals_or_repeats)
-            intervals_or_repeats = IntervalOnes{length(processalgos)}
-        end
     end
 
     ######### PROCESS STATES #########
@@ -169,7 +171,7 @@ function parse_la_input(laType::Type{LA}, args...) where {LA<:LoopAlgorithm}
     options = tuple()
     if !isempty(args)
         options = tuple(args[1:end]...)
-        @assert all(x -> x isa AbstractOption || x isa Type{<:AbstractOption}, options) "All arguments after the ProcessStates must be options, but got: $(options)"
+        @assert all(x -> x isa Union{AbstractOption, AbstractWiring} || x isa Type{<:Union{AbstractOption, AbstractWiring}}, options) "All arguments after the ProcessStates must be options or wiring, but got: $(options)"
     end
     options = tuple(collected_options..., options...)
     return LoopAlgorithm(laType, processalgos, pstates, options, intervals_or_repeats)
@@ -180,7 +182,9 @@ end
 Add all algos and states in one or more loop algorithms to a shared registry with
 their corresponding multipliers/intervals.
 """
-function setup_registry(las::LoopAlgorithm...)
+setup_registry(las...) = _setup_registry(las)
+
+function _setup_registry(las::LAS) where {LAS<:Tuple}
     registry = NameSpaceRegistry()
     for la in las
         # First add states with multiplier 1

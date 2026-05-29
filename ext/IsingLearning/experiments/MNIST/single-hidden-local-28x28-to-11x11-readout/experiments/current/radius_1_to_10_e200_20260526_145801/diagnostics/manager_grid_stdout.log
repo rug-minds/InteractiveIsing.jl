@@ -1,0 +1,30 @@
+[2026-05-26T14:58:02] bootstrap script started elapsed_s=0.258
+[2026-05-26T14:58:02] bootstrap Pkg loaded elapsed_s=0.653
+[2026-05-26T14:58:03] bootstrap project activated elapsed_s=0.089
+[2026-05-26T15:01:27] bootstrap dependencies loaded elapsed_s=204.019
+[2026-05-26T15:01:36] run started name=r1 radius=1 epochs=200 workers=32 threads=32 outdir=ext/IsingLearning/experiments/MNIST/single-hidden-local-28x28-to-11x11-readout/experiments/current/radius_1_to_10_e200_20260526_145801\r1
+[2026-05-26T15:01:36] run output initialized elapsed_s=0.001
+[2026-05-26T15:01:38] training data loaded elapsed_s=2.162 samples=1000 per_class=100
+[2026-05-26T15:01:39] test data loaded elapsed_s=0.241 samples=200 per_class=20
+[2026-05-26T15:01:42] model graph shell initialized elapsed_s=3.098 states=1729
+[2026-05-26T15:01:42] model connectivity masks built elapsed_s=0.035 input_hidden=6724 hidden_hidden=484 hidden_output=4840
+[2026-05-26T15:01:42] model J entries initialized elapsed_s=0.214 stored_entries=24096
+[2026-05-26T15:01:42] model J pointer lookup built elapsed_s=0.106 pointers=24096
+[2026-05-26T15:01:42] model edge groups built elapsed_s=0.059
+[2026-05-26T15:01:42] model initialized elapsed_s=3.532 stored_entries=24096
+[2026-05-26T15:01:42] source model ready elapsed_s=3.546
+[2026-05-26T15:01:42] manager construction started workers=32
+[2026-05-26T15:01:43] manager constructing worker worker=1 workers=32
+[2026-05-26T15:01:44] worker model initialized elapsed_s=0.821 worker=1
+[2026-05-26T15:02:03] worker algorithm resolved elapsed_s=19.629 worker=1
+[2026-05-26T15:02:07] worker process initialized elapsed_s=3.39 worker=1
+[2026-05-26T15:02:07] worker initialized elapsed_s=23.849 worker=1
+[2026-05-26T15:02:07] manager constructed worker worker=1 workers=32
+[2026-05-26T15:02:07] manager constructing worker worker=2 workers=32
+[2026-05-26T15:02:09] worker model initialized elapsed_s=2.154 worker=2
+[2026-05-26T15:02:19] worker algorithm resolved elapsed_s=10.199 worker=2
+[2026-05-26T15:02:21] worker process initialized elapsed_s=1.782 worker=2
+[2026-05-26T15:02:21] worker initialized elapsed_s=14.136 worker=2
+[2026-05-26T15:02:21] manager constructed worker worker=2 workers=32
+[2026-05-26T15:02:22] manager constructing worker worker=3 workers=32
+[2026-05-26T15:02:22] worker model initialized elapsed_s=0.098 worker=3

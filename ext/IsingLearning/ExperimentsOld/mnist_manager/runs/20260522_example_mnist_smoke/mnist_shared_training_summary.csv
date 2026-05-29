@@ -1,0 +1,2 @@
+timestamp,architecture,workers,threads,epochs,batchsize,sweeps,relaxation_steps,train_limit,validation_limit,elapsed_seconds,elapsed_minutes,checkpoint
+2026-05-22T01:00:22,784-120-40,2,4,1,4,1.0,160,8,none,9.8188981,0.16364830166666666,ext/IsingLearning/experiments/mnist_manager/runs/20260522_example_mnist_smoke\mnist_shared_training.bin

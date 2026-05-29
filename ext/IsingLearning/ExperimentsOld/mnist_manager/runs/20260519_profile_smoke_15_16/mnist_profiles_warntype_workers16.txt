@@ -1,0 +1,886 @@
+Threads.nthreads() = 16
+trainer type = IsingLearning.MNISTThreadedTrainer{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, @NamedTuple{w::Optimisers.Leaf{Adam{Float32, Tuple{Float64, Float64}, Float64}, Tuple{Vector{Float32}, Vector{Float32}, Tuple{Float32, Float32}}}, b::Optimisers.Leaf{Adam{Float32, Tuple{Float64, Float64}, Float64}, Tuple{Vector{Float32}, Vector{Float32}, Tuple{Float32, Float32}}}}, Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Process{Routine(initstate!@initstate!_1, FuncWrapper@FuncWrapper_1, LocalLangevin@dynamics, FuncWrapper@FuncWrapper_2)}, Adam{Float32, Tuple{Float64, Float64}, Float64}, ProcessManager{@NamedTuple{makeworker::IsingLearning.var"#_mnist_training_manager##2#_mnist_training_manager##3"{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}}, prepare!::IsingLearning.var"#_mnist_training_manager##4#_mnist_training_manager##5"}, NTuple{16, WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}}, Nothing, Nothing, NoFlush}}
+manager type = ProcessManager{@NamedTuple{makeworker::IsingLearning.var"#_mnist_training_manager##2#_mnist_training_manager##3"{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}}, prepare!::IsingLearning.var"#_mnist_training_manager##4#_mnist_training_manager##5"}, NTuple{16, WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}}, Nothing, Nothing, NoFlush}
+slot type = WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}
+worker type = Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}
+job type = @NamedTuple{x::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, y::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}}
+batch gradient type = @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}
+
+==== _write_example! ====
+MethodInstance for IsingLearning._write_example!(::Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, ::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, ::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true})
+  from _write_example!(worker, x, y) @ IsingLearning C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\src\ThreadedMNISTLoop.jl:442
+Arguments
+  #self#::Core.Const(IsingLearning._write_example!)
+  worker::Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}
+  x::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}
+  y::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}
+Body::PROCESSCONTEXT
+1 ─ %1  =   builtin Base.getfield(worker, :runtime_context)::UNION{NOTHING, PROCESSCONTEXT}
+│   %2  =   builtin (isa)(%1, Nothing)::Bool
+└──       goto #3 if not %2
+2 ─       goto #4
+3 ─       goto #4
+4 ┄ %6  = φ (#2 => true, #3 => false)::Bool
+└──       goto #6 if not %6
+5 ─ %8  =   builtin Base.getfield(worker, :algo)::CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)
+│   %9  =   builtin IsingLearning.InteractiveIsing.Processes.getfield(%8, :context)::ProcessContext{@NamedTuple{_state::IsingLearning.InteractiveIsing.Processes.SubContext{:_state, @NamedTuple{buffers::@NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, equilibrium_state::Vector{Float32}, x::Vector{Float32}, y::Vector{Float32}}, (), ()}, initstate!_1::IsingLearning.InteractiveIsing.Processes.SubContext{:initstate!_1, @NamedTuple{}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (:isinggraph,), nothing}(),)}, FuncWrapper_1::IsingLearning.InteractiveIsing.Processes.SubContext{:FuncWrapper_1, @NamedTuple{}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (Symbol("##dsl_pos_1#4444"),), nothing}(), IsingLearning.InteractiveIsing.Processes.SharedVars{:_state, (:x,), (:x,), nothing}())}, FuncWrapper_2::IsingLearning.InteractiveIsing.Processes.SubContext{:FuncWrapper_2, @NamedTuple{}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:_state, (:equilibrium_state,), (:equilibrium_state,), nothing}(), IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (Symbol("##dsl_pos_2#4445"),), IsingLearning.var"#58#59"()}())}, FuncWrapper_3::IsingLearning.InteractiveIsing.Processes.SubContext{:FuncWrapper_3, @NamedTuple{}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (Symbol("##dsl_pos_1#4448"),), nothing}(), IsingLearning.InteractiveIsing.Processes.SharedVars{:_state, (:x,), (:x,), nothing}())}, FuncWrapper_4::IsingLearning.InteractiveIsing.Processes.SubContext{:FuncWrapper_4, @NamedTuple{}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (Symbol("##dsl_pos_1#4451"),), nothing}(), IsingLearning.InteractiveIsing.Processes.SharedVars{:_state, (:y,), (:y,), nothing}())}, FuncWrapper_5::IsingLearning.InteractiveIsing.Processes.SubContext{:FuncWrapper_5, @NamedTuple{}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (Symbol("##dsl_pos_1#4454"),), nothing}(),)}, FuncWrapper_6::IsingLearning.InteractiveIsing.Processes.SubContext{:FuncWrapper_6, @NamedTuple{}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (Symbol("##dsl_pos_1#4459"),), nothing}(), IsingLearning.InteractiveIsing.Processes.SharedVars{:_state, (:x,), (:x,), nothing}())}, FuncWrapper_7::IsingLearning.InteractiveIsing.Processes.SubContext{:FuncWrapper_7, @NamedTuple{}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (Symbol("##dsl_pos_1#4462"),), nothing}(), IsingLearning.InteractiveIsing.Processes.SharedVars{:_state, (:y,), (:y,), nothing}())}, FuncWrapper_8::IsingLearning.InteractiveIsing.Processes.SubContext{:FuncWrapper_8, @NamedTuple{}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (Symbol("##dsl_pos_1#4465"),), nothing}(),)}, FuncWrapper_9::IsingLearning.InteractiveIsing.Processes.SubContext{:FuncWrapper_9, @NamedTuple{}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (Symbol("##dsl_pos_1#4470"),), nothing}(),)}, FuncWrapper_10::IsingLearning.InteractiveIsing.Processes.SubContext{:FuncWrapper_10, @NamedTuple{}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (Symbol("##dsl_pos_1#4475"),), nothing}(), IsingLearning.InteractiveIsing.Processes.SharedVars{:plus_capture, (:captured,), (Symbol("##dsl_pos_2#4478"),), nothing}(), IsingLearning.InteractiveIsing.Processes.SharedVars{:minus_capture, (:captured,), (Symbol("##dsl_pos_3#4481"),), nothing}(), IsingLearning.InteractiveIsing.Processes.SharedVars{:_state, (:buffers,), (:buffers,), nothing}())}, dynamics::IsingLearning.InteractiveIsing.Processes.SubContext{:dynamics, @NamedTuple{model::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, hamiltonian::HamiltonianTerms{Tuple{Bilinear{Parameters{@NamedTuple{J::Parameter{Defaulted, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}}}, @NamedTuple{J::String}, @NamedTuple{J::Nothing}}}, MagField{Parameters{@NamedTuple{c::Parameter{Defaulted, Float32}, b::Parameter{Passed, Vector{Float32}}}, @NamedTuple{c::String, b::String}, @NamedTuple{c::Nothing, b::Nothing}}}, Clamping{Parameters{@NamedTuple{β::Parameter{Passed, UniformArray{Float32, 0}}, y::Parameter{Passed, Vector{Float32}}, mask::Parameter{Defaulted, Vector{Float32}}}, @NamedTuple{β::String, y::String, mask::String}, @NamedTuple{β::Nothing, y::Nothing, mask::Nothing}}}}}, rng::MersenneTwister, dH_prealloc::Vector{Float32}, active_index_set::ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}, active_spins::Vector{Int64}, layer_views::Tuple{Continuous() IsingLayer, Continuous() IsingLayer, Continuous() IsingLayer}, stepsize::Base.RefValue{Float32}, max_drift_fraction::Base.RefValue{Float32}, group_steps::Base.RefValue{Int64}, adjusted::Bool, proposal::FlipProposal{Float32}, ΔE::Float32, accepted::Int64, attempted::Int64, T::Float32, η::Float32, σ::Float32, gradient_max::Float32, gradient_rms::Float32, reflected_fraction::Float32, sweep_position::Base.RefValue{Int64}, sweep_order::Vector{Int64}, sweep_offset::Base.RefValue{Int64}, group_remaining::Base.RefValue{Int64}}, (), ()}, setgraph!_1::IsingLearning.InteractiveIsing.Processes.SubContext{:setgraph!_1, @NamedTuple{}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (:isinggraph,), nothing}(), IsingLearning.InteractiveIsing.Processes.SharedVars{:_state, (:equilibrium_state,), (:target,), nothing}(), IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (:isinggraph,), nothing}(), IsingLearning.InteractiveIsing.Processes.SharedVars{:_state, (:equilibrium_state,), (:target,), nothing}())}, plus_capture::IsingLearning.InteractiveIsing.Processes.SubContext{:plus_capture, @NamedTuple{captured::Vector{Float64}}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (:isinggraph,), nothing}(),)}, minus_capture::IsingLearning.InteractiveIsing.Processes.SubContext{:minus_capture, @NamedTuple{captured::Vector{Float64}}, (), (IsingLearning.InteractiveIsing.Processes.SharedVars{:dynamics, (:model,), (:isinggraph,), nothing}(),)}, globals::@NamedTuple{algo::CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10), lifetime::Repeat}}, IsingLearning.InteractiveIsing.Processes.NameSpaceRegistry{Tuple{IsingLearning.InteractiveIsing.Processes.RegistryTypeEntry{GeneralState, Tuple{IdentifiableAlgo{GeneralState{(:buffers, :equilibrium_state, :x, :y), (:buffers, :x, :equilibrium_state, :y), IsingLearning.InteractiveIsing.Processes.var"#302#303"{GeneralState{(:buffers, :equilibrium_state, :x, :y), (:buffers, :x, :equilibrium_state, :y), IsingLearning.InteractiveIsing.Processes.var"#302#303"{GeneralState{(:buffers, :equilibrium_state, :x), (:buffers, :x), IsingLearning.InteractiveIsing.Processes.var"#302#303"{GeneralState{(:buffers,), (:buffers,), IsingLearning.var"#Forward_and_Nudged##0#Forward_and_Nudged##1"}, GeneralState{(:equilibrium_state, :x), (:x,), IsingLearning.var"#56#57"{Int64}}}}, GeneralState{(:equilibrium_state, :y, :x), (:equilibrium_state, :y, :x), IsingLearning.var"#NudgedDynamics##0#NudgedDynamics##1"}}}, GeneralState{(:equilibrium_state, :y, :x), (:equilibrium_state, :y, :x), IsingLearning.var"#NudgedDynamics##2#NudgedDynamics##3"}}}, GeneralState(buffers), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), Symbol(""), :_state}}}, IsingLearning.InteractiveIsing.Processes.RegistryTypeEntry{IsingLearning.initstate!, Tuple{IdentifiableAlgo{IsingLearning.initstate!, IsingLearning.initstate!, IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :initstate!_1}}}, IsingLearning.InteractiveIsing.Processes.RegistryTypeEntry{FuncWrapper, Tuple{IdentifiableAlgo{FuncWrapper{typeof(IsingLearning.apply_input), (Symbol("##dsl_pos_1#4444"), :x), (), NamedTuple(), Tuple{}}, IsingLearning.InteractiveIsing.Processes.ObjectIDMatcher{0xfa8e0d4c111cb43a}(), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :FuncWrapper_1}, IdentifiableAlgo{FuncWrapper{typeof(IsingLearning.copyvector!), (:equilibrium_state, Symbol("##dsl_pos_2#4445")), (), NamedTuple(), Tuple{}}, IsingLearning.InteractiveIsing.Processes.ObjectIDMatcher{0x4fea2f8abbd4fb62}(), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :FuncWrapper_2}, IdentifiableAlgo{FuncWrapper{typeof(IsingLearning.apply_input), (Symbol("##dsl_pos_1#4448"), :x), (), NamedTuple(), Tuple{}}, IsingLearning.InteractiveIsing.Processes.ObjectIDMatcher{0x60e80d9babc1dd73}(), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :FuncWrapper_3}, IdentifiableAlgo{FuncWrapper{typeof(IsingLearning.apply_targets), (Symbol("##dsl_pos_1#4451"), :y), (), NamedTuple(), Tuple{}}, IsingLearning.InteractiveIsing.Processes.ObjectIDMatcher{0x0750f09978a1a26c}(), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :FuncWrapper_4}, IdentifiableAlgo{FuncWrapper{typeof(IsingLearning.set_clamping_beta!), (Symbol("##dsl_pos_1#4454"), IsingLearning.InteractiveIsing.Processes.ValueRef{1, Float32}()), (), NamedTuple(), Tuple{Float32}}, IsingLearning.InteractiveIsing.Processes.ObjectIDMatcher{0x969232d560c37563}(), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :FuncWrapper_5}, IdentifiableAlgo{FuncWrapper{typeof(IsingLearning.apply_input), (Symbol("##dsl_pos_1#4459"), :x), (), NamedTuple(), Tuple{}}, IsingLearning.InteractiveIsing.Processes.ObjectIDMatcher{0x3f0457089a38cd7f}(), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :FuncWrapper_6}, IdentifiableAlgo{FuncWrapper{typeof(IsingLearning.apply_targets), (Symbol("##dsl_pos_1#4462"), :y), (), NamedTuple(), Tuple{}}, IsingLearning.InteractiveIsing.Processes.ObjectIDMatcher{0x20363a4ddc9bae32}(), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :FuncWrapper_7}, IdentifiableAlgo{FuncWrapper{typeof(IsingLearning.set_clamping_beta!), (Symbol("##dsl_pos_1#4465"), IsingLearning.InteractiveIsing.Processes.ValueRef{1, Float32}()), (), NamedTuple(), Tuple{Float32}}, IsingLearning.InteractiveIsing.Processes.ObjectIDMatcher{0x83cf0e993b8ecd66}(), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :FuncWrapper_8}, IdentifiableAlgo{FuncWrapper{typeof(IsingLearning.set_clamping_beta!), (Symbol("##dsl_pos_1#4470"), IsingLearning.InteractiveIsing.Processes.ValueRef{1, Float32}()), (), NamedTuple(), Tuple{Float32}}, IsingLearning.InteractiveIsing.Processes.ObjectIDMatcher{0x1d29a5ba7df04fef}(), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :FuncWrapper_9}, IdentifiableAlgo{FuncWrapper{typeof(IsingLearning.contrastive_gradient), (Symbol("##dsl_pos_1#4475"), Symbol("##dsl_pos_2#4478"), Symbol("##dsl_pos_3#4481"), IsingLearning.InteractiveIsing.Processes.ValueRef{1, Float32}()), (), (buffers = :buffers,), Tuple{Float32}}, IsingLearning.InteractiveIsing.Processes.ObjectIDMatcher{0xe19f2908640295e6}(), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :FuncWrapper_10}}}, IsingLearning.InteractiveIsing.Processes.RegistryTypeEntry{LocalLangevin, Tuple{IdentifiableAlgo{LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}(0.5, 0.15, 1), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), Symbol(""), :dynamics}}}, IsingLearning.InteractiveIsing.Processes.RegistryTypeEntry{IsingLearning.setgraph!, Tuple{IdentifiableAlgo{IsingLearning.setgraph!, IsingLearning.setgraph!, IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :setgraph!_1}}}, IsingLearning.InteractiveIsing.Processes.RegistryTypeEntry{IsingLearning.CaptureState, Tuple{IdentifiableAlgo{IsingLearning.CaptureState, IsingLearning.InteractiveIsing.Processes.SimpleId{Base.UUID("c24c8e3d-47a9-4e97-b7fe-bd3a4418c0c7")}(), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :plus_capture}, IdentifiableAlgo{IsingLearning.CaptureState, IsingLearning.InteractiveIsing.Processes.SimpleId{Base.UUID("af399565-0cc7-4f69-a6d2-2123f21c1451")}(), IsingLearning.InteractiveIsing.Processes.VarAliases{NamedTuple(), NamedTuple()}(), nothing, :minus_capture}}}}}}
+└──       goto #7
+6 ─ %11 = π (%1, ProcessContext)
+└──       goto #7
+7 ┄ %13 = φ (#5 => %9, #6 => %11)::PROCESSCONTEXT
+│   %14 =   builtin IsingLearning.InteractiveIsing.Processes.getfield(%13, :subcontexts)::ANY
+│   %15 =   dynamic IsingLearning.InteractiveIsing.Processes.getproperty(%14, :_state)::ANY
+│   %16 =   dynamic Base.dotgetproperty(%15, :x)::ANY
+│   %17 =   builtin Core.tuple(x)::Tuple{SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}}
+│   %18 = %new(Base.Broadcast.Broadcasted{Base.Broadcast.DefaultArrayStyle{1}, Nothing, typeof(identity), Tuple{SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}}}, $(QuoteNode(Base.Broadcast.DefaultArrayStyle{1}())), identity, %17, Base.Broadcast.nothing)::Base.Broadcast.Broadcasted{Base.Broadcast.DefaultArrayStyle{1}, Nothing, typeof(identity), Tuple{SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}}}
+│           dynamic Base.materialize!(%16, %18)
+│   %20 =   builtin IsingLearning.InteractiveIsing.Processes.getfield(%13, :subcontexts)::ANY
+│   %21 =   dynamic IsingLearning.InteractiveIsing.Processes.getproperty(%20, :_state)::ANY
+│   %22 =   dynamic Base.dotgetproperty(%21, :y)::ANY
+│   %23 =   builtin Core.tuple(y)::Tuple{SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}}
+│   %24 = %new(Base.Broadcast.Broadcasted{Base.Broadcast.DefaultArrayStyle{1}, Nothing, typeof(identity), Tuple{SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}}}, $(QuoteNode(Base.Broadcast.DefaultArrayStyle{1}())), identity, %23, Base.Broadcast.nothing)::Base.Broadcast.Broadcasted{Base.Broadcast.DefaultArrayStyle{1}, Nothing, typeof(identity), Tuple{SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}}}
+│           dynamic Base.materialize!(%22, %24)
+└──       return %13
+
+==== resetworker! ====
+MethodInstance for resetworker!(::WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any})
+  from resetworker!(slot::WorkerSlot) @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\ProcessManager.jl:96
+Arguments
+  #self#::Core.Const(IsingLearning.InteractiveIsing.Processes.resetworker!)
+  slot::WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}
+Body::WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}
+1 ─ %1 =   builtin Base.getfield(slot, :worker)::Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}
+│           invoke IsingLearning.InteractiveIsing.Processes.reset!(%1::Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)})
+└──      return slot
+
+==== apply_input ====
+MethodInstance for IsingLearning.apply_input(::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, ::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true})
+  from apply_input(isinggraph, x) @ IsingLearning C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\src\Dynamics.jl:102
+Arguments
+  #self#::Core.Const(IsingLearning.apply_input)
+  isinggraph::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}
+  x::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}
+Body::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}
+1 ─── %1   =   builtin Base.getfield(isinggraph, :index_set)::ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}
+│     %2   =   builtin Base.getfield(%1, :on)::Vector{Bool}
+│     %3   = $(Expr(:boundscheck, true))::Bool
+└────        goto #5 if not %3
+2 ─── %5   = intrinsic Base.sub_int(1, 1)::Int64
+│     %6   = intrinsic Base.bitcast(Base.UInt, %5)::UInt64
+│     %7   =   builtin Base.getfield(%2, :size)::Tuple{Int64}
+│     %8   = $(Expr(:boundscheck, true))::Bool
+│     %9   =   builtin Base.getfield(%7, 1, %8)::Int64
+│     %10  = intrinsic Base.bitcast(Base.UInt, %9)::UInt64
+│     %11  = intrinsic Base.ult_int(%6, %10)::Bool
+└────        goto #4 if not %11
+3 ───        goto #5
+4 ─── %14  =   builtin Core.tuple(1)::Tuple{Int64}
+│               invoke Base.throw_boundserror(%2::Vector{Bool}, %14::Tuple{Int64})
+└────        unreachable
+5 ┄── %17  =   builtin Base.getfield(%2, :ref)::MemoryRef{Bool}
+│     %18  =   builtin Base.memoryrefnew(%17, 1, false)::MemoryRef{Bool}
+│     %19  =   builtin Base.memoryrefget(%18, :not_atomic, false)::Bool
+└────        goto #6
+6 ───        goto #8 if not %19
+7 ───           invoke IsingLearning.InteractiveIsing.toggle!(%1::ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}, 1::Int64)
+8 ┄──        goto #9
+9 ─── %24  =   builtin IsingLearning.InteractiveIsing.getfield(isinggraph, :state)::Vector{Float32}
+│     %25  = $(Expr(:boundscheck, true))::Bool
+└────        goto #14 if not %25
+10 ── %27  =   builtin Base.getfield(%24, :size)::Tuple{Int64}
+│     %28  = $(Expr(:boundscheck, true))::Bool
+│     %29  =   builtin Base.getfield(%27, 1, %28)::Int64
+│     %30  = intrinsic Base.bitcast(UInt64, %29)::UInt64
+│     %31  = intrinsic Base.ult_int(0x0000000000000000, %30)::Bool
+│     %32  = intrinsic Base.bitcast(UInt64, %29)::UInt64
+│     %33  = intrinsic Base.ult_int(0x000000000000030f, %32)::Bool
+│     %34  = intrinsic Base.and_int(%31, %33)::Bool
+│     %35  = intrinsic Base.or_int(false, %34)::Bool
+└────        goto #12 if not %35
+11 ──        goto #13
+12 ──           invoke Base.throw_boundserror(%24::Vector{Float32}, (1:784,)::Tuple{UnitRange{Int64}})
+└────        unreachable
+13 ──        nothing
+14 ┄─        goto #15
+15 ── %42  =   builtin Base.getfield(%24, :ref)::MemoryRef{Float32}
+│     %43  =   builtin Base.getfield(%42, :ptr_or_offset)::Ptr{Nothing}
+│     %44  = intrinsic Base.bitcast(Ptr{Float32}, %43)::Ptr{Float32}
+│     %45  = intrinsic Base.add_ptr(%44, 0x0000000000000000)::Ptr{Float32}
+│     %46  = intrinsic Core.bitcast(Ptr{Float32}, %45)::Ptr{Float32}
+│     %47  = intrinsic Base.bitcast(Ptr{Nothing}, %46)::Ptr{Nothing}
+│     %48  = $(Expr(:foreigncall, :(:jl_ptr_to_array), Matrix{Float32}, svec(Any, Ptr{Nothing}, Any, Int32), 0, :(:ccall), Matrix{Float32}, :(%47), (28, 28), 0, 0, :(%46)))::Matrix{Float32}
+└────        goto #16
+16 ── %50  =   builtin Base.getfield(%48, :size)::Tuple{Int64, Int64}
+│     %51  =   builtin Base.getfield(x, :indices)::Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}
+│     %52  =   builtin Core.getfield(%51, 1)::Base.Slice{Base.OneTo{Int64}}
+│     %53  =   builtin Base.getfield(%52, :indices)::Base.OneTo{Int64}
+│     %54  =   builtin Base.getfield(%53, :stop)::Int64
+│     %55  =   builtin Core.getfield(%50, 1)::Int64
+│     %56  =   builtin Core.getfield(%50, 2)::Int64
+│     %57  = intrinsic Base.mul_int(%55, %56)::Int64
+│     %58  =   builtin (%57 === %54)::Bool
+└────        goto #18 if not %58
+17 ── %60  = %new(Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}}, x, %50, ())::Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}}
+└────        goto #19
+18 ──           invoke Base._throw_dmrs(%54::Int64, "size"::String, %50::Tuple{Int64, Int64})
+└────        unreachable
+19 ──        goto #20
+20 ── %65  =   builtin Base.getfield(%48, :size)::Tuple{Int64, Int64}
+│     %66  = $(Expr(:boundscheck, true))::Bool
+│     %67  =   builtin Base.getfield(%65, 1, %66)::Int64
+│     %68  = %new(Base.OneTo{Int64}, %67)::Base.OneTo{Int64}
+│     %69  = $(Expr(:boundscheck, true))::Bool
+│     %70  =   builtin Base.getfield(%65, 2, %69)::Int64
+│     %71  = %new(Base.OneTo{Int64}, %70)::Base.OneTo{Int64}
+│     %72  =   builtin Core.tuple(%68, %71)::Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}
+│     %73  = $(Expr(:boundscheck, true))::Bool
+│     %74  =   builtin Base.getfield(%50, 1, %73)::Int64
+│     %75  = $(Expr(:boundscheck, true))::Bool
+│     %76  =   builtin Base.getfield(%50, 2, %75)::Int64
+│     %77  =   builtin (%67 === %74)::Bool
+└────        goto #22 if not %77
+21 ──        goto #23
+22 ── %80  =   builtin (%74 === 1)::Bool
+└────        goto #23
+23 ┄─ %82  = φ (#21 => %77, #22 => %80)::Bool
+└────        goto #31 if not %82
+24 ── %84  =   builtin (%70 === %76)::Bool
+└────        goto #26 if not %84
+25 ──        goto #27
+26 ── %87  =   builtin (%76 === 1)::Bool
+└────        goto #27
+27 ┄─ %89  = φ (#25 => %84, #26 => %87)::Bool
+└────        goto #29 if not %89
+28 ──        goto #30
+29 ── %92  =    invoke Base.Broadcast.DimensionMismatch("array could not be broadcast to match destination"::String)::DimensionMismatch
+│              builtin Base.Broadcast.throw(%92)
+└────        unreachable
+30 ──        goto #32
+31 ── %96  =    invoke Base.Broadcast.DimensionMismatch("array could not be broadcast to match destination"::String)::DimensionMismatch
+│              builtin Base.Broadcast.throw(%96)
+└────        unreachable
+32 ──        goto #33
+33 ──        goto #34
+34 ── %101 =   builtin Base.getfield(%48, :size)::Tuple{Int64, Int64}
+│     %102 = $(Expr(:boundscheck, true))::Bool
+│     %103 =   builtin Base.getfield(%101, 1, %102)::Int64
+│     %104 = $(Expr(:boundscheck, true))::Bool
+│     %105 =   builtin Base.getfield(%101, 2, %104)::Int64
+│     %106 =   builtin (%103 === %67)::Bool
+│     %107 =   builtin (%106 === false)::Bool
+└────        goto #36 if not %107
+35 ──        goto #40
+36 ── %110 =   builtin (%105 === %70)::Bool
+│     %111 =   builtin (%110 === false)::Bool
+└────        goto #38 if not %111
+37 ──        goto #39
+38 ──        goto #39
+39 ┄─ %115 = φ (#37 => false, #38 => true)::Bool
+└────        goto #40
+40 ┄─ %117 = φ (#35 => false, #39 => %115)::Bool
+└────        goto #41
+41 ──        goto #161 if not %117
+42 ── %120 =   builtin Base.getfield(%48, :size)::Tuple{Int64, Int64}
+│     %121 = $(Expr(:boundscheck, true))::Bool
+│     %122 =   builtin Base.getfield(%120, 1, %121)::Int64
+│     %123 = $(Expr(:boundscheck, true))::Bool
+│     %124 =   builtin Base.getfield(%120, 2, %123)::Int64
+│     %125 = $(Expr(:boundscheck, true))::Bool
+│     %126 =   builtin Base.getfield(%50, 1, %125)::Int64
+│     %127 = $(Expr(:boundscheck, true))::Bool
+│     %128 =   builtin Base.getfield(%50, 2, %127)::Int64
+│     %129 =   builtin (%122 === %126)::Bool
+│     %130 =   builtin (%129 === false)::Bool
+└────        goto #44 if not %130
+43 ──        goto #48
+44 ── %133 =   builtin (%124 === %128)::Bool
+│     %134 =   builtin (%133 === false)::Bool
+└────        goto #46 if not %134
+45 ──        goto #47
+46 ──        goto #47
+47 ┄─ %138 = φ (#45 => false, #46 => true)::Bool
+└────        goto #48
+48 ┄─ %140 = φ (#43 => false, #47 => %138)::Bool
+└────        goto #49
+49 ──        goto #51 if not %140
+50 ──           invoke Base.Broadcast.copyto!(%48::Matrix{Float32}, %60::Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}})
+└────        goto #162
+51 ── %145 =   builtin Base.getfield(%48, :size)::Tuple{Int64, Int64}
+│     %146 = $(Expr(:boundscheck, true))::Bool
+│     %147 =   builtin Base.getfield(%145, 1, %146)::Int64
+│     %148 = $(Expr(:boundscheck, true))::Bool
+│     %149 =   builtin Base.getfield(%145, 2, %148)::Int64
+│     %150 = intrinsic Base.mul_int(%147, %149)::Int64
+│     %151 =   builtin (%150 === 0)::Bool
+│     %152 = intrinsic Base.not_int(%151)::Bool
+└────        goto #55 if not %152
+52 ── %154 =   builtin Base.getfield(x, :indices)::Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}
+│     %155 =   builtin Core.getfield(%154, 1)::Base.Slice{Base.OneTo{Int64}}
+│     %156 =   builtin Base.getfield(%155, :indices)::Base.OneTo{Int64}
+│     %157 =   builtin Base.getfield(%156, :stop)::Int64
+│     %158 =   builtin (%157 === 0)::Bool
+│     %159 = intrinsic Base.not_int(%158)::Bool
+└────        goto #54 if not %159
+53 ── %161 =   builtin Base.getfield(%48, :ref)::MemoryRef{Float32}
+│     %162 =   builtin Base.getfield(%161, :mem)::Memory{Float32}
+│     %163 =   builtin Base.getfield(%162, :ptr)::Ptr{Nothing}
+│     %164 = intrinsic Core.bitcast(Core.UInt, %163)::UInt64
+│     %165 =   builtin Base.getfield(x, :parent)::Matrix{Float32}
+│     %166 =   builtin Base.getfield(%165, :ref)::MemoryRef{Float32}
+│     %167 =   builtin Base.getfield(%166, :mem)::Memory{Float32}
+│     %168 =   builtin Base.getfield(%167, :ptr)::Ptr{Nothing}
+│     %169 = intrinsic Core.bitcast(Core.UInt, %168)::UInt64
+│     %170 =   builtin (%164 === %169)::Bool
+│     %171 = intrinsic Base.not_int(%170)::Bool
+│     %172 = intrinsic Base.not_int(%171)::Bool
+└────        goto #56
+54 ──        goto #56
+55 ──        goto #56
+56 ┄─ %176 = φ (#53 => %172, #54 => false, #55 => false)::Bool
+└────        goto #76 if not %176
+57 ── %178 =   builtin Base.getfield(x, :indices)::Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}
+│     %179 =   builtin Core.getfield(%178, 1)::Base.Slice{Base.OneTo{Int64}}
+│     %180 =   builtin Base.getfield(%179, :indices)::Base.OneTo{Int64}
+│     %181 =   builtin Base.getfield(%180, :stop)::Int64
+│     %182 = intrinsic Base.slt_int(%181, 1)::Bool
+└────        goto #59 if not %182
+58 ──        goto #63
+59 ── %185 =   builtin Base.getfield(%179, :indices)::Base.OneTo{Int64}
+│     %186 =   builtin Base.getfield(%185, :stop)::Int64
+│     %187 = intrinsic Base.slt_int(%186, 1)::Bool
+└────        goto #61 if not %187
+60 ── %189 =    invoke Base.ArgumentError("range must be non-empty"::String)::ArgumentError
+│              builtin Base.throw(%189)
+└────        unreachable
+61 ── %192 =   builtin Base.getfield(%179, :indices)::Base.OneTo{Int64}
+│     %193 =   builtin Base.getfield(%192, :stop)::Int64
+└────        goto #62
+62 ──        nothing
+63 ┄─ %196 = φ (#58 => 0, #62 => %193)::Int64
+└────        goto #64
+64 ── %198 = intrinsic (Core.Intrinsics.checked_smul_int)(%196, 1)::Tuple{Int64, Bool}
+│     %199 =   builtin Core.getfield(%198, 1)::Int64
+│     %200 =   builtin Core.getfield(%198, 2)::Bool
+│     %201 = intrinsic (Core.Intrinsics.ule_int)(Core.typemax_Int, %196)::Bool
+│     %202 = intrinsic (Core.Intrinsics.or_int)(%200, %201)::Bool
+│     %203 = intrinsic (Core.Intrinsics.or_int)(%202, false)::Bool
+└────        goto #66 if not %203
+65 ── %205 =    invoke Core.ArgumentError("invalid Array dimensions"::String)::ArgumentError
+│              builtin Core.throw(%205)
+└────        unreachable
+66 ──        goto #67
+67 ── %209 =   builtin Core.memorynew(Memory{Float32}, %199)::Memory{Float32}
+│     %210 =   builtin Core.memoryrefnew(%209)::MemoryRef{Float32}
+│     %211 =   builtin Core.tuple(%196, 1)::Tuple{Int64, Int64}
+│     %212 = %new(Matrix{Float32}, %210, %211)::Matrix{Float32}
+└────        goto #68
+68 ──        goto #69
+69 ──        goto #70
+70 ── %216 =   builtin Base.getfield(x, :indices)::Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}
+│     %217 =   builtin Core.getfield(%216, 1)::Base.Slice{Base.OneTo{Int64}}
+│     %218 =   builtin Base.getfield(%217, :indices)::Base.OneTo{Int64}
+│     %219 = %new(Base.Slice{Base.OneTo{Int64}}, %218)::Base.Slice{Base.OneTo{Int64}}
+│     %220 = $(Expr(:boundscheck, true))::Bool
+└────        goto #72 if not %220
+71 ──        nothing
+72 ┄─ %223 =   builtin Base.getfield(x, :indices)::Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}
+│     %224 =   builtin Core.getfield(%223, 2)::Int64
+│     %225 =   builtin Base.getfield(x, :parent)::Matrix{Float32}
+│     %226 =   builtin Core.tuple(%219, %224)::Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}
+│     %227 =   builtin Base.getfield(%225, :size)::Tuple{Int64, Int64}
+│     %228 = $(Expr(:boundscheck, true))::Bool
+│     %229 =   builtin Base.getfield(%227, 1, %228)::Int64
+│     %230 = intrinsic Base.mul_int(1, %229)::Int64
+│     %231 = intrinsic Base.sub_int(%224, 1)::Int64
+│     %232 = intrinsic Base.mul_int(%231, %230)::Int64
+│     %233 = intrinsic Base.add_int(1, %232)::Int64
+│     %234 = intrinsic Base.sub_int(%233, 1)::Int64
+│     %235 = %new(SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, %225, %226, %234, 1)::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}
+└────        goto #73
+73 ──           invoke Base.copyto!(%212::Matrix{Float32}, %235::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true})
+│     %238 =   builtin Base.getfield(x, :indices)::Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}
+│     %239 = $(Expr(:boundscheck, true))::Bool
+│     %240 =   builtin Base.getfield(%238, 1, %239)::Base.Slice{Base.OneTo{Int64}}
+│     %241 =   builtin Core.tuple(%240, 1)::Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}
+│     %242 =   builtin Base.getfield(%212, :size)::Tuple{Int64, Int64}
+│     %243 = $(Expr(:boundscheck, true))::Bool
+│     %244 =   builtin Base.getfield(%242, 1, %243)::Int64
+│     %245 = intrinsic Base.mul_int(1, %244)::Int64
+│     %246 = intrinsic Base.mul_int(0, %245)::Int64
+│     %247 = intrinsic Base.add_int(1, %246)::Int64
+│     %248 = intrinsic Base.sub_int(%247, 1)::Int64
+│     %249 = %new(SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, %212, %241, %248, 1)::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}
+└────        goto #74
+74 ── %251 = %new(Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}}, %249, %50, ())::Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}}
+└────        goto #75
+75 ──        goto #77
+76 ──        goto #77
+77 ┄─ %255 = φ (#75 => %249, #76 => x)::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}
+│     %256 = φ (#75 => %249, #76 => x)::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}
+│     %257 = φ (#75 => %251, #76 => %60)::Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}}
+└────        goto #78
+78 ── %259 = $(Expr(:boundscheck, true))::Bool
+│     %260 =   builtin Base.getfield(%50, 1, %259)::Int64
+│     %261 = $(Expr(:boundscheck, true))::Bool
+│     %262 =   builtin Base.getfield(%50, 2, %261)::Int64
+│     %263 =   builtin (%262 === 1)::Bool
+│     %264 = intrinsic Base.not_int(%263)::Bool
+│     %265 =   builtin (%260 === 1)::Bool
+│     %266 = intrinsic Base.not_int(%265)::Bool
+│     %267 =   builtin Core.tuple(%266, %264)::Tuple{Bool, Bool}
+│     %268 = %new(Base.Broadcast.Extruded{Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}}, Tuple{Bool, Bool}, Tuple{Int64, Int64}}, %257, %267, (1, 1))::Base.Broadcast.Extruded{Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}}, Tuple{Bool, Bool}, Tuple{Int64, Int64}}
+└────        goto #79
+79 ── %270 =   builtin Core.tuple(%268)::Tuple{Base.Broadcast.Extruded{Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}}, Tuple{Bool, Bool}, Tuple{Int64, Int64}}}
+└────        goto #80
+80 ── %272 = %new(Base.Broadcast.Broadcasted{Nothing, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}, typeof(identity), Tuple{Base.Broadcast.Extruded{Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}}, Tuple{Bool, Bool}, Tuple{Int64, Int64}}}}, nothing, identity, %270, %72)::Base.Broadcast.Broadcasted{Nothing, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}, typeof(identity), Tuple{Base.Broadcast.Extruded{Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}}, Tuple{Bool, Bool}, Tuple{Int64, Int64}}}}
+└────        goto #81
+81 ── %274 = intrinsic Base.sle_int(1, %70)::Bool
+│     %275 = intrinsic Base.and_int(true, %274)::Bool
+│     %276 = intrinsic Base.not_int(%275)::Bool
+└────        goto #83 if not %276
+82 ──        goto #84
+83 ──        goto #84
+84 ┄─ %280 = φ (#82 => true, #83 => false)::Bool
+│     %281 = φ (#83 => 1)::Int64
+│     %282 = φ (#83 => 1)::Int64
+│     %283 = φ (#83 => 1)::Int64
+│     %284 = intrinsic Base.not_int(%280)::Bool
+└────        goto #160 if not %284
+85 ┄─ %286 = φ (#84 => %281, #159 => %500)::Int64
+│     %287 = φ (#84 => %282, #159 => %499)::Int64
+│     %288 = φ (#84 => %283, #159 => %498)::Int64
+│     %289 = intrinsic Base.slt_int(0, %67)::Bool
+└────        goto #155 if not %289
+86 ──        nothing
+87 ┄─ %292 = φ (#86 => 0, #154 => %489)::Int64
+│     %293 = intrinsic Base.slt_int(%292, %67)::Bool
+└────        goto #155 if not %293
+88 ── %295 = intrinsic Base.add_int(%292, 1)::Int64
+│     %296 = $(Expr(:boundscheck, false))::Bool
+└────        goto #93 if not %296
+89 ── %298 =   builtin Core.tuple(%295)::Tuple{Int64}
+│     %299 = intrinsic Base.sub_int(%295, 1)::Int64
+│     %300 = intrinsic Base.bitcast(UInt64, %299)::UInt64
+│     %301 = intrinsic Base.bitcast(UInt64, %67)::UInt64
+│     %302 = intrinsic Base.ult_int(%300, %301)::Bool
+└────        goto #91 if not %302
+90 ──        goto #92
+91 ──           invoke Base.throw_boundserror(%68::Base.OneTo{Int64}, %298::Tuple{Int64})
+└────        unreachable
+92 ──        nothing
+93 ┄─        goto #94
+94 ──        goto #95
+95 ── %310 =   builtin Core.tuple(%295, %286)::Tuple{Int64, Int64}
+└────        goto #96
+96 ── %312 = %new(CartesianIndex{2}, %310)::CartesianIndex{2}
+│     %313 = $(Expr(:boundscheck, false))::Bool
+└────        goto #107 if not %313
+97 ──        goto #98
+98 ── %316 = intrinsic Base.sub_int(%295, 1)::Int64
+│     %317 = intrinsic Base.bitcast(UInt64, %316)::UInt64
+│     %318 = intrinsic Base.bitcast(UInt64, %67)::UInt64
+│     %319 = intrinsic Base.ult_int(%317, %318)::Bool
+└────        goto #99
+99 ── %321 = intrinsic Base.sub_int(%286, 1)::Int64
+│     %322 = intrinsic Base.bitcast(UInt64, %321)::UInt64
+│     %323 = intrinsic Base.bitcast(UInt64, %70)::UInt64
+│     %324 = intrinsic Base.ult_int(%322, %323)::Bool
+│     %325 = intrinsic Base.and_int(%324, true)::Bool
+└────        goto #100
+100 ─ %327 = intrinsic Base.and_int(%319, %325)::Bool
+└────        goto #101
+101 ─        goto #102
+102 ─ %330 = intrinsic Base.and_int(%327, true)::Bool
+└────        goto #103
+103 ─        goto #105 if not %330
+104 ─        goto #106
+105 ─ %334 =   builtin Core.tuple(%312)::Tuple{CartesianIndex{2}}
+│               invoke Base.throw_boundserror(%272::Base.Broadcast.Broadcasted{Nothing, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}, typeof(identity), Tuple{Base.Broadcast.Extruded{Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}}, Tuple{Bool, Bool}, Tuple{Int64, Int64}}}}, %334::Tuple{CartesianIndex{2}})
+└────        unreachable
+106 ─        nothing
+107 ┄ %338 =   builtin (Core.ifelse)(%266, %295, 1)::Int64
+│     %339 =   builtin (Core.ifelse)(%264, %286, 1)::Int64
+│     %340 = $(Expr(:boundscheck, false))::Bool
+└────        goto #117 if not %340
+108 ─ %342 =   builtin Core.tuple(%338, %339)::Tuple{Int64, Int64}
+│     %343 = $(Expr(:boundscheck, true))::Bool
+│     %344 =   builtin Base.getfield(%50, 1, %343)::Int64
+│     %345 = $(Expr(:boundscheck, true))::Bool
+│     %346 =   builtin Base.getfield(%50, 2, %345)::Int64
+└────        goto #109
+109 ─ %348 = intrinsic Base.sub_int(%338, 1)::Int64
+│     %349 = intrinsic Base.bitcast(UInt64, %348)::UInt64
+│     %350 = intrinsic Base.bitcast(UInt64, %344)::UInt64
+│     %351 = intrinsic Base.ult_int(%349, %350)::Bool
+└────        goto #110
+110 ─ %353 = intrinsic Base.sub_int(%339, 1)::Int64
+│     %354 = intrinsic Base.bitcast(UInt64, %353)::UInt64
+│     %355 = intrinsic Base.bitcast(UInt64, %346)::UInt64
+│     %356 = intrinsic Base.ult_int(%354, %355)::Bool
+│     %357 = intrinsic Base.and_int(%356, true)::Bool
+└────        goto #111
+111 ─ %359 = intrinsic Base.and_int(%351, %357)::Bool
+└────        goto #112
+112 ─        goto #113
+113 ─        goto #115 if not %359
+114 ─        goto #116
+115 ─           invoke Base.throw_boundserror(%257::Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}}, %342::Tuple{Int64, Int64})
+└────        unreachable
+116 ─        nothing
+117 ┄ %367 = $(Expr(:boundscheck, true))::Bool
+│     %368 =   builtin Base.getfield(%50, 1, %367)::Int64
+│     %369 = intrinsic Base.mul_int(1, %368)::Int64
+│     %370 = intrinsic Base.sub_int(%338, 1)::Int64
+│     %371 = intrinsic Base.mul_int(%370, 1)::Int64
+│     %372 = intrinsic Base.add_int(1, %371)::Int64
+│     %373 = intrinsic Base.sub_int(%339, 1)::Int64
+│     %374 = intrinsic Base.mul_int(%373, %369)::Int64
+│     %375 = intrinsic Base.add_int(%372, %374)::Int64
+│     %376 = $(Expr(:boundscheck, false))::Bool
+└────        goto #122 if not %376
+118 ─ %378 =   builtin Core.tuple(%375)::Tuple{Int64}
+│     %379 =   builtin Base.getfield(%255, :indices)::Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}
+│     %380 =   builtin Core.getfield(%379, 1)::Base.Slice{Base.OneTo{Int64}}
+│     %381 =   builtin Base.getfield(%380, :indices)::Base.OneTo{Int64}
+│     %382 =   builtin Base.getfield(%381, :stop)::Int64
+│     %383 = intrinsic Base.slt_int(%382, 0)::Bool
+│     %384 =   builtin (Core.ifelse)(%383, 0, %382)::Int64
+│     %385 = intrinsic Base.sub_int(%375, 1)::Int64
+│     %386 = intrinsic Base.bitcast(UInt64, %385)::UInt64
+│     %387 = intrinsic Base.bitcast(UInt64, %384)::UInt64
+│     %388 = intrinsic Base.ult_int(%386, %387)::Bool
+└────        goto #120 if not %388
+119 ─        goto #121
+120 ─           invoke Base.throw_boundserror(%257::Base.ReshapedArray{Float32, 2, SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, Tuple{}}, %378::Tuple{Int64})
+└────        unreachable
+121 ─        nothing
+122 ┄ %394 = intrinsic Base.sub_int(%375, 1)::Int64
+│     %395 = intrinsic Base.add_int(%394, 1)::Int64
+│     %396 = $(Expr(:boundscheck, false))::Bool
+└────        goto #127 if not %396
+123 ─ %398 =   builtin Core.tuple(%395)::Tuple{Int64}
+│     %399 =   builtin Base.getfield(%256, :indices)::Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}
+│     %400 =   builtin Core.getfield(%399, 1)::Base.Slice{Base.OneTo{Int64}}
+│     %401 =   builtin Base.getfield(%400, :indices)::Base.OneTo{Int64}
+│     %402 = intrinsic Base.sub_int(%395, 1)::Int64
+│     %403 = intrinsic Base.bitcast(UInt64, %402)::UInt64
+│     %404 =   builtin Base.getfield(%401, :stop)::Int64
+│     %405 = intrinsic Base.bitcast(UInt64, %404)::UInt64
+│     %406 = intrinsic Base.ult_int(%403, %405)::Bool
+└────        goto #125 if not %406
+124 ─        goto #126
+125 ─           invoke Base.throw_boundserror(%256::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}, %398::Tuple{Int64})
+└────        unreachable
+126 ─        nothing
+127 ┄ %412 =   builtin Base.getfield(%256, :parent)::Matrix{Float32}
+│     %413 =   builtin Base.getfield(%256, :offset1)::Int64
+│     %414 = intrinsic Base.add_int(%413, %395)::Int64
+│     %415 = $(Expr(:boundscheck, false))::Bool
+└────        goto #131 if not %415
+128 ─ %417 = intrinsic Base.sub_int(%414, 1)::Int64
+│     %418 = intrinsic Base.bitcast(Base.UInt, %417)::UInt64
+│     %419 =   builtin Base.getfield(%412, :size)::Tuple{Int64, Int64}
+│     %420 = $(Expr(:boundscheck, true))::Bool
+│     %421 =   builtin Base.getfield(%419, 1, %420)::Int64
+│     %422 = $(Expr(:boundscheck, true))::Bool
+│     %423 =   builtin Base.getfield(%419, 2, %422)::Int64
+│     %424 = intrinsic Base.mul_int(%421, %423)::Int64
+│     %425 = intrinsic Base.bitcast(Base.UInt, %424)::UInt64
+│     %426 = intrinsic Base.ult_int(%418, %425)::Bool
+└────        goto #130 if not %426
+129 ─        goto #131
+130 ─ %429 =   builtin Core.tuple(%414)::Tuple{Int64}
+│               invoke Base.throw_boundserror(%412::Matrix{Float32}, %429::Tuple{Int64})
+└────        unreachable
+131 ┄ %432 =   builtin Base.getfield(%412, :ref)::MemoryRef{Float32}
+│     %433 =   builtin Base.memoryrefnew(%432, %414, false)::MemoryRef{Float32}
+│     %434 =   builtin Base.memoryrefget(%433, :not_atomic, false)::Float32
+└────        goto #132
+132 ─        goto #133
+133 ─        goto #134
+134 ─        goto #135
+135 ─        goto #136
+136 ─        goto #137
+137 ─        goto #138
+138 ─        goto #139
+139 ─        goto #140
+140 ─        goto #141
+141 ─ %445 = $(Expr(:boundscheck, false))::Bool
+└────        goto #151 if not %445
+142 ─ %447 =   builtin Core.tuple(%295, %286)::Tuple{Int64, Int64}
+│     %448 =   builtin Base.getfield(%48, :size)::Tuple{Int64, Int64}
+│     %449 = $(Expr(:boundscheck, true))::Bool
+│     %450 =   builtin Base.getfield(%448, 1, %449)::Int64
+│     %451 = $(Expr(:boundscheck, true))::Bool
+│     %452 =   builtin Base.getfield(%448, 2, %451)::Int64
+└────        goto #143
+143 ─ %454 = intrinsic Base.sub_int(%295, 1)::Int64
+│     %455 = intrinsic Base.bitcast(UInt64, %454)::UInt64
+│     %456 = intrinsic Base.bitcast(UInt64, %450)::UInt64
+│     %457 = intrinsic Base.ult_int(%455, %456)::Bool
+└────        goto #144
+144 ─ %459 = intrinsic Base.sub_int(%286, 1)::Int64
+│     %460 = intrinsic Base.bitcast(UInt64, %459)::UInt64
+│     %461 = intrinsic Base.bitcast(UInt64, %452)::UInt64
+│     %462 = intrinsic Base.ult_int(%460, %461)::Bool
+│     %463 = intrinsic Base.and_int(%462, true)::Bool
+└────        goto #145
+145 ─ %465 = intrinsic Base.and_int(%457, %463)::Bool
+└────        goto #146
+146 ─        goto #147
+147 ─        goto #149 if not %465
+148 ─        goto #150
+149 ─           invoke Base.throw_boundserror(%48::Matrix{Float32}, %447::Tuple{Int64, Int64})
+└────        unreachable
+150 ─        nothing
+151 ┄ %473 =   builtin Base.getfield(%48, :ref)::MemoryRef{Float32}
+│     %474 =   builtin Base.getfield(%48, :size)::Tuple{Int64, Int64}
+│     %475 = $(Expr(:boundscheck, true))::Bool
+│     %476 =   builtin Base.getfield(%474, 1, %475)::Int64
+│     %477 = intrinsic Base.mul_int(1, %476)::Int64
+│     %478 = intrinsic Base.sub_int(%295, 1)::Int64
+│     %479 = intrinsic Base.mul_int(%478, 1)::Int64
+│     %480 = intrinsic Base.add_int(1, %479)::Int64
+│     %481 = intrinsic Base.sub_int(%286, 1)::Int64
+│     %482 = intrinsic Base.mul_int(%481, %477)::Int64
+│     %483 = intrinsic Base.add_int(%480, %482)::Int64
+│     %484 =   builtin Base.memoryrefnew(%473, %483, false)::MemoryRef{Float32}
+│              builtin Base.memoryrefset!(%484, %434, :not_atomic, false)
+└────        goto #152
+152 ─        goto #153
+153 ─        goto #154
+154 ─ %489 = intrinsic Base.add_int(%292, 1)::Int64
+│            $(Expr(:loopinfo, Symbol("julia.simdloop"), nothing))
+└────        goto #87
+155 ┄ %492 = intrinsic Base.add_int(%287, 1)::Int64
+│     %493 =   builtin (%288 === %70)::Bool
+│     %494 = intrinsic Base.not_int(%493)::Bool
+└────        goto #157 if not %494
+156 ─        goto #158
+157 ─        goto #158
+158 ┄ %498 = φ (#156 => %492)::Int64
+│     %499 = φ (#156 => %492)::Int64
+│     %500 = φ (#156 => %492)::Int64
+│     %501 = φ (#156 => false, #157 => true)::Bool
+│     %502 = intrinsic Base.not_int(%501)::Bool
+└────        goto #160 if not %502
+159 ─        goto #85
+160 ┄        goto #162
+161 ─ %506 =   builtin Base.getfield(%48, :size)::Tuple{Int64, Int64}
+│     %507 = $(Expr(:boundscheck, true))::Bool
+│     %508 =   builtin Base.getfield(%506, 1, %507)::Int64
+│     %509 = %new(Base.OneTo{Int64}, %508)::Base.OneTo{Int64}
+│     %510 = $(Expr(:boundscheck, true))::Bool
+│     %511 =   builtin Base.getfield(%506, 2, %510)::Int64
+│     %512 = %new(Base.OneTo{Int64}, %511)::Base.OneTo{Int64}
+│     %513 =   builtin Core.tuple(%509, %512)::Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}
+│               invoke Base.Broadcast.throwdm(%513::Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}, %72::Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}})
+└────        unreachable
+162 ┄        goto #163
+163 ─        goto #164
+164 ─        goto #165
+165 ─ %519 =   builtin Base.getfield(isinggraph, :addons)::Dict{Symbol, Any}
+│     %520 =    invoke IsingLearning.InteractiveIsing.get(%519::Dict{Symbol, Any}, :after_apply_input!::Symbol, IsingLearning.nothing::Nothing)::ANY
+│     %521 =   dynamic IsingLearning.isnothing(%520)::Bool
+└────        goto #167 if not %521
+166 ─        goto #168
+167 ─          dynamic (%520)(isinggraph)
+168 ┄        return isinggraph
+
+==== apply_targets ====
+MethodInstance for IsingLearning.apply_targets(::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, ::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true})
+  from apply_targets(isinggraph, y) @ IsingLearning C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\src\Dynamics.jl:111
+Arguments
+  #self#::Core.Const(IsingLearning.apply_targets)
+  isinggraph::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}
+  y::SubArray{Float32, 1, Matrix{Float32}, Tuple{Base.Slice{Base.OneTo{Int64}}, Int64}, true}
+Body::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}
+1 ─ %1 =    invoke IsingLearning._learning_clamping(isinggraph::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}})::UNION{CLAMPING, CONSTANTLINEARREADOUTNUDGE, LINEARREADOUTCLAMPING}
+│          dynamic IsingLearning._apply_targets!(%1, isinggraph, y)
+└──      return isinggraph
+
+==== run! manager ====
+MethodInstance for run!(::ProcessManager{@NamedTuple{makeworker::IsingLearning.var"#_mnist_training_manager##2#_mnist_training_manager##3"{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}}, prepare!::IsingLearning.var"#_mnist_training_manager##4#_mnist_training_manager##5"}, NTuple{16, WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}}, Nothing, Nothing, NoFlush}, ::Vector{NamedTuple})
+  from run!(manager::ProcessManager, jobs) @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\ProcessManager.jl:951
+Arguments
+  #self#::Core.Const(IsingLearning.InteractiveIsing.Processes.run!)
+  manager::ProcessManager{@NamedTuple{makeworker::IsingLearning.var"#_mnist_training_manager##2#_mnist_training_manager##3"{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}}, prepare!::IsingLearning.var"#_mnist_training_manager##4#_mnist_training_manager##5"}, NTuple{16, WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}}, Nothing, Nothing, NoFlush}
+  jobs::Vector{NamedTuple}
+Body::ProcessManager{@NamedTuple{makeworker::IsingLearning.var"#_mnist_training_manager##2#_mnist_training_manager##3"{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}}, prepare!::IsingLearning.var"#_mnist_training_manager##4#_mnist_training_manager##5"}, NTuple{16, WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}}, Nothing, Nothing, NoFlush}
+1 ── %1   = intrinsic Base.sub_int(1, 1)::Int64
+│    %2   = intrinsic Base.bitcast(UInt64, %1)::UInt64
+│    %3   =   builtin Base.getfield(jobs, :size)::Tuple{Int64}
+│    %4   = $(Expr(:boundscheck, true))::Bool
+│    %5   =   builtin Base.getfield(%3, 1, %4)::Int64
+│    %6   = intrinsic Base.bitcast(UInt64, %5)::UInt64
+│    %7   = intrinsic Base.ult_int(%2, %6)::Bool
+└───        goto #8 if not %7
+2 ── %9   = $(Expr(:boundscheck, false))::Bool
+└───        goto #6 if not %9
+3 ── %11  = intrinsic Base.sub_int(1, 1)::Int64
+│    %12  = intrinsic Base.bitcast(Base.UInt, %11)::UInt64
+│    %13  =   builtin Base.getfield(jobs, :size)::Tuple{Int64}
+│    %14  = $(Expr(:boundscheck, true))::Bool
+│    %15  =   builtin Base.getfield(%13, 1, %14)::Int64
+│    %16  = intrinsic Base.bitcast(Base.UInt, %15)::UInt64
+│    %17  = intrinsic Base.ult_int(%12, %16)::Bool
+└───        goto #5 if not %17
+4 ──        goto #6
+5 ── %20  =   builtin Core.tuple(1)::Tuple{Int64}
+│              invoke Base.throw_boundserror(jobs::Vector{NamedTuple}, %20::Tuple{Int64})
+└───        unreachable
+6 ┄─ %23  =   builtin Base.getfield(jobs, :ref)::MemoryRef{NamedTuple}
+│    %24  =   builtin Base.memoryrefnew(%23, 1, false)::MemoryRef{NamedTuple}
+│    %25  =   builtin Base.memoryrefget(%24, :not_atomic, false)::NAMEDTUPLE
+└───        goto #7
+7 ── %27  = intrinsic Base.add_int(1, 1)::Int64
+└───        goto #9
+8 ──        goto #9
+9 ┄─ %30  = φ (#7 => false, #8 => true)::Bool
+│    %31  = φ (#7 => %25)::NAMEDTUPLE
+│    %32  = φ (#7 => %27)::Int64
+└───        goto #10
+10 ─ %34  = intrinsic Base.not_int(%30)::Bool
+└───        goto #40 if not %34
+11 ┄ %36  = φ (#10 => %31, #39 => %111)::NAMEDTUPLE
+│    %37  = φ (#10 => %32, #39 => %112)::Int64
+│             dynamic IsingLearning.InteractiveIsing.Processes.dispatch!(manager, %36)
+│    %39  =   builtin Base.getfield(manager, :closed)::Bool
+└───        goto #13 if not %39
+12 ─ %41  =    invoke IsingLearning.InteractiveIsing.Processes.ArgumentError("Cannot poll a closed ProcessManager."::String)::ArgumentError
+│             builtin IsingLearning.InteractiveIsing.Processes.throw(%41)
+└───        unreachable
+13 ─ %44  =   builtin Base.getfield(manager, :slots)::NTuple{16, WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}}
+└───        goto #14
+14 ─ %46  = $(Expr(:boundscheck, true))::Bool
+│    %47  =   builtin Base.getfield(%44, 1, %46)::WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}
+└───        goto #15
+15 ─        goto #16
+16 ─        nothing
+17 ┄ %51  = φ (#16 => %47, #27 => %74)::WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}
+│    %52  = φ (#16 => 2, #27 => %75)::Int64
+│    %53  = φ (#16 => 0, #27 => %61)::Int64
+│    %54  =   builtin Base.getfield(%51, :active)::Bool
+└───        goto #20 if not %54
+18 ─ %56  =   builtin Base.getfield(%51, :worker)::Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}
+│    %57  =    invoke IsingLearning.InteractiveIsing.Processes.isdone(%56::Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)})::Bool
+└───        goto #20 if not %57
+19 ─           invoke IsingLearning.InteractiveIsing.Processes._finish_slot!(manager::ProcessManager{@NamedTuple{makeworker::IsingLearning.var"#_mnist_training_manager##2#_mnist_training_manager##3"{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}}, prepare!::IsingLearning.var"#_mnist_training_manager##4#_mnist_training_manager##5"}, NTuple{16, WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}}, Nothing, Nothing, NoFlush}, %51::WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any})
+└─── %60  = intrinsic Base.add_int(%53, 1)::Int64
+20 ┄ %61  = φ (#19 => %60, #18 => %53, #17 => %53)::Int64
+│    %62  = intrinsic Base.sle_int(1, %52)::Bool
+└───        goto #22 if not %62
+21 ─ %64  = intrinsic Base.sle_int(%52, 16)::Bool
+└───        goto #23
+22 ─        nothing
+23 ┄ %67  = φ (#21 => %64, #22 => false)::Bool
+└───        goto #25 if not %67
+24 ─ %69  = $(Expr(:boundscheck, true))::Bool
+│    %70  =   builtin Base.getfield(%44, %52, %69)::WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}
+│    %71  = intrinsic Base.add_int(%52, 1)::Int64
+└───        goto #26
+25 ─        goto #26
+26 ┄ %74  = φ (#24 => %70)::WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}
+│    %75  = φ (#24 => %71)::Int64
+│    %76  = φ (#24 => false, #25 => true)::Bool
+│    %77  = intrinsic Base.not_int(%76)::Bool
+└───        goto #28 if not %77
+27 ─        goto #17
+28 ─        goto #29
+29 ─        goto #30
+30 ─ %82  = intrinsic Base.sub_int(%37, 1)::Int64
+│    %83  = intrinsic Base.bitcast(UInt64, %82)::UInt64
+│    %84  =   builtin Base.getfield(jobs, :size)::Tuple{Int64}
+│    %85  = $(Expr(:boundscheck, true))::Bool
+│    %86  =   builtin Base.getfield(%84, 1, %85)::Int64
+│    %87  = intrinsic Base.bitcast(UInt64, %86)::UInt64
+│    %88  = intrinsic Base.ult_int(%83, %87)::Bool
+└───        goto #37 if not %88
+31 ─ %90  = $(Expr(:boundscheck, false))::Bool
+└───        goto #35 if not %90
+32 ─ %92  = intrinsic Base.sub_int(%37, 1)::Int64
+│    %93  = intrinsic Base.bitcast(Base.UInt, %92)::UInt64
+│    %94  =   builtin Base.getfield(jobs, :size)::Tuple{Int64}
+│    %95  = $(Expr(:boundscheck, true))::Bool
+│    %96  =   builtin Base.getfield(%94, 1, %95)::Int64
+│    %97  = intrinsic Base.bitcast(Base.UInt, %96)::UInt64
+│    %98  = intrinsic Base.ult_int(%93, %97)::Bool
+└───        goto #34 if not %98
+33 ─        goto #35
+34 ─ %101 =   builtin Core.tuple(%37)::Tuple{Int64}
+│              invoke Base.throw_boundserror(jobs::Vector{NamedTuple}, %101::Tuple{Int64})
+└───        unreachable
+35 ┄ %104 =   builtin Base.getfield(jobs, :ref)::MemoryRef{NamedTuple}
+│    %105 =   builtin Base.memoryrefnew(%104, %37, false)::MemoryRef{NamedTuple}
+│    %106 =   builtin Base.memoryrefget(%105, :not_atomic, false)::NAMEDTUPLE
+└───        goto #36
+36 ─ %108 = intrinsic Base.add_int(%37, 1)::Int64
+└───        goto #38
+37 ─        goto #38
+38 ┄ %111 = φ (#36 => %106)::NAMEDTUPLE
+│    %112 = φ (#36 => %108)::Int64
+│    %113 = φ (#36 => false, #37 => true)::Bool
+│    %114 = intrinsic Base.not_int(%113)::Bool
+└───        goto #40 if not %114
+39 ─        goto #11
+40 ┄           invoke IsingLearning.InteractiveIsing.Processes.drain!(manager::ProcessManager{@NamedTuple{makeworker::IsingLearning.var"#_mnist_training_manager##2#_mnist_training_manager##3"{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}}, prepare!::IsingLearning.var"#_mnist_training_manager##4#_mnist_training_manager##5"}, NTuple{16, WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}}, Nothing, Nothing, NoFlush})
+└───        return manager
+
+==== _collect_batch_gradient! ====
+MethodInstance for IsingLearning._collect_batch_gradient!(::IsingLearning.MNISTThreadedTrainer{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, @NamedTuple{w::Optimisers.Leaf{Adam{Float32, Tuple{Float64, Float64}, Float64}, Tuple{Vector{Float32}, Vector{Float32}, Tuple{Float32, Float32}}}, b::Optimisers.Leaf{Adam{Float32, Tuple{Float64, Float64}, Float64}, Tuple{Vector{Float32}, Vector{Float32}, Tuple{Float32, Float32}}}}, Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Process{Routine(initstate!@initstate!_1, FuncWrapper@FuncWrapper_1, LocalLangevin@dynamics, FuncWrapper@FuncWrapper_2)}, Adam{Float32, Tuple{Float64, Float64}, Float64}, ProcessManager{@NamedTuple{makeworker::IsingLearning.var"#_mnist_training_manager##2#_mnist_training_manager##3"{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}}, prepare!::IsingLearning.var"#_mnist_training_manager##4#_mnist_training_manager##5"}, NTuple{16, WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}}, Nothing, Nothing, NoFlush}}, ::@NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, ::Int64)
+  from _collect_batch_gradient!(trainer, dest, batchsize) @ IsingLearning C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\src\ThreadedMNISTLoop.jl:467
+Arguments
+  #self#::Core.Const(IsingLearning._collect_batch_gradient!)
+  trainer::IsingLearning.MNISTThreadedTrainer{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, @NamedTuple{w::Optimisers.Leaf{Adam{Float32, Tuple{Float64, Float64}, Float64}, Tuple{Vector{Float32}, Vector{Float32}, Tuple{Float32, Float32}}}, b::Optimisers.Leaf{Adam{Float32, Tuple{Float64, Float64}, Float64}, Tuple{Vector{Float32}, Vector{Float32}, Tuple{Float32, Float32}}}}, Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Process{Routine(initstate!@initstate!_1, FuncWrapper@FuncWrapper_1, LocalLangevin@dynamics, FuncWrapper@FuncWrapper_2)}, Adam{Float32, Tuple{Float64, Float64}, Float64}, ProcessManager{@NamedTuple{makeworker::IsingLearning.var"#_mnist_training_manager##2#_mnist_training_manager##3"{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}}, prepare!::IsingLearning.var"#_mnist_training_manager##4#_mnist_training_manager##5"}, NTuple{16, WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}}, Nothing, Nothing, NoFlush}}
+  dest::@NamedTuple{w::Vector{Float32}, b::Vector{Float32}}
+  batchsize::Int64
+Body::@NamedTuple{w::Vector{Float32}, b::Vector{Float32}}
+1 ─ %1  =   builtin Base.getfield(trainer, :layer)::LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}
+│   %2  =   builtin Base.getfield(%1, :β)::Float32
+│   %3  = intrinsic Base.sitofp(Float32, batchsize)::Float32
+│   %4  = intrinsic Base.mul_float(2.0f0, %2)::Float32
+│   %5  = intrinsic Base.mul_float(%4, %3)::Float32
+│   %6  = intrinsic Base.div_float(1.0f0, %5)::Float32
+│   %7  =   builtin Base.getfield(trainer, :workers)::Vector{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}}
+│   %8  = %new(Base.Generator{Vector{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}}, IsingLearning.var"#_collect_batch_gradient!##0#_collect_batch_gradient!##1"}, IsingLearning.var"#_collect_batch_gradient!##0#_collect_batch_gradient!##1"(), %7)::Base.Generator{Vector{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}}, IsingLearning.var"#_collect_batch_gradient!##0#_collect_batch_gradient!##1"}
+│   %9  =    invoke Base.collect(%8::Base.Generator{Vector{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}}, IsingLearning.var"#_collect_batch_gradient!##0#_collect_batch_gradient!##1"})::VECTOR
+│   %10 =   builtin Base.getfield(dest, :w)::Vector{Float32}
+│   %11 =   dynamic IsingLearning.map(IsingLearning.var"#_collect_batch_gradient!##2#_collect_batch_gradient!##3"(), %9)::VECTOR
+│           dynamic IsingLearning._threaded_sum_scale!(%10, %11, %6)
+│   %13 =   builtin Base.getfield(dest, :b)::Vector{Float32}
+│   %14 =   dynamic IsingLearning.map(IsingLearning.var"#_collect_batch_gradient!##4#_collect_batch_gradient!##5"(), %9)::VECTOR
+│           dynamic IsingLearning._sum_scale_small!(%13, %14, %6)
+└──       return dest
+
+==== _broadcast_params! ====
+MethodInstance for IsingLearning._broadcast_params!(::IsingLearning.MNISTThreadedTrainer{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, @NamedTuple{w::Optimisers.Leaf{Adam{Float32, Tuple{Float64, Float64}, Float64}, Tuple{Vector{Float32}, Vector{Float32}, Tuple{Float32, Float32}}}, b::Optimisers.Leaf{Adam{Float32, Tuple{Float64, Float64}, Float64}, Tuple{Vector{Float32}, Vector{Float32}, Tuple{Float32, Float32}}}}, Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Process{Routine(initstate!@initstate!_1, FuncWrapper@FuncWrapper_1, LocalLangevin@dynamics, FuncWrapper@FuncWrapper_2)}, Adam{Float32, Tuple{Float64, Float64}, Float64}, ProcessManager{@NamedTuple{makeworker::IsingLearning.var"#_mnist_training_manager##2#_mnist_training_manager##3"{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}}, prepare!::IsingLearning.var"#_mnist_training_manager##4#_mnist_training_manager##5"}, NTuple{16, WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}}, Nothing, Nothing, NoFlush}})
+  from _broadcast_params!(trainer) @ IsingLearning C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\src\ThreadedMNISTLoop.jl:479
+Arguments
+  #self#::Core.Const(IsingLearning._broadcast_params!)
+  trainer::IsingLearning.MNISTThreadedTrainer{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, @NamedTuple{w::Optimisers.Leaf{Adam{Float32, Tuple{Float64, Float64}, Float64}, Tuple{Vector{Float32}, Vector{Float32}, Tuple{Float32, Float32}}}, b::Optimisers.Leaf{Adam{Float32, Tuple{Float64, Float64}, Float64}, Tuple{Vector{Float32}, Vector{Float32}, Tuple{Float32, Float32}}}}, Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Process{Routine(initstate!@initstate!_1, FuncWrapper@FuncWrapper_1, LocalLangevin@dynamics, FuncWrapper@FuncWrapper_2)}, Adam{Float32, Tuple{Float64, Float64}, Float64}, ProcessManager{@NamedTuple{makeworker::IsingLearning.var"#_mnist_training_manager##2#_mnist_training_manager##3"{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}}, prepare!::IsingLearning.var"#_mnist_training_manager##4#_mnist_training_manager##5"}, NTuple{16, WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}}, Nothing, Nothing, NoFlush}}
+Body::IsingLearning.MNISTThreadedTrainer{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, @NamedTuple{w::Optimisers.Leaf{Adam{Float32, Tuple{Float64, Float64}, Float64}, Tuple{Vector{Float32}, Vector{Float32}, Tuple{Float32, Float32}}}, b::Optimisers.Leaf{Adam{Float32, Tuple{Float64, Float64}, Float64}, Tuple{Vector{Float32}, Vector{Float32}, Tuple{Float32, Float32}}}}, Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Process{Routine(initstate!@initstate!_1, FuncWrapper@FuncWrapper_1, LocalLangevin@dynamics, FuncWrapper@FuncWrapper_2)}, Adam{Float32, Tuple{Float64, Float64}, Float64}, ProcessManager{@NamedTuple{makeworker::IsingLearning.var"#_mnist_training_manager##2#_mnist_training_manager##3"{LayeredIsingGraphLayer{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, UnitRange{Int64}, UnitRange{Int64}, Float32, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}, LocalLangevin{:random, false, Float64}}, IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}}, prepare!::IsingLearning.var"#_mnist_training_manager##4#_mnist_training_manager##5"}, NTuple{16, WorkerSlot{Process{CompositeAlgorithm(Routine, Routine, Routine, FuncWrapper@FuncWrapper_9, FuncWrapper@FuncWrapper_10)}, Any, Any, Any, Any}}, Nothing, Nothing, NoFlush}}
+1 ── %1  =   builtin Base.getfield(trainer, :prototype_graph)::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}
+│    %2  =   builtin Base.getfield(trainer, :params)::@NamedTuple{w::Vector{Float32}, b::Vector{Float32}}
+│             invoke IsingLearning.sync_graph_params!(%1::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, %2::@NamedTuple{w::Vector{Float32}, b::Vector{Float32}})
+│    %4  =   builtin Base.getfield(trainer, :worker_graphs)::Vector{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}}
+│    %5  = intrinsic Base.sub_int(1, 1)::Int64
+│    %6  = intrinsic Base.bitcast(UInt64, %5)::UInt64
+│    %7  =   builtin Base.getfield(%4, :size)::Tuple{Int64}
+│    %8  = $(Expr(:boundscheck, true))::Bool
+│    %9  =   builtin Base.getfield(%7, 1, %8)::Int64
+│    %10 = intrinsic Base.bitcast(UInt64, %9)::UInt64
+│    %11 = intrinsic Base.ult_int(%6, %10)::Bool
+└───       goto #8 if not %11
+2 ── %13 = $(Expr(:boundscheck, false))::Bool
+└───       goto #6 if not %13
+3 ── %15 = intrinsic Base.sub_int(1, 1)::Int64
+│    %16 = intrinsic Base.bitcast(Base.UInt, %15)::UInt64
+│    %17 =   builtin Base.getfield(%4, :size)::Tuple{Int64}
+│    %18 = $(Expr(:boundscheck, true))::Bool
+│    %19 =   builtin Base.getfield(%17, 1, %18)::Int64
+│    %20 = intrinsic Base.bitcast(Base.UInt, %19)::UInt64
+│    %21 = intrinsic Base.ult_int(%16, %20)::Bool
+└───       goto #5 if not %21
+4 ──       goto #6
+5 ── %24 =   builtin Core.tuple(1)::Tuple{Int64}
+│             invoke Base.throw_boundserror(%4::Vector{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}}, %24::Tuple{Int64})
+└───       unreachable
+6 ┄─ %27 =   builtin Base.getfield(%4, :ref)::MemoryRef{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}}
+│    %28 =   builtin Base.memoryrefnew(%27, 1, false)::MemoryRef{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}}
+│    %29 =   builtin Base.memoryrefget(%28, :not_atomic, false)::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}
+└───       goto #7
+7 ── %31 = intrinsic Base.add_int(1, 1)::Int64
+└───       goto #9
+8 ──       goto #9
+9 ┄─ %34 = φ (#7 => false, #8 => true)::Bool
+│    %35 = φ (#7 => %29)::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}
+│    %36 = φ (#7 => %31)::Int64
+└───       goto #10
+10 ─ %38 = intrinsic Base.not_int(%34)::Bool
+└───       goto #21 if not %38
+11 ┄ %40 = φ (#10 => %35, #20 => %73)::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}
+│    %41 = φ (#10 => %36, #20 => %74)::Int64
+│    %42 =   builtin Base.getfield(trainer, :params)::@NamedTuple{w::Vector{Float32}, b::Vector{Float32}}
+│             invoke IsingLearning.sync_graph_params!(%40::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, %42::@NamedTuple{w::Vector{Float32}, b::Vector{Float32}})
+│    %44 = intrinsic Base.sub_int(%41, 1)::Int64
+│    %45 = intrinsic Base.bitcast(UInt64, %44)::UInt64
+│    %46 =   builtin Base.getfield(%4, :size)::Tuple{Int64}
+│    %47 = $(Expr(:boundscheck, true))::Bool
+│    %48 =   builtin Base.getfield(%46, 1, %47)::Int64
+│    %49 = intrinsic Base.bitcast(UInt64, %48)::UInt64
+│    %50 = intrinsic Base.ult_int(%45, %49)::Bool
+└───       goto #18 if not %50
+12 ─ %52 = $(Expr(:boundscheck, false))::Bool
+└───       goto #16 if not %52
+13 ─ %54 = intrinsic Base.sub_int(%41, 1)::Int64
+│    %55 = intrinsic Base.bitcast(Base.UInt, %54)::UInt64
+│    %56 =   builtin Base.getfield(%4, :size)::Tuple{Int64}
+│    %57 = $(Expr(:boundscheck, true))::Bool
+│    %58 =   builtin Base.getfield(%56, 1, %57)::Int64
+│    %59 = intrinsic Base.bitcast(Base.UInt, %58)::UInt64
+│    %60 = intrinsic Base.ult_int(%55, %59)::Bool
+└───       goto #15 if not %60
+14 ─       goto #16
+15 ─ %63 =   builtin Core.tuple(%41)::Tuple{Int64}
+│             invoke Base.throw_boundserror(%4::Vector{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}}, %63::Tuple{Int64})
+└───       unreachable
+16 ┄ %66 =   builtin Base.getfield(%4, :ref)::MemoryRef{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}}
+│    %67 =   builtin Base.memoryrefnew(%66, %41, false)::MemoryRef{IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}}
+│    %68 =   builtin Base.memoryrefget(%67, :not_atomic, false)::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}
+└───       goto #17
+17 ─ %70 = intrinsic Base.add_int(%41, 1)::Int64
+└───       goto #19
+18 ─       goto #19
+19 ┄ %73 = φ (#17 => %68)::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}
+│    %74 = φ (#17 => %70)::Int64
+│    %75 = φ (#17 => false, #18 => true)::Bool
+│    %76 = intrinsic Base.not_int(%75)::Bool
+└───       goto #21 if not %76
+20 ─       goto #11
+21 ┄ %79 =   builtin Base.getfield(trainer, :validation_graph)::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}
+│    %80 =   builtin Base.getfield(trainer, :params)::@NamedTuple{w::Vector{Float32}, b::Vector{Float32}}
+│             invoke IsingLearning.sync_graph_params!(%79::IsingGraph{Float32, IsingLearning.InteractiveIsing.UndirectedAdjacency{Float32, Int32, SparseMatrixCSC{Float32, Int32}, OffsetArray{Int64, 1, Vector{Int64}}, Nothing}, Tuple{IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (28, 28), 1:784, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (10, 12), 785:904, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}, IsingLearning.InteractiveIsing.IsingLayerData{Continuous(), (-1.0f0, 1.0f0), 2, (2, 5), 905:914, IsingLearning.InteractiveIsing.SquareTopology{NonPeriodic, 2, Float64}}}, Vector{Float32}, 3, ToggledIndexSet{Tuple{UnitRange{Int64}, UnitRange{Int64}, UnitRange{Int64}}, Int64}}, %80::@NamedTuple{w::Vector{Float32}, b::Vector{Float32}})
+└───       return trainer
+
+==== striped_sync_params! ====
+MethodInstance for striped_sync_params!(::Vector{Any}, ::@NamedTuple{w::Vector{Float32}, b::Vector{Float32}})
+  from striped_sync_params!(graphs, params) @ Main C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\mnist_manager\Profiling.jl:132
+Arguments
+  #self#::Core.Const(Main.striped_sync_params!)
+  graphs::Vector{Any}
+  params::@NamedTuple{w::Vector{Float32}, b::Vector{Float32}}
+Body::Vector{Any}
+1 ── %1  =   builtin Base.getfield(graphs, :size)::Tuple{Int64}
+│    %2  = $(Expr(:boundscheck, true))::Bool
+│    %3  =   builtin Base.getfield(%1, 1, %2)::Int64
+│    %4  =   builtin (%3 === 0)::Bool
+└───       goto #3 if not %4
+2 ──       return graphs
+3 ── %7  = intrinsic Base.Threads.cglobal(:jl_n_threads_per_pool, Ptr{Int32})::Ptr{Ptr{Int32}}
+│    %8  = intrinsic Base.pointerref(%7, 1, 1)::Ptr{Int32}
+│    %9  = intrinsic Base.pointerref(%8, 2, 1)::Int32
+│    %10 = intrinsic Core.sext_int(Core.Int64, %9)::Int64
+│    %11 = intrinsic Base.sle_int(1, %10)::Bool
+└───       goto #5 if not %11
+4 ──       goto #6
+5 ──       goto #6
+6 ┄─ %15 = φ (#4 => %10, #5 => 0)::Int64
+│    %16 = %new(UnitRange{Int64}, 1, %15)::UnitRange{Int64}
+└───       goto #7
+7 ──       goto #8
+8 ── %19 = %new(var"#striped_sync_params!##2#striped_sync_params!##3"{Vector{Any}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, Int64, UnitRange{Int64}}, graphs, params, %10, %16)::var"#striped_sync_params!##2#striped_sync_params!##3"{Vector{Any}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, Int64, UnitRange{Int64}}
+│    %20 = %new(var"#striped_sync_params!##0#striped_sync_params!##1"{var"#striped_sync_params!##2#striped_sync_params!##3"{Vector{Any}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, Int64, UnitRange{Int64}}}, %19)::var"#striped_sync_params!##0#striped_sync_params!##1"{var"#striped_sync_params!##2#striped_sync_params!##3"{Vector{Any}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, Int64, UnitRange{Int64}}}
+│             invoke Base.Threads.threading_run(%20::var"#striped_sync_params!##0#striped_sync_params!##1"{var"#striped_sync_params!##2#striped_sync_params!##3"{Vector{Any}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, Int64, UnitRange{Int64}}}, false::Bool)
+│    %22 = intrinsic Base.sle_int(1, %10)::Bool
+└───       goto #10 if not %22
+9 ──       goto #11
+10 ─       goto #11
+11 ┄ %26 = φ (#9 => %10, #10 => 0)::Int64
+│    %27 = %new(UnitRange{Int64}, 1, %26)::UnitRange{Int64}
+└───       goto #12
+12 ─       goto #13
+13 ─ %30 = %new(var"#striped_sync_params!##6#striped_sync_params!##7"{Vector{Any}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, Int64, UnitRange{Int64}}, graphs, params, %10, %27)::var"#striped_sync_params!##6#striped_sync_params!##7"{Vector{Any}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, Int64, UnitRange{Int64}}
+│    %31 = %new(var"#striped_sync_params!##4#striped_sync_params!##5"{var"#striped_sync_params!##6#striped_sync_params!##7"{Vector{Any}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, Int64, UnitRange{Int64}}}, %30)::var"#striped_sync_params!##4#striped_sync_params!##5"{var"#striped_sync_params!##6#striped_sync_params!##7"{Vector{Any}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, Int64, UnitRange{Int64}}}
+│             invoke Base.Threads.threading_run(%31::var"#striped_sync_params!##4#striped_sync_params!##5"{var"#striped_sync_params!##6#striped_sync_params!##7"{Vector{Any}, @NamedTuple{w::Vector{Float32}, b::Vector{Float32}}, Int64, UnitRange{Int64}}}, false::Bool)
+└───       return graphs
+

@@ -275,7 +275,7 @@ end
 @inline function set_adj!(layer1::IsingLayer, layer2::IsingLayer, wg::AbstractWeightGenerator, rcw)
     connections(layer1)[internal_idx(layer1) => internal_idx(layer2)] = wg
     set_adj!(graph(layer1), rcw)
-    notify(layer1)
+    applicable(notify, layer1) && notify(layer1)
     return adj(graph(layer1))
 end
 export state, adj

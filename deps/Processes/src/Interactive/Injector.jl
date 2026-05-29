@@ -58,6 +58,8 @@ function Processes.init(inj::ContextInjector, context::ProcessContext)
     return replace(context, NamedTuple{(context_injector_key,)}((_context_injector_state(inj),)))
 end
 
+@inline Processes.cleanup(::ContextInjector, context::ProcessContext) = context
+
 @inline Processes.step!(inj::ContextInjector, context::C) where {C<:ProcessContext} =
     Processes.step!(inj, context, Stable())
 
@@ -106,7 +108,7 @@ function _resolve_scoped_target(context::ProcessContext, target)
     if target isa Symbol
         return reg[target]
     elseif target isa Type
-        matches = tuple((algo for algo in all_algos(reg) if getalgo(algo) isa target)...)
+        matches = findall(target, reg)
         if isempty(matches)
             error("No algorithm matching $(target) was found in the registry.")
         elseif length(matches) > 1

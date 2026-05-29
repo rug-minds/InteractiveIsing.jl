@@ -1,0 +1,24 @@
+hidden=120
+output_replicas=4
+train_per_class=100
+validation_per_class=50
+free_sweeps=50.0
+nudged_sweeps=25.0
+stepsize=0.05
+beta=0.1
+ridge=10.0
+target_on=0.5
+target_off=0.0
+before=(accuracy = 0.116, mse = 25.666466f0, pred_counts = [27, 59, 90, 30, 14, 54, 129, 59, 29, 9], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50])
+after_ridge=(accuracy = 0.356, mse = 14.220526f0, pred_counts = [63, 47, 55, 44, 57, 43, 59, 52, 44, 36], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50])
+ep_epochs=10
+ep_epoch_1=(accuracy = 0.346, mse = 14.171151f0, pred_counts = [55, 57, 53, 54, 48, 52, 56, 47, 48, 30], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]) seconds=2.1187984
+ep_epoch_2=(accuracy = 0.36, mse = 14.253537f0, pred_counts = [54, 55, 49, 55, 42, 60, 57, 42, 48, 38], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]) seconds=0.7812098
+ep_epoch_3=(accuracy = 0.334, mse = 14.111916f0, pred_counts = [49, 50, 52, 61, 50, 57, 52, 49, 40, 40], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]) seconds=0.7869349
+ep_epoch_4=(accuracy = 0.374, mse = 14.081913f0, pred_counts = [53, 52, 52, 42, 59, 46, 45, 56, 56, 39], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]) seconds=0.7272993
+ep_epoch_5=(accuracy = 0.34, mse = 14.094776f0, pred_counts = [47, 46, 54, 52, 45, 62, 53, 55, 47, 39], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]) seconds=0.7231411
+ep_epoch_6=(accuracy = 0.372, mse = 13.938408f0, pred_counts = [40, 49, 47, 59, 44, 54, 50, 67, 50, 40], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]) seconds=0.7164553
+ep_epoch_7=(accuracy = 0.342, mse = 14.115861f0, pred_counts = [55, 41, 59, 50, 43, 56, 44, 57, 49, 46], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]) seconds=0.7004487
+ep_epoch_8=(accuracy = 0.356, mse = 14.089411f0, pred_counts = [55, 52, 55, 60, 55, 55, 34, 43, 46, 45], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]) seconds=0.7032476
+ep_epoch_9=(accuracy = 0.326, mse = 14.067734f0, pred_counts = [55, 52, 34, 58, 63, 47, 40, 58, 47, 46], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]) seconds=0.7087837
+ep_epoch_10=(accuracy = 0.34, mse = 14.124371f0, pred_counts = [45, 47, 39, 47, 58, 58, 55, 49, 50, 52], target_counts = [50, 50, 50, 50, 50, 50, 50, 50, 50, 50]) seconds=0.7157667

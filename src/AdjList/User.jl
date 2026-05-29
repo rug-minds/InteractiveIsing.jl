@@ -16,6 +16,7 @@ Base.@propagate_inbounds function gen_connections(layerdata::AbstractLayerData, 
 
     return row_idxs, col_idxs, weights
 end
+
 # """
 # Generate the connections in a layer based on a weightgenerator and set the connections in the layer
 # Then put the connections directly in the graph

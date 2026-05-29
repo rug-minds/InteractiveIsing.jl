@@ -1,0 +1,17 @@
+timestamp,epoch,seconds,train_accuracy,train_loss,skipped,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
+2026-05-20T03:28:21,0,0.0,missing,missing,missing,0.09,42.986,88-229-25-229-61-46-179-31-104-8,0.09,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:28:59,1,28.7900699,0.5005,7.982,723,0.735,4.154,113-96-109-88-40-122-115-47-165-105,0.735,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:29:29,2,21.9198178,0.7325,4.259,1366,0.765,3.666,99-92-85-62-109-238-110-85-52-68,0.765,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:29:58,3,20.5553132,0.792,3.372,1524,0.708,4.452,124-99-267-126-79-63-45-64-42-91,0.765,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:30:26,4,19.7445795,0.827,2.733,1615,0.768,3.484,126-94-126-203-95-73-94-94-61-34,0.768,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:30:53,5,19.222203,0.8545,2.327,1679,0.781,3.614,112-104-92-132-56-101-104-46-63-190,0.781,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:31:20,6,18.9009384,0.8695,2.111,1714,0.812,2.972,117-100-81-112-84-40-114-114-85-153,0.812,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:31:47,7,18.8410912,0.873,2.003,1721,0.811,3.174,96-93-120-134-88-152-104-111-48-54,0.812,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:32:14,8,18.3571038,0.8985,1.601,1781,0.81,3.0,89-101-79-76-60-174-97-89-104-131,0.812,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:32:40,9,18.1757694,0.9085,1.441,1799,0.846,2.466,108-113-113-100-76-123-84-91-61-131,0.846,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:33:06,10,18.0332345,0.916,1.336,1817,0.809,2.948,121-101-96-53-151-152-85-110-52-79,0.846,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:33:33,11,18.2083547,0.9065,1.492,1793,0.866,2.102,122-101-89-105-113-83-76-119-111-81,0.866,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:33:59,12,17.8030158,0.9265,1.156,1842,0.787,3.492,95-96-133-91-62-91-80-193-50-109,0.866,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:34:25,13,17.751952,0.925,1.174,1845,0.861,2.154,105-99-98-70-98-137-107-76-107-103,0.866,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:34:51,14,17.8179601,0.9255,1.165,1841,0.783,3.454,103-123-72-49-132-115-117-164-86-39,0.866,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,
+2026-05-20T03:35:16,15,17.6504729,0.933,1.08,1859,0.886,1.766,118-103-87-96-108-103-91-97-117-80,0.886,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\best_model.bin,ext/IsingLearning/experiments/mnist_manager/runs/20260520_paper_like_200pc_r10_s100_e15\final_model.bin

@@ -1,0 +1,2 @@
+timestamp,config_id,hidden,output_replicas,epoch,seconds,relaxation,sweeps,minit,digits,target_scale,target_off,target_on,input_low,input_high,skip_scale,pixel_copy_scale,beta,lr,train_accuracy,train_mse,validation_accuracy,validation_mse
+2026-05-20T01:35:08,1,120,4,0,0.0,8000,50.0,1,0-1-2-3-4-5-6-7-8-9,0.2,-0.2,0.2,-1.0,1.0,0.0,0.0,0.1,0.001,0.2421875,26.49443,0.109375,26.535244

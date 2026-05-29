@@ -7,7 +7,7 @@ end
 
 function idle_process(g, algo; repeat = Inf)
     local_algo = deepcopy(algo)
-    inputs = InteractiveIsing._merge_graph_inputs(local_algo, g)
+    inputs = InteractiveIsing._mc_model_inits(local_algo, g)
     p = Process(local_algo, inputs...; repeat)
     push!(processes(g), p)
     return p
@@ -30,7 +30,7 @@ injector_graph = deepcopy(template_graph)
 
 old_process = idle_process(old_graph, Metropolis())
 
-injector_algorithm = SimpleAlgo(
+injector_algorithm = CompositeAlgorithm(
     Injector(),
     :metro => metropolis_nointeract(T = initial_T),
 )

@@ -1,0 +1,2 @@
+timestamp,hidden,output_replicas,sweeps,relaxation,trial,warmup,direct_seconds,manager_seconds,overhead_seconds,overhead_ratio
+2026-05-20T13:31:03,120,4,0.1,16,1,false,2.3494919,0.0639263,-2.2855656,0.027208563689876952

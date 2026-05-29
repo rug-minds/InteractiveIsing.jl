@@ -1,5 +1,6 @@
 using Test
 using InteractiveIsing
+using SparseArrays
 
 const BETWEEN_LAYER_WG = @WG (;dr) -> 1.0f0 NN = 1
 
@@ -18,6 +19,29 @@ const BETWEEN_LAYER_WG = @WG (;dr) -> 1.0f0 NN = 1
     @test Matrix(adj(g)[l1_idxs, l2_idxs]) == ones(Float32, 2, 2)
 end
 
+@testset "Constructor Adjacency Storage Type" begin
+    l1 = Layer(2, Continuous(); periodic = false)
+    l2 = Layer(2, Continuous(); periodic = false)
+
+    sparse_graph = IsingGraph(l1, BETWEEN_LAYER_WG, l2; precision = Float32, adj = SparseMatrixCSC)
+    @test adj(sparse_graph) isa SparseMatrixCSC{Float32,Int32}
+    @test Matrix(adj(sparse_graph)) == [
+        0f0 0f0 1f0 1f0
+        0f0 0f0 1f0 1f0
+        1f0 1f0 0f0 0f0
+        1f0 1f0 0f0 0f0
+    ]
+
+    concrete_sparse_graph = IsingGraph(l1, BETWEEN_LAYER_WG, l2; precision = Float32, adj = SparseMatrixCSC{Float64,Int64})
+    @test adj(concrete_sparse_graph) isa SparseMatrixCSC{Float64,Int64}
+
+    regenerated = IsingGraph(l1, l2; precision = Float32, adj = SparseMatrixCSC)
+    @test adj(regenerated) isa SparseMatrixCSC{Float32,Int32}
+    genAdj!(regenerated[1], regenerated[2], BETWEEN_LAYER_WG)
+    @test adj(regenerated) isa SparseMatrixCSC{Float32,Int32}
+    @test Matrix(adj(regenerated)) == Matrix(adj(sparse_graph))
+end
+
 @testset "Initial State" begin
     bounded = IsingGraph(3, 3, Continuous(), StateSet(-1.0f0, 1.0f0); precision = Float32)
     @test all(x -> -1.0f0 <= x <= 1.0f0, InteractiveIsing.graphstate(bounded))
@@ -28,6 +52,31 @@ end
     explicit_array = fill(0.5f0, 9)
     explicit_graph = IsingGraph(3, 3, Continuous(), StateSet(-Inf32, Inf32); precision = Float32, initial_state = explicit_array)
     @test InteractiveIsing.graphstate(explicit_graph) == explicit_array
+
+    backing_a = fill(0.1f0, 4)
+    backing_b = fill(0.2f0, 5)
+    custom_state = RefConcatVector(backing_a, backing_b)
+    custom_graph = IsingGraph(3, 3, Continuous(), StateSet(-Inf32, Inf32); precision = Float32, state = custom_state)
+    @test InteractiveIsing.graphstate(custom_graph) === custom_state
+    @test refslices(custom_state) === (backing_a, backing_b)
+    @test sliceranges(custom_state) == (1:4, 5:9)
+    @test collect(InteractiveIsing.graphstate(custom_graph)) == [fill(0.1f0, 4); fill(0.2f0, 5)]
+
+    filled_state = RefConcatVector(fill(0.0f0, 4), fill(0.0f0, 5))
+    IsingGraph(3, 3, Continuous(), StateSet(-Inf32, Inf32); precision = Float32, state = filled_state, initial_state = 0.75f0)
+    @test all(==(0.75f0), filled_state)
+
+    filled_state .= 2 .* explicit_array .+ 1
+    @test collect(filled_state) == collect(2 .* explicit_array .+ 1)
+
+    turbo_fill!(filled_state, 0.25f0)
+    @test all(==(0.25f0), filled_state)
+
+    turbo_copyto!(filled_state, explicit_array)
+    @test collect(filled_state) == explicit_array
+
+    turbo_map!(x -> x + 1.0f0, filled_state, explicit_array)
+    @test collect(filled_state) == explicit_array .+ 1.0f0
 
     fallback = IsingGraph(3, 3, Continuous(), StateSet(-Inf32, Inf32), Ising(c = ConstVal(0f0), b = 0); precision = Float32)
     @test all(iszero, InteractiveIsing.graphstate(fallback))
@@ -52,6 +101,28 @@ end
     @test all(x -> isapprox(abs(x), 1.0f0; atol = 1f-5), InteractiveIsing.graphstate(quartic_double_well))
 end
 
+@testset "Topology sizing" begin
+    square_template_graph = IsingGraph(
+        3,
+        3,
+        Continuous(),
+        SquareTopology(; lattice_constants = (2.0f0, 3.0f0), periodic = false);
+        periodic = false,
+    )
+    @test size(topology(square_template_graph[1])) == (3, 3)
+    @test InteractiveIsing.lattice_constants(topology(square_template_graph[1])) == [2.0f0, 3.0f0]
+
+    lattice_template_graph = IsingGraph(
+        3,
+        3,
+        Continuous(),
+        LatticeTopology((2.0f0, 0.0f0), (0.0f0, 3.0f0); periodic = false);
+        periodic = false,
+    )
+    @test size(topology(lattice_template_graph[1])) == (3, 3)
+    @test InteractiveIsing.lattice_constants(topology(lattice_template_graph[1])) == (2.0f0, 3.0f0)
+end
+
 @testset "Constructor errors" begin
     err = try
         IsingGraph(2, 2, Continuous(), Quadratic(), Quartic(); precision = Float32)
@@ -63,4 +134,14 @@ end
     @test err isa ArgumentError
     @test occursin("single Hamiltonian argument", sprint(showerror, err))
     @test occursin("accidental comma", sprint(showerror, err))
+
+    explicit_topology_error = try
+        IsingGraph(2, 2, Continuous(), LatticeTopology((1.0f0, 0.0f0), (0.0f0, 1.0f0)), LatticeConstants(1.0f0, 1.0f0))
+        nothing
+    catch e
+        e
+    end
+
+    @test explicit_topology_error isa ArgumentError
+    @test occursin("LatticeConstants is only a convenience argument", sprint(showerror, explicit_topology_error))
 end

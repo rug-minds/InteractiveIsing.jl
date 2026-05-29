@@ -1,17 +1,22 @@
 """
     AllLayersViewPanel(g; colormap = :thermal, labels = true,
-                       initial_view = :all, axis_kwargs = (;))
+                       initial_view = :all, axis_kwargs = (;),
+                       display_sizes = nothing)
 
-Display all positioned 2D layers of `g` in one shared Makie axis.
+Display all positioned 1D and 2D layers of `g` in one shared Makie axis.
 
 Layer coordinates are read from `coords(layer)`, interpreted as `(y, x, z)`,
 and only the xy position is used. The xy coordinate is treated as the global
-lower-left origin of that layer's image rectangle. Layers must be 2D and must
-have unique xy coordinates; duplicate coordinates or overlapping rectangles
-throw an `ArgumentError`.
+lower-left origin of that layer's image rectangle. One-dimensional layers are
+drawn as compact 2D grids. Layers must have unique xy coordinates; duplicate
+coordinates throw an `ArgumentError`.
 
 The resulting axis keeps Makie's normal drag-pan and scroll-zoom interactions,
 so large layer arrangements can be inspected as one continuous view.
+
+`display_sizes` may be a tuple/vector/dict of `(height, width)` rectangles by
+layer index. It changes only the rendered rectangle size, not the graph layer
+or state size.
 """
 struct AllLayersViewPanel <: AbstractPanel
     graph::Any
@@ -19,13 +24,14 @@ struct AllLayersViewPanel <: AbstractPanel
     labels::Bool
     initial_view::Symbol
     axis_kwargs::Any
+    display_sizes::Any
 end
 
 axis_trait(::Type{AllLayersViewPanel}) = HasAxis()
 image_trait(::Type{AllLayersViewPanel}) = HasImage()
 
-function AllLayersViewPanel(g; colormap = :thermal, labels = true, initial_view = :all, axis_kwargs = (;))
-    return AllLayersViewPanel(g, colormap, Bool(labels), Symbol(initial_view), axis_kwargs)
+function AllLayersViewPanel(g; colormap = :thermal, labels = true, initial_view = :all, axis_kwargs = (;), display_sizes = nothing)
+    return AllLayersViewPanel(g, colormap, Bool(labels), Symbol(initial_view), axis_kwargs, display_sizes)
 end
 
 function mount!(panel::AllLayersViewPanel, host::WindowHost, cell; kwargs...)
@@ -49,15 +55,15 @@ end
 
 function _draw_all_layers_view!(handle::PanelHandle, cell)
     panel = handle.panel::AllLayersViewPanel
-    placements = _all_layer_placements(panel.graph)
+    placements = _all_layer_placements(panel.graph, panel.display_sizes)
     ax = handle[:axis] = Axis(cell; _all_layers_axis_kwargs(panel)...)
-    ax.yreversed = @load_preference("makie_y_flip", default = false)
+    ax.yreversed = @load_preference("makie_y_flip", default = true)
     handle[:placements] = placements
     handle[:layer_observables] = Observable[]
     handle[:plots] = Any[]
 
     for placement in placements
-        obs = Observable(state(placement.layer))
+        obs = hot_observable!(handle, _all_layer_image_state(placement.layer))
         push!(handle[:layer_observables], obs)
         plot = image!(
             ax,
@@ -79,7 +85,7 @@ function _draw_all_layers_view!(handle::PanelHandle, cell)
                 text = "Layer $(placement.index)",
                 align = (:left, :top),
                 fontsize = 12,
-                color = :black,
+                color = :white,
             )
         end
     end
@@ -108,11 +114,74 @@ struct AllLayerPlacement
     y1::Float32
 end
 
-function _all_layer_placements(g)
+const _ALL_LAYER_AUTO_GAP = 2f0
+
+struct _LayerVectorGrid{V<:AbstractVector} <: AbstractMatrix{eltype(V)}
+    data::V
+    size::Tuple{Int, Int}
+end
+
+Base.size(view::_LayerVectorGrid) = view.size
+function Base.getindex(view::_LayerVectorGrid, i::Int, j::Int)
+    return @inbounds view.data[i + (j - 1) * view.size[1]]
+end
+Base.IndexStyle(::Type{<:_LayerVectorGrid}) = IndexCartesian()
+
+"""
+    hot_observable_zero(::Type{<:_LayerVectorGrid})
+
+Build the close-time inert replacement for a one-dimensional layer grid view
+while preserving the concrete observable value type.
+"""
+function hot_observable_zero(::Type{T}) where {V,T<:_LayerVectorGrid{V}}
+    data = hot_observable_zero(V)
+    replacement = _LayerVectorGrid(data, (0, 0))
+    replacement isa T && return replacement
+    throw(ArgumentError("Cannot build zero-sized replacement for hot observable value type $T."))
+end
+
+_all_layer_image_state(layer::AbstractIsingLayer{<:Any,1}) =
+    _LayerVectorGrid(vec(state(layer)), _all_layer_vector_grid_size(layer))
+
+_all_layer_image_state(layer::AbstractIsingLayer{<:Any,2}) = state(layer)
+
+function _all_layer_vector_grid_size(layer::AbstractIsingLayer{<:Any,1})
+    n = prod(size(layer))
+    height = floor(Int, sqrt(n))
+    while height > 1 && n % height != 0
+        height -= 1
+    end
+    width = cld(n, height)
+    return (height, width)
+end
+
+function _all_layer_rect_size(layer::AbstractIsingLayer{<:Any,1})
+    height, width = _all_layer_vector_grid_size(layer)
+    return Float32(height), Float32(width)
+end
+
+function _all_layer_rect_size(layer::AbstractIsingLayer{<:Any,2})
+    return Float32(size(layer, 1)), Float32(size(layer, 2))
+end
+
+function _all_layer_display_size(display_sizes, idx, layer)
+    isnothing(display_sizes) && return _all_layer_rect_size(layer)
+    value =
+        display_sizes isa AbstractDict ? get(display_sizes, idx, nothing) :
+        idx <= length(display_sizes) ? display_sizes[idx] :
+        nothing
+    isnothing(value) && return _all_layer_rect_size(layer)
+    length(value) == 2 || throw(ArgumentError("display size for layer $idx must be (height, width), got $value"))
+    return Float32(value[1]), Float32(value[2])
+end
+
+_supported_all_layer(layer) = layer isa AbstractIsingLayer{<:Any,1} || layer isa AbstractIsingLayer{<:Any,2}
+
+function _all_layer_placements(g, display_sizes = nothing)
     graph_layers = collect(layers(g))
     isempty(graph_layers) && throw(ArgumentError("AllLayersViewPanel needs at least one layer."))
-    all(layer -> layer isa AbstractIsingLayer{<:Any,2}, graph_layers) ||
-        throw(ArgumentError("AllLayersViewPanel currently supports only graphs made of 2D layers."))
+    all(_supported_all_layer, graph_layers) ||
+        throw(ArgumentError("AllLayersViewPanel currently supports only graphs made of 1D or 2D layers."))
 
     placements = AllLayerPlacement[]
     seen_xy = Dict{Tuple{Int32,Int32}, Int}()
@@ -127,15 +196,50 @@ function _all_layer_placements(g)
         end
         seen_xy[xy] = idx
 
-        height = Float32(size(layer, 1))
-        width = Float32(size(layer, 2))
+        height, width = _all_layer_display_size(display_sizes, idx, layer)
         x0 = Float32(c[2])
         y0 = Float32(c[1])
         push!(placements, AllLayerPlacement(idx, layer, xy, x0, x0 + width, y0, y0 + height))
     end
 
-    _assert_no_layer_rect_overlap!(placements)
+    if _any_layer_rect_overlap(placements)
+        all(layer -> layer isa AbstractIsingLayer{<:Any,1}, graph_layers) ||
+            _assert_no_layer_rect_overlap!(placements)
+        placements = _auto_pack_1d_layer_placements(placements)
+    end
     return placements
+end
+
+function _any_layer_rect_overlap(placements)
+    for i in eachindex(placements)
+        for j in (i + 1):lastindex(placements)
+            _rects_overlap(placements[i], placements[j]) && return true
+        end
+    end
+    return false
+end
+
+function _auto_pack_1d_layer_placements(placements)
+    packed = AllLayerPlacement[]
+    x0 = 0f0
+    for placement in placements
+        height = placement.y1 - placement.y0
+        width = placement.x1 - placement.x0
+        push!(
+            packed,
+            AllLayerPlacement(
+                placement.index,
+                placement.layer,
+                (Int32(round(x0)), 0),
+                x0,
+                x0 + width,
+                0f0,
+                height,
+            ),
+        )
+        x0 += width + _ALL_LAYER_AUTO_GAP
+    end
+    return packed
 end
 
 function _assert_no_layer_rect_overlap!(placements)

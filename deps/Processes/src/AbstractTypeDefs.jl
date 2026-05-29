@@ -2,18 +2,120 @@ abstract type SteppableAlgorithm end
 
 abstract type ProcessAlgorithm <: SteppableAlgorithm end
 abstract type AbstractOption end
+abstract type AbstractWiring end
 abstract type ProcessState <: AbstractOption end
 abstract type ParserOption end
+
+export ThreadsType, Static, Dynamic, Greedy
+
+"""
+Thread scheduling trait used by manager-level threaded runners.
+"""
+abstract type ThreadsType end
+
+"""
+    Static()
+
+Use static thread scheduling where a threaded loop supports it.
+"""
+struct Static <: ThreadsType end
+
+"""
+    Dynamic()
+
+Use dynamic thread scheduling where a threaded loop supports it.
+"""
+struct Dynamic <: ThreadsType end
+
+"""
+    Greedy()
+
+Use greedy thread scheduling where a threaded loop supports it.
+"""
+struct Greedy <: ThreadsType end
 
 struct IfWrapped{A,C} <: ParserOption
     algo::A
     cond::C
 end
 
-# abstract type ProcessLoopAlgorithm <: ProcessAlgorithm end # Algorithms that can be inlined in processloop
-# abstract type LoopAlgorithm <: ProcessLoopAlgorithm end # Algorithms that have multiple functions and intervals
-abstract type LoopAlgorithm <: SteppableAlgorithm end # Algorithms that have multiple functions and intervals
-Base.iterate(la::LoopAlgorithm) = iterate(getalgos(la))
+"""
+Supertype for loop-like algorithms and loop runtime wrappers.
+
+`CompositeAlgorithm` and `Routine` are execution-plan nodes: they describe the
+child algorithms, schedule metadata, and local plan wiring. `LoopAlgorithm` is
+the concrete runtime wrapper that carries registry, context, input, override,
+and root-state lifecycle data around one of those plans.
+"""
+abstract type AbstractLoopAlgorithm <: SteppableAlgorithm end
+
+"""
+Runtime wrapper for a loop execution plan.
+
+The `plan` field is the stable "what runs" part, usually a `CompositeAlgorithm`
+or `Routine`. The remaining fields describe the runtime environment in which
+that plan is resolved or initialized: root states, resolved options, registry,
+stored context, initializers, and overrides. Reinitialization should replace
+this wrapper/lifecycle data without changing the type of the wrapped plan.
+"""
+struct LoopAlgorithm{Plan, S, O, R, C, Inits, Overrides, id} <: AbstractLoopAlgorithm
+    plan::Plan
+    states::S
+    options::O
+    reg::R
+    context::C
+    inits::Inits
+    overrides::Overrides
+end
+
+"""
+Attach route/share wiring to the local plan node that emitted it.
+
+Plain `Route` and `Share` values are top-level plan routing metadata. The DSL
+uses this wrapper when a route/share belongs to a specific statement-local child
+plan, including cases where the endpoint is nested or state-owned. Constructor
+parsing keeps the option with that local plan node while preserving the original
+option for normal route resolution.
+"""
+struct LocalPlanOption{Owner, Option} <: AbstractWiring
+    owner::Owner
+    option::Option
+end
+
+"""
+Route and share sets passed through plan construction and execution.
+
+`routes` and `shares` are kept in separate fields so generated view code can
+specialize on the route and share tuples without filtering mixed values.
+"""
+struct Wiring{Routes, Shares} <: AbstractWiring
+    routes::Routes
+    shares::Shares
+end
+
+Wiring(routes::Routes, shares::Shares) where {Routes<:Tuple, Shares<:Tuple} = Wiring{Routes, Shares}(routes, shares)
+Wiring() = Wiring((), ())
+
+"""
+Plan-level wiring propagated through composite and routine execution.
+
+`global_wiring` records grouped plan-global wiring for inspection and
+propagation during resolution. After resolution, global wiring is already
+inlaid into the concrete child `Wiring` buckets. `child_wiring` is indexed by
+child position and contains the exact wiring value passed to that child:
+`Wiring` for concrete executable children and `PlanWiring` for nested loop
+plans.
+"""
+struct PlanWiring{GlobalWiring, ChildWiring} <: AbstractWiring
+    global_wiring::GlobalWiring
+    child_wiring::ChildWiring
+end
+
+PlanWiring(global_wiring::GlobalWiring, child_wiring::ChildWiring) where {GlobalWiring, ChildWiring<:Tuple} =
+    PlanWiring{GlobalWiring, ChildWiring}(global_wiring, child_wiring)
+PlanWiring() = PlanWiring(Wiring(), ())
+
+Base.iterate(la::ALA) where {ALA<:AbstractLoopAlgorithm} = iterate(getalgos(la))
 
 
 

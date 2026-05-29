@@ -16,6 +16,9 @@ using Processes
     )
 
     @test length(Processes.getoptions(algo, Processes.Route)) == 1
+    @test algo isa Processes.CompositeAlgorithm
+    @test Processes.getplan(algo) isa Processes.CompositeAlgorithm
+    @test length(Processes.getoptions(Processes.getplan(algo), Processes.Route)) == 1
 
     resolved = Processes.resolve(algo)
     registry = Processes.getregistry(resolved)
@@ -24,32 +27,45 @@ using Processes
     target_name = Processes.static_findkey(registry, PrepTarget)
     other_name = Processes.static_findkey(registry, PrepOther)
 
-    @test resolved isa Processes.CompositeAlgorithm
+    @test resolved isa Processes.LoopAlgorithm
+    @test Processes.getplan(resolved) isa Processes.CompositeAlgorithm
     @test Processes.isresolved(resolved)
+    @test length(Processes.getoptions(Processes.getplan(resolved), Processes.Route)) == 1
+    @test length(Processes.child_wiring(Processes.getwiring(Processes.getplan(resolved)))) == length(Processes.getalgos(resolved))
     @test !isnothing(source_name)
     @test !isnothing(target_name)
     @test !isnothing(other_name)
     @test isempty(Processes.getoptions(resolved, Processes.Route))
 
-    opts = Processes.getoptions(resolved)
     sharedcontexts, sharedvars = Processes._resolve_options(resolved)
-    @test opts == Processes.merge_nested_namedtuples(sharedvars, sharedcontexts)
-    @test Processes.contextname(sharedcontexts[source_name]) == target_name
-    @test Processes.contextname(sharedcontexts[target_name]) == source_name
+    @test Processes.contextname(only(sharedcontexts[source_name])) == target_name
+    @test Processes.contextname(only(sharedcontexts[target_name])) == source_name
 
     @test haskey(sharedvars, other_name)
     @test length(sharedvars[other_name]) == 1
     @test Processes.get_fromname(only(sharedvars[other_name])) == source_name
 
+    initialized = Processes.init(algo)
+    reinitialized = Processes.init(initialized)
+    @test typeof(Processes.getplan(initialized)) === typeof(Processes.getplan(reinitialized))
+    @test Processes.getplan(initialized) === Processes.getplan(reinitialized)
+
     routine = Routine(algo, PrepOther, (2, 3))
     resolved_routine = Processes.resolve(routine)
     nested_comp = first(Processes.getalgos(resolved_routine))
 
-    @test resolved_routine isa Processes.Routine
+    @test resolved_routine isa Processes.LoopAlgorithm
+    @test Processes.getplan(resolved_routine) isa Processes.Routine
     @test Processes.isresolved(resolved_routine)
     @test nested_comp isa Processes.CompositeAlgorithm
-    @test Processes.all_keys(Processes.getregistry(nested_comp)) == Processes.all_keys(Processes.getregistry(resolved_routine))
     @test all(Processes.getkey.(Processes.getalgos(nested_comp)) .!= Ref(Symbol()))
+    routine_wiring = Processes.getwiring(Processes.getplan(resolved_routine))
+    nested_plan_wiring = getfield(Processes.child_wiring(routine_wiring), 1)
+    nested_wiring = Processes.child_wiring(nested_plan_wiring)
+    @test length(Processes.child_wiring(routine_wiring)) == length(Processes.getalgos(resolved_routine))
+    @test length(nested_wiring) == length(Processes.getalgos(nested_comp))
+    @test length(Processes.shares(nested_wiring[2])) == 1
+    @test length(Processes.routes(nested_wiring[3])) == 1
 
     threaded = ThreadedCompositeAlgorithm(PrepSource, PrepTarget, (1, 1))
     @test threaded isa Processes.ThreadedCompositeAlgorithm
@@ -83,9 +99,9 @@ using Processes
     sharedcontexts2, sharedvars2 = Processes._resolve_options(resolved2)
 
     @test haskey(sharedcontexts1, source_name)
-    @test Processes.contextname(sharedcontexts1[source_name]) == target_name
+    @test Processes.contextname(only(sharedcontexts1[source_name])) == target_name
     @test haskey(sharedcontexts1, target_name)
-    @test Processes.contextname(sharedcontexts1[target_name]) == source_name
+    @test Processes.contextname(only(sharedcontexts1[target_name])) == source_name
     @test haskey(sharedvars1, other_name)
     @test length(sharedvars1[other_name]) == 1
     @test Processes.get_fromname(only(sharedvars1[other_name])) == source_name

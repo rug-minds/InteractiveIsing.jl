@@ -387,6 +387,46 @@ function _coordinates_3d!(handle, vals_size)
     end
 end
 
+"""
+    _coordinates_3d!(handle, layer)
+
+Return cached 3D display coordinates for a layer using its topology geometry.
+"""
+function _coordinates_3d!(handle, layer::AbstractIsingLayer)
+    return _coordinates_3d!(handle, topology(layer), size(layer))
+end
+
+"""
+    _coordinates_3d!(handle, top, vals_size)
+
+Return 3D display coordinates for a three-dimensional topology.
+"""
+function _coordinates_3d!(handle, top::AbstractLayerTopology{U,3}, vals_size::NTuple{3,<:Integer}) where {U}
+    return _world_layer_coordinates_3d(top, vals_size)
+end
+
+"""
+    _world_layer_coordinates_3d(top, vals_size)
+
+Return world-space `x`, `y`, and `z` coordinate vectors for a 3D topology.
+"""
+function _world_layer_coordinates_3d(top::T, vals_size::NTuple{3,<:Integer}) where {U,T<:AbstractLayerTopology{U,3}}
+    len = prod(vals_size)
+    xs = Vector{Float32}(undef, len)
+    ys = Vector{Float32}(undef, len)
+    zs = Vector{Float32}(undef, len)
+    linear = LinearIndices(vals_size)
+
+    for ci in CartesianIndices(vals_size)
+        wc = woorldcoordinate(top, Coordinate(top, ci; check = false))
+        idx = linear[ci]
+        xs[idx] = Float32(wc[1])
+        ys[idx] = Float32(wc[2])
+        zs[idx] = Float32(wc[3])
+    end
+    return xs, ys, zs
+end
+
 _layer_state_view(layer) = view(state(layer), ntuple(_ -> (:), ndims(state(layer)))...)
 _layer_state_vector_view(layer) = vec(_layer_state_view(layer))
 _layer_state_float_vector(layer) = Float64.(vec(state(layer)))

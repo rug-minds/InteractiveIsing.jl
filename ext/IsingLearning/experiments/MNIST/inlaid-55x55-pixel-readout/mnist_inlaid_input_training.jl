@@ -1,0 +1,1028 @@
+using Pkg
+Pkg.activate(joinpath(@__DIR__, "..", "..", ".."))
+
+using CairoMakie
+using Dates
+using IsingLearning
+using IsingLearning.InteractiveIsing
+using MLDatasets
+using Optimisers
+using Random
+using Serialization
+using SparseArrays
+using Statistics
+
+const II = IsingLearning.InteractiveIsing
+const Processes = II.Processes
+const INMNIST_FT = Float32
+const INMNIST_INPUT_SIDE = 28
+const INMNIST_NCLASSES = 10
+
+"""
+Static active-index set for the inlaid MNIST input layer.
+
+The 28x28 MNIST pixel sites are fixed state entries inside the same inlaid layer
+as the separator spins. Only separator sites and output spins are sampled.
+"""
+struct InlaidMNISTActiveSet{V<:AbstractVector{Int32}} <: II.UniformIndexPicker
+    active::V
+end
+
+"""Return the active graph indices for sweep-style algorithms."""
+II.sampling_indices(index_set::InlaidMNISTActiveSet) = index_set.active
+
+"""Sample one active graph index uniformly."""
+II.pick_idx(rng::Random.AbstractRNG, index_set::InlaidMNISTActiveSet) = rand(rng, index_set.active)
+
+Base.length(index_set::InlaidMNISTActiveSet) = length(index_set.active)
+
+Base.@kwdef struct InlaidMNISTConfig{T<:AbstractFloat,S<:AbstractString}
+    name::S = get(ENV, "ISING_MNIST_INLAID_NAME", "inlaid_readout")
+    workers::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_WORKERS", "32"))
+    epochs::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_EPOCHS", "12"))
+    batchsize::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_BATCHSIZE", "256"))
+    train_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_TRAIN_PER_CLASS", "100"))
+    test_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_TEST_PER_CLASS", "40"))
+    output_replicas::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_OUTPUT_REPLICAS", "4"))
+    free_reads::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_FREE_READS", "1"))
+    nudge_reads::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_NUDGE_READS", "1"))
+    eval_reads::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_EVAL_READS", "3"))
+    free_sweeps::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_FREE_SWEEPS", "75"))
+    nudge_sweeps::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_NUDGE_SWEEPS", "75"))
+    eval_sweeps::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_EVAL_SWEEPS", "100"))
+    β::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_BETA", "20.0"))
+    target_on::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_TARGET_ON", "1.0"))
+    target_off::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_TARGET_OFF", "-1.0"))
+    lr::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_LR", "0.01"))
+    lr_decay::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_LR_DECAY", "0.995"))
+    lr_min::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_LR_MIN", "0.001"))
+    optimizer::S = lowercase(get(ENV, "ISING_MNIST_INLAID_OPTIMIZER", "adam"))
+    weight_decay::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_WEIGHT_DECAY", "0.0"))
+    weight_clip::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_WEIGHT_CLIP", "2.0"))
+    bias_clip::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_BIAS_CLIP", "2.0"))
+    applied_bias_clip::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_APPLIED_BIAS_CLIP", "20.0"))
+    train_live_readout::Bool = parse(Bool, lowercase(get(ENV, "ISING_MNIST_INLAID_TRAIN_LIVE_READOUT", "false")))
+    readout_gain::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_READOUT_GAIN", "0.03"))
+    separator_padding::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_PADDING", "1"))
+    input_internal_radius::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_INPUT_RADIUS", "1"))
+    input_internal_scale::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_INPUT_SCALE", "0.10"))
+    output_replica_scale::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_OUTPUT_REPLICA_SCALE", "0.10"))
+    output_competition_scale::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_OUTPUT_COMPETITION_SCALE", "0.05"))
+    hot_temp::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_HOT_TEMP", "5.0"))
+    cold_temp::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_COLD_TEMP", "0.05"))
+    reverse_temp::T = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_REVERSE_TEMP", "1.0"))
+    seed::Int = parse(Int, get(ENV, "ISING_MNIST_INLAID_SEED", "5317"))
+    outdir::S = get(
+        ENV,
+        "ISING_MNIST_INLAID_OUTDIR",
+        joinpath(@__DIR__, "experiments", "current", "inlaid_input_" * Dates.format(now(), "yyyymmdd_HHMMSS")),
+    )
+end
+
+"""Return the lattice stride between neighboring fixed MNIST pixels."""
+function inlaid_stride(config::C) where {C<:InlaidMNISTConfig}
+    return Int(config.separator_padding) + 1
+end
+
+"""Return the side length of the inlaid input layer for one padding setting."""
+function inlaid_side(config::C) where {C<:InlaidMNISTConfig}
+    return INMNIST_INPUT_SIDE + (INMNIST_INPUT_SIDE - 1) * Int(config.separator_padding)
+end
+
+mutable struct InlaidMNISTModel{C,G,W,B,P,L,A,O,M,R}
+    config::C
+    graph::G
+    weights_io::W
+    bias_o::B
+    pixel_idxs::P
+    live_input_idxs::L
+    input_idxs::A
+    output_idxs::O
+    readout_mask::M
+    rng::R
+end
+
+struct InlaidMNISTJob{X<:AbstractVector{INMNIST_FT},Y<:AbstractVector{INMNIST_FT}}
+    x::X
+    y::Y
+end
+
+mutable struct InlaidMNISTManagerState{M,G,P,O}
+    model::M
+    batch_gradient::G
+    nsamples::Base.RefValue{Int}
+    ncorrect::Base.RefValue{Int}
+    nskipped::Base.RefValue{Int}
+    total_loss::Base.RefValue{INMNIST_FT}
+    params::Base.RefValue{P}
+    opt_state::O
+    update_idx::Base.RefValue{Int}
+end
+
+"""Construct the configured single-step dynamics algorithm for inlaid MNIST routines."""
+function inlaid_dynamics_algorithm(config::C) where {C<:InlaidMNISTConfig}
+    name = lowercase(strip(get(ENV, "ISING_MNIST_INLAID_DYNAMICS", "metropolis")))
+    if name == "metropolis"
+        return II.Metropolis()
+    elseif name == "local_langevin"
+        stepsize = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_LANGEVIN_STEPSIZE", "0.1"))
+        adjusted = parse(Bool, lowercase(get(ENV, "ISING_MNIST_INLAID_LANGEVIN_ADJUSTED", "false")))
+        order = Symbol(get(ENV, "ISING_MNIST_INLAID_LANGEVIN_ORDER", "random"))
+        return II.LocalLangevin(; stepsize, adjusted, order)
+    elseif name == "global_langevin"
+        stepsize = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_LANGEVIN_STEPSIZE", "0.1"))
+        adjusted = parse(Bool, lowercase(get(ENV, "ISING_MNIST_INLAID_LANGEVIN_ADJUSTED", "false")))
+        return II.GlobalLangevin(; stepsize, adjusted)
+    elseif name == "block_langevin"
+        stepsize = parse(INMNIST_FT, get(ENV, "ISING_MNIST_INLAID_LANGEVIN_STEPSIZE", "0.1"))
+        adjusted = parse(Bool, lowercase(get(ENV, "ISING_MNIST_INLAID_LANGEVIN_ADJUSTED", "false")))
+        block_size = parse(Int, get(ENV, "ISING_MNIST_INLAID_LANGEVIN_BLOCK_SIZE", "256"))
+        return II.BlockLangevin(; stepsize, adjusted, block_size)
+    end
+    throw(ArgumentError("unknown ISING_MNIST_INLAID_DYNAMICS=`$name`"))
+end
+
+"""Return a compact rectangular shape for output replicas."""
+function output_shape(units::I) where {I<:Integer}
+    rows = floor(Int, sqrt(Int(units)))
+    while rows > 1 && Int(units) % rows != 0
+        rows -= 1
+    end
+    return rows, Int(units) ÷ rows
+end
+
+"""Return the clamped MNIST pixel graph indices for one inlaid padding setting."""
+function inlaid_pixel_indices(graph::G, config::C) where {G,C<:InlaidMNISTConfig}
+    layer = graph[1]
+    side = inlaid_side(config)
+    stride = inlaid_stride(config)
+    idxs = reshape(collect(II.layerrange(layer)), side, side)
+    pixels = Vector{Int32}(undef, INMNIST_INPUT_SIDE^2)
+    out_idx = 1
+    @inbounds for col in 1:INMNIST_INPUT_SIDE, row in 1:INMNIST_INPUT_SIDE
+        pixels[out_idx] = Int32(idxs[(row - 1) * stride + 1, (col - 1) * stride + 1])
+        out_idx += 1
+    end
+    return pixels
+end
+
+"""Return the live separator indices in the inlaid input layer."""
+function inlaid_live_input_indices(graph::G, config::C) where {G,C<:InlaidMNISTConfig}
+    pixels = Set(inlaid_pixel_indices(graph, config))
+    live = Int32[]
+    for idx in II.layerrange(graph[1])
+        idx32 = Int32(idx)
+        idx32 in pixels && continue
+        push!(live, idx32)
+    end
+    return live
+end
+
+"""Return all sampled graph indices: separator sites and output replicas."""
+function inlaid_active_indices(graph::G, config::C) where {G,C<:InlaidMNISTConfig}
+    active = inlaid_live_input_indices(graph, config)
+    append!(active, Int32.(collect(II.layerrange(graph[2]))))
+    return active
+end
+
+"""Create the inlaid-input graph with trainable dense readout structure."""
+function sampled_graph(config::C, rng::R; shared_adj = nothing) where {C<:InlaidMNISTConfig,R<:Random.AbstractRNG}
+    side = inlaid_side(config)
+    output_rows, output_cols = output_shape(INMNIST_NCLASSES * config.output_replicas)
+    zero_wg = II.AllToAllWeightGenerator((; dr, c1, c2, dc) -> 0f0)
+    input = II.Layer(side, side, II.StateSet(-1f0, 1f0), II.Discrete(), II.Coords(0, 0, 0); periodic = false)
+    out = II.Layer(output_rows, output_cols, II.StateSet(-1f0, 1f0), II.Discrete(), II.Coords(0, side + 3, 0); periodic = false)
+    graph = II.IsingGraph(
+        input,
+        zero_wg,
+        out,
+        II.Bilinear() + II.MagField(b = g -> II.filltype(Vector, 0f0, II.statelen(g)));
+        precision = INMNIST_FT,
+        adj = shared_adj,
+        index_set = g -> InlaidMNISTActiveSet(inlaid_active_indices(g, config)),
+    )
+    if isnothing(shared_adj)
+        add_fixed_input_edges!(graph, rng; radius = config.input_internal_radius, scale = config.input_internal_scale)
+        add_output_replica_edges!(graph, config)
+    end
+    II.temp!(graph, config.cold_temp)
+    return graph
+end
+
+"""Add fixed local couplings inside the inlaid input layer."""
+function add_fixed_input_edges!(
+    graph::G,
+    rng::R;
+    radius::I,
+    scale::T,
+) where {G,R<:Random.AbstractRNG,I<:Integer,T<:AbstractFloat}
+    radius <= 0 && return graph
+    scale == 0 && return graph
+    layer = graph[1]
+    rows, cols = size(layer)
+    idxs = reshape(collect(II.layerrange(layer)), rows, cols)
+    adj = II.adj(graph)
+    @inbounds for col in 1:cols, row in 1:rows
+        src = idxs[row, col]
+        for dcol in -Int(radius):Int(radius), drow in -Int(radius):Int(radius)
+            drow == 0 && dcol == 0 && continue
+            dst_row = row + drow
+            dst_col = col + dcol
+            (1 <= dst_row <= rows && 1 <= dst_col <= cols) || continue
+            dst = idxs[dst_row, dst_col]
+            dst <= src && continue
+            w = scale * randn(rng, INMNIST_FT)
+            adj[dst, src] = w
+            adj[src, dst] = w
+        end
+    end
+    return graph
+end
+
+"""Add fixed within-digit alignment and between-digit inhibition for outputs."""
+function add_output_replica_edges!(graph::G, config::C) where {G,C<:InlaidMNISTConfig}
+    output_idxs = collect(II.layerrange(graph[2]))
+    adj = II.adj(graph)
+    replicas = config.output_replicas
+    @inbounds for local_a in eachindex(output_idxs), local_b in (local_a + 1):length(output_idxs)
+        digit_a = (local_a - 1) ÷ replicas
+        digit_b = (local_b - 1) ÷ replicas
+        w = digit_a == digit_b ? config.output_replica_scale : -config.output_competition_scale
+        w == 0 && continue
+        src = output_idxs[local_a]
+        dst = output_idxs[local_b]
+        adj[dst, src] = w
+        adj[src, dst] = w
+    end
+    return graph
+end
+
+"""Restore fixed output couplings after dense readout updates touch those slots."""
+function sync_output_fixed_edges!(model::M) where {M<:InlaidMNISTModel}
+    output_idxs = model.output_idxs
+    adj = II.adj(model.graph)
+    replicas = model.config.output_replicas
+    @inbounds for local_a in eachindex(output_idxs), local_b in (local_a + 1):length(output_idxs)
+        digit_a = (local_a - 1) ÷ replicas
+        digit_b = (local_b - 1) ÷ replicas
+        w = digit_a == digit_b ? model.config.output_replica_scale : -model.config.output_competition_scale
+        if w != 0
+            src = output_idxs[local_a]
+            dst = output_idxs[local_b]
+            adj[dst, src] = w
+            adj[src, dst] = w
+        end
+    end
+    return model
+end
+
+"""Initialize trainable readout parameters and install them into the graph."""
+function init_model(config::C, seed::I = config.seed; shared_adj = nothing) where {C<:InlaidMNISTConfig,I<:Integer}
+    rng = Random.MersenneTwister(Int(seed))
+    graph = sampled_graph(config, rng; shared_adj)
+    input_n = inlaid_side(config)^2
+    output_n = INMNIST_NCLASSES * config.output_replicas
+    weight_scale = config.readout_gain / sqrt(INMNIST_FT(input_n))
+    pixel_idxs = inlaid_pixel_indices(graph, config)
+    input_idxs = Int32.(collect(II.layerrange(graph[1])))
+    readout_mask = fill(config.train_live_readout, input_n)
+    first_input_idx = first(input_idxs)
+    @inbounds for idx in pixel_idxs
+        readout_mask[Int(idx - first_input_idx + 1)] = true
+    end
+    weights_io = weight_scale .* randn(rng, INMNIST_FT, input_n, output_n)
+    weights_io .*= reshape(INMNIST_FT.(readout_mask), :, 1)
+    model = InlaidMNISTModel(
+        config,
+        graph,
+        weights_io,
+        zeros(INMNIST_FT, output_n),
+        pixel_idxs,
+        inlaid_live_input_indices(graph, config),
+        input_idxs,
+        Int32.(collect(II.layerrange(graph[2]))),
+        readout_mask,
+        rng,
+    )
+    sync_graph_couplings!(model)
+    return model
+end
+
+"""Create one worker model with local state/fields and shared adjacency."""
+function worker_model(source::M, worker_idx::I) where {M<:InlaidMNISTModel,I<:Integer}
+    model = init_model(source.config, source.config.seed + 10_000 + Int(worker_idx); shared_adj = II.adj(source.graph))
+    model.weights_io = source.weights_io
+    model.bias_o = source.bias_o
+    return model
+end
+
+"""Install the trainable readout matrix into the shared adjacency."""
+function sync_graph_couplings!(model::M) where {M<:InlaidMNISTModel}
+    adj = II.adj(model.graph)
+    @inbounds for input_pos in axes(model.weights_io, 1)
+        model.readout_mask[input_pos] || continue
+        input_idx = model.input_idxs[input_pos]
+        for output_pos in axes(model.weights_io, 2)
+            output_idx = model.output_idxs[output_pos]
+            w = -model.weights_io[input_pos, output_pos]
+            adj[output_idx, input_idx] = w
+            adj[input_idx, output_idx] = w
+        end
+    end
+    sync_output_fixed_edges!(model)
+    return model
+end
+
+"""Return Optimisers-compatible parameter arrays."""
+function parameters(model::M) where {M<:InlaidMNISTModel}
+    return (; weights_io = model.weights_io, bias_o = model.bias_o)
+end
+
+"""Replace source and worker parameter references after an optimizer update."""
+function set_parameters!(model::M, ps::P) where {M<:InlaidMNISTModel,P<:NamedTuple}
+    model.weights_io = clamp.(ps.weights_io, -model.config.weight_clip, model.config.weight_clip)
+    model.weights_io .*= reshape(INMNIST_FT.(model.readout_mask), :, 1)
+    model.bias_o = clamp.(ps.bias_o, -model.config.bias_clip, model.config.bias_clip)
+    sync_graph_couplings!(model)
+    return model
+end
+
+"""Allocate a gradient buffer matching the trainable readout parameters."""
+function gradient_buffer(model::M) where {M<:InlaidMNISTModel}
+    return (;
+        weights_io = zeros(INMNIST_FT, size(model.weights_io)),
+        bias_o = zeros(INMNIST_FT, size(model.bias_o)),
+    )
+end
+
+"""Set every array in a gradient buffer to zero."""
+function clear_gradient!(gradient::G) where {G<:NamedTuple}
+    fill!(gradient.weights_io, 0f0)
+    fill!(gradient.bias_o, 0f0)
+    return gradient
+end
+
+"""Add one gradient buffer into another."""
+function add_gradient!(dest::D, src::S) where {D<:NamedTuple,S<:NamedTuple}
+    dest.weights_io .+= src.weights_io
+    dest.bias_o .+= src.bias_o
+    return dest
+end
+
+"""Scale a gradient buffer in place."""
+function scale_gradient!(gradient::G, scale::T) where {G<:NamedTuple,T<:Real}
+    gradient.weights_io .*= INMNIST_FT(scale)
+    gradient.bias_o .*= INMNIST_FT(scale)
+    return gradient
+end
+
+"""Add L2 decay to readout weights before the optimizer step."""
+function add_weight_decay!(gradient::G, ps::P, λ::T) where {G<:NamedTuple,P<:NamedTuple,T<:Real}
+    λ > zero(T) || return gradient
+    gradient.weights_io .+= INMNIST_FT(λ) .* ps.weights_io
+    return gradient
+end
+
+"""Return the optimizer learning rate for a one-indexed update."""
+function learning_rate_at(config::C, update_idx::I) where {C<:InlaidMNISTConfig,I<:Integer}
+    scheduled = config.lr * config.lr_decay^max(Int(update_idx) - 1, 0)
+    return max(config.lr_min, scheduled)
+end
+
+"""Update the Optimisers.jl learning rate while preserving Adam moments."""
+function adjust_learning_rate!(manager::M) where {M<:Processes.ProcessManager}
+    η = learning_rate_at(manager.config, manager.state.update_idx[])
+    Optimisers.adjust!(manager.state.opt_state, η)
+    return η
+end
+
+"""Write one bipolar image into the fixed pixel sites."""
+function apply_inlaid_pattern!(model::M, x::X) where {M<:InlaidMNISTModel,X<:AbstractVector{INMNIST_FT}}
+    @inbounds II.state(model.graph)[model.pixel_idxs] .= x
+    return model
+end
+
+"""Apply free or nudged output magnetic fields."""
+function apply_output_field!(model::M; target = nothing, beta::Real = 0) where {M<:InlaidMNISTModel}
+    bias = II.getparam(model.graph.hamiltonian, II.MagField, :b)
+    fill!(bias, 0f0)
+    output_bias = isnothing(target) ? model.bias_o : model.bias_o .- INMNIST_FT(beta) .* target
+    @inbounds bias[model.output_idxs] .= .-clamp.(output_bias, -model.config.applied_bias_clip, model.config.applied_bias_clip)
+    return model
+end
+
+"""Apply the configured nudged output field for a labelled sample."""
+function apply_nudged_output_field!(model::M, target::Y) where {M<:InlaidMNISTModel,Y<:AbstractVector}
+    return apply_output_field!(model; target, beta = model.config.β)
+end
+
+"""Randomize live separator and output states while leaving pixels fixed."""
+function randomize_live_state!(model::M) where {M<:InlaidMNISTModel}
+    state = II.state(model.graph)
+    @inbounds for idx in model.live_input_idxs
+        state[idx] = rand(model.rng, Bool) ? 1f0 : -1f0
+    end
+    @inbounds for idx in model.output_idxs
+        state[idx] = rand(model.rng, Bool) ? 1f0 : -1f0
+    end
+    return model
+end
+
+"""Evaluate the current sparse Hamiltonian energy."""
+function graph_energy(model::M) where {M<:InlaidMNISTModel}
+    state = II.state(model.graph)
+    bias = II.getparam(model.graph.hamiltonian, II.MagField, :b)
+    adj = II.adj(model.graph)
+    colptrs = SparseArrays.getcolptr(adj)
+    rowvals = SparseArrays.rowvals(adj)
+    nzvals = SparseArrays.nonzeros(adj)
+    energy = 0f0
+    @inbounds for col in 1:size(adj, 2)
+        for ptr in colptrs[col]:(colptrs[col + 1] - 1)
+            energy -= 0.5f0 * nzvals[ptr] * state[rowvals[ptr]] * state[col]
+        end
+    end
+    @inbounds for idx in eachindex(state)
+        energy -= bias[idx] * state[idx]
+    end
+    return energy
+end
+
+"""Average output replicas into one score per digit."""
+function class_scores(output::V, replicas::I) where {V<:AbstractVector,I<:Integer}
+    scores = zeros(INMNIST_FT, INMNIST_NCLASSES)
+    @inbounds for digit in 1:INMNIST_NCLASSES
+        first_idx = (digit - 1) * Int(replicas) + 1
+        scores[digit] = sum(view(output, first_idx:(first_idx + Int(replicas) - 1))) / Int(replicas)
+    end
+    return scores
+end
+
+"""Accumulate an inlaid readout gradient from already sampled free/nudged states."""
+function finish_contrastive_sample!(
+    gradient::G,
+    model::M,
+    x::X,
+    y::Y,
+    free_state::F,
+    nudged_state::N,
+) where {G<:NamedTuple,M<:InlaidMNISTModel,X<:AbstractVector{INMNIST_FT},Y<:AbstractVector{INMNIST_FT},F<:AbstractVector,N<:AbstractVector}
+    config = model.config
+    free_input = copy(@view free_state[model.input_idxs])
+    free_o = copy(@view free_state[model.output_idxs])
+    correct = argmax(class_scores(free_o, config.output_replicas)) == argmax(class_scores(y, config.output_replicas))
+    loss = sum(abs2, y .- free_o) / 2
+    if all(free_o .== y)
+        return (; loss, correct, skipped = true)
+    end
+
+    nudged_input = @view nudged_state[model.input_idxs]
+    nudged_o = @view nudged_state[model.output_idxs]
+    invβ = one(INMNIST_FT) / config.β
+    @inbounds for output_pos in axes(gradient.weights_io, 2)
+        free_out = free_o[output_pos]
+        nudged_out = nudged_o[output_pos]
+        gradient.bias_o[output_pos] += -(nudged_out - free_out) * invβ
+        for input_pos in axes(gradient.weights_io, 1)
+            model.readout_mask[input_pos] || continue
+            gradient.weights_io[input_pos, output_pos] +=
+                -(nudged_input[input_pos] * nudged_out - free_input[input_pos] * free_out) * invβ
+        end
+    end
+    return (; loss, correct, skipped = false)
+end
+
+"""Reset one worker's minibatch accounting fields."""
+function reset_worker_stats!(context::C) where {C}
+    clear_gradient!(context.gradient)
+    context.nsamples[] = 0
+    context.ncorrect[] = 0
+    context.nskipped[] = 0
+    context.total_loss[] = 0f0
+    return context
+end
+
+"""Return the mutable process subcontext used by a manager worker."""
+function worker_context(worker::W) where {W}
+    return Processes.context(worker)._state
+end
+
+"""Update worker-local counters after one inlaid contrastive sample."""
+function update_worker_stats!(
+    nsamples::Base.RefValue{I},
+    ncorrect::Base.RefValue{J},
+    nskipped::Base.RefValue{K},
+    total_loss::Base.RefValue{T},
+    stats::S,
+) where {I<:Integer,J<:Integer,K<:Integer,T<:Real,S}
+    nsamples[] += 1
+    ncorrect[] += stats.correct ? 1 : 0
+    nskipped[] += stats.skipped ? 1 : 0
+    total_loss[] += stats.loss
+    return nothing
+end
+
+"""Return the number of dynamics steps used for a configured inlaid sweep count."""
+function phase_steps(model::M, sweeps::I) where {M<:InlaidMNISTModel,I<:Integer}
+    return max(1, Int(sweeps) * length(II.sampling_indices(model.graph)))
+end
+
+"""Build one temperature-scheduled free-phase dynamics step."""
+function free_phase_step_algorithm(dynamics_algorithm::D, temperature_algorithm::T) where {D,T}
+    return Processes.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @alias free_temperature = temperature_algorithm
+
+        free_temperature(dynamics.model)
+        dynamics()
+    end
+end
+
+"""Build one temperature-scheduled nudged-phase dynamics step."""
+function nudged_phase_step_algorithm(dynamics_algorithm::D, temperature_algorithm::T) where {D,T}
+    return Processes.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @alias nudge_temperature = temperature_algorithm
+
+        nudge_temperature(dynamics.model)
+        dynamics()
+    end
+end
+
+"""Build the reusable inlaid free-phase routine."""
+function free_phase_algorithm(
+    dynamics_algorithm::D,
+    temperature_algorithm::T,
+    steps::I,
+) where {D,T,I<:Integer}
+    phase_step = free_phase_step_algorithm(dynamics_algorithm, temperature_algorithm)
+    return Processes.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @alias phase_step = phase_step
+        @state inlaid_model
+        @state x
+        @state free_state
+        @state free_best_energy
+
+        randomize_live_state!(inlaid_model)
+        apply_inlaid_pattern!(inlaid_model, x)
+        apply_output_field!(inlaid_model)
+        @repeat steps phase_step()
+        CaptureBestEnergyState!(dynamics.model, free_best_energy, free_state)
+    end
+end
+
+"""Build the reusable inlaid nudged-phase routine."""
+function nudged_phase_algorithm(
+    dynamics_algorithm::D,
+    temperature_algorithm::T,
+    steps::I,
+) where {D,T,I<:Integer}
+    phase_step = nudged_phase_step_algorithm(dynamics_algorithm, temperature_algorithm)
+    return Processes.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @alias phase_step = phase_step
+        @state inlaid_model
+        @state x
+        @state y
+        @state free_state
+        @state nudged_state
+        @state nudged_best_energy
+
+        SetGraphState!(dynamics.model, free_state)
+        apply_inlaid_pattern!(inlaid_model, x)
+        apply_nudged_output_field!(inlaid_model, y)
+        @repeat steps phase_step()
+        CaptureBestEnergyState!(dynamics.model, nudged_best_energy, nudged_state)
+    end
+end
+
+"""Build the reusable LoopAlgorithm that fills one inlaid worker buffer."""
+function inlaid_worker_algorithm(
+    dynamics_algorithm::D,
+    config::C,
+    nstates::I,
+) where {D,C<:InlaidMNISTConfig,I<:Integer}
+    free_steps = max(1, config.free_sweeps * Int(nstates))
+    nudge_steps = max(1, config.nudge_sweeps * Int(nstates))
+    free_reads = max(1, config.free_reads)
+    nudge_reads = max(1, config.nudge_reads)
+    free_temperature = GeometricTemperatureSchedule(; start_T = config.hot_temp, stop_T = config.cold_temp, n_steps = free_steps)
+    nudge_temperature = ReverseAnnealTemperatureSchedule(; cold_T = config.cold_temp, peak_T = config.reverse_temp, n_steps = nudge_steps)
+    free_phase = free_phase_algorithm(dynamics_algorithm, free_temperature, free_steps)
+    nudged_phase = nudged_phase_algorithm(dynamics_algorithm, nudge_temperature, nudge_steps)
+    return Processes.@Routine begin
+        @alias free_phase = free_phase
+        @alias nudged_phase = nudged_phase
+        @state inlaid_model
+        @state x
+        @state y
+        @state gradient
+        @state free_state
+        @state nudged_state
+        @state free_best_energy
+        @state nudged_best_energy
+        @state nsamples
+        @state ncorrect
+        @state nskipped
+        @state total_loss
+
+        ResetBestEnergyCapture!(free_best_energy, free_state)
+        @repeat free_reads free_phase()
+
+        ResetBestEnergyCapture!(nudged_best_energy, nudged_state)
+        @repeat nudge_reads nudged_phase()
+
+        stats = finish_contrastive_sample!(gradient, inlaid_model, x, y, free_state, nudged_state)
+        update_worker_stats!(nsamples, ncorrect, nskipped, total_loss, stats)
+    end
+end
+
+"""Create one reusable manager-owned inlaid MNIST worker."""
+function inlaid_worker(source::M, worker_idx::I, dynamics_algorithm::D) where {M<:InlaidMNISTModel,I<:Integer,D}
+    model = worker_model(source, worker_idx)
+    graph_state = II.state(model.graph)
+    nactive = length(II.sampling_indices(model.graph))
+    algorithm = Processes.resolve(inlaid_worker_algorithm(deepcopy(dynamics_algorithm), model.config, nactive))
+    return Processes.Process(
+        algorithm,
+        Processes.Init(:_state;
+            inlaid_model = model,
+            x = zeros(INMNIST_FT, INMNIST_INPUT_SIDE^2),
+            y = zeros(INMNIST_FT, INMNIST_NCLASSES * source.config.output_replicas),
+            gradient = gradient_buffer(model),
+            free_state = similar(graph_state),
+            nudged_state = similar(graph_state),
+            free_best_energy = Ref(INMNIST_FT(Inf)),
+            nudged_best_energy = Ref(INMNIST_FT(Inf)),
+            nsamples = Ref(0),
+            ncorrect = Ref(0),
+            nskipped = Ref(0),
+            total_loss = Ref(0f0),
+        ),
+        Processes.Init(:dynamics; model = model.graph);
+        repeat = 1,
+    )
+end
+
+"""Merge worker-local gradients and statistics into the manager state."""
+function flush_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+    clear_gradient!(manager.state.batch_gradient)
+    manager.state.nsamples[] = 0
+    manager.state.ncorrect[] = 0
+    manager.state.nskipped[] = 0
+    manager.state.total_loss[] = 0f0
+    for worker in Processes.workers(manager)
+        ctx = worker_context(worker)
+        add_gradient!(manager.state.batch_gradient, ctx.gradient)
+        manager.state.nsamples[] += ctx.nsamples[]
+        manager.state.ncorrect[] += ctx.ncorrect[]
+        manager.state.nskipped[] += ctx.nskipped[]
+        manager.state.total_loss[] += ctx.total_loss[]
+        reset_worker_stats!(ctx)
+    end
+    nsamples = max(manager.state.nsamples[], 1)
+    scale_gradient!(manager.state.batch_gradient, -inv(INMNIST_FT(nsamples)))
+    return manager.state.batch_gradient
+end
+
+"""Clear every manager and worker buffer before a minibatch."""
+function clear_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+    clear_gradient!(manager.state.batch_gradient)
+    manager.state.nsamples[] = 0
+    manager.state.ncorrect[] = 0
+    manager.state.nskipped[] = 0
+    manager.state.total_loss[] = 0f0
+    for worker in Processes.workers(manager)
+        reset_worker_stats!(worker_context(worker))
+    end
+    return manager
+end
+
+"""Update worker parameter references after an optimizer step."""
+function sync_worker_params!(manager::M) where {M<:Processes.ProcessManager}
+    for worker in Processes.workers(manager)
+        ctx = worker_context(worker)
+        ctx.inlaid_model.weights_io = manager.state.model.weights_io
+        ctx.inlaid_model.bias_o = manager.state.model.bias_o
+    end
+    return manager
+end
+
+"""Create the ProcessManager for inlaid MNIST minibatches."""
+function inlaid_manager(source::M) where {M<:InlaidMNISTModel}
+    optimizer_name = lowercase(source.config.optimizer)
+    optimiser = optimizer_name == "adam" ? Optimisers.Adam(source.config.lr) :
+        optimizer_name in ("descent", "sgd") ? Optimisers.Descent(source.config.lr) :
+        throw(ArgumentError("unknown optimizer `$(source.config.optimizer)`; use `adam` or `descent`"))
+    ps = parameters(source)
+    state = InlaidMNISTManagerState(
+        source,
+        gradient_buffer(source),
+        Ref(0),
+        Ref(0),
+        Ref(0),
+        Ref(0f0),
+        Ref(ps),
+        Optimisers.setup(optimiser, ps),
+        Ref(1),
+    )
+    dynamics_algorithm = inlaid_dynamics_algorithm(source.config)
+    recipe = (;
+        makeworker = (idx, manager) -> inlaid_worker(manager.state.model, idx, dynamics_algorithm),
+        prepare! = (slot, job, manager) -> begin
+            ctx = worker_context(slot.worker)
+            ctx.x .= job.x
+            ctx.y .= job.y
+            Processes.resetworker!(slot)
+            return nothing
+        end,
+        flush! = manager -> flush_manager_buffers!(manager),
+    )
+    return Processes.ProcessManager(
+        recipe;
+        nworkers = source.config.workers,
+        config = source.config,
+        state,
+        flush_policy = Processes.FlushAtEnd(),
+        worker_init = Processes.MakeEachWorker(),
+        poll_interval = 0.0,
+        job_type = InlaidMNISTJob{Vector{INMNIST_FT},Vector{INMNIST_FT}},
+    )
+end
+
+"""Run one minibatch and update shared source parameters once."""
+function run_minibatch!(manager::M, jobs::J) where {M<:Processes.ProcessManager,J<:AbstractVector}
+    clear_manager_buffers!(manager)
+    Processes.run!(manager, jobs, Processes.Dynamic())
+    add_weight_decay!(manager.state.batch_gradient, manager.state.params[], manager.config.weight_decay)
+    η = adjust_learning_rate!(manager)
+    manager.state.opt_state, ps_new = Optimisers.update(manager.state.opt_state, manager.state.params[], manager.state.batch_gradient)
+    manager.state.params[] = ps_new
+    set_parameters!(manager.state.model, ps_new)
+    manager.state.params[] = parameters(manager.state.model)
+    sync_worker_params!(manager)
+    manager.state.update_idx[] += 1
+    return (;
+        nsamples = manager.state.nsamples[],
+        accuracy = manager.state.nsamples[] == 0 ? 0.0 : manager.state.ncorrect[] / manager.state.nsamples[],
+        loss = manager.state.nsamples[] == 0 ? 0f0 : manager.state.total_loss[] / manager.state.nsamples[],
+        skipped = manager.state.nskipped[],
+        lr = η,
+    )
+end
+
+"""Load a balanced MNIST subset with `[0, 1]` fixed pixels and replica targets."""
+function balanced_mnist(split::Symbol, per_class::I, config::C) where {I<:Integer,C<:InlaidMNISTConfig}
+    dataset = split === :train ? MLDatasets.MNIST(split = :train) :
+        split === :test ? MLDatasets.MNIST(split = :test) :
+        throw(ArgumentError("split must be :train or :test"))
+    images, labels = dataset[:]
+    buckets = [Int[] for _ in 1:INMNIST_NCLASSES]
+    for idx in eachindex(labels)
+        push!(buckets[Int(labels[idx]) + 1], idx)
+    end
+    keep = Int[]
+    rng = Random.MersenneTwister(hash((config.seed, split, Int(per_class))))
+    for digit in 1:INMNIST_NCLASSES
+        length(buckets[digit]) >= Int(per_class) ||
+            throw(ArgumentError("split $(split) has only $(length(buckets[digit])) samples for digit $(digit - 1)"))
+
+        # Shuffle each class bucket once so reduced runs are still representative.
+        digit_indices = copy(buckets[digit])
+        Random.shuffle!(rng, digit_indices)
+        append!(keep, @view digit_indices[1:Int(per_class)])
+    end
+    x = Matrix{INMNIST_FT}(undef, INMNIST_INPUT_SIDE^2, length(keep))
+    y = fill(config.target_off, INMNIST_NCLASSES * config.output_replicas, length(keep))
+    for (col, idx) in enumerate(keep)
+        image = INMNIST_FT.(reshape(images[:, :, idx], :))
+        maximum(image) > 1.5f0 && (image ./= 255f0)
+        x[:, col] .= image
+        label = Int(labels[idx]) + 1
+        first_idx = (label - 1) * config.output_replicas + 1
+        y[first_idx:(first_idx + config.output_replicas - 1), col] .= config.target_on
+    end
+    return x, y
+end
+
+"""Create concrete manager jobs for selected sample indices."""
+function batch_jobs(x::X, y::Y, indices::V) where {X<:AbstractMatrix,Y<:AbstractMatrix,V<:AbstractVector{Int}}
+    jobs = InlaidMNISTJob{Vector{INMNIST_FT},Vector{INMNIST_FT}}[]
+    for sample_idx in indices
+        push!(jobs, InlaidMNISTJob(copy(view(x, :, sample_idx)), copy(view(y, :, sample_idx))))
+    end
+    return jobs
+end
+
+"""Build a free-phase LoopAlgorithm for inlaid validation sampling."""
+function validation_free_phase_algorithm(
+    dynamics_algorithm::D,
+    config::C,
+    nactive::I,
+) where {D,C<:InlaidMNISTConfig,I<:Integer}
+    free_steps = max(1, config.eval_sweeps * Int(nactive))
+    free_reads = max(1, config.eval_reads)
+    free_temperature = GeometricTemperatureSchedule(; start_T = config.hot_temp, stop_T = config.cold_temp, n_steps = free_steps)
+    free_phase = free_phase_algorithm(dynamics_algorithm, free_temperature, free_steps)
+    return Processes.@Routine begin
+        @alias free_phase = free_phase
+        @state inlaid_model
+        @state x
+        @state free_state
+        @state free_best_energy
+
+        ResetBestEnergyCapture!(free_best_energy, free_state)
+        @repeat free_reads free_phase()
+    end
+end
+
+"""Create one reusable process for inlaid validation sampling."""
+function free_phase_process(model::M, dynamics_algorithm::D) where {M<:InlaidMNISTModel,D}
+    graph_state = II.state(model.graph)
+    algorithm = Processes.resolve(validation_free_phase_algorithm(deepcopy(dynamics_algorithm), model.config, length(II.sampling_indices(model.graph))))
+    return Processes.Process(
+        algorithm,
+        Processes.Init(:_state;
+            inlaid_model = model,
+            x = zeros(INMNIST_FT, INMNIST_INPUT_SIDE^2),
+            free_state = similar(graph_state),
+            free_best_energy = Ref(INMNIST_FT(Inf)),
+        ),
+        Processes.Init(:dynamics; model = model.graph);
+        repeat = 1,
+    )
+end
+
+"""Evaluate free-phase balanced accuracy and loss."""
+function evaluate(model::M, x::X, y::Y) where {M<:InlaidMNISTModel,X<:AbstractMatrix,Y<:AbstractMatrix}
+    config = model.config
+    process = free_phase_process(model, inlaid_dynamics_algorithm(config))
+    context = worker_context(process)
+    correct = 0
+    loss = 0f0
+    pred_counts = zeros(Int, INMNIST_NCLASSES)
+    for sample_idx in axes(x, 2)
+        target = view(y, :, sample_idx)
+        context.x .= view(x, :, sample_idx)
+        run(process)
+        wait(process)
+        output = @view context.free_state[model.output_idxs]
+        pred = argmax(class_scores(output, config.output_replicas))
+        truth = argmax(class_scores(target, config.output_replicas))
+        pred_counts[pred] += 1
+        correct += pred == truth
+        loss += sum(abs2, target .- output) / 2
+    end
+    return (; accuracy = correct / size(x, 2), loss = loss / size(x, 2), pred_counts)
+end
+
+"""Append one named tuple row to a CSV file."""
+function append_row!(path::P, row::R) where {P<:AbstractString,R<:NamedTuple}
+    names = propertynames(row)
+    needs_header = !isfile(path) || filesize(path) == 0
+    open(path, "a") do io
+        needs_header && println(io, join(names, ","))
+        println(io, join((getproperty(row, name) for name in names), ","))
+    end
+    return path
+end
+
+"""Serialize trainable inlaid MNIST parameters."""
+function save_model(path::P, model::M) where {P<:AbstractString,M<:InlaidMNISTModel}
+    mkpath(dirname(path))
+    open(path, "w") do io
+        serialize(io, (;
+            weights_io = model.weights_io,
+            bias_o = model.bias_o,
+            config = model.config,
+            pixel_idxs = model.pixel_idxs,
+            live_input_idxs = model.live_input_idxs,
+            input_idxs = model.input_idxs,
+            output_idxs = model.output_idxs,
+            readout_mask = model.readout_mask,
+        ))
+    end
+    return path
+end
+
+"""Plot train/test accuracy and loss curves for one retained run."""
+function plot_metrics(path::P, rows::R) where {P<:AbstractString,R<:AbstractVector}
+    fig = Figure(size = (1200, 760))
+    ax_acc = Axis(fig[1, 1], xlabel = "epoch", ylabel = "accuracy", title = "Inlaid MNIST accuracy")
+    ax_loss = Axis(fig[2, 1], xlabel = "epoch", ylabel = "loss", title = "Loss")
+    epochs = [row.epoch for row in rows]
+    lines!(ax_acc, epochs, [row.train_accuracy for row in rows], label = "train", color = :steelblue)
+    lines!(ax_acc, epochs, [row.test_accuracy for row in rows], label = "test", color = :orange)
+    lines!(ax_loss, epochs, [row.train_loss for row in rows], label = "train", color = :steelblue)
+    lines!(ax_loss, epochs, [row.test_loss for row in rows], label = "test", color = :orange)
+    axislegend(ax_acc, position = :rb)
+    save(path, fig)
+    return path
+end
+
+"""Write the run settings needed to reproduce one inlaid-input run."""
+function write_settings!(path::P, config::C, rows::R) where {P<:AbstractString,C<:InlaidMNISTConfig,R<:AbstractVector}
+    best = rows[argmax([row.test_accuracy for row in rows])]
+    side = inlaid_side(config)
+    live_sites = side^2 - INMNIST_INPUT_SIDE^2
+    open(path, "w") do io
+        println(io, "# Inlaid Input MNIST")
+        println(io)
+        println(io, "- architecture: `$(side)x$(side) inlaid input -> $(INMNIST_NCLASSES * config.output_replicas) output replicas`")
+        println(io, "- fixed pixels/live separators: `$(INMNIST_INPUT_SIDE^2)` / `$(live_sites)`")
+        println(io, "- separator padding: `$(config.separator_padding)`")
+        println(io, "- workers/batchsize: `$(config.workers)` / `$(config.batchsize)`")
+        println(io, "- train/test per class: `$(config.train_per_class)` / `$(config.test_per_class)`")
+        println(io, "- free/nudged/eval sweeps: `$(config.free_sweeps)` / `$(config.nudge_sweeps)` / `$(config.eval_sweeps)`")
+        println(io, "- reads free/nudged/eval: `$(config.free_reads)` / `$(config.nudge_reads)` / `$(config.eval_reads)`")
+        println(io, "- optimizer: `$(config.optimizer)`")
+        println(io, "- lr/decay/min: `$(config.lr)` / `$(config.lr_decay)` / `$(config.lr_min)`")
+        println(io, "- beta: `$(config.β)`")
+        println(io, "- parameter/applied bias clip: `$(config.bias_clip)` / `$(config.applied_bias_clip)`")
+        println(io, "- input radius/scale: `$(config.input_internal_radius)` / `$(config.input_internal_scale)`")
+        println(io, "- output replica/competition couplings: `$(config.output_replica_scale)` / `$(config.output_competition_scale)`")
+        println(io, "- train live separator readout: `$(config.train_live_readout)`")
+        println(io, "- best test accuracy: `$(best.test_accuracy)` at epoch `$(best.epoch)`")
+        println(io, "- final test accuracy: `$(last(rows).test_accuracy)`")
+    end
+    return path
+end
+
+"""Convert prediction counts to a compact CSV-safe string."""
+function count_string(counts::V) where {V<:AbstractVector{Int}}
+    return join(counts, ";")
+end
+
+"""Train one inlaid-input MNIST run and write all artifacts."""
+function train(config::C = InlaidMNISTConfig()) where {C<:InlaidMNISTConfig}
+    config.separator_padding >= 1 || throw(ArgumentError("separator_padding must be at least 1"))
+    Threads.nthreads() < config.workers && @warn "Julia was started with fewer threads than requested workers" threads = Threads.nthreads() workers = config.workers
+    mkpath(config.outdir)
+    metrics_path = joinpath(config.outdir, "metrics.csv")
+    isfile(metrics_path) && rm(metrics_path)
+
+    println("loading MNIST train/test slices")
+    train_x, train_y = balanced_mnist(:train, config.train_per_class, config)
+    test_x, test_y = balanced_mnist(:test, config.test_per_class, config)
+    println("initializing graph and manager")
+    model = init_model(config)
+    manager = inlaid_manager(model)
+    rng = Random.MersenneTwister(config.seed + 77)
+    rows = NamedTuple[]
+    best_accuracy = -Inf
+    best_path = joinpath(config.outdir, "best_params.bin")
+    final_path = joinpath(config.outdir, "final_params.bin")
+
+    for epoch in 1:config.epochs
+        epoch_start = time_ns()
+        order = shuffle(rng, collect(axes(train_x, 2)))
+        batch_stats = NamedTuple[]
+        for first_idx in 1:config.batchsize:length(order)
+            idxs = order[first_idx:min(first_idx + config.batchsize - 1, length(order))]
+            stats = run_minibatch!(manager, batch_jobs(train_x, train_y, idxs))
+            push!(batch_stats, stats)
+        end
+        epoch_time = (time_ns() - epoch_start) / 1.0e9
+
+        train_eval = evaluate(model, train_x, train_y)
+        test_eval = evaluate(model, test_x, test_y)
+        row = (;
+            epoch,
+            train_accuracy = train_eval.accuracy,
+            train_loss = train_eval.loss,
+            test_accuracy = test_eval.accuracy,
+            test_loss = test_eval.loss,
+            batch_accuracy = mean(stat.accuracy for stat in batch_stats),
+            batch_loss = mean(stat.loss for stat in batch_stats),
+            skipped = sum(stat.skipped for stat in batch_stats),
+            lr = last(batch_stats).lr,
+            epoch_time_s = epoch_time,
+            test_pred_counts = count_string(test_eval.pred_counts),
+        )
+        append_row!(metrics_path, row)
+        push!(rows, row)
+        if row.test_accuracy > best_accuracy
+            best_accuracy = row.test_accuracy
+            save_model(best_path, model)
+        end
+        println("epoch $(epoch): train=$(round(row.train_accuracy; digits=3)) test=$(round(row.test_accuracy; digits=3)) loss=$(round(row.test_loss; digits=3)) time=$(round(epoch_time; digits=2))s lr=$(row.lr)")
+    end
+
+    save_model(final_path, model)
+    plot_metrics(joinpath(config.outdir, "progress.png"), rows)
+    write_settings!(joinpath(config.outdir, "settings.md"), config, rows)
+    println("saved metrics: $metrics_path")
+    println("saved plot: $(joinpath(config.outdir, "progress.png"))")
+    println("saved best params: $best_path")
+    return (; config, model, rows, metrics_path, best_path, final_path)
+end
+
+"""Run the configured inlaid-input MNIST experiment entrypoint."""
+function main()
+    return train()
+end
+
+if abspath(PROGRAM_FILE) == @__FILE__
+    main()
+end
