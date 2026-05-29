@@ -236,7 +236,7 @@ end
             Processes.Interval(1),
             Processes.Interval(1),
         )
-        @test Processes.getkey(Processes.getalgo(resolved, 1)) == :source
+        @test Processes.plan_child_namespace(resolved, 1) == :source
         @test length(Processes.getstates(resolved)) == 1
         @test Processes.getkey(first(Processes.getstates(resolved))) == :_state
 
@@ -528,7 +528,7 @@ end
 
         resolved = resolve(algo)
         wrapper = Processes.getalgo(resolved, 2)
-        wrapper_key = Processes.getkey(wrapper)
+        wrapper_key = Processes.plan_child_namespace(resolved, 2)
         _, sharedvars = Processes._resolve_options(resolved)
         routes = sharedvars[wrapper_key]
         @test length(routes) == 1
@@ -557,7 +557,7 @@ end
 
         resolved = resolve(algo)
         wrapper = Processes.getalgo(resolved, 2)
-        wrapper_key = Processes.getkey(wrapper)
+        wrapper_key = Processes.plan_child_namespace(resolved, 2)
         @test occursin("@transform", sprint(show, wrapper))
         @test occursin("c1.plus_capture.captured", sprint(show, wrapper))
 
@@ -578,7 +578,7 @@ end
 
         resolved = resolve(algo)
         wrapper = Processes.getalgo(resolved, 1)
-        wrapper_key = Processes.getkey(wrapper)
+        wrapper_key = Processes.plan_child_namespace(resolved, 1)
         _, sharedvars = Processes._resolve_options(resolved)
         routes = sharedvars[wrapper_key]
         @test length(routes) == 1
@@ -604,9 +604,9 @@ end
 
         resolved = resolve(algo)
         writer = Processes.getalgo(resolved, 1)
-        writer_key = Processes.getkey(writer)
-        result_algo = Processes.getalgo(resolved, 2)
-        @test Processes.getalgo(writer) isa Processes.ContextWrite
+        writer_key = Processes.plan_child_namespace(resolved, 1)
+        result_key = Processes.plan_child_namespace(resolved, 2)
+        @test writer isa Processes.ContextWrite
 
         _, sharedvars = Processes._resolve_options(resolved)
         routes = sharedvars[writer_key]
@@ -711,7 +711,7 @@ end
 
         resolved = resolve(algo)
         sink = Processes.getalgo(resolved, 1)
-        sink_key = Processes.getkey(sink)
+        sink_key = Processes.plan_child_namespace(resolved, 1)
         _, sharedvars = Processes._resolve_options(resolved)
         routes = sharedvars[sink_key]
         @test length(routes) == 1
@@ -736,10 +736,10 @@ end
         end
 
         resolved = resolve(algo)
-        function_key = Processes.getkey(Processes.getalgo(resolved, 1))
-        positional_key = Processes.getkey(Processes.getalgo(resolved, 2))
-        transform_key = Processes.getkey(Processes.getalgo(resolved, 3))
-        sink_key = Processes.getkey(Processes.getalgo(resolved, 4))
+        function_key = Processes.plan_child_namespace(resolved, 1)
+        positional_key = Processes.plan_child_namespace(resolved, 2)
+        transform_key = Processes.plan_child_namespace(resolved, 3)
+        sink_key = Processes.plan_child_namespace(resolved, 4)
         _, sharedvars = Processes._resolve_options(resolved)
         @test length(sharedvars[function_key]) == 1
         @test length(sharedvars[positional_key]) == 1
@@ -769,8 +769,8 @@ end
         resolved = resolve(algo)
         nested = Processes.getalgo(resolved, 1)
         nested_plan = Processes.getalgo(nested, 1)
-        function_key = Processes.getkey(Processes.getalgo(nested_plan, 1))
-        positional_key = Processes.getkey(Processes.getalgo(nested_plan, 2))
+        function_key = Processes.plan_child_namespace(nested_plan, 1)
+        positional_key = Processes.plan_child_namespace(nested_plan, 2)
         _, sharedvars = Processes._resolve_options(resolved)
         @test length(sharedvars[function_key]) == 1
         @test length(sharedvars[positional_key]) == 1
@@ -792,7 +792,7 @@ end
 
         resolved = resolve(algo)
         sink = Processes.getalgo(resolved, 1)
-        sink_key = Processes.getkey(sink)
+        sink_key = Processes.plan_child_namespace(resolved, 1)
         _, sharedvars = Processes._resolve_options(resolved)
         routes = sharedvars[sink_key]
         @test length(routes) == 1
@@ -815,7 +815,7 @@ end
 
         resolved = resolve(algo)
         sink = Processes.getalgo(resolved, 1)
-        sink_key = Processes.getkey(sink)
+        sink_key = Processes.plan_child_namespace(resolved, 1)
 
         p = Process(resolved, repeat = 1)
         Processes.run(p)
