@@ -13,7 +13,8 @@ using XLSX
 # Compatibility for a current InteractiveIsing update where `sign` was defined
 # inside the package for buffer modes, shadowing `Base.sign` in sparse adjacency
 # construction.
-InteractiveIsing.sign(x::Real) = Base.sign(x)
+InteractiveIsing.sign(x::T) where {T<:Real} =
+    ifelse(x > zero(T), one(T), ifelse(x < zero(T), -one(T), zero(T)))
 
 graph_array(g) = InteractiveIsing.state(g)
 
