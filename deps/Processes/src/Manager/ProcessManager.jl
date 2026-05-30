@@ -208,20 +208,62 @@ function partialinitworker!(slot::WorkerSlot{<:Process}, inputs_overrides...)
 end
 
 """
-    runprocessinline!(worker; lifetime = nothing, kwargs...)
+    _manager_launch_lifetime(worker, kwargs)
+
+Extract a per-run process lifetime from manager launch keyword arguments.
+`lifetime`, `repeats`, and `repeat` are launch controls, not runtime inputs.
+"""
+function _manager_launch_lifetime(worker::P, kwargs::K) where {P<:Process, K<:NamedTuple}
+    lifetime_value = get(kwargs, :lifetime, nothing)
+    repeats_value = get(kwargs, :repeats, nothing)
+    repeat_value = get(kwargs, :repeat, nothing)
+    has_lifetime = !isnothing(lifetime_value)
+    has_repeats = !isnothing(repeats_value)
+    has_repeat = !isnothing(repeat_value)
+    has_repeats && has_repeat && throw(ArgumentError("Pass either `repeats` or `repeat`, not both."))
+    has_lifetime && (has_repeats || has_repeat) && throw(ArgumentError("Pass either `lifetime` or `repeats`/`repeat`, not both."))
+
+    raw_lifetime = if has_lifetime
+        lifetime_value
+    elseif has_repeats
+        repeats_value
+    elseif has_repeat
+        repeat_value
+    else
+        nothing
+    end
+    return isnothing(raw_lifetime) ? nothing : normalize_process_lifetime(getalgo(worker), raw_lifetime)
+end
+
+"""
+    _manager_process_launch_args(worker, kwargs)
+
+Split manager launch arguments into `(lifetime, runtime_kwargs)` for a `Process`
+worker. Runtime keyword arguments are passed to the loop as `@input` values.
+"""
+function _manager_process_launch_args(worker::P, kwargs::K) where {P<:Process, K<:NamedTuple}
+    lifetime = _manager_launch_lifetime(worker, kwargs)
+    runtime_kwargs = deletekeys(kwargs, :lifetime, :repeats, :repeat)
+    return lifetime, runtime_kwargs
+end
+
+"""
+    runprocessinline!(worker; lifetime = nothing, repeats = nothing, repeat = nothing, kwargs...)
 
 Run a `Process` worker synchronously in the current task and store the resulting
 runtime context back on the worker. This avoids per-job `Task` allocation for
-manager recipes that do not need concurrent `Process` execution.
+threaded manager jobs.
 """
-function runprocessinline!(worker::P; lifetime = nothing, kwargs...) where {P<:Process}
+function runprocessinline!(worker::P; lifetime = nothing, repeats = nothing, repeat = nothing, kwargs...) where {P<:Process}
     @assert isidle(worker) "Process is already in use"
     @atomic worker.shouldrun = true
     @atomic worker.paused = false
     worker.lastresult = nothing
 
-    if !isnothing(lifetime)
-        lt = normalize_process_lifetime(getalgo(worker), lifetime)
+    launch_kwargs = (; lifetime, repeats, repeat)
+    launch_lifetime = _manager_launch_lifetime(worker, launch_kwargs)
+    if !isnothing(launch_lifetime)
+        lt = launch_lifetime
         context(worker, _merge_into_globals(context(worker), (; lifetime = lt)))
     end
 
@@ -777,132 +819,6 @@ Return the workers stored in each manager slot.
 workers(manager::ProcessManager) = map(_slot_worker, manager.slots)
 
 """
-Return a short status label for a manager slot.
-"""
-function _slot_status_label(slot::S) where {S<:WorkerSlot}
-    if slot.active
-        return :active
-    elseif !isnothing(slot.error)
-        return :error
-    elseif isnothing(slot.worker)
-        return :empty
-    else
-        return :idle
-    end
-end
-
-"""
-Return a compact label for values shown in manager summaries.
-"""
-function _manager_value_label(value::V) where {V}
-    isnothing(value) && return "nothing"
-    return sprint(summary, value)
-end
-
-"""Return the number of manager slots currently marked active."""
-function _manager_active_count(manager::M) where {M<:ProcessManager}
-    return count(slot -> slot.active, manager.slots)
-end
-
-"""
-Print one manager slot as a compact diagnostic line.
-"""
-function _show_manager_slot_line(io::IO, slot::S; prefix::String = "") where {S<:WorkerSlot}
-    print(
-        io,
-        prefix,
-        "[",
-        slot.idx,
-        "] ",
-        repr(slot.name),
-        " ",
-        _slot_status_label(slot),
-        " runs=",
-        slot.runs,
-        " worker=",
-        _manager_value_label(slot.worker),
-    )
-    !isnothing(slot.job) && print(io, " job=", _manager_value_label(slot.job))
-    !isnothing(slot.result) && print(io, " result=", _manager_value_label(slot.result))
-    !isnothing(slot.error) && print(io, " error=", _manager_value_label(slot.error))
-    return nothing
-end
-
-function Base.show(io::IO, slot::S) where {S<:WorkerSlot}
-    print(io, "WorkerSlot(")
-    _show_manager_slot_line(io, slot)
-    print(io, ")")
-    return nothing
-end
-
-function Base.summary(io::IO, slot::S) where {S<:WorkerSlot}
-    print(io, "WorkerSlot(", slot.idx, ", ", _slot_status_label(slot), ")")
-    return nothing
-end
-
-function Base.show(io::IO, ::MIME"text/plain", slot::S) where {S<:WorkerSlot}
-    println(io, "WorkerSlot")
-    println(io, "├── idx = ", slot.idx)
-    println(io, "├── name = ", repr(slot.name))
-    println(io, "├── status = ", _slot_status_label(slot))
-    println(io, "├── runs = ", slot.runs)
-    println(io, "├── worker = ", _manager_value_label(slot.worker))
-    println(io, "├── job = ", _manager_value_label(slot.job))
-    println(io, "├── result = ", _manager_value_label(slot.result))
-    print(io, "└── error = ", _manager_value_label(slot.error))
-    return nothing
-end
-
-function Base.show(io::IO, manager::M) where {M<:ProcessManager}
-    active = _manager_active_count(manager)
-    print(
-        io,
-        "ProcessManager(",
-        manager.closed ? "closed" : "open",
-        ", workers=",
-        length(manager.slots),
-        ", active=",
-        active,
-        ", completions=",
-        manager.completions,
-        ", errors=",
-        length(manager.errors),
-        ")",
-    )
-    return nothing
-end
-
-function Base.summary(io::IO, manager::M) where {M<:ProcessManager}
-    print(io, "ProcessManager(", length(manager.slots), " workers, ", manager.closed ? "closed" : "open", ")")
-    return nothing
-end
-
-function Base.show(io::IO, ::MIME"text/plain", manager::M) where {M<:ProcessManager}
-    active = _manager_active_count(manager)
-    println(io, "ProcessManager")
-    println(io, "├── status = ", manager.closed ? :closed : :open)
-    println(io, "├── workers = ", length(manager.slots), " (active=", active, ", idle=", length(manager.slots) - active, ")")
-    println(io, "├── lifecycle = ", typeof(manager.worker_lifecycle))
-    println(io, "├── flush_policy = ", manager.flush_policy)
-    println(
-        io,
-        "├── progress = dispatched=",
-        manager.dispatched,
-        ", completions=",
-        manager.completions,
-        ", since_flush=",
-        manager.completions_since_flush,
-    )
-    println(io, "├── errors = ", length(manager.errors))
-    print(io, "└── slots")
-    for slot in manager.slots
-        print(io, "\n    ")
-        _show_manager_slot_line(io, slot)
-    end
-    return nothing
-end
-
-"""
 Sentinel returned by optional recipe lookup when a callback is not defined.
 """
 struct NoRecipeCallback end
@@ -1182,7 +1098,8 @@ Default worker launch step. `Process` workers are launched with
 shape or provide recipe `start!`.
 """
 function _start_worker!(worker::Process, kwargs::NamedTuple)
-    run(worker; kwargs...)
+    lifetime, runtime_kwargs = _manager_process_launch_args(worker, kwargs)
+    run(worker, lifetime; runtime_kwargs...)
     return worker
 end
 
