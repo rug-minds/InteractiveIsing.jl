@@ -1,0 +1,24 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+after include elapsed=0.0 threads=2
+after config elapsed=0.028
+after data elapsed=2.097
+after build_layer elapsed=3.826
+after resolve elapsed=14.108
+after worker elapsed=17.209
+before monitor elapsed=30.119
+before run elapsed=30.12
+poll_0 elapsed=30.149 ticks=1 loopidx=1 task_is_nothing=true
+after run returned elapsed=31.012
+poll_1 elapsed=35.749 ticks=1 loopidx=1 task_is_nothing=false
+poll_2 elapsed=40.761 ticks=1 loopidx=1 task_is_nothing=false
+poll_3 elapsed=45.766 ticks=1 loopidx=1 task_is_nothing=false
+poll_4 elapsed=50.77 ticks=1 loopidx=1 task_is_nothing=false
+poll_5 elapsed=55.774 ticks=1 loopidx=1 task_is_nothing=false
+poll_6 elapsed=60.782 ticks=1 loopidx=1 task_is_nothing=false
+poll_7 elapsed=65.786 ticks=1 loopidx=1 task_is_nothing=false
+poll_8 elapsed=70.8 ticks=1 loopidx=1 task_is_nothing=false
+poll_9 elapsed=75.813 ticks=1 loopidx=1 task_is_nothing=false
+poll_10 elapsed=80.825 ticks=1 loopidx=1 task_is_nothing=false
+poll_11 elapsed=85.837 ticks=1 loopidx=1 task_is_nothing=false
+poll_12 elapsed=90.839 ticks=1 loopidx=1 task_is_nothing=false

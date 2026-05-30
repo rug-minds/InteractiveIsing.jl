@@ -10,6 +10,7 @@ Contrastive gradient for IsingLayer from plus and minus nudged states
         - nstates(g)
 """
 
+
 function contrastive_gradient(graph, s_plus, s_minus, β::Real; buffers = nothing)
     if isnothing(buffers) # setup buffers
     end
