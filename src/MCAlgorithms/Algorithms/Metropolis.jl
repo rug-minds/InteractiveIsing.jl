@@ -32,14 +32,13 @@ end
 
 # @inline function (::Metropolis)(context::As) where As
 @inline function Processes.step!(metro::Metropolis, context::C) where {C}
-    (;rng, model, hamiltonian, proposer, proposal) = context
+    (;rng, model, hamiltonian, proposer, proposal, T) = context
 
     proposal = @inline rand(rng, proposer)
     Ttype = eltype(model)
 
    
     ΔE = @inline calculate(ΔH(), hamiltonian, model, proposal)
-    T = temp(model)
     if (@inline (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-ΔE/T)))
         proposal = @inline accept(proposer, proposal)
     end

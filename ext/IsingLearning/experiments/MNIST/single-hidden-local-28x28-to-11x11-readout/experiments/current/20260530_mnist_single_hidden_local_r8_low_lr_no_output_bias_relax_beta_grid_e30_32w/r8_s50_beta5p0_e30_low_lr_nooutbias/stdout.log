@@ -1,0 +1,1626 @@
+[2026-05-30T04:20:03] bootstrap script started elapsed_s=0.157
+[2026-05-30T04:20:03] bootstrap Pkg loaded elapsed_s=0.378
+[2026-05-30T04:20:03] bootstrap project activated elapsed_s=0.049
+[2026-05-30T04:20:10] bootstrap dependencies loaded elapsed_s=7.005
+[2026-05-30T04:20:17] run started name=r8 radius=8 epochs=30 workers=32 threads=32 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8
+[2026-05-30T04:20:17] run output initialized elapsed_s=0.001
+[2026-05-30T04:20:18] training data loaded elapsed_s=1.133 samples=1000 per_class=100
+[2026-05-30T04:20:18] test data loaded elapsed_s=0.12 samples=200 per_class=20
+[2026-05-30T04:20:20] model graph shell initialized elapsed_s=1.459 states=1729
+[2026-05-30T04:20:20] model connectivity masks built elapsed_s=0.022 input_hidden=163216 hidden_hidden=21904 hidden_output=4840
+[2026-05-30T04:20:22] model J entries initialized elapsed_s=2.452 stored_entries=379920
+[2026-05-30T04:20:22] model sparse edge layout built elapsed_s=0.256 trainable_entries=379920
+[2026-05-30T04:20:22] model initialized elapsed_s=4.198 stored_entries=379920
+[2026-05-30T04:20:22] source model ready elapsed_s=4.203
+[2026-05-30T04:20:23] manager construction started workers=32
+[2026-05-30T04:20:35] worker algorithm resolved elapsed_s=11.751
+[2026-05-30T04:20:36] manager constructing worker worker=1 workers=32
+[2026-05-30T04:20:36] worker model initialized elapsed_s=0.232 worker=1
+[2026-05-30T04:20:37] worker process initialized elapsed_s=1.38 worker=1
+[2026-05-30T04:20:37] worker initialized elapsed_s=1.614 worker=1
+[2026-05-30T04:20:37] manager constructed worker worker=1 workers=32
+[2026-05-30T04:20:43] manager constructing worker worker=10 workers=32
+[2026-05-30T04:20:43] worker model initialized elapsed_s=0.046 worker=10
+[2026-05-30T04:20:43] worker process initialized elapsed_s=0.001 worker=10
+[2026-05-30T04:20:43] worker initialized elapsed_s=0.047 worker=10
+[2026-05-30T04:20:43] manager constructed worker worker=10 workers=32
+[2026-05-30T04:20:43] manager constructing worker worker=20 workers=32
+[2026-05-30T04:20:43] worker model initialized elapsed_s=0.045 worker=20
+[2026-05-30T04:20:43] worker process initialized elapsed_s=0.0 worker=20
+[2026-05-30T04:20:43] worker initialized elapsed_s=0.046 worker=20
+[2026-05-30T04:20:43] manager constructed worker worker=20 workers=32
+[2026-05-30T04:20:44] manager constructing worker worker=30 workers=32
+[2026-05-30T04:20:44] worker model initialized elapsed_s=0.048 worker=30
+[2026-05-30T04:20:44] worker process initialized elapsed_s=0.0 worker=30
+[2026-05-30T04:20:44] worker initialized elapsed_s=0.049 worker=30
+[2026-05-30T04:20:44] manager constructed worker worker=30 workers=32
+[2026-05-30T04:20:44] manager constructing worker worker=32 workers=32
+[2026-05-30T04:20:44] worker model initialized elapsed_s=0.047 worker=32
+[2026-05-30T04:20:44] worker process initialized elapsed_s=0.0 worker=32
+[2026-05-30T04:20:44] worker initialized elapsed_s=0.047 worker=32
+[2026-05-30T04:20:44] manager constructed worker worker=32 workers=32
+[2026-05-30T04:20:44] manager constructed elapsed_s=20.787 workers=32
+[2026-05-30T04:20:44] manager ready elapsed_s=21.528 workers=32
+[2026-05-30T04:20:44] validation manager construction started workers=32
+[2026-05-30T04:20:47] validation worker algorithm resolved elapsed_s=3.397
+[2026-05-30T04:20:52] validation manager constructed elapsed_s=7.571 workers=32
+[2026-05-30T04:20:52] validation manager ready elapsed_s=7.742 workers=32
+[2026-05-30T04:20:52] epoch started epoch=0
+[2026-05-30T04:20:52] epoch evaluation started epoch=0 samples=200
+[2026-05-30T04:20:52] evaluation buffers cleared elapsed_s=0.028 samples=200
+[2026-05-30T04:20:52] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:20:52] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:20:55] evaluation manager run finished elapsed_s=3.45 jobs=200
+[2026-05-30T04:20:55] epoch evaluation finished elapsed_s=3.797 epoch=0 test_accuracy=0.08 test_loss=40.98
+[2026-05-30T04:20:56] best checkpoint saved elapsed_s=0.569 epoch=0 best_accuracy=0.08 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\best_params.bin
+[2026-05-30T04:20:56] latest checkpoint saved elapsed_s=0.003 epoch=0 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=0
+(timestamp = "2026-05-30T04:20:56", epoch = 0, seconds = 0.0, train_accuracy = missing, train_loss = missing, skipped = missing, test_accuracy = 0.08, test_loss = 40.98f0, pred_counts = "30-44-34-6-18-8-23-17-15-5", best_accuracy = 0.08, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:20:57] epoch finished elapsed_s=4.922 epoch=0
+[2026-05-30T04:20:57] epoch started epoch=1
+[2026-05-30T04:20:57] epoch training started epoch=1 batches=32 samples=1000
+[2026-05-30T04:20:57] batch build started epoch=1 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:20:57] batch jobs built elapsed_s=0.0 epoch=1 batch=1 jobs=32
+[2026-05-30T04:20:57] batch run started epoch=1 batch=1 jobs=32
+[2026-05-30T04:20:57] minibatch buffers cleared elapsed_s=0.043 jobs=32
+[2026-05-30T04:20:57] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:02] minibatch manager run finished elapsed_s=5.177 jobs=32
+[2026-05-30T04:21:03] minibatch optimizer update finished elapsed_s=0.458 nsamples=32 skipped=0
+[2026-05-30T04:21:03] batch run finished elapsed_s=6.385 epoch=1 batch=1 nsamples=32 accuracy=0.2812 loss=39.375 skipped=0
+[2026-05-30T04:21:05] batch build started epoch=1 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:21:05] batch jobs built elapsed_s=0.0 epoch=1 batch=10 jobs=32
+[2026-05-30T04:21:05] batch run started epoch=1 batch=10 jobs=32
+[2026-05-30T04:21:05] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:21:05] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:06] minibatch manager run finished elapsed_s=0.274 jobs=32
+[2026-05-30T04:21:06] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:21:06] batch run finished elapsed_s=0.284 epoch=1 batch=10 nsamples=32 accuracy=0.0938 loss=9.25 skipped=0
+[2026-05-30T04:21:08] batch build started epoch=1 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:21:08] batch jobs built elapsed_s=0.0 epoch=1 batch=20 jobs=32
+[2026-05-30T04:21:08] batch run started epoch=1 batch=20 jobs=32
+[2026-05-30T04:21:08] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:08] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:09] minibatch manager run finished elapsed_s=0.283 jobs=32
+[2026-05-30T04:21:09] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:21:09] batch run finished elapsed_s=0.295 epoch=1 batch=20 nsamples=32 accuracy=0.0938 loss=13.125 skipped=0
+[2026-05-30T04:21:11] batch build started epoch=1 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:21:11] batch jobs built elapsed_s=0.0 epoch=1 batch=30 jobs=32
+[2026-05-30T04:21:11] batch run started epoch=1 batch=30 jobs=32
+[2026-05-30T04:21:11] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:11] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:11] minibatch manager run finished elapsed_s=0.29 jobs=32
+[2026-05-30T04:21:11] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:21:11] batch run finished elapsed_s=0.299 epoch=1 batch=30 nsamples=32 accuracy=0.0938 loss=19.4375 skipped=0
+[2026-05-30T04:21:12] batch build started epoch=1 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:21:12] batch jobs built elapsed_s=0.0 epoch=1 batch=32 jobs=8
+[2026-05-30T04:21:12] batch run started epoch=1 batch=32 jobs=8
+[2026-05-30T04:21:12] minibatch buffers cleared elapsed_s=0.005 jobs=8
+[2026-05-30T04:21:12] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:21:12] minibatch manager run finished elapsed_s=0.15 jobs=8
+[2026-05-30T04:21:12] minibatch optimizer update finished elapsed_s=0.004 nsamples=8 skipped=0
+[2026-05-30T04:21:12] batch run finished elapsed_s=0.16 epoch=1 batch=32 nsamples=8 accuracy=0.125 loss=17.25 skipped=0
+[2026-05-30T04:21:12] epoch training finished epoch=1 elapsed_s=15.411 train_accuracy=0.11 train_loss=14.002 skipped=0
+[2026-05-30T04:21:12] epoch evaluation started epoch=1 samples=200
+[2026-05-30T04:21:12] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:21:12] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:21:12] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:21:13] evaluation manager run finished elapsed_s=0.811 jobs=200
+[2026-05-30T04:21:13] epoch evaluation finished elapsed_s=0.812 epoch=1 test_accuracy=0.105 test_loss=11.26
+[2026-05-30T04:21:13] best checkpoint saved elapsed_s=0.004 epoch=1 best_accuracy=0.105 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\best_params.bin
+[2026-05-30T04:21:13] latest checkpoint saved elapsed_s=0.008 epoch=1 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=32
+(timestamp = "2026-05-30T04:21:13", epoch = 1, seconds = 15.4108806, train_accuracy = 0.11, train_loss = 14.002f0, skipped = 0, test_accuracy = 0.105, test_loss = 11.26f0, pred_counts = "0-2-0-2-0-130-0-0-66-0", best_accuracy = 0.105, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:21:13] epoch finished elapsed_s=16.419 epoch=1
+[2026-05-30T04:21:13] epoch started epoch=2
+[2026-05-30T04:21:13] epoch training started epoch=2 batches=32 samples=1000
+[2026-05-30T04:21:13] batch build started epoch=2 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:21:13] batch jobs built elapsed_s=0.0 epoch=2 batch=1 jobs=32
+[2026-05-30T04:21:13] batch run started epoch=2 batch=1 jobs=32
+[2026-05-30T04:21:13] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:13] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:13] minibatch manager run finished elapsed_s=0.296 jobs=32
+[2026-05-30T04:21:13] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:21:13] batch run finished elapsed_s=0.305 epoch=2 batch=1 nsamples=32 accuracy=0.1875 loss=15.625 skipped=0
+[2026-05-30T04:21:16] batch build started epoch=2 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:21:16] batch jobs built elapsed_s=0.001 epoch=2 batch=10 jobs=32
+[2026-05-30T04:21:16] batch run started epoch=2 batch=10 jobs=32
+[2026-05-30T04:21:16] minibatch buffers cleared elapsed_s=0.013 jobs=32
+[2026-05-30T04:21:16] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:16] minibatch manager run finished elapsed_s=0.275 jobs=32
+[2026-05-30T04:21:16] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:21:16] batch run finished elapsed_s=0.292 epoch=2 batch=10 nsamples=32 accuracy=0.1562 loss=16.5625 skipped=0
+[2026-05-30T04:21:19] batch build started epoch=2 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:21:19] batch jobs built elapsed_s=0.001 epoch=2 batch=20 jobs=32
+[2026-05-30T04:21:19] batch run started epoch=2 batch=20 jobs=32
+[2026-05-30T04:21:19] minibatch buffers cleared elapsed_s=0.011 jobs=32
+[2026-05-30T04:21:19] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:19] minibatch manager run finished elapsed_s=0.304 jobs=32
+[2026-05-30T04:21:19] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:21:19] batch run finished elapsed_s=0.318 epoch=2 batch=20 nsamples=32 accuracy=0.125 loss=15.0 skipped=0
+[2026-05-30T04:21:22] batch build started epoch=2 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:21:22] batch jobs built elapsed_s=0.0 epoch=2 batch=30 jobs=32
+[2026-05-30T04:21:22] batch run started epoch=2 batch=30 jobs=32
+[2026-05-30T04:21:22] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:22] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:22] minibatch manager run finished elapsed_s=0.295 jobs=32
+[2026-05-30T04:21:22] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:21:22] batch run finished elapsed_s=0.305 epoch=2 batch=30 nsamples=32 accuracy=0.125 loss=15.75 skipped=0
+[2026-05-30T04:21:22] batch build started epoch=2 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:21:22] batch jobs built elapsed_s=0.0 epoch=2 batch=32 jobs=8
+[2026-05-30T04:21:22] batch run started epoch=2 batch=32 jobs=8
+[2026-05-30T04:21:22] minibatch buffers cleared elapsed_s=0.009 jobs=8
+[2026-05-30T04:21:22] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:21:22] minibatch manager run finished elapsed_s=0.153 jobs=8
+[2026-05-30T04:21:22] minibatch optimizer update finished elapsed_s=0.003 nsamples=8 skipped=0
+[2026-05-30T04:21:22] batch run finished elapsed_s=0.166 epoch=2 batch=32 nsamples=8 accuracy=0.125 loss=14.75 skipped=0
+[2026-05-30T04:21:22] epoch training finished epoch=2 elapsed_s=9.356 train_accuracy=0.106 train_loss=15.146 skipped=0
+[2026-05-30T04:21:22] epoch evaluation started epoch=2 samples=200
+[2026-05-30T04:21:22] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:21:22] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:21:22] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:21:23] evaluation manager run finished elapsed_s=0.856 jobs=200
+[2026-05-30T04:21:23] epoch evaluation finished elapsed_s=0.857 epoch=2 test_accuracy=0.11 test_loss=15.84
+[2026-05-30T04:21:23] best checkpoint saved elapsed_s=0.01 epoch=2 best_accuracy=0.11 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\best_params.bin
+[2026-05-30T04:21:23] latest checkpoint saved elapsed_s=0.003 epoch=2 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=64
+(timestamp = "2026-05-30T04:21:23", epoch = 2, seconds = 9.3558367, train_accuracy = 0.106, train_loss = 15.146f0, skipped = 0, test_accuracy = 0.11, test_loss = 15.84f0, pred_counts = "0-10-0-3-8-0-0-179-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:21:23] epoch finished elapsed_s=10.227 epoch=2
+[2026-05-30T04:21:23] epoch started epoch=3
+[2026-05-30T04:21:23] epoch training started epoch=3 batches=32 samples=1000
+[2026-05-30T04:21:23] batch build started epoch=3 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:21:23] batch jobs built elapsed_s=0.0 epoch=3 batch=1 jobs=32
+[2026-05-30T04:21:23] batch run started epoch=3 batch=1 jobs=32
+[2026-05-30T04:21:23] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:21:23] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:23] minibatch manager run finished elapsed_s=0.289 jobs=32
+[2026-05-30T04:21:23] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:21:23] batch run finished elapsed_s=0.299 epoch=3 batch=1 nsamples=32 accuracy=0.125 loss=15.1875 skipped=0
+[2026-05-30T04:21:26] batch build started epoch=3 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:21:26] batch jobs built elapsed_s=0.0 epoch=3 batch=10 jobs=32
+[2026-05-30T04:21:26] batch run started epoch=3 batch=10 jobs=32
+[2026-05-30T04:21:26] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:26] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:26] minibatch manager run finished elapsed_s=0.293 jobs=32
+[2026-05-30T04:21:26] minibatch optimizer update finished elapsed_s=0.084 nsamples=32 skipped=0
+[2026-05-30T04:21:26] batch run finished elapsed_s=0.384 epoch=3 batch=10 nsamples=32 accuracy=0.0625 loss=16.5625 skipped=0
+[2026-05-30T04:21:29] batch build started epoch=3 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:21:29] batch jobs built elapsed_s=0.0 epoch=3 batch=20 jobs=32
+[2026-05-30T04:21:29] batch run started epoch=3 batch=20 jobs=32
+[2026-05-30T04:21:29] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:29] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:29] minibatch manager run finished elapsed_s=0.29 jobs=32
+[2026-05-30T04:21:29] minibatch optimizer update finished elapsed_s=0.011 nsamples=32 skipped=0
+[2026-05-30T04:21:29] batch run finished elapsed_s=0.307 epoch=3 batch=20 nsamples=32 accuracy=0.125 loss=12.6875 skipped=0
+[2026-05-30T04:21:32] batch build started epoch=3 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:21:32] batch jobs built elapsed_s=0.0 epoch=3 batch=30 jobs=32
+[2026-05-30T04:21:32] batch run started epoch=3 batch=30 jobs=32
+[2026-05-30T04:21:32] minibatch buffers cleared elapsed_s=0.008 jobs=32
+[2026-05-30T04:21:32] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:32] minibatch manager run finished elapsed_s=0.26 jobs=32
+[2026-05-30T04:21:32] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:21:32] batch run finished elapsed_s=0.276 epoch=3 batch=30 nsamples=32 accuracy=0.0625 loss=14.875 skipped=0
+[2026-05-30T04:21:32] batch build started epoch=3 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:21:32] batch jobs built elapsed_s=0.0 epoch=3 batch=32 jobs=8
+[2026-05-30T04:21:32] batch run started epoch=3 batch=32 jobs=8
+[2026-05-30T04:21:32] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:21:32] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:21:33] minibatch manager run finished elapsed_s=0.155 jobs=8
+[2026-05-30T04:21:33] minibatch optimizer update finished elapsed_s=0.003 nsamples=8 skipped=0
+[2026-05-30T04:21:33] batch run finished elapsed_s=0.165 epoch=3 batch=32 nsamples=8 accuracy=0.0 loss=16.75 skipped=0
+[2026-05-30T04:21:33] epoch training finished epoch=3 elapsed_s=9.387 train_accuracy=0.098 train_loss=15.12 skipped=0
+[2026-05-30T04:21:33] epoch evaluation started epoch=3 samples=200
+[2026-05-30T04:21:33] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:21:33] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:21:33] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:21:33] evaluation manager run finished elapsed_s=0.842 jobs=200
+[2026-05-30T04:21:33] epoch evaluation finished elapsed_s=0.843 epoch=3 test_accuracy=0.1 test_loss=16.06
+[2026-05-30T04:21:33] latest checkpoint saved elapsed_s=0.004 epoch=3 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=96
+(timestamp = "2026-05-30T04:21:33", epoch = 3, seconds = 9.3867906, train_accuracy = 0.098, train_loss = 15.12f0, skipped = 0, test_accuracy = 0.1, test_loss = 16.06f0, pred_counts = "0-200-0-0-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:21:33] epoch finished elapsed_s=10.235 epoch=3
+[2026-05-30T04:21:33] epoch started epoch=4
+[2026-05-30T04:21:33] epoch training started epoch=4 batches=32 samples=1000
+[2026-05-30T04:21:33] batch build started epoch=4 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:21:33] batch jobs built elapsed_s=0.0 epoch=4 batch=1 jobs=32
+[2026-05-30T04:21:33] batch run started epoch=4 batch=1 jobs=32
+[2026-05-30T04:21:33] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:33] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:34] minibatch manager run finished elapsed_s=0.276 jobs=32
+[2026-05-30T04:21:34] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:21:34] batch run finished elapsed_s=0.285 epoch=4 batch=1 nsamples=32 accuracy=0.0312 loss=15.3125 skipped=0
+[2026-05-30T04:21:36] batch build started epoch=4 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:21:36] batch jobs built elapsed_s=0.0 epoch=4 batch=10 jobs=32
+[2026-05-30T04:21:36] batch run started epoch=4 batch=10 jobs=32
+[2026-05-30T04:21:36] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:36] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:36] minibatch manager run finished elapsed_s=0.282 jobs=32
+[2026-05-30T04:21:36] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:21:36] batch run finished elapsed_s=0.293 epoch=4 batch=10 nsamples=32 accuracy=0.0938 loss=19.3125 skipped=0
+[2026-05-30T04:21:39] batch build started epoch=4 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:21:39] batch jobs built elapsed_s=0.0 epoch=4 batch=20 jobs=32
+[2026-05-30T04:21:39] batch run started epoch=4 batch=20 jobs=32
+[2026-05-30T04:21:39] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:39] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:39] minibatch manager run finished elapsed_s=0.274 jobs=32
+[2026-05-30T04:21:39] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:21:39] batch run finished elapsed_s=0.284 epoch=4 batch=20 nsamples=32 accuracy=0.0938 loss=16.8125 skipped=0
+[2026-05-30T04:21:42] batch build started epoch=4 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:21:42] batch jobs built elapsed_s=0.0 epoch=4 batch=30 jobs=32
+[2026-05-30T04:21:42] batch run started epoch=4 batch=30 jobs=32
+[2026-05-30T04:21:42] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:42] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:42] minibatch manager run finished elapsed_s=0.295 jobs=32
+[2026-05-30T04:21:42] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:21:42] batch run finished elapsed_s=0.304 epoch=4 batch=30 nsamples=32 accuracy=0.1562 loss=16.0625 skipped=0
+[2026-05-30T04:21:43] batch build started epoch=4 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:21:43] batch jobs built elapsed_s=0.0 epoch=4 batch=32 jobs=8
+[2026-05-30T04:21:43] batch run started epoch=4 batch=32 jobs=8
+[2026-05-30T04:21:43] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:21:43] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:21:43] minibatch manager run finished elapsed_s=0.159 jobs=8
+[2026-05-30T04:21:43] minibatch optimizer update finished elapsed_s=0.008 nsamples=8 skipped=0
+[2026-05-30T04:21:43] batch run finished elapsed_s=0.173 epoch=4 batch=32 nsamples=8 accuracy=0.25 loss=14.75 skipped=0
+[2026-05-30T04:21:43] epoch training finished epoch=4 elapsed_s=9.284 train_accuracy=0.106 train_loss=17.294 skipped=0
+[2026-05-30T04:21:43] epoch evaluation started epoch=4 samples=200
+[2026-05-30T04:21:43] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:21:43] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:21:43] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:21:44] evaluation manager run finished elapsed_s=0.798 jobs=200
+[2026-05-30T04:21:44] epoch evaluation finished elapsed_s=0.8 epoch=4 test_accuracy=0.1 test_loss=14.4
+[2026-05-30T04:21:44] latest checkpoint saved elapsed_s=0.003 epoch=4 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=128
+(timestamp = "2026-05-30T04:21:44", epoch = 4, seconds = 9.2837766, train_accuracy = 0.106, train_loss = 17.294f0, skipped = 0, test_accuracy = 0.1, test_loss = 14.4f0, pred_counts = "0-0-0-0-0-0-0-0-0-200", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:21:44] epoch finished elapsed_s=10.089 epoch=4
+[2026-05-30T04:21:44] epoch started epoch=5
+[2026-05-30T04:21:44] epoch training started epoch=5 batches=32 samples=1000
+[2026-05-30T04:21:44] batch build started epoch=5 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:21:44] batch jobs built elapsed_s=0.0 epoch=5 batch=1 jobs=32
+[2026-05-30T04:21:44] batch run started epoch=5 batch=1 jobs=32
+[2026-05-30T04:21:44] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:44] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:44] minibatch manager run finished elapsed_s=0.277 jobs=32
+[2026-05-30T04:21:44] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:21:44] batch run finished elapsed_s=0.286 epoch=5 batch=1 nsamples=32 accuracy=0.0625 loss=15.875 skipped=0
+[2026-05-30T04:21:46] batch build started epoch=5 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:21:46] batch jobs built elapsed_s=0.0 epoch=5 batch=10 jobs=32
+[2026-05-30T04:21:46] batch run started epoch=5 batch=10 jobs=32
+[2026-05-30T04:21:46] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:21:46] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:46] minibatch manager run finished elapsed_s=0.262 jobs=32
+[2026-05-30T04:21:46] minibatch optimizer update finished elapsed_s=0.007 nsamples=32 skipped=0
+[2026-05-30T04:21:46] batch run finished elapsed_s=0.278 epoch=5 batch=10 nsamples=32 accuracy=0.2188 loss=13.125 skipped=0
+[2026-05-30T04:21:49] batch build started epoch=5 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:21:49] batch jobs built elapsed_s=0.0 epoch=5 batch=20 jobs=32
+[2026-05-30T04:21:49] batch run started epoch=5 batch=20 jobs=32
+[2026-05-30T04:21:49] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:49] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:49] minibatch manager run finished elapsed_s=0.284 jobs=32
+[2026-05-30T04:21:49] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:21:49] batch run finished elapsed_s=0.295 epoch=5 batch=20 nsamples=32 accuracy=0.0938 loss=13.6875 skipped=0
+[2026-05-30T04:21:52] batch build started epoch=5 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:21:52] batch jobs built elapsed_s=0.0 epoch=5 batch=30 jobs=32
+[2026-05-30T04:21:52] batch run started epoch=5 batch=30 jobs=32
+[2026-05-30T04:21:52] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:52] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:52] minibatch manager run finished elapsed_s=0.299 jobs=32
+[2026-05-30T04:21:52] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:21:52] batch run finished elapsed_s=0.308 epoch=5 batch=30 nsamples=32 accuracy=0.0312 loss=15.0 skipped=0
+[2026-05-30T04:21:53] batch build started epoch=5 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:21:53] batch jobs built elapsed_s=0.0 epoch=5 batch=32 jobs=8
+[2026-05-30T04:21:53] batch run started epoch=5 batch=32 jobs=8
+[2026-05-30T04:21:53] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:21:53] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:21:53] minibatch manager run finished elapsed_s=0.161 jobs=8
+[2026-05-30T04:21:53] minibatch optimizer update finished elapsed_s=0.008 nsamples=8 skipped=0
+[2026-05-30T04:21:53] batch run finished elapsed_s=0.175 epoch=5 batch=32 nsamples=8 accuracy=0.125 loss=15.0 skipped=0
+[2026-05-30T04:21:53] epoch training finished epoch=5 elapsed_s=9.247 train_accuracy=0.108 train_loss=14.196 skipped=0
+[2026-05-30T04:21:53] epoch evaluation started epoch=5 samples=200
+[2026-05-30T04:21:53] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:21:53] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:21:53] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:21:54] evaluation manager run finished elapsed_s=0.83 jobs=200
+[2026-05-30T04:21:54] epoch evaluation finished elapsed_s=0.831 epoch=5 test_accuracy=0.1 test_loss=18.86
+[2026-05-30T04:21:54] latest checkpoint saved elapsed_s=0.004 epoch=5 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=160
+(timestamp = "2026-05-30T04:21:54", epoch = 5, seconds = 9.2471137, train_accuracy = 0.108, train_loss = 14.196f0, skipped = 0, test_accuracy = 0.1, test_loss = 18.86f0, pred_counts = "0-0-0-200-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:21:54] epoch finished elapsed_s=10.084 epoch=5
+[2026-05-30T04:21:54] epoch started epoch=6
+[2026-05-30T04:21:54] epoch training started epoch=6 batches=32 samples=1000
+[2026-05-30T04:21:54] batch build started epoch=6 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:21:54] batch jobs built elapsed_s=0.0 epoch=6 batch=1 jobs=32
+[2026-05-30T04:21:54] batch run started epoch=6 batch=1 jobs=32
+[2026-05-30T04:21:54] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:54] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:54] minibatch manager run finished elapsed_s=0.291 jobs=32
+[2026-05-30T04:21:54] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:21:54] batch run finished elapsed_s=0.301 epoch=6 batch=1 nsamples=32 accuracy=0.0625 loss=15.25 skipped=0
+[2026-05-30T04:21:56] batch build started epoch=6 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:21:56] batch jobs built elapsed_s=0.0 epoch=6 batch=10 jobs=32
+[2026-05-30T04:21:56] batch run started epoch=6 batch=10 jobs=32
+[2026-05-30T04:21:56] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:56] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:21:57] minibatch manager run finished elapsed_s=0.272 jobs=32
+[2026-05-30T04:21:57] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:21:57] batch run finished elapsed_s=0.28 epoch=6 batch=10 nsamples=32 accuracy=0.0938 loss=18.125 skipped=0
+[2026-05-30T04:21:59] batch build started epoch=6 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:21:59] batch jobs built elapsed_s=0.0 epoch=6 batch=20 jobs=32
+[2026-05-30T04:21:59] batch run started epoch=6 batch=20 jobs=32
+[2026-05-30T04:21:59] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:21:59] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:00] minibatch manager run finished elapsed_s=0.278 jobs=32
+[2026-05-30T04:22:00] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:22:00] batch run finished elapsed_s=0.287 epoch=6 batch=20 nsamples=32 accuracy=0.125 loss=15.5625 skipped=0
+[2026-05-30T04:22:02] batch build started epoch=6 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:22:02] batch jobs built elapsed_s=0.0 epoch=6 batch=30 jobs=32
+[2026-05-30T04:22:02] batch run started epoch=6 batch=30 jobs=32
+[2026-05-30T04:22:02] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:02] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:03] minibatch manager run finished elapsed_s=0.274 jobs=32
+[2026-05-30T04:22:03] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:22:03] batch run finished elapsed_s=0.283 epoch=6 batch=30 nsamples=32 accuracy=0.0938 loss=14.5 skipped=0
+[2026-05-30T04:22:03] batch build started epoch=6 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:22:03] batch jobs built elapsed_s=0.0 epoch=6 batch=32 jobs=8
+[2026-05-30T04:22:03] batch run started epoch=6 batch=32 jobs=8
+[2026-05-30T04:22:03] minibatch buffers cleared elapsed_s=0.007 jobs=8
+[2026-05-30T04:22:03] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:22:03] minibatch manager run finished elapsed_s=0.159 jobs=8
+[2026-05-30T04:22:03] minibatch optimizer update finished elapsed_s=0.003 nsamples=8 skipped=0
+[2026-05-30T04:22:03] batch run finished elapsed_s=0.169 epoch=6 batch=32 nsamples=8 accuracy=0.125 loss=14.75 skipped=0
+[2026-05-30T04:22:03] epoch training finished epoch=6 elapsed_s=9.414 train_accuracy=0.1 train_loss=16.328 skipped=0
+[2026-05-30T04:22:03] epoch evaluation started epoch=6 samples=200
+[2026-05-30T04:22:03] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:22:03] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:22:03] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:22:04] evaluation manager run finished elapsed_s=0.849 jobs=200
+[2026-05-30T04:22:04] epoch evaluation finished elapsed_s=0.85 epoch=6 test_accuracy=0.1 test_loss=11.2
+[2026-05-30T04:22:04] latest checkpoint saved elapsed_s=0.008 epoch=6 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=192
+(timestamp = "2026-05-30T04:22:04", epoch = 6, seconds = 9.4143195, train_accuracy = 0.1, train_loss = 16.328f0, skipped = 0, test_accuracy = 0.1, test_loss = 11.2f0, pred_counts = "0-0-0-0-200-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:22:04] epoch finished elapsed_s=10.274 epoch=6
+[2026-05-30T04:22:04] epoch started epoch=7
+[2026-05-30T04:22:04] epoch training started epoch=7 batches=32 samples=1000
+[2026-05-30T04:22:04] batch build started epoch=7 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:22:04] batch jobs built elapsed_s=0.0 epoch=7 batch=1 jobs=32
+[2026-05-30T04:22:04] batch run started epoch=7 batch=1 jobs=32
+[2026-05-30T04:22:04] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:04] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:04] minibatch manager run finished elapsed_s=0.275 jobs=32
+[2026-05-30T04:22:04] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:22:04] batch run finished elapsed_s=0.284 epoch=7 batch=1 nsamples=32 accuracy=0.1562 loss=14.25 skipped=0
+[2026-05-30T04:22:07] batch build started epoch=7 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:22:07] batch jobs built elapsed_s=0.0 epoch=7 batch=10 jobs=32
+[2026-05-30T04:22:07] batch run started epoch=7 batch=10 jobs=32
+[2026-05-30T04:22:07] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:22:07] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:07] minibatch manager run finished elapsed_s=0.302 jobs=32
+[2026-05-30T04:22:07] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:22:07] batch run finished elapsed_s=0.311 epoch=7 batch=10 nsamples=32 accuracy=0.0938 loss=14.625 skipped=0
+[2026-05-30T04:22:09] batch build started epoch=7 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:22:09] batch jobs built elapsed_s=0.0 epoch=7 batch=20 jobs=32
+[2026-05-30T04:22:09] batch run started epoch=7 batch=20 jobs=32
+[2026-05-30T04:22:09] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:09] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:10] minibatch manager run finished elapsed_s=0.291 jobs=32
+[2026-05-30T04:22:10] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:22:10] batch run finished elapsed_s=0.301 epoch=7 batch=20 nsamples=32 accuracy=0.0938 loss=18.5625 skipped=0
+[2026-05-30T04:22:12] batch build started epoch=7 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:22:12] batch jobs built elapsed_s=0.0 epoch=7 batch=30 jobs=32
+[2026-05-30T04:22:12] batch run started epoch=7 batch=30 jobs=32
+[2026-05-30T04:22:12] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:22:12] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:13] minibatch manager run finished elapsed_s=0.27 jobs=32
+[2026-05-30T04:22:13] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:22:13] batch run finished elapsed_s=0.279 epoch=7 batch=30 nsamples=32 accuracy=0.0 loss=17.875 skipped=0
+[2026-05-30T04:22:13] batch build started epoch=7 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:22:13] batch jobs built elapsed_s=0.0 epoch=7 batch=32 jobs=8
+[2026-05-30T04:22:13] batch run started epoch=7 batch=32 jobs=8
+[2026-05-30T04:22:13] minibatch buffers cleared elapsed_s=0.005 jobs=8
+[2026-05-30T04:22:13] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:22:13] minibatch manager run finished elapsed_s=0.153 jobs=8
+[2026-05-30T04:22:13] minibatch optimizer update finished elapsed_s=0.004 nsamples=8 skipped=0
+[2026-05-30T04:22:13] batch run finished elapsed_s=0.163 epoch=7 batch=32 nsamples=8 accuracy=0.0 loss=17.5 skipped=0
+[2026-05-30T04:22:13] epoch training finished epoch=7 elapsed_s=9.232 train_accuracy=0.092 train_loss=16.9 skipped=0
+[2026-05-30T04:22:13] epoch evaluation started epoch=7 samples=200
+[2026-05-30T04:22:13] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:22:13] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:22:13] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:22:14] evaluation manager run finished elapsed_s=0.804 jobs=200
+[2026-05-30T04:22:14] epoch evaluation finished elapsed_s=0.806 epoch=7 test_accuracy=0.1 test_loss=11.2
+[2026-05-30T04:22:14] latest checkpoint saved elapsed_s=0.009 epoch=7 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=224
+(timestamp = "2026-05-30T04:22:14", epoch = 7, seconds = 9.2317234, train_accuracy = 0.092, train_loss = 16.9f0, skipped = 0, test_accuracy = 0.1, test_loss = 11.2f0, pred_counts = "200-0-0-0-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:22:14] epoch finished elapsed_s=10.047 epoch=7
+[2026-05-30T04:22:14] epoch started epoch=8
+[2026-05-30T04:22:14] epoch training started epoch=8 batches=32 samples=1000
+[2026-05-30T04:22:14] batch build started epoch=8 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:22:14] batch jobs built elapsed_s=0.0 epoch=8 batch=1 jobs=32
+[2026-05-30T04:22:14] batch run started epoch=8 batch=1 jobs=32
+[2026-05-30T04:22:14] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:22:14] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:14] minibatch manager run finished elapsed_s=0.286 jobs=32
+[2026-05-30T04:22:14] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:22:14] batch run finished elapsed_s=0.294 epoch=8 batch=1 nsamples=32 accuracy=0.0938 loss=16.5 skipped=0
+[2026-05-30T04:22:17] batch build started epoch=8 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:22:17] batch jobs built elapsed_s=0.0 epoch=8 batch=10 jobs=32
+[2026-05-30T04:22:17] batch run started epoch=8 batch=10 jobs=32
+[2026-05-30T04:22:17] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:22:17] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:17] minibatch manager run finished elapsed_s=0.275 jobs=32
+[2026-05-30T04:22:17] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:22:17] batch run finished elapsed_s=0.285 epoch=8 batch=10 nsamples=32 accuracy=0.125 loss=15.0625 skipped=0
+[2026-05-30T04:22:20] batch build started epoch=8 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:22:20] batch jobs built elapsed_s=0.0 epoch=8 batch=20 jobs=32
+[2026-05-30T04:22:20] batch run started epoch=8 batch=20 jobs=32
+[2026-05-30T04:22:20] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:22:20] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:20] minibatch manager run finished elapsed_s=0.284 jobs=32
+[2026-05-30T04:22:20] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:22:20] batch run finished elapsed_s=0.295 epoch=8 batch=20 nsamples=32 accuracy=0.1562 loss=12.0 skipped=0
+[2026-05-30T04:22:22] batch build started epoch=8 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:22:22] batch jobs built elapsed_s=0.0 epoch=8 batch=30 jobs=32
+[2026-05-30T04:22:22] batch run started epoch=8 batch=30 jobs=32
+[2026-05-30T04:22:22] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:22] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:23] minibatch manager run finished elapsed_s=0.28 jobs=32
+[2026-05-30T04:22:23] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:22:23] batch run finished elapsed_s=0.289 epoch=8 batch=30 nsamples=32 accuracy=0.125 loss=12.625 skipped=0
+[2026-05-30T04:22:23] batch build started epoch=8 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:22:23] batch jobs built elapsed_s=0.0 epoch=8 batch=32 jobs=8
+[2026-05-30T04:22:23] batch run started epoch=8 batch=32 jobs=8
+[2026-05-30T04:22:23] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:22:23] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:22:23] minibatch manager run finished elapsed_s=0.162 jobs=8
+[2026-05-30T04:22:23] minibatch optimizer update finished elapsed_s=0.002 nsamples=8 skipped=0
+[2026-05-30T04:22:23] batch run finished elapsed_s=0.171 epoch=8 batch=32 nsamples=8 accuracy=0.25 loss=11.75 skipped=0
+[2026-05-30T04:22:23] epoch training finished epoch=8 elapsed_s=9.335 train_accuracy=0.113 train_loss=13.814 skipped=0
+[2026-05-30T04:22:23] epoch evaluation started epoch=8 samples=200
+[2026-05-30T04:22:23] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:22:23] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:22:23] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:22:24] evaluation manager run finished elapsed_s=0.899 jobs=200
+[2026-05-30T04:22:24] epoch evaluation finished elapsed_s=0.899 epoch=8 test_accuracy=0.1 test_loss=16.0
+[2026-05-30T04:22:24] latest checkpoint saved elapsed_s=0.004 epoch=8 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=256
+(timestamp = "2026-05-30T04:22:24", epoch = 8, seconds = 9.3346526, train_accuracy = 0.113, train_loss = 13.814f0, skipped = 0, test_accuracy = 0.1, test_loss = 16.0f0, pred_counts = "0-200-0-0-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:22:24] epoch finished elapsed_s=10.241 epoch=8
+[2026-05-30T04:22:24] epoch started epoch=9
+[2026-05-30T04:22:24] epoch training started epoch=9 batches=32 samples=1000
+[2026-05-30T04:22:24] batch build started epoch=9 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:22:24] batch jobs built elapsed_s=0.0 epoch=9 batch=1 jobs=32
+[2026-05-30T04:22:24] batch run started epoch=9 batch=1 jobs=32
+[2026-05-30T04:22:24] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:24] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:24] minibatch manager run finished elapsed_s=0.294 jobs=32
+[2026-05-30T04:22:24] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:22:24] batch run finished elapsed_s=0.304 epoch=9 batch=1 nsamples=32 accuracy=0.2188 loss=11.6875 skipped=0
+[2026-05-30T04:22:27] batch build started epoch=9 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:22:27] batch jobs built elapsed_s=0.0 epoch=9 batch=10 jobs=32
+[2026-05-30T04:22:27] batch run started epoch=9 batch=10 jobs=32
+[2026-05-30T04:22:27] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:27] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:27] minibatch manager run finished elapsed_s=0.303 jobs=32
+[2026-05-30T04:22:27] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:22:27] batch run finished elapsed_s=0.312 epoch=9 batch=10 nsamples=32 accuracy=0.0938 loss=13.9375 skipped=0
+[2026-05-30T04:22:30] batch build started epoch=9 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:22:30] batch jobs built elapsed_s=0.0 epoch=9 batch=20 jobs=32
+[2026-05-30T04:22:30] batch run started epoch=9 batch=20 jobs=32
+[2026-05-30T04:22:30] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:22:30] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:30] minibatch manager run finished elapsed_s=0.278 jobs=32
+[2026-05-30T04:22:30] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:22:30] batch run finished elapsed_s=0.289 epoch=9 batch=20 nsamples=32 accuracy=0.2188 loss=15.875 skipped=0
+[2026-05-30T04:22:33] batch build started epoch=9 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:22:33] batch jobs built elapsed_s=0.0 epoch=9 batch=30 jobs=32
+[2026-05-30T04:22:33] batch run started epoch=9 batch=30 jobs=32
+[2026-05-30T04:22:33] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:33] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:33] minibatch manager run finished elapsed_s=0.301 jobs=32
+[2026-05-30T04:22:33] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:22:33] batch run finished elapsed_s=0.31 epoch=9 batch=30 nsamples=32 accuracy=0.0938 loss=18.5 skipped=0
+[2026-05-30T04:22:33] batch build started epoch=9 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:22:33] batch jobs built elapsed_s=0.0 epoch=9 batch=32 jobs=8
+[2026-05-30T04:22:33] batch run started epoch=9 batch=32 jobs=8
+[2026-05-30T04:22:33] minibatch buffers cleared elapsed_s=0.005 jobs=8
+[2026-05-30T04:22:33] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:22:33] minibatch manager run finished elapsed_s=0.151 jobs=8
+[2026-05-30T04:22:33] minibatch optimizer update finished elapsed_s=0.008 nsamples=8 skipped=0
+[2026-05-30T04:22:33] batch run finished elapsed_s=0.165 epoch=9 batch=32 nsamples=8 accuracy=0.0 loss=17.5 skipped=0
+[2026-05-30T04:22:33] epoch training finished epoch=9 elapsed_s=9.311 train_accuracy=0.1 train_loss=15.648 skipped=0
+[2026-05-30T04:22:33] epoch evaluation started epoch=9 samples=200
+[2026-05-30T04:22:33] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:22:33] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:22:33] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:22:34] evaluation manager run finished elapsed_s=0.81 jobs=200
+[2026-05-30T04:22:34] epoch evaluation finished elapsed_s=0.81 epoch=9 test_accuracy=0.095 test_loss=17.87
+[2026-05-30T04:22:34] latest checkpoint saved elapsed_s=0.004 epoch=9 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=288
+(timestamp = "2026-05-30T04:22:34", epoch = 9, seconds = 9.3106705, train_accuracy = 0.1, train_loss = 15.648f0, skipped = 0, test_accuracy = 0.095, test_loss = 17.87f0, pred_counts = "0-0-169-31-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:22:34] epoch finished elapsed_s=10.127 epoch=9
+[2026-05-30T04:22:34] epoch started epoch=10
+[2026-05-30T04:22:34] epoch training started epoch=10 batches=32 samples=1000
+[2026-05-30T04:22:34] batch build started epoch=10 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:22:34] batch jobs built elapsed_s=0.0 epoch=10 batch=1 jobs=32
+[2026-05-30T04:22:34] batch run started epoch=10 batch=1 jobs=32
+[2026-05-30T04:22:34] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:22:34] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:35] minibatch manager run finished elapsed_s=0.289 jobs=32
+[2026-05-30T04:22:35] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:22:35] batch run finished elapsed_s=0.298 epoch=10 batch=1 nsamples=32 accuracy=0.125 loss=16.8125 skipped=0
+[2026-05-30T04:22:37] batch build started epoch=10 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:22:37] batch jobs built elapsed_s=0.0 epoch=10 batch=10 jobs=32
+[2026-05-30T04:22:37] batch run started epoch=10 batch=10 jobs=32
+[2026-05-30T04:22:37] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:37] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:37] minibatch manager run finished elapsed_s=0.288 jobs=32
+[2026-05-30T04:22:37] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:22:37] batch run finished elapsed_s=0.297 epoch=10 batch=10 nsamples=32 accuracy=0.0938 loss=17.3125 skipped=0
+[2026-05-30T04:22:40] batch build started epoch=10 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:22:40] batch jobs built elapsed_s=0.0 epoch=10 batch=20 jobs=32
+[2026-05-30T04:22:40] batch run started epoch=10 batch=20 jobs=32
+[2026-05-30T04:22:40] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:40] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:40] minibatch manager run finished elapsed_s=0.286 jobs=32
+[2026-05-30T04:22:40] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:22:40] batch run finished elapsed_s=0.295 epoch=10 batch=20 nsamples=32 accuracy=0.0625 loss=17.4375 skipped=0
+[2026-05-30T04:22:43] batch build started epoch=10 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:22:43] batch jobs built elapsed_s=0.0 epoch=10 batch=30 jobs=32
+[2026-05-30T04:22:43] batch run started epoch=10 batch=30 jobs=32
+[2026-05-30T04:22:43] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:22:43] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:43] minibatch manager run finished elapsed_s=0.298 jobs=32
+[2026-05-30T04:22:43] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:22:43] batch run finished elapsed_s=0.307 epoch=10 batch=30 nsamples=32 accuracy=0.0625 loss=14.125 skipped=0
+[2026-05-30T04:22:43] batch build started epoch=10 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:22:43] batch jobs built elapsed_s=0.0 epoch=10 batch=32 jobs=8
+[2026-05-30T04:22:43] batch run started epoch=10 batch=32 jobs=8
+[2026-05-30T04:22:43] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:22:43] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:22:44] minibatch manager run finished elapsed_s=0.153 jobs=8
+[2026-05-30T04:22:44] minibatch optimizer update finished elapsed_s=0.004 nsamples=8 skipped=0
+[2026-05-30T04:22:44] batch run finished elapsed_s=0.164 epoch=10 batch=32 nsamples=8 accuracy=0.25 loss=11.5 skipped=0
+[2026-05-30T04:22:44] epoch training finished epoch=10 elapsed_s=9.265 train_accuracy=0.089 train_loss=16.444 skipped=0
+[2026-05-30T04:22:44] epoch evaluation started epoch=10 samples=200
+[2026-05-30T04:22:44] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:22:44] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:22:44] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:22:44] evaluation manager run finished elapsed_s=0.802 jobs=200
+[2026-05-30T04:22:44] epoch evaluation finished elapsed_s=0.803 epoch=10 test_accuracy=0.1 test_loss=8.0
+[2026-05-30T04:22:44] latest checkpoint saved elapsed_s=0.004 epoch=10 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=320
+(timestamp = "2026-05-30T04:22:44", epoch = 10, seconds = 9.264582, train_accuracy = 0.089, train_loss = 16.444f0, skipped = 0, test_accuracy = 0.1, test_loss = 8.0f0, pred_counts = "200-0-0-0-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:22:44] epoch finished elapsed_s=10.073 epoch=10
+[2026-05-30T04:22:44] epoch started epoch=11
+[2026-05-30T04:22:44] epoch training started epoch=11 batches=32 samples=1000
+[2026-05-30T04:22:44] batch build started epoch=11 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:22:44] batch jobs built elapsed_s=0.0 epoch=11 batch=1 jobs=32
+[2026-05-30T04:22:44] batch run started epoch=11 batch=1 jobs=32
+[2026-05-30T04:22:44] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:22:44] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:45] minibatch manager run finished elapsed_s=0.3 jobs=32
+[2026-05-30T04:22:45] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:22:45] batch run finished elapsed_s=0.309 epoch=11 batch=1 nsamples=32 accuracy=0.0312 loss=13.125 skipped=0
+[2026-05-30T04:22:47] batch build started epoch=11 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:22:47] batch jobs built elapsed_s=0.0 epoch=11 batch=10 jobs=32
+[2026-05-30T04:22:47] batch run started epoch=11 batch=10 jobs=32
+[2026-05-30T04:22:47] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:47] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:47] minibatch manager run finished elapsed_s=0.285 jobs=32
+[2026-05-30T04:22:47] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:22:47] batch run finished elapsed_s=0.295 epoch=11 batch=10 nsamples=32 accuracy=0.0938 loss=12.5625 skipped=0
+[2026-05-30T04:22:50] batch build started epoch=11 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:22:50] batch jobs built elapsed_s=0.0 epoch=11 batch=20 jobs=32
+[2026-05-30T04:22:50] batch run started epoch=11 batch=20 jobs=32
+[2026-05-30T04:22:50] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:50] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:50] minibatch manager run finished elapsed_s=0.291 jobs=32
+[2026-05-30T04:22:50] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:22:50] batch run finished elapsed_s=0.301 epoch=11 batch=20 nsamples=32 accuracy=0.0938 loss=13.4375 skipped=0
+[2026-05-30T04:22:53] batch build started epoch=11 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:22:53] batch jobs built elapsed_s=0.0 epoch=11 batch=30 jobs=32
+[2026-05-30T04:22:53] batch run started epoch=11 batch=30 jobs=32
+[2026-05-30T04:22:53] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:53] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:53] minibatch manager run finished elapsed_s=0.293 jobs=32
+[2026-05-30T04:22:53] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:22:53] batch run finished elapsed_s=0.303 epoch=11 batch=30 nsamples=32 accuracy=0.1562 loss=11.8125 skipped=0
+[2026-05-30T04:22:54] batch build started epoch=11 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:22:54] batch jobs built elapsed_s=0.0 epoch=11 batch=32 jobs=8
+[2026-05-30T04:22:54] batch run started epoch=11 batch=32 jobs=8
+[2026-05-30T04:22:54] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:22:54] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:22:54] minibatch manager run finished elapsed_s=0.153 jobs=8
+[2026-05-30T04:22:54] minibatch optimizer update finished elapsed_s=0.003 nsamples=8 skipped=0
+[2026-05-30T04:22:54] batch run finished elapsed_s=0.162 epoch=11 batch=32 nsamples=8 accuracy=0.0 loss=14.5 skipped=0
+[2026-05-30T04:22:54] epoch training finished epoch=11 elapsed_s=9.45 train_accuracy=0.109 train_loss=12.57 skipped=0
+[2026-05-30T04:22:54] epoch evaluation started epoch=11 samples=200
+[2026-05-30T04:22:54] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:22:54] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:22:54] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:22:55] evaluation manager run finished elapsed_s=0.819 jobs=200
+[2026-05-30T04:22:55] epoch evaluation finished elapsed_s=0.819 epoch=11 test_accuracy=0.1 test_loss=12.8
+[2026-05-30T04:22:55] latest checkpoint saved elapsed_s=0.004 epoch=11 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=352
+(timestamp = "2026-05-30T04:22:55", epoch = 11, seconds = 9.4497883, train_accuracy = 0.109, train_loss = 12.57f0, skipped = 0, test_accuracy = 0.1, test_loss = 12.8f0, pred_counts = "0-0-0-0-0-0-200-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:22:55] epoch finished elapsed_s=10.274 epoch=11
+[2026-05-30T04:22:55] epoch started epoch=12
+[2026-05-30T04:22:55] epoch training started epoch=12 batches=32 samples=1000
+[2026-05-30T04:22:55] batch build started epoch=12 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:22:55] batch jobs built elapsed_s=0.0 epoch=12 batch=1 jobs=32
+[2026-05-30T04:22:55] batch run started epoch=12 batch=1 jobs=32
+[2026-05-30T04:22:55] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:55] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:55] minibatch manager run finished elapsed_s=0.275 jobs=32
+[2026-05-30T04:22:55] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:22:55] batch run finished elapsed_s=0.285 epoch=12 batch=1 nsamples=32 accuracy=0.1562 loss=12.5 skipped=0
+[2026-05-30T04:22:57] batch build started epoch=12 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:22:57] batch jobs built elapsed_s=0.0 epoch=12 batch=10 jobs=32
+[2026-05-30T04:22:57] batch run started epoch=12 batch=10 jobs=32
+[2026-05-30T04:22:57] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:22:57] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:22:58] minibatch manager run finished elapsed_s=0.275 jobs=32
+[2026-05-30T04:22:58] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:22:58] batch run finished elapsed_s=0.284 epoch=12 batch=10 nsamples=32 accuracy=0.125 loss=12.3125 skipped=0
+[2026-05-30T04:23:00] batch build started epoch=12 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:23:00] batch jobs built elapsed_s=0.0 epoch=12 batch=20 jobs=32
+[2026-05-30T04:23:00] batch run started epoch=12 batch=20 jobs=32
+[2026-05-30T04:23:00] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:00] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:01] minibatch manager run finished elapsed_s=0.3 jobs=32
+[2026-05-30T04:23:01] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:23:01] batch run finished elapsed_s=0.309 epoch=12 batch=20 nsamples=32 accuracy=0.0625 loss=13.5625 skipped=0
+[2026-05-30T04:23:03] batch build started epoch=12 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:23:03] batch jobs built elapsed_s=0.0 epoch=12 batch=30 jobs=32
+[2026-05-30T04:23:03] batch run started epoch=12 batch=30 jobs=32
+[2026-05-30T04:23:03] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:23:03] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:04] minibatch manager run finished elapsed_s=0.288 jobs=32
+[2026-05-30T04:23:04] minibatch optimizer update finished elapsed_s=0.008 nsamples=32 skipped=0
+[2026-05-30T04:23:04] batch run finished elapsed_s=0.303 epoch=12 batch=30 nsamples=32 accuracy=0.125 loss=13.5625 skipped=0
+[2026-05-30T04:23:04] batch build started epoch=12 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:23:04] batch jobs built elapsed_s=0.0 epoch=12 batch=32 jobs=8
+[2026-05-30T04:23:04] batch run started epoch=12 batch=32 jobs=8
+[2026-05-30T04:23:04] minibatch buffers cleared elapsed_s=0.008 jobs=8
+[2026-05-30T04:23:04] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:23:04] minibatch manager run finished elapsed_s=0.157 jobs=8
+[2026-05-30T04:23:04] minibatch optimizer update finished elapsed_s=0.002 nsamples=8 skipped=0
+[2026-05-30T04:23:04] batch run finished elapsed_s=0.168 epoch=12 batch=32 nsamples=8 accuracy=0.125 loss=12.75 skipped=0
+[2026-05-30T04:23:04] epoch training finished epoch=12 elapsed_s=9.348 train_accuracy=0.093 train_loss=12.918 skipped=0
+[2026-05-30T04:23:04] epoch evaluation started epoch=12 samples=200
+[2026-05-30T04:23:04] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:23:04] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:23:04] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:23:05] evaluation manager run finished elapsed_s=0.84 jobs=200
+[2026-05-30T04:23:05] epoch evaluation finished elapsed_s=0.841 epoch=12 test_accuracy=0.1 test_loss=14.4
+[2026-05-30T04:23:05] latest checkpoint saved elapsed_s=0.005 epoch=12 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=384
+(timestamp = "2026-05-30T04:23:05", epoch = 12, seconds = 9.3478856, train_accuracy = 0.093, train_loss = 12.918f0, skipped = 0, test_accuracy = 0.1, test_loss = 14.4f0, pred_counts = "200-0-0-0-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:23:05] epoch finished elapsed_s=10.194 epoch=12
+[2026-05-30T04:23:05] epoch started epoch=13
+[2026-05-30T04:23:05] epoch training started epoch=13 batches=32 samples=1000
+[2026-05-30T04:23:05] batch build started epoch=13 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:23:05] batch jobs built elapsed_s=0.0 epoch=13 batch=1 jobs=32
+[2026-05-30T04:23:05] batch run started epoch=13 batch=1 jobs=32
+[2026-05-30T04:23:05] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:05] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:05] minibatch manager run finished elapsed_s=0.274 jobs=32
+[2026-05-30T04:23:05] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:23:05] batch run finished elapsed_s=0.283 epoch=13 batch=1 nsamples=32 accuracy=0.2188 loss=13.25 skipped=0
+[2026-05-30T04:23:08] batch build started epoch=13 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:23:08] batch jobs built elapsed_s=0.0 epoch=13 batch=10 jobs=32
+[2026-05-30T04:23:08] batch run started epoch=13 batch=10 jobs=32
+[2026-05-30T04:23:08] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:08] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:08] minibatch manager run finished elapsed_s=0.296 jobs=32
+[2026-05-30T04:23:08] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:23:08] batch run finished elapsed_s=0.306 epoch=13 batch=10 nsamples=32 accuracy=0.0938 loss=14.875 skipped=0
+[2026-05-30T04:23:10] batch build started epoch=13 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:23:10] batch jobs built elapsed_s=0.0 epoch=13 batch=20 jobs=32
+[2026-05-30T04:23:10] batch run started epoch=13 batch=20 jobs=32
+[2026-05-30T04:23:10] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:10] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:11] minibatch manager run finished elapsed_s=0.278 jobs=32
+[2026-05-30T04:23:11] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:23:11] batch run finished elapsed_s=0.287 epoch=13 batch=20 nsamples=32 accuracy=0.125 loss=16.375 skipped=0
+[2026-05-30T04:23:13] batch build started epoch=13 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:23:13] batch jobs built elapsed_s=0.0 epoch=13 batch=30 jobs=32
+[2026-05-30T04:23:13] batch run started epoch=13 batch=30 jobs=32
+[2026-05-30T04:23:13] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:13] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:14] minibatch manager run finished elapsed_s=0.263 jobs=32
+[2026-05-30T04:23:14] minibatch optimizer update finished elapsed_s=0.008 nsamples=32 skipped=0
+[2026-05-30T04:23:14] batch run finished elapsed_s=0.277 epoch=13 batch=30 nsamples=32 accuracy=0.1875 loss=17.875 skipped=0
+[2026-05-30T04:23:14] batch build started epoch=13 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:23:14] batch jobs built elapsed_s=0.0 epoch=13 batch=32 jobs=8
+[2026-05-30T04:23:14] batch run started epoch=13 batch=32 jobs=8
+[2026-05-30T04:23:14] minibatch buffers cleared elapsed_s=0.007 jobs=8
+[2026-05-30T04:23:14] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:23:14] minibatch manager run finished elapsed_s=0.154 jobs=8
+[2026-05-30T04:23:14] minibatch optimizer update finished elapsed_s=0.002 nsamples=8 skipped=0
+[2026-05-30T04:23:14] batch run finished elapsed_s=0.163 epoch=13 batch=32 nsamples=8 accuracy=0.125 loss=17.25 skipped=0
+[2026-05-30T04:23:14] epoch training finished epoch=13 elapsed_s=9.228 train_accuracy=0.096 train_loss=15.958 skipped=0
+[2026-05-30T04:23:14] epoch evaluation started epoch=13 samples=200
+[2026-05-30T04:23:14] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:23:14] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:23:14] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:23:15] evaluation manager run finished elapsed_s=0.837 jobs=200
+[2026-05-30T04:23:15] epoch evaluation finished elapsed_s=0.84 epoch=13 test_accuracy=0.1 test_loss=22.4
+[2026-05-30T04:23:15] latest checkpoint saved elapsed_s=0.004 epoch=13 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=416
+(timestamp = "2026-05-30T04:23:15", epoch = 13, seconds = 9.2282989, train_accuracy = 0.096, train_loss = 15.958f0, skipped = 0, test_accuracy = 0.1, test_loss = 22.4f0, pred_counts = "0-0-0-0-200-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:23:15] epoch finished elapsed_s=10.072 epoch=13
+[2026-05-30T04:23:15] epoch started epoch=14
+[2026-05-30T04:23:15] epoch training started epoch=14 batches=32 samples=1000
+[2026-05-30T04:23:15] batch build started epoch=14 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:23:15] batch jobs built elapsed_s=0.0 epoch=14 batch=1 jobs=32
+[2026-05-30T04:23:15] batch run started epoch=14 batch=1 jobs=32
+[2026-05-30T04:23:15] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:15] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:15] minibatch manager run finished elapsed_s=0.306 jobs=32
+[2026-05-30T04:23:15] minibatch optimizer update finished elapsed_s=0.01 nsamples=32 skipped=0
+[2026-05-30T04:23:15] batch run finished elapsed_s=0.322 epoch=14 batch=1 nsamples=32 accuracy=0.0938 loss=18.9375 skipped=0
+[2026-05-30T04:23:18] batch build started epoch=14 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:23:18] batch jobs built elapsed_s=0.0 epoch=14 batch=10 jobs=32
+[2026-05-30T04:23:18] batch run started epoch=14 batch=10 jobs=32
+[2026-05-30T04:23:18] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:18] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:18] minibatch manager run finished elapsed_s=0.279 jobs=32
+[2026-05-30T04:23:18] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:23:18] batch run finished elapsed_s=0.289 epoch=14 batch=10 nsamples=32 accuracy=0.1562 loss=18.8125 skipped=0
+[2026-05-30T04:23:21] batch build started epoch=14 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:23:21] batch jobs built elapsed_s=0.0 epoch=14 batch=20 jobs=32
+[2026-05-30T04:23:21] batch run started epoch=14 batch=20 jobs=32
+[2026-05-30T04:23:21] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:23:21] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:21] minibatch manager run finished elapsed_s=0.276 jobs=32
+[2026-05-30T04:23:21] minibatch optimizer update finished elapsed_s=0.076 nsamples=32 skipped=0
+[2026-05-30T04:23:21] batch run finished elapsed_s=0.358 epoch=14 batch=20 nsamples=32 accuracy=0.2188 loss=16.875 skipped=0
+[2026-05-30T04:23:24] batch build started epoch=14 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:23:24] batch jobs built elapsed_s=0.0 epoch=14 batch=30 jobs=32
+[2026-05-30T04:23:24] batch run started epoch=14 batch=30 jobs=32
+[2026-05-30T04:23:24] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:23:24] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:24] minibatch manager run finished elapsed_s=0.272 jobs=32
+[2026-05-30T04:23:24] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:23:24] batch run finished elapsed_s=0.282 epoch=14 batch=30 nsamples=32 accuracy=0.125 loss=16.0 skipped=0
+[2026-05-30T04:23:24] batch build started epoch=14 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:23:24] batch jobs built elapsed_s=0.0 epoch=14 batch=32 jobs=8
+[2026-05-30T04:23:24] batch run started epoch=14 batch=32 jobs=8
+[2026-05-30T04:23:24] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:23:24] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:23:24] minibatch manager run finished elapsed_s=0.161 jobs=8
+[2026-05-30T04:23:24] minibatch optimizer update finished elapsed_s=0.012 nsamples=8 skipped=0
+[2026-05-30T04:23:24] batch run finished elapsed_s=0.18 epoch=14 batch=32 nsamples=8 accuracy=0.125 loss=18.25 skipped=0
+[2026-05-30T04:23:24] epoch training finished epoch=14 elapsed_s=9.554 train_accuracy=0.105 train_loss=18.432 skipped=0
+[2026-05-30T04:23:24] epoch evaluation started epoch=14 samples=200
+[2026-05-30T04:23:24] evaluation buffers cleared elapsed_s=0.001 samples=200
+[2026-05-30T04:23:24] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:23:24] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:23:25] evaluation manager run finished elapsed_s=0.881 jobs=200
+[2026-05-30T04:23:25] epoch evaluation finished elapsed_s=0.882 epoch=14 test_accuracy=0.1 test_loss=9.6
+[2026-05-30T04:23:25] latest checkpoint saved elapsed_s=0.004 epoch=14 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=448
+(timestamp = "2026-05-30T04:23:25", epoch = 14, seconds = 9.5537203, train_accuracy = 0.105, train_loss = 18.432f0, skipped = 0, test_accuracy = 0.1, test_loss = 9.6f0, pred_counts = "0-0-200-0-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:23:25] epoch finished elapsed_s=10.442 epoch=14
+[2026-05-30T04:23:25] epoch started epoch=15
+[2026-05-30T04:23:25] epoch training started epoch=15 batches=32 samples=1000
+[2026-05-30T04:23:25] batch build started epoch=15 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:23:25] batch jobs built elapsed_s=0.0 epoch=15 batch=1 jobs=32
+[2026-05-30T04:23:25] batch run started epoch=15 batch=1 jobs=32
+[2026-05-30T04:23:25] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:23:25] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:26] minibatch manager run finished elapsed_s=0.295 jobs=32
+[2026-05-30T04:23:26] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:23:26] batch run finished elapsed_s=0.305 epoch=15 batch=1 nsamples=32 accuracy=0.0938 loss=15.8125 skipped=0
+[2026-05-30T04:23:28] batch build started epoch=15 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:23:28] batch jobs built elapsed_s=0.0 epoch=15 batch=10 jobs=32
+[2026-05-30T04:23:28] batch run started epoch=15 batch=10 jobs=32
+[2026-05-30T04:23:28] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:23:28] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:28] minibatch manager run finished elapsed_s=0.268 jobs=32
+[2026-05-30T04:23:28] minibatch optimizer update finished elapsed_s=0.007 nsamples=32 skipped=0
+[2026-05-30T04:23:28] batch run finished elapsed_s=0.283 epoch=15 batch=10 nsamples=32 accuracy=0.0938 loss=15.375 skipped=0
+[2026-05-30T04:23:31] batch build started epoch=15 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:23:31] batch jobs built elapsed_s=0.0 epoch=15 batch=20 jobs=32
+[2026-05-30T04:23:31] batch run started epoch=15 batch=20 jobs=32
+[2026-05-30T04:23:31] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:23:31] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:31] minibatch manager run finished elapsed_s=0.287 jobs=32
+[2026-05-30T04:23:31] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:23:31] batch run finished elapsed_s=0.298 epoch=15 batch=20 nsamples=32 accuracy=0.0938 loss=14.5625 skipped=0
+[2026-05-30T04:23:34] batch build started epoch=15 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:23:34] batch jobs built elapsed_s=0.0 epoch=15 batch=30 jobs=32
+[2026-05-30T04:23:34] batch run started epoch=15 batch=30 jobs=32
+[2026-05-30T04:23:34] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:34] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:34] minibatch manager run finished elapsed_s=0.265 jobs=32
+[2026-05-30T04:23:34] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:23:34] batch run finished elapsed_s=0.275 epoch=15 batch=30 nsamples=32 accuracy=0.0938 loss=14.9375 skipped=0
+[2026-05-30T04:23:35] batch build started epoch=15 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:23:35] batch jobs built elapsed_s=0.0 epoch=15 batch=32 jobs=8
+[2026-05-30T04:23:35] batch run started epoch=15 batch=32 jobs=8
+[2026-05-30T04:23:35] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:23:35] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:23:35] minibatch manager run finished elapsed_s=0.155 jobs=8
+[2026-05-30T04:23:35] minibatch optimizer update finished elapsed_s=0.003 nsamples=8 skipped=0
+[2026-05-30T04:23:35] batch run finished elapsed_s=0.165 epoch=15 batch=32 nsamples=8 accuracy=0.25 loss=11.75 skipped=0
+[2026-05-30T04:23:35] epoch training finished epoch=15 elapsed_s=9.33 train_accuracy=0.1 train_loss=14.718 skipped=0
+[2026-05-30T04:23:35] epoch evaluation started epoch=15 samples=200
+[2026-05-30T04:23:35] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:23:35] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:23:35] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:23:35] evaluation manager run finished elapsed_s=0.827 jobs=200
+[2026-05-30T04:23:36] epoch evaluation finished elapsed_s=0.828 epoch=15 test_accuracy=0.1 test_loss=19.2
+[2026-05-30T04:23:36] latest checkpoint saved elapsed_s=0.009 epoch=15 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=480
+(timestamp = "2026-05-30T04:23:36", epoch = 15, seconds = 9.3304787, train_accuracy = 0.1, train_loss = 14.718f0, skipped = 0, test_accuracy = 0.1, test_loss = 19.2f0, pred_counts = "0-0-0-200-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:23:36] epoch finished elapsed_s=10.17 epoch=15
+[2026-05-30T04:23:36] epoch started epoch=16
+[2026-05-30T04:23:36] epoch training started epoch=16 batches=32 samples=1000
+[2026-05-30T04:23:36] batch build started epoch=16 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:23:36] batch jobs built elapsed_s=0.0 epoch=16 batch=1 jobs=32
+[2026-05-30T04:23:36] batch run started epoch=16 batch=1 jobs=32
+[2026-05-30T04:23:36] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:36] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:36] minibatch manager run finished elapsed_s=0.274 jobs=32
+[2026-05-30T04:23:36] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:23:36] batch run finished elapsed_s=0.284 epoch=16 batch=1 nsamples=32 accuracy=0.1562 loss=14.6875 skipped=0
+[2026-05-30T04:23:38] batch build started epoch=16 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:23:38] batch jobs built elapsed_s=0.0 epoch=16 batch=10 jobs=32
+[2026-05-30T04:23:38] batch run started epoch=16 batch=10 jobs=32
+[2026-05-30T04:23:38] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:23:38] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:38] minibatch manager run finished elapsed_s=0.28 jobs=32
+[2026-05-30T04:23:38] minibatch optimizer update finished elapsed_s=0.008 nsamples=32 skipped=0
+[2026-05-30T04:23:38] batch run finished elapsed_s=0.294 epoch=16 batch=10 nsamples=32 accuracy=0.125 loss=14.375 skipped=0
+[2026-05-30T04:23:41] batch build started epoch=16 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:23:41] batch jobs built elapsed_s=0.0 epoch=16 batch=20 jobs=32
+[2026-05-30T04:23:41] batch run started epoch=16 batch=20 jobs=32
+[2026-05-30T04:23:41] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:41] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:41] minibatch manager run finished elapsed_s=0.279 jobs=32
+[2026-05-30T04:23:41] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:23:41] batch run finished elapsed_s=0.29 epoch=16 batch=20 nsamples=32 accuracy=0.0312 loss=13.8125 skipped=0
+[2026-05-30T04:23:44] batch build started epoch=16 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:23:44] batch jobs built elapsed_s=0.0 epoch=16 batch=30 jobs=32
+[2026-05-30T04:23:44] batch run started epoch=16 batch=30 jobs=32
+[2026-05-30T04:23:44] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:44] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:44] minibatch manager run finished elapsed_s=0.274 jobs=32
+[2026-05-30T04:23:44] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:23:44] batch run finished elapsed_s=0.284 epoch=16 batch=30 nsamples=32 accuracy=0.0938 loss=13.0 skipped=0
+[2026-05-30T04:23:45] batch build started epoch=16 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:23:45] batch jobs built elapsed_s=0.0 epoch=16 batch=32 jobs=8
+[2026-05-30T04:23:45] batch run started epoch=16 batch=32 jobs=8
+[2026-05-30T04:23:45] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:23:45] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:23:45] minibatch manager run finished elapsed_s=0.162 jobs=8
+[2026-05-30T04:23:45] minibatch optimizer update finished elapsed_s=0.004 nsamples=8 skipped=0
+[2026-05-30T04:23:45] batch run finished elapsed_s=0.172 epoch=16 batch=32 nsamples=8 accuracy=0.125 loss=11.25 skipped=0
+[2026-05-30T04:23:45] epoch training finished epoch=16 elapsed_s=9.241 train_accuracy=0.091 train_loss=13.948 skipped=0
+[2026-05-30T04:23:45] epoch evaluation started epoch=16 samples=200
+[2026-05-30T04:23:45] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:23:45] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:23:45] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:23:46] evaluation manager run finished elapsed_s=0.867 jobs=200
+[2026-05-30T04:23:46] epoch evaluation finished elapsed_s=0.867 epoch=16 test_accuracy=0.1 test_loss=11.2
+[2026-05-30T04:23:46] latest checkpoint saved elapsed_s=0.008 epoch=16 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=512
+(timestamp = "2026-05-30T04:23:46", epoch = 16, seconds = 9.2414594, train_accuracy = 0.091, train_loss = 13.948f0, skipped = 0, test_accuracy = 0.1, test_loss = 11.2f0, pred_counts = "0-0-0-0-0-0-200-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:23:46] epoch finished elapsed_s=10.118 epoch=16
+[2026-05-30T04:23:46] epoch started epoch=17
+[2026-05-30T04:23:46] epoch training started epoch=17 batches=32 samples=1000
+[2026-05-30T04:23:46] batch build started epoch=17 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:23:46] batch jobs built elapsed_s=0.0 epoch=17 batch=1 jobs=32
+[2026-05-30T04:23:46] batch run started epoch=17 batch=1 jobs=32
+[2026-05-30T04:23:46] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:46] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:46] minibatch manager run finished elapsed_s=0.263 jobs=32
+[2026-05-30T04:23:46] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:23:46] batch run finished elapsed_s=0.272 epoch=17 batch=1 nsamples=32 accuracy=0.0312 loss=13.25 skipped=0
+[2026-05-30T04:23:48] batch build started epoch=17 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:23:48] batch jobs built elapsed_s=0.0 epoch=17 batch=10 jobs=32
+[2026-05-30T04:23:48] batch run started epoch=17 batch=10 jobs=32
+[2026-05-30T04:23:48] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:48] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:49] minibatch manager run finished elapsed_s=0.274 jobs=32
+[2026-05-30T04:23:49] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:23:49] batch run finished elapsed_s=0.283 epoch=17 batch=10 nsamples=32 accuracy=0.0938 loss=12.6875 skipped=0
+[2026-05-30T04:23:51] batch build started epoch=17 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:23:51] batch jobs built elapsed_s=0.0 epoch=17 batch=20 jobs=32
+[2026-05-30T04:23:51] batch run started epoch=17 batch=20 jobs=32
+[2026-05-30T04:23:51] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:23:51] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:52] minibatch manager run finished elapsed_s=0.306 jobs=32
+[2026-05-30T04:23:52] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:23:52] batch run finished elapsed_s=0.316 epoch=17 batch=20 nsamples=32 accuracy=0.0938 loss=12.1875 skipped=0
+[2026-05-30T04:23:54] batch build started epoch=17 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:23:54] batch jobs built elapsed_s=0.0 epoch=17 batch=30 jobs=32
+[2026-05-30T04:23:54] batch run started epoch=17 batch=30 jobs=32
+[2026-05-30T04:23:54] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:23:54] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:54] minibatch manager run finished elapsed_s=0.275 jobs=32
+[2026-05-30T04:23:54] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:23:54] batch run finished elapsed_s=0.286 epoch=17 batch=30 nsamples=32 accuracy=0.125 loss=11.9375 skipped=0
+[2026-05-30T04:23:55] batch build started epoch=17 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:23:55] batch jobs built elapsed_s=0.0 epoch=17 batch=32 jobs=8
+[2026-05-30T04:23:55] batch run started epoch=17 batch=32 jobs=8
+[2026-05-30T04:23:55] minibatch buffers cleared elapsed_s=0.005 jobs=8
+[2026-05-30T04:23:55] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:23:55] minibatch manager run finished elapsed_s=0.154 jobs=8
+[2026-05-30T04:23:55] minibatch optimizer update finished elapsed_s=0.01 nsamples=8 skipped=0
+[2026-05-30T04:23:55] batch run finished elapsed_s=0.17 epoch=17 batch=32 nsamples=8 accuracy=0.0 loss=11.25 skipped=0
+[2026-05-30T04:23:55] epoch training finished epoch=17 elapsed_s=9.288 train_accuracy=0.091 train_loss=12.29 skipped=0
+[2026-05-30T04:23:55] epoch evaluation started epoch=17 samples=200
+[2026-05-30T04:23:55] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:23:55] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:23:55] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:23:56] evaluation manager run finished elapsed_s=0.803 jobs=200
+[2026-05-30T04:23:56] epoch evaluation finished elapsed_s=0.803 epoch=17 test_accuracy=0.1 test_loss=16.0
+[2026-05-30T04:23:56] latest checkpoint saved elapsed_s=0.004 epoch=17 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=544
+(timestamp = "2026-05-30T04:23:56", epoch = 17, seconds = 9.2880529, train_accuracy = 0.091, train_loss = 12.29f0, skipped = 0, test_accuracy = 0.1, test_loss = 16.0f0, pred_counts = "0-0-0-0-0-0-0-200-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:23:56] epoch finished elapsed_s=10.096 epoch=17
+[2026-05-30T04:23:56] epoch started epoch=18
+[2026-05-30T04:23:56] epoch training started epoch=18 batches=32 samples=1000
+[2026-05-30T04:23:56] batch build started epoch=18 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:23:56] batch jobs built elapsed_s=0.0 epoch=18 batch=1 jobs=32
+[2026-05-30T04:23:56] batch run started epoch=18 batch=1 jobs=32
+[2026-05-30T04:23:56] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:23:56] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:56] minibatch manager run finished elapsed_s=0.292 jobs=32
+[2026-05-30T04:23:56] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:23:56] batch run finished elapsed_s=0.301 epoch=18 batch=1 nsamples=32 accuracy=0.0938 loss=12.375 skipped=0
+[2026-05-30T04:23:58] batch build started epoch=18 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:23:58] batch jobs built elapsed_s=0.0 epoch=18 batch=10 jobs=32
+[2026-05-30T04:23:58] batch run started epoch=18 batch=10 jobs=32
+[2026-05-30T04:23:58] minibatch buffers cleared elapsed_s=0.009 jobs=32
+[2026-05-30T04:23:58] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:23:59] minibatch manager run finished elapsed_s=0.274 jobs=32
+[2026-05-30T04:23:59] minibatch optimizer update finished elapsed_s=0.006 nsamples=32 skipped=0
+[2026-05-30T04:23:59] batch run finished elapsed_s=0.291 epoch=18 batch=10 nsamples=32 accuracy=0.0625 loss=13.125 skipped=0
+[2026-05-30T04:24:01] batch build started epoch=18 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:24:01] batch jobs built elapsed_s=0.0 epoch=18 batch=20 jobs=32
+[2026-05-30T04:24:01] batch run started epoch=18 batch=20 jobs=32
+[2026-05-30T04:24:01] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:24:01] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:02] minibatch manager run finished elapsed_s=0.292 jobs=32
+[2026-05-30T04:24:02] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:24:02] batch run finished elapsed_s=0.304 epoch=18 batch=20 nsamples=32 accuracy=0.0938 loss=13.875 skipped=0
+[2026-05-30T04:24:04] batch build started epoch=18 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:24:04] batch jobs built elapsed_s=0.0 epoch=18 batch=30 jobs=32
+[2026-05-30T04:24:04] batch run started epoch=18 batch=30 jobs=32
+[2026-05-30T04:24:04] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:24:04] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:05] minibatch manager run finished elapsed_s=0.265 jobs=32
+[2026-05-30T04:24:05] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:24:05] batch run finished elapsed_s=0.275 epoch=18 batch=30 nsamples=32 accuracy=0.1562 loss=16.0 skipped=0
+[2026-05-30T04:24:05] batch build started epoch=18 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:24:05] batch jobs built elapsed_s=0.0 epoch=18 batch=32 jobs=8
+[2026-05-30T04:24:05] batch run started epoch=18 batch=32 jobs=8
+[2026-05-30T04:24:05] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:24:05] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:24:05] minibatch manager run finished elapsed_s=0.154 jobs=8
+[2026-05-30T04:24:05] minibatch optimizer update finished elapsed_s=0.008 nsamples=8 skipped=0
+[2026-05-30T04:24:05] batch run finished elapsed_s=0.168 epoch=18 batch=32 nsamples=8 accuracy=0.375 loss=15.5 skipped=0
+[2026-05-30T04:24:05] epoch training finished epoch=18 elapsed_s=9.32 train_accuracy=0.094 train_loss=13.918 skipped=0
+[2026-05-30T04:24:05] epoch evaluation started epoch=18 samples=200
+[2026-05-30T04:24:05] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:24:05] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:24:05] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:24:06] evaluation manager run finished elapsed_s=0.837 jobs=200
+[2026-05-30T04:24:06] epoch evaluation finished elapsed_s=0.837 epoch=18 test_accuracy=0.1 test_loss=27.2
+[2026-05-30T04:24:06] latest checkpoint saved elapsed_s=0.004 epoch=18 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=576
+(timestamp = "2026-05-30T04:24:06", epoch = 18, seconds = 9.3204459, train_accuracy = 0.094, train_loss = 13.918f0, skipped = 0, test_accuracy = 0.1, test_loss = 27.2f0, pred_counts = "0-0-0-0-0-200-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:24:06] epoch finished elapsed_s=10.164 epoch=18
+[2026-05-30T04:24:06] epoch started epoch=19
+[2026-05-30T04:24:06] epoch training started epoch=19 batches=32 samples=1000
+[2026-05-30T04:24:06] batch build started epoch=19 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:24:06] batch jobs built elapsed_s=0.0 epoch=19 batch=1 jobs=32
+[2026-05-30T04:24:06] batch run started epoch=19 batch=1 jobs=32
+[2026-05-30T04:24:06] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:24:06] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:06] minibatch manager run finished elapsed_s=0.275 jobs=32
+[2026-05-30T04:24:06] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:24:06] batch run finished elapsed_s=0.285 epoch=19 batch=1 nsamples=32 accuracy=0.0625 loss=17.9375 skipped=0
+[2026-05-30T04:24:08] batch build started epoch=19 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:24:08] batch jobs built elapsed_s=0.0 epoch=19 batch=10 jobs=32
+[2026-05-30T04:24:08] batch run started epoch=19 batch=10 jobs=32
+[2026-05-30T04:24:09] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:24:09] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:09] minibatch manager run finished elapsed_s=0.275 jobs=32
+[2026-05-30T04:24:09] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:24:09] batch run finished elapsed_s=0.285 epoch=19 batch=10 nsamples=32 accuracy=0.0625 loss=17.9375 skipped=0
+[2026-05-30T04:24:11] batch build started epoch=19 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:24:11] batch jobs built elapsed_s=0.0 epoch=19 batch=20 jobs=32
+[2026-05-30T04:24:11] batch run started epoch=19 batch=20 jobs=32
+[2026-05-30T04:24:11] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:24:11] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:12] minibatch manager run finished elapsed_s=0.287 jobs=32
+[2026-05-30T04:24:12] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:24:12] batch run finished elapsed_s=0.297 epoch=19 batch=20 nsamples=32 accuracy=0.1875 loss=16.9375 skipped=0
+[2026-05-30T04:24:14] batch build started epoch=19 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:24:14] batch jobs built elapsed_s=0.0 epoch=19 batch=30 jobs=32
+[2026-05-30T04:24:14] batch run started epoch=19 batch=30 jobs=32
+[2026-05-30T04:24:14] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:24:14] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:15] minibatch manager run finished elapsed_s=0.283 jobs=32
+[2026-05-30T04:24:15] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:24:15] batch run finished elapsed_s=0.295 epoch=19 batch=30 nsamples=32 accuracy=0.1875 loss=16.625 skipped=0
+[2026-05-30T04:24:15] batch build started epoch=19 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:24:15] batch jobs built elapsed_s=0.0 epoch=19 batch=32 jobs=8
+[2026-05-30T04:24:15] batch run started epoch=19 batch=32 jobs=8
+[2026-05-30T04:24:15] minibatch buffers cleared elapsed_s=0.005 jobs=8
+[2026-05-30T04:24:15] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:24:15] minibatch manager run finished elapsed_s=0.157 jobs=8
+[2026-05-30T04:24:15] minibatch optimizer update finished elapsed_s=0.064 nsamples=8 skipped=0
+[2026-05-30T04:24:15] batch run finished elapsed_s=0.228 epoch=19 batch=32 nsamples=8 accuracy=0.0 loss=17.5 skipped=0
+[2026-05-30T04:24:15] epoch training finished epoch=19 elapsed_s=9.413 train_accuracy=0.105 train_loss=17.296 skipped=0
+[2026-05-30T04:24:15] epoch evaluation started epoch=19 samples=200
+[2026-05-30T04:24:15] evaluation buffers cleared elapsed_s=0.001 samples=200
+[2026-05-30T04:24:15] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:24:15] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:24:16] evaluation manager run finished elapsed_s=0.812 jobs=200
+[2026-05-30T04:24:16] epoch evaluation finished elapsed_s=0.814 epoch=19 test_accuracy=0.1 test_loss=14.4
+[2026-05-30T04:24:16] latest checkpoint saved elapsed_s=0.003 epoch=19 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=608
+(timestamp = "2026-05-30T04:24:16", epoch = 19, seconds = 9.4127039, train_accuracy = 0.105, train_loss = 17.296f0, skipped = 0, test_accuracy = 0.1, test_loss = 14.4f0, pred_counts = "0-0-0-0-0-200-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:24:16] epoch finished elapsed_s=10.231 epoch=19
+[2026-05-30T04:24:16] epoch started epoch=20
+[2026-05-30T04:24:16] epoch training started epoch=20 batches=32 samples=1000
+[2026-05-30T04:24:16] batch build started epoch=20 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:24:16] batch jobs built elapsed_s=0.0 epoch=20 batch=1 jobs=32
+[2026-05-30T04:24:16] batch run started epoch=20 batch=1 jobs=32
+[2026-05-30T04:24:16] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:24:16] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:16] minibatch manager run finished elapsed_s=0.28 jobs=32
+[2026-05-30T04:24:16] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:24:16] batch run finished elapsed_s=0.293 epoch=20 batch=1 nsamples=32 accuracy=0.0625 loss=17.3125 skipped=0
+[2026-05-30T04:24:19] batch build started epoch=20 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:24:19] batch jobs built elapsed_s=0.0 epoch=20 batch=10 jobs=32
+[2026-05-30T04:24:19] batch run started epoch=20 batch=10 jobs=32
+[2026-05-30T04:24:19] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:24:19] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:19] minibatch manager run finished elapsed_s=0.264 jobs=32
+[2026-05-30T04:24:19] minibatch optimizer update finished elapsed_s=0.007 nsamples=32 skipped=0
+[2026-05-30T04:24:19] batch run finished elapsed_s=0.277 epoch=20 batch=10 nsamples=32 accuracy=0.0625 loss=17.75 skipped=0
+[2026-05-30T04:24:22] batch build started epoch=20 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:24:22] batch jobs built elapsed_s=0.0 epoch=20 batch=20 jobs=32
+[2026-05-30T04:24:22] batch run started epoch=20 batch=20 jobs=32
+[2026-05-30T04:24:22] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:24:22] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:22] minibatch manager run finished elapsed_s=0.299 jobs=32
+[2026-05-30T04:24:22] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:24:22] batch run finished elapsed_s=0.309 epoch=20 batch=20 nsamples=32 accuracy=0.1562 loss=17.25 skipped=0
+[2026-05-30T04:24:25] batch build started epoch=20 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:24:25] batch jobs built elapsed_s=0.0 epoch=20 batch=30 jobs=32
+[2026-05-30T04:24:25] batch run started epoch=20 batch=30 jobs=32
+[2026-05-30T04:24:25] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:24:25] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:25] minibatch manager run finished elapsed_s=0.288 jobs=32
+[2026-05-30T04:24:25] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:24:25] batch run finished elapsed_s=0.299 epoch=20 batch=30 nsamples=32 accuracy=0.1562 loss=16.8125 skipped=0
+[2026-05-30T04:24:25] batch build started epoch=20 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:24:25] batch jobs built elapsed_s=0.0 epoch=20 batch=32 jobs=8
+[2026-05-30T04:24:25] batch run started epoch=20 batch=32 jobs=8
+[2026-05-30T04:24:25] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:24:25] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:24:26] minibatch manager run finished elapsed_s=0.161 jobs=8
+[2026-05-30T04:24:26] minibatch optimizer update finished elapsed_s=0.002 nsamples=8 skipped=0
+[2026-05-30T04:24:26] batch run finished elapsed_s=0.171 epoch=20 batch=32 nsamples=8 accuracy=0.125 loss=15.0 skipped=0
+[2026-05-30T04:24:26] epoch training finished epoch=20 elapsed_s=9.416 train_accuracy=0.092 train_loss=17.244 skipped=0
+[2026-05-30T04:24:26] epoch evaluation started epoch=20 samples=200
+[2026-05-30T04:24:26] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:24:26] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:24:26] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:24:26] evaluation manager run finished elapsed_s=0.81 jobs=200
+[2026-05-30T04:24:26] epoch evaluation finished elapsed_s=0.811 epoch=20 test_accuracy=0.1 test_loss=9.6
+[2026-05-30T04:24:26] latest checkpoint saved elapsed_s=0.004 epoch=20 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=640
+(timestamp = "2026-05-30T04:24:26", epoch = 20, seconds = 9.416175, train_accuracy = 0.092, train_loss = 17.244f0, skipped = 0, test_accuracy = 0.1, test_loss = 9.6f0, pred_counts = "200-0-0-0-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:24:26] epoch finished elapsed_s=10.233 epoch=20
+[2026-05-30T04:24:26] epoch started epoch=21
+[2026-05-30T04:24:26] epoch training started epoch=21 batches=32 samples=1000
+[2026-05-30T04:24:26] batch build started epoch=21 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:24:26] batch jobs built elapsed_s=0.0 epoch=21 batch=1 jobs=32
+[2026-05-30T04:24:26] batch run started epoch=21 batch=1 jobs=32
+[2026-05-30T04:24:26] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:24:26] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:27] minibatch manager run finished elapsed_s=0.294 jobs=32
+[2026-05-30T04:24:27] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:24:27] batch run finished elapsed_s=0.304 epoch=21 batch=1 nsamples=32 accuracy=0.125 loss=16.9375 skipped=0
+[2026-05-30T04:24:29] batch build started epoch=21 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:24:29] batch jobs built elapsed_s=0.0 epoch=21 batch=10 jobs=32
+[2026-05-30T04:24:29] batch run started epoch=21 batch=10 jobs=32
+[2026-05-30T04:24:29] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:24:29] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:29] minibatch manager run finished elapsed_s=0.293 jobs=32
+[2026-05-30T04:24:29] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:24:29] batch run finished elapsed_s=0.301 epoch=21 batch=10 nsamples=32 accuracy=0.0938 loss=14.3125 skipped=0
+[2026-05-30T04:24:32] batch build started epoch=21 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:24:32] batch jobs built elapsed_s=0.0 epoch=21 batch=20 jobs=32
+[2026-05-30T04:24:32] batch run started epoch=21 batch=20 jobs=32
+[2026-05-30T04:24:32] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:24:32] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:32] minibatch manager run finished elapsed_s=0.279 jobs=32
+[2026-05-30T04:24:32] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:24:32] batch run finished elapsed_s=0.289 epoch=21 batch=20 nsamples=32 accuracy=0.0312 loss=14.375 skipped=0
+[2026-05-30T04:24:35] batch build started epoch=21 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:24:35] batch jobs built elapsed_s=0.0 epoch=21 batch=30 jobs=32
+[2026-05-30T04:24:35] batch run started epoch=21 batch=30 jobs=32
+[2026-05-30T04:24:35] minibatch buffers cleared elapsed_s=0.009 jobs=32
+[2026-05-30T04:24:35] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:35] minibatch manager run finished elapsed_s=0.285 jobs=32
+[2026-05-30T04:24:35] minibatch optimizer update finished elapsed_s=0.009 nsamples=32 skipped=0
+[2026-05-30T04:24:35] batch run finished elapsed_s=0.305 epoch=21 batch=30 nsamples=32 accuracy=0.0938 loss=13.8125 skipped=0
+[2026-05-30T04:24:35] batch build started epoch=21 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:24:35] batch jobs built elapsed_s=0.0 epoch=21 batch=32 jobs=8
+[2026-05-30T04:24:35] batch run started epoch=21 batch=32 jobs=8
+[2026-05-30T04:24:35] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:24:35] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:24:36] minibatch manager run finished elapsed_s=0.162 jobs=8
+[2026-05-30T04:24:36] minibatch optimizer update finished elapsed_s=0.002 nsamples=8 skipped=0
+[2026-05-30T04:24:36] batch run finished elapsed_s=0.172 epoch=21 batch=32 nsamples=8 accuracy=0.0 loss=15.0 skipped=0
+[2026-05-30T04:24:36] epoch training finished epoch=21 elapsed_s=9.275 train_accuracy=0.1 train_loss=14.634 skipped=0
+[2026-05-30T04:24:36] epoch evaluation started epoch=21 samples=200
+[2026-05-30T04:24:36] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:24:36] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:24:36] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:24:37] evaluation manager run finished elapsed_s=0.881 jobs=200
+[2026-05-30T04:24:37] epoch evaluation finished elapsed_s=0.881 epoch=21 test_accuracy=0.1 test_loss=12.8
+[2026-05-30T04:24:37] latest checkpoint saved elapsed_s=0.005 epoch=21 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=672
+(timestamp = "2026-05-30T04:24:37", epoch = 21, seconds = 9.2750059, train_accuracy = 0.1, train_loss = 14.634f0, skipped = 0, test_accuracy = 0.1, test_loss = 12.8f0, pred_counts = "200-0-0-0-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:24:37] epoch finished elapsed_s=10.162 epoch=21
+[2026-05-30T04:24:37] epoch started epoch=22
+[2026-05-30T04:24:37] epoch training started epoch=22 batches=32 samples=1000
+[2026-05-30T04:24:37] batch build started epoch=22 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:24:37] batch jobs built elapsed_s=0.0 epoch=22 batch=1 jobs=32
+[2026-05-30T04:24:37] batch run started epoch=22 batch=1 jobs=32
+[2026-05-30T04:24:37] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:24:37] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:37] minibatch manager run finished elapsed_s=0.274 jobs=32
+[2026-05-30T04:24:37] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:24:37] batch run finished elapsed_s=0.284 epoch=22 batch=1 nsamples=32 accuracy=0.0625 loss=13.8125 skipped=0
+[2026-05-30T04:24:39] batch build started epoch=22 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:24:39] batch jobs built elapsed_s=0.0 epoch=22 batch=10 jobs=32
+[2026-05-30T04:24:39] batch run started epoch=22 batch=10 jobs=32
+[2026-05-30T04:24:39] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:24:39] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:39] minibatch manager run finished elapsed_s=0.294 jobs=32
+[2026-05-30T04:24:39] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:24:39] batch run finished elapsed_s=0.305 epoch=22 batch=10 nsamples=32 accuracy=0.0625 loss=13.625 skipped=0
+[2026-05-30T04:24:42] batch build started epoch=22 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:24:42] batch jobs built elapsed_s=0.0 epoch=22 batch=20 jobs=32
+[2026-05-30T04:24:42] batch run started epoch=22 batch=20 jobs=32
+[2026-05-30T04:24:42] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:24:42] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:42] minibatch manager run finished elapsed_s=0.29 jobs=32
+[2026-05-30T04:24:42] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:24:42] batch run finished elapsed_s=0.3 epoch=22 batch=20 nsamples=32 accuracy=0.25 loss=13.4375 skipped=0
+[2026-05-30T04:24:45] batch build started epoch=22 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:24:45] batch jobs built elapsed_s=0.0 epoch=22 batch=30 jobs=32
+[2026-05-30T04:24:45] batch run started epoch=22 batch=30 jobs=32
+[2026-05-30T04:24:45] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:24:45] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:45] minibatch manager run finished elapsed_s=0.294 jobs=32
+[2026-05-30T04:24:45] minibatch optimizer update finished elapsed_s=0.077 nsamples=32 skipped=0
+[2026-05-30T04:24:45] batch run finished elapsed_s=0.377 epoch=22 batch=30 nsamples=32 accuracy=0.0625 loss=14.75 skipped=0
+[2026-05-30T04:24:46] batch build started epoch=22 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:24:46] batch jobs built elapsed_s=0.0 epoch=22 batch=32 jobs=8
+[2026-05-30T04:24:46] batch run started epoch=22 batch=32 jobs=8
+[2026-05-30T04:24:46] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:24:46] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:24:46] minibatch manager run finished elapsed_s=0.158 jobs=8
+[2026-05-30T04:24:46] minibatch optimizer update finished elapsed_s=0.002 nsamples=8 skipped=0
+[2026-05-30T04:24:46] batch run finished elapsed_s=0.168 epoch=22 batch=32 nsamples=8 accuracy=0.0 loss=16.75 skipped=0
+[2026-05-30T04:24:46] epoch training finished epoch=22 elapsed_s=9.407 train_accuracy=0.102 train_loss=13.798 skipped=0
+[2026-05-30T04:24:46] epoch evaluation started epoch=22 samples=200
+[2026-05-30T04:24:46] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:24:46] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:24:46] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:24:47] evaluation manager run finished elapsed_s=0.824 jobs=200
+[2026-05-30T04:24:47] epoch evaluation finished elapsed_s=0.825 epoch=22 test_accuracy=0.1 test_loss=16.01
+[2026-05-30T04:24:47] latest checkpoint saved elapsed_s=0.004 epoch=22 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=704
+(timestamp = "2026-05-30T04:24:47", epoch = 22, seconds = 9.4071191, train_accuracy = 0.102, train_loss = 13.798f0, skipped = 0, test_accuracy = 0.1, test_loss = 16.01f0, pred_counts = "0-0-0-0-200-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:24:47] epoch finished elapsed_s=10.237 epoch=22
+[2026-05-30T04:24:47] epoch started epoch=23
+[2026-05-30T04:24:47] epoch training started epoch=23 batches=32 samples=1000
+[2026-05-30T04:24:47] batch build started epoch=23 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:24:47] batch jobs built elapsed_s=0.0 epoch=23 batch=1 jobs=32
+[2026-05-30T04:24:47] batch run started epoch=23 batch=1 jobs=32
+[2026-05-30T04:24:47] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:24:47] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:47] minibatch manager run finished elapsed_s=0.294 jobs=32
+[2026-05-30T04:24:47] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:24:47] batch run finished elapsed_s=0.304 epoch=23 batch=1 nsamples=32 accuracy=0.1875 loss=14.4375 skipped=0
+[2026-05-30T04:24:49] batch build started epoch=23 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:24:49] batch jobs built elapsed_s=0.0 epoch=23 batch=10 jobs=32
+[2026-05-30T04:24:49] batch run started epoch=23 batch=10 jobs=32
+[2026-05-30T04:24:49] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:24:49] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:50] minibatch manager run finished elapsed_s=0.276 jobs=32
+[2026-05-30T04:24:50] minibatch optimizer update finished elapsed_s=0.002 nsamples=32 skipped=0
+[2026-05-30T04:24:50] batch run finished elapsed_s=0.285 epoch=23 batch=10 nsamples=32 accuracy=0.0938 loss=14.0 skipped=0
+[2026-05-30T04:24:52] batch build started epoch=23 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:24:52] batch jobs built elapsed_s=0.0 epoch=23 batch=20 jobs=32
+[2026-05-30T04:24:52] batch run started epoch=23 batch=20 jobs=32
+[2026-05-30T04:24:52] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:24:52] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:53] minibatch manager run finished elapsed_s=0.279 jobs=32
+[2026-05-30T04:24:53] minibatch optimizer update finished elapsed_s=0.008 nsamples=32 skipped=0
+[2026-05-30T04:24:53] batch run finished elapsed_s=0.296 epoch=23 batch=20 nsamples=32 accuracy=0.1562 loss=14.0 skipped=0
+[2026-05-30T04:24:55] batch build started epoch=23 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:24:55] batch jobs built elapsed_s=0.0 epoch=23 batch=30 jobs=32
+[2026-05-30T04:24:55] batch run started epoch=23 batch=30 jobs=32
+[2026-05-30T04:24:55] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:24:55] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:56] minibatch manager run finished elapsed_s=0.273 jobs=32
+[2026-05-30T04:24:56] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:24:56] batch run finished elapsed_s=0.282 epoch=23 batch=30 nsamples=32 accuracy=0.0938 loss=14.0 skipped=0
+[2026-05-30T04:24:56] batch build started epoch=23 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:24:56] batch jobs built elapsed_s=0.0 epoch=23 batch=32 jobs=8
+[2026-05-30T04:24:56] batch run started epoch=23 batch=32 jobs=8
+[2026-05-30T04:24:56] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:24:56] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:24:56] minibatch manager run finished elapsed_s=0.164 jobs=8
+[2026-05-30T04:24:56] minibatch optimizer update finished elapsed_s=0.003 nsamples=8 skipped=0
+[2026-05-30T04:24:56] batch run finished elapsed_s=0.174 epoch=23 batch=32 nsamples=8 accuracy=0.25 loss=13.75 skipped=0
+[2026-05-30T04:24:56] epoch training finished epoch=23 elapsed_s=9.384 train_accuracy=0.105 train_loss=14.37 skipped=0
+[2026-05-30T04:24:56] epoch evaluation started epoch=23 samples=200
+[2026-05-30T04:24:56] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:24:56] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:24:56] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:24:57] evaluation manager run finished elapsed_s=0.812 jobs=200
+[2026-05-30T04:24:57] epoch evaluation finished elapsed_s=0.813 epoch=23 test_accuracy=0.1 test_loss=16.0
+[2026-05-30T04:24:57] latest checkpoint saved elapsed_s=0.005 epoch=23 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=736
+(timestamp = "2026-05-30T04:24:57", epoch = 23, seconds = 9.3842047, train_accuracy = 0.105, train_loss = 14.37f0, skipped = 0, test_accuracy = 0.1, test_loss = 16.0f0, pred_counts = "0-0-200-0-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:24:57] epoch finished elapsed_s=10.202 epoch=23
+[2026-05-30T04:24:57] epoch started epoch=24
+[2026-05-30T04:24:57] epoch training started epoch=24 batches=32 samples=1000
+[2026-05-30T04:24:57] batch build started epoch=24 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:24:57] batch jobs built elapsed_s=0.0 epoch=24 batch=1 jobs=32
+[2026-05-30T04:24:57] batch run started epoch=24 batch=1 jobs=32
+[2026-05-30T04:24:57] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:24:57] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:24:57] minibatch manager run finished elapsed_s=0.274 jobs=32
+[2026-05-30T04:24:57] minibatch optimizer update finished elapsed_s=0.007 nsamples=32 skipped=0
+[2026-05-30T04:24:57] batch run finished elapsed_s=0.288 epoch=24 batch=1 nsamples=32 accuracy=0.0938 loss=14.0 skipped=0
+[2026-05-30T04:25:00] batch build started epoch=24 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:25:00] batch jobs built elapsed_s=0.0 epoch=24 batch=10 jobs=32
+[2026-05-30T04:25:00] batch run started epoch=24 batch=10 jobs=32
+[2026-05-30T04:25:00] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:00] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:00] minibatch manager run finished elapsed_s=0.304 jobs=32
+[2026-05-30T04:25:00] minibatch optimizer update finished elapsed_s=0.007 nsamples=32 skipped=0
+[2026-05-30T04:25:00] batch run finished elapsed_s=0.318 epoch=24 batch=10 nsamples=32 accuracy=0.0312 loss=15.25 skipped=0
+[2026-05-30T04:25:03] batch build started epoch=24 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:25:03] batch jobs built elapsed_s=0.0 epoch=24 batch=20 jobs=32
+[2026-05-30T04:25:03] batch run started epoch=24 batch=20 jobs=32
+[2026-05-30T04:25:03] minibatch buffers cleared elapsed_s=0.008 jobs=32
+[2026-05-30T04:25:03] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:03] minibatch manager run finished elapsed_s=0.257 jobs=32
+[2026-05-30T04:25:03] minibatch optimizer update finished elapsed_s=0.007 nsamples=32 skipped=0
+[2026-05-30T04:25:03] batch run finished elapsed_s=0.275 epoch=24 batch=20 nsamples=32 accuracy=0.0312 loss=15.75 skipped=0
+[2026-05-30T04:25:05] batch build started epoch=24 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:25:05] batch jobs built elapsed_s=0.0 epoch=24 batch=30 jobs=32
+[2026-05-30T04:25:05] batch run started epoch=24 batch=30 jobs=32
+[2026-05-30T04:25:05] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:05] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:06] minibatch manager run finished elapsed_s=0.284 jobs=32
+[2026-05-30T04:25:06] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:25:06] batch run finished elapsed_s=0.295 epoch=24 batch=30 nsamples=32 accuracy=0.0312 loss=17.125 skipped=0
+[2026-05-30T04:25:06] batch build started epoch=24 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:25:06] batch jobs built elapsed_s=0.0 epoch=24 batch=32 jobs=8
+[2026-05-30T04:25:06] batch run started epoch=24 batch=32 jobs=8
+[2026-05-30T04:25:06] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:25:06] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:25:06] minibatch manager run finished elapsed_s=0.155 jobs=8
+[2026-05-30T04:25:06] minibatch optimizer update finished elapsed_s=0.005 nsamples=8 skipped=0
+[2026-05-30T04:25:06] batch run finished elapsed_s=0.168 epoch=24 batch=32 nsamples=8 accuracy=0.125 loss=17.5 skipped=0
+[2026-05-30T04:25:06] epoch training finished epoch=24 elapsed_s=9.252 train_accuracy=0.102 train_loss=15.244 skipped=0
+[2026-05-30T04:25:06] epoch evaluation started epoch=24 samples=200
+[2026-05-30T04:25:06] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:25:06] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:25:06] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:25:07] evaluation manager run finished elapsed_s=0.874 jobs=200
+[2026-05-30T04:25:07] epoch evaluation finished elapsed_s=0.874 epoch=24 test_accuracy=0.1 test_loss=17.6
+[2026-05-30T04:25:07] latest checkpoint saved elapsed_s=0.008 epoch=24 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=768
+(timestamp = "2026-05-30T04:25:07", epoch = 24, seconds = 9.2523805, train_accuracy = 0.102, train_loss = 15.244f0, skipped = 0, test_accuracy = 0.1, test_loss = 17.6f0, pred_counts = "0-0-0-0-0-0-0-0-200-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:25:07] epoch finished elapsed_s=10.136 epoch=24
+[2026-05-30T04:25:07] epoch started epoch=25
+[2026-05-30T04:25:07] epoch training started epoch=25 batches=32 samples=1000
+[2026-05-30T04:25:07] batch build started epoch=25 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:25:07] batch jobs built elapsed_s=0.0 epoch=25 batch=1 jobs=32
+[2026-05-30T04:25:07] batch run started epoch=25 batch=1 jobs=32
+[2026-05-30T04:25:07] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:25:07] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:07] minibatch manager run finished elapsed_s=0.293 jobs=32
+[2026-05-30T04:25:07] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:25:07] batch run finished elapsed_s=0.303 epoch=25 batch=1 nsamples=32 accuracy=0.0312 loss=16.9375 skipped=0
+[2026-05-30T04:25:10] batch build started epoch=25 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:25:10] batch jobs built elapsed_s=0.0 epoch=25 batch=10 jobs=32
+[2026-05-30T04:25:10] batch run started epoch=25 batch=10 jobs=32
+[2026-05-30T04:25:10] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:10] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:10] minibatch manager run finished elapsed_s=0.295 jobs=32
+[2026-05-30T04:25:10] minibatch optimizer update finished elapsed_s=0.008 nsamples=32 skipped=0
+[2026-05-30T04:25:10] batch run finished elapsed_s=0.309 epoch=25 batch=10 nsamples=32 accuracy=0.125 loss=16.0625 skipped=0
+[2026-05-30T04:25:13] batch build started epoch=25 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:25:13] batch jobs built elapsed_s=0.0 epoch=25 batch=20 jobs=32
+[2026-05-30T04:25:13] batch run started epoch=25 batch=20 jobs=32
+[2026-05-30T04:25:13] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:13] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:13] minibatch manager run finished elapsed_s=0.275 jobs=32
+[2026-05-30T04:25:13] minibatch optimizer update finished elapsed_s=0.074 nsamples=32 skipped=0
+[2026-05-30T04:25:13] batch run finished elapsed_s=0.356 epoch=25 batch=20 nsamples=32 accuracy=0.1562 loss=15.5 skipped=0
+[2026-05-30T04:25:16] batch build started epoch=25 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:25:16] batch jobs built elapsed_s=0.0 epoch=25 batch=30 jobs=32
+[2026-05-30T04:25:16] batch run started epoch=25 batch=30 jobs=32
+[2026-05-30T04:25:16] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:25:16] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:16] minibatch manager run finished elapsed_s=0.276 jobs=32
+[2026-05-30T04:25:16] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:25:16] batch run finished elapsed_s=0.285 epoch=25 batch=30 nsamples=32 accuracy=0.1875 loss=15.5625 skipped=0
+[2026-05-30T04:25:16] batch build started epoch=25 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:25:16] batch jobs built elapsed_s=0.0 epoch=25 batch=32 jobs=8
+[2026-05-30T04:25:16] batch run started epoch=25 batch=32 jobs=8
+[2026-05-30T04:25:16] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:25:16] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:25:17] minibatch manager run finished elapsed_s=0.157 jobs=8
+[2026-05-30T04:25:17] minibatch optimizer update finished elapsed_s=0.004 nsamples=8 skipped=0
+[2026-05-30T04:25:17] batch run finished elapsed_s=0.167 epoch=25 batch=32 nsamples=8 accuracy=0.0 loss=16.25 skipped=0
+[2026-05-30T04:25:17] epoch training finished epoch=25 elapsed_s=9.417 train_accuracy=0.112 train_loss=15.866 skipped=0
+[2026-05-30T04:25:17] epoch evaluation started epoch=25 samples=200
+[2026-05-30T04:25:17] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:25:17] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:25:17] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:25:17] evaluation manager run finished elapsed_s=0.81 jobs=200
+[2026-05-30T04:25:17] epoch evaluation finished elapsed_s=0.81 epoch=25 test_accuracy=0.1 test_loss=14.4
+[2026-05-30T04:25:17] latest checkpoint saved elapsed_s=0.003 epoch=25 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=800
+(timestamp = "2026-05-30T04:25:17", epoch = 25, seconds = 9.4171472, train_accuracy = 0.112, train_loss = 15.866f0, skipped = 0, test_accuracy = 0.1, test_loss = 14.4f0, pred_counts = "0-200-0-0-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:25:17] epoch finished elapsed_s=10.232 epoch=25
+[2026-05-30T04:25:17] epoch started epoch=26
+[2026-05-30T04:25:17] epoch training started epoch=26 batches=32 samples=1000
+[2026-05-30T04:25:17] batch build started epoch=26 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:25:17] batch jobs built elapsed_s=0.0 epoch=26 batch=1 jobs=32
+[2026-05-30T04:25:17] batch run started epoch=26 batch=1 jobs=32
+[2026-05-30T04:25:17] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:17] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:18] minibatch manager run finished elapsed_s=0.265 jobs=32
+[2026-05-30T04:25:18] minibatch optimizer update finished elapsed_s=0.005 nsamples=32 skipped=0
+[2026-05-30T04:25:18] batch run finished elapsed_s=0.276 epoch=26 batch=1 nsamples=32 accuracy=0.1562 loss=15.0 skipped=0
+[2026-05-30T04:25:20] batch build started epoch=26 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:25:20] batch jobs built elapsed_s=0.0 epoch=26 batch=10 jobs=32
+[2026-05-30T04:25:20] batch run started epoch=26 batch=10 jobs=32
+[2026-05-30T04:25:20] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:25:20] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:20] minibatch manager run finished elapsed_s=0.275 jobs=32
+[2026-05-30T04:25:20] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:25:20] batch run finished elapsed_s=0.286 epoch=26 batch=10 nsamples=32 accuracy=0.0625 loss=15.6875 skipped=0
+[2026-05-30T04:25:23] batch build started epoch=26 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:25:23] batch jobs built elapsed_s=0.0 epoch=26 batch=20 jobs=32
+[2026-05-30T04:25:23] batch run started epoch=26 batch=20 jobs=32
+[2026-05-30T04:25:23] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:23] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:23] minibatch manager run finished elapsed_s=0.29 jobs=32
+[2026-05-30T04:25:23] minibatch optimizer update finished elapsed_s=0.005 nsamples=32 skipped=0
+[2026-05-30T04:25:23] batch run finished elapsed_s=0.302 epoch=26 batch=20 nsamples=32 accuracy=0.0312 loss=16.5625 skipped=0
+[2026-05-30T04:25:26] batch build started epoch=26 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:25:26] batch jobs built elapsed_s=0.0 epoch=26 batch=30 jobs=32
+[2026-05-30T04:25:26] batch run started epoch=26 batch=30 jobs=32
+[2026-05-30T04:25:26] minibatch buffers cleared elapsed_s=0.005 jobs=32
+[2026-05-30T04:25:26] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:26] minibatch manager run finished elapsed_s=0.29 jobs=32
+[2026-05-30T04:25:26] minibatch optimizer update finished elapsed_s=0.005 nsamples=32 skipped=0
+[2026-05-30T04:25:26] batch run finished elapsed_s=0.301 epoch=26 batch=30 nsamples=32 accuracy=0.0312 loss=16.25 skipped=0
+[2026-05-30T04:25:26] batch build started epoch=26 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:25:26] batch jobs built elapsed_s=0.0 epoch=26 batch=32 jobs=8
+[2026-05-30T04:25:26] batch run started epoch=26 batch=32 jobs=8
+[2026-05-30T04:25:26] minibatch buffers cleared elapsed_s=0.005 jobs=8
+[2026-05-30T04:25:26] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:25:27] minibatch manager run finished elapsed_s=0.182 jobs=8
+[2026-05-30T04:25:27] minibatch optimizer update finished elapsed_s=0.008 nsamples=8 skipped=0
+[2026-05-30T04:25:27] batch run finished elapsed_s=0.197 epoch=26 batch=32 nsamples=8 accuracy=0.0 loss=15.75 skipped=0
+[2026-05-30T04:25:27] epoch training finished epoch=26 elapsed_s=9.366 train_accuracy=0.089 train_loss=15.718 skipped=0
+[2026-05-30T04:25:27] epoch evaluation started epoch=26 samples=200
+[2026-05-30T04:25:27] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:25:27] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:25:27] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:25:27] evaluation manager run finished elapsed_s=0.809 jobs=200
+[2026-05-30T04:25:27] epoch evaluation finished elapsed_s=0.81 epoch=26 test_accuracy=0.1 test_loss=16.0
+[2026-05-30T04:25:28] latest checkpoint saved elapsed_s=0.004 epoch=26 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=832
+(timestamp = "2026-05-30T04:25:28", epoch = 26, seconds = 9.3655221, train_accuracy = 0.089, train_loss = 15.718f0, skipped = 0, test_accuracy = 0.1, test_loss = 16.0f0, pred_counts = "0-0-0-0-0-0-0-200-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:25:28] epoch finished elapsed_s=10.179 epoch=26
+[2026-05-30T04:25:28] epoch started epoch=27
+[2026-05-30T04:25:28] epoch training started epoch=27 batches=32 samples=1000
+[2026-05-30T04:25:28] batch build started epoch=27 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:25:28] batch jobs built elapsed_s=0.0 epoch=27 batch=1 jobs=32
+[2026-05-30T04:25:28] batch run started epoch=27 batch=1 jobs=32
+[2026-05-30T04:25:28] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:28] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:28] minibatch manager run finished elapsed_s=0.31 jobs=32
+[2026-05-30T04:25:28] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:25:28] batch run finished elapsed_s=0.32 epoch=27 batch=1 nsamples=32 accuracy=0.1875 loss=15.375 skipped=0
+[2026-05-30T04:25:30] batch build started epoch=27 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:25:30] batch jobs built elapsed_s=0.0 epoch=27 batch=10 jobs=32
+[2026-05-30T04:25:30] batch run started epoch=27 batch=10 jobs=32
+[2026-05-30T04:25:30] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:25:30] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:30] minibatch manager run finished elapsed_s=0.273 jobs=32
+[2026-05-30T04:25:30] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:25:30] batch run finished elapsed_s=0.285 epoch=27 batch=10 nsamples=32 accuracy=0.0938 loss=16.5 skipped=0
+[2026-05-30T04:25:33] batch build started epoch=27 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:25:33] batch jobs built elapsed_s=0.0 epoch=27 batch=20 jobs=32
+[2026-05-30T04:25:33] batch run started epoch=27 batch=20 jobs=32
+[2026-05-30T04:25:33] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:25:33] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:33] minibatch manager run finished elapsed_s=0.264 jobs=32
+[2026-05-30T04:25:33] minibatch optimizer update finished elapsed_s=0.005 nsamples=32 skipped=0
+[2026-05-30T04:25:33] batch run finished elapsed_s=0.276 epoch=27 batch=20 nsamples=32 accuracy=0.125 loss=14.8125 skipped=0
+[2026-05-30T04:25:36] batch build started epoch=27 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:25:36] batch jobs built elapsed_s=0.0 epoch=27 batch=30 jobs=32
+[2026-05-30T04:25:36] batch run started epoch=27 batch=30 jobs=32
+[2026-05-30T04:25:36] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:36] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:37] minibatch manager run finished elapsed_s=0.274 jobs=32
+[2026-05-30T04:25:37] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:25:37] batch run finished elapsed_s=0.285 epoch=27 batch=30 nsamples=32 accuracy=0.125 loss=12.0625 skipped=0
+[2026-05-30T04:25:37] batch build started epoch=27 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:25:37] batch jobs built elapsed_s=0.0 epoch=27 batch=32 jobs=8
+[2026-05-30T04:25:37] batch run started epoch=27 batch=32 jobs=8
+[2026-05-30T04:25:37] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:25:37] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:25:37] minibatch manager run finished elapsed_s=0.152 jobs=8
+[2026-05-30T04:25:37] minibatch optimizer update finished elapsed_s=0.011 nsamples=8 skipped=0
+[2026-05-30T04:25:37] batch run finished elapsed_s=0.169 epoch=27 batch=32 nsamples=8 accuracy=0.125 loss=12.25 skipped=0
+[2026-05-30T04:25:37] epoch training finished epoch=27 elapsed_s=9.473 train_accuracy=0.117 train_loss=14.748 skipped=0
+[2026-05-30T04:25:37] epoch evaluation started epoch=27 samples=200
+[2026-05-30T04:25:37] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:25:37] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:25:37] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:25:38] evaluation manager run finished elapsed_s=0.813 jobs=200
+[2026-05-30T04:25:38] epoch evaluation finished elapsed_s=0.813 epoch=27 test_accuracy=0.1 test_loss=9.6
+[2026-05-30T04:25:38] latest checkpoint saved elapsed_s=0.004 epoch=27 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=864
+(timestamp = "2026-05-30T04:25:38", epoch = 27, seconds = 9.4729262, train_accuracy = 0.117, train_loss = 14.748f0, skipped = 0, test_accuracy = 0.1, test_loss = 9.6f0, pred_counts = "200-0-0-0-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:25:38] epoch finished elapsed_s=10.293 epoch=27
+[2026-05-30T04:25:38] epoch started epoch=28
+[2026-05-30T04:25:38] epoch training started epoch=28 batches=32 samples=1000
+[2026-05-30T04:25:38] batch build started epoch=28 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:25:38] batch jobs built elapsed_s=0.0 epoch=28 batch=1 jobs=32
+[2026-05-30T04:25:38] batch run started epoch=28 batch=1 jobs=32
+[2026-05-30T04:25:38] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:25:38] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:38] minibatch manager run finished elapsed_s=0.295 jobs=32
+[2026-05-30T04:25:38] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:25:38] batch run finished elapsed_s=0.307 epoch=28 batch=1 nsamples=32 accuracy=0.0625 loss=12.5625 skipped=0
+[2026-05-30T04:25:40] batch build started epoch=28 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:25:40] batch jobs built elapsed_s=0.0 epoch=28 batch=10 jobs=32
+[2026-05-30T04:25:40] batch run started epoch=28 batch=10 jobs=32
+[2026-05-30T04:25:40] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:40] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:41] minibatch manager run finished elapsed_s=0.293 jobs=32
+[2026-05-30T04:25:41] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:25:41] batch run finished elapsed_s=0.303 epoch=28 batch=10 nsamples=32 accuracy=0.1562 loss=11.875 skipped=0
+[2026-05-30T04:25:44] batch build started epoch=28 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:25:44] batch jobs built elapsed_s=0.0 epoch=28 batch=20 jobs=32
+[2026-05-30T04:25:44] batch run started epoch=28 batch=20 jobs=32
+[2026-05-30T04:25:44] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:44] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:44] minibatch manager run finished elapsed_s=0.289 jobs=32
+[2026-05-30T04:25:44] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:25:44] batch run finished elapsed_s=0.3 epoch=28 batch=20 nsamples=32 accuracy=0.0312 loss=12.1875 skipped=0
+[2026-05-30T04:25:46] batch build started epoch=28 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:25:46] batch jobs built elapsed_s=0.0 epoch=28 batch=30 jobs=32
+[2026-05-30T04:25:46] batch run started epoch=28 batch=30 jobs=32
+[2026-05-30T04:25:46] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:25:46] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:47] minibatch manager run finished elapsed_s=0.292 jobs=32
+[2026-05-30T04:25:47] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:25:47] batch run finished elapsed_s=0.303 epoch=28 batch=30 nsamples=32 accuracy=0.0938 loss=12.6875 skipped=0
+[2026-05-30T04:25:47] batch build started epoch=28 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:25:47] batch jobs built elapsed_s=0.0 epoch=28 batch=32 jobs=8
+[2026-05-30T04:25:47] batch run started epoch=28 batch=32 jobs=8
+[2026-05-30T04:25:47] minibatch buffers cleared elapsed_s=0.006 jobs=8
+[2026-05-30T04:25:47] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:25:47] minibatch manager run finished elapsed_s=0.154 jobs=8
+[2026-05-30T04:25:47] minibatch optimizer update finished elapsed_s=0.006 nsamples=8 skipped=0
+[2026-05-30T04:25:47] batch run finished elapsed_s=0.168 epoch=28 batch=32 nsamples=8 accuracy=0.25 loss=10.75 skipped=0
+[2026-05-30T04:25:47] epoch training finished epoch=28 elapsed_s=9.446 train_accuracy=0.104 train_loss=12.072 skipped=0
+[2026-05-30T04:25:47] epoch evaluation started epoch=28 samples=200
+[2026-05-30T04:25:47] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:25:47] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:25:47] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:25:48] evaluation manager run finished elapsed_s=0.815 jobs=200
+[2026-05-30T04:25:48] epoch evaluation finished elapsed_s=0.816 epoch=28 test_accuracy=0.1 test_loss=14.4
+[2026-05-30T04:25:48] latest checkpoint saved elapsed_s=0.004 epoch=28 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=896
+(timestamp = "2026-05-30T04:25:48", epoch = 28, seconds = 9.4462035, train_accuracy = 0.104, train_loss = 12.072f0, skipped = 0, test_accuracy = 0.1, test_loss = 14.4f0, pred_counts = "200-0-0-0-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:25:48] epoch finished elapsed_s=10.268 epoch=28
+[2026-05-30T04:25:48] epoch started epoch=29
+[2026-05-30T04:25:48] epoch training started epoch=29 batches=32 samples=1000
+[2026-05-30T04:25:48] batch build started epoch=29 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:25:48] batch jobs built elapsed_s=0.0 epoch=29 batch=1 jobs=32
+[2026-05-30T04:25:48] batch run started epoch=29 batch=1 jobs=32
+[2026-05-30T04:25:48] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:48] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:48] minibatch manager run finished elapsed_s=0.295 jobs=32
+[2026-05-30T04:25:48] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:25:48] batch run finished elapsed_s=0.305 epoch=29 batch=1 nsamples=32 accuracy=0.125 loss=12.5625 skipped=0
+[2026-05-30T04:25:51] batch build started epoch=29 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:25:51] batch jobs built elapsed_s=0.0 epoch=29 batch=10 jobs=32
+[2026-05-30T04:25:51] batch run started epoch=29 batch=10 jobs=32
+[2026-05-30T04:25:51] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:51] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:51] minibatch manager run finished elapsed_s=0.285 jobs=32
+[2026-05-30T04:25:51] minibatch optimizer update finished elapsed_s=0.004 nsamples=32 skipped=0
+[2026-05-30T04:25:51] batch run finished elapsed_s=0.295 epoch=29 batch=10 nsamples=32 accuracy=0.125 loss=12.8125 skipped=0
+[2026-05-30T04:25:54] batch build started epoch=29 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:25:54] batch jobs built elapsed_s=0.0 epoch=29 batch=20 jobs=32
+[2026-05-30T04:25:54] batch run started epoch=29 batch=20 jobs=32
+[2026-05-30T04:25:54] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:54] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:54] minibatch manager run finished elapsed_s=0.309 jobs=32
+[2026-05-30T04:25:54] minibatch optimizer update finished elapsed_s=0.005 nsamples=32 skipped=0
+[2026-05-30T04:25:54] batch run finished elapsed_s=0.32 epoch=29 batch=20 nsamples=32 accuracy=0.125 loss=13.6875 skipped=0
+[2026-05-30T04:25:57] batch build started epoch=29 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:25:57] batch jobs built elapsed_s=0.0 epoch=29 batch=30 jobs=32
+[2026-05-30T04:25:57] batch run started epoch=29 batch=30 jobs=32
+[2026-05-30T04:25:57] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:57] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:57] minibatch manager run finished elapsed_s=0.277 jobs=32
+[2026-05-30T04:25:57] minibatch optimizer update finished elapsed_s=0.009 nsamples=32 skipped=0
+[2026-05-30T04:25:57] batch run finished elapsed_s=0.293 epoch=29 batch=30 nsamples=32 accuracy=0.0312 loss=13.0 skipped=0
+[2026-05-30T04:25:57] batch build started epoch=29 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:25:57] batch jobs built elapsed_s=0.0 epoch=29 batch=32 jobs=8
+[2026-05-30T04:25:57] batch run started epoch=29 batch=32 jobs=8
+[2026-05-30T04:25:57] minibatch buffers cleared elapsed_s=0.005 jobs=8
+[2026-05-30T04:25:57] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:25:57] minibatch manager run finished elapsed_s=0.162 jobs=8
+[2026-05-30T04:25:57] minibatch optimizer update finished elapsed_s=0.004 nsamples=8 skipped=0
+[2026-05-30T04:25:57] batch run finished elapsed_s=0.172 epoch=29 batch=32 nsamples=8 accuracy=0.0 loss=13.5 skipped=0
+[2026-05-30T04:25:57] epoch training finished epoch=29 elapsed_s=9.411 train_accuracy=0.106 train_loss=13.082 skipped=0
+[2026-05-30T04:25:57] epoch evaluation started epoch=29 samples=200
+[2026-05-30T04:25:57] evaluation buffers cleared elapsed_s=0.0 samples=200
+[2026-05-30T04:25:57] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:25:57] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:25:58] evaluation manager run finished elapsed_s=0.82 jobs=200
+[2026-05-30T04:25:58] epoch evaluation finished elapsed_s=0.821 epoch=29 test_accuracy=0.1 test_loss=14.4
+[2026-05-30T04:25:58] latest checkpoint saved elapsed_s=0.004 epoch=29 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=928
+(timestamp = "2026-05-30T04:25:58", epoch = 29, seconds = 9.4109338, train_accuracy = 0.106, train_loss = 13.082f0, skipped = 0, test_accuracy = 0.1, test_loss = 14.4f0, pred_counts = "0-0-0-0-0-0-0-0-200-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "")
+[2026-05-30T04:25:58] epoch finished elapsed_s=10.237 epoch=29
+[2026-05-30T04:25:58] epoch started epoch=30
+[2026-05-30T04:25:58] epoch training started epoch=30 batches=32 samples=1000
+[2026-05-30T04:25:58] batch build started epoch=30 batch=1 batches=32 first=1 last=32
+[2026-05-30T04:25:58] batch jobs built elapsed_s=0.0 epoch=30 batch=1 jobs=32
+[2026-05-30T04:25:58] batch run started epoch=30 batch=1 jobs=32
+[2026-05-30T04:25:58] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:25:58] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:25:59] minibatch manager run finished elapsed_s=0.273 jobs=32
+[2026-05-30T04:25:59] minibatch optimizer update finished elapsed_s=0.003 nsamples=32 skipped=0
+[2026-05-30T04:25:59] batch run finished elapsed_s=0.284 epoch=30 batch=1 nsamples=32 accuracy=0.0625 loss=13.5 skipped=0
+[2026-05-30T04:26:01] batch build started epoch=30 batch=10 batches=32 first=289 last=320
+[2026-05-30T04:26:01] batch jobs built elapsed_s=0.0 epoch=30 batch=10 jobs=32
+[2026-05-30T04:26:01] batch run started epoch=30 batch=10 jobs=32
+[2026-05-30T04:26:01] minibatch buffers cleared elapsed_s=0.007 jobs=32
+[2026-05-30T04:26:01] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:26:01] minibatch manager run finished elapsed_s=0.293 jobs=32
+[2026-05-30T04:26:01] minibatch optimizer update finished elapsed_s=0.005 nsamples=32 skipped=0
+[2026-05-30T04:26:01] batch run finished elapsed_s=0.305 epoch=30 batch=10 nsamples=32 accuracy=0.0312 loss=12.9375 skipped=0
+[2026-05-30T04:26:04] batch build started epoch=30 batch=20 batches=32 first=609 last=640
+[2026-05-30T04:26:04] batch jobs built elapsed_s=0.0 epoch=30 batch=20 jobs=32
+[2026-05-30T04:26:04] batch run started epoch=30 batch=20 jobs=32
+[2026-05-30T04:26:04] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:26:04] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:26:04] minibatch manager run finished elapsed_s=0.292 jobs=32
+[2026-05-30T04:26:04] minibatch optimizer update finished elapsed_s=0.005 nsamples=32 skipped=0
+[2026-05-30T04:26:04] batch run finished elapsed_s=0.303 epoch=30 batch=20 nsamples=32 accuracy=0.0938 loss=12.1875 skipped=0
+[2026-05-30T04:26:07] batch build started epoch=30 batch=30 batches=32 first=929 last=960
+[2026-05-30T04:26:07] batch jobs built elapsed_s=0.0 epoch=30 batch=30 jobs=32
+[2026-05-30T04:26:07] batch run started epoch=30 batch=30 jobs=32
+[2026-05-30T04:26:07] minibatch buffers cleared elapsed_s=0.006 jobs=32
+[2026-05-30T04:26:07] minibatch manager run started jobs=32 workers=32
+[2026-05-30T04:26:07] minibatch manager run finished elapsed_s=0.289 jobs=32
+[2026-05-30T04:26:07] minibatch optimizer update finished elapsed_s=0.01 nsamples=32 skipped=0
+[2026-05-30T04:26:07] batch run finished elapsed_s=0.305 epoch=30 batch=30 nsamples=32 accuracy=0.0625 loss=12.625 skipped=0
+[2026-05-30T04:26:07] batch build started epoch=30 batch=32 batches=32 first=993 last=1000
+[2026-05-30T04:26:07] batch jobs built elapsed_s=0.0 epoch=30 batch=32 jobs=8
+[2026-05-30T04:26:07] batch run started epoch=30 batch=32 jobs=8
+[2026-05-30T04:26:07] minibatch buffers cleared elapsed_s=0.01 jobs=8
+[2026-05-30T04:26:07] minibatch manager run started jobs=8 workers=32
+[2026-05-30T04:26:08] minibatch manager run finished elapsed_s=0.163 jobs=8
+[2026-05-30T04:26:08] minibatch optimizer update finished elapsed_s=0.004 nsamples=8 skipped=0
+[2026-05-30T04:26:08] batch run finished elapsed_s=0.178 epoch=30 batch=32 nsamples=8 accuracy=0.375 loss=12.5 skipped=0
+[2026-05-30T04:26:08] epoch training finished epoch=30 elapsed_s=9.332 train_accuracy=0.092 train_loss=12.8 skipped=0
+[2026-05-30T04:26:08] epoch evaluation started epoch=30 samples=200
+[2026-05-30T04:26:08] evaluation buffers cleared elapsed_s=0.001 samples=200
+[2026-05-30T04:26:08] evaluation jobs built elapsed_s=0.0 jobs=200
+[2026-05-30T04:26:08] evaluation manager run started jobs=200 workers=32
+[2026-05-30T04:26:08] evaluation manager run finished elapsed_s=0.844 jobs=200
+[2026-05-30T04:26:08] epoch evaluation finished elapsed_s=0.846 epoch=30 test_accuracy=0.1 test_loss=12.8
+[2026-05-30T04:26:08] latest checkpoint saved elapsed_s=0.004 epoch=30 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\latest_checkpoint.bin update_idx=960
+(timestamp = "2026-05-30T04:26:08", epoch = 30, seconds = 9.3315598, train_accuracy = 0.092, train_loss = 12.8f0, skipped = 0, test_accuracy = 0.1, test_loss = 12.8f0, pred_counts = "0-0-0-200-0-0-0-0-0-0", best_accuracy = 0.11, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\best_params.bin", latest_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\latest_checkpoint.bin", final_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\single-hidden-local-28x28-to-11x11-readout\\experiments\\current\\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\\r8_s50_beta5p0_e30_low_lr_nooutbias\\r8\\final_params.bin")
+[2026-05-30T04:26:08] epoch finished elapsed_s=10.182 epoch=30
+[2026-05-30T04:26:08] final checkpoint saved elapsed_s=0.01 path=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8\final_params.bin
+[2026-05-30T04:26:35] plots saved elapsed_s=26.09
+[2026-05-30T04:26:35] run finished elapsed_s=377.699 best_accuracy=0.11 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8
+saved local MNIST manager run in C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_low_lr_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_low_lr_nooutbias\r8
+[2026-05-30T04:26:35] manager closing
+[2026-05-30T04:26:35] manager closed

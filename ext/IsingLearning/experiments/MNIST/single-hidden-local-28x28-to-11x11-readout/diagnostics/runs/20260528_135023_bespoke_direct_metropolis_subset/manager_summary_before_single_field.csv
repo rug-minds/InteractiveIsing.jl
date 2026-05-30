@@ -1,0 +1,2 @@
+workers,threads,subset_samples,full_epoch_samples,elapsed_seconds,estimated_epoch_seconds,seconds_per_sample,batches,accuracy,loss,skipped
+32,32,273,1000,67.695247,247.967938,0.247967938,9,0.252747,14.798534,68

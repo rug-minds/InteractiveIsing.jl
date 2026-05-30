@@ -12,13 +12,18 @@ neighbor value from `nodevals`.
     transform::F = identity,
     transform_weight::FW = identity,
 ) where {I <: Integer, SP <: SparseMatrixCSC, AV <: AbstractArray, F, FW}
-    total = @inline column_contraction(node_idx, nodevals, adj; transform, transform_weight)
+    rows = SparseArrays.rowvals(adj)
+    colptr = SparseArrays.getcolptr(adj)
+    nzvals = SparseArrays.nonzeros(adj)
+    total = zero(eltype(adj))
 
-    # Plain CSC matrices store self-couplings on the diagonal, while this
-    # neighbor loop intentionally excludes the node itself.
-    self_weight = @inline adj[node_idx, node_idx]
-    self_value = @inline getindex(nodevals, node_idx)
-    total -= @inline transform_weight(self_weight) * transform(self_value)
+    # Plain CSC matrices can store self-couplings on the diagonal. Skip those
+    # while scanning the column so diagonal-free graphs avoid a sparse lookup.
+    @inbounds for ptr in colptr[node_idx]:(colptr[node_idx + 1] - 1)
+        row = rows[ptr]
+        row == node_idx && continue
+        total += transform_weight(nzvals[ptr]) * transform(nodevals[row])
+    end
     return total
 end
 

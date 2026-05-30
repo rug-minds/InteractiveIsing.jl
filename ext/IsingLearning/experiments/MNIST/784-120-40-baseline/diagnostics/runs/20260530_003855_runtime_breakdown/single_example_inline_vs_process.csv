@@ -1,0 +1,2 @@
+timestamp,architecture,measured_examples,workers,threads,sweeps,relaxation_steps,work_steps_per_example,setup_seconds,data_seconds,normal_build_warm_seconds,inline_build_warm_seconds,normal_wall_seconds,normal_internal_seconds,inline_wall_seconds,inline_internal_seconds,normal_over_inline_wall,normal_over_inline_internal
+2026-05-30T00:55:48,784-120-40,1,1,1,500.0,80000,160000,2.5276002,1.269855,36.1442791,28.0909156,5.8205728,0.128319,4.4337432,0.1333366,1.312789788998154,0.9623689219614119

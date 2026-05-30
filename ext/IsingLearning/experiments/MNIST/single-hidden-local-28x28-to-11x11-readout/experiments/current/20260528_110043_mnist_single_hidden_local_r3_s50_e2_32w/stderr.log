@@ -1,0 +1,47 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+Γöî Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+Γöé   overlapping_fields =
+Γöé    5-element Vector{Symbol}:
+Γöé     :mnist_model
+Γöé     :x
+Γöé     :free_state
+Γöé     :free_best_energy
+Γöé     :rng
+Γöö @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+Γöî Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+Γöé   overlapping_fields =
+Γöé    6-element Vector{Symbol}:
+Γöé     :mnist_model
+Γöé     :x
+Γöé     :y
+Γöé     :free_state
+Γöé     :nudged_state
+Γöé     :nudged_best_energy
+Γöö @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+Γöî Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+Γöé   overlapping_fields =
+Γöé    5-element Vector{Symbol}:
+Γöé     :mnist_model
+Γöé     :x
+Γöé     :free_state
+Γöé     :free_best_energy
+Γöé     :rng
+Γöö @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+Γöî Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+Γöé   overlapping_fields =
+Γöé    5-element Vector{Symbol}:
+Γöé     :mnist_model
+Γöé     :x
+Γöé     :free_state
+Γöé     :free_best_energy
+Γöé     :rng
+Γöö @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+Γöî Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+Γöé   overlapping_fields =
+Γöé    5-element Vector{Symbol}:
+Γöé     :mnist_model
+Γöé     :x
+Γöé     :free_state
+Γöé     :free_best_energy
+Γöé     :rng
+Γöö @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54

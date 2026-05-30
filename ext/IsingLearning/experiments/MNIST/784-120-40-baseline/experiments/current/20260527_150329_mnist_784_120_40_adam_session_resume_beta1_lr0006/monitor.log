@@ -1,0 +1,16 @@
+[2026-05-27T15:03:32] monitor started pid=292276 poll_s=15
+[2026-05-27T15:03:32] running stdout="["
+[2026-05-27T15:03:47] running stdout="loading train-eval split"
+[2026-05-27T15:04:02] running stdout="constructing 32-worker Adam manager"
+[2026-05-27T15:04:17] running epoch=14 stdout="starting epochs"
+[2026-05-27T15:04:32] running epoch=14 stdout="epoch 16 training"
+[2026-05-27T15:10:47] running epoch=16 stdout="epoch 17 training"
+[2026-05-27T15:16:47] running epoch=17 stdout="epoch 18 training"
+[2026-05-27T15:23:03] running epoch=18 stdout="epoch 19 training"
+[2026-05-27T15:29:18] running epoch=19 stdout="epoch 20 training"
+[2026-05-27T15:36:19] running epoch=19 stdout="epoch 20 evaluating"
+[2026-05-27T15:43:19] new_eval epoch=20 test_accuracy=0.7281390134529148 test_loss=8.208755
+[2026-05-27T15:43:34] running last_eval_epoch=20 test_accuracy=0.7281390134529148 stdout="epoch 21 training"
+[2026-05-27T15:49:35] running epoch=21 stdout="epoch 22 training"
+[2026-05-27T15:55:35] running epoch=22 stdout="epoch 23 training"
+[2026-05-27T16:01:51] running epoch=23 stdout="epoch 24 training"

@@ -1,0 +1,10 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+[bootstrap] activated project
+[bootstrap] loaded packages
+[2026-05-30T00:54:29] building inline-vs-process layer threads=1 workers=1
+[2026-05-30T00:54:32] loading tiny train split
+[2026-05-30T00:54:33] constructing and warming normal process
+[2026-05-30T00:55:10] constructing and warming inline process
+[2026-05-30T00:55:38] measuring normal process
+[2026-05-30T00:55:44] measuring inline process
+[2026-05-30T00:55:49] inline-vs-process summary timestamp=2026-05-30T00:55:48 architecture=784-120-40 measured_examples=1 workers=1 threads=1 sweeps=500.0 relaxation_steps=80000 work_steps_per_example=160000 setup_seconds=2.5276002 data_seconds=1.269855 normal_build_warm_seconds=36.1442791 inline_build_warm_seconds=28.0909156 normal_wall_seconds=5.8205728 normal_internal_seconds=0.128319 inline_wall_seconds=4.4337432 inline_internal_seconds=0.1333366 normal_over_inline_wall=1.312789788998154 normal_over_inline_internal=0.9623689219614119

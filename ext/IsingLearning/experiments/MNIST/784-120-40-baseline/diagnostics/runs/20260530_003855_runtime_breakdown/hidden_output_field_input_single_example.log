@@ -1,0 +1,6 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+[bootstrap] activated project
+[bootstrap] loaded packages
+[2026-05-30T01:43:15] building reduced hidden/output field-input graph threads=1
+[2026-05-30T01:43:19] loading tiny MNIST split
+[2026-05-30T01:43:22] field-input reduced summary timestamp=2026-05-30T01:43:21 architecture=120-40_field_input_from_784 implementation=bespoke_reduced_hidden_output_two_magfields measured_examples=1 threads=1 sweeps=500.0 beta=5.0 temp=0.001 relaxation_steps=80000 work_steps_per_example=160000 active_units=160 input_projection_weights=94080 sampled_nonzeros=9600 setup_seconds=4.0151806 data_seconds=1.3235301 warmup_total_seconds=0.4184469 measured_wall_seconds=0.0409285 projection_seconds=3.95e-5 free_seconds=0.0188125 nudged_seconds=0.0219421 gradient_seconds=7.03e-5 normalize_seconds=6.0e-7 accepted_free=2948 accepted_nudged=4811 acceptance_rate=0.04849375 steps_per_second=3.9092563861367996e6 csv=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\diagnostics\runs\20260530_003855_runtime_breakdown\hidden_output_field_input_single_example.csv

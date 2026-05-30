@@ -86,7 +86,8 @@ The first call uses `start_T` and the final call uses `stop_T`.
     function PowerLawTemperatureSchedule(
         isinggraph,
         @managed(step_idx = 0),
-        @managed(total_steps = n_steps);
+        @managed(total_steps = n_steps),
+        @managed(current_T = start_T);
         @inputs((; n_steps::Int = 1))
     )
         total = max(total_steps, 1)
@@ -176,6 +177,13 @@ function apply_input_pattern!(isinggraph::G, pattern::P) where {G,P<:AbstractVec
     return isinggraph
 end
 
+"""
+    apply_input(isinggraph, x)
+
+Install one MNIST input sample. Field-mode graphs write the image-induced local
+field directly into the worker-local input `MagField`; state-mode graphs retain
+the legacy fixed-input-spin path.
+"""
 function apply_input(isinggraph, x)
     InteractiveIsing.off!(isinggraph.index_set, 1)
     input_field = _mnist_input_magfield(isinggraph)
@@ -184,7 +192,6 @@ function apply_input(isinggraph, x)
         input_state .= reshape(x, size(input_state))
     else
         precompute_mnist_input_pattern!(isinggraph, input_field.b, x)
-        apply_input_pattern!(isinggraph, input_field.b)
     end
     hook = get(isinggraph, :after_apply_input!, nothing)
     isnothing(hook) || hook(isinggraph)

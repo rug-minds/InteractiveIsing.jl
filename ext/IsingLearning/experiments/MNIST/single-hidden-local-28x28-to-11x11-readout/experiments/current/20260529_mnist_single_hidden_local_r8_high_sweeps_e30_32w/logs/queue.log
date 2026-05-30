@@ -1,0 +1,155 @@
+[2026-05-29T00:33:11] Waiting for radius grid summary rows: 18 at C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260529_mnist_single_hidden_local_r8_high_sweeps_e30_32w\..\20260529_mnist_single_hidden_local_r1_to_r9_relax_grid_e30_32w\grid_summary.csv
+[2026-05-29T00:33:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:34:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:35:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:36:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:37:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:38:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:39:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:40:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:41:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:42:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:43:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:44:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:45:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:46:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:47:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:48:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:49:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:50:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:51:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:52:11] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:53:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:54:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:55:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:56:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:57:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:58:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T00:59:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:00:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:01:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:02:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:03:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:04:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:05:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:06:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:07:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:08:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:09:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:10:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:11:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:12:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:13:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:14:12] Radius grid summary not present yet; still waiting.
+[2026-05-29T01:14:58] Queue watcher paused manually: r8 from-scratch grid is flat/collapsing; revisit setup before continuing.
+[2026-05-29T01:15:08] Queue watcher paused manually: r8 from-scratch grid is flat/collapsing; revisit setup before continuing.
+[2026-05-29T08:22:44] Queue restarted manually; high sweeps expanded to 150,250,400,800,1200.
+[2026-05-29T08:22:45] Waiting for radius grid summary rows: 18 at C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260529_mnist_single_hidden_local_r8_high_sweeps_e30_32w\..\20260529_mnist_single_hidden_local_r1_to_r9_relax_grid_e30_32w\grid_summary.csv
+[2026-05-29T08:22:45] Radius grid summary not present yet; still waiting.
+[2026-05-29T08:23:45] Radius grid summary not present yet; still waiting.
+[2026-05-29T08:24:45] Radius grid summary not present yet; still waiting.
+[2026-05-29T08:25:45] Radius grid summary not present yet; still waiting.
+[2026-05-29T08:26:45] Radius grid rows=1/18; still waiting.
+[2026-05-29T08:27:45] Radius grid rows=1/18; still waiting.
+[2026-05-29T08:28:45] Radius grid rows=2/18; still waiting.
+[2026-05-29T08:29:45] Radius grid rows=2/18; still waiting.
+[2026-05-29T08:30:45] Radius grid rows=3/18; still waiting.
+[2026-05-29T08:31:45] Radius grid rows=3/18; still waiting.
+[2026-05-29T08:32:45] Radius grid rows=3/18; still waiting.
+[2026-05-29T08:33:45] Radius grid rows=3/18; still waiting.
+[2026-05-29T08:34:45] Radius grid rows=4/18; still waiting.
+[2026-05-29T08:35:45] Radius grid rows=4/18; still waiting.
+[2026-05-29T08:36:45] Radius grid rows=4/18; still waiting.
+[2026-05-29T08:37:45] Radius grid rows=5/18; still waiting.
+[2026-05-29T08:38:45] Radius grid rows=5/18; still waiting.
+[2026-05-29T08:39:45] Radius grid rows=5/18; still waiting.
+[2026-05-29T08:40:45] Radius grid rows=5/18; still waiting.
+[2026-05-29T08:41:45] Radius grid rows=5/18; still waiting.
+[2026-05-29T08:42:45] Radius grid rows=6/18; still waiting.
+[2026-05-29T08:43:45] Radius grid rows=6/18; still waiting.
+[2026-05-29T08:44:45] Radius grid rows=6/18; still waiting.
+[2026-05-29T08:45:45] Radius grid rows=6/18; still waiting.
+[2026-05-29T08:46:45] Radius grid rows=6/18; still waiting.
+[2026-05-29T08:47:45] Radius grid rows=7/18; still waiting.
+[2026-05-29T08:48:45] Radius grid rows=7/18; still waiting.
+[2026-05-29T08:49:45] Radius grid rows=7/18; still waiting.
+[2026-05-29T08:50:45] Radius grid rows=7/18; still waiting.
+[2026-05-29T08:51:45] Radius grid rows=7/18; still waiting.
+[2026-05-29T08:52:45] Radius grid rows=7/18; still waiting.
+[2026-05-29T08:53:45] Radius grid rows=8/18; still waiting.
+[2026-05-29T08:54:45] Radius grid rows=8/18; still waiting.
+[2026-05-29T08:55:45] Radius grid rows=8/18; still waiting.
+[2026-05-29T08:56:45] Radius grid rows=8/18; still waiting.
+[2026-05-29T08:57:45] Radius grid rows=8/18; still waiting.
+[2026-05-29T08:58:45] Radius grid rows=8/18; still waiting.
+[2026-05-29T08:59:45] Radius grid rows=8/18; still waiting.
+[2026-05-29T09:00:46] Radius grid rows=9/18; still waiting.
+[2026-05-29T09:01:46] Radius grid rows=9/18; still waiting.
+[2026-05-29T09:02:46] Radius grid rows=9/18; still waiting.
+[2026-05-29T09:03:46] Radius grid rows=9/18; still waiting.
+[2026-05-29T09:04:46] Radius grid rows=10/18; still waiting.
+[2026-05-29T09:05:46] Radius grid rows=10/18; still waiting.
+[2026-05-29T09:06:46] Radius grid rows=10/18; still waiting.
+[2026-05-29T09:07:46] Radius grid rows=10/18; still waiting.
+[2026-05-29T09:08:46] Radius grid rows=11/18; still waiting.
+[2026-05-29T09:09:46] Radius grid rows=11/18; still waiting.
+[2026-05-29T09:10:46] Radius grid rows=11/18; still waiting.
+[2026-05-29T09:11:46] Radius grid rows=11/18; still waiting.
+[2026-05-29T09:12:46] Radius grid rows=11/18; still waiting.
+[2026-05-29T09:13:46] Radius grid rows=12/18; still waiting.
+[2026-05-29T09:14:46] Radius grid rows=12/18; still waiting.
+[2026-05-29T09:15:46] Radius grid rows=12/18; still waiting.
+[2026-05-29T09:16:46] Radius grid rows=12/18; still waiting.
+[2026-05-29T09:17:46] Radius grid rows=12/18; still waiting.
+[2026-05-29T09:18:46] Radius grid rows=12/18; still waiting.
+[2026-05-29T09:19:46] Radius grid rows=13/18; still waiting.
+[2026-05-29T09:20:46] Radius grid rows=13/18; still waiting.
+[2026-05-29T09:21:46] Radius grid rows=13/18; still waiting.
+[2026-05-29T09:22:46] Radius grid rows=13/18; still waiting.
+[2026-05-29T09:23:46] Radius grid rows=13/18; still waiting.
+[2026-05-29T09:24:46] Radius grid rows=13/18; still waiting.
+[2026-05-29T09:25:46] Radius grid rows=13/18; still waiting.
+[2026-05-29T09:26:46] Radius grid rows=14/18; still waiting.
+[2026-05-29T09:27:46] Radius grid rows=14/18; still waiting.
+[2026-05-29T09:28:46] Radius grid rows=14/18; still waiting.
+[2026-05-29T09:29:46] Radius grid rows=14/18; still waiting.
+[2026-05-29T09:30:46] Radius grid rows=14/18; still waiting.
+[2026-05-29T09:31:46] Radius grid rows=14/18; still waiting.
+[2026-05-29T09:32:46] Radius grid rows=14/18; still waiting.
+[2026-05-29T09:33:46] Radius grid rows=14/18; still waiting.
+[2026-05-29T09:34:46] Radius grid rows=15/18; still waiting.
+[2026-05-29T09:35:46] Radius grid rows=15/18; still waiting.
+[2026-05-29T09:36:46] Radius grid rows=15/18; still waiting.
+[2026-05-29T09:37:46] Radius grid rows=15/18; still waiting.
+[2026-05-29T09:38:46] Radius grid rows=15/18; still waiting.
+[2026-05-29T09:39:46] Radius grid rows=15/18; still waiting.
+[2026-05-29T09:40:46] Radius grid rows=15/18; still waiting.
+[2026-05-29T09:41:46] Radius grid rows=15/18; still waiting.
+[2026-05-29T09:42:46] Radius grid rows=15/18; still waiting.
+[2026-05-29T09:43:46] Radius grid rows=15/18; still waiting.
+[2026-05-29T09:44:46] Radius grid rows=16/18; still waiting.
+[2026-05-29T09:45:46] Radius grid rows=16/18; still waiting.
+[2026-05-29T09:46:46] Radius grid rows=16/18; still waiting.
+[2026-05-29T09:47:46] Radius grid rows=16/18; still waiting.
+[2026-05-29T09:48:46] Radius grid rows=16/18; still waiting.
+[2026-05-29T09:49:46] Radius grid rows=16/18; still waiting.
+[2026-05-29T09:50:46] Radius grid rows=16/18; still waiting.
+[2026-05-29T09:51:46] Radius grid rows=16/18; still waiting.
+[2026-05-29T09:52:46] Radius grid rows=16/18; still waiting.
+[2026-05-29T09:53:46] Radius grid rows=16/18; still waiting.
+[2026-05-29T09:54:46] Radius grid rows=16/18; still waiting.
+[2026-05-29T09:55:46] Radius grid rows=17/18; still waiting.
+[2026-05-29T09:56:46] Radius grid rows=17/18; still waiting.
+[2026-05-29T09:57:46] Radius grid rows=17/18; still waiting.
+[2026-05-29T09:58:46] Radius grid rows=17/18; still waiting.
+[2026-05-29T09:59:46] Radius grid rows=17/18; still waiting.
+[2026-05-29T10:00:46] Radius grid rows=17/18; still waiting.
+[2026-05-29T10:01:46] Radius grid rows=17/18; still waiting.
+[2026-05-29T10:02:46] Radius grid rows=17/18; still waiting.
+[2026-05-29T10:03:46] Radius grid rows=17/18; still waiting.
+[2026-05-29T10:04:46] Radius grid rows=17/18; still waiting.
+[2026-05-29T10:05:46] Radius grid rows=17/18; still waiting.
+[2026-05-29T10:06:46] Radius grid rows=17/18; still waiting.
+[2026-05-29T10:07:46] Radius grid rows=17/18; still waiting.
+[2026-05-29T10:08:46] Radius grid has 18 rows; starting high-sweep grid.
+[2026-05-29T10:08:46] Started high-sweep grid. stdout=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260529_mnist_single_hidden_local_r8_high_sweeps_e30_32w\logs\launcher_stdout.log stderr=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260529_mnist_single_hidden_local_r8_high_sweeps_e30_32w\logs\launcher_stderr.log

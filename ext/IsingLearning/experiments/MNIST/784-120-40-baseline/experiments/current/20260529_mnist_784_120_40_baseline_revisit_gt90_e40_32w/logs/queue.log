@@ -1,0 +1,265 @@
+[2026-05-29T00:42:01] Waiting for high-sweep summary rows: 3 at C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260529_mnist_single_hidden_local_r8_high_sweeps_e30_32w\grid_summary.csv
+[2026-05-29T00:42:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:43:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:44:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:45:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:46:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:47:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:48:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:49:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:50:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:51:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:52:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:53:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:54:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:55:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:56:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:57:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:58:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T00:59:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:00:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:01:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:02:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:03:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:04:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:05:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:06:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:07:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:08:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:09:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:10:01] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:11:02] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:12:02] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:13:02] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:14:02] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:14:58] Queue watcher paused manually: r8 from-scratch grid is flat/collapsing; revisit setup before continuing.
+[2026-05-29T01:15:02] High-sweep summary not present yet; still waiting.
+[2026-05-29T01:15:08] Queue watcher paused manually: r8 from-scratch grid is flat/collapsing; revisit setup before continuing.
+[2026-05-29T08:22:44] Queue restarted manually; waiting for 5 high-sweep rows.
+[2026-05-29T08:22:45] Waiting for high-sweep summary rows: 5 at C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260529_mnist_single_hidden_local_r8_high_sweeps_e30_32w\grid_summary.csv
+[2026-05-29T08:22:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:23:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:24:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:25:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:26:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:27:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:28:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:29:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:30:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:31:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:32:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:33:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:34:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:35:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:36:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:37:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:38:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:39:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:40:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:41:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:42:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:43:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:44:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:45:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:46:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:47:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:48:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:49:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:50:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:51:45] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:52:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:53:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:54:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:55:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:56:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:57:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:58:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T08:59:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:00:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:01:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:02:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:03:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:04:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:05:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:06:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:07:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:08:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:09:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:10:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:11:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:12:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:13:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:14:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:15:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:16:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:17:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:18:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:19:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:20:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:21:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:22:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:23:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:24:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:25:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:26:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:27:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:28:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:29:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:30:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:31:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:32:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:33:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:34:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:35:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:36:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:37:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:38:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:39:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:40:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:41:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:42:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:43:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:44:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:45:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:46:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:47:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:48:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:49:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:50:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:51:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:52:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:53:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:54:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:55:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:56:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:57:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:58:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T09:59:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:00:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:01:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:02:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:03:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:04:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:05:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:06:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:07:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:08:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:09:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:10:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:11:46] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:12:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:13:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:14:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:15:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:16:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:17:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:18:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:19:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:20:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:21:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:22:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:23:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:24:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:25:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:26:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:27:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:28:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:29:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:30:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:31:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:32:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:33:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:34:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:35:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:36:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:37:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:38:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:39:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:40:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:41:47] High-sweep summary not present yet; still waiting.
+[2026-05-29T10:42:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:43:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:44:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:45:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:46:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:47:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:48:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:49:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:50:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:51:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:52:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:53:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:54:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:55:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:56:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:57:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:58:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T10:59:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:00:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:01:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:02:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:03:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:04:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:05:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:06:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:07:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:08:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:09:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:10:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:11:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:12:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:13:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:14:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:15:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:16:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:17:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:18:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:19:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:20:47] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:21:48] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:22:48] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:23:48] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:24:48] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:25:48] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:26:48] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:27:48] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:28:48] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:29:48] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:30:48] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:31:48] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:32:48] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:33:48] High-sweep rows=1/5; still waiting.
+[2026-05-29T11:34:48] High-sweep rows=2/5; still waiting.
+[2026-05-29T11:35:48] High-sweep rows=2/5; still waiting.
+[2026-05-29T11:36:48] High-sweep rows=2/5; still waiting.
+[2026-05-29T11:37:48] High-sweep rows=2/5; still waiting.
+[2026-05-29T11:38:48] High-sweep rows=2/5; still waiting.
+[2026-05-29T11:39:48] High-sweep rows=2/5; still waiting.
+[2026-05-29T11:40:48] High-sweep rows=2/5; still waiting.
+[2026-05-29T11:41:48] High-sweep rows=2/5; still waiting.
+[2026-05-29T11:42:48] High-sweep rows=2/5; still waiting.
+[2026-05-29T11:43:48] High-sweep rows=2/5; still waiting.
+[2026-05-29T11:44:48] High-sweep rows=3/5; still waiting.
+[2026-05-29T11:45:48] High-sweep rows=3/5; still waiting.
+[2026-05-29T11:46:48] High-sweep rows=3/5; still waiting.
+[2026-05-29T11:47:48] High-sweep rows=3/5; still waiting.
+[2026-05-29T11:48:48] High-sweep rows=3/5; still waiting.
+[2026-05-29T11:49:48] High-sweep rows=3/5; still waiting.
+[2026-05-29T11:50:48] High-sweep rows=3/5; still waiting.
+[2026-05-29T11:51:48] High-sweep rows=3/5; still waiting.
+[2026-05-29T11:52:48] High-sweep rows=3/5; still waiting.
+[2026-05-29T11:53:48] High-sweep rows=4/5; still waiting.
+[2026-05-29T11:54:48] High-sweep rows=4/5; still waiting.
+[2026-05-29T11:55:48] High-sweep rows=4/5; still waiting.
+[2026-05-29T11:56:48] High-sweep rows=4/5; still waiting.
+[2026-05-29T11:57:48] High-sweep rows=4/5; still waiting.
+[2026-05-29T11:58:48] High-sweep rows=4/5; still waiting.
+[2026-05-29T11:59:48] High-sweep rows=4/5; still waiting.
+[2026-05-29T12:00:48] High-sweep rows=4/5; still waiting.
+[2026-05-29T12:01:48] High-sweep rows=4/5; still waiting.
+[2026-05-29T12:02:48] High-sweep rows=4/5; still waiting.
+[2026-05-29T12:03:48] High-sweep rows=4/5; still waiting.
+[2026-05-29T12:04:48] High-sweep rows=4/5; still waiting.
+[2026-05-29T12:05:48] High-sweep rows=4/5; still waiting.
+[2026-05-29T12:06:48] High-sweep grid has 5 rows; starting baseline revisit.
+[2026-05-29T12:06:48] Started baseline revisit. stdout=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\experiments\current\20260529_mnist_784_120_40_baseline_revisit_gt90_e40_32w\logs\launcher_stdout.log stderr=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\experiments\current\20260529_mnist_784_120_40_baseline_revisit_gt90_e40_32w\logs\launcher_stderr.log

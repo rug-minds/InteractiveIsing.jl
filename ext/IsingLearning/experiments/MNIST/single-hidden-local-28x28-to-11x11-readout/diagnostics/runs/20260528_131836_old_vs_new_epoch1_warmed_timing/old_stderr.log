@@ -1,0 +1,75 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    5-element Vector{Symbol}:
+│     :mnist_model
+│     :x
+│     :free_state
+│     :free_best_energy
+│     :rng
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    6-element Vector{Symbol}:
+│     :mnist_model
+│     :x
+│     :y
+│     :free_state
+│     :nudged_state
+│     :nudged_best_energy
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    5-element Vector{Symbol}:
+│     :mnist_model
+│     :x
+│     :free_state
+│     :free_best_energy
+│     :rng
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    5-element Vector{Symbol}:
+│     :mnist_model
+│     :x
+│     :free_state
+│     :free_best_energy
+│     :rng
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    5-element Vector{Symbol}:
+│     :mnist_model
+│     :x
+│     :free_state
+│     :free_best_energy
+│     :rng
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    6-element Vector{Symbol}:
+│     :mnist_model
+│     :x
+│     :y
+│     :free_state
+│     :nudged_state
+│     :nudged_best_energy
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    5-element Vector{Symbol}:
+│     :mnist_model
+│     :x
+│     :free_state
+│     :free_best_energy
+│     :rng
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    5-element Vector{Symbol}:
+│     :mnist_model
+│     :x
+│     :free_state
+│     :free_best_energy
+│     :rng
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54

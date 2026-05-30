@@ -1,0 +1,14 @@
+[2026-05-27T13:57:34] monitor started pid=258920 poll_s=15
+[2026-05-27T13:57:34] running stdout="["
+[2026-05-27T13:57:49] running stdout="loading training split"
+[2026-05-27T13:58:04] running stdout="constructing 32-worker Adam manager"
+[2026-05-27T13:58:19] running epoch=14 stdout="epoch 16 training"
+[2026-05-27T14:04:49] running epoch=16 stdout="epoch 17 training"
+[2026-05-27T14:10:50] running epoch=17 stdout="epoch 18 training"
+[2026-05-27T14:17:05] running epoch=18 stdout="epoch 19 training"
+[2026-05-27T14:23:21] running epoch=19 stdout="epoch 20 training"
+[2026-05-27T14:30:21] running epoch=19 stdout="epoch 20 evaluating"
+[2026-05-27T14:37:36] new_eval epoch=20 test_accuracy=0.6806053811659193 test_loss=9.524159
+[2026-05-27T14:37:51] running last_eval_epoch=20 test_accuracy=0.6806053811659193 stdout="epoch 21 training"
+[2026-05-27T14:43:52] running epoch=21 stdout="epoch 22 training"
+[2026-05-27T14:44:22] process exited

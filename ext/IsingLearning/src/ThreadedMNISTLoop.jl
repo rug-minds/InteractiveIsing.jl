@@ -111,6 +111,20 @@ function Processes.init(step::MNISTContrastiveStep, context)
     return (; model, x, y, buffers, equilibrium_state, plus_state, minus_state, input_pattern, free_context, nudged_context)
 end
 
+"""Return the object inside a `Ref`, or the object itself for direct values."""
+@inline _mnist_ref_value(x::Base.RefValue) = x[]
+@inline _mnist_ref_value(x) = x
+
+"""Return the current MNIST input vector from direct state or a job-buffer reference."""
+function _mnist_context_x(context::C) where {C}
+    return _mnist_ref_value(context.x)
+end
+
+"""Return the current MNIST target vector from direct state or a job-buffer reference."""
+function _mnist_context_y(context::C) where {C}
+    return _mnist_ref_value(context.y)
+end
+
 """
     _apply_mnist_context_input!(model, context)
 
@@ -123,6 +137,20 @@ function _apply_mnist_context_input!(model::G, context::C) where {G,C}
         apply_input_pattern!(model, context.input_pattern)
     else
         apply_input(model, context.x)
+    end
+    return model
+end
+
+"""
+    _prepare_mnist_context_input_pattern!(model, context)
+
+Compute the sample-local MNIST input field inside the worker task. The manager
+only writes `context.x`; this keeps the input projection parallel with the rest
+of the per-sample worker work.
+"""
+function _prepare_mnist_context_input_pattern!(model::G, context::C, x) where {G,C}
+    if hasproperty(context, :input_pattern) && !isnothing(context.input_pattern)
+        precompute_mnist_input_pattern!(model, context.input_pattern, x)
     end
     return model
 end
@@ -182,6 +210,9 @@ accumulate the symmetric contrastive gradient into `context.buffers`.
 function Processes.step!(step::MNISTContrastiveStep, context)
     model = context.model
     β = step.β
+    x = _mnist_context_x(context)
+    y = _mnist_context_y(context)
+    _prepare_mnist_context_input_pattern!(model, context, x)
 
     resetstate!(model)
     _apply_mnist_context_input!(model, context)
@@ -190,14 +221,14 @@ function Processes.step!(step::MNISTContrastiveStep, context)
 
     state(model) .= context.equilibrium_state
     _apply_mnist_context_input!(model, context)
-    apply_targets(model, context.y)
+    apply_targets(model, y)
     set_clamping_beta!(model, β)
     _relax_mnist_context!(step.nudged_dynamics_algorithm, context.nudged_context, step.nudged_relaxation_steps)
     context.plus_state .= state(model)
 
     state(model) .= context.equilibrium_state
     _apply_mnist_context_input!(model, context)
-    apply_targets(model, context.y)
+    apply_targets(model, y)
     set_clamping_beta!(model, -β)
     _relax_mnist_context!(step.nudged_dynamics_algorithm, context.nudged_context, step.nudged_relaxation_steps)
     context.minus_state .= state(model)
@@ -208,7 +239,7 @@ function Processes.step!(step::MNISTContrastiveStep, context)
         _accumulate_input_field_edge_gradient!(
             context.buffers,
             model,
-            context.x,
+            x,
             context.plus_state,
             context.minus_state,
         )
@@ -784,18 +815,12 @@ function _write_example!(worker, x, y)
     state_context = _mnist_worker_state(worker)
     state_context.x .= x
     state_context.y .= y
-    if hasproperty(state_context, :input_pattern) && !isnothing(state_context.input_pattern)
-        precompute_mnist_input_pattern!(state_context.model, state_context.input_pattern, x)
-    end
     return state_context
 end
 
 function _write_input!(worker, x)
     state_context = _mnist_worker_state(worker)
     state_context.x .= x
-    if hasproperty(state_context, :input_pattern) && !isnothing(state_context.input_pattern)
-        precompute_mnist_input_pattern!(state_context.model, state_context.input_pattern, x)
-    end
     return state_context
 end
 

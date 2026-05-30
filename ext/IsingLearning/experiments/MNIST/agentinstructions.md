@@ -3,6 +3,7 @@
 Use of this file: operational rules for future agents before running or editing MNIST experiments. Keep this as instructions, not results.
 
 - Do diagnostic runs before broad grids. Poll periodically and stop if accuracy or loss is clearly not improving.
+- Do not resume from a checkpoint unless the user explicitly asks for a resumed/continued/fine-tuning run, or the experiment design says checkpoint initialization is the variable being tested. If resuming, write the exact checkpoint path in the launcher and settings before starting the run.
 - Use `ProcessManager` for manager-backed MNIST training experiments. Start Julia with enough threads, normally `julia -t 32 --project=ext/IsingLearning ...`.
 - Do not use `ProcessManager` for interactive runtime demos. Interactive MNIST should be a continuous single-graph simulation, normally one `LocalLangevin` loop, with no training manager.
 - Reuse worker contexts after creation. Do not rebuild processes, graphs, or contexts per batch.
@@ -12,6 +13,7 @@ Use of this file: operational rules for future agents before running or editing 
 - Keep at least as many jobs as useful workers when benchmarking parallelism. For training, choose batch/chunking so worker jobs contain enough examples to amortize scheduling and still fill the workers.
 - Share static model data across workers where possible, especially `J`/adjacency and base parameter arrays. Worker state and clamp buffers stay worker-local.
 - If using field-based image input, keep the base model parameters shared and write only worker-local input-field buffers between samples. Do not mutate the source graph state just to load an image.
+- For the `784-120-40` field-input baseline, do not keep a structural input layer in the sampled graph. Keep the `784 -> hidden` weights as an external projection into a worker-local magnetic field, and sample only hidden/output units.
 - Treat fixed input spins and image-dependent magnetic fields as equivalent input mechanisms. Use the field path when it avoids graph-state writes and keeps worker data sharing intact.
 - Count relaxation settings in full sweeps when discussing learning. Raw step counts like `300` are not enough for a large MNIST graph unless explicitly converted from sweeps.
 - Use Adam by default for current MNIST runs. Do not assume Muon is applicable to sparse coupling-vector parameters without a deliberate implementation.

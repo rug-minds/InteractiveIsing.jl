@@ -1,0 +1,12 @@
+warm,before_reset,35352243920500
+warm,after_reset,35352244309700
+warm,after_project,35352250347300
+warm,after_repeat,35352250639700
+warm,after_copy,35352250857300
+warm,total_seconds,29.019928
+timed,before_reset,35354310615100
+timed,after_reset,35354310875800
+timed,after_project,35354311105200
+timed,after_repeat,35354311335100
+timed,after_copy,35354311516300
+timed,total_seconds,1.9450712

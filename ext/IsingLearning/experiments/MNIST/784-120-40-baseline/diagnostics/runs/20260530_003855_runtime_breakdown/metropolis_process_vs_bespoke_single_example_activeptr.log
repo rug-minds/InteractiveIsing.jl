@@ -1,0 +1,10 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+[bootstrap] activated project
+[bootstrap] loaded packages
+[2026-05-30T01:33:58] warming exact Metropolis direct path
+[2026-05-30T01:33:59] measuring exact Metropolis direct path
+[2026-05-30T01:33:59] warming exact Metropolis normal Process
+[2026-05-30T01:34:21] measuring exact Metropolis normal Process
+[2026-05-30T01:34:21] warming exact Metropolis InlineProcess
+[2026-05-30T01:34:46] measuring exact Metropolis InlineProcess
+[2026-05-30T01:34:46] exact Metropolis comparison summary timestamp=2026-05-30T01:34:46 architecture=784-120-40 dynamics=continuous_metropolis measured_examples=1 threads=1 sweeps=500.0 beta=5.0 temp=0.001 relaxation_steps=80000 work_steps_per_example=160000 direct_wall_seconds=0.0337429 direct_free_seconds=0.0162687 direct_nudged_seconds=0.0165613 direct_gradient_seconds=0.0007011 direct_normalize_seconds=1.24e-5 normal_process_wall_seconds=0.0409699 normal_process_internal_seconds=0.0409345 inline_process_wall_seconds=0.0442537 inline_process_internal_seconds=0.0442265 normal_over_direct_wall=1.2141783901205883 inline_over_direct_wall=1.3114966407748 normal_over_inline_wall=0.9257960351337854 csv=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\diagnostics\runs\20260530_003855_runtime_breakdown\metropolis_process_vs_bespoke_single_example.csv

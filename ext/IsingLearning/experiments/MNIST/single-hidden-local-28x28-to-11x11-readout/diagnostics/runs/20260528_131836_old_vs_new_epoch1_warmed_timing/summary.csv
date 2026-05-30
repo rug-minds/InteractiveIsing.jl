@@ -1,0 +1,5 @@
+"label","phase","run_elapsed_seconds","exit_code","rows","final_epoch","epoch1_train_seconds","epoch1_train_accuracy","epoch1_test_accuracy","epoch1_skipped","run_dir"
+"old","warmup","416,153","0","2","1","235.7820631","0.103","0.1","0","C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260528_131836_old_epoch1_32w_warmup"
+"old","warmed_timing","395,474","0","2","1","248.3626","0.1","0.095","0","C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260528_131836_old_epoch1_32w_warmed_timing"
+"new","warmup","409,432","0","2","1","229.3114295","0.095","0.1","0","C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260528_131836_new_epoch1_32w_warmup"
+"new","warmed_timing","401,999","0","2","1","253.5556134","0.1","0.1","0","C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260528_131836_new_epoch1_32w_warmed_timing"

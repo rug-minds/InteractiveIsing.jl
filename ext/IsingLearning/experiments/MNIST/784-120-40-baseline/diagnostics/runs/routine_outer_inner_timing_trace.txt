@@ -1,0 +1,14 @@
+warm,outside_before_run,35429045032100
+warm,inside_before_reset,35458332760200
+warm,inside_after_reset,35458333060600
+warm,inside_after_project,35458338855700
+warm,inside_after_repeat,35458339130600
+warm,inside_after_copy,35458339334100
+warm,outside_after_run,35458569612300
+timed,outside_before_run,35458569847400
+timed,inside_before_reset,35460351643800
+timed,inside_after_reset,35460351904200
+timed,inside_after_project,35460352104100
+timed,inside_after_repeat,35460352269400
+timed,inside_after_copy,35460352431000
+timed,outside_after_run,35460483046100

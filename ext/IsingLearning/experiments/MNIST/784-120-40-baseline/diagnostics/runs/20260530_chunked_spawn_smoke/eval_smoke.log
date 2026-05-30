@@ -1,0 +1,19 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+[bootstrap] activated project
+[bootstrap] loaded packages
+┌ Warning: this run uses a subsampled balanced training split, so it is not the full balanced MNIST baseline
+│   train_per_class = 1
+└ @ Main C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\mnist_784_120_40_adam.jl:1173
+┌ Warning: this run uses a subsampled balanced test split, so reported accuracy will be noisy
+│   test_per_class = 1
+└ @ Main C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\mnist_784_120_40_adam.jl:1174
+building MNIST 784-120-40 layer
+loading training split
+loading train-eval split
+loading test split
+constructing 1-worker Adam manager
+constructing 1-worker validation manager
+starting epochs
+epoch 0 evaluating
+(timestamp = "2026-05-30T11:53:40", epoch = 0, seconds = 0.0, train_accuracy = missing, train_loss = missing, test_accuracy = 0.1, test_loss = 54.541687f0, pred_counts = "0-2-1-1-0-0-3-0-1-2", best_accuracy = 0.1, best_path = "ext/IsingLearning/experiments/MNIST/784-120-40-baseline/diagnostics/runs/20260530_chunked_spawn_smoke\\best_checkpoint.bin", final_path = "ext/IsingLearning/experiments/MNIST/784-120-40-baseline/diagnostics/runs/20260530_chunked_spawn_smoke\\final_checkpoint.bin")
+saved MNIST 784-120-40 baseline in ext/IsingLearning/experiments/MNIST/784-120-40-baseline/diagnostics/runs/20260530_chunked_spawn_smoke

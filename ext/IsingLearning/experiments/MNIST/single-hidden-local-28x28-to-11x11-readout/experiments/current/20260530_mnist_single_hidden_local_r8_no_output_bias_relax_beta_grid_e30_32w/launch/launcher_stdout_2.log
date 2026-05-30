@@ -1,0 +1,26 @@
+[2026-05-30T02:06:28] launcher started root=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w
+[2026-05-30T02:06:28] run started name=r8_s25_beta2p5_e30_nooutbias sweeps=25 beta=2.5 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w\r8_s25_beta2p5_e30_nooutbias
+[2026-05-30T02:11:09] run finished name=r8_s25_beta2p5_e30_nooutbias exit=0
+[2026-05-30T02:11:09] run started name=r8_s25_beta5p0_e30_nooutbias sweeps=25 beta=5.0 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w\r8_s25_beta5p0_e30_nooutbias
+[2026-05-30T02:15:42] run finished name=r8_s25_beta5p0_e30_nooutbias exit=0
+[2026-05-30T02:15:42] run started name=r8_s25_beta10p0_e30_nooutbias sweeps=25 beta=10.0 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w\r8_s25_beta10p0_e30_nooutbias
+[2026-05-30T02:20:12] run finished name=r8_s25_beta10p0_e30_nooutbias exit=0
+[2026-05-30T02:20:12] run started name=r8_s50_beta2p5_e30_nooutbias sweeps=50 beta=2.5 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta2p5_e30_nooutbias
+[2026-05-30T02:27:00] run finished name=r8_s50_beta2p5_e30_nooutbias exit=0
+[2026-05-30T02:27:00] run started name=r8_s50_beta5p0_e30_nooutbias sweeps=50 beta=5.0 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta5p0_e30_nooutbias
+[2026-05-30T02:33:36] run finished name=r8_s50_beta5p0_e30_nooutbias exit=0
+[2026-05-30T02:33:36] run started name=r8_s50_beta10p0_e30_nooutbias sweeps=50 beta=10.0 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w\r8_s50_beta10p0_e30_nooutbias
+[2026-05-30T02:40:07] run finished name=r8_s50_beta10p0_e30_nooutbias exit=0
+[2026-05-30T02:40:07] run started name=r8_s100_beta2p5_e30_nooutbias sweeps=100 beta=2.5 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w\r8_s100_beta2p5_e30_nooutbias
+[2026-05-30T02:51:24] run finished name=r8_s100_beta2p5_e30_nooutbias exit=0
+[2026-05-30T02:51:24] run started name=r8_s100_beta5p0_e30_nooutbias sweeps=100 beta=5.0 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w\r8_s100_beta5p0_e30_nooutbias
+[2026-05-30T03:02:23] run finished name=r8_s100_beta5p0_e30_nooutbias exit=0
+[2026-05-30T03:02:23] run started name=r8_s100_beta10p0_e30_nooutbias sweeps=100 beta=10.0 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w\r8_s100_beta10p0_e30_nooutbias
+[2026-05-30T03:13:32] run finished name=r8_s100_beta10p0_e30_nooutbias exit=0
+[2026-05-30T03:13:32] run started name=r8_s150_beta2p5_e30_nooutbias sweeps=150 beta=2.5 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w\r8_s150_beta2p5_e30_nooutbias
+[2026-05-30T03:29:16] run finished name=r8_s150_beta2p5_e30_nooutbias exit=0
+[2026-05-30T03:29:16] run started name=r8_s150_beta5p0_e30_nooutbias sweeps=150 beta=5.0 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w\r8_s150_beta5p0_e30_nooutbias
+[2026-05-30T03:45:02] run finished name=r8_s150_beta5p0_e30_nooutbias exit=0
+[2026-05-30T03:45:02] run started name=r8_s150_beta10p0_e30_nooutbias sweeps=150 beta=10.0 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w\r8_s150_beta10p0_e30_nooutbias
+[2026-05-30T04:00:23] run finished name=r8_s150_beta10p0_e30_nooutbias exit=0
+[2026-05-30T04:00:23] launcher finished

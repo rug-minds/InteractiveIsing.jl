@@ -1,0 +1,55 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+[2026-05-28T14:26:18] loading balanced MNIST subset
+[2026-05-28T14:26:20] manager diagnostic configured workers=32 threads=32 full_n=1000 subset_n=273 warmup_n=1
+[2026-05-28T14:26:20] manager warmup starting
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    5-element Vector{Symbol}:
+│     :mnist_model
+│     :x
+│     :free_state
+│     :free_best_energy
+│     :rng
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    6-element Vector{Symbol}:
+│     :mnist_model
+│     :x
+│     :y
+│     :free_state
+│     :nudged_state
+│     :nudged_best_energy
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+[2026-05-28T14:26:48] manager subset progress batch=1 samples=1 nsamples=1 elapsed_s=41.13
+[2026-05-28T14:26:48] manager warmup finished elapsed_s=5.348 samples=1
+[2026-05-28T14:26:48] manager measured run starting
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    5-element Vector{Symbol}:
+│     :mnist_model
+│     :x
+│     :free_state
+│     :free_best_energy
+│     :rng
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
+│   overlapping_fields =
+│    6-element Vector{Symbol}:
+│     :mnist_model
+│     :x
+│     :y
+│     :free_state
+│     :nudged_state
+│     :nudged_best_energy
+└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+[2026-05-28T14:27:10] manager subset progress batch=1 samples=32 nsamples=273 elapsed_s=63.127
+[2026-05-28T14:27:18] manager subset progress batch=2 samples=64 nsamples=273 elapsed_s=71.457
+[2026-05-28T14:27:25] manager subset progress batch=3 samples=96 nsamples=273 elapsed_s=78.779
+[2026-05-28T14:27:33] manager subset progress batch=4 samples=128 nsamples=273 elapsed_s=86.118
+[2026-05-28T14:27:40] manager subset progress batch=5 samples=160 nsamples=273 elapsed_s=93.149
+[2026-05-28T14:27:47] manager subset progress batch=6 samples=192 nsamples=273 elapsed_s=100.73
+[2026-05-28T14:27:55] manager subset progress batch=7 samples=224 nsamples=273 elapsed_s=108.246
+[2026-05-28T14:28:03] manager subset progress batch=8 samples=256 nsamples=273 elapsed_s=116.113
+[2026-05-28T14:28:07] manager subset progress batch=9 samples=273 nsamples=273 elapsed_s=120.5
+[2026-05-28T14:28:07] manager measured subset finished workers=32 subset_n=273 elapsed_s=67.695 estimated_epoch_s=247.968 seconds_per_sample=0.248 summary=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\diagnostics\runs\20260528_135023_bespoke_direct_metropolis_subset\manager_summary.csv

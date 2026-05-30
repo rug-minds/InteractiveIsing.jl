@@ -1,0 +1,27 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+building MNIST 784-120-40 layer
+loading training split
+loading train-eval split
+loading test split
+constructing 32-worker Adam manager
+constructing validation worker
+starting epochs
+epoch 16 training
+(timestamp = "2026-05-27T15:10:36", epoch = 16, seconds = 378.0710842, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.8826233183856502, best_path = "C:/Users/fenje/dev/InteractiveIsing.jl/ext/IsingLearning/experiments/MNIST/784-120-40-baseline/experiments/current/mnist_784_120_40_adam_session_resume_beta1_lr0006_20260527_150329\\best_checkpoint.bin", final_path = "")
+epoch 17 training
+(timestamp = "2026-05-27T15:16:46", epoch = 17, seconds = 369.616202, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.8826233183856502, best_path = "C:/Users/fenje/dev/InteractiveIsing.jl/ext/IsingLearning/experiments/MNIST/784-120-40-baseline/experiments/current/mnist_784_120_40_adam_session_resume_beta1_lr0006_20260527_150329\\best_checkpoint.bin", final_path = "")
+epoch 18 training
+(timestamp = "2026-05-27T15:22:55", epoch = 18, seconds = 369.0495292, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.8826233183856502, best_path = "C:/Users/fenje/dev/InteractiveIsing.jl/ext/IsingLearning/experiments/MNIST/784-120-40-baseline/experiments/current/mnist_784_120_40_adam_session_resume_beta1_lr0006_20260527_150329\\best_checkpoint.bin", final_path = "")
+epoch 19 training
+(timestamp = "2026-05-27T15:29:04", epoch = 19, seconds = 368.8235799, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.8826233183856502, best_path = "C:/Users/fenje/dev/InteractiveIsing.jl/ext/IsingLearning/experiments/MNIST/784-120-40-baseline/experiments/current/mnist_784_120_40_adam_session_resume_beta1_lr0006_20260527_150329\\best_checkpoint.bin", final_path = "")
+epoch 20 training
+epoch 20 evaluating
+(timestamp = "2026-05-27T15:43:18", epoch = 20, seconds = 369.4476939, train_accuracy = 0.721, train_loss = 8.31826f0, test_accuracy = 0.7281390134529148, test_loss = 8.208755f0, pred_counts = "889-957-840-1108-2226-646-777-1046-407-24", best_accuracy = 0.8826233183856502, best_path = "C:/Users/fenje/dev/InteractiveIsing.jl/ext/IsingLearning/experiments/MNIST/784-120-40-baseline/experiments/current/mnist_784_120_40_adam_session_resume_beta1_lr0006_20260527_150329\\best_checkpoint.bin", final_path = "")
+epoch 21 training
+(timestamp = "2026-05-27T15:49:27", epoch = 21, seconds = 369.0501582, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.8826233183856502, best_path = "C:/Users/fenje/dev/InteractiveIsing.jl/ext/IsingLearning/experiments/MNIST/784-120-40-baseline/experiments/current/mnist_784_120_40_adam_session_resume_beta1_lr0006_20260527_150329\\best_checkpoint.bin", final_path = "")
+epoch 22 training
+(timestamp = "2026-05-27T15:55:35", epoch = 22, seconds = 368.196535, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.8826233183856502, best_path = "C:/Users/fenje/dev/InteractiveIsing.jl/ext/IsingLearning/experiments/MNIST/784-120-40-baseline/experiments/current/mnist_784_120_40_adam_session_resume_beta1_lr0006_20260527_150329\\best_checkpoint.bin", final_path = "")
+epoch 23 training
+(timestamp = "2026-05-27T16:01:43", epoch = 23, seconds = 368.28397, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.8826233183856502, best_path = "C:/Users/fenje/dev/InteractiveIsing.jl/ext/IsingLearning/experiments/MNIST/784-120-40-baseline/experiments/current/mnist_784_120_40_adam_session_resume_beta1_lr0006_20260527_150329\\best_checkpoint.bin", final_path = "")
+epoch 24 training

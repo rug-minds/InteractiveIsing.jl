@@ -1,0 +1,20 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+[2026-05-28T13:53:14] loading balanced MNIST subset
+[2026-05-28T13:53:16] direct diagnostic configured full_n=1000 subset_n=273 warmup_n=1 batchsize=32
+[2026-05-28T13:53:16] warmup model initializing
+[2026-05-28T13:53:22] direct subset progress sample=1 nsamples=1 elapsed_s=18.81
+[2026-05-28T13:53:22] warmup finished elapsed_s=1.406 samples=1
+[2026-05-28T13:53:22] measured model initializing
+[2026-05-28T13:53:25] direct subset progress sample=1 nsamples=273 elapsed_s=21.568
+[2026-05-28T13:53:29] direct subset progress sample=25 nsamples=273 elapsed_s=25.763
+[2026-05-28T13:53:33] direct subset progress sample=50 nsamples=273 elapsed_s=30.106
+[2026-05-28T13:53:38] direct subset progress sample=75 nsamples=273 elapsed_s=34.456
+[2026-05-28T13:53:42] direct subset progress sample=100 nsamples=273 elapsed_s=38.794
+[2026-05-28T13:53:46] direct subset progress sample=125 nsamples=273 elapsed_s=43.135
+[2026-05-28T13:53:51] direct subset progress sample=150 nsamples=273 elapsed_s=47.471
+[2026-05-28T13:53:55] direct subset progress sample=175 nsamples=273 elapsed_s=51.804
+[2026-05-28T13:53:59] direct subset progress sample=200 nsamples=273 elapsed_s=56.169
+[2026-05-28T13:54:04] direct subset progress sample=225 nsamples=273 elapsed_s=60.533
+[2026-05-28T13:54:08] direct subset progress sample=250 nsamples=273 elapsed_s=64.87
+[2026-05-28T13:54:12] direct subset progress sample=273 nsamples=273 elapsed_s=68.872
+[2026-05-28T13:54:12] measured direct subset finished subset_n=273 elapsed_s=47.551 estimated_epoch_s=174.179 seconds_per_sample=0.1742 steps_per_second=2.9779661e6 summary=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\diagnostics\runs\20260528_135023_bespoke_direct_metropolis_subset\summary.csv

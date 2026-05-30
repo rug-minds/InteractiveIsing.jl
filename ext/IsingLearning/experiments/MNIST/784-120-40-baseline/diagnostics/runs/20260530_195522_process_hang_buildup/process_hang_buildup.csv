@@ -1,0 +1,16 @@
+timestamp,stage,entrypoint,status,seconds,note
+2026-05-30T20:14:47,free_phase_short,process_run,timeout,15.0,timed out after 15.0s
+2026-05-30T20:15:03,free_phase_short,process_inline,timeout,15.0,timed out after 15.0s
+2026-05-30T20:15:18,free_phase_short,inline_process,timeout,15.0,timed out after 15.0s
+2026-05-30T20:15:33,free_phase_full,process_run,timeout,15.0,timed out after 15.0s
+2026-05-30T20:15:48,free_phase_full,process_inline,timeout,15.0,timed out after 15.0s
+2026-05-30T20:16:03,free_phase_full,inline_process,timeout,15.0,timed out after 15.0s
+2026-05-30T20:16:18,free_then_nudged,process_run,timeout,15.0,timed out after 15.0s
+2026-05-30T20:16:34,free_then_nudged,process_inline,timeout,15.0,timed out after 15.0s
+2026-05-30T20:16:49,free_then_nudged,inline_process,timeout,15.0,timed out after 15.0s
+2026-05-30T20:17:04,contrastive_static_beta,process_run,timeout,15.0,timed out after 15.0s
+2026-05-30T20:17:19,contrastive_static_beta,process_inline,timeout,15.0,timed out after 15.0s
+2026-05-30T20:17:34,contrastive_static_beta,inline_process,timeout,15.0,timed out after 15.0s
+2026-05-30T20:17:49,contrastive_runtime_beta,process_run,timeout,15.0,timed out after 15.0s
+2026-05-30T20:18:04,contrastive_runtime_beta,process_inline,timeout,15.0,timed out after 15.0s
+2026-05-30T20:18:20,contrastive_runtime_beta,inline_process,timeout,15.0,timed out after 15.0s
