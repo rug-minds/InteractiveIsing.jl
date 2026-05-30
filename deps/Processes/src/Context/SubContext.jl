@@ -1,5 +1,6 @@
 @inline getdata(sc::SubContext) = getfield(sc, :data)
 
+<<<<<<< Updated upstream
 """
     withdata(sc, data)
 
@@ -15,6 +16,15 @@ function newdata(sc::SubContext, data::NamedTuple)
     # Mutable SubContext path kept for comparison:
     # setfield!(sc, :data, data)
     # return sc
+=======
+SubContext(name, data::NamedTuple) = SubContext{name, typeof(data)}(data)
+
+function newdata(sc::SubContext, data::NamedTuple)
+    setfield!(sc, :data, data)
+    return sc
+    # Immutable constructor path kept for comparison:
+    # return SubContext{getkey(sc), typeof(data)}(data)
+>>>>>>> Stashed changes
 end
 
 @inline Base.isempty(sc::SubContext) = isempty(getdata(sc))
@@ -46,7 +56,11 @@ Merge subcontext into a NamedTuple.
 end
 
 @inline function Base.replace(sc::SubContext{T}, args::NamedTuple = (;)) where {T}
+<<<<<<< Updated upstream
     return @inline withdata(sc, args)
+=======
+    return @inline SubContext(getkey(sc), args)
+>>>>>>> Stashed changes
     # Accessors path kept for comparison:
     # return @inline @set sc.data = args
 end

@@ -96,9 +96,9 @@ end
 ###
 @inline function _merge_into_globals(pc::ProcessContext{D}, args) where {D}
     merged_runtime = @inline merge(getglobals(pc), args)
-    return @inline withruntime(pc, merged_runtime)
-    # Accessors path kept for comparison:
-    # return @inline @set pc._runtime = merged_runtime
+    # Constructor path kept for comparison:
+    # return @inline ProcessContext(get_subcontexts(pc), getregistry(pc), merged_runtime, getruntimeinput(pc))
+    return @inline @set pc._runtime = merged_runtime
 end
 
 """
@@ -209,12 +209,12 @@ end
         old_subcontexts = @inline get_subcontexts(pc)
         subcontext = @inline getproperty(old_subcontexts, $(QuoteNode(name)))
         new_data = @inline merge(getdata(subcontext), args)
-        new_subcontext = @inline withdata(subcontext, new_data)
-        new_subcontexts = @inline replace_namedtuple_field(old_subcontexts, Val($(QuoteNode(name))), new_subcontext)
-        return @inline withsubcontexts(pc, new_subcontexts)
-        # Mutable SubContext path kept for comparison:
+        new_subcontext = @inline @set subcontext.data = new_data
+        new_subcontexts = @inline @set old_subcontexts.$name = new_subcontext
+        # Mutable SubContext experiment:
         # @inline setfield!(subcontext, :data, new_data)
         # return pc
+        return @inline @set pc.subcontexts = new_subcontexts
     end
 end
 
@@ -244,11 +244,10 @@ Args should name subcontext they want to replace, check if all names are in the 
     end
 
     return quote
-        new_subcontexts = @inline get_subcontexts(pc)
-        $(replace_exprs...)
-        return @inline withsubcontexts(pc, new_subcontexts)
-        # Accessors path kept for comparison:
-        # return @inline @set pc.subcontexts = new_subcontexts
+        new_subcontexts = NamedTuple{$ntnames}(tuple($(getproperty_exprs...)))
+        # Constructor path kept for comparison:
+        # return @inline ProcessContext(new_subcontexts, getregistry(pc), getglobals(pc), getruntimeinput(pc))
+        return @inline @set pc.subcontexts = new_subcontexts
     end
 end
 
