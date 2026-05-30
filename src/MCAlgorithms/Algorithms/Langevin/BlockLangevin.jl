@@ -298,8 +298,9 @@ end
         schedule_length[] = 0
         proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
         return (;proposal, ΔE = zero(SType), accepted = 0, attempted = 0,
-            acceptance_rate = zero(SType), T, η, σ, group_steps = n_group_steps,
-            block_size = 0, refreshed_gradient = false,
+            acceptance_rate = zero(SType), T, η, σ, group_steps,
+            block_size = _langevin_context_value(context, :block_size, 0),
+            refreshed_gradient = false,
             gradient_max = zero(SType), gradient_rms = zero(SType),
             reflected_fraction = zero(SType))
     end
@@ -325,7 +326,7 @@ end
             gradient_max = gradient_max_cache[]
             gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
             return (;proposal, ΔE = schedule_ΔE[], accepted, attempted, acceptance_rate, T, η, σ,
-                group_steps = n_group_steps, block_size = schedule_length[],
+                group_steps, block_size = _langevin_context_value(context, :block_size, schedule_length[]),
                 refreshed_gradient = false, gradient_max, gradient_rms,
                 reflected_fraction = zero(SType))
         end
@@ -423,7 +424,8 @@ end
         acceptance_rate = SType(accepted)
         gradient_rms = sqrt(gradient_sumsq / SType(m))
         return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
-            group_steps = n_group_steps, block_size = m, refreshed_gradient = true,
+            group_steps, block_size = _langevin_context_value(context, :block_size, m),
+            refreshed_gradient = true,
             gradient_max, gradient_rms, reflected_fraction = zero(SType))
     end
 
@@ -479,6 +481,6 @@ end
     reflected_fraction = SType(reflected)
 
     return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
-        group_steps = n_group_steps, block_size = schedule_length[],
+        group_steps, block_size = _langevin_context_value(context, :block_size, schedule_length[]),
         refreshed_gradient = refreshed, gradient_max, gradient_rms, reflected_fraction)
 end

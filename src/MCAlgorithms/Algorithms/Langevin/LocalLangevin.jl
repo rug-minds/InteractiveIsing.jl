@@ -613,6 +613,6 @@ end
     gradient_rms = abs(derivative)
     reflected_fraction = SType(reflected)
     return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
-        group_steps = max(1, context.group_steps[]), gradient_max, gradient_rms,
+        group_steps = context.group_steps, gradient_max, gradient_rms,
         reflected_fraction)
 end

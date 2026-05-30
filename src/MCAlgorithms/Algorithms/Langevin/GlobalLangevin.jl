@@ -291,7 +291,7 @@ end
             gradient_max = gradient_max_cache[]
             gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
             return (;proposal, ΔE = schedule_ΔE[], accepted, attempted, acceptance_rate, T, η, σ,
-                group_steps = n_group_steps, refreshed_gradient = false,
+                group_steps, refreshed_gradient = false,
                 gradient_max, gradient_rms, reflected_fraction = zero(SType))
         end
     end
@@ -307,7 +307,7 @@ end
         σ = t > zero(SType) ? sqrt(SType(2) * η * t) : zero(SType)
         proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
         return (;proposal, ΔE = zero(SType), accepted = 0, attempted = 0,
-            acceptance_rate = zero(SType), T, η, σ, group_steps = n_group_steps,
+            acceptance_rate = zero(SType), T, η, σ, group_steps,
             refreshed_gradient = false, gradient_max = zero(SType),
             gradient_rms = zero(SType), reflected_fraction = zero(SType))
     end
@@ -408,7 +408,7 @@ end
         acceptance_rate = SType(accepted)
         gradient_rms = sqrt(gradient_sumsq / SType(n))
         return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
-            group_steps = n_group_steps, refreshed_gradient = true,
+            group_steps, refreshed_gradient = true,
             gradient_max, gradient_rms, reflected_fraction = zero(SType))
     end
 
@@ -463,6 +463,6 @@ end
     gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
     reflected_fraction = SType(reflected)
     return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
-        group_steps = n_group_steps, refreshed_gradient = refreshed,
+        group_steps, refreshed_gradient = refreshed,
         gradient_max, gradient_rms, reflected_fraction)
 end

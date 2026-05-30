@@ -341,11 +341,11 @@ function Processes.step!(algorithm::GaussianBernoulliGibbsLangevin, context)
         acceptance_rate,
         log_acceptance,
         η = α0,
-        group_steps = n_group_steps,
-        langevin_steps = K,
-        adjusted = adjusted[],
-        adjust_step = adjust_step[],
+        group_steps,
+        langevin_steps,
+        adjusted,
+        adjust_step,
         burned_in = step_idx[] > burnin[],
-        step_idx = step_idx[],
+        step_idx,
     )
 end
