@@ -550,6 +550,7 @@ end
 jobs = threaded_basefile_jobs()
 manager = run_threaded_basefile!(jobs; nworkers = length(jobs))
 state = manager.state
+wait(manager)
 
 println("Finished threaded Basefile jobs.")
 for (i, path_info) in pairs(state.paths)

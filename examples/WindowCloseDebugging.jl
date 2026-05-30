@@ -106,8 +106,13 @@ const CLOSE_DEBUG_EXACT_START_PROCESS = Ref(true)
 const CLOSE_DEBUG_EXACT_PROCESS_KWARGS = Ref{Any}(NamedTuple())
 const CLOSE_DEBUG_EXACT_REPEAT_LEFT = Ref(0)
 const CLOSE_DEBUG_EXACT_REPEAT_TOTAL = Ref(0)
+const CLOSE_DEBUG_SCENARIO_REPEAT_NAME = Ref(:example_3d_langevin_coulomb)
+const CLOSE_DEBUG_SCENARIO_REPEAT_START_PROCESS = Ref(true)
+const CLOSE_DEBUG_SCENARIO_REPEAT_LEFT = Ref(0)
+const CLOSE_DEBUG_SCENARIO_REPEAT_TOTAL = Ref(0)
 
 const CLOSE_DEBUG_SCENARIOS = [
+    :example_hexagonal,
     :example_3d_langevin_coulomb,
     :example_3d_coulomb,
     :example_3d_default,
@@ -174,6 +179,8 @@ function print_close_trace(host = CLOSE_DEBUG_LAST[])
             round(row.time - previous_time; digits = 4),
             " hot=",
             row.hot_observables,
+            " method=",
+            get(row, :method, :unknown),
             " closing=",
             row.closing,
             " closed=",
@@ -182,6 +189,33 @@ function print_close_trace(host = CLOSE_DEBUG_LAST[])
         previous_time = row.time
     end
     return log
+end
+
+"""
+    mark_manual_close!(method = :native, host = CLOSE_DEBUG_LAST[])
+
+Label the next manual close attempt in the trace. Use `:native` before clicking
+the red dot and `:keyboard` before pressing Cmd+W if the key handler itself is
+not firing for a particular platform/backend path.
+"""
+function mark_manual_close!(method::Symbol = :native, host = CLOSE_DEBUG_LAST[])
+    isnothing(host) && return println("No close-debug host has been opened.")
+    host[:close_method] = method
+    println("Marked next close method as ", method)
+    return host
+end
+
+"""
+    close_last_programmatically!(host = CLOSE_DEBUG_LAST[])
+
+Close the most recently opened debug window through `close(host)`. This tests
+the explicit API path separately from the native red-dot and Cmd+W paths.
+"""
+function close_last_programmatically!(host = CLOSE_DEBUG_LAST[])
+    isnothing(host) && return println("No close-debug host has been opened.")
+    host[:close_trace] = get(host.data, :close_trace, true)
+    close(host)
+    return host
 end
 
 function open_next!(; graph = debug_graph, kwargs...)
@@ -556,6 +590,10 @@ function _scenario_nn_weight(; dr)
     return dr == 1 ? 1f0 : 0f0
 end
 
+function _scenario_zigzag_hexagonal_isingweights(; dr::R) where {R}
+    return isapprox(dr, one(R); atol = R(1e-6)) ? 1f0 : 0f0
+end
+
 function _scenario_inverse_weight(dr, c1, c2)
     return 1 / dr
 end
@@ -565,7 +603,31 @@ function _scenario_ising_weight(dr, c1, c2)
 end
 
 function make_close_debug_scenario(name::Symbol)
-    if name === :example_3d_langevin_coulomb
+    if name === :example_hexagonal
+        row_spacing = sqrt(3f0) / 2
+        top = LatticeTopology(
+            (0f0, row_spacing, 0f0),
+            (1f0, 0f0, 0f0),
+            (0f0, 0f0, 1f0);
+            layout = ZigZagRows(),
+            periodic = true,
+            lattice_type = Hexagonal,
+        )
+        wg = @WG _scenario_zigzag_hexagonal_isingweights NN = 1
+        g = IsingGraph(
+            40,
+            40,
+            10,
+            Continuous(),
+            LocalProposer(0.5f0),
+            wg,
+            top,
+            StateSet(-1f0, 1f0),
+            Ising(c = ConstVal(0f0), b = 0f0, localpotential = 0f0);
+            periodic = true,
+        )
+        return (; graph = g, algorithm = nothing, title = "Scenario: Hexagonal Graph")
+    elseif name === :example_3d_langevin_coulomb
         wg3 = @WG _scenario_nn_weight NN = 1
         g = IsingGraph(
             40,
@@ -657,11 +719,20 @@ function make_close_debug_scenario(name::Symbol)
     throw(ArgumentError("Unknown close-debug scenario $name. Use CLOSE_DEBUG_SCENARIOS."))
 end
 
-function open_scenario_debug!(name::Symbol = :example_3d_langevin_coulomb; start_process = true, kwargs...)
+"""
+    open_scenario_debug!(name = :example_3d_langevin_coulomb; start_process = true, trace = true, kwargs...)
+
+Open one example-like `interface(g)` scenario and store the returned host in
+`CLOSE_DEBUG_LAST`. Close tracing is enabled by default because these scenarios
+are meant to catch intermittent macOS close stalls on realistic windows.
+"""
+function open_scenario_debug!(name::Symbol = :example_3d_langevin_coulomb; start_process = true, trace = true, kwargs...)
     name in CLOSE_DEBUG_SCENARIOS || throw(ArgumentError("Unknown close-debug scenario $name. Use CLOSE_DEBUG_SCENARIOS."))
     scenario = make_close_debug_scenario(name)
     println("Opening close-debug scenario: ", name)
     host = interface(scenario.graph; title = scenario.title, kwargs...)
+    CLOSE_DEBUG_LAST[] = host
+    trace === false || trace_last_close!(trace)
     if start_process
         if isnothing(scenario.algorithm)
             createProcess(scenario.graph)
@@ -669,8 +740,51 @@ function open_scenario_debug!(name::Symbol = :example_3d_langevin_coulomb; start
             createProcess(scenario.graph, scenario.algorithm)
         end
     end
-    CLOSE_DEBUG_LAST[] = host
     return nothing
+end
+
+"""
+    repeat_scenario_debug!(name = :example_3d_langevin_coulomb; repeats = 10, start_process = true)
+
+Prepare a repeated run of one realistic `interface(g)` scenario. Call
+`open_next_scenario_repeat!()`, close the window, then repeat until complete.
+"""
+function repeat_scenario_debug!(name::Symbol = :example_3d_langevin_coulomb; repeats = 10, start_process = true)
+    name in CLOSE_DEBUG_SCENARIOS || throw(ArgumentError("Unknown close-debug scenario $name. Use CLOSE_DEBUG_SCENARIOS."))
+    CLOSE_DEBUG_SCENARIO_REPEAT_NAME[] = name
+    CLOSE_DEBUG_SCENARIO_REPEAT_START_PROCESS[] = Bool(start_process)
+    CLOSE_DEBUG_SCENARIO_REPEAT_LEFT[] = Int(repeats)
+    CLOSE_DEBUG_SCENARIO_REPEAT_TOTAL[] = Int(repeats)
+    println("Prepared scenario close-debug run for ", name, " x ", repeats)
+    return nothing
+end
+
+"""
+    open_next_scenario_repeat!(; trace = true, kwargs...)
+
+Open the next scenario window prepared by `repeat_scenario_debug!`.
+"""
+function open_next_scenario_repeat!(; trace = true, kwargs...)
+    if CLOSE_DEBUG_SCENARIO_REPEAT_LEFT[] <= 0
+        println("Scenario close-debug run complete.")
+        return nothing
+    end
+    iteration = CLOSE_DEBUG_SCENARIO_REPEAT_TOTAL[] - CLOSE_DEBUG_SCENARIO_REPEAT_LEFT[] + 1
+    CLOSE_DEBUG_SCENARIO_REPEAT_LEFT[] -= 1
+    println(
+        "Scenario close-debug ",
+        iteration,
+        "/",
+        CLOSE_DEBUG_SCENARIO_REPEAT_TOTAL[],
+        ": ",
+        CLOSE_DEBUG_SCENARIO_REPEAT_NAME[],
+    )
+    return open_scenario_debug!(
+        CLOSE_DEBUG_SCENARIO_REPEAT_NAME[];
+        start_process = CLOSE_DEBUG_SCENARIO_REPEAT_START_PROCESS[],
+        trace,
+        kwargs...,
+    )
 end
 
 describe_debug_windows()
@@ -682,3 +796,4 @@ println("For the current suspected neighborhood, call open_next_suspect!(), or p
 println(CLOSE_DEBUG_SUSPECT_NAMES)
 println("For exact example-like scenarios, call open_scenario_debug!(), or pass one of:")
 println(CLOSE_DEBUG_SCENARIOS)
+println("To repeat one realistic scenario, call repeat_scenario_debug!(); open_next_scenario_repeat!().")

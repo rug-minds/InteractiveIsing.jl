@@ -242,6 +242,14 @@ using Random
     wait(extra_process)
     @test istaskdone(extra_process.task)
     @test length(processes(g)) == 2
+
+    default_lifetime_process = createProcess(g, Metropolis())
+    try
+        @test Processes.lifetime(default_lifetime_process) isa Processes.Indefinite
+        @test length(processes(g)) == 1
+    finally
+        Processes.close(g)
+    end
 end
 
 @testset "Index Set API" begin

@@ -58,7 +58,8 @@ Create and run a process attached to `g`.
 By default, existing processes on `g` are closed and removed before the new
 process is launched, so repeated calls replace the active simulation. Pass
 `allow_multiple=true` to keep existing processes and append the new one, which
-matches the previous behavior.
+matches the previous behavior. When no `lifetime`, `repeats`, or `repeat` is
+given, the launched graph process runs indefinitely until it is closed.
 """
 function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.default_algorithm, lifetime = nothing, repeats = nothing, repeat = nothing, allow_multiple = false, args...)
     if isnothing(func)
@@ -70,6 +71,12 @@ function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.de
         isnothing(repeats) || error("Pass either `repeats = ...` or numeric `lifetime = ...`, not both.")
         repeats = lifetime
         lifetime = nothing
+    end
+
+    if isnothing(lifetime) && isnothing(repeats) && isnothing(repeat)
+        # Interactive graph processes should keep running unless the caller
+        # provides an explicit stopping condition.
+        lifetime = Processes.Indefinite()
     end
 
     if !allow_multiple

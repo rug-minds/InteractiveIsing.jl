@@ -170,11 +170,13 @@ function _display_host!(host::WindowHost, title; focus = true)
     host.open = events(host.figure).window_open
     register!(host, on(host.open) do isopen
         isopen && return nothing
+        get!(host.data, :close_method, :native)
         _schedule_native_close!(host)
         return nothing
     end)
     register!(host, on(events(host.figure.scene).keyboardbutton) do _
         if ispressed(host.figure, (Keyboard.left_super, Keyboard.w)) || ispressed(host.figure, (Keyboard.left_control, Keyboard.w))
+            host.data[:close_method] = :keyboard
             _request_deferred_window_close!(host)
         end
     end)
@@ -780,6 +782,7 @@ function _trace_close!(host::WindowHost, phase::Symbol)
         closing = host.closing,
         closed = host.closed,
         hot_observables = _hot_observable_count(host),
+        method = get(host.data, :close_method, :unknown),
     )
     log = get!(host.data, :close_trace_log, Any[])
     previous_time = isempty(log) ? row.time : last(log).time
@@ -799,6 +802,8 @@ function _trace_close!(host::WindowHost, phase::Symbol)
             row.closed,
             " hot=",
             row.hot_observables,
+            " method=",
+            row.method,
         )
     elseif tracer isa Function
         tracer(row)
@@ -975,6 +980,7 @@ the native close path.
 function Base.close(host::WindowHost)
     (host.closed || host.closing) && return nothing
     if !isnothing(host.screen)
+        host.data[:close_method] = :programmatic
         _request_deferred_window_close!(host)
         return nothing
     end

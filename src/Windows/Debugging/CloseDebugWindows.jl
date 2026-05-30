@@ -236,11 +236,13 @@ function _debug_display_host!(host::WindowHost, title; start_timers = true, star
     host.open = events(host.figure).window_open
     register!(host, on(host.open) do isopen
         isopen && return nothing
+        get!(host.data, :close_method, :native)
         _schedule_native_close!(host)
         return nothing
     end)
     register!(host, on(events(host.figure.scene).keyboardbutton) do _
         if ispressed(host.figure, (Keyboard.left_super, Keyboard.w)) || ispressed(host.figure, (Keyboard.left_control, Keyboard.w))
+            host.data[:close_method] = :keyboard
             _request_deferred_window_close!(host)
         end
     end)
