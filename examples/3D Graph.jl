@@ -17,6 +17,6 @@ g = IsingGraph(100,100,10,
         Ising(c = ConstVal(0f0), b = 0, localpotential = 0),
         periodic = (:x,:y))
 
-
+temp!(g, 0)
 interface(g)
 createProcess(g)
