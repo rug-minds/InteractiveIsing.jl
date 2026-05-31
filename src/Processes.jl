@@ -3,8 +3,7 @@ module Processes
 
     export getcontext, context, Process, start, quit
 
-    using UUIDs, Preferences, JLD2, MacroTools, StaticArrays, PrecompileTools, RuntimeGeneratedFunctions
-    RuntimeGeneratedFunctions.init(@__MODULE__)
+    using UUIDs, Preferences, JLD2, MacroTools, StaticArrays, PrecompileTools
 
     import Base: Threads.SpinLock, lock, unlock
     const wait_timeout = .5
@@ -81,12 +80,12 @@ module Processes
     include("LoopAlgorithms/Edit/Edit.jl")
     include("Packaging/Packaging.jl")
     include("Loops.jl")
-    include("GeneratedCode/GeneratedLoops.jl")
     include("Trackers/Trackers.jl")
     include("TotalInc.jl")
     include("Tools.jl")
     include("Saving.jl")
 
+    include("GeneratedCode/GeneratedCode.jl")
     include("Precompile.jl")
 
     # @setup_workload begin
