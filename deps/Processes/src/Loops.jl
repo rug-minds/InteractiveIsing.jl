@@ -68,32 +68,43 @@ Run a single function in a loop indefinitely
 @inline loop(process::P, func::F, context::C, lt::LT, inputs::NamedTuple = (;), resume::Resuming = Resuming{false}()) where {P<:AbstractProcess, F, C, LT} =
     loop(process, func, context, lt, inputs, resume, sys_looptype)
 
-@inline function loop(process::P, func::F, context::C, lt::LT, inputs::NamedTuple, ::Resuming{isresuming}, ::NonGenerated) where {P<:AbstractProcess, F<:AbstractLoopAlgorithm, C, LT <: IndefiniteLifetime, isresuming}
+@inline loop(process::P, func::F, context::C, lt::LT, inputs::NamedTuple, resume::Resuming, ::NonGenerated) where {P<:AbstractProcess, F<:AbstractLoopAlgorithm, C, LT<:Lifetime} =
+    loop(process, func, context, lt, inputs, resume, RuntimeGenerated())
+
+@inline loop(process::P, func::F, context::C, lt::LT, inputs::NamedTuple, resume::Resuming, ::Generated) where {P<:AbstractProcess, F<:AbstractLoopAlgorithm, C, LT<:Lifetime} =
+    loop(process, func, context, lt, inputs, resume, RuntimeGenerated())
+
+Base.@constprop :aggressive function loop(process::P, algo::F, context::C, lt::LT, inputs::NamedTuple, ::Resuming{isresuming}, ::RuntimeGenerated) where {P<:AbstractProcess, F<:AbstractLoopAlgorithm, C, LT <: IndefiniteLifetime, isresuming}
     @inline before_while(process)
 
-    step_plan = @inline getplan(func)
-    step_wiring = @inline getwiring(step_plan)
+    step_plan = @inline getplan(algo)
     runtime_context = @inline _merge_runtime_inputs(context, inputs)
+    runtime_inputs = @inline getruntimeinput(runtime_context)
+    runtime_globals = @inline getglobals(runtime_context)
+    subcontexts = @inline get_subcontexts(runtime_context)
     if isresuming
         @atomic process.paused = false
-    else
-        runtime_context = @inline _step!(step_plan, runtime_context, step_wiring, Namespace{nothing}(), process, lt, Stable())
-        @inline tick!(process)
-        @inline inc!(process)
     end
 
+    generated_plan_step = @inline get_step(algo)
+    available_names_val = @inline step_available_names_val(algo)
     while true
-        nextcontext = @inline _step!(step_plan, runtime_context, step_wiring, Namespace{nothing}(), process, lt, Stable())
-        # typeof(nextcontext) === typeof(runtime_context) || error("Steady-state loop steps must preserve context type. Got $(typeof(nextcontext)), expected $(typeof(runtime_context)).")
-        runtime_context = nextcontext
+        active_subcontexts = @inline select_subcontexts(subcontexts, available_names_val)
+        returned = @inline RuntimeGeneratedFunctions.generated_callfunc(generated_plan_step, step_plan, process, lt, runtime_globals, runtime_inputs, active_subcontexts...)
+        runtime_globals = @inline getproperty(returned, :globals)
+        returned_subcontexts = @inline deletekeys(returned, :globals)
+        subcontexts = @inline merge_subcontexts_by_name(subcontexts, returned_subcontexts)
+        runtime_context = @inline withruntime_if_changed(runtime_context, runtime_globals)
         @inline tick!(process)
-        @inline inc!(process) 
-        if @inline breakcondition(lt, process, runtime_context)
+        @inline inc!(process)
+        break_context = @inline withsubcontexts(runtime_context, subcontexts)
+        if @inline breakcondition(lt, process, break_context)
             break
         end
     end
 
-    return @inline after_while(process, func, runtime_context, context)
+    newcontext = @inline withsubcontexts(runtime_context, subcontexts)
+    return @inline after_while(process, algo, newcontext, context)
 end
 
 """
@@ -102,39 +113,45 @@ Run a single function in a loop for a given number of times
 @inline loop(process::P, algo::F, context::C, r::R, inputs::NamedTuple = (;), resume::Resuming = Resuming{false}()) where {P<:AbstractProcess, F, C, R <: RepeatLifetime} =
     loop(process, algo, context, r, inputs, resume, sys_looptype)
 
-Base.@constprop :aggressive function loop(process::P, algo::F, context::C, r::R, inputs::NamedTuple, ::Resuming{isresuming}, ::NonGenerated) where {P<:AbstractProcess, F<:AbstractLoopAlgorithm, C, R <: RepeatLifetime, isresuming}
+Base.@constprop :aggressive function loop(process::P, algo::F, context::C, r::R, inputs::NamedTuple, ::Resuming{isresuming}, ::RuntimeGenerated) where {P<:AbstractProcess, F<:AbstractLoopAlgorithm, C, R <: RepeatLifetime, isresuming}
     @DebugMode "Running process loop for $repeats times from thread $(Threads.threadid())"
     @assert isresolved(algo) "Algo must be resolved before running the loop. Got algo $(algo) which is not resolved."
     @inline before_while(process)
     
     step_plan = @inline getplan(algo)
-    step_wiring = @inline getwiring(step_plan)
-
     runtime_context = @inline _merge_runtime_inputs(context, inputs)
-    stablecontext = if isresuming
+    runtime_inputs = @inline getruntimeinput(runtime_context)
+    runtime_globals = @inline getglobals(runtime_context)
+    subcontexts = @inline get_subcontexts(runtime_context)
+    if isresuming
         @atomic process.paused = false
-        runtime_context
-    else
-        stepped_context = @inline _step!(step_plan, runtime_context, step_wiring, Namespace{nothing}(), process, r, Stable())
-        @inline tick!(process)
-        @inline inc!(process)
-        stepped_context
     end
     
+    # Top level step gets all available subcontexts.
+    generated_plan_step = @inline get_step(algo)
+    available_names_val = @inline step_available_names_val(algo)
     start_idx = @inline loopidx(process)
     end_idx = @inline repeats(r)
-    
+
     for _ in start_idx:end_idx
-    
-        nextcontext = @inline _step!(step_plan, stablecontext, step_wiring, Namespace{nothing}(), process, r, Stable())
-        # typeof(nextcontext) === typeof(stablecontext) || error("Steady-state loop steps must preserve context type. Got $(typeof(nextcontext)), expected $(typeof(stablecontext)).")
-        stablecontext = nextcontext
+        # Top level algo always gets all available subcontexts
+        active_subcontexts = @inline select_subcontexts(subcontexts, available_names_val)
+        returned = @inline RuntimeGeneratedFunctions.generated_callfunc(generated_plan_step, step_plan, process, r, runtime_globals, runtime_inputs, active_subcontexts...)
+        runtime_globals = @inline getproperty(returned, :globals)
+        returned_subcontexts = @inline deletekeys(returned, :globals)
+        subcontexts = @inline merge_subcontexts_by_name(subcontexts, returned_subcontexts)
+        runtime_context = @inline withruntime_if_changed(runtime_context, runtime_globals)
         @inline tick!(process)
         @inline inc!(process)
-        if @inline breakcondition(r, process, stablecontext)
+        # TODO Breakcondition needs to read directly from the subcontexts, as a namedtuple, instead of the whole context
+        break_context = @inline withsubcontexts(runtime_context, subcontexts)
+        if @inline breakcondition(r, process, break_context)
             break
         end
 
     end
-    return @inline after_while(process, algo, stablecontext, context)
+    # TODO generate newcontext here from the new subcontexts
+    newcontext = @inline withsubcontexts(runtime_context, subcontexts)
+
+    return @inline after_while(process, algo, newcontext, context)
 end
