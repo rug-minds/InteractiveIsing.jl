@@ -218,6 +218,7 @@ end
     ΔE = zero(SType)
     accepted = 0
     attempted = 0
+    acceptance_rate = zero(SType)
     gradient_max = zero(SType)
     gradient_rms = zero(SType)
     reflected_fraction = zero(SType)
@@ -231,7 +232,7 @@ end
 
     return (;model, hamiltonian, rng, dH_prealloc, active_index_set, active_spins,
                 layer_views, stepsize, max_drift_fraction, group_steps,
-                adjusted, proposal, ΔE, accepted, attempted, T, η, σ,
+                adjusted, proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
                 gradient_max, gradient_rms, reflected_fraction,
                 sweep_position, sweep_order, sweep_offset, group_remaining)
 end
