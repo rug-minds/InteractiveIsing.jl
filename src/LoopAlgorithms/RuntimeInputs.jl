@@ -152,9 +152,7 @@ subcontexts, so finished contexts can be stripped back to their original shape.
 """
 @inline _merge_runtime_inputs(context, ::NamedTuple{()}) = context
 @inline _merge_runtime_inputs(context, inputs::I) where {I<:NamedTuple} =
-    ProcessContext(get_subcontexts(context), getregistry(context), getglobals(context), inputs)
-
-@inline _strip_runtime_inputs(context) = context
+    ProcessContext(get_subcontexts(context), getregistry(context), getglobals(context), inputs, getwidened(context))
 
 """
 Remove runtime-only data from a finished context.
@@ -170,62 +168,39 @@ function _strip_runtime_inputs(context::C) where {C<:ProcessContext}
     if !haskey(runtime, :process) &&
         !haskey(runtime, :lifetime) &&
         !haskey(subcontexts, :_input) &&
-        isempty(getruntimeinput(context))
+        isempty(getruntimeinput(context)) &&
+        isempty(getwidened(context))
         return context
     end
 
     stripped_runtime = haskey(runtime, :process) ? deletekeys(runtime, :process) : runtime
     stripped_runtime = haskey(stripped_runtime, :lifetime) ? deletekeys(stripped_runtime, :lifetime) : stripped_runtime
     persistent_subcontexts = haskey(subcontexts, :_input) ? deletekeys(subcontexts, :_input) : subcontexts
-    return ProcessContext(persistent_subcontexts, getregistry(context), stripped_runtime, (;))
+    return ProcessContext(persistent_subcontexts, getregistry(context), stripped_runtime, (;), (;))
 end
 
 """
     _strip_runtime_inputs(runtime_context, stored_context)
 
 Keep the updated persistent subcontexts from `runtime_context`, but restore the
-runtime and input fields from `stored_context`.
-"""
-@inline _strip_runtime_inputs(runtime_context, stored_context) = _strip_runtime_inputs(runtime_context)
+stored runtime-only buckets from `stored_context`.
 
+This path should preserve the original concrete `ProcessContext` shape whenever
+the finished run did not introduce new persistent fields.
+"""
 @inline function _strip_runtime_inputs(runtime_context::C, stored_context::S) where {C<:ProcessContext, S<:ProcessContext}
-    subcontexts = get_subcontexts(runtime_context)
-    if !haskey(subcontexts, :_input) &&
-        getglobals(runtime_context) == getglobals(stored_context) &&
-        getruntimeinput(runtime_context) == getruntimeinput(stored_context)
-        return runtime_context
-    end
-
-    persistent_subcontexts = haskey(subcontexts, :_input) ? deletekeys(subcontexts, :_input) : subcontexts
-    # Previous implementation always rebuilt the context:
-    # return ProcessContext(
-    #     persistent_subcontexts,
-    #     getregistry(runtime_context),
-    #     getglobals(stored_context),
-    #     getruntimeinput(stored_context),
-    # )
-    return ProcessContext(
-        persistent_subcontexts,
-        getregistry(runtime_context),
-        getglobals(stored_context),
-        getruntimeinput(stored_context),
-    )
-end
-
-"""
-Remove runtime-only values while preserving the stored context type.
-
-`InlineProcess` stores its context in a concrete field for inference. Runtime
-inputs may temporarily change `ProcessContext._input`, but the persistent
-context must return to the exact stored shape before assignment back into the
-process.
-"""
-@inline function _strip_runtime_inputs_preserve_context_type(runtime_context::C, stored_context::S) where {C<:ProcessContext, S<:ProcessContext}
     runtime_subcontexts = get_subcontexts(runtime_context)
     stored_subcontexts = get_subcontexts(stored_context)
 
-    # Preserve persistent state updates, but restore the stored input bucket
-    # when the initialized inline context contains one for routing metadata.
+    if !haskey(runtime_subcontexts, :_input) &&
+        getglobals(runtime_context) == getglobals(stored_context) &&
+        getruntimeinput(runtime_context) == getruntimeinput(stored_context) &&
+        getwidened(runtime_context) == getwidened(stored_context)
+        return runtime_context
+    end
+
+    # Preserve persistent updates, but restore the stored input bucket when the
+    # initialized lifecycle context already carried one for routing metadata.
     persistent_subcontexts = if haskey(stored_subcontexts, :_input) && haskey(runtime_subcontexts, :_input)
         replace_namedtuple_field(runtime_subcontexts, Val(:_input), stored_subcontexts._input)
     elseif haskey(runtime_subcontexts, :_input)
@@ -239,6 +214,7 @@ process.
         getregistry(runtime_context),
         getglobals(stored_context),
         getruntimeinput(stored_context),
+        getwidened(stored_context),
     )
 end
 
