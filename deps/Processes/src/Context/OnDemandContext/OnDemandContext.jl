@@ -197,16 +197,8 @@ function _on_demand_names_for_location(::Type{ODC}, ::Type{VL}) where {ODC<:OnDe
     return Tuple(matches)
 end
 
-@inline function Base.getproperty(context::OnDemandContext, name::Symbol)
-    if name === :variables || name === :input || name === :globals
-        return getfield(context, name)
-    end
-    name === :locations && return get_locations(context)
-    name === :wiring && return typeof(context).parameters[3]()
-    name === :algorithm && return typeof(context).parameters[6]
-    name === :namespace && return typeof(context).parameters[7]()
-    return getproperty(context, Val(name))
-end
+Base.@constprop :aggressive @inline Base.getproperty(context::ODC, name::Symbol) where {ODC<:OnDemandContext} =
+    getproperty(context, Val(name))
 
 @inline @generated function Base.haskey(context::ODC, ::Val{name}) where {ODC<:OnDemandContext, name}
     Variables = ODC.parameters[1]
@@ -221,6 +213,14 @@ end
 end
 
 @inline @generated function Base.getproperty(context::ODC, ::Val{name}) where {ODC<:OnDemandContext, name}
+    name === :variables && return :(return getfield(context, :variables))
+    name === :input && return :(return getfield(context, :input))
+    name === :globals && return :(return getfield(context, :globals))
+    name === :locations && return :(return _on_demand_locations_from_type($(ODC.parameters[2])))
+    name === :wiring && return :(return $(ODC.parameters[3])())
+    name === :algorithm && return :(return $(ODC.parameters[6]))
+    name === :namespace && return :(return $(ODC.parameters[7])())
+
     Variables = ODC.parameters[1]
     if name in fieldnames(Variables)
         return quote
