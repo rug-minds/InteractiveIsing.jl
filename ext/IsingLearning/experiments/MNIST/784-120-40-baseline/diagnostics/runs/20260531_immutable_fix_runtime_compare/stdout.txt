@@ -1,0 +1,11 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+2026-05-31T01:44:26 begin runtime compare
+2026-05-31T01:44:26 threads=32 batchsize=1 repeats=1 sweeps=500.0
+2026-05-31T01:44:26 helper=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\diagnostics\runs\20260530_182019_backend_update_contrastive_learning_retest\local_langevin_learning_vs_process.jl
+2026-05-31T01:44:26 loading mnist data
+2026-05-31T01:44:28 repeat=1 build direct setup
+2026-05-31T01:44:30 repeat=1 time direct bespoke full learning minibatch
+2026-05-31T01:44:35 repeat=1 direct wall=0.0185713 seconds_per_example=0.0185713
+2026-05-31T01:44:35 repeat=1 build serial process setup
+2026-05-31T01:44:35 repeat=1 time serial Processes full learning minibatch

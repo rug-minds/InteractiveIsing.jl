@@ -1,0 +1,26 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+2026-05-31T02:25:02 begin process marker diagnostic threads=32 batchsize=1 sweeps=500.0
+2026-05-31T02:25:04 build setup
+2026-05-31T02:25:07 resolve algorithm
+2026-05-31T02:25:18 build worker
+2026-05-31T02:25:21 warmup begin
+2026-05-31T02:25:24 warmup clear worker buffers
+2026-05-31T02:25:24 warmup sample=1 load
+2026-05-31T02:25:24 warmup sample=1 reset begin
+2026-05-31T02:25:24 warmup sample=1 reset end
+2026-05-31T02:25:24 warmup sample=1 runprocessinline begin
+2026-05-31T02:28:29 warmup sample=1 runprocessinline end
+2026-05-31T02:28:29 warmup gradient copy begin
+2026-05-31T02:28:30 warmup optimizer begin
+2026-05-31T02:28:31 warmup batch end
+2026-05-31T02:28:31 warmup end
+2026-05-31T02:28:31 restore initial params
+2026-05-31T02:28:31 timed begin
+2026-05-31T02:28:31 timed clear worker buffers
+2026-05-31T02:28:31 timed sample=1 load
+2026-05-31T02:28:31 timed sample=1 reset begin
+2026-05-31T02:28:31 timed sample=1 reset end
+2026-05-31T02:28:31 timed sample=1 runprocessinline begin
+2026-05-31T02:42:34 close begin
+2026-05-31T02:42:34 close end
