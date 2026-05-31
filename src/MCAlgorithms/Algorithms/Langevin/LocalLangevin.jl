@@ -212,7 +212,7 @@ end
     stepsize_default = SType(langevin.stepsize)
     stepsize = Ref(SType(@inline _langevin_unwrap_ref(@inline _langevin_context_value(context, :stepsize, stepsize_default))))
     max_drift_fraction = Ref(SType(langevin.max_drift_fraction))
-    group_steps = Ref(langevin.group_steps)
+    group_steps_ref = Ref(langevin.group_steps)
     adjusted = Adjusted
     proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
     ΔE = zero(SType)
@@ -231,7 +231,7 @@ end
     σ = zero(SType)
 
     return (;model, hamiltonian, rng, dH_prealloc, active_index_set, active_spins,
-                layer_views, stepsize, max_drift_fraction, group_steps,
+                layer_views, stepsize, max_drift_fraction, group_steps_ref,
                 adjusted, proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
                 gradient_max, gradient_rms, reflected_fraction,
                 sweep_position, sweep_order, sweep_offset, group_remaining)
@@ -266,7 +266,7 @@ end
     end
 
     n = length(active_spins)
-    context.group_remaining[] = max(1, context.group_steps[])
+    context.group_remaining[] = max(1, context.group_steps_ref[])
     context.sweep_position[] = 1
     if Order === :random
         @inline _reset_local_langevin_order!(context.sweep_order, n)
@@ -614,6 +614,5 @@ end
     gradient_rms = abs(derivative)
     reflected_fraction = SType(reflected)
     return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
-        group_steps = context.group_steps, gradient_max, gradient_rms,
-        reflected_fraction)
+        gradient_max, gradient_rms, reflected_fraction)
 end
