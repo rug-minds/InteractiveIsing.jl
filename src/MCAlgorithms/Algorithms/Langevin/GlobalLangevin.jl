@@ -57,8 +57,8 @@ GlobalLangevin(adjusted::Bool) = GlobalLangevin(; adjusted)
     stepsize_default = SType(langevin.stepsize)
     stepsize = Ref(SType(_langevin_unwrap_ref(_langevin_context_value(context, :stepsize, stepsize_default))))
     max_drift_fraction = Ref(SType(langevin.max_drift_fraction))
-    group_steps = Ref(langevin.group_steps)
-    adjusted = Ref(langevin.adjusted)
+    group_steps_ref = Ref(langevin.group_steps)
+    adjusted_ref = Ref(langevin.adjusted)
 
     proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
     ΔE = zero(SType)
@@ -82,8 +82,8 @@ GlobalLangevin(adjusted::Bool) = GlobalLangevin(; adjusted)
     σ = zero(SType)
 
     return (;model, hamiltonian, rng, dH_prealloc, active_index_set, active_spins,
-                layer_views, stepsize, max_drift_fraction, group_steps,
-                adjusted, proposal, ΔE, accepted, attempted, T, η, σ,
+                layer_views, stepsize, max_drift_fraction, group_steps_ref,
+                adjusted_ref, proposal, ΔE, accepted, attempted, T, η, σ,
                 gradient_max, gradient_rms, reflected_fraction,
                 old_vals, new_vals, layer_idxs,
                 schedule_idxs, schedule_position, schedule_length,
@@ -252,7 +252,7 @@ end
 
 @inline function Processes.step!(langevin::GlobalLangevin, context::C) where {C}
     (;hamiltonian, rng, model, dH_prealloc, layer_views, stepsize,
-        max_drift_fraction, group_steps, adjusted, old_vals, new_vals,
+        max_drift_fraction, group_steps_ref, adjusted_ref, old_vals, new_vals,
         layer_idxs, schedule_idxs, schedule_position, schedule_length,
         schedule_accepted, schedule_ΔE, gradient_max_cache, gradient_sumsq_cache) = context
 
@@ -262,8 +262,8 @@ end
     t = max(SType(T), zero(SType))
     η = max(stepsize[], epsT)
     drift_fraction = clamp(max_drift_fraction[], epsT, one(SType))
-    n_group_steps = max(1, group_steps[])
-    use_adjusted = adjusted[]
+    n_group_steps = max(1, group_steps_ref[])
+    use_adjusted = adjusted_ref[]
     dh = d_iH()
     active_changed = @inline consume_changed!(context.active_index_set)
 
@@ -291,8 +291,8 @@ end
             gradient_max = gradient_max_cache[]
             gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
             return (;proposal, ΔE = schedule_ΔE[], accepted, attempted, acceptance_rate, T, η, σ,
-                group_steps = n_group_steps, refreshed_gradient = false,
-                gradient_max, gradient_rms, reflected_fraction = zero(SType))
+                refreshed_gradient = false, gradient_max, gradient_rms,
+                reflected_fraction = zero(SType))
         end
     end
 
@@ -307,8 +307,8 @@ end
         σ = t > zero(SType) ? sqrt(SType(2) * η * t) : zero(SType)
         proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
         return (;proposal, ΔE = zero(SType), accepted = 0, attempted = 0,
-            acceptance_rate = zero(SType), T, η, σ, group_steps = n_group_steps,
-            refreshed_gradient = false, gradient_max = zero(SType),
+            acceptance_rate = zero(SType), T, η, σ, refreshed_gradient = false,
+            gradient_max = zero(SType),
             gradient_rms = zero(SType), reflected_fraction = zero(SType))
     end
 
@@ -408,8 +408,8 @@ end
         acceptance_rate = SType(accepted)
         gradient_rms = sqrt(gradient_sumsq / SType(n))
         return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
-            group_steps = n_group_steps, refreshed_gradient = true,
-            gradient_max, gradient_rms, reflected_fraction = zero(SType))
+            refreshed_gradient = true, gradient_max, gradient_rms,
+            reflected_fraction = zero(SType))
     end
 
     refreshed = active_changed || schedule_position[] == 0 || schedule_position[] > schedule_length[]
@@ -463,6 +463,6 @@ end
     gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
     reflected_fraction = SType(reflected)
     return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
-        group_steps = n_group_steps, refreshed_gradient = refreshed,
-        gradient_max, gradient_rms, reflected_fraction)
+        refreshed_gradient = refreshed, gradient_max, gradient_rms,
+        reflected_fraction)
 end

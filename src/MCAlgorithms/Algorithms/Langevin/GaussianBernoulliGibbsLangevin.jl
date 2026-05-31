@@ -220,7 +220,7 @@ function Processes.init(algorithm::GaussianBernoulliGibbsLangevin, context)
     accepted = 0
     attempted = 0
     acceptance_rate = zero(SType)
-    step_idx = Ref(0)
+    step_idx_ref = Ref(0)
 
     return (;
         model,
@@ -228,11 +228,11 @@ function Processes.init(algorithm::GaussianBernoulliGibbsLangevin, context)
         hterm,
         rng,
         stepsize,
-        group_steps = Ref(algorithm.group_steps),
-        adjusted = Ref(algorithm.adjusted),
-        adjust_step = Ref(algorithm.adjust_step),
-        burnin = Ref(algorithm.burnin),
-        langevin_steps = Ref(K),
+        group_steps_ref = Ref(algorithm.group_steps),
+        adjusted_ref = Ref(algorithm.adjusted),
+        adjust_step_ref = Ref(algorithm.adjust_step),
+        burnin_ref = Ref(algorithm.burnin),
+        langevin_steps_ref = Ref(K),
         old_v,
         old_h,
         new_v,
@@ -252,15 +252,15 @@ function Processes.init(algorithm::GaussianBernoulliGibbsLangevin, context)
         accepted,
         attempted,
         acceptance_rate,
-        step_idx,
+        step_idx_ref,
     )
 end
 
 function Processes.step!(algorithm::GaussianBernoulliGibbsLangevin, context)
-    (; model, hamiltonian, hterm, rng, stepsize, group_steps, adjusted,
-        adjust_step, burnin, langevin_steps, old_v, old_h, new_v, new_h, grad,
+    (; model, hamiltonian, hterm, rng, stepsize, group_steps_ref, adjusted_ref,
+        adjust_step_ref, burnin_ref, langevin_steps_ref, old_v, old_h, new_v, new_h, grad,
         alphas, forward_mean, reverse_mean, proposal_variance, conditional_mean,
-        logits, at_idxs, layer_idxs, from_vals, to_vals, step_idx) = context
+        logits, at_idxs, layer_idxs, from_vals, to_vals, step_idx_ref) = context
 
     visible = _gb_visible_view(hterm, model)
     hidden = _gb_hidden_view(hterm, model)
@@ -268,8 +268,8 @@ function Processes.step!(algorithm::GaussianBernoulliGibbsLangevin, context)
     n_visible = length(visible)
     n_hidden = length(hidden)
     n_total = n_visible + n_hidden
-    n_group_steps = max(1, group_steps[])
-    K = max(1, langevin_steps[])
+    n_group_steps = max(1, group_steps_ref[])
+    K = max(1, langevin_steps_ref[])
     α0 = max(SType(stepsize[]), eps(SType))
     αs = _gb_fill_alphas!(alphas, K, α0)
 
@@ -280,7 +280,7 @@ function Processes.step!(algorithm::GaussianBernoulliGibbsLangevin, context)
 
     for _ in 1:n_group_steps
         attempted += 1
-        step_idx[] += 1
+        step_idx_ref[] += 1
 
         copyto!(old_v, visible)
         copyto!(old_h, hidden)
@@ -289,7 +289,7 @@ function Processes.step!(algorithm::GaussianBernoulliGibbsLangevin, context)
         _gb_conditional_langevin!(rng, new_v, grad, hterm, old_h, αs)
         sample_hidden!(rng, new_h, hterm, new_v)
 
-        use_adjustment = adjusted[] && step_idx[] > adjust_step[]
+        use_adjustment = adjusted_ref[] && step_idx_ref[] > adjust_step_ref[]
         accept_move = true
         if use_adjustment
             log_acceptance = _gb_log_acceptance!(
@@ -341,11 +341,6 @@ function Processes.step!(algorithm::GaussianBernoulliGibbsLangevin, context)
         acceptance_rate,
         log_acceptance,
         η = α0,
-        group_steps = n_group_steps,
-        langevin_steps = K,
-        adjusted = adjusted[],
-        adjust_step = adjust_step[],
-        burned_in = step_idx[] > burnin[],
-        step_idx = step_idx[],
+        burned_in = step_idx_ref[] > burnin_ref[],
     )
 end

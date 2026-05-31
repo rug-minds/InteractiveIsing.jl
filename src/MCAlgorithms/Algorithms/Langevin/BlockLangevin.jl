@@ -132,8 +132,8 @@ DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
     stepsize_default = SType(langevin.stepsize)
     stepsize = Ref(SType(@inline _langevin_unwrap_ref(@inline _langevin_context_value(context, :stepsize, stepsize_default))))
     max_drift_fraction = Ref(SType(langevin.max_drift_fraction))
-    block_size = Ref(langevin.block_size)
-    group_steps = Ref(langevin.group_steps)
+    block_size_ref = Ref(langevin.block_size)
+    group_steps_ref = Ref(langevin.group_steps)
     adjusted = Adjusted
 
     dH_prealloc = zeros(SType, nstates_model)
@@ -141,7 +141,7 @@ DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
     old_vals = Vector{SType}(undef, nstates_model)
     new_vals = Vector{SType}(undef, nstates_model)
     layer_idxs = Vector{Int}(undef, nstates_model)
-    block_idxs = Vector{Int}(undef, min(nstates_model, max(1, block_size[])))
+    block_idxs = Vector{Int}(undef, min(nstates_model, max(1, block_size_ref[])))
     block_shuffle_position = Ref(length(active_spins) + 1)
 
     proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
@@ -163,7 +163,7 @@ DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
     gradient_sumsq_cache = Ref(zero(SType))
 
     return (;model, hamiltonian, rng, active_index_set, active_spins, layer_views, stepsize,
-        max_drift_fraction, block_size, group_steps, adjusted, dH_prealloc,
+        max_drift_fraction, block_size_ref, group_steps_ref, adjusted, dH_prealloc,
         derivatives, old_vals, new_vals, layer_idxs, block_idxs, block_shuffle_position,
         proposal, ΔE, accepted, attempted, acceptance_rate, T, η,
         σ, gradient_max, gradient_rms, reflected_fraction, schedule_position,
@@ -192,7 +192,7 @@ end
     stepsize = Ref(SType(@inline _langevin_unwrap_ref(@inline _langevin_context_value(context, :stepsize, stepsize_default))))
     max_drift_fraction = Ref(SType(langevin.max_drift_fraction))
     max_blocksize = MaxBlockSize
-    group_steps = Ref(langevin.group_steps)
+    group_steps_ref = Ref(langevin.group_steps)
     adjusted = Adjusted
 
     dH_prealloc = zeros(SType, nstates_model)
@@ -222,7 +222,7 @@ end
     gradient_sumsq_cache = Ref(zero(SType))
 
     return (;model, hamiltonian, rng, active_index_set, active_spins, layer_views, stepsize,
-        max_drift_fraction, max_blocksize, group_steps, adjusted, dH_prealloc,
+        max_drift_fraction, max_blocksize, group_steps_ref, adjusted, dH_prealloc,
         derivatives, old_vals, new_vals, layer_idxs, block_idxs, block_shuffle_position,
         proposal, ΔE, accepted, attempted, acceptance_rate, T, η,
         σ, gradient_max, gradient_rms, reflected_fraction, schedule_position,
@@ -256,7 +256,7 @@ end
 end
 
 @inline function _draw_langevin_block_size(::BlockLangevin, context, rng, n_active::Int)
-    return min(max(1, context.block_size[]), n_active)
+    return min(max(1, context.block_size_ref[]), n_active)
 end
 
 @inline function _draw_langevin_block_size(::DynamicBlockLangevin{MaxBlockSize}, context, rng, n_active::Int) where {MaxBlockSize}
@@ -273,7 +273,7 @@ end
 
 @inline function _block_langevin_step!(langevin, context::C, ::Val{Adjusted}) where {Adjusted,C}
     (;hamiltonian, rng, model, layer_views, stepsize,
-        max_drift_fraction, group_steps, dH_prealloc,
+        max_drift_fraction, group_steps_ref, dH_prealloc,
         derivatives, old_vals, new_vals, layer_idxs, block_idxs, block_shuffle_position,
         schedule_position, schedule_length, schedule_accepted, schedule_ΔE,
         gradient_max_cache, gradient_sumsq_cache) = context
@@ -285,7 +285,7 @@ end
     η = max(stepsize[], epsT)
     σ = t > zero(SType) ? sqrt(SType(2) * η * t) : zero(SType)
     drift_fraction = clamp(max_drift_fraction[], epsT, one(SType))
-    n_group_steps = max(1, group_steps[])
+    n_group_steps = max(1, group_steps_ref[])
     active_changed = @inline consume_changed!(context.active_index_set)
     if active_changed
         @inline _set_local_langevin_active_spins!(context.active_spins, @inline _active_spin_vector(context.active_index_set))
@@ -298,8 +298,7 @@ end
         schedule_length[] = 0
         proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
         return (;proposal, ΔE = zero(SType), accepted = 0, attempted = 0,
-            acceptance_rate = zero(SType), T, η, σ, group_steps = n_group_steps,
-            block_size = 0, refreshed_gradient = false,
+            acceptance_rate = zero(SType), T, η, σ, refreshed_gradient = false,
             gradient_max = zero(SType), gradient_rms = zero(SType),
             reflected_fraction = zero(SType))
     end
@@ -325,7 +324,6 @@ end
             gradient_max = gradient_max_cache[]
             gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
             return (;proposal, ΔE = schedule_ΔE[], accepted, attempted, acceptance_rate, T, η, σ,
-                group_steps = n_group_steps, block_size = schedule_length[],
                 refreshed_gradient = false, gradient_max, gradient_rms,
                 reflected_fraction = zero(SType))
         end
@@ -423,8 +421,8 @@ end
         acceptance_rate = SType(accepted)
         gradient_rms = sqrt(gradient_sumsq / SType(m))
         return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
-            group_steps = n_group_steps, block_size = m, refreshed_gradient = true,
-            gradient_max, gradient_rms, reflected_fraction = zero(SType))
+            refreshed_gradient = true, gradient_max, gradient_rms,
+            reflected_fraction = zero(SType))
     end
 
     refreshed = active_changed || schedule_position[] == 0 || schedule_position[] > schedule_length[]
@@ -479,6 +477,6 @@ end
     reflected_fraction = SType(reflected)
 
     return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
-        group_steps = n_group_steps, block_size = schedule_length[],
-        refreshed_gradient = refreshed, gradient_max, gradient_rms, reflected_fraction)
+        refreshed_gradient = refreshed, gradient_max, gradient_rms,
+        reflected_fraction)
 end
