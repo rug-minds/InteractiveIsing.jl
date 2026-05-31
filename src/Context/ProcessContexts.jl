@@ -1,4 +1,10 @@
-@generated function ProcessContext(subcontexts::D, registry::Reg, runtime::R = (;), input::I = (;)) where {D,Reg,R,I}
+@generated function ProcessContext(
+    subcontexts::D,
+    registry::Reg,
+    runtime::R = (;),
+    input::I = (;),
+    widened::W = (;),
+) where {D,Reg,R,I,W}
     # Statically Check if all keys except for global are SubContexts
     sc_names = fieldnames(D)
     bad_names = Symbol[]
@@ -9,16 +15,18 @@
     end
     @assert isempty(bad_names) "All fields in ProcessContext subcontexts must be of type SubContext, but found non-SubContext fields: $bad_names"
     @assert Reg <: AbstractRegistry "Registry type must be a subtype of AbstractRegistry, got: $Reg"
-    return :(ProcessContext{D,Reg,R,I}(subcontexts, registry, runtime, input))
+    return :(ProcessContext{D,Reg,R,I,W}(subcontexts, registry, runtime, input, widened))
 end
 
 @inline Base.@constprop :aggressive function Base.getproperty(pc::ProcessContext, name::Symbol)
-    if name === :subcontexts || name === :registry || name === :_runtime || name === :_input
+    if name === :subcontexts || name === :registry || name === :_runtime || name === :_input || name === :_widened
         return getfield(pc, name)
     end
     subcontexts = @inline get_subcontexts(pc)
     if haskey(subcontexts, name)
-        return @inline getproperty(subcontexts, name)
+        subcontext = @inline getproperty(subcontexts, name)
+        widened = @inline get_widened_subcontext(pc, Val(name))
+        return isempty(widened) ? subcontext : @inline merge(subcontext, widened)
     end
     input = @inline getruntimeinput(pc)
     if haskey(input, name)
@@ -31,12 +39,12 @@ end
     name === :globals && return getglobals(pc)
     name === :_runtime && return getglobals(pc)
     name === :_input && return getruntimeinput(pc)
-    return @inline getproperty(get_subcontexts(pc), name)
+    return @inline getproperty(pc, name)
 end
 
 @inline function Base.getindex(pc::ProcessContext, obj)
     name = getkey(getregistry(pc)[obj])
-    return @inline getproperty(get_subcontexts(pc), name)
+    return @inline getproperty(pc, name)
 end
 
 @inline function Base.getindex(pc::ProcessContext, idx::Int)
@@ -46,6 +54,7 @@ end
 @inline get_subcontexts(pc::ProcessContext) = getfield(pc, :subcontexts)
 @inline getregistry(pc::ProcessContext) = getfield(pc, :registry)
 @inline getruntimeinput(pc::ProcessContext) = getfield(pc, :_input)
+@inline getwidened(pc::ProcessContext) = getfield(pc, :_widened)
 
 """
     withruntime(pc, runtime)
@@ -54,7 +63,7 @@ Return an immutable `ProcessContext` rebuild with updated runtime globals.
 This is the package-local replacement for `@set pc._runtime = runtime`.
 """
 @inline function withruntime(pc::PC, runtime::R) where {PC<:ProcessContext, R<:NamedTuple}
-    return ProcessContext(get_subcontexts(pc), getregistry(pc), runtime, getruntimeinput(pc))
+    return ProcessContext(get_subcontexts(pc), getregistry(pc), runtime, getruntimeinput(pc), getwidened(pc))
 end
 
 """
@@ -64,7 +73,97 @@ Return an immutable `ProcessContext` rebuild with updated subcontexts. This is
 the package-local replacement for `@set pc.subcontexts = subcontexts`.
 """
 @inline function withsubcontexts(pc::PC, subcontexts::D) where {PC<:ProcessContext, D<:NamedTuple}
-    return ProcessContext(subcontexts, getregistry(pc), getglobals(pc), getruntimeinput(pc))
+    return ProcessContext(subcontexts, getregistry(pc), getglobals(pc), getruntimeinput(pc), getwidened(pc))
+end
+
+"""
+    withwidened(pc, widened)
+
+Return an immutable `ProcessContext` rebuild with updated shape-widening data.
+
+The widened bucket is part of the `ProcessContext` type so rare shape-changing
+returns still rebuild a concrete context. The field is stripped after loop
+completion, which keeps persistent context shape separate from widening.
+"""
+@inline function withwidened(pc::PC, widened) where {PC<:ProcessContext}
+    return ProcessContext(get_subcontexts(pc), getregistry(pc), getglobals(pc), getruntimeinput(pc), widened)
+end
+
+"""
+    get_widened_subcontext(pc, Val(name))
+
+Return the widened field patch for one subcontext, or an empty `NamedTuple`.
+"""
+@inline function get_widened_subcontext(pc::PC, ::Val{name}) where {PC<:ProcessContext, name}
+    widened = getwidened(pc)
+    return haskey(widened, name) ? getproperty(widened, name) : (;)
+end
+
+"""
+    has_widened_var(pc, Val(subcontext), Val(name))
+
+Return whether a shape-widening patch contains `name` for `subcontext`.
+"""
+@inline function has_widened_var(pc::PC, ::Val{subcontext}, ::Val{name}) where {PC<:ProcessContext, subcontext, name}
+    patch = @inline get_widened_subcontext(pc, Val(subcontext))
+    return haskey(patch, name)
+end
+
+"""
+    get_widened_var(pc, Val(subcontext), Val(name))
+
+Read a variable stored in the widened bucket for a subcontext.
+"""
+@inline function get_widened_var(pc::PC, ::Val{subcontext}, ::Val{name}) where {PC<:ProcessContext, subcontext, name}
+    patch = @inline get_widened_subcontext(pc, Val(subcontext))
+    return getproperty(patch, name)
+end
+
+"""
+    merge_into_widened(pc, args)
+
+Merge nested subcontext patches into `ProcessContext._widened`.
+
+This rebuilds a concretely typed `ProcessContext` with a new widened field type,
+but does not change the main subcontext layout.
+"""
+@inline @generated function merge_into_widened(pc::PC, args::As) where {PC<:ProcessContext, As<:NamedTuple}
+    patch_names = fieldnames(As)
+    isempty(patch_names) && return :(pc)
+
+    widened_type = PC.parameters[5]
+    widened_names = fieldnames(widened_type)
+    exprs = Any[:(widened = @inline getwidened(pc))]
+    for name in patch_names
+        old_patch_expr = name in widened_names ? :(getproperty(widened, $(QuoteNode(name)))) : :((;))
+        new_patch = gensym(:new_patch)
+        push!(exprs, :($new_patch = @inline merge($old_patch_expr, getproperty(args, $(QuoteNode(name))))))
+        if name in widened_names
+            push!(exprs, :(widened = @inline replace_namedtuple_field(widened, Val($(QuoteNode(name))), $new_patch)))
+        else
+            push!(exprs, :(widened = @inline merge(widened, NamedTuple{$((name,))}(($new_patch,)))))
+        end
+    end
+    push!(exprs, :(return @inline withwidened(pc, widened)))
+    return Expr(:block, exprs...)
+end
+
+"""
+    materialize_widened_context(pc)
+
+Merge widened patches into their target subcontexts. This is used after a loop
+has finished so external callers can inspect shape-changing results without the
+hot `_step!` path changing context type.
+"""
+function materialize_widened_context(pc::PC) where {PC<:ProcessContext}
+    widened = getwidened(pc)
+    widened isa NamedTuple || return pc
+    isempty(widened) && return pc
+    context = pc
+    for name in fieldnames(typeof(widened))
+        context = @inline merge_into_subcontext_rebuild(context, Val(name), getproperty(widened, name))
+    end
+    return @inline withwidened(context, (;))
 end
 
 @inline subcontext_names(pc::ProcessContext{D}, name::Symbol) where {D} = @inline fieldnames(typeof(getproperty(get_subcontexts(pc), name)))
@@ -209,12 +308,8 @@ end
         old_subcontexts = @inline get_subcontexts(pc)
         subcontext = @inline getproperty(old_subcontexts, $(QuoteNode(name)))
         new_data = @inline merge(getdata(subcontext), args)
-        new_subcontext = @inline withdata(subcontext, new_data)
-        new_subcontexts = @inline replace_namedtuple_field(old_subcontexts, Val($(QuoteNode(name))), new_subcontext)
-        return @inline withsubcontexts(pc, new_subcontexts)
-        # Mutable SubContext path kept for comparison:
-        # @inline setfield!(subcontext, :data, new_data)
-        # return pc
+        @inline withdata(subcontext, new_data)
+        return pc
     end
 end
 
@@ -247,8 +342,6 @@ Args should name subcontext they want to replace, check if all names are in the 
         new_subcontexts = @inline get_subcontexts(pc)
         $(replace_exprs...)
         return @inline withsubcontexts(pc, new_subcontexts)
-        # Accessors path kept for comparison:
-        # return @inline @set pc.subcontexts = new_subcontexts
     end
 end
 
