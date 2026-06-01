@@ -59,9 +59,22 @@ By default, existing processes on `g` are closed and removed before the new
 process is launched, so repeated calls replace the active simulation. Pass
 `allow_multiple=true` to keep existing processes and append the new one, which
 matches the previous behavior. When no `lifetime`, `repeats`, or `repeat` is
-given, the launched graph process runs indefinitely until it is closed.
+given, the launched graph process runs indefinitely until it is closed. Pass
+`looptype = Processes.RuntimeGenerated()` to select the process loop backend
+used by the initial `run(process; ...)` call.
 """
-function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.default_algorithm, lifetime = nothing, repeats = nothing, repeat = nothing, allow_multiple = false, args...)
+function createProcess(
+    g::IsingGraph,
+    func = nothing,
+    inputs...;
+    dynamics = g.default_algorithm,
+    lifetime = nothing,
+    repeats = nothing,
+    repeat = nothing,
+    allow_multiple = false,
+    looptype::LT = Processes.sys_looptype,
+    args...,
+) where {LT<:Processes.FunctionType}
     if isnothing(func)
         # func = get(args, :algorithm, g.default_algorithm)
         func = g.default_algorithm
@@ -90,7 +103,7 @@ function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.de
     
     ps = processes(g)
     push!(ps, process)
-    run(process)
+    run(process; looptype)
 
     return process
 end
