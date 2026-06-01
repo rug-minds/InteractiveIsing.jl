@@ -160,8 +160,7 @@ end
 @inline resolve_plan_wiring(la, ::NameSpaceRegistry) = la
 
 @inline function resolve_plan_wiring(la::LoopAlgorithm, registry::NameSpaceRegistry)
-    plan = _resolve_plan_wiring_tree(getplan(la), registry, (;))
-    return attach_root_step(setfield(la, :plan, plan))
+    return setfield(la, :plan, _resolve_plan_wiring_tree(getplan(la), registry, (;)))
 end
 
 """Resolve a plan tree and inlay inherited global wiring into concrete children."""
@@ -201,7 +200,7 @@ function _resolve_plan_wiring_tree(la::LA, registry::NameSpaceRegistry, inherite
         return resolved
     end
 
-    return attach_steps_to_plan(setfield(la, :wiring, PlanWiring(combined_global, resolved_children)))
+    return setfield(la, :wiring, PlanWiring(combined_global, resolved_children))
 end
 
 @inline function resolve_plan_wiring(fa::FA, registry::NameSpaceRegistry) where {FA<:FinalizedAlgorithm}
