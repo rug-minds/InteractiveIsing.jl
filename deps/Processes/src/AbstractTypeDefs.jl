@@ -180,7 +180,11 @@ The type of loop to use for a process. This is determined by the system and can 
 # else
 #     Generated()
 # end
+<<<<<<< Updated upstream
 const sys_looptype = NonGenerated()
+=======
+const sys_looptype = GeneratedOld()
+>>>>>>> Stashed changes
     
 
 #### Type Stabliity of steps
