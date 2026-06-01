@@ -183,16 +183,8 @@ The type of loop to use for a process. This is determined by the system and can 
 # else
 #     Generated()
 # end
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-const sys_looptype = NonGenerated()
-=======
+
 const sys_looptype = GeneratedOld()
->>>>>>> Stashed changes
-=======
-const sys_looptype = RuntimeGenerated()
->>>>>>> dd76df5866ee80a653a55c7e8018cf6c4244487a
-    
 
 #### Type Stabliity of steps
 abstract type Stability end
