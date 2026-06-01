@@ -1,0 +1,31 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+2026-06-01T12:57:28 begin generatedold marker diagnostic threads=32 batchsize=1 sweeps=500.0 looptype=IsingLearning.InteractiveIsing.Processes.GeneratedOld()
+2026-06-01T12:57:31 build setup
+2026-06-01T12:57:33 resolve algorithm
+2026-06-01T12:57:44 build worker
+2026-06-01T12:57:47 warmup begin
+2026-06-01T12:57:48 warmup clear worker buffers
+2026-06-01T12:57:48 warmup sample=1 load
+2026-06-01T12:57:48 warmup sample=1 reset begin
+2026-06-01T12:57:48 warmup sample=1 reset end
+2026-06-01T12:57:48 warmup sample=1 runprocessinline begin
+2026-06-01T13:09:09 warmup sample=1 runprocessinline end
+2026-06-01T13:09:09 warmup gradient copy begin
+2026-06-01T13:09:09 warmup optimizer begin
+2026-06-01T13:09:10 warmup batch end
+2026-06-01T13:09:10 warmup end
+2026-06-01T13:09:10 restore initial params
+2026-06-01T13:09:10 timed begin
+2026-06-01T13:09:10 timed clear worker buffers
+2026-06-01T13:09:10 timed sample=1 load
+2026-06-01T13:09:10 timed sample=1 reset begin
+2026-06-01T13:09:10 timed sample=1 reset end
+2026-06-01T13:09:10 timed sample=1 runprocessinline begin
+2026-06-01T13:09:13 timed sample=1 runprocessinline end
+2026-06-01T13:09:13 timed gradient copy begin
+2026-06-01T13:09:13 timed optimizer begin
+2026-06-01T13:09:13 timed batch end
+2026-06-01T13:09:13 timed end wall=2.5715899 seconds_per_example=2.5715899
+2026-06-01T13:09:13 close begin
+2026-06-01T13:09:13 close end

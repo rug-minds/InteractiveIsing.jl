@@ -1,0 +1,6 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+2026-06-01T13:44:01.772 begin NonGenerated check threads=32 batchsize=128
+2026-06-01T13:44:01.799 sys_looptype=IsingLearning.InteractiveIsing.Processes.Generated() explicit_looptype=IsingLearning.InteractiveIsing.Processes.NonGenerated()
+probe_before_subcontexts=(:_input, :_state, :initstate!_1, :ApplyProjectedInputFieldRef!_1, :dynamics, :CopyGraphState!_1, :setgraph!_1, :ApplyTargetsRef!_1, :SetInputFieldClampingBeta!_1, :AccumulateInputFieldGradientRef!_1)
+probe_before_widened=()

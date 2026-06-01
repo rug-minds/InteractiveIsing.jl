@@ -1,0 +1,16 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+2026-06-01T13:34:30.615 begin no-funcwrapper ProcessAlgorithm compare threads=32 batchsize=128 looptype=IsingLearning.InteractiveIsing.Processes.Generated()
+2026-06-01T13:34:35.334 direct rep=1 begin
+2026-06-01T13:34:45.920 direct rep=1 wall=2.2910715 spe=0.01789899609375
+2026-06-01T13:34:45.953 generated process rep=1 begin
+2026-06-01T13:35:10.596 generated process rep=1 wall=3.5998025 spe=0.02812345703125 over_direct=1.5712309720582704
+2026-06-01T13:35:10.615 direct rep=2 begin
+2026-06-01T13:35:15.301 direct rep=2 wall=2.3137334 spe=0.0180760421875
+2026-06-01T13:35:15.302 generated process rep=2 begin
+2026-06-01T13:35:22.545 generated process rep=2 wall=3.5879873 spe=0.02803115078125 over_direct=1.5507349723178998
+2026-06-01T13:35:22.545 direct rep=3 begin
+2026-06-01T13:35:27.230 direct rep=3 wall=2.3094515 spe=0.01804258984375
+2026-06-01T13:35:27.230 generated process rep=3 begin
+2026-06-01T13:35:34.543 generated process rep=3 wall=3.6128871 spe=0.02822568046875 over_direct=1.564391848021056
+2026-06-01T13:35:34.544 csv=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\diagnostics\runs\20260601_no_funcwrapper_processalgos_vs_bespoke\no_funcwrapper_processalgos_vs_bespoke.csv

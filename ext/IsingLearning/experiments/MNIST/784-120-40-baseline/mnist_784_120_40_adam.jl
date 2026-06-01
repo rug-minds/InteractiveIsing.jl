@@ -525,10 +525,10 @@ function input_field_free_phase_algorithm(layer::L) where {L<:IsingLearning.Laye
         @alias dynamics = dynamics_algorithm
 
         # Fold the image into the worker-local input field, then relax once.
-        II.resetstate!(dynamics.model)
+        IsingLearning.initstate!(dynamics.model)
         ApplyProjectedInputFieldRef!(dynamics.model, input_hidden_w, x, input_pattern)
         model = @repeat free_steps dynamics()
-        IsingLearning.copyvector!(equilibrium_state, @transform(graph -> II.state(graph), model))
+        IsingLearning.CopyGraphState!(equilibrium_state, model)
     end
 end
 
@@ -555,7 +555,7 @@ function input_field_nudged_phase_algorithm(layer::L) where {L<:IsingLearning.La
         ApplyTargetsRef!(dynamics.model, y)
         SetInputFieldClampingBeta!(dynamics.model, phase_beta)
         model = @repeat nudged_steps dynamics()
-        IsingLearning.copyvector!(nudged_state, @transform(graph -> II.state(graph), model))
+        IsingLearning.CopyGraphState!(nudged_state, model)
 
         # Reset clamping so the worker can be rerun without rebuilding state.
         SetInputFieldClampingBeta!(dynamics.model, 0f0)
@@ -763,10 +763,10 @@ function input_field_validation_algorithm(layer::L) where {L<:IsingLearning.Laye
         @alias dynamics = dynamics_algorithm
 
         # Validation is a free phase plus worker-local statistics; no source graph state is mutated.
-        II.resetstate!(dynamics.model)
+        IsingLearning.initstate!(dynamics.model)
         ApplyProjectedInputFieldRef!(dynamics.model, input_hidden_w, x, input_pattern)
         model = @repeat relaxation_steps dynamics()
-        IsingLearning.copyvector!(equilibrium_state, @transform(graph -> II.state(graph), model))
+        IsingLearning.CopyGraphState!(equilibrium_state, model)
         AccumulateInputFieldValidationStatsRef!(
             y,
             equilibrium_state,

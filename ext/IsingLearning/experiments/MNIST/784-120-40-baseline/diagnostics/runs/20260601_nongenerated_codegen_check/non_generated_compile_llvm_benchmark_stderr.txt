@@ -1,0 +1,4 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+Warning: detected a stack overflow; program state may be corrupted, so further execution might be unreliable.
+ERROR: LoadError: StackOverflowError:
+in expression starting at C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\diagnostics\runs\20260601_nongenerated_codegen_check\non_generated_compile_llvm_benchmark.jl:152

@@ -1,0 +1,32 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+2026-06-01T13:12:08 begin runtimegenerated runprocessinline repeats threads=32 warmups=3 reps=10 sweeps=500.0
+2026-06-01T13:12:27 warmup iter=1 runprocessinline begin
+2026-06-01T13:13:28 warmup iter=1 runprocessinline end wall=61.0525814
+2026-06-01T13:13:28 warmup iter=2 runprocessinline begin
+2026-06-01T13:13:29 warmup iter=2 runprocessinline end wall=0.8594026
+2026-06-01T13:13:29 warmup iter=3 runprocessinline begin
+2026-06-01T13:13:30 warmup iter=3 runprocessinline end wall=0.8558067
+2026-06-01T13:13:30 timed iter=4 runprocessinline begin
+2026-06-01T13:13:30 timed iter=4 runprocessinline end wall=0.8430812
+2026-06-01T13:13:30 timed iter=5 runprocessinline begin
+2026-06-01T13:13:31 timed iter=5 runprocessinline end wall=0.8608629
+2026-06-01T13:13:31 timed iter=6 runprocessinline begin
+2026-06-01T13:13:32 timed iter=6 runprocessinline end wall=0.9502666
+2026-06-01T13:13:32 timed iter=7 runprocessinline begin
+2026-06-01T13:13:33 timed iter=7 runprocessinline end wall=0.9385006
+2026-06-01T13:13:33 timed iter=8 runprocessinline begin
+2026-06-01T13:13:34 timed iter=8 runprocessinline end wall=1.088714
+2026-06-01T13:13:34 timed iter=9 runprocessinline begin
+2026-06-01T13:13:35 timed iter=9 runprocessinline end wall=0.98906
+2026-06-01T13:13:35 timed iter=10 runprocessinline begin
+2026-06-01T13:13:36 timed iter=10 runprocessinline end wall=1.0145606
+2026-06-01T13:13:36 timed iter=11 runprocessinline begin
+2026-06-01T13:13:37 timed iter=11 runprocessinline end wall=1.1320101
+2026-06-01T13:13:37 timed iter=12 runprocessinline begin
+2026-06-01T13:13:38 timed iter=12 runprocessinline end wall=1.00471
+2026-06-01T13:13:38 timed iter=13 runprocessinline begin
+2026-06-01T13:13:39 timed iter=13 runprocessinline end wall=0.8626097
+2026-06-01T13:13:39 summary count=10 min=0.8430812 median=0.9696633 mean=0.9684375700000001 max=1.1320101
+2026-06-01T13:13:39 times=0.8430812,0.8608629,0.9502666,0.9385006,1.088714,0.98906,1.0145606,1.1320101,1.00471,0.8626097
+2026-06-01T13:13:39 closed
