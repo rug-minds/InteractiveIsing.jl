@@ -67,6 +67,15 @@ This is the package-local replacement for `@set pc._runtime = runtime`.
 end
 
 """
+    withruntime_if_changed(pc, runtime)
+
+Keep the existing `ProcessContext` when runtime globals are unchanged.
+"""
+@inline function withruntime_if_changed(pc::PC, runtime::R) where {PC<:ProcessContext, R<:NamedTuple}
+    return runtime === getglobals(pc) ? pc : (@inline withruntime(pc, runtime))
+end
+
+"""
     withsubcontexts(pc, subcontexts)
 
 Return an immutable `ProcessContext` rebuild with updated subcontexts. This is
@@ -308,8 +317,12 @@ end
         old_subcontexts = @inline get_subcontexts(pc)
         subcontext = @inline getproperty(old_subcontexts, $(QuoteNode(name)))
         new_data = @inline merge(getdata(subcontext), args)
-        @inline withdata(subcontext, new_data)
-        return pc
+        new_subcontext = @inline withdata(subcontext, new_data)
+        new_subcontexts = @inline replace_namedtuple_field(old_subcontexts, Val($(QuoteNode(name))), new_subcontext)
+        return @inline withsubcontexts(pc, new_subcontexts)
+        # Mutable SubContext path kept for comparison:
+        # @inline setfield!(subcontext, :data, new_data)
+        # return pc
     end
 end
 
@@ -342,6 +355,8 @@ Args should name subcontext they want to replace, check if all names are in the 
         new_subcontexts = @inline get_subcontexts(pc)
         $(replace_exprs...)
         return @inline withsubcontexts(pc, new_subcontexts)
+        # Accessors path kept for comparison:
+        # return @inline @set pc.subcontexts = new_subcontexts
     end
 end
 

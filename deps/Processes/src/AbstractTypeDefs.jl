@@ -58,8 +58,9 @@ that plan is resolved or initialized: root states, resolved options, registry,
 stored context, initializers, and overrides. Reinitialization should replace
 this wrapper/lifecycle data without changing the type of the wrapped plan.
 """
-struct LoopAlgorithm{Plan, S, O, R, C, Inits, Overrides, id} <: AbstractLoopAlgorithm
+struct LoopAlgorithm{Plan, RootStep, S, O, R, C, Inits, Overrides, id} <: AbstractLoopAlgorithm
     plan::Plan
+    step::RootStep
     states::S
     options::O
     reg::R
@@ -169,6 +170,8 @@ static_findkey(r::AbstractRegistry, obj) = error("static_findkey not implemented
 #### Processloop type
 abstract type FunctionType end
 struct Generated <: FunctionType end
+struct GeneratedOld <: FunctionType end
+struct RuntimeGenerated <: FunctionType end
 struct NonGenerated <: FunctionType end
 
 struct Resuming{isresuming} end
@@ -180,11 +183,15 @@ The type of loop to use for a process. This is determined by the system and can 
 # else
 #     Generated()
 # end
+<<<<<<< HEAD
 <<<<<<< Updated upstream
 const sys_looptype = NonGenerated()
 =======
 const sys_looptype = GeneratedOld()
 >>>>>>> Stashed changes
+=======
+const sys_looptype = RuntimeGenerated()
+>>>>>>> dd76df5866ee80a653a55c7e8018cf6c4244487a
     
 
 #### Type Stabliity of steps

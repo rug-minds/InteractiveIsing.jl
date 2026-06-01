@@ -4,6 +4,7 @@ Pkg.activate(joinpath(@__DIR__, ".."))
 using Printf
 using Test
 using Processes
+using RuntimeGeneratedFunctions
 
 const SCALAR_DEPENDENCY_STEPS = parse(Int, get(ENV, "SCALAR_DEPENDENCY_STEPS", "100000"))
 const SCALAR_DEPENDENCY_TRIALS = parse(Int, get(ENV, "SCALAR_DEPENDENCY_TRIALS", "100"))
@@ -248,37 +249,17 @@ function scalar_dependency_plain(steps::I) where {I<:Integer}
     )
 end
 
-"""Run the dependency workload through the direct plan entrypoint."""
-function scalar_dependency_direct_plan_loop(process::IP) where {IP<:Processes.InlineProcess}
-    algo = Processes.getalgo(process)
-    lifetime = Processes.lifetime(process)
-    plan = Processes.getplan(algo)
-    wiring = Processes.getwiring(plan)
-    context = Processes.context(process)
-
-    context = Processes._step!(
-        plan,
-        context,
-        wiring,
-        Processes.Namespace{nothing}(),
-        process,
-        lifetime,
-        Processes.Unstable(),
-    )
-    Processes.inc!(process)
+"""Run the dependency workload through the resolved root-step entrypoint."""
+Base.@constprop :aggressive function scalar_dependency_direct_plan_loop(process::IP) where {IP<:Processes.InlineProcess}
+    algo = @inline Processes.getalgo(process)
+    lifetime = @inline Processes.lifetime(process)
+    context = @inline Processes._merge_runtime_inputs(Processes.context(process), (;))
+    generated_plan_step = @inline Processes.get_step(algo)
 
     for _ in Processes.loopidx(process):Processes.repeats(lifetime)
-        context = Processes._step!(
-            plan,
-            context,
-            wiring,
-            Processes.Namespace{nothing}(),
-            process,
-            lifetime,
-            Processes.Stable(),
-        )
-        Processes.inc!(process)
-        Processes.breakcondition(lifetime, process, context) && break
+        context = @inline generated_plan_step(algo, context, process, lifetime)
+        @inline Processes.inc!(process)
+        @inline Processes.breakcondition(lifetime, process, context) && break
     end
 
     return context
