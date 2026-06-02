@@ -22,24 +22,23 @@ end
     hamiltonian = init!(hamiltonian, model)
     proposer = get_proposer(model)
 
-    returnargs = (;model, hamiltonian, proposer, rng)
+    returnargs = (;model, hamiltonian, proposer, rng, T = temp(model))
     return returnargs
 end
 
 # @inline function (::Metropolis)(context::As) where As
 @inline function Processes.step!(metro::Metropolis, context::C) where {C}
-    (;rng, model, hamiltonian, proposer) = context
+    (;rng, model, hamiltonian, proposer, T) = context
 
+    floattype = eltype(model)
     proposal = @inline rand(rng, proposer)
-    Ttype = eltype(model)
-    T = Ttype(temp(model))
 
    
     ΔE = @inline calculate(ΔH(), hamiltonian, model, proposal)
-    if (@inline (ΔE <= zero(Ttype) || rand(rng, Ttype) < exp(-ΔE/T)))
+    if (@inline (ΔE <= zero(floattype) || rand(rng, floattype) < exp(-ΔE/T)))
         proposal = @inline accept(proposer, proposal)
     end
 
     @inline update!(metro, hamiltonian, model, proposal)
-    return (;proposal, ΔE, T)
+    return (;proposal, ΔE)
 end
