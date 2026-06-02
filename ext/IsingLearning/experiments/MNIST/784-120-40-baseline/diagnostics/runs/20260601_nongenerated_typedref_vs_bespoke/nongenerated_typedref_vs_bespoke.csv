@@ -1,0 +1,4 @@
+timestamp,repeat,threads,batchsize,sweeps,looptype,direct_seconds,direct_seconds_per_example,process_warmup_seconds,process_seconds,process_seconds_per_example,process_over_bespoke
+2026-06-02T00:07:50,1,32,128,500.0,IsingLearning.InteractiveIsing.Processes.NonGenerated(),2.3110662,0.0180552046875,7.4377849,2.3614924,0.018449159375,1.0218194528568676
+2026-06-02T00:08:00,2,32,128,500.0,IsingLearning.InteractiveIsing.Processes.NonGenerated(),2.2900816,0.0178912625,2.3597876,2.3664516,0.018487903125,1.033348156677037
+2026-06-02T00:08:09,3,32,128,500.0,IsingLearning.InteractiveIsing.Processes.NonGenerated(),2.3682765,0.01850216015625,2.3711116,2.3692389,0.01850967890625,1.000406371468872

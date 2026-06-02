@@ -283,6 +283,33 @@ function main()
         ))
     end
 
+    if stage == "worker_loop_repeat2" || stage == "all"
+        worker_algo = Processes.getalgo(probe.worker)
+        Processes.reset!(probe.worker)
+        timed("loop(worker, worker_algo, Repeat(2), NonGenerated)", () -> Processes.loop(
+            probe.worker,
+            worker_algo,
+            Processes.context(probe.worker),
+            Processes.Repeat(2),
+            (; phase_beta = probe.config.β),
+            Processes.Resuming{false}(),
+            Processes.NonGenerated(),
+        ))
+    end
+
+    if stage == "worker_loop_indefinite" || stage == "all"
+        worker_algo = Processes.getalgo(probe.worker)
+        timed("loop(worker, worker_algo, Indefinite, NonGenerated)", () -> Processes.loop(
+            probe.worker,
+            worker_algo,
+            Processes.context(probe.worker),
+            Processes.Indefinite(),
+            (; phase_beta = probe.config.β),
+            Processes.Resuming{false}(),
+            Processes.NonGenerated(),
+        ))
+    end
+
     if stage == "manual_untyped" || stage == "all"
         worker_algo = Processes.getalgo(probe.worker)
         timed("manual_repeat_loop_untyped", () -> manual_repeat_loop_untyped(

@@ -1,0 +1,4 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+Precompiling packages...
+  23545.9 ms  ✓ IsingLearning
+  1 dependency successfully precompiled in 26 seconds. 557 already precompiled.
