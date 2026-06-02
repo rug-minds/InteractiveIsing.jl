@@ -124,8 +124,6 @@ function Processes.init(algorithm::LayerwiseMC, context)
         subcontexts,
         scheduler_context,
         spec_indices,
-        accepted = 0,
-        attempted = 0,
     )
 end
 

@@ -67,6 +67,12 @@ end
     return FlipProposal{statetype(proposer)}(i, oldstate, newstate, layer_idx, false)
 end
 
+"""Return a non-accepted diagnostic proposal for steps with no drawable event."""
+@inline function _inactive_flip_proposal(proposer::P) where {P}
+    SType = statetype(proposer)
+    return FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
+end
+
 @inline function _rate_from_delta(r0::T, ΔE::T, t::T) where {T}
     if !(t > zero(T))
         # At T=0, only accept transitions that lower energy
@@ -218,23 +224,12 @@ end
     rng = Random.MersenneTwister()
     hamiltonian = init!(hamiltonian, model)
     proposer = get_proposer(model)
-    proposal = @inline rand(rng, proposer)
 
     T = eltype(model)
-    t = T(temp(model))
-    lasttemp = Ref(t)
-    lastdt = Ref(zero(T))
     time = Ref(zero(T))
     active_count = Ref(@inline _kinetic_active_count(model))
-    j = 0
-    ΔE = zero(T)
-    dt = zero(T)
-    accepted = 0
-    attempted = 0
-    totalrate = T(algo.r0) * T(active_count[])
 
-    returnargs = (;model, hamiltonian, proposer, rng, proposal, lasttemp, lastdt,
-        time, active_count, j, ΔE, dt, totalrate, accepted, attempted)
+    returnargs = (;model, hamiltonian, proposer, rng, time, active_count)
     return returnargs
 end
 
@@ -243,7 +238,6 @@ end
 
     T = eltype(model)
     t = T(temp(model))
-    context.lasttemp[] = t
 
     if @inline consume_changed!(model)
         context.active_count[] = @inline _kinetic_active_count(model)
@@ -251,11 +245,12 @@ end
 
     totalrate = T(kinetic.r0) * T(context.active_count[])
     if !(totalrate > zero(T)) || !isfinite(totalrate)
-        context.lastdt[] = zero(T)
+        dt = zero(T)
         yield()
-        return (;j = 0, ΔE = zero(T), dt = context.lastdt[], totalrate = zero(T),
-            proposal = context.proposal, kmc_time = context.time[], accepted = context.accepted,
-            attempted = context.attempted + 1)
+        proposal = @inline _inactive_flip_proposal(proposer)
+        return (; j = 0, ΔE = zero(T), dt, totalrate = zero(T),
+            proposal, kmc_time = context.time[],
+            accepted = 0, attempted = 1)
     end
 
     proposal = @inline rand(rng, proposer)
@@ -268,10 +263,8 @@ end
     end
 
     dt = -log(max(rand(rng, T), eps(T))) / totalrate
-    context.lastdt[] = dt
     context.time[] += dt
 
     return (;j = at_idx(proposal), ΔE, dt, totalrate, proposal,
-        kmc_time = context.time[], accepted = context.accepted + Int(accept_event),
-        attempted = context.attempted + 1)
+        kmc_time = context.time[], accepted = Int(accept_event), attempted = 1)
 end

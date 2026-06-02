@@ -144,17 +144,6 @@ DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
     block_idxs = Vector{Int}(undef, min(nstates_model, max(1, block_size_ref[])))
     block_shuffle_position = Ref(length(active_spins) + 1)
 
-    proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
-    ΔE = zero(SType)
-    accepted = 0
-    attempted = 0
-    T = temp(model)
-    η = max(stepsize[], eps(SType))
-    σ = zero(SType)
-    acceptance_rate = zero(SType)
-    gradient_max = zero(SType)
-    gradient_rms = zero(SType)
-    reflected_fraction = zero(SType)
     schedule_position = Ref(0)
     schedule_length = Ref(0)
     schedule_accepted = Ref(false)
@@ -165,9 +154,8 @@ DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
     return (;model, hamiltonian, rng, active_index_set, active_spins, layer_views, stepsize,
         max_drift_fraction, block_size_ref, group_steps_ref, adjusted, dH_prealloc,
         derivatives, old_vals, new_vals, layer_idxs, block_idxs, block_shuffle_position,
-        proposal, ΔE, accepted, attempted, acceptance_rate, T, η,
-        σ, gradient_max, gradient_rms, reflected_fraction, schedule_position,
-        schedule_length, schedule_accepted, schedule_ΔE, gradient_max_cache, gradient_sumsq_cache)
+        schedule_position, schedule_length, schedule_accepted, schedule_ΔE,
+        gradient_max_cache, gradient_sumsq_cache)
 end
 
 @inline function Processes.init(langevin::DynamicBlockLangevin{MaxBlockSize,Adjusted}, context::Cont) where {MaxBlockSize,Adjusted,Cont}
@@ -203,17 +191,6 @@ end
     block_idxs = Vector{Int}(undef, min(nstates_model, MaxBlockSize))
     block_shuffle_position = Ref(length(active_spins) + 1)
 
-    proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
-    ΔE = zero(SType)
-    accepted = 0
-    attempted = 0
-    T = temp(model)
-    η = max(stepsize[], eps(SType))
-    σ = zero(SType)
-    acceptance_rate = zero(SType)
-    gradient_max = zero(SType)
-    gradient_rms = zero(SType)
-    reflected_fraction = zero(SType)
     schedule_position = Ref(0)
     schedule_length = Ref(0)
     schedule_accepted = Ref(false)
@@ -224,9 +201,8 @@ end
     return (;model, hamiltonian, rng, active_index_set, active_spins, layer_views, stepsize,
         max_drift_fraction, max_blocksize, group_steps_ref, adjusted, dH_prealloc,
         derivatives, old_vals, new_vals, layer_idxs, block_idxs, block_shuffle_position,
-        proposal, ΔE, accepted, attempted, acceptance_rate, T, η,
-        σ, gradient_max, gradient_rms, reflected_fraction, schedule_position,
-        schedule_length, schedule_accepted, schedule_ΔE, gradient_max_cache, gradient_sumsq_cache)
+        schedule_position, schedule_length, schedule_accepted, schedule_ΔE,
+        gradient_max_cache, gradient_sumsq_cache)
 end
 
 @inline update!(::BlockLangevin, hterm, model::AbstractIsingGraph, proposal::AbstractProposal) = update!(Metropolis(), hterm, model, proposal)

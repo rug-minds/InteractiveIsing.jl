@@ -282,12 +282,6 @@ end
     SType = eltype(model)
     t = SType(temp(model))
     events = _KMCEventTable(model, active_spins, SType(kinetic.r0))
-    proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
-    ΔE = zero(SType)
-    dt = zero(SType)
-    totalrate = zero(SType)
-    event_index = 0
-    spin_idx = 0
     time = Ref(zero(SType))
     lasttemp = Ref(t)
     steps_since_refresh = Ref(0)
@@ -295,8 +289,7 @@ end
     init_context = (;model, active_index_set, adj, hamiltonian, proposer, rng)
     @inline _kmc_rebuild_rates!(events, kinetic, init_context, t)
 
-    return (;init_context..., events, proposal, ΔE, dt, totalrate, event_index,
-        spin_idx, time, lasttemp, steps_since_refresh, T = t)
+    return (;init_context..., events, time, lasttemp, steps_since_refresh)
 end
 
 @inline function Processes.step!(kinetic::KineticMonteCarloLoop, context::C) where {C}
@@ -323,7 +316,7 @@ end
     event_index, totalrate = @inline _kmc_draw_event(rng, events)
     if event_index == 0
         dt = zero(SType)
-        proposal = context.proposal
+        proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
         yield()
         return (;proposal, ΔE = zero(SType), dt, totalrate = zero(SType),
             event_index, spin_idx = 0, kmc_time = context.time[], T = t)

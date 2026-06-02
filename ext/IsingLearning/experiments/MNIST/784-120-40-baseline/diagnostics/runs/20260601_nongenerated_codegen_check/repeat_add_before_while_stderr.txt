@@ -1,0 +1,565 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+Precompiling packages...
+Info Given IsingLearning was explicitly requested, output will be shown live [0K
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=2
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=2
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=2
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=2
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Indefinite] enter
+[0K[Processes.NonGenerated Indefinite] before before_while
+[0K[Processes.NonGenerated Indefinite] after before_while
+[0K[Processes.NonGenerated Indefinite] before getplan
+[0K[Processes.NonGenerated Indefinite] after getplan
+[0K[Processes.NonGenerated Indefinite] before getwiring
+[0K[Processes.NonGenerated Indefinite] after getwiring
+[0K[Processes.NonGenerated Indefinite] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Indefinite] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Indefinite] before initial _step!
+[0K[Processes.NonGenerated Indefinite] after initial _step!
+[0K[Processes.NonGenerated Indefinite] before initial tick!
+[0K[Processes.NonGenerated Indefinite] after initial tick!
+[0K[Processes.NonGenerated Indefinite] before initial inc!
+[0K[Processes.NonGenerated Indefinite] after initial inc!
+[0K[Processes.NonGenerated Indefinite] before while
+[0K[Processes.NonGenerated Indefinite] while before _step!
+[0K[Processes.NonGenerated Indefinite] while after _step!
+[0K[Processes.NonGenerated Indefinite] while after context assignment
+[0K[Processes.NonGenerated Indefinite] while before tick!
+[0K[Processes.NonGenerated Indefinite] while after tick!
+[0K[Processes.NonGenerated Indefinite] while before inc!
+[0K[Processes.NonGenerated Indefinite] while after inc!
+[0K[Processes.NonGenerated Indefinite] while before breakcondition
+[0K[Processes.NonGenerated Indefinite] while breakcondition true
+[0K[Processes.NonGenerated Indefinite] before after_while
+[0K[Processes.NonGenerated Indefinite] after after_while
+[0K[Processes.NonGenerated Indefinite] enter
+[0K[Processes.NonGenerated Indefinite] before before_while
+[0K[Processes.NonGenerated Indefinite] after before_while
+[0K[Processes.NonGenerated Indefinite] before getplan
+[0K[Processes.NonGenerated Indefinite] after getplan
+[0K[Processes.NonGenerated Indefinite] before getwiring
+[0K[Processes.NonGenerated Indefinite] after getwiring
+[0K[Processes.NonGenerated Indefinite] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Indefinite] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Indefinite] before initial _step!
+[0K[Processes.NonGenerated Indefinite] after initial _step!
+[0K[Processes.NonGenerated Indefinite] before initial tick!
+[0K[Processes.NonGenerated Indefinite] after initial tick!
+[0K[Processes.NonGenerated Indefinite] before initial inc!
+[0K[Processes.NonGenerated Indefinite] after initial inc!
+[0K[Processes.NonGenerated Indefinite] before while
+[0K[Processes.NonGenerated Indefinite] while before _step!
+[0K[Processes.NonGenerated Indefinite] while after _step!
+[0K[Processes.NonGenerated Indefinite] while after context assignment
+[0K[Processes.NonGenerated Indefinite] while before tick!
+[0K[Processes.NonGenerated Indefinite] while after tick!
+[0K[Processes.NonGenerated Indefinite] while before inc!
+[0K[Processes.NonGenerated Indefinite] while after inc!
+[0K[Processes.NonGenerated Indefinite] while before breakcondition
+[0K[Processes.NonGenerated Indefinite] while breakcondition true
+[0K[Processes.NonGenerated Indefinite] before after_while
+[0K[Processes.NonGenerated Indefinite] after after_while
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=3
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 after _step!
+[0K[Processes.NonGenerated Repeat minimal] for 3 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 3 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=2
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=2
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=2
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=2
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=2
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 2 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+[0K[Processes.NonGenerated Repeat minimal] enter
+[0K[Processes.NonGenerated Repeat minimal] before isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] after isresolved assert
+[0K[Processes.NonGenerated Repeat minimal] before before_while
+[0K[Processes.NonGenerated Repeat minimal] after before_while
+[0K[Processes.NonGenerated Repeat minimal] before getplan
+[0K[Processes.NonGenerated Repeat minimal] after getplan
+[0K[Processes.NonGenerated Repeat minimal] before getwiring
+[0K[Processes.NonGenerated Repeat minimal] after getwiring
+[0K[Processes.NonGenerated Repeat minimal] before _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] after _merge_runtime_inputs
+[0K[Processes.NonGenerated Repeat minimal] before repeats
+[0K[Processes.NonGenerated Repeat minimal] after repeats end=1
+[0K[Processes.NonGenerated Repeat minimal] for 1 before _step!
+[0K[Processes.NonGenerated Repeat minimal] for 1 after _step!
+[0K[Processes.NonGenerated Repeat minimal] return stablecontext
+ 101898.7 ms  ✓ IsingLearning
+  1 dependency successfully precompiled in 105 seconds. 557 already precompiled.
+  1 dependency had output during precompilation:
+┌ IsingLearning
+│  [Output was shown above]
+└  

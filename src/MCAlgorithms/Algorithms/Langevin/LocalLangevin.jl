@@ -207,34 +207,20 @@ end
 
     hamiltonian = init!(hamiltonian, model)
     dH_prealloc = zeros(eltype(model), InteractiveIsing.nstates(model))
-    T = temp(model)
     SType = eltype(model)
     stepsize_default = SType(langevin.stepsize)
     stepsize = Ref(SType(@inline _langevin_unwrap_ref(@inline _langevin_context_value(context, :stepsize, stepsize_default))))
     max_drift_fraction = Ref(SType(langevin.max_drift_fraction))
     group_steps_ref = Ref(langevin.group_steps)
     adjusted = Adjusted
-    proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
-    ΔE = zero(SType)
-    accepted = 0
-    attempted = 0
-    acceptance_rate = zero(SType)
-    gradient_max = zero(SType)
-    gradient_rms = zero(SType)
-    reflected_fraction = zero(SType)
     sweep_position = Ref(0)
     sweep_order = Order === :random ? collect(1:length(active_spins)) : Int[]
     sweep_offset = Ref(0)
     group_remaining = Ref(0)
 
-    η = max(stepsize[], eps(SType))
-    σ = zero(SType)
-
     return (;model, hamiltonian, rng, dH_prealloc, active_index_set, active_spins,
                 layer_views, stepsize, max_drift_fraction, group_steps_ref,
-                adjusted, proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
-                gradient_max, gradient_rms, reflected_fraction,
-                sweep_position, sweep_order, sweep_offset, group_remaining)
+                adjusted, sweep_position, sweep_order, sweep_offset, group_remaining)
 end
 
 @inline update!(::LocalLangevin, hterm, model::AbstractIsingGraph, proposal::FlipProposal) = update!(Metropolis(), hterm, model, proposal)
