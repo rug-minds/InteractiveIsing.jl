@@ -11,7 +11,7 @@ end
 
 @inline MetropolisTracked() = Metropolis()
 
-@inline function Processes.init(::Metropolis, context::Cont) where Cont
+@inline function Processes.init(::Metropolis, context::Cont) where {Cont}
     # @show typeof(context)
     (;model) = context
 
@@ -21,21 +21,18 @@ end
 
     hamiltonian = init!(hamiltonian, model)
     proposer = get_proposer(model)
-    proposal = @inline rand(rng, proposer)
 
-    ΔE = zero(eltype(model))
-    T = temp(model)
-
-    returnargs = (;model, hamiltonian, proposer, rng, proposal, ΔE, T)
+    returnargs = (;model, hamiltonian, proposer, rng)
     return returnargs
 end
 
 # @inline function (::Metropolis)(context::As) where As
 @inline function Processes.step!(metro::Metropolis, context::C) where {C}
-    (;rng, model, hamiltonian, proposer, proposal, T) = context
+    (;rng, model, hamiltonian, proposer) = context
 
     proposal = @inline rand(rng, proposer)
     Ttype = eltype(model)
+    T = Ttype(temp(model))
 
    
     ΔE = @inline calculate(ΔH(), hamiltonian, model, proposal)
