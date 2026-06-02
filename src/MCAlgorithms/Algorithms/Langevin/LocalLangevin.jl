@@ -595,10 +595,11 @@ end
 
     @inline _advance_local_langevin_cursor!(langevin, context, n)
 
-    attempted = 1
     acceptance_rate = SType(accepted)
     gradient_rms = abs(derivative)
     reflected_fraction = SType(reflected)
-    return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
+   
+    return (;proposal, ΔE, accepted, acceptance_rate, T, η, σ,
         gradient_max, gradient_rms, reflected_fraction)
+    # return nothing
 end
