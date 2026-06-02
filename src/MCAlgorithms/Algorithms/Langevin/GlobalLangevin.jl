@@ -52,7 +52,6 @@ GlobalLangevin(adjusted::Bool) = GlobalLangevin(; adjusted)
     active_index_set = index_set(model)
     active_spins = collect(@inline _active_spin_vector(active_index_set))
     layer_views = layers(model)
-    T = temp(model)
     SType = eltype(model)
     stepsize_default = SType(langevin.stepsize)
     stepsize = Ref(SType(_langevin_unwrap_ref(_langevin_context_value(context, :stepsize, stepsize_default))))
@@ -60,13 +59,6 @@ GlobalLangevin(adjusted::Bool) = GlobalLangevin(; adjusted)
     group_steps_ref = Ref(langevin.group_steps)
     adjusted_ref = Ref(langevin.adjusted)
 
-    proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
-    ΔE = zero(SType)
-    accepted = 0
-    attempted = 0
-    gradient_max = zero(SType)
-    gradient_rms = zero(SType)
-    reflected_fraction = zero(SType)
     old_vals = Vector{SType}(undef, nstates_model)
     new_vals = Vector{SType}(undef, nstates_model)
     layer_idxs = Vector{Int}(undef, nstates_model)
@@ -78,14 +70,9 @@ GlobalLangevin(adjusted::Bool) = GlobalLangevin(; adjusted)
     gradient_max_cache = Ref(zero(SType))
     gradient_sumsq_cache = Ref(zero(SType))
 
-    η = max(stepsize[], eps(SType))
-    σ = zero(SType)
-
     return (;model, hamiltonian, rng, dH_prealloc, active_index_set, active_spins,
                 layer_views, stepsize, max_drift_fraction, group_steps_ref,
-                adjusted_ref, proposal, ΔE, accepted, attempted, T, η, σ,
-                gradient_max, gradient_rms, reflected_fraction,
-                old_vals, new_vals, layer_idxs,
+                adjusted_ref, old_vals, new_vals, layer_idxs,
                 schedule_idxs, schedule_position, schedule_length,
                 schedule_accepted, schedule_ΔE,
                 gradient_max_cache, gradient_sumsq_cache)

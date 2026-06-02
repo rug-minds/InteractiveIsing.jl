@@ -44,7 +44,9 @@ include("Images.jl")
 include("Windows/Windows.jl")
 include("Topology/TopologyDisplayExtensions.jl")
 
-include("Precompile.jl")
+# Diagnostic local edit: disable InteractiveIsing precompile workload while
+# isolating `Processes.loop(::Repeat, ::NonGenerated)` codegen behavior.
+# include("Precompile.jl")
 
 # include("Barebones.jl")
 

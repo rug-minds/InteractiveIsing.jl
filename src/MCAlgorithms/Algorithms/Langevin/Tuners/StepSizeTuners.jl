@@ -66,9 +66,8 @@ end
 
 @inline function Processes.init(tuner::AcceptanceRateStepSizeTuner, context::Cont) where {Cont}
     stepsize = get(context, :stepsize, Ref(tuner.min_stepsize))
-    acceptance_rate = get(context, :acceptance_rate, zero(tuner.target))
     adjusted = get(context, :adjusted, true)
-    return (;stepsize, acceptance_rate, adjusted)
+    return (;stepsize, adjusted)
 end
 
 @inline function Processes.step!(tuner::AcceptanceRateStepSizeTuner, context::C) where {C}
@@ -86,8 +85,7 @@ end
 
 @inline function Processes.init(tuner::DriftStepSizeTuner, context::Cont) where {Cont}
     stepsize = get(context, :stepsize, Ref(tuner.min_stepsize))
-    gradient_max = get(context, :gradient_max, zero(tuner.target_drift))
-    return (;stepsize, gradient_max)
+    return (;stepsize)
 end
 
 @inline function Processes.step!(tuner::DriftStepSizeTuner, context::C) where {C}

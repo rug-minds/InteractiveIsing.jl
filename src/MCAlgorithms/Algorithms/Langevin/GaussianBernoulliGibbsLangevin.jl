@@ -216,10 +216,6 @@ function Processes.init(algorithm::GaussianBernoulliGibbsLangevin, context)
         layer_idxs[pos] = hterm.hidden_layer
     end
 
-    proposal = MultiSpinProposal(Int[], SType[], SType[], Int[], false)
-    accepted = 0
-    attempted = 0
-    acceptance_rate = zero(SType)
     step_idx_ref = Ref(0)
 
     return (;
@@ -248,10 +244,6 @@ function Processes.init(algorithm::GaussianBernoulliGibbsLangevin, context)
         layer_idxs,
         from_vals,
         to_vals,
-        proposal,
-        accepted,
-        attempted,
-        acceptance_rate,
         step_idx_ref,
     )
 end
