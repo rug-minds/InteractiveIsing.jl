@@ -54,11 +54,11 @@ const Injector = ContextInjector
 
 Processes.init(inj::ContextInjector, ::NamedTuple = (;)) = _context_injector_state(inj)
 
-function Processes.init(inj::ContextInjector, context::ProcessContext)
+function Processes.init(inj::ContextInjector, context::AbstractContext)
     return replace(context, NamedTuple{(context_injector_key,)}((_context_injector_state(inj),)))
 end
 
-@inline Processes.cleanup(::ContextInjector, context::ProcessContext) = context
+@inline Processes.cleanup(::ContextInjector, context::AbstractContext) = context
 
 @inline Processes.step!(inj::ContextInjector, context::C) where {C<:ProcessContext} =
     Processes.step!(inj, context, Stable())
@@ -72,6 +72,12 @@ end
     _step_context_injector(inj, context)
 
 """Step the injector on the full process context even inside raw resolved plans."""
+@inline Processes._step!(inj::ContextInjector, context::C, runtimecontext::RC, ::Wiring{Tuple{}, Tuple{}}, ::Namespace{Name}, process::P, lifetime::LT, stability::S = Stable()) where {C<:ProcessContext, RC<:ProcessContext, Name, P<:AbstractProcess, LT<:Lifetime, S<:Stability} =
+    (Processes.step!(inj, context, stability), runtimecontext)
+
+@inline Processes._step!(inj::ContextInjector, context::C, runtimecontext::RC, ::Wiring, ::Namespace, process::P, lifetime::LT, stability::S = Stable()) where {C<:ProcessContext, RC<:ProcessContext, P<:AbstractProcess, LT<:Lifetime, S<:Stability} =
+    (Processes.step!(inj, context, stability), runtimecontext)
+
 @inline Processes._step!(inj::ContextInjector, context::C, ::Wiring{Tuple{}, Tuple{}}, ::Namespace{Name}, process::P, lifetime::LT, stability::S = Stable()) where {C<:ProcessContext, Name, P<:AbstractProcess, LT<:Lifetime, S<:Stability} =
     Processes.step!(inj, context, stability)
 
