@@ -34,8 +34,8 @@ function init(algos::LA, inputcontext::C, runtimecontext::RC) where {LA<:Abstrac
     registry = @inline getregistry(inputcontext)
     named_algos = @inline all_algos(registry)
 
-    context = @inline unrollreplace(inputcontext, named_algos) do context, named_algo # Recursively replace context
-        init(named_algo, context, runtimecontext)
+    context = @inline unrollreplace_withargs(inputcontext, named_algos; args = (runtimecontext,)) do context, named_algo, runtimecontext
+        @inline init(named_algo, context, runtimecontext)
     end
 
     return context
@@ -51,11 +51,11 @@ function cleanup(algos::LA, context::C, runtimecontext::RC) where {LA<:AbstractL
     registry = getregistry(context)
     named_algos = all_algos(registry)
 
-    for named_algo in named_algos
-        context, runtimecontext = @inline cleanup(named_algo, context, runtimecontext)
+    # Keep cleanup on the same statically unrolled path as init. A runtime loop
+    # over heterogeneous registered algorithms boxes the returned context tuple.
+    return @inline unrollreplace((context, runtimecontext), named_algos) do state, named_algo
+        @inline cleanup(named_algo, getfield(state, 1), getfield(state, 2))
     end
-    
-    return context, runtimecontext
 end
 
 
