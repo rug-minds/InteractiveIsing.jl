@@ -47,6 +47,7 @@ end
 
 _temperature_value(value::Real) = value
 _temperature_value(value::Base.RefValue{<:Real}) = value[]
+_temperature_value(value::Processes.InteractiveVar{<:Real}) = value[]
 _temperature_value(_) = nothing
 
 function _temperature_vars(sc)
@@ -68,6 +69,7 @@ function _process_context_temperature(process::Processes.AbstractProcess)
     for subcontext_name in reverse(propertynames(subcontexts))
         subcontext_name === :globals && continue
         subcontext_name === :_injector && continue
+        subcontext_name === :_exchange && continue
         vars = _temperature_vars(getproperty(subcontexts, subcontext_name))
         isempty(vars) && continue
         return _temperature_value(last(vars).second)
@@ -91,13 +93,14 @@ function _set_process_context_temperature!(process::Processes.AbstractProcess, v
     for subcontext_name in propertynames(subcontexts)
         subcontext_name === :globals && continue
         subcontext_name === :_injector && continue
+        subcontext_name === :_exchange && continue
 
         subcontext = getproperty(subcontexts, subcontext_name)
         for (varname, current) in _temperature_vars(subcontext)
-            if current isa Base.RefValue
+            if current isa Base.RefValue || current isa Processes.InteractiveVar
                 current[] = convert(typeof(current[]), value)
             elseif Processes.isinteractive(process)
-                Processes.interact!(process, Processes.Var(subcontext_name, varname) => value)
+                Processes.interact!(process, varname => value)
             elseif !Processes.isrunning(process)
                 converted = convert(typeof(current), value)
                 update = NamedTuple{(subcontext_name,)}((NamedTuple{(varname,)}((converted,)),))

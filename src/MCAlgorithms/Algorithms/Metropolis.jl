@@ -22,7 +22,8 @@ end
     hamiltonian = init!(hamiltonian, model)
     proposer = get_proposer(model)
 
-    returnargs = (;model, hamiltonian, proposer, rng, T = temp(model))
+    T = eltype(model)(temp(model))
+    returnargs = (;model, hamiltonian, proposer, rng, T)
     return returnargs
 end
 
@@ -35,7 +36,7 @@ end
 
    
     ΔE = @inline calculate(ΔH(), hamiltonian, model, proposal)
-    if (@inline (ΔE <= zero(floattype) || rand(rng, floattype) < exp(-ΔE/T)))
+    if (@inline (ΔE <= zero(floattype) || rand(rng, floattype) < exp(-ΔE / T)))
         proposal = @inline accept(proposer, proposal)
     end
 

@@ -51,6 +51,42 @@ function _mc_model_inits(func::F, g::G) where {F,G<:IsingGraph}
 end
 
 """
+    _mc_interactive_specs(func, g)
+
+Build `Processes.Interactive` lifecycle specs for temperature variables exposed
+by the prepared Monte Carlo subcontexts in `func`. Interactive graphs opt into
+this path through `g[:interactive] = true`.
+"""
+function _mc_interactive_specs(func::F, g::G) where {F,G<:IsingGraph}
+    Bool(get(g, :interactive, false)) || return ()
+
+    targets = _collect_ising_mc_targets(func)
+    isempty(targets) && return ()
+
+    graph_inputs = _mc_model_inits(func, g)
+    prepared_algo = Processes.init(
+        Processes.normalize_process_algo(deepcopy(func)),
+        graph_inputs...;
+        lifetime = Processes.Indefinite(),
+    )
+
+    interactive_specs = ()
+    subcontexts = Processes.get_subcontexts(Processes.context(prepared_algo))
+    registry = Processes.getregistry(prepared_algo)
+    for target in targets
+        for varname in (:T, :temp)
+            resolved_spec = only(Processes.resolve(registry, Processes.Interactive(target, varname)))
+            target_name = Processes.get_target(resolved_spec)
+            data = Processes.getdata(getproperty(subcontexts, target_name))
+            haskey(data, varname) || continue
+            interactive_specs = (interactive_specs..., Processes.Interactive(target, varname))
+            break
+        end
+    end
+    return interactive_specs
+end
+
+"""
     createProcess(g::IsingGraph, func=nothing, inputs...; allow_multiple=false, kwargs...)
 
 Create and run a process attached to `g`.
@@ -84,7 +120,7 @@ function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.de
     end
     
     func = deepcopy(func)
-    graph_inputs = _mc_model_inits(func, g)
+    graph_inputs = (_mc_model_inits(func, g)..., _mc_interactive_specs(func, g)...)
     # process = Process(func, Init(DestructureInput(), structure = g); lifetime)
     process = Process(func, graph_inputs..., inputs...; lifetime, repeats, repeat)
     

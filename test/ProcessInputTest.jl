@@ -252,6 +252,39 @@ using Random
     end
 end
 
+@testset "Interactive temperature vars" begin
+    g = IsingGraph(4, 4, Continuous(); precision = Float32)
+    g.addons[:interactive] = true
+
+    metro_proc = createProcess(g, Metropolis(); lifetime = 1)
+    wait(metro_proc)
+    metro_subcontexts = Processes.get_subcontexts(getcontext(metro_proc))
+    metro_key = only(filter(name -> name !== :globals, propertynames(metro_subcontexts)))
+    metro_T = getproperty(Processes.getdata(getproperty(metro_subcontexts, metro_key)), :T)
+    @test metro_T isa Processes.InteractiveVar{Float32}
+
+    local_proc = createProcess(g, LocalLangevin(); lifetime = 1)
+    wait(local_proc)
+    local_subcontexts = Processes.get_subcontexts(getcontext(local_proc))
+    local_key = only(filter(name -> name !== :globals, propertynames(local_subcontexts)))
+    local_T = getproperty(Processes.getdata(getproperty(local_subcontexts, local_key)), :T)
+    @test local_T isa Processes.InteractiveVar{Float32}
+
+    global_proc = createProcess(g, GlobalLangevin(); lifetime = 1)
+    wait(global_proc)
+    global_subcontexts = Processes.get_subcontexts(getcontext(global_proc))
+    global_key = only(filter(name -> name !== :globals, propertynames(global_subcontexts)))
+    global_T = getproperty(Processes.getdata(getproperty(global_subcontexts, global_key)), :T)
+    @test global_T isa Processes.InteractiveVar{Float32}
+
+    block_proc = createProcess(g, BlockLangevin(); lifetime = 1)
+    wait(block_proc)
+    block_subcontexts = Processes.get_subcontexts(getcontext(block_proc))
+    block_key = only(filter(name -> name !== :globals, propertynames(block_subcontexts)))
+    block_T = getproperty(Processes.getdata(getproperty(block_subcontexts, block_key)), :T)
+    @test block_T isa Processes.InteractiveVar{Float32}
+end
+
 @testset "Index Set API" begin
     toggled = ToggledIndexSet(1:2, 3:5)
     @test collect(InteractiveIsing.sampling_indices(toggled)) == [1, 2, 3, 4, 5]

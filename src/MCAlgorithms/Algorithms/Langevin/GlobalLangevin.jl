@@ -69,13 +69,14 @@ GlobalLangevin(adjusted::Bool) = GlobalLangevin(; adjusted)
     schedule_ΔE = Ref(zero(SType))
     gradient_max_cache = Ref(zero(SType))
     gradient_sumsq_cache = Ref(zero(SType))
+    T = SType(temp(model))
 
     return (;model, hamiltonian, rng, dH_prealloc, active_index_set, active_spins,
                 layer_views, stepsize, max_drift_fraction, group_steps_ref,
                 adjusted_ref, old_vals, new_vals, layer_idxs,
                 schedule_idxs, schedule_position, schedule_length,
                 schedule_accepted, schedule_ΔE,
-                gradient_max_cache, gradient_sumsq_cache)
+                gradient_max_cache, gradient_sumsq_cache, T)
 end
 
 @inline update!(::GlobalLangevin, hterm, model::AbstractIsingGraph, proposal::AbstractProposal) = update!(Metropolis(), hterm, model, proposal)
@@ -241,11 +242,10 @@ end
     (;hamiltonian, rng, model, dH_prealloc, layer_views, stepsize,
         max_drift_fraction, group_steps_ref, adjusted_ref, old_vals, new_vals,
         layer_idxs, schedule_idxs, schedule_position, schedule_length,
-        schedule_accepted, schedule_ΔE, gradient_max_cache, gradient_sumsq_cache) = context
+        schedule_accepted, schedule_ΔE, gradient_max_cache, gradient_sumsq_cache, T) = context
 
     SType = eltype(model)
     epsT = eps(SType)
-    T = temp(model)
     t = max(SType(T), zero(SType))
     η = max(stepsize[], epsT)
     drift_fraction = clamp(max_drift_fraction[], epsT, one(SType))
@@ -277,7 +277,7 @@ end
             acceptance_rate = one(SType)
             gradient_max = gradient_max_cache[]
             gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
-            return (;proposal, ΔE = schedule_ΔE[], accepted, attempted, acceptance_rate, T, η, σ,
+            return (;proposal, ΔE = schedule_ΔE[], accepted, attempted, acceptance_rate, η, σ,
                 refreshed_gradient = false, gradient_max, gradient_rms,
                 reflected_fraction = zero(SType))
         end
@@ -294,7 +294,7 @@ end
         σ = t > zero(SType) ? sqrt(SType(2) * η * t) : zero(SType)
         proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
         return (;proposal, ΔE = zero(SType), accepted = 0, attempted = 0,
-            acceptance_rate = zero(SType), T, η, σ, refreshed_gradient = false,
+            acceptance_rate = zero(SType), η, σ, refreshed_gradient = false,
             gradient_max = zero(SType), gradient_rms = zero(SType),
             reflected_fraction = zero(SType))
     end
@@ -394,7 +394,7 @@ end
         attempted = 1
         acceptance_rate = SType(accepted)
         gradient_rms = sqrt(gradient_sumsq / SType(n))
-        return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
+        return (;proposal, ΔE, accepted, attempted, acceptance_rate, η, σ,
             refreshed_gradient = true, gradient_max, gradient_rms,
             reflected_fraction = zero(SType))
     end
@@ -449,7 +449,7 @@ end
     gradient_max = gradient_max_cache[]
     gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
     reflected_fraction = SType(reflected)
-    return (;proposal, ΔE, accepted, attempted, acceptance_rate, T, η, σ,
+    return (;proposal, ΔE, accepted, attempted, acceptance_rate, η, σ,
         refreshed_gradient = refreshed, gradient_max, gradient_rms,
         reflected_fraction)
 end

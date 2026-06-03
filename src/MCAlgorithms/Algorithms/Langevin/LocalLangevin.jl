@@ -217,10 +217,11 @@ end
     sweep_order = Order === :random ? collect(1:length(active_spins)) : Int[]
     sweep_offset = Ref(0)
     group_remaining = Ref(0)
+    T = SType(temp(model))
 
     return (;model, hamiltonian, rng, dH_prealloc, active_index_set, active_spins,
                 layer_views, stepsize, max_drift_fraction, group_steps_ref,
-                adjusted, sweep_position, sweep_order, sweep_offset, group_remaining)
+                adjusted, sweep_position, sweep_order, sweep_offset, group_remaining, T)
 end
 
 @inline update!(::LocalLangevin, hterm, model::AbstractIsingGraph, proposal::FlipProposal) = update!(Metropolis(), hterm, model, proposal)
@@ -498,12 +499,11 @@ end
 
 @inline function Processes.step!(langevin::LocalLangevin{Order,Adjusted}, context::C) where {Order,Adjusted,C}
     (;hamiltonian, rng, model, dH_prealloc, layer_views, stepsize,
-        max_drift_fraction) = context
+        max_drift_fraction, T) = context
 
     SType = eltype(model)
     spins = @inline InteractiveIsing.graphstate(model)
     epsT = eps(SType)
-    T = @inline temp(model)
     t = max(SType(T), zero(SType))
     η = max(stepsize[], epsT)
     drift_fraction = clamp(max_drift_fraction[], epsT, one(SType))
@@ -599,7 +599,7 @@ end
     gradient_rms = abs(derivative)
     reflected_fraction = SType(reflected)
    
-    return (;proposal, ΔE, accepted, acceptance_rate, T, η, σ,
+    return (;proposal, ΔE, accepted, acceptance_rate, η, σ,
         gradient_max, gradient_rms, reflected_fraction)
     # return nothing
 end
