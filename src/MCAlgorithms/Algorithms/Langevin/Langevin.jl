@@ -1,4 +1,5 @@
 include("LocalLangevin.jl")
+include("VectorSpinLocalLangevin.jl")
 include("GlobalLangevin.jl")
 include("BlockLangevin.jl")
 include("GaussianBernoulliGibbsLangevin.jl")

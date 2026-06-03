@@ -19,7 +19,7 @@ Return the algorithm that currently defines the graph's UI-relevant process
 shape. Prefer the latest graph process when present, otherwise fall back to the
 graph default algorithm.
 """
-function _panel_source_algo(g::IsingGraph)
+function _panel_source_algo(g::AbstractSpinGraph)
     graph_processes = processes(g)
     if isempty(graph_processes)
         return g.default_algorithm
@@ -33,7 +33,7 @@ end
 Return whether the active graph algorithm tree contains a child whose algorithm
 type is a subtype of `target_type`.
 """
-function _panel_has_algo_type(g::IsingGraph, target_type::Type)
+function _panel_has_algo_type(g::AbstractSpinGraph, target_type::Type)
     for algo in _panel_process_algos(_panel_source_algo(g))
         Processes.algotype(algo) <: target_type && return true
     end
@@ -47,9 +47,9 @@ Return whether one optional simulation panel should be mounted for graph `g`.
 This may inspect either the current running process or the graph's default
 algorithm when no process exists yet.
 """
-@inline _panel_supported(g::IsingGraph, ::Val{panelkey}) where {panelkey} = true
-@inline _panel_supported(g::IsingGraph, ::Val{:interactive_variables}) = !isempty(interactivevars(g))
-@inline _panel_supported(g::IsingGraph, ::Val{:kinetic_time}) =
+@inline _panel_supported(g::AbstractSpinGraph, ::Val{panelkey}) where {panelkey} = true
+@inline _panel_supported(g::AbstractSpinGraph, ::Val{:interactive_variables}) = !isempty(interactivevars(g))
+@inline _panel_supported(g::AbstractSpinGraph, ::Val{:kinetic_time}) =
     !isnothing(_kinetic_time_snapshot(g)) || _panel_has_algo_type(g, KineticMC)
 
 """
@@ -146,7 +146,7 @@ function _interactive_process_slot(process::Processes.AbstractProcess, spec::Int
     return target_name, getproperty(data, spec.varname)
 end
 
-function _interactive_prepared_value(g::IsingGraph, spec::InteractiveGraphVarSpec)
+function _interactive_prepared_value(g::G, spec::InteractiveGraphVarSpec) where {G<:AbstractSpinGraph}
     func = deepcopy(g.default_algorithm)
     graph_inputs = _mc_model_inits(func, g)
     prepared = Processes.init(Processes.normalize_process_algo(func), graph_inputs...; lifetime = Processes.Indefinite())
@@ -155,7 +155,7 @@ function _interactive_prepared_value(g::IsingGraph, spec::InteractiveGraphVarSpe
     return _interactive_numeric_value(last(data))
 end
 
-function _interactive_graph_var_value(g::IsingGraph, spec::InteractiveGraphVarSpec)
+function _interactive_graph_var_value(g::G, spec::InteractiveGraphVarSpec) where {G<:AbstractSpinGraph}
     for process in reverse(processes(g))
         slot = _interactive_process_slot(process, spec)
         isnothing(slot) && continue
@@ -173,7 +173,7 @@ function _interactive_graph_var_value(g::IsingGraph, spec::InteractiveGraphVarSp
     return value
 end
 
-function _set_graph_interactive_var!(g::IsingGraph, spec::InteractiveGraphVarSpec, value)
+function _set_graph_interactive_var!(g::G, spec::InteractiveGraphVarSpec, value) where {G<:AbstractSpinGraph}
     _set_interactive_graph_var_value!(g, spec.target, spec.varname, value)
 
     for process in processes(g)
@@ -355,7 +355,7 @@ function _process_context_temperature(process::Processes.AbstractProcess)
     return nothing
 end
 
-function _process_context_temperature(g::IsingGraph)
+function _process_context_temperature(g::AbstractSpinGraph)
     for process in reverse(processes(g))
         value = _process_context_temperature(process)
         isnothing(value) || return value
@@ -472,7 +472,7 @@ function _kinetic_time_snapshot(process::Processes.AbstractProcess)
     return nothing
 end
 
-function _kinetic_time_snapshot(g::IsingGraph)
+function _kinetic_time_snapshot(g::AbstractSpinGraph)
     for process in reverse(processes(g))
         snapshot = _kinetic_time_snapshot(process)
         isnothing(snapshot) || return snapshot
@@ -585,9 +585,21 @@ function _reap_graph_processes_later!(graph_processes)
     return nothing
 end
 
-_magnetization(g, layer_idx) = _with_layer(layer -> sum(state(layer)), g, layer_idx)
+function _magnetization(g, layer_idx)
+    return _with_layer(g, layer_idx) do layer
+        layer_graph = graph(layer)
+        if layer_graph isa AbstractVectorSpinGraph
+            return norm(sum(state(layer))) / max(1, length(state(layer)))
+        end
+        return sum(state(layer))
+    end
+end
 
 function _layer_colorrange(layer)
+    if graph(layer) isa AbstractVectorSpinGraph
+        return _vector_spin_display_colorrange(graph(layer))
+    end
+
     range = stateset(layer)
     if isfinite(range[1]) && isfinite(range[end]) && range[1] < range[end]
         return (range[1], range[end])
@@ -708,11 +720,272 @@ function _world_layer_coordinates_3d(top::T, vals_size::NTuple{3,<:Integer}) whe
     return xs, ys, zs
 end
 
-_layer_state_view(layer) = view(state(layer), ntuple(_ -> (:), ndims(state(layer)))...)
+struct _VectorSpinDisplayArray{A,T,N} <: AbstractArray{T,N}
+    data::A
+end
+
+Base.size(display::_VectorSpinDisplayArray) = size(display.data)
+Base.IndexStyle(::Type{<:_VectorSpinDisplayArray}) = IndexCartesian()
+
+@inline function Base.getindex(display::_VectorSpinDisplayArray, idxs...)
+    spin = @inbounds display.data[idxs...]
+    return _vector_spin_display_value(spin)
+end
+
+function hot_observable_zero(::Type{T}) where {A,S,N,T<:_VectorSpinDisplayArray{A,S,N}}
+    data = Array{eltype(A),N}(undef, ntuple(_ -> 0, Val(N)))
+    replacement = _VectorSpinDisplayArray{typeof(data),S,N}(data)
+    replacement isa T && return replacement
+    throw(ArgumentError("Cannot build zero-sized replacement for hot observable value type $T."))
+end
+
+"""
+    _vector_spin_display_value(spin)
+
+Return the scalar color value used for vector-spin layer displays.
+
+Two or more components are displayed by in-plane angle `atan(s_y, s_x)`.
+Single-component vector spins fall back to their only component.
+"""
+@inline function _vector_spin_display_value(spin)
+    length(spin) == 1 && return Float32(spin[1])
+    return Float32(atan(spin[2], spin[1]))
+end
+
+@inline function _vector_spin_display_colorrange(g::AbstractVectorSpinGraph)
+    spin_dimension(g) == 1 && return (-1f0, 1f0)
+    return (Float32(-π), Float32(π))
+end
+
+@inline _is_vector_spin_2d_layer(layer::AbstractIsingLayer{T,2}) where {T} =
+    graph(layer) isa AbstractVectorSpinGraph && spin_dimension(graph(layer)) >= 2
+@inline _is_vector_spin_2d_layer(layer) = false
+
+@inline _is_vector_spin_3d_layer(layer::AbstractIsingLayer{T,3}) where {T} =
+    graph(layer) isa AbstractVectorSpinGraph && spin_dimension(graph(layer)) >= 3
+@inline _is_vector_spin_3d_layer(layer) = false
+
+@inline function _vector_arrow_stride(layer)
+    max_side = maximum(size(layer))
+    return max(1, cld(Int(max_side), 16))
+end
+
+"""
+    _vector_arrow_strides_3d(layer)
+
+Return the visual sampling strides for 3D vector-spin arrows.
+
+The simulation still runs on the full lattice. Only the horizontal axes are
+sampled for dense volumes; the vertical axis is always shown at full
+resolution so shallow 3D systems do not collapse to a few displayed planes.
+"""
+@inline function _vector_arrow_strides_3d(layer::L) where {L<:AbstractIsingLayer}
+    sx, sy, _ = size(layer)
+    horizontal_stride = max(1, cld(Int(max(sx, sy)), 10))
+    return horizontal_stride, horizontal_stride, 1
+end
+
+"""
+    _vector_spin_glyphs_2d(layer)
+
+Return downsampled arrow positions and direction vectors for a visible
+vector-spin layer display.
+"""
+function _vector_spin_glyphs_2d(layer::AbstractIsingLayer{T,2}) where {T}
+    layer_graph = graph(layer)
+    layer_graph isa AbstractVectorSpinGraph || return nothing
+    spin_dimension(layer_graph) >= 2 || return nothing
+
+    spin_state = state(layer)
+    stride = _vector_arrow_stride(layer)
+    arrow_scale = Float32(0.62 * stride)
+    positions = Point2f[]
+    directions = Vec2f[]
+
+    # Makie image coordinates are cell-centered at integer positions here.
+    @inbounds for j in 1:stride:size(layer, 2), i in 1:stride:size(layer, 1)
+        spin = spin_state[i, j]
+        push!(positions, Point2f(Float32(i), Float32(j)))
+        push!(directions, Vec2f(arrow_scale * Float32(spin[1]), arrow_scale * Float32(spin[2])))
+    end
+    return positions, directions
+end
+_vector_spin_glyphs_2d(layer) = nothing
+
+function _vector_arrow_key(prefix::Symbol, suffix::Symbol)
+    return Symbol(prefix, :_, suffix)
+end
+
+function _draw_vector_spin_arrows_2d!(handle, ax, layer; prefix::Symbol = :vector_arrow)
+    geometry = _vector_spin_glyphs_2d(layer)
+    isnothing(geometry) && return nothing
+
+    layer_key = _vector_arrow_key(prefix, :layer)
+    positions_key = _vector_arrow_key(prefix, :positions)
+    directions_key = _vector_arrow_key(prefix, :directions)
+    underlay_key = _vector_arrow_key(prefix, :underlay)
+    plot_key = _vector_arrow_key(prefix, :plot)
+
+    handle[layer_key] = layer
+    handle[positions_key] = Observable(first(geometry))
+    handle[directions_key] = Observable(last(geometry))
+    handle[underlay_key] = arrows2d!(
+        ax,
+        handle[positions_key],
+        handle[directions_key];
+        align = :center,
+        color = (:white, 0.75),
+        shaftwidth = 5,
+        tipwidth = 16,
+        tiplength = 11,
+        minshaftlength = 0,
+    )
+    handle[plot_key] = arrows2d!(
+        ax,
+        handle[positions_key],
+        handle[directions_key];
+        align = :center,
+        color = (:black, 0.95),
+        shaftwidth = 2.6,
+        tipwidth = 11,
+        tiplength = 8,
+        minshaftlength = 0,
+    )
+    return handle[plot_key]
+end
+
+function _draw_vector_spin_layer_2d!(
+    handle,
+    cell,
+    layer;
+    axis_key::Symbol = :axis,
+    prefix::Symbol = :vector_arrow,
+    yflip_default::Bool = true,
+)
+    ax = handle[axis_key] = Axis(cell, xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
+    ax.yreversed = @load_preference("makie_y_flip", default = yflip_default)
+    _draw_vector_spin_arrows_2d!(handle, ax, layer; prefix)
+    xlims!(ax, 0.5, size(layer, 1) + 0.5)
+    ylims!(ax, 0.5, size(layer, 2) + 0.5)
+    return handle
+end
+
+"""
+    _vector_spin_glyphs_3d(handle, layer)
+
+Return downsampled 3D arrow positions and direction vectors for a vector-spin
+layer display.
+"""
+function _vector_spin_glyphs_3d(handle, layer::AbstractIsingLayer{T,3}) where {T}
+    layer_graph = graph(layer)
+    layer_graph isa AbstractVectorSpinGraph || return nothing
+    spin_dimension(layer_graph) >= 3 || return nothing
+
+    spin_state = state(layer)
+    xstride, ystride, zstride = _vector_arrow_strides_3d(layer)
+    xs, ys, zs = _coordinates_3d!(handle, layer)
+    linear = LinearIndices(size(layer))
+    positions = Point3f[]
+    directions = Vec3f[]
+
+    # The spin vector is interpreted in display/world axes.
+    @inbounds for k in 1:zstride:size(layer, 3), j in 1:ystride:size(layer, 2), i in 1:xstride:size(layer, 1)
+        idx = linear[i, j, k]
+        spin = spin_state[i, j, k]
+        spin_direction = Vec3f(Float32(spin[1]), Float32(spin[2]), Float32(spin[3]))
+        spin_norm = norm(spin_direction)
+        spin_norm <= eps(Float32) && continue
+
+        push!(positions, Point3f(xs[idx], ys[idx], zs[idx]))
+        push!(directions, spin_direction)
+    end
+    return positions, directions
+end
+_vector_spin_glyphs_3d(handle, layer) = nothing
+
+function _draw_vector_spin_arrows_3d!(handle, ax, layer; prefix::Symbol = :vector_arrow)
+    geometry = _vector_spin_glyphs_3d(handle, layer)
+    isnothing(geometry) && return nothing
+
+    layer_key = _vector_arrow_key(prefix, :layer)
+    positions_key = _vector_arrow_key(prefix, :positions)
+    directions_key = _vector_arrow_key(prefix, :directions)
+    plot_key = _vector_arrow_key(prefix, :plot)
+
+    handle[layer_key] = layer
+    handle[positions_key] = Observable(first(geometry))
+    handle[directions_key] = Observable(last(geometry))
+    handle[plot_key] = arrows3d!(
+        ax,
+        handle[positions_key],
+        handle[directions_key];
+        shaftcolor = :gray,
+        tipcolor = :black,
+        align = :center,
+        lengthscale = 0.85f0,
+        markerscale = 1.0f0,
+        shaftradius = 0.035,
+        tipradius = 0.10,
+        tiplength = 0.28,
+    )
+    return handle[plot_key]
+end
+
+function _draw_vector_spin_layer_3d!(
+    handle,
+    cell,
+    layer;
+    axis_key::Symbol = :axis,
+    prefix::Symbol = :vector_arrow,
+)
+    ax = handle[axis_key] = Axis3(cell, tellheight = true)
+    _restore_axis3_state!(ax, get(handle.data, Symbol(String(axis_key), "3_state"), nothing))
+    _draw_vector_spin_arrows_3d!(handle, ax, layer; prefix)
+    return handle
+end
+
+function _refresh_vector_spin_arrows_2d!(handle; prefix::Symbol = :vector_arrow)
+    positions_key = _vector_arrow_key(prefix, :positions)
+    haskey(handle, positions_key) || return nothing
+    layer = handle[_vector_arrow_key(prefix, :layer)]
+    geometry = _vector_spin_glyphs_2d(layer)
+    isnothing(geometry) && return nothing
+    positions, directions = geometry
+    handle[positions_key][] = positions
+    handle[_vector_arrow_key(prefix, :directions)][] = directions
+    return nothing
+end
+
+function _refresh_vector_spin_arrows_3d!(handle; prefix::Symbol = :vector_arrow)
+    positions_key = _vector_arrow_key(prefix, :positions)
+    haskey(handle, positions_key) || return nothing
+    layer = handle[_vector_arrow_key(prefix, :layer)]
+    _is_vector_spin_3d_layer(layer) || return nothing
+    geometry = _vector_spin_glyphs_3d(handle, layer)
+    isnothing(geometry) && return nothing
+    positions, directions = geometry
+    handle[positions_key][] = positions
+    handle[_vector_arrow_key(prefix, :directions)][] = directions
+    return nothing
+end
+
+function _refresh_vector_spin_arrows!(handle; prefix::Symbol = :vector_arrow)
+    _refresh_vector_spin_arrows_2d!(handle; prefix)
+    _refresh_vector_spin_arrows_3d!(handle; prefix)
+    return nothing
+end
+
+_layer_state_view(layer) = graph(layer) isa AbstractVectorSpinGraph ?
+    _VectorSpinDisplayArray{typeof(state(layer)),Float32,ndims(state(layer))}(state(layer)) :
+    view(state(layer), ntuple(_ -> (:), ndims(state(layer)))...)
 _layer_state_vector_view(layer) = vec(_layer_state_view(layer))
-_layer_state_float_vector(layer) = Float64.(vec(state(layer)))
+_layer_state_float_vector(layer) = Float64.(vec(_layer_state_view(layer)))
 
 function _cast_layer_state_vector(layer)
+    if graph(layer) isa AbstractVectorSpinGraph
+        return Float64.(vec(_layer_state_view(layer)))
+    end
+
     layer_state = state(layer)
     unsafe_vector = unsafe_wrap(Vector{eltype(layer_state)}, pointer(layer_state), length(layer_state))
     return CastVec(Float64, unsafe_vector)

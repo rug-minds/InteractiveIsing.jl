@@ -24,16 +24,17 @@ using GLMakie.GLFW
 using GLMakie: to_native
 using Observables
 using Preferences
+using LinearAlgebra
 using SparseArrays
 using UUIDs
 
 using ..Processes
-using ..InteractiveIsing: AbstractIsingLayer, AbstractLayerTopology, Clamping, CoulombHamiltonian,
-    CastVec, HamiltonianTerms, InteractiveGraphVarSpec, IsingGraph, KineticMC, MagField, PTimer, PolynomialHamiltonian,
-    PolledObservable, Parameter, SingleLayerGraph, _mc_model_inits, _prepared_interactive_var_data,
-    _resolve_interactive_target_key, _set_interactive_graph_var_value!, addRandomDefects!, adj, createProcess, graphidxs,
+using ..InteractiveIsing: AbstractIsingLayer, AbstractLayerTopology, AbstractSpinGraph, AbstractVectorSpinGraph,
+    Clamping, CoulombHamiltonian, CastVec, HamiltonianTerms, InteractiveGraphVarSpec, IsingGraph, KineticMC, MagField, PTimer, PolynomialHamiltonian,
+    PolledObservable, Parameter, SingleLayerGraph, UndirectedAdjacency, _mc_model_inits, _prepared_interactive_var_data,
+    _resolve_interactive_target_key, _set_interactive_graph_var_value!, addRandomDefects!, adj, createProcess, graph, graphidxs,
     Coordinate, hamiltonian, hamiltonians, idxToCoord, inline_layer_dispatch, interactivevars, layers, modulefolder,
-    nstates, origin, parameters, plotCorr, poll!, processes, coords, reset!, saveGImg, state,
+    nstates, origin, parameters, plotCorr, poll!, processes, coords, reset!, saveGImg, spin_dimension, state, VectorExchange,
     stateset, temp, temp!, topology, value, wg, woorldcoordinate
 
 export AbstractPanel, PanelHandle, WindowHost, SimulationPanel, StatusPanel,

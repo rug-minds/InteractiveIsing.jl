@@ -141,9 +141,9 @@ function hot_observable_zero(::Type{T}) where {V,T<:_LayerVectorGrid{V}}
 end
 
 _all_layer_image_state(layer::AbstractIsingLayer{<:Any,1}) =
-    _LayerVectorGrid(vec(state(layer)), _all_layer_vector_grid_size(layer))
+    _LayerVectorGrid(vec(_layer_state_view(layer)), _all_layer_vector_grid_size(layer))
 
-_all_layer_image_state(layer::AbstractIsingLayer{<:Any,2}) = state(layer)
+_all_layer_image_state(layer::AbstractIsingLayer{<:Any,2}) = _layer_state_view(layer)
 
 function _all_layer_vector_grid_size(layer::AbstractIsingLayer{<:Any,1})
     n = prod(size(layer))

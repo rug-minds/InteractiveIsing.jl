@@ -154,6 +154,15 @@ end
 hamiltonian_visualizations(term::PolynomialHamiltonian, g) = _parameter_visualizations(term, g, (:lp,))
 hamiltonian_visualizations(term::MagField, g) = _parameter_visualizations(term, g, (:b,))
 hamiltonian_visualizations(term::Clamping, g) = _parameter_visualizations(term, g, (:y,))
+hamiltonian_visualizations(term::VectorExchange, g) = HamiltonianDisplaySpec[
+    layer_display(
+        :adjacency,
+        layer -> _layer_adjacency_strength(term.J, layer);
+        info = "Sum of absolute exchange weights incident to each spin",
+        colormap = :viridis,
+        colorrange = :data,
+    ),
+]
 
 function _parameter_visualizations(term, g, names)
     specs = HamiltonianDisplaySpec[]
@@ -250,3 +259,41 @@ function hamiltonian_visualizations(term::CoulombHamiltonian, g)
 end
 
 _is_state_sized(val, g) = val isa AbstractArray && ndims(val) == 1 && length(val) == nstates(g)
+
+@inline _display_adjacency_matrix(J) = J
+@inline _display_adjacency_matrix(J::UndirectedAdjacency) = J.sp
+
+function _layer_adjacency_strength(J, layer)
+    A = _display_adjacency_matrix(J)
+    A isa SparseMatrixCSC && return _layer_sparse_adjacency_strength(A, layer)
+
+    idxs = collect(graphidxs(layer))
+    vals = zeros(Float32, length(idxs))
+    @inbounds for (local_idx, graph_idx) in enumerate(idxs)
+        total = 0f0
+        for row in axes(A, 1)
+            row == graph_idx && continue
+            total += abs(Float32(A[row, graph_idx]))
+        end
+        vals[local_idx] = total
+    end
+    return reshape(vals, size(layer))
+end
+
+function _layer_sparse_adjacency_strength(A::SparseMatrixCSC, layer)
+    idxs = collect(graphidxs(layer))
+    vals = zeros(Float32, length(idxs))
+    rows = SparseArrays.rowvals(A)
+    colptr = SparseArrays.getcolptr(A)
+    nzvals = SparseArrays.nonzeros(A)
+
+    @inbounds for (local_idx, graph_idx) in enumerate(idxs)
+        total = 0f0
+        for ptr in colptr[graph_idx]:(colptr[graph_idx + 1] - 1)
+            rows[ptr] == graph_idx && continue
+            total += abs(Float32(nzvals[ptr]))
+        end
+        vals[local_idx] = total
+    end
+    return reshape(vals, size(layer))
+end

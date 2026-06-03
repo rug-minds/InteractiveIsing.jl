@@ -23,6 +23,19 @@ struct H_i <: AbstractLinearFunctional end
 end
 
 """
+    calculate(d_iH(), hts, model::AbstractVectorSpinGraph, spin_idx)
+
+Accumulate the vector derivative for one spin in a vector-spin model.
+"""
+@inline function calculate(hF::d_iH, hts::HTS, model::G, args...) where {HTS<:AbstractHamiltonianTerms,G<:AbstractVectorSpinGraph}
+    total = zero(spin_state_type(model))
+    total = @inline unrollreplace(total, hts...) do ftotal, hamiltonian
+        ftotal = ftotal + @inline calculate(hF, hamiltonian, model, args...)
+    end
+    return total
+end
+
+"""
     calculate(ΔH(), hts, model, proposal::MultiSpinProposal)
 
 Fallback energy-change calculation for a multi-spin move on a collection of

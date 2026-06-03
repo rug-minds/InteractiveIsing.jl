@@ -27,6 +27,7 @@ function mount!(panel::LayerViewPanel, host::WindowHost, cell; kwargs...)
         if haskey(handle, :img_obs)
             notify(handle[:img_obs])
         end
+        _refresh_vector_spin_arrows!(handle)
         return nothing
     end
     return handle
@@ -48,7 +49,18 @@ function _redraw_layer!(handle::PanelHandle)
 end
 
 function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,2}) where {T}
-    return topology_layer_display!(
+    if _is_vector_spin_2d_layer(layer)
+        return _draw_vector_spin_layer_2d!(
+            handle,
+            grid[1, 1],
+            layer;
+            axis_key = :axis,
+            prefix = :vector_arrow,
+            yflip_default = true,
+        )
+    end
+
+    topology_layer_display!(
         handle,
         grid[1, 1],
         topology(layer),
@@ -61,9 +73,21 @@ function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,2}) where {
         hot = true,
         yflip_default = true,
     )
+    _draw_vector_spin_arrows_2d!(handle, handle[:axis], layer)
+    return handle
 end
 
 function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,3}) where {T}
+    if _is_vector_spin_3d_layer(layer)
+        return _draw_vector_spin_layer_3d!(
+            handle,
+            grid[1, 1],
+            layer;
+            axis_key = :axis,
+            prefix = :vector_arrow,
+        )
+    end
+
     ax = handle[:axis] = Axis3(grid[1, 1], tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :axis3_state, nothing))
     xs, ys, zs = _coordinates_3d!(handle, layer)
@@ -81,6 +105,19 @@ function toimage!(cell, panel::LayerViewPanel, handle::PanelHandle; kwargs...)
 end
 
 function _layer_view_toimage!(cell, layer::AbstractIsingLayer{T,2}, handle) where {T}
+    if _is_vector_spin_2d_layer(layer)
+        export_handle = PanelHandle(handle.panel, handle.host, cell)
+        _draw_vector_spin_layer_2d!(
+            export_handle,
+            cell,
+            layer;
+            axis_key = :axis,
+            prefix = :vector_arrow,
+            yflip_default = true,
+        )
+        return export_handle[:axis]
+    end
+
     ax = Axis(cell, xrectzoom = false, yrectzoom = false, aspect = DataAspect())
     ax.yreversed = @load_preference("makie_y_flip", default = true)
     vals = _layer_state_values(layer)
@@ -91,6 +128,21 @@ function _layer_view_toimage!(cell, layer::AbstractIsingLayer{T,2}, handle) wher
 end
 
 function _layer_view_toimage!(cell, layer::AbstractIsingLayer{T,3}, handle) where {T}
+    if _is_vector_spin_3d_layer(layer)
+        export_handle = PanelHandle(handle.panel, handle.host, cell)
+        if haskey(handle, :axis)
+            export_handle[:axis3_state] = _axis3_state(handle[:axis])
+        end
+        _draw_vector_spin_layer_3d!(
+            export_handle,
+            cell,
+            layer;
+            axis_key = :axis,
+            prefix = :vector_arrow,
+        )
+        return export_handle[:axis]
+    end
+
     ax = Axis3(cell)
     if haskey(handle, :axis)
         _restore_axis3_state!(ax, _axis3_state(handle[:axis]))

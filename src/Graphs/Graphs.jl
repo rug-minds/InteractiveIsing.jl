@@ -1,6 +1,7 @@
 export AbstractIsingGraph, IsingGraph, CIsingGraph, coordToIdx, idxToCoord, index_set, setSpins!, addDefects!, remDefects!, addDefect!, remDefect!, 
     connIdx, connW, initSqAdj, HFunc, HWeightedFunc, HMagFunc, HWMagFunc, setGHFunc!, gwidth, glength,
-    StatePartition, partition_index, partition_value, partition_dispatch
+    StatePartition, partition_index, partition_value, partition_dispatch,
+    VectorSpinGraph, AbstractSpinGraph, AbstractVectorSpinGraph, vector_unit_norm
 
 # Aliases
 const Edge = Pair{Int32,Int32}
@@ -21,6 +22,7 @@ include("Utils.jl")
 include("GraphDefects.jl")
 include("GraphDefectsNew.jl")
 include("IsingGraph.jl")
+include("VectorSpinGraph.jl")
 
 
 include("Layers/Layers.jl")
@@ -28,6 +30,7 @@ include("StatePartition.jl")
 include("SingleLayerGraph.jl")
 include("InitialState.jl")
 include("Constructors.jl")
+include("VectorSpinConstructors.jl")
 
 
 include("User.jl")

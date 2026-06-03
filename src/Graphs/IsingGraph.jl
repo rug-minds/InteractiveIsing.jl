@@ -221,11 +221,11 @@ function InteractiveGraphVarSpec(
 end
 
 """
-    interactivevars(g::IsingGraph)
+    interactivevars(g::AbstractSpinGraph)
 
 Return the graph-level interactive variable specs stored in `g.addons`.
 """
-@inline interactivevars(g::G) where {G<:IsingGraph} = get(g, :interactive_vars, ())
+@inline interactivevars(g::G) where {G<:AbstractSpinGraph} = get(g, :interactive_vars, ())
 
 @inline function _replace_interactive_graph_var_spec(spec::InteractiveGraphVarSpec, value)
     return InteractiveGraphVarSpec(spec.target, spec.varname; value, range = spec.range, label = spec.label)
@@ -245,7 +245,7 @@ function interactivevar!(
     value = nothing,
     range = nothing,
     label = string(varname),
-) where {G<:IsingGraph}
+) where {G<:AbstractSpinGraph}
     spec = InteractiveGraphVarSpec(target, varname; value, range, label)
     specs = interactivevars(g)
     updated = ()
@@ -263,7 +263,7 @@ function interactivevar!(
     return spec
 end
 
-@inline function _set_interactive_graph_var_value!(g::G, target, varname::Symbol, value) where {G<:IsingGraph}
+@inline function _set_interactive_graph_var_value!(g::G, target, varname::Symbol, value) where {G<:AbstractSpinGraph}
     specs = interactivevars(g)
     updated = ()
     replaced = false

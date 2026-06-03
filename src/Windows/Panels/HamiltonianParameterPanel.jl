@@ -198,7 +198,25 @@ function _clear_hamiltonian_display!(handle)
             delete!(handle.data, key)
         end
     end
-    for key in (:display_obs, :display_entry, :display_is_3d, :display_vectorized, :display_plot, :display_use_data_colorrange, :display_notify_only)
+    for key in (
+        :display_obs,
+        :display_entry,
+        :display_is_3d,
+        :display_vectorized,
+        :display_plot,
+        :display_use_data_colorrange,
+        :display_notify_only,
+        :display_vector_arrow_layer,
+        :display_vector_arrow_positions,
+        :display_vector_arrow_directions,
+        :display_vector_arrow_underlay,
+        :display_vector_arrow_stem_segments,
+        :display_vector_arrow_head_positions,
+        :display_vector_arrow_head_rotations,
+        :display_vector_arrow_head_sizes,
+        :display_vector_arrow_stem_plot,
+        :display_vector_arrow_plot,
+    )
         delete!(handle.data, key)
     end
     return handle
@@ -233,7 +251,21 @@ function _draw_graph_state!(handle, entry, cell)
 end
 
 function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,2}) where {T}
-    return _draw_layer_array!(
+    if _is_vector_spin_2d_layer(layer)
+        handle[:display_is_3d] = false
+        handle[:display_use_data_colorrange] = false
+        handle[:display_notify_only] = true
+        return _draw_vector_spin_layer_2d!(
+            handle,
+            cell,
+            layer;
+            axis_key = :display_axis,
+            prefix = :display_vector_arrow,
+            yflip_default = false,
+        )
+    end
+
+    _draw_layer_array!(
         handle,
         cell,
         _layer_state_values(layer),
@@ -243,9 +275,23 @@ function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,2})
         use_data_colorrange = _uses_data_colorrange(entry),
         hot = true,
     )
+    return handle
 end
 
 function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,3}) where {T}
+    if _is_vector_spin_3d_layer(layer)
+        handle[:display_is_3d] = true
+        handle[:display_use_data_colorrange] = false
+        handle[:display_notify_only] = true
+        return _draw_vector_spin_layer_3d!(
+            handle,
+            cell,
+            layer;
+            axis_key = :display_axis,
+            prefix = :display_vector_arrow,
+        )
+    end
+
     ax = handle[:display_axis] = Axis3(cell, tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
     xs, ys, zs = _coordinates_3d!(handle, layer)
@@ -376,8 +422,12 @@ function _display_title(entry::HamiltonianDisplayEntry)
 end
 
 function _refresh_hamiltonian_display!(handle)
-    haskey(handle, :display_obs) || return nothing
     haskey(handle, :display_entry) || return nothing
+
+    if !haskey(handle, :display_obs)
+        _refresh_vector_spin_arrows!(handle; prefix = :display_vector_arrow)
+        return nothing
+    end
 
     if get(handle.data, :display_notify_only, false)
         vals = _entry_layer_values(handle[:display_entry], handle)
@@ -385,6 +435,7 @@ function _refresh_hamiltonian_display!(handle)
             handle[:display_plot].colorrange[] = _entry_colorrange(handle[:display_entry], vals)
         end
         notify(handle[:display_obs])
+        _refresh_vector_spin_arrows!(handle; prefix = :display_vector_arrow)
         return nothing
     end
 
@@ -397,6 +448,7 @@ function _refresh_hamiltonian_display!(handle)
     if get(handle.data, :display_use_data_colorrange, false) && haskey(handle, :display_plot)
         handle[:display_plot].colorrange[] = _entry_colorrange(handle[:display_entry], vals)
     end
+    _refresh_vector_spin_arrows!(handle; prefix = :display_vector_arrow)
     return nothing
 end
 
@@ -414,7 +466,7 @@ function _entry_layer_values(entry::HamiltonianDisplayEntry, handle, layer)
     return _layer_values(entry.value, layer)
 end
 
-_layer_state_values(layer) = copy(state(layer))
+_layer_state_values(layer) = copy(_layer_state_view(layer))
 
 function _layer_values(val, layer)
     layer_vals = @view val[graphidxs(layer)]

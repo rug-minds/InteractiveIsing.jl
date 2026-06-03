@@ -231,7 +231,7 @@ end
 destructor(layer::IsingLayer) = destructor(data(layer))
 
 # Create view
-IsingLayer(g::AbstractIsingGraph, idx::Integer) = IsingLayer(getfield(g, :layers)[idx], g, idx)
+IsingLayer(g::AbstractSpinGraph, idx::Integer) = IsingLayer(getfield(g, :layers)[idx], g, idx)
 
 Base.LinearIndices(l::IsingLayer) = LinearIndices(size(l))
 Base.CartesianIndices(layer::AbstractIsingLayer) = CartesianIndices(size(layer))
@@ -321,8 +321,22 @@ function conncoords(i::Integer, j::Integer, layer1::IsingLayer, layer2::IsingLay
 end
 export conns, conncoords
 
-@inline wg(layer::IsingLayer) = try connections(layer)[internal_idx(layer) => internal_idx(layer)]; catch; return "No weightfunc"; end
+@inline function wg(layer::IsingLayer)
+    key = internal_idx(layer) => internal_idx(layer)
+    if haskey(connections(layer), key)
+        return _weightgenerator_label(connections(layer)[key])
+    end
+
+    generator = get_weightgenerator(layer)
+    return _weightgenerator_label(generator)
+end
 @inline wg(layer1::IsingLayer, layer2::IsingLayer) = try connections(layer1)[internal_idx(layer1) => internal_idx(layer2)]; catch; return "No weightfunc"; end
+
+@inline _weightgenerator_label(::Nothing) = "No weightfunc"
+@inline _weightgenerator_label(wg::WeightGenerator{F,NN,Symmetric}) where {F,NN,Symmetric} =
+    "WeightGenerator(NN=$(NN), symmetric=$(Symmetric))"
+@inline _weightgenerator_label(::AllToAllWeightGenerator) = "AllToAllWeightGenerator"
+@inline _weightgenerator_label(wg::AbstractWeightGenerator) = string(nameof(typeof(wg)))
 
 """
 Set graph of layer

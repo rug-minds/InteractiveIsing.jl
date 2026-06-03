@@ -1,10 +1,10 @@
 # Move the locks to the graph functio
 
-function quit(g::IsingGraph)
+function quit(g::AbstractSpinGraph)
     @warn "quit is deprecated, use close instead"
     close(g)
 end
-function Processes.close(g::IsingGraph)
+function Processes.close(g::AbstractSpinGraph)
     for process in reverse(processes(g))
         try 
             close(process)
@@ -17,15 +17,15 @@ function Processes.close(g::IsingGraph)
     deleteat!(processes(g), 1:length(processes(g)))
 end
 
-function Processes.run(g::IsingGraph)
+function Processes.run(g::AbstractSpinGraph)
     run.(processes(g))
 end
 
-function Processes.pause(g::IsingGraph)
+function Processes.pause(g::AbstractSpinGraph)
     pause.(processes(g))
 end
 
-unpause(g::IsingGraph) = run.(processes(g))
+unpause(g::AbstractSpinGraph) = run.(processes(g))
 
 # For broadcasting
 Processes.pause(::Nothing) = nothing
@@ -36,7 +36,7 @@ unpause(::Nothing) = nothing
 export quitSim, quit, pause, unpause
 
 # TODO: Make this work with the new process system KWARGS
-function Processes.restart(g::IsingGraph; kwargs...)
+function Processes.restart(g::AbstractSpinGraph; kwargs...)
     _processes = processes(g)
     for process in _processes
         # Is process being used? Otherwise nothing has to be started
@@ -48,7 +48,7 @@ export restart
 """
 Keep the keywords and recompile the processes
 """
-function Processes.reinit(g::IsingGraph; kwargs...)
+function Processes.reinit(g::AbstractSpinGraph; kwargs...)
     _processes = processes(g)
     for process in _processes
         if isrunning(process)
@@ -78,7 +78,7 @@ export reinit
 #     return
 # end
 
-function togglepause(g::IsingGraph)
+function togglepause(g::AbstractSpinGraph)
     if any(isrunning.(processes(g)))
         pause.(processes(g))
     else
@@ -92,4 +92,3 @@ end
 
 
 export togglepause
-

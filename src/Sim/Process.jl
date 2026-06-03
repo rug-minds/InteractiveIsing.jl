@@ -41,7 +41,7 @@ Create one `Processes.Init` per Ising Monte Carlo algorithm in `func`, assigning
 merged here; `createProcess` splats them into `Process` unchanged after these
 graph-model inputs.
 """
-function _mc_model_inits(func::F, g::G) where {F,G<:IsingGraph}
+function _mc_model_inits(func::F, g::G) where {F,G<:AbstractSpinGraph}
     targets = _collect_ising_mc_targets(func)
     graph_inputs = ()
     for target in targets
@@ -105,7 +105,7 @@ end
 Build graph-driven `Processes.Interactive` lifecycle specs and matching
 `Processes.Override` values for designated interactive process variables.
 """
-function _mc_interactive_specs(func::F, g::G) where {F,G<:IsingGraph}
+function _mc_interactive_specs(func::F, g::G) where {F,G<:AbstractSpinGraph}
     Bool(get(g, :interactive, false)) || !isempty(interactivevars(g)) || return (), ()
 
     graph_inputs = _mc_model_inits(func, g)
@@ -144,7 +144,7 @@ function _mc_interactive_specs(func::F, g::G) where {F,G<:IsingGraph}
 end
 
 """
-    createProcess(g::IsingGraph, func=nothing, inputs...; allow_multiple=false, kwargs...)
+    createProcess(g::AbstractSpinGraph, func=nothing, inputs...; allow_multiple=false, kwargs...)
 
 Create and run a process attached to `g`.
 
@@ -154,10 +154,9 @@ process is launched, so repeated calls replace the active simulation. Pass
 matches the previous behavior. When no `lifetime`, `repeats`, or `repeat` is
 given, the launched graph process runs indefinitely until it is closed.
 """
-function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.default_algorithm, lifetime = nothing, repeats = nothing, repeat = nothing, allow_multiple = false, args...)
+function createProcess(g::G, func = nothing, inputs...; dynamics = g.default_algorithm, lifetime = nothing, repeats = nothing, repeat = nothing, allow_multiple = false, args...) where {G<:AbstractSpinGraph}
     if isnothing(func)
-        # func = get(args, :algorithm, g.default_algorithm)
-        func = g.default_algorithm
+        func = dynamics
     end
 
     if !isnothing(lifetime) && !(lifetime isa Processes.Lifetime)
@@ -191,21 +190,21 @@ end
 
 export createProcess, createProcesses
 
-hasprocess(g::IsingGraph) = !isempty(processes(g))
-doneprocesses(g::IsingGraph) = findall(p -> isdone(p), processes(g))
-norunningprocesses(g::IsingGraph) = length(doneprocesses(g)) == length(processes(g))
-lastprocess(g::IsingGraph) = processes(g)[end]
-cleanprocesses(g::IsingGraph) = deleteat!(processes(g), doneprocesses(g))
+hasprocess(g::AbstractSpinGraph) = !isempty(processes(g))
+doneprocesses(g::AbstractSpinGraph) = findall(p -> isdone(p), processes(g))
+norunningprocesses(g::AbstractSpinGraph) = length(doneprocesses(g)) == length(processes(g))
+lastprocess(g::AbstractSpinGraph) = processes(g)[end]
+cleanprocesses(g::AbstractSpinGraph) = deleteat!(processes(g), doneprocesses(g))
 
 """
 Wait until all processes are done.
 """
-Base.wait(g::IsingGraph) = wait.(processes(g))
+Base.wait(g::AbstractSpinGraph) = wait.(processes(g))
 """
 Fetch last output
 """
-Base.fetch(g::IsingGraph) = fetch(process(g))
+Base.fetch(g::AbstractSpinGraph) = fetch(process(g))
 export wait, fetch
 
-Processes.getcontext(g::IsingGraph) = getcontext(process(g))
+Processes.getcontext(g::AbstractSpinGraph) = getcontext(process(g))
 export getcontext

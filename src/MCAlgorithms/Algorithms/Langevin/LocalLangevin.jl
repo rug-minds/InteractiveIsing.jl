@@ -189,7 +189,7 @@ end
 @inline _langevin_context_value(context, name::Symbol, default) = get(context, name, default)
 @inline _langevin_unwrap_ref(x) = x isa Ref ? x[] : x
 
-@inline function Processes.init(langevin::LocalLangevin{Order,Adjusted}, context::Cont) where {Order,Adjusted,Cont}
+@inline function _scalar_local_langevin_init(langevin::LocalLangevin{Order,Adjusted}, context::Cont) where {Order,Adjusted,Cont}
     (;model) = context
 
     active_index_set = index_set(model)
@@ -223,6 +223,9 @@ end
                 layer_views, stepsize, max_drift_fraction, group_steps_ref,
                 adjusted, sweep_position, sweep_order, sweep_offset, group_remaining, T)
 end
+
+@inline Processes.init(langevin::LocalLangevin{Order,Adjusted}, context::Cont) where {Order,Adjusted,Cont} =
+    _scalar_local_langevin_init(langevin, context)
 
 @inline update!(::LocalLangevin, hterm, model::AbstractIsingGraph, proposal::FlipProposal) = update!(Metropolis(), hterm, model, proposal)
 
@@ -497,7 +500,7 @@ Hamiltonian caches unchanged.
     return FlipProposal{T}(spin_idx, old_state, new_state, layer_idx, false), ΔE, 0, derivative
 end
 
-@inline function Processes.step!(langevin::LocalLangevin{Order,Adjusted}, context::C) where {Order,Adjusted,C}
+@inline function _scalar_local_langevin_step!(langevin::LocalLangevin{Order,Adjusted}, context::C) where {Order,Adjusted,C}
     (;hamiltonian, rng, model, dH_prealloc, layer_views, stepsize,
         max_drift_fraction, T) = context
 
@@ -603,3 +606,6 @@ end
         gradient_max, gradient_rms, reflected_fraction)
     # return nothing
 end
+
+@inline Processes.step!(langevin::LocalLangevin{Order,Adjusted}, context::C) where {Order,Adjusted,C} =
+    _scalar_local_langevin_step!(langevin, context)
