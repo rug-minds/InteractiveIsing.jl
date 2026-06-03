@@ -50,18 +50,63 @@ function _mc_model_inits(func::F, g::G) where {F,G<:IsingGraph}
     return graph_inputs
 end
 
+@inline _interactive_slot_value(value::Real) = value
+@inline _interactive_slot_value(value::Base.RefValue{<:Real}) = value[]
+@inline _interactive_slot_value(value::Processes.InteractiveVar{<:Real}) = value[]
+@inline _interactive_slot_value(value::Processes.InteractiveVar{<:Base.RefValue{<:Real}}) = value[][]
+@inline _interactive_slot_value(_) = nothing
+
+"""
+    _resolve_interactive_target_key(registry, target)
+
+Resolve a graph-level interactive target to one concrete process namespace key.
+Broad type targets such as `LocalLangevin` are matched by registry subtype and
+must resolve to exactly one entry.
+"""
+function _resolve_interactive_target_key(registry::R, target) where {R<:Processes.NameSpaceRegistry}
+    key = try
+        Processes.static_findkey(registry, target)
+    catch
+        nothing
+    end
+    !isnothing(key) && return key
+
+    target isa Type || return nothing
+    matches = Base.findall(target, registry)
+    isempty(matches) && return nothing
+    length(matches) == 1 ||
+        error("Interactive target $(target) is ambiguous in this process. Use a keyed algorithm instance instead.")
+    return Processes.getkey(only(matches))
+end
+
+function _prepared_interactive_var_data(prepared_algo, target, varname::Symbol)
+    registry = Processes.getregistry(prepared_algo)
+    target_name = _resolve_interactive_target_key(registry, target)
+    isnothing(target_name) && return nothing
+    subcontexts = Processes.get_subcontexts(Processes.context(prepared_algo))
+    hasproperty(subcontexts, target_name) || return nothing
+    data = Processes.getdata(getproperty(subcontexts, target_name))
+    haskey(data, varname) || return nothing
+    return target_name, getproperty(data, varname)
+end
+
+@inline function _push_unique_interactive_spec(specs::Specs, target, varname::Symbol) where {Specs<:Tuple}
+    for spec in specs
+        if isequal(Processes.get_target(spec), target) && only(Processes.interactive_names(spec)) === varname
+            return specs
+        end
+    end
+    return (specs..., Processes.Interactive(target, varname))
+end
+
 """
     _mc_interactive_specs(func, g)
 
-Build `Processes.Interactive` lifecycle specs for temperature variables exposed
-by the prepared Monte Carlo subcontexts in `func`. Interactive graphs opt into
-this path through `g[:interactive] = true`.
+Build graph-driven `Processes.Interactive` lifecycle specs and matching
+`Processes.Override` values for designated interactive process variables.
 """
 function _mc_interactive_specs(func::F, g::G) where {F,G<:IsingGraph}
-    Bool(get(g, :interactive, false)) || return ()
-
-    targets = _collect_ising_mc_targets(func)
-    isempty(targets) && return ()
+    Bool(get(g, :interactive, false)) || !isempty(interactivevars(g)) || return (), ()
 
     graph_inputs = _mc_model_inits(func, g)
     prepared_algo = Processes.init(
@@ -71,19 +116,31 @@ function _mc_interactive_specs(func::F, g::G) where {F,G<:IsingGraph}
     )
 
     interactive_specs = ()
-    subcontexts = Processes.get_subcontexts(Processes.context(prepared_algo))
-    registry = Processes.getregistry(prepared_algo)
-    for target in targets
-        for varname in (:T, :temp)
-            resolved_spec = only(Processes.resolve(registry, Processes.Interactive(target, varname)))
-            target_name = Processes.get_target(resolved_spec)
-            data = Processes.getdata(getproperty(subcontexts, target_name))
-            haskey(data, varname) || continue
-            interactive_specs = (interactive_specs..., Processes.Interactive(target, varname))
-            break
+    overrides = ()
+
+    if Bool(get(g, :interactive, false))
+        for target in _collect_ising_mc_targets(func)
+            for varname in (:T, :temp)
+                data = _prepared_interactive_var_data(prepared_algo, target, varname)
+                isnothing(data) && continue
+                target_name, _ = data
+                interactive_specs = _push_unique_interactive_spec(interactive_specs, target_name, varname)
+                break
+            end
         end
     end
-    return interactive_specs
+
+    for spec in interactivevars(g)
+        data = _prepared_interactive_var_data(prepared_algo, spec.target, spec.varname)
+        isnothing(data) && continue
+
+        target_name, current = data
+        value = isnothing(spec.value) ? _interactive_slot_value(current) : spec.value
+        interactive_specs = _push_unique_interactive_spec(interactive_specs, target_name, spec.varname)
+        isnothing(value) || (overrides = (overrides..., Processes.Override(target_name, spec.varname => value)))
+    end
+
+    return overrides, interactive_specs
 end
 
 """
@@ -120,7 +177,8 @@ function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.de
     end
     
     func = deepcopy(func)
-    graph_inputs = (_mc_model_inits(func, g)..., _mc_interactive_specs(func, g)...)
+    interactive_overrides, interactive_specs = _mc_interactive_specs(func, g)
+    graph_inputs = (_mc_model_inits(func, g)..., interactive_overrides..., interactive_specs...)
     # process = Process(func, Init(DestructureInput(), structure = g); lifetime)
     process = Process(func, graph_inputs..., inputs...; lifetime, repeats, repeat)
     

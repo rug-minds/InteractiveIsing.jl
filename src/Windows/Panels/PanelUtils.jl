@@ -9,6 +9,61 @@ current_layer(g, layer_idx) = _with_layer(identity, g, layer_idx)
 _has_layer_selector(g) = length(layers(g)) > 1
 _has_layer_selector(g::SingleLayerGraph) = false
 
+@inline _panel_process_algos(algo::Processes.AbstractLoopAlgorithm) = Processes.flat_funcs(algo)
+@inline _panel_process_algos(algo) = (algo,)
+
+"""
+    _panel_source_algo(g)
+
+Return the algorithm that currently defines the graph's UI-relevant process
+shape. Prefer the latest graph process when present, otherwise fall back to the
+graph default algorithm.
+"""
+function _panel_source_algo(g::IsingGraph)
+    graph_processes = processes(g)
+    if isempty(graph_processes)
+        return g.default_algorithm
+    end
+    return Processes.getalgo(graph_processes[end])
+end
+
+"""
+    _panel_has_algo_type(g, target_type)
+
+Return whether the active graph algorithm tree contains a child whose algorithm
+type is a subtype of `target_type`.
+"""
+function _panel_has_algo_type(g::IsingGraph, target_type::Type)
+    for algo in _panel_process_algos(_panel_source_algo(g))
+        Processes.algotype(algo) <: target_type && return true
+    end
+    return false
+end
+
+"""
+    _panel_supported(g, ::Val{panelkey})
+
+Return whether one optional simulation panel should be mounted for graph `g`.
+This may inspect either the current running process or the graph's default
+algorithm when no process exists yet.
+"""
+@inline _panel_supported(g::IsingGraph, ::Val{panelkey}) where {panelkey} = true
+@inline _panel_supported(g::IsingGraph, ::Val{:interactive_variables}) = !isempty(interactivevars(g))
+@inline _panel_supported(g::IsingGraph, ::Val{:kinetic_time}) =
+    !isnothing(_kinetic_time_snapshot(g)) || _panel_has_algo_type(g, KineticMC)
+
+"""
+    _mount_panel_if_supported!(handle, key, panel_factory, cell)
+
+Mount one child panel only when the graph/process properties indicate the panel
+is relevant for the current simulation.
+"""
+function _mount_panel_if_supported!(handle::PanelHandle, key::Symbol, panel_factory::Function, cell)
+    g = handle[:graph]
+    _panel_supported(g, Val(key)) || return nothing
+    return panel!(handle, key, panel_factory(), cell)
+end
+
 function _register_graph_close!(handle::PanelHandle, g)
     close_graphs = get!(handle.host.data, :close_graphs, IdDict{Any, Bool}())
     haskey(close_graphs, g) && return nothing
@@ -48,7 +103,230 @@ end
 _temperature_value(value::Real) = value
 _temperature_value(value::Base.RefValue{<:Real}) = value[]
 _temperature_value(value::Processes.InteractiveVar{<:Real}) = value[]
+_temperature_value(value::Processes.InteractiveVar{<:Base.RefValue{<:Real}}) = value[][]
 _temperature_value(_) = nothing
+
+_interactive_numeric_value(value::Real) = value
+_interactive_numeric_value(value::Base.RefValue{<:Real}) = value[]
+_interactive_numeric_value(value::Processes.InteractiveVar{<:Real}) = value[]
+_interactive_numeric_value(value::Processes.InteractiveVar{<:Base.RefValue{<:Real}}) = value[][]
+_interactive_numeric_value(_) = nothing
+
+function _set_interactive_numeric_value!(slot::Base.RefValue{T}, value) where {T<:Real}
+    slot[] = convert(T, value)
+    return slot[]
+end
+
+function _set_interactive_numeric_value!(slot::Processes.InteractiveVar{T}, value) where {T<:Real}
+    slot[] = convert(T, value)
+    return slot[]
+end
+
+function _set_interactive_numeric_value!(slot::Processes.InteractiveVar{<:Base.RefValue{T}}, value) where {T<:Real}
+    slot[][] = convert(T, value)
+    return slot[][]
+end
+
+@inline _set_interactive_numeric_value!(slot, value) = nothing
+
+function _interactive_process_slot(process::Processes.AbstractProcess, spec::InteractiveGraphVarSpec)
+    context = Processes.context(process)
+    context isa Processes.ProcessContext || return nothing
+
+    target_name = _resolve_interactive_target_key(
+        Processes.getregistry(Processes.getalgo(process)),
+        spec.target,
+    )
+    isnothing(target_name) && return nothing
+    subcontexts = Processes.get_subcontexts(context)
+    hasproperty(subcontexts, target_name) || return nothing
+
+    data = Processes.getdata(getproperty(subcontexts, target_name))
+    haskey(data, spec.varname) || return nothing
+    return target_name, getproperty(data, spec.varname)
+end
+
+function _interactive_prepared_value(g::IsingGraph, spec::InteractiveGraphVarSpec)
+    func = deepcopy(g.default_algorithm)
+    graph_inputs = _mc_model_inits(func, g)
+    prepared = Processes.init(Processes.normalize_process_algo(func), graph_inputs...; lifetime = Processes.Indefinite())
+    data = _prepared_interactive_var_data(prepared, spec.target, spec.varname)
+    isnothing(data) && return nothing
+    return _interactive_numeric_value(last(data))
+end
+
+function _interactive_graph_var_value(g::IsingGraph, spec::InteractiveGraphVarSpec)
+    for process in reverse(processes(g))
+        slot = _interactive_process_slot(process, spec)
+        isnothing(slot) && continue
+        value = _interactive_numeric_value(last(slot))
+        isnothing(value) || return value
+    end
+
+    if !isnothing(spec.value)
+        return spec.value
+    end
+
+    value = _interactive_prepared_value(g, spec)
+    isnothing(value) && return nothing
+    _set_interactive_graph_var_value!(g, spec.target, spec.varname, value)
+    return value
+end
+
+function _set_graph_interactive_var!(g::IsingGraph, spec::InteractiveGraphVarSpec, value)
+    _set_interactive_graph_var_value!(g, spec.target, spec.varname, value)
+
+    for process in processes(g)
+        slot = _interactive_process_slot(process, spec)
+        isnothing(slot) && continue
+        target_name, current = slot
+        if !isnothing(_set_interactive_numeric_value!(current, value))
+            continue
+        elseif !Processes.isrunning(process)
+            converted = convert(typeof(current), value)
+            update = NamedTuple{(target_name,)}((NamedTuple{(spec.varname,)}((converted,)),))
+            Processes.context(process, Processes.merge_into_subcontexts(Processes.context(process), update))
+        end
+    end
+
+    return value
+end
+
+function _interactive_slider_range(spec::InteractiveGraphVarSpec, value::Real)
+    range = spec.range
+    if range isa AbstractRange
+        return range
+    elseif range isa Tuple && length(range) == 2
+        lo, hi = Float64(first(range)), Float64(last(range))
+        step = value isa Integer ? 1 : max((hi - lo) / 200, eps(Float64))
+        if value isa Integer
+            return round(Int, lo):1:round(Int, hi)
+        else
+            return lo:step:hi
+        end
+    elseif !isnothing(range)
+        return range
+    end
+
+    if value isa Integer
+        hi = max(10, 4 * abs(Int(value)))
+        return 0:1:hi
+    end
+
+    positive_name = spec.varname in (:T, :temp, :stepsize, :max_drift_fraction, :block_size, :group_steps, :max_blocksize, :langevin_steps)
+    if positive_name || value >= 0
+        hi = max(1.0, 4 * abs(Float64(value)))
+        return 0.0:max(hi / 200, 0.001):hi
+    end
+
+    span = max(1.0, 2 * abs(Float64(value)))
+    return (-span):max((2 * span) / 200, 0.001):span
+end
+
+"""
+    _interactive_range_limits(range)
+
+Return the lower and upper numeric bounds of one interactive slider range.
+"""
+function _interactive_range_limits(range::AbstractRange)
+    lo = Float64(first(range))
+    hi = Float64(last(range))
+    return min(lo, hi), max(lo, hi)
+end
+
+"""
+    _interactive_default_delta(range, value)
+
+Choose a default `+/-` increment for one interactive variable.
+"""
+function _interactive_default_delta(range::AbstractRange, value::T) where {T<:Real}
+    if value isa Integer
+        return one(T)
+    end
+
+    step_value = try
+        Float64(step(range))
+    catch
+        0.0
+    end
+    if isfinite(step_value) && step_value > 0
+        return T(step_value)
+    end
+
+    lo, hi = _interactive_range_limits(range)
+    return T(max((hi - lo) / 100, 0.001))
+end
+
+"""
+    _parse_interactive_delta(text, current, fallback)
+
+Parse one delta textbox value, falling back to the previous delta when the
+textbox input is empty or invalid.
+"""
+function _parse_interactive_delta(text, current::T, fallback::T) where {T<:Real}
+    isnothing(text) && return fallback
+    stripped = strip(text)
+    isempty(stripped) && return fallback
+
+    parsed = current isa Integer ? tryparse(Int, stripped) : tryparse(Float64, stripped)
+    isnothing(parsed) && return fallback
+
+    delta = current isa Integer ? abs(parsed) : abs(T(parsed))
+    return delta > zero(T) ? delta : fallback
+end
+
+"""
+    _interactive_quantize_value(value, range)
+
+Snap one candidate value onto the slider range grid and clamp it to the valid
+range interval.
+"""
+function _interactive_quantize_value(value::T, range::AbstractRange) where {T<:Real}
+    lo, hi = _interactive_range_limits(range)
+    clamped = clamp(Float64(value), lo, hi)
+
+    if value isa Integer
+        return T(round(Int, clamped))
+    end
+
+    step_value = try
+        abs(Float64(step(range)))
+    catch
+        0.0
+    end
+    if !(isfinite(step_value) && step_value > 0)
+        return T(clamped)
+    end
+
+    base = Float64(first(range))
+    snapped = base + round((clamped - base) / step_value) * step_value
+    return T(clamp(snapped, lo, hi))
+end
+
+"""
+    _interactive_commit_delta!(textbox, delta, current)
+
+Commit the current textbox contents immediately, even when the user clicks a
+button without pressing Enter first.
+"""
+function _interactive_commit_delta!(textbox, delta, current::T) where {T<:Real}
+    text = textbox.displayed_string[]
+    delta_type = typeof(delta[])
+    current_value = convert(delta_type, current)
+    delta[] = _parse_interactive_delta(text, current_value, delta[])
+    textbox.displayed_string[] = string(delta[])
+    return delta[]
+end
+
+"""
+    _interactive_adjusted_value(value, delta, direction, range)
+
+Apply one signed delta step and snap the result to the slider range.
+"""
+function _interactive_adjusted_value(value::T, delta::T, direction::Int, range::AbstractRange) where {T<:Real}
+    raw = value + direction * delta
+    return _interactive_quantize_value(raw, range)
+end
 
 function _temperature_vars(sc)
     data = Processes.getdata(sc)

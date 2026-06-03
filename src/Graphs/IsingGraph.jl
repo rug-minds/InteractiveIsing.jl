@@ -183,6 +183,104 @@ Base.get!(g::IsingGraph, s, d) = get!(addons(g), s, d)
 Base.get(g::IsingGraph, s) = get(addons(g), s)
 Base.get(g::IsingGraph, s, d) = get(addons(g), s, d)
 
+"""
+    InteractiveGraphVarSpec(target, varname; value = nothing, range = nothing, label = string(varname))
+
+Graph addon specification for one interactively controlled process variable.
+
+`target` is the lifecycle target passed to `Processes.Interactive` and
+`Processes.Override`, for example `LocalLangevin` or a concrete keyed
+algorithm instance. `value` is the persistent graph-side value used to seed new
+processes. `range` configures the UI slider when present; otherwise the slider
+panel infers a range heuristically from the current value.
+"""
+struct InteractiveGraphVarSpec{Target,ValueType,RangeType,LabelType}
+    target::Target
+    varname::Symbol
+    value::ValueType
+    range::RangeType
+    label::LabelType
+end
+
+function InteractiveGraphVarSpec(
+    target,
+    varname::Symbol;
+    value = nothing,
+    range = nothing,
+    label = string(varname),
+)
+    isnothing(value) || value isa Real ||
+        throw(ArgumentError("Interactive graph variable `$(varname)` must have a Real `value` or `nothing`, got $(typeof(value))."))
+    return InteractiveGraphVarSpec{typeof(target),typeof(value),typeof(range),typeof(label)}(
+        target,
+        varname,
+        value,
+        range,
+        label,
+    )
+end
+
+"""
+    interactivevars(g::IsingGraph)
+
+Return the graph-level interactive variable specs stored in `g.addons`.
+"""
+@inline interactivevars(g::G) where {G<:IsingGraph} = get(g, :interactive_vars, ())
+
+@inline function _replace_interactive_graph_var_spec(spec::InteractiveGraphVarSpec, value)
+    return InteractiveGraphVarSpec(spec.target, spec.varname; value, range = spec.range, label = spec.label)
+end
+
+"""
+    interactivevar!(g, target, varname; value = nothing, range = nothing, label = string(varname))
+
+Register or replace one interactively controlled process variable on `g`.
+Stored values persist on the graph addon and seed future `createProcess` calls
+through `Processes.Override`.
+"""
+function interactivevar!(
+    g::G,
+    target,
+    varname::Symbol;
+    value = nothing,
+    range = nothing,
+    label = string(varname),
+) where {G<:IsingGraph}
+    spec = InteractiveGraphVarSpec(target, varname; value, range, label)
+    specs = interactivevars(g)
+    updated = ()
+    replaced = false
+    for oldspec in specs
+        if isequal(oldspec.target, spec.target) && oldspec.varname === varname
+            updated = (updated..., spec)
+            replaced = true
+        else
+            updated = (updated..., oldspec)
+        end
+    end
+    replaced || (updated = (updated..., spec))
+    g.addons[:interactive_vars] = updated
+    return spec
+end
+
+@inline function _set_interactive_graph_var_value!(g::G, target, varname::Symbol, value) where {G<:IsingGraph}
+    specs = interactivevars(g)
+    updated = ()
+    replaced = false
+    for spec in specs
+        if isequal(spec.target, target) && spec.varname === varname
+            updated = (updated..., _replace_interactive_graph_var_spec(spec, value))
+            replaced = true
+        else
+            updated = (updated..., spec)
+        end
+    end
+    replaced || error("Interactive graph variable $(varname) for target $(target) is not registered on this graph.")
+    g.addons[:interactive_vars] = updated
+    return value
+end
+export InteractiveGraphVarSpec, interactivevars, interactivevar!
+
 @inline layers(g::IsingGraph) = ntuple(i -> IsingLayer(g, i), length(g))
 
 # Don't overload!

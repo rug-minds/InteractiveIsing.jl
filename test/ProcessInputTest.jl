@@ -285,6 +285,19 @@ end
     @test block_T isa Processes.InteractiveVar{Float32}
 end
 
+@testset "Interactive Langevin parameter vars" begin
+    g = IsingGraph(4, 4, Continuous(); precision = Float32)
+    interactivevar!(g, LocalLangevin, :stepsize; value = 0.025f0, range = 0.0:0.005:0.2)
+
+    proc = createProcess(g, LocalLangevin(); lifetime = 1)
+    wait(proc)
+    subcontexts = Processes.get_subcontexts(getcontext(proc))
+    key = only(filter(name -> name !== :globals, propertynames(subcontexts)))
+    stepsize = getproperty(Processes.getdata(getproperty(subcontexts, key)), :stepsize)
+    @test stepsize isa Processes.InteractiveVar{Float32}
+    @test stepsize[] ≈ 0.025f0
+end
+
 @testset "Index Set API" begin
     toggled = ToggledIndexSet(1:2, 3:5)
     @test collect(InteractiveIsing.sampling_indices(toggled)) == [1, 2, 3, 4, 5]

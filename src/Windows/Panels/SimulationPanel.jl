@@ -45,11 +45,15 @@ function mount!(panel::SimulationPanel, host::WindowHost, cell; kwargs...)
     )
     rightgrid = GridLayout(midgrid[1, 3], tellwidth = false, default_rowgap = 8)
     handle[:rightgrid] = rightgrid
-    panel!(handle, :kinetic_time, KineticTimePanel(panel.graph), rightgrid[1, 1])
-    panel!(handle, :temperature, TemperaturePanel(panel.graph), rightgrid[2, 1])
+    right_row = 1
+    _mount_panel_if_supported!(handle, :kinetic_time, () -> KineticTimePanel(panel.graph), rightgrid[right_row, 1])
+    haskey(handle.children, :kinetic_time) && (right_row += 1)
+    _mount_panel_if_supported!(handle, :temperature, () -> TemperaturePanel(panel.graph), rightgrid[right_row, 1])
+    haskey(handle.children, :temperature) && (right_row += 1)
+    _mount_panel_if_supported!(handle, :interactive_variables, () -> InteractiveVariablesPanel(panel.graph), rightgrid[right_row, 1])
     colsize!(midgrid, 1, panel.hide_left_buttons ? 0 : 260)
     colsize!(midgrid, 2, Auto(false))
-    colsize!(midgrid, 3, 140)
+    colsize!(midgrid, 3, haskey(handle.children, :interactive_variables) ? 220 : 140)
 
     panel!(handle, :magnetization, MagnetizationPanel(panel.graph, handle[:layer_idx]), (3, 1))
     rowsize!(grid, 3, 140)
@@ -73,12 +77,20 @@ function toimage!(cell, panel::SimulationPanel, handle::PanelHandle; kwargs...)
     else
         throw(ArgumentError("SimulationPanel has no mounted visual child to export."))
     end
-    if haskey(handle.children, :temperature)
+    if haskey(handle.children, :temperature) || haskey(handle.children, :kinetic_time) || haskey(handle.children, :interactive_variables)
         rightgrid = GridLayout(midgrid[1, 2], default_rowgap = 6)
+        right_row = 1
         if haskey(handle.children, :kinetic_time)
-            toimage!(rightgrid[1, 1], handle.children[:kinetic_time]; kwargs...)
+            toimage!(rightgrid[right_row, 1], handle.children[:kinetic_time]; kwargs...)
+            right_row += 1
         end
-        toimage!(rightgrid[2, 1], handle.children[:temperature]; kwargs...)
+        if haskey(handle.children, :temperature)
+            toimage!(rightgrid[right_row, 1], handle.children[:temperature]; kwargs...)
+            right_row += 1
+        end
+        if haskey(handle.children, :interactive_variables)
+            toimage!(rightgrid[right_row, 1], handle.children[:interactive_variables]; kwargs...)
+        end
         colsize!(midgrid, 2, 90)
     end
     colsize!(midgrid, 1, Auto(false))

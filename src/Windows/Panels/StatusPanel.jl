@@ -15,6 +15,23 @@ end
 
 image_trait(::Type{StatusPanel}) = HasImage()
 
+function restart!(panel::StatusPanel, handle::PanelHandle)
+    g = panel.graph
+    had_processes = !isempty(processes(g))
+    was_paused = _graph_paused(g)
+
+    Processes.close(g)
+    reset!(g)
+
+    if had_processes
+        createProcess(g)
+        was_paused && _pause_graph_processes!(g)
+    end
+
+    haskey(handle, :graph_paused) && poll!(handle[:graph_paused])
+    return nothing
+end
+
 function _steps_per_second_observables!(owner, g)
     host = owner isa WindowHost ? owner : owner.host
     ups = Observable(0.0)
@@ -73,7 +90,7 @@ function mount!(panel::StatusPanel, host::WindowHost, cell; kwargs...)
     mid_grid = handle[:mid_grid] = GridLayout(grid[1, 2], tellwidth = false)
     resetbutton = handle[:resetbutton] = Button(mid_grid[1, 1], label = "Reset Graph", fontsize = 18, height = 30, halign = :center, tellwidth = false)
     register!(handle, on(resetbutton.clicks) do _
-        nothing
+        restart!(handle)
     end)
 
     graph_paused = handle[:graph_paused] = register_polled!(handle, PolledObservable(_graph_paused(g), _ -> _graph_paused(g)))

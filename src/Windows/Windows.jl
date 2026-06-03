@@ -29,15 +29,16 @@ using UUIDs
 
 using ..Processes
 using ..InteractiveIsing: AbstractIsingLayer, AbstractLayerTopology, Clamping, CoulombHamiltonian,
-    CastVec, HamiltonianTerms, IsingGraph, MagField, PTimer, PolynomialHamiltonian,
-    PolledObservable, Parameter, SingleLayerGraph, addRandomDefects!, adj, graphidxs,
-    Coordinate, hamiltonian, hamiltonians, idxToCoord, inline_layer_dispatch, layers, modulefolder,
-    nstates, origin, parameters, plotCorr, poll!, processes, coords, saveGImg, state,
+    CastVec, HamiltonianTerms, InteractiveGraphVarSpec, IsingGraph, KineticMC, MagField, PTimer, PolynomialHamiltonian,
+    PolledObservable, Parameter, SingleLayerGraph, _mc_model_inits, _prepared_interactive_var_data,
+    _resolve_interactive_target_key, _set_interactive_graph_var_value!, addRandomDefects!, adj, createProcess, graphidxs,
+    Coordinate, hamiltonian, hamiltonians, idxToCoord, inline_layer_dispatch, interactivevars, layers, modulefolder,
+    nstates, origin, parameters, plotCorr, poll!, processes, coords, reset!, saveGImg, state,
     stateset, temp, temp!, topology, value, wg, woorldcoordinate
 
 export AbstractPanel, PanelHandle, WindowHost, SimulationPanel, StatusPanel,
     AllLayersViewPanel, ConnectionsPanel, ContextLinesPanel, HamiltonianDisplaySpec, HamiltonianParameterPanel,
-    InteractiveLinesPanel, KineticTimePanel, LayerDisplayValue, LayerSelectorPanel, LayerViewPanel,
+    InteractiveLinesPanel, InteractiveVariablesPanel, KineticTimePanel, LayerDisplayValue, LayerSelectorPanel, LayerViewPanel,
     TemperaturePanel, MagnetizationPanel,
     HasAxis, NoAxis, AxisTrait, HasImage, NoImage, ImageTrait,
     axis_to_png, axis_trait, axiskey, fullimage, image_trait,

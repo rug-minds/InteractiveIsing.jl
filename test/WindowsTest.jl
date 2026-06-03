@@ -458,6 +458,63 @@ end
     @test host.closed
 end
 
+@testset "SimulationPanel interactive variable sliders" begin
+    g = IsingGraph(3, 3, Continuous(), StateSet(-1.0f0, 1.0f0); precision = Float32)
+    interactivevar!(g, LocalLangevin, :stepsize; value = 0.05f0, range = 0.0:0.01:0.2)
+
+    host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    handle = Windows.panel!(host, Windows.SimulationPanel(g), (1, 1))
+    @test haskey(handle.children, :interactive_variables)
+
+    interactive_panel = handle.children[:interactive_variables]
+    @test length(interactive_panel[:entries]) == 1
+    entry = only(interactive_panel[:entries])
+    @test entry.slider.value[] ≈ 0.05f0
+    @test entry.delta[] ≈ 0.01f0
+
+    proc = createProcess(g, LocalLangevin(); lifetime = 1)
+    wait(proc)
+    stepsize = getproperty(getproperty(Processes.getcontext(proc), :LocalLangevin_1), :stepsize)
+    @test stepsize[] ≈ 0.05f0
+
+    entry.apply_step!(1)
+    @test stepsize[] ≈ 0.06f0
+
+    entry.delta_textbox.displayed_string[] = "0.02"
+    entry.apply_step!(1)
+    @test entry.delta[] ≈ 0.02f0
+    @test stepsize[] ≈ 0.08f0
+
+    entry.apply_step!(-1)
+    @test stepsize[] ≈ 0.06f0
+
+    entry.slider.value[] = 0.1f0
+    @test stepsize[] ≈ 0.1f0
+    @test only(interactivevars(g)).value ≈ 0.1f0
+
+    close(host)
+    @test host.closed
+end
+
+@testset "SimulationPanel conditional optional panels" begin
+    g_langevin = IsingGraph(3, 3, Continuous(), StateSet(-1.0f0, 1.0f0); precision = Float32)
+    host_langevin = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    handle_langevin = Windows.panel!(host_langevin, Windows.SimulationPanel(g_langevin), (1, 1))
+    @test !haskey(handle_langevin.children, :kinetic_time)
+    @test haskey(handle_langevin.children, :temperature)
+    close(host_langevin)
+    @test host_langevin.closed
+
+    g_kinetic = IsingGraph(3, 3, Continuous(), StateSet(-1.0f0, 1.0f0); precision = Float32)
+    g_kinetic.default_algorithm = KineticMC()
+    host_kinetic = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    handle_kinetic = Windows.panel!(host_kinetic, Windows.SimulationPanel(g_kinetic), (1, 1))
+    @test haskey(handle_kinetic.children, :kinetic_time)
+    @test haskey(handle_kinetic.children, :temperature)
+    close(host_kinetic)
+    @test host_kinetic.closed
+end
+
 @testset "SimulationPanel layer selector construction" begin
     g = IsingGraph(
         Layer(3, 3, Continuous(), StateSet(-1.0f0, 1.0f0)),
