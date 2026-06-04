@@ -45,6 +45,7 @@ Base.@kwdef struct LocalMNISTManagerConfig{T<:AbstractFloat,S<:AbstractString}
     workers::Int = parse(Int, get(ENV, "ISING_MNIST_PM_WORKERS", "32"))
     epochs::Int = parse(Int, get(ENV, "ISING_MNIST_PM_EPOCHS", "200"))
     batchsize::Int = parse(Int, get(ENV, "ISING_MNIST_PM_BATCHSIZE", "32"))
+    job_chunk_size::Int = parse(Int, get(ENV, "ISING_MNIST_PM_JOB_CHUNK_SIZE", "1"))
     train_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_PM_TRAIN_PER_CLASS", "100"))
     test_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_PM_TEST_PER_CLASS", "20"))
     hidden1_side::Int = parse(Int, get(ENV, "ISING_MNIST_PM_H1_SIDE", "28"))
@@ -157,17 +158,14 @@ end
     return index_set
 end
 
-struct LocalMNISTJob{X<:AbstractVector,Y<:AbstractVector}
-    x::X
-    y::Y
-end
-
-mutable struct LocalMNISTManagerState{M,G,P,O}
+mutable struct LocalMNISTManagerState{M,G,P,O,X,Y}
     model::M
     batch_gradient::G
     optimizer_gradient::G
     params::Base.RefValue{P}
     opt_state::O
+    current_x::Base.RefValue{X}
+    current_y::Base.RefValue{Y}
     update_idx::Base.RefValue{Int}
     nsamples::Base.RefValue{Int}
     ncorrect::Base.RefValue{Int}
@@ -175,8 +173,10 @@ mutable struct LocalMNISTManagerState{M,G,P,O}
     total_loss::Base.RefValue{PMNIST_FT}
 end
 
-mutable struct LocalMNISTEvalManagerState{M}
+mutable struct LocalMNISTEvalManagerState{M,X,Y}
     model::M
+    current_x::Base.RefValue{X}
+    current_y::Base.RefValue{Y}
     nsamples::Base.RefValue{Int}
     ncorrect::Base.RefValue{Int}
     total_loss::Base.RefValue{PMNIST_FT}
@@ -800,6 +800,93 @@ function worker_context(worker::W) where {W}
     return Processes.context(worker)._state
 end
 
+"""Load one shared data-matrix column into a reusable worker-local sample buffer."""
+function load_sample_into_worker!(
+    context::C,
+    x::X,
+    y::Y,
+    sample_idx::I,
+) where {C,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
+    @inbounds begin
+        context.x .= @view x[:, sample_idx]
+        context.y .= @view y[:, sample_idx]
+    end
+    return context
+end
+
+"""Run a chunk of training sample indices on one already-constructed worker."""
+function run_training_chunk_task!(
+    worker::W,
+    job::J,
+    manager::M,
+) where {W<:Processes.Process,J<:AbstractVector{Int},M<:Processes.ProcessManager}
+    context = worker_context(worker)
+    x = manager.state.current_x[]
+    y = manager.state.current_y[]
+    @inbounds for sample_idx in job
+        load_sample_into_worker!(context, x, y, sample_idx)
+        Processes.reset!(worker)
+        Processes.runprocessinline!(worker)
+    end
+    return worker
+end
+
+"""Run a chunk of validation sample indices on one already-constructed worker."""
+function run_validation_chunk_task!(
+    worker::W,
+    job::J,
+    manager::M,
+) where {W<:Processes.Process,J<:AbstractVector{Int},M<:Processes.ProcessManager}
+    context = worker_context(worker)
+    x = manager.state.current_x[]
+    y = manager.state.current_y[]
+    @inbounds for sample_idx in job
+        load_sample_into_worker!(context, x, y, sample_idx)
+        Processes.reset!(worker)
+        Processes.runprocessinline!(worker)
+    end
+    return worker
+end
+
+"""Start one spawned training chunk task through the manager recipe."""
+function start_training_chunk!(slot::S, job::J, manager::M) where {S,J<:AbstractVector{Int},M<:Processes.ProcessManager}
+    manager.recipe.tasks[slot.idx] = Threads.@spawn run_training_chunk_task!(slot.worker, job, manager)
+    return slot.worker
+end
+
+"""Start one spawned validation chunk task through the manager recipe."""
+function start_validation_chunk!(slot::S, job::J, manager::M) where {S,J<:AbstractVector{Int},M<:Processes.ProcessManager}
+    manager.recipe.tasks[slot.idx] = Threads.@spawn run_validation_chunk_task!(slot.worker, job, manager)
+    return slot.worker
+end
+
+"""Return whether the spawned task owned by one worker slot has completed."""
+function chunk_task_isdone(slot::S, manager::M) where {S,M<:Processes.ProcessManager}
+    task = manager.recipe.tasks[slot.idx]
+    return !isnothing(task) && istaskdone(task)
+end
+
+"""Fetch a completed spawned worker task and make that worker slot reusable."""
+function finalize_chunk_task!(slot::S, job, manager::M) where {S,M<:Processes.ProcessManager}
+    task = manager.recipe.tasks[slot.idx]
+    if !isnothing(task)
+        fetch(task)
+        manager.recipe.tasks[slot.idx] = nothing
+    end
+    return slot.worker
+end
+
+"""Close one worker after fetching any still-owned spawned chunk task."""
+function close_chunk_worker!(slot::S, manager::M) where {S,M<:Processes.ProcessManager}
+    task = manager.recipe.tasks[slot.idx]
+    if !isnothing(task)
+        fetch(task)
+        manager.recipe.tasks[slot.idx] = nothing
+    end
+    close(slot.worker)
+    return slot.worker
+end
+
 """Update worker-local counters after one contrastive sample."""
 function update_worker_stats!(
     nsamples::Base.RefValue{I},
@@ -862,6 +949,8 @@ function local_manager(source::M) where {M<:LocalMNISTModel}
         gradient_buffer(source),
         Ref(params),
         optimizer_states(source.config, params),
+        Ref(zeros(PMNIST_FT, PMNIST_INPUT_DIM, 0)),
+        Ref(zeros(PMNIST_FT, PMNIST_NCLASSES * source.config.output_replicas, 0)),
         Ref(0),
         Ref(0),
         Ref(0),
@@ -872,7 +961,9 @@ function local_manager(source::M) where {M<:LocalMNISTModel}
     t_resolve = time()
     worker_algorithm = Processes.resolve(contrastive_worker_algorithm(deepcopy(dynamics_algorithm), source.config, length(II.state(source.graph))))
     progress_log(source.config, "worker algorithm resolved"; t0 = t_resolve)
+    tasks = Union{Nothing,Task}[nothing for _ in 1:source.config.workers]
     recipe = (;
+        tasks,
         makeworker = (idx, manager) -> begin
             should_log_progress(manager.config, idx, manager.config.workers) &&
                 progress_log(manager.config, "manager constructing worker"; worker = idx, workers = manager.config.workers)
@@ -881,13 +972,10 @@ function local_manager(source::M) where {M<:LocalMNISTModel}
                 progress_log(manager.config, "manager constructed worker"; worker = idx, workers = manager.config.workers)
             return worker
         end,
-        prepare! = (slot, job, manager) -> begin
-            ctx = worker_context(slot.worker)
-            ctx.x .= job.x
-            ctx.y .= job.y
-            Processes.resetworker!(slot)
-            return nothing
-        end,
+        start! = start_training_chunk!,
+        isdone = (slot, manager) -> chunk_task_isdone(slot, manager),
+        finalize! = finalize_chunk_task!,
+        close! = close_chunk_worker!,
         flush! = manager -> flush_manager_buffers!(manager),
     )
     manager = Processes.ProcessManager(
@@ -898,7 +986,7 @@ function local_manager(source::M) where {M<:LocalMNISTModel}
         flush_policy = Processes.FlushAtEnd(),
         worker_init = Processes.MakeEachWorker(),
         poll_interval = 0.0,
-        job_type = LocalMNISTJob{Vector{PMNIST_FT},Vector{PMNIST_FT}},
+        job_type = Vector{Int},
     )
     progress_log(source.config, "manager constructed"; t0 = t_manager, workers = source.config.workers)
     return manager
@@ -908,20 +996,27 @@ end
 function validation_manager(source::M) where {M<:LocalMNISTModel}
     t_manager = time()
     progress_log(source.config, "validation manager construction started"; workers = source.config.workers)
-    state = LocalMNISTEvalManagerState(source, Ref(0), Ref(0), Ref(0f0), zeros(Int, PMNIST_NCLASSES))
+    state = LocalMNISTEvalManagerState(
+        source,
+        Ref(zeros(PMNIST_FT, PMNIST_INPUT_DIM, 0)),
+        Ref(zeros(PMNIST_FT, PMNIST_NCLASSES * source.config.output_replicas, 0)),
+        Ref(0),
+        Ref(0),
+        Ref(0f0),
+        zeros(Int, PMNIST_NCLASSES),
+    )
     dynamics_algorithm = mnist_dynamics_algorithm()
     t_resolve = time()
     worker_algorithm = Processes.resolve(validation_free_phase_algorithm(deepcopy(dynamics_algorithm), source.config, length(II.state(source.graph))))
     progress_log(source.config, "validation worker algorithm resolved"; t0 = t_resolve)
+    tasks = Union{Nothing,Task}[nothing for _ in 1:source.config.workers]
     recipe = (;
+        tasks,
         makeworker = (idx, manager) -> validation_worker(manager.state.model, idx, worker_algorithm),
-        prepare! = (slot, job, manager) -> begin
-            ctx = worker_context(slot.worker)
-            ctx.x .= job.x
-            ctx.y .= job.y
-            Processes.resetworker!(slot)
-            return nothing
-        end,
+        start! = start_validation_chunk!,
+        isdone = (slot, manager) -> chunk_task_isdone(slot, manager),
+        finalize! = finalize_chunk_task!,
+        close! = close_chunk_worker!,
         flush! = manager -> flush_validation_buffers!(manager),
     )
     manager = Processes.ProcessManager(
@@ -932,7 +1027,7 @@ function validation_manager(source::M) where {M<:LocalMNISTModel}
         flush_policy = Processes.FlushAtEnd(),
         worker_init = Processes.MakeEachWorker(),
         poll_interval = 0.0,
-        job_type = LocalMNISTJob{Vector{PMNIST_FT},Vector{PMNIST_FT}},
+        job_type = Vector{Int},
     )
     progress_log(source.config, "validation manager constructed"; t0 = t_manager, workers = source.config.workers)
     return manager
@@ -1018,6 +1113,19 @@ function run_minibatch!(manager::M, jobs::J; log_progress::Bool = true) where {M
         loss = manager.state.nsamples[] == 0 ? 0f0 : manager.state.total_loss[] / manager.state.nsamples[],
         skipped = manager.state.nskipped[],
     )
+end
+
+"""Run one minibatch after binding the shared training matrices used by index jobs."""
+function run_minibatch!(
+    manager::M,
+    x::X,
+    y::Y,
+    jobs::J;
+    log_progress::Bool = true,
+) where {M<:Processes.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix,J<:AbstractVector}
+    manager.state.current_x[] = x
+    manager.state.current_y[] = y
+    return run_minibatch!(manager, jobs; log_progress)
 end
 
 """Install per-sample input/nudge fields into a combined base-plus-sample field."""
@@ -1240,11 +1348,13 @@ function balanced_mnist(split::Symbol, per_class::I, config::C) where {I<:Intege
     return x, y
 end
 
-"""Split selected sample indices into concrete manager jobs."""
-function batch_jobs(x::X, y::Y, indices::V) where {X<:AbstractMatrix,Y<:AbstractMatrix,V<:AbstractVector{Int}}
-    jobs = LocalMNISTJob{Vector{PMNIST_FT},Vector{PMNIST_FT}}[]
-    for sample_idx in indices
-        push!(jobs, LocalMNISTJob(copy(view(x, :, sample_idx)), copy(view(y, :, sample_idx))))
+"""Split selected sample indices into chunk jobs for self-loading workers."""
+function batch_jobs(indices::V, chunk_size::I) where {V<:AbstractVector{Int},I<:Integer}
+    chunk = max(1, Int(chunk_size))
+    jobs = Vector{Int}[]
+    for first_idx in firstindex(indices):chunk:lastindex(indices)
+        last_idx = min(first_idx + chunk - 1, lastindex(indices))
+        push!(jobs, collect(view(indices, first_idx:last_idx)))
     end
     return jobs
 end
@@ -1304,10 +1414,12 @@ end
 function evaluate(manager::M, x::X, y::Y) where {M<:Processes.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix}
     t_clear = time()
     clear_validation_buffers!(manager)
+    manager.state.current_x[] = x
+    manager.state.current_y[] = y
     progress_log(manager.config, "evaluation buffers cleared"; t0 = t_clear, samples = size(x, 2))
 
     t_jobs = time()
-    jobs = batch_jobs(x, y, collect(axes(x, 2)))
+    jobs = batch_jobs(collect(axes(x, 2)), manager.config.job_chunk_size)
     progress_log(manager.config, "evaluation jobs built"; t0 = t_jobs, jobs = length(jobs))
 
     t_run = time()
@@ -1421,6 +1533,7 @@ function write_settings!(path::P, config::C) where {P<:AbstractString,C<:LocalMN
         println(io, "- radius: `$(config.local_radius)`")
         println(io, "- workers: `$(config.workers)`")
         println(io, "- batchsize: `$(config.batchsize)`")
+        println(io, "- job chunk size: `$(config.job_chunk_size)`")
         println(io, "- train/test per class: `$(config.train_per_class)` / `$(config.test_per_class)`")
         println(io, "- free/nudge reads: `$(config.free_reads)` / `$(config.nudge_reads)`")
         println(io, "- free/nudge sweeps: `$(config.free_sweeps)` / `$(config.nudge_sweeps)`")
@@ -1437,6 +1550,7 @@ function write_settings!(path::P, config::C) where {P<:AbstractString,C<:LocalMN
         println(io, "- adjacency storage: `SparseMatrixCSC`")
         println(io, "- worker graph adjacency: shared with source graph")
         println(io, "- worker base bias: shared read-only; worker combined field is local")
+        println(io, "- manager jobs: chunked sample indices; workers self-load columns from shared data matrices")
         println(io, "- worker parameters: source updates once after `FlushAtEnd()`")
         println(io, "- checkpoints: include sparse `J`, bias, optimizer state, update index, config, and source RNG")
     end
@@ -1530,11 +1644,11 @@ function run_config!(config::C) where {C<:LocalMNISTManagerConfig}
                             )
                         end
                         t_jobs = time()
-                        jobs = batch_jobs(xtrain, ytrain, @view order[first_idx:last_idx])
+                        jobs = batch_jobs(view(order, first_idx:last_idx), config.job_chunk_size)
                         log_batch && progress_log(config, "batch jobs built"; t0 = t_jobs, epoch, batch = batch_idx, jobs = length(jobs))
                         t_batch = time()
                         log_batch && progress_log(config, "batch run started"; epoch, batch = batch_idx, jobs = length(jobs))
-                        stats = run_minibatch!(manager, jobs; log_progress = log_batch)
+                        stats = run_minibatch!(manager, xtrain, ytrain, jobs; log_progress = log_batch)
                         log_batch && progress_log(
                             config,
                             "batch run finished";
@@ -1652,6 +1766,7 @@ function main()
     base = LocalMNISTManagerConfig()
     base.workers > 0 || throw(ArgumentError("ISING_MNIST_PM_WORKERS must be positive"))
     base.batchsize > 0 || throw(ArgumentError("ISING_MNIST_PM_BATCHSIZE must be positive"))
+    base.job_chunk_size > 0 || throw(ArgumentError("ISING_MNIST_PM_JOB_CHUNK_SIZE must be positive"))
     Threads.nthreads() < base.workers && @warn "Julia was started with fewer threads than requested manager workers" threads = Threads.nthreads() workers = base.workers
     radii = parse_int_list(get(ENV, "ISING_MNIST_PM_RADII", "1,2,3,4,5,6,7,8,9,10"), collect(1:10))
     root_outdir = haskey(ENV, "ISING_MNIST_PM_OUTDIR") ? base.outdir :

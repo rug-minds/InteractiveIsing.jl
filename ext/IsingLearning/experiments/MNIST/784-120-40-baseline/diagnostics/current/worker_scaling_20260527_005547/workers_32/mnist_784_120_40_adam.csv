@@ -1,3 +1,0 @@
-timestamp,epoch,seconds,train_accuracy,train_loss,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
-2026-05-27T01:07:25,0,0.0,0.12,67.64071,0.123,67.65688,31-92-82-55-156-196-252-62-21-53,0.123,ext/IsingLearning/experiments/MNIST/784-120-40-baseline/diagnostics/current/worker_scaling_20260527_005547\workers_32\best_checkpoint.bin,
-2026-05-27T01:09:33,1,115.1160826,0.605,12.723705,0.592,12.591337,56-93-269-168-82-56-3-123-39-111,0.592,ext/IsingLearning/experiments/MNIST/784-120-40-baseline/diagnostics/current/worker_scaling_20260527_005547\workers_32\best_checkpoint.bin,ext/IsingLearning/experiments/MNIST/784-120-40-baseline/diagnostics/current/worker_scaling_20260527_005547\workers_32\final_checkpoint.bin

@@ -1,7 +1,0 @@
-label,looptype,repeat,wall_seconds,seconds_per_example
-bespoke_direct,none,1,2.2910715,0.01789899609375
-serial_process,IsingLearning.InteractiveIsing.Processes.Generated(),1,3.5998025,0.02812345703125
-bespoke_direct,none,2,2.3137334,0.0180760421875
-serial_process,IsingLearning.InteractiveIsing.Processes.Generated(),2,3.5879873,0.02803115078125
-bespoke_direct,none,3,2.3094515,0.01804258984375
-serial_process,IsingLearning.InteractiveIsing.Processes.Generated(),3,3.6128871,0.02822568046875

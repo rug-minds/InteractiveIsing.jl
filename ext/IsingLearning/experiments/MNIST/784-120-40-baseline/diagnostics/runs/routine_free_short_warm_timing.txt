@@ -1,2 +1,0 @@
-run_1 seconds=16.0577085 ticks=21
-run_2 seconds=1.5305116 ticks=21

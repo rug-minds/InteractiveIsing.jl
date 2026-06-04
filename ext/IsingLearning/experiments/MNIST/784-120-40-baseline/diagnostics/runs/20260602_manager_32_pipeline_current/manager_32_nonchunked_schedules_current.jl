@@ -96,6 +96,7 @@ function nonchunked_schedule(schedule_name::S) where {S<:Symbol}
     schedule_name === :dynamic && return Processes.Dynamic()
     schedule_name === :greedy && return Processes.Greedy()
     schedule_name === :static && return Processes.Static()
+    schedule_name === :channelworkers && return Processes.ChannelWorkers()
     schedule_name === :spawn && return nothing
     throw(ArgumentError("unknown schedule $(schedule_name)"))
 end

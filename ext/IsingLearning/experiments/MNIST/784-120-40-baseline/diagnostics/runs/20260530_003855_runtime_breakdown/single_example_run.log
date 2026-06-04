@@ -1,9 +1,0 @@
-  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-[bootstrap] activated project
-[bootstrap] loaded packages
-[2026-05-30T00:43:08] building single-example baseline layer threads=1 workers=1
-[2026-05-30T00:43:11] loading tiny train split
-[2026-05-30T00:43:12] constructing one worker
-[2026-05-30T00:43:30] warming one sample
-[2026-05-30T00:43:47] running measured single sample
-[2026-05-30T00:43:52] single-example summary timestamp=2026-05-30T00:43:52 architecture=784-120-40 measured_examples=1 workers=1 threads=1 sweeps=500.0 relaxation_steps=80000 work_steps_per_example=160000 total_work_steps=160000 setup_seconds=2.9507735 data_seconds=1.5970936 worker_seconds=17.3676815 warmup_seconds=11.2147951 measured_sample_seconds=4.640277 examples_per_second=0.21550437613961407

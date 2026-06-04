@@ -1,5 +1,0 @@
-[bootstrap] activated project
-[bootstrap] loaded packages
-[2026-06-02T20:25:38] building baseline for manager breakdown threads=32 workers=32
-[2026-06-02T20:25:41] skipping static schedule because it requires one slot per max thread workers=32 maxthreadid=64
-[2026-06-02T20:25:41] constructing diagnostic manager schedule=dynamic

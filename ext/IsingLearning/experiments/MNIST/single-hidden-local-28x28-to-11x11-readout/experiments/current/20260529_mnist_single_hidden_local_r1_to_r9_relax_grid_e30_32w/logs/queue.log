@@ -1,5 +1,0 @@
-[2026-05-29T00:23:33] Waiting for PID 744496 before starting radius grid.
-[2026-05-29T01:14:58] Queue watcher paused manually: r8 from-scratch grid is flat/collapsing; revisit setup before continuing.
-[2026-05-29T01:15:08] Queue watcher paused manually: r8 from-scratch grid is flat/collapsing; revisit setup before continuing.
-[2026-05-29T08:22:44] Queue restarted manually; first r8 grid completed.
-[2026-05-29T08:22:45] Started radius/relax grid. stdout=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260529_mnist_single_hidden_local_r1_to_r9_relax_grid_e30_32w\logs\launcher_stdout.log stderr=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260529_mnist_single_hidden_local_r1_to_r9_relax_grid_e30_32w\logs\launcher_stderr.log

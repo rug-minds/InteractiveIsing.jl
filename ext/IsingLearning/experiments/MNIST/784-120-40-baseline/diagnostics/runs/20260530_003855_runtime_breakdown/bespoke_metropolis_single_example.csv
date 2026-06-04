@@ -1,3 +1,0 @@
-timestamp,architecture,implementation,measured_examples,threads,sweeps,beta,temp,relaxation_steps,work_steps_per_example,active_units,setup_seconds,data_seconds,warmup_total_seconds,measured_wall_seconds,free_seconds,nudged_seconds,gradient_seconds,normalize_seconds,accepted_free,accepted_nudged,acceptance_rate,steps_per_second
-2026-05-30T00:58:21,784-120-40,bespoke_direct_continuous_metropolis,1,1,500.0,5.0,0.001,80000,160000,160,2.5779221,1.5028231,0.423756,0.6261961,0.5669713,0.0579439,0.0010781,1.05e-5,4018,4807,0.05515625,255511.01324329549
-2026-05-30T12:09:09,784-120-40,bespoke_direct_continuous_metropolis,1,1,500.0,5.0,0.001,80000,160000,160,2.541015,1.2753679,0.2838828,0.0382708,0.0185483,0.0189742,0.0005947,9.7e-6,4018,4807,0.05515625,4.180733091547603e6

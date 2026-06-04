@@ -101,6 +101,10 @@ focused on implementation decisions that should survive future experiment edits.
     `0.01674 s/example`
   - Reduced `InlineProcess` mean over the same reruns:
     `0.01736 s/example`
+- The exact reduced Metropolis benchmark rerun on `2026-06-04` confirmed this
+  improved state: direct bespoke `0.03344 s/example`, normal `Process`
+  `0.00874 s/example`, and `InlineProcess` `0.00856 s/example`. This is the
+  current apples-to-apples Metropolis abstraction-overhead check.
 - The 1-worker real training-path diagnostic (`LocalLangevin` manager code,
   measured through `runprocessinline!`) averaged `0.03530 s/example` over 8
   serial samples, while the 1-worker manager chunk path measured

@@ -191,6 +191,49 @@ Important rules:
   first-run compilation.
 - Always run a warmup before comparing timings.
 
+### Chunked Index Jobs
+
+Current rescue runs use manager jobs that are small `Vector{Int}` chunks of
+sample indices. The manager state holds references to the active `x` and `y`
+matrices, and each spawned worker task loads its assigned columns into
+worker-local `x`/`y` buffers before calling `runprocessinline!`.
+
+This keeps the process algorithm unchanged while removing copied sample payload
+jobs from the main thread. It also makes chunk size an explicit scheduling
+parameter through `ISING_MNIST_PM_JOB_CHUNK_SIZE`.
+
+Important rules:
+
+- Use enough chunks to fill workers. For 32 workers, `batchsize=128` and
+  `job_chunk_size=4` gives 32 chunk jobs.
+- Keep `x`/`y` matrices read-only while a manager run is active.
+- Copy into worker-local sample buffers inside the worker task, not during job
+  construction.
+- Record chunk size in settings because it changes scheduling and throughput.
+
+## R8 Rescue Findings
+
+The 2026-06-04 r8 rescue series showed that default r8 Metropolis settings can
+collapse into a class attractor even when epoch-zero prediction counts are
+diverse. Lowering the learning rate and increasing the minibatch helped:
+
+- `β=2.5`, `25/25` sweeps, `batchsize=64`, `job_chunk_size=2`,
+  `lr=5e-4`: best test accuracy `0.21`, final collapse.
+- Same sampler with `batchsize=128`, `job_chunk_size=4`, `lr=1e-4`: best test
+  accuracy `0.415`, later decayed.
+- Same sampler with `batchsize=128`, `job_chunk_size=4`, `lr=5e-5`: best test
+  accuracy `0.535`, then decayed to `0.21` by epoch 80.
+
+This suggests the r8 failure is not simply "too little relaxation"; optimizer
+step size and readout-class attractors are central. The next useful branches are
+lower LR/longer runs, lower nudge strength, higher relaxation counts, and seed
+averaging for any recipe that sustains non-chance behavior.
+
+Langevin is not a drop-in option for this discrete-spin experiment. A smoke test
+with `LocalLangevin(adjusted=false)` failed during worker initialization because
+Langevin requires `Continuous` active layers. Testing Langevin fairly requires a
+separate continuous-state variant of the architecture.
+
 ## Diagnostics
 
 Use small diagnostics before broad learning runs.

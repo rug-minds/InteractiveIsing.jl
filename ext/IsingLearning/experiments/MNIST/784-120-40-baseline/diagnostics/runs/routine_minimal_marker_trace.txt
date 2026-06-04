@@ -1,6 +1,0 @@
-script_start
-included
-process_ready
-process_reset
-inside_marker_only
-run_returned

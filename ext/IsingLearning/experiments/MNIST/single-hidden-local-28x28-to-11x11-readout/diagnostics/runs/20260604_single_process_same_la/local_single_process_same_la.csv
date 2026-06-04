@@ -1,0 +1,5 @@
+timestamp,mode,threads,workers,sample_idx,radius,free_sweeps,nudge_sweeps,free_reads,nudge_reads,beta,examples,seconds,seconds_per_example,examples_per_second
+2026-06-04T21:36:50,local_serial_process_inline,1,1,2,8,50,50,3,3,5.0,1,0.1740716,0.1740716,5.744762500028724
+2026-06-04T21:36:52,local_serial_process_inline,1,1,3,8,50,50,3,3,5.0,1,0.157217,0.157217,6.360635300253789
+2026-06-04T21:36:52,local_serial_process_inline,1,1,4,8,50,50,3,3,5.0,1,0.2123779,0.2123779,4.708587852125857
+2026-06-04T21:37:09,local_one_worker_manager_chunk,1,1,0,8,50,50,3,3,5.0,32,6.815092,0.212971625,4.695461191132856

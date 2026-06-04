@@ -1,2 +1,0 @@
-[bootstrap] activated project
-[bootstrap] loaded packages

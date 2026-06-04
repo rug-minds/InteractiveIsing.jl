@@ -1,4 +1,0 @@
-  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-Warning: detected a stack overflow; program state may be corrupted, so further execution might be unreliable.
-ERROR: LoadError: StackOverflowError:
-in expression starting at stdin:19

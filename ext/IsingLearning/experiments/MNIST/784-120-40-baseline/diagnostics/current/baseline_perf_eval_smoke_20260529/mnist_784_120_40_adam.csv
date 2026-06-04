@@ -1,2 +1,0 @@
-timestamp,epoch,seconds,train_accuracy,train_loss,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
-2026-05-29T19:13:11,0,0.0,0.1,55.378136,0.0,53.10448,1-0-0-0-0-3-0-1-1-4,0.0,ext/IsingLearning/experiments/MNIST/784-120-40-baseline/diagnostics/current/baseline_perf_eval_smoke_20260529\best_checkpoint.bin,ext/IsingLearning/experiments/MNIST/784-120-40-baseline/diagnostics/current/baseline_perf_eval_smoke_20260529\final_checkpoint.bin

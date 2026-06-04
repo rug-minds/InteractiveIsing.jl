@@ -1,0 +1,13 @@
+[2026-06-04T11:36:16] START attempt_09_metropolis_s25_beta1p5_lr000025_b128_chunk4_seed2468_e200 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260604_r8_rescue_series\attempt_09_metropolis_s25_beta1p5_lr000025_b128_chunk4_seed2468_e200
+[2026-06-04T11:36:16] PID attempt_09_metropolis_s25_beta1p5_lr000025_b128_chunk4_seed2468_e200 1569884
+[2026-06-04T11:38:33] END attempt_09_metropolis_s25_beta1p5_lr000025_b128_chunk4_seed2468_e200
+[2026-06-04T11:38:33] START attempt_10_metropolis_s25_beta1p0_lr000025_b128_chunk4_seed2468_e200 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260604_r8_rescue_series\attempt_10_metropolis_s25_beta1p0_lr000025_b128_chunk4_seed2468_e200
+[2026-06-04T11:38:33] PID attempt_10_metropolis_s25_beta1p0_lr000025_b128_chunk4_seed2468_e200 1570956
+[2026-06-04T11:40:04] END attempt_10_metropolis_s25_beta1p0_lr000025_b128_chunk4_seed2468_e200
+[2026-06-04T11:40:04] START attempt_11_metropolis_s25_beta1p5_lr00001_b128_chunk4_seed2468_e240 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260604_r8_rescue_series\attempt_11_metropolis_s25_beta1p5_lr00001_b128_chunk4_seed2468_e240
+[2026-06-04T11:40:04] PID attempt_11_metropolis_s25_beta1p5_lr00001_b128_chunk4_seed2468_e240 1550828
+[2026-06-04T11:46:36] END attempt_11_metropolis_s25_beta1p5_lr00001_b128_chunk4_seed2468_e240
+[2026-06-04T11:46:36] START attempt_12_metropolis_s25_beta1p0_lr00001_b128_chunk4_seed2468_e240 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260604_r8_rescue_series\attempt_12_metropolis_s25_beta1p0_lr00001_b128_chunk4_seed2468_e240
+[2026-06-04T11:46:36] PID attempt_12_metropolis_s25_beta1p0_lr00001_b128_chunk4_seed2468_e240 1565136
+[2026-06-04T11:51:13] END attempt_12_metropolis_s25_beta1p0_lr00001_b128_chunk4_seed2468_e240
+[2026-06-04T11:51:13] RETRY SUITE 02 COMPLETE

@@ -1,2 +1,0 @@
-timestamp,repeat,threads,batchsize,sweeps,direct_seconds,direct_seconds_per_example,process_warmup_seconds,process_seconds,process_seconds_per_example,process_over_bespoke
-2026-06-01T23:08:30,1,32,128,500.0,2.3306423,0.01820814296875,8.7897277,4.0655531,0.03176213359375,1.7443917069556318

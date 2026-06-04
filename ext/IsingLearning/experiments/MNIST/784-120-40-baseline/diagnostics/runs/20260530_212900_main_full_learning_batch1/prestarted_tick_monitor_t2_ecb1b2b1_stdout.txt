@@ -1,3 +1,0 @@
-[bootstrap] activated project
-[bootstrap] loaded packages
-after include elapsed=0.0 threads=2

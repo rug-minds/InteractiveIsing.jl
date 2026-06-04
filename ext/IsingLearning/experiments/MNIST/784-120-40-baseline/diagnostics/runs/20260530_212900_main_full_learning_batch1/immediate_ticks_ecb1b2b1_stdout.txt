@@ -1,4 +1,0 @@
-[bootstrap] activated project
-[bootstrap] loaded packages
-after include elapsed=0.0
-before run elapsed=33.027

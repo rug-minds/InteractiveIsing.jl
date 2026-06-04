@@ -1,4 +1,0 @@
-Warning: detected a stack overflow; program state may be corrupted, so further execution might be unreliable.
-  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-ERROR: LoadError: StackOverflowError:
-in expression starting at C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\diagnostics\runs\20260531_immutable_fix_runtime_compare\immutable_fix_process_markers.jl:90

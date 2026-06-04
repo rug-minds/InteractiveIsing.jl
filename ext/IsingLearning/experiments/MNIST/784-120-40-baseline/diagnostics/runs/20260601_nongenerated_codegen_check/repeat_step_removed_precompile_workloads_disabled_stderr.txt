@@ -1,7 +1,0 @@
-  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-Precompiling packages...
-┌ Warning: attempting to remove probably stale pidfile
-│   path = "C:\\Users\\fenje\\.julia\\compiled\\v1.12\\IsingLearning\\sAg6i_MwG1I.ji.pidfile"
-└ @ FileWatching.Pidfile C:\Users\fenje\.julia\juliaup\julia-1.12.6+0.x64.w64.mingw32\share\julia\stdlib\v1.12\FileWatching\src\pidfile.jl:250
-  25965.4 ms  ✓ IsingLearning
-  1 dependency successfully precompiled in 29 seconds. 557 already precompiled.

@@ -1,7 +1,0 @@
-[bootstrap] activated project
-[bootstrap] loaded packages
-after include elapsed=2.315
-after data elapsed=4.398
-after worker elapsed=20.086
-before run elapsed=33.823
-after run returned elapsed=34.97

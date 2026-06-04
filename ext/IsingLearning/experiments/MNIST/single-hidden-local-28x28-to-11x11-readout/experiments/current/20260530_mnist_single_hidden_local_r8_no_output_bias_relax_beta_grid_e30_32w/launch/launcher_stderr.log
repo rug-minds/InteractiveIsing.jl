@@ -1,9 +1,0 @@
-julia.exe :   Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-At C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readou
-t\experiments\current\20260530_mnist_single_hidden_local_r8_no_output_bias_relax_beta_grid_e30_32w\launch\launch_r8_no_
-output_bias_grid.ps1:44 char:9
-+         & julia --project="ext\IsingLearning" -t 32 $Driver > (Join-P ...
-+         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (  Activating pr...\IsingLearning`:String) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
- 

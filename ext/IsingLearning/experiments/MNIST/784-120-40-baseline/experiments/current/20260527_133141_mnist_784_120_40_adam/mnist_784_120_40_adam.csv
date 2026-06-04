@@ -1,2 +1,0 @@
-timestamp,epoch,seconds,train_accuracy,train_loss,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
-2026-05-27T13:40:13,0,0.0,0.116,87.032745,0.09809417040358745,87.02625,880-961-421-516-629-891-476-1559-401-2186,0.09809417040358745,C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\experiments\current\mnist_784_120_40_adam_20260527_133141\best_checkpoint.bin,

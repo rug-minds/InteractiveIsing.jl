@@ -1,4 +1,0 @@
-[bootstrap] activated project
-[bootstrap] loaded packages
-2026-06-02T20:29:47.220 begin manager32 current chunked pipeline threads=32 workers=32 batchsize=128 sweeps=500.0 repeats=3
-2026-06-02T20:30:04.931 warmup begin

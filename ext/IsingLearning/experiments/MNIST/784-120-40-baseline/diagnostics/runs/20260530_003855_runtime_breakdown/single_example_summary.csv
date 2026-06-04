@@ -1,2 +1,0 @@
-timestamp,architecture,measured_examples,workers,threads,sweeps,relaxation_steps,work_steps_per_example,total_work_steps,setup_seconds,data_seconds,worker_seconds,warmup_seconds,measured_sample_seconds,examples_per_second
-2026-05-30T00:43:52,784-120-40,1,1,1,500.0,80000,160000,160000,2.9507735,1.5970936,17.3676815,11.2147951,4.640277,0.21550437613961407

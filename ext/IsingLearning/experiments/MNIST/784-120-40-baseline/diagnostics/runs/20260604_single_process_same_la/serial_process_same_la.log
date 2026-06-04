@@ -1,0 +1,14 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+[bootstrap] activated project
+Precompiling packages...
+  73632.9 ms  ✓ IsingLearning
+  1 dependency successfully precompiled in 88 seconds. 557 already precompiled.
+[bootstrap] loaded packages
+[21:27:27] building setup
+[21:27:50] warming serial process
+(timestamp = "2026-06-04T21:27:58", mode = "serial_process_inline", threads = 1, workers = 1, sample_idx = 3, sweeps = 500.0f0, beta = 5.0f0, temp = 0.001f0, stepsize = 0.5f0, relaxation_steps = 80000, examples = 1, seconds = 0.0199551, seconds_per_example = 0.0199551, examples_per_second = 50.112502568265754)
+(timestamp = "2026-06-04T21:27:59", mode = "serial_process_inline", threads = 1, workers = 1, sample_idx = 4, sweeps = 500.0f0, beta = 5.0f0, temp = 0.001f0, stepsize = 0.5f0, relaxation_steps = 80000, examples = 1, seconds = 0.0209095, seconds_per_example = 0.0209095, examples_per_second = 47.825151247040814)
+(timestamp = "2026-06-04T21:27:59", mode = "serial_process_inline", threads = 1, workers = 1, sample_idx = 5, sweeps = 500.0f0, beta = 5.0f0, temp = 0.001f0, stepsize = 0.5f0, relaxation_steps = 80000, examples = 1, seconds = 0.019838, seconds_per_example = 0.019838, examples_per_second = 50.40830728904123)
+(timestamp = "2026-06-04T21:27:59", mode = "serial_process_inline", threads = 1, workers = 1, sample_idx = 6, sweeps = 500.0f0, beta = 5.0f0, temp = 0.001f0, stepsize = 0.5f0, relaxation_steps = 80000, examples = 1, seconds = 0.0232234, seconds_per_example = 0.0232234, examples_per_second = 43.06001705176675)
+[21:28:00] warming one-worker manager
+(timestamp = "2026-06-04T21:28:08", mode = "one_worker_manager_chunk", threads = 1, workers = 1, sample_idx = 0, sweeps = 500.0f0, beta = 5.0f0, temp = 0.001f0, stepsize = 0.5f0, relaxation_steps = 80000, examples = 128, seconds = 4.2531138, seconds_per_example = 0.0332274515625, examples_per_second = 30.095597253946035)

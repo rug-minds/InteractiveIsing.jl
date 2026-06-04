@@ -1,9 +1,0 @@
-SCRIPT_START
-INCLUDED
-BEFORE started=false running=false done=false idle=true task_isnothing=true
-AFTER_RUN started=true running=true done=false idle=false task_isnothing=false task_done=false
-AFTER_0_5S started=true running=true done=false idle=false task_isnothing=false task_done=false
-AFTER_2_5S started=true running=false done=true idle=true task_isnothing=false task_done=true
-AFTER_RUN started=true running=true done=false idle=false task_isnothing=false task_done=false
-AFTER_0_5S started=true running=true done=false idle=false task_isnothing=false task_done=false
-AFTER_2_5S started=true running=false done=true idle=true task_isnothing=false task_done=true

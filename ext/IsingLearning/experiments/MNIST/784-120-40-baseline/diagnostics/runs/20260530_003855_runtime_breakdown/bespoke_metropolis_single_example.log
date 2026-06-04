@@ -1,6 +1,0 @@
-  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-[bootstrap] activated project
-[bootstrap] loaded packages
-[2026-05-30T00:58:13] building bespoke Metropolis baseline threads=1
-[2026-05-30T00:58:18] loading tiny MNIST split
-[2026-05-30T00:58:22] bespoke Metropolis summary timestamp=2026-05-30T00:58:21 architecture=784-120-40 implementation=bespoke_direct_continuous_metropolis measured_examples=1 threads=1 sweeps=500.0 beta=5.0 temp=0.001 relaxation_steps=80000 work_steps_per_example=160000 active_units=160 setup_seconds=2.5779221 data_seconds=1.5028231 warmup_total_seconds=0.423756 measured_wall_seconds=0.6261961 free_seconds=0.5669713 nudged_seconds=0.0579439 gradient_seconds=0.0010781 normalize_seconds=1.05e-5 accepted_free=4018 accepted_nudged=4807 acceptance_rate=0.05515625 steps_per_second=255511.01324329549 csv=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\diagnostics\runs\20260530_003855_runtime_breakdown\bespoke_metropolis_single_example.csv

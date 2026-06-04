@@ -1,0 +1,6 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+[21:30:22] building local r8 source
+[21:30:52] warming local single Process
+(timestamp = "2026-06-04T21:31:00", mode = "local_serial_process_inline", threads = 1, workers = 1, sample_idx = 2, radius = 8, free_sweeps = 50, nudge_sweeps = 50, free_reads = 3, nudge_reads = 3, beta = 5.0f0, examples = 1, seconds = 0.2060603, seconds_per_example = 0.2060603, examples_per_second = 4.852948384526277)
+(timestamp = "2026-06-04T21:31:01", mode = "local_serial_process_inline", threads = 1, workers = 1, sample_idx = 3, radius = 8, free_sweeps = 50, nudge_sweeps = 50, free_reads = 3, nudge_reads = 3, beta = 5.0f0, examples = 1, seconds = 0.1483399, seconds_per_example = 0.1483399, examples_per_second = 6.741274599753674)
+(timestamp = "2026-06-04T21:31:02", mode = "local_serial_process_inline", threads = 1, workers = 1, sample_idx = 4, radius = 8, free_sweeps = 50, nudge_sweeps = 50, free_reads = 3, nudge_reads = 3, beta = 5.0f0, examples = 1, seconds = 0.1536167, seconds_per_example = 0.1536167, examples_per_second = 6.50970890534688)

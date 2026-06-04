@@ -1,5 +1,0 @@
-workers,total_seconds,train_seconds,overhead_seconds,final_train_accuracy,final_train_loss,final_test_accuracy,final_test_loss,best_accuracy,outdir
-1,262.8932943,147.2285651,115.66472919999998,0.675,10.877708,0.667,11.185187,0.667,ext/IsingLearning/experiments/MNIST/784-120-40-baseline/diagnostics/current/worker_scaling_20260527_005547\workers_1
-8,212.8339405,151.8389216,60.99501890000002,0.7,9.67839,0.711,9.88035,0.711,ext/IsingLearning/experiments/MNIST/784-120-40-baseline/diagnostics/current/worker_scaling_20260527_005547\workers_8
-16,164.409129,114.9737481,49.43538090000001,0.6,11.095607,0.575,11.56752,0.575,ext/IsingLearning/experiments/MNIST/784-120-40-baseline/diagnostics/current/worker_scaling_20260527_005547\workers_16
-32,165.1356804,115.1160826,50.019597800000014,0.605,12.723705,0.592,12.591337,0.592,ext/IsingLearning/experiments/MNIST/784-120-40-baseline/diagnostics/current/worker_scaling_20260527_005547\workers_32

@@ -1,3 +1,0 @@
-schedule,batches,threads,workers,batchsize,sweeps,median_total_seconds_per_example,mean_total_seconds_per_example,median_examples_per_second,mean_examples_per_second
-greedy,3,32,32,128,500.0,0.00153851328125,0.0015454794270833335,649.9781394071082,647.0857438140213
-spawn,3,32,32,128,500.0,0.0016551953125000002,0.0016854825520833336,604.1583083567365,594.3364512340494

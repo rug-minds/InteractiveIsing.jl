@@ -1,3 +1,0 @@
-timestamp,epoch,seconds,train_accuracy,train_loss,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
-2026-05-27T14:53:18,0,0.0,0.089,87.59231,0.09865470852017937,87.24265,782-1044-427-531-625-909-526-1542-415-2119,0.09865470852017937,C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\experiments\current\mnist_784_120_40_adam_restart_beta1_lr0006_e300_20260527_144408\best_checkpoint.bin,
-2026-05-27T14:59:36,1,377.3954429,missing,missing,missing,missing,missing,0.09865470852017937,C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline\experiments\current\mnist_784_120_40_adam_restart_beta1_lr0006_e300_20260527_144408\best_checkpoint.bin,
