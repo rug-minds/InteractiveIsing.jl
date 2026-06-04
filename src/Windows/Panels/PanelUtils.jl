@@ -873,8 +873,8 @@ end
 """
     _vector_spin_glyphs_3d(handle, layer)
 
-Return downsampled 3D arrow positions and direction vectors for a vector-spin
-layer display.
+Return downsampled 3D arrow positions, direction vectors, and magnitudes for a
+vector-spin layer display.
 """
 function _vector_spin_glyphs_3d(handle, layer::AbstractIsingLayer{T,3}) where {T}
     layer_graph = graph(layer)
@@ -887,8 +887,9 @@ function _vector_spin_glyphs_3d(handle, layer::AbstractIsingLayer{T,3}) where {T
     linear = LinearIndices(size(layer))
     positions = Point3f[]
     directions = Vec3f[]
+    magnitudes = Float32[]
 
-    # The spin vector is interpreted in display/world axes.
+    # Direction vectors keep their state magnitude; color displays the same magnitude.
     @inbounds for k in 1:zstride:size(layer, 3), j in 1:ystride:size(layer, 2), i in 1:xstride:size(layer, 1)
         idx = linear[i, j, k]
         spin = spin_state[i, j, k]
@@ -898,10 +899,33 @@ function _vector_spin_glyphs_3d(handle, layer::AbstractIsingLayer{T,3}) where {T
 
         push!(positions, Point3f(xs[idx], ys[idx], zs[idx]))
         push!(directions, spin_direction)
+        push!(magnitudes, Float32(spin_norm))
     end
-    return positions, directions
+    return (;positions, directions, magnitudes)
 end
 _vector_spin_glyphs_3d(handle, layer) = nothing
+
+"""
+    _vector_spin_magnitude_slice_3d(layer)
+
+Return a central z-slice of vector magnitudes for the side heatmap.
+"""
+function _vector_spin_magnitude_slice_3d(layer::AbstractIsingLayer{T,3}) where {T}
+    spin_state = state(layer)
+    zidx = cld(size(layer, 3), 2)
+    values = Matrix{Float32}(undef, size(layer, 1), size(layer, 2))
+
+    @inbounds for j in 1:size(layer, 2), i in 1:size(layer, 1)
+        values[i, j] = Float32(norm(spin_state[i, j, zidx]))
+    end
+    return values
+end
+
+@inline function _vector_spin_magnitude_colorrange(values)
+    isempty(values) && return (0f0, 1f0)
+    hi = maximum(values)
+    return (0f0, max(Float32(hi), eps(Float32)))
+end
 
 function _draw_vector_spin_arrows_3d!(handle, ax, layer; prefix::Symbol = :vector_arrow)
     geometry = _vector_spin_glyphs_3d(handle, layer)
@@ -910,25 +934,52 @@ function _draw_vector_spin_arrows_3d!(handle, ax, layer; prefix::Symbol = :vecto
     layer_key = _vector_arrow_key(prefix, :layer)
     positions_key = _vector_arrow_key(prefix, :positions)
     directions_key = _vector_arrow_key(prefix, :directions)
+    magnitudes_key = _vector_arrow_key(prefix, :magnitudes)
     plot_key = _vector_arrow_key(prefix, :plot)
 
     handle[layer_key] = layer
-    handle[positions_key] = Observable(first(geometry))
-    handle[directions_key] = Observable(last(geometry))
+    handle[positions_key] = Observable(geometry.positions)
+    handle[directions_key] = Observable(geometry.directions)
+    handle[magnitudes_key] = Observable(geometry.magnitudes)
     handle[plot_key] = arrows3d!(
         ax,
         handle[positions_key],
         handle[directions_key];
-        shaftcolor = :gray,
-        tipcolor = :black,
+        color = handle[magnitudes_key],
+        colormap = :viridis,
+        colorrange = _vector_spin_magnitude_colorrange(geometry.magnitudes),
         align = :center,
-        lengthscale = 0.85f0,
+        normalize = false,
+        lengthscale = 1.5f0,
         markerscale = 1.0f0,
-        shaftradius = 0.035,
-        tipradius = 0.10,
-        tiplength = 0.28,
+        minshaftlength = 0.0,
+        shaftradius = 0.025,
+        tipradius = 0.075,
+        tiplength = 0.22,
     )
     return handle[plot_key]
+end
+
+function _draw_vector_spin_magnitude_heatmap_3d!(handle, cell, layer; prefix::Symbol = :vector_arrow)
+    values = _vector_spin_magnitude_slice_3d(layer)
+    obs_key = _vector_arrow_key(prefix, :magnitude_heatmap_obs)
+    plot_key = _vector_arrow_key(prefix, :magnitude_heatmap_plot)
+    axis_key = _vector_arrow_key(prefix, :magnitude_axis)
+
+    ax = handle[axis_key] = Axis(cell, aspect = DataAspect(), tellheight = true, tellwidth = true)
+    ax.yreversed = @load_preference("makie_y_flip", default = false)
+    handle[obs_key] = Observable(values)
+    plot = handle[plot_key] = image!(
+        ax,
+        handle[obs_key];
+        colormap = :viridis,
+        colorrange = _vector_spin_magnitude_colorrange(values),
+        fxaa = false,
+        interpolate = false,
+    )
+    hidedecorations!(ax; grid = false)
+    hidespines!(ax)
+    return plot
 end
 
 function _draw_vector_spin_layer_3d!(
@@ -938,7 +989,11 @@ function _draw_vector_spin_layer_3d!(
     axis_key::Symbol = :axis,
     prefix::Symbol = :vector_arrow,
 )
-    ax = handle[axis_key] = Axis3(cell, tellheight = true)
+    grid = GridLayout(cell)
+    _draw_vector_spin_magnitude_heatmap_3d!(handle, grid[1, 1], layer; prefix)
+    ax = handle[axis_key] = Axis3(grid[1, 2], tellheight = true)
+    colsize!(grid, 1, Relative(0.24))
+    colsize!(grid, 2, Auto(false))
     _restore_axis3_state!(ax, get(handle.data, Symbol(String(axis_key), "3_state"), nothing))
     _draw_vector_spin_arrows_3d!(handle, ax, layer; prefix)
     return handle
@@ -963,9 +1018,17 @@ function _refresh_vector_spin_arrows_3d!(handle; prefix::Symbol = :vector_arrow)
     _is_vector_spin_3d_layer(layer) || return nothing
     geometry = _vector_spin_glyphs_3d(handle, layer)
     isnothing(geometry) && return nothing
-    positions, directions = geometry
-    handle[positions_key][] = positions
-    handle[_vector_arrow_key(prefix, :directions)][] = directions
+    handle[positions_key][] = geometry.positions
+    handle[_vector_arrow_key(prefix, :directions)][] = geometry.directions
+    handle[_vector_arrow_key(prefix, :magnitudes)][] = geometry.magnitudes
+    handle[_vector_arrow_key(prefix, :plot)].colorrange[] = _vector_spin_magnitude_colorrange(geometry.magnitudes)
+
+    heatmap_obs_key = _vector_arrow_key(prefix, :magnitude_heatmap_obs)
+    if haskey(handle, heatmap_obs_key)
+        values = _vector_spin_magnitude_slice_3d(layer)
+        handle[heatmap_obs_key][] = values
+        handle[_vector_arrow_key(prefix, :magnitude_heatmap_plot)].colorrange[] = _vector_spin_magnitude_colorrange(values)
+    end
     return nothing
 end
 

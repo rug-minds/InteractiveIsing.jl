@@ -38,6 +38,10 @@ function _redraw_layer!(handle::PanelHandle)
         _remember_axis3_state!(handle, :axis3_state, handle[:axis])
         _delete_makie_object!(handle, handle[:axis])
     end
+    if haskey(handle, :vector_arrow_magnitude_axis)
+        _delete_makie_object!(handle, handle[:vector_arrow_magnitude_axis])
+        delete!(handle.data, :vector_arrow_magnitude_axis)
+    end
 
     panel = handle.panel::LayerViewPanel
     grid = handle[:grid]

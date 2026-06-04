@@ -191,7 +191,7 @@ function _draw_hamiltonian_entry!(handle::PanelHandle)
 end
 
 function _clear_hamiltonian_display!(handle)
-    for key in (:display_axis, :display_label, :display_title)
+    for key in (:display_axis, :display_vector_arrow_magnitude_axis, :display_label, :display_title)
         if haskey(handle, key)
             key === :display_axis && _remember_axis3_state!(handle, :display_axis3_state, handle[key])
             _delete_makie_object!(handle, handle[key])
@@ -209,12 +209,16 @@ function _clear_hamiltonian_display!(handle)
         :display_vector_arrow_layer,
         :display_vector_arrow_positions,
         :display_vector_arrow_directions,
+        :display_vector_arrow_magnitudes,
         :display_vector_arrow_underlay,
         :display_vector_arrow_stem_segments,
         :display_vector_arrow_head_positions,
         :display_vector_arrow_head_rotations,
         :display_vector_arrow_head_sizes,
         :display_vector_arrow_stem_plot,
+        :display_vector_arrow_magnitude_axis,
+        :display_vector_arrow_magnitude_heatmap_obs,
+        :display_vector_arrow_magnitude_heatmap_plot,
         :display_vector_arrow_plot,
     )
         delete!(handle.data, key)
