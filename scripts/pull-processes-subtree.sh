@@ -10,8 +10,8 @@ if [[ -n "$(git status --porcelain)" ]]; then
   stashed=1
 fi
 
-# Pull the requested Processes.jl branch into the vendored subtree.
-git subtree pull --prefix=deps/Processes https://github.com/f-ij/Processes.jl.git "$branch" --squash -m "Pull deps/Processes subtree from $branch"
+# Pull the requested StatefulAlgorithms.jl branch into the vendored subtree.
+git subtree pull --prefix=deps/StatefulAlgorithms https://github.com/f-ij/StatefulAlgorithms.jl.git "$branch" --squash -m "Pull deps/StatefulAlgorithms subtree from $branch"
 
 if [[ "$stashed" -eq 1 ]]; then
   git stash pop

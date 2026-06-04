@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Recreate deps/Processes as its own nested git repo (so GUIs can push it separately).
+# Recreate deps/StatefulAlgorithms as its own nested git repo (so GUIs can push it separately).
 # Default remote is HTTPS to avoid SSH-key setup on new machines.
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
@@ -10,10 +10,10 @@ if [[ -z "${ROOT}" ]]; then
   exit 2
 fi
 
-PREFIX="deps/Processes"
-REMOTE_URL_DEFAULT="https://github.com/f-ij/Processes.jl.git"
-REMOTE_URL="${PROCESSES_REMOTE_URL:-$REMOTE_URL_DEFAULT}"
-BRANCH="${PROCESSES_BRANCH:-main}"
+PREFIX="deps/StatefulAlgorithms"
+REMOTE_URL_DEFAULT="https://github.com/f-ij/StatefulAlgorithms.jl.git"
+REMOTE_URL="${STATEFULALGORITHMS_REMOTE_URL:-$REMOTE_URL_DEFAULT}"
+BRANCH="${STATEFULALGORITHMS_BRANCH:-main}"
 
 YES=0
 NO_BACKUP=0
@@ -23,12 +23,12 @@ usage() {
 Usage: scripts/reclone-processes.sh [--yes] [--no-backup] [--url <remote>] [--branch <branch>]
 
 Environment:
-  PROCESSES_REMOTE_URL   default: $REMOTE_URL_DEFAULT
-  PROCESSES_BRANCH       default: main
+  STATEFULALGORITHMS_REMOTE_URL   default: $REMOTE_URL_DEFAULT
+  STATEFULALGORITHMS_BRANCH       default: main
 
 Examples:
   bash scripts/reclone-processes.sh
-  PROCESSES_REMOTE_URL=git@github.com:f-ij/Processes.jl.git bash scripts/reclone-processes.sh --yes
+  STATEFULALGORITHMS_REMOTE_URL=git@github.com:f-ij/StatefulAlgorithms.jl.git bash scripts/reclone-processes.sh --yes
 EOF
 }
 

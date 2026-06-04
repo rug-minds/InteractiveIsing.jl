@@ -26,8 +26,8 @@ if ($status) {
     $stashed = $true
 }
 
-# Pull the requested Processes.jl branch into the vendored subtree.
-git subtree pull --prefix=deps/Processes https://github.com/f-ij/Processes.jl.git $Branch --squash -m "Pull deps/Processes subtree from $Branch"
+# Pull the requested StatefulAlgorithms.jl branch into the vendored subtree.
+git subtree pull --prefix=deps/StatefulAlgorithms https://github.com/f-ij/StatefulAlgorithms.jl.git $Branch --squash -m "Pull deps/StatefulAlgorithms subtree from $Branch"
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
