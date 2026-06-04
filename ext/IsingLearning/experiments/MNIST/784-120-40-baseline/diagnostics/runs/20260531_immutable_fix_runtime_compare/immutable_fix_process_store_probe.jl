@@ -17,10 +17,10 @@ function logline(message::M) where {M<:AbstractString}
 end
 
 """Return a compact summary of the worker's stored/dynamic context state."""
-function context_storage_summary(worker::P) where {P<:Processes.Process}
-    algo = Processes.getalgo(worker)
-    stored_context = Processes.getstoredcontext(algo)
-    current_context = Processes.context(worker)
+function context_storage_summary(worker::P) where {P<:StatefulAlgorithms.Process}
+    algo = StatefulAlgorithms.getalgo(worker)
+    stored_context = StatefulAlgorithms.getstoredcontext(algo)
+    current_context = StatefulAlgorithms.context(worker)
     runtime_context = getfield(worker, :runtime_context)
     return (;
         runtime_context_is_nothing = isnothing(runtime_context),
@@ -28,9 +28,9 @@ function context_storage_summary(worker::P) where {P<:Processes.Process}
         current_type = string(typeof(current_context)),
         stored_type = string(typeof(stored_context)),
         runtime_type = isnothing(runtime_context) ? "nothing" : string(typeof(runtime_context)),
-        widened_names = string(fieldnames(typeof(Processes.getwidened(current_context)))),
-        input_names = string(fieldnames(typeof(Processes.getruntimeinput(current_context)))),
-        global_names = string(fieldnames(typeof(Processes.getglobals(current_context)))),
+        widened_names = string(fieldnames(typeof(StatefulAlgorithms.getwidened(current_context)))),
+        input_names = string(fieldnames(typeof(StatefulAlgorithms.getruntimeinput(current_context)))),
+        global_names = string(fieldnames(typeof(StatefulAlgorithms.getglobals(current_context)))),
     )
 end
 
@@ -40,16 +40,16 @@ function main()
     xtrain, ytrain = balanced_mnist(:train, config.train_per_class, config)
     setup = build_layer(config)
     input_hidden_w_ref = Ref(copy(setup.input_hidden_w))
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(setup.graph), input_hidden_w_ref)
 
     try
         logline("before run $(context_storage_summary(worker))")
         load_sample_into_worker!(worker_context(worker), xtrain, ytrain, 1)
-        Processes.reset!(worker)
+        StatefulAlgorithms.reset!(worker)
         logline("after reset $(context_storage_summary(worker))")
         logline("runprocessinline begin")
-        Processes.runprocessinline!(worker; phase_beta = config.β)
+        StatefulAlgorithms.runprocessinline!(worker; phase_beta = config.β)
         logline("runprocessinline end")
         logline("after run $(context_storage_summary(worker))")
     finally

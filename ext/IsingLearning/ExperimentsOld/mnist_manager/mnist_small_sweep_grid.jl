@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Optimisers
 using Random
 using SparseArrays
@@ -200,7 +200,7 @@ function evaluate!(trainer, x, y)
     for sample_idx in axes(x, 2)
         worker = trainer.validation_worker
         IsingLearning._write_input!(worker, view(x, :, sample_idx))
-        Processes.reset!(worker)
+        StatefulAlgorithms.reset!(worker)
         run(worker)
         wait(worker)
         close(worker)

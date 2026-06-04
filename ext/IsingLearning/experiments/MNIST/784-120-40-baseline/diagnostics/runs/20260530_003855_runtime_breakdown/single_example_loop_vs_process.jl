@@ -5,7 +5,7 @@ function run_worker_sample_process!(worker::W, x, y, β::T) where {W,T<:Real}
     ctx = worker_context(worker)
     ctx.x .= x
     ctx.y .= y
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     run(worker; phase_beta = β)
     wait(worker)
     return worker

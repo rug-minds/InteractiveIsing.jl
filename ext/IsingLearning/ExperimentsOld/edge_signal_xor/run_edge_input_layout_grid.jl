@@ -8,17 +8,17 @@ const LAYOUT_INPUT_SCALE_REF = Ref{FT}(0.75)
 Process algorithm used only for validation in this file. It samples one scalar
 output spin once per full sweep after an initial burn-in.
 """
-struct EdgeOutputAverager <: Processes.ProcessAlgorithm
+struct EdgeOutputAverager <: StatefulAlgorithms.ProcessAlgorithm
     output_idx::Int
     burnin_sweeps::Int
     average_sweeps::Int
 end
 
-Processes.init(::EdgeOutputAverager, context) =
+StatefulAlgorithms.init(::EdgeOutputAverager, context) =
     (; sum = zero(FT), sumsq = zero(FT), count = 0, seen_sweeps = 0)
 
 """Update the scalar output average after each scheduled full sweep."""
-function Processes.step!(averager::EdgeOutputAverager, context)
+function StatefulAlgorithms.step!(averager::EdgeOutputAverager, context)
     seen = context.seen_sweeps + 1
     sum = context.sum
     sumsq = context.sumsq
@@ -194,20 +194,20 @@ function timeavg_scalar_output!(trainer, x, config::EdgeSignalXORConfig; seed::I
     sweep_steps = length(II.sampling_indices(graph.index_set))
     total_sweeps = burnin_sweeps + average_sweeps
 
-    routine = Processes.@CompositeAlgorithm begin
+    routine = StatefulAlgorithms.@CompositeAlgorithm begin
         @alias dynamics = dynamics
         @every 1 dynamics()
         @alias averager = averager
         @every sweep_steps averager(model = dynamics.model)
     end
-    wrapped = Processes.@Routine begin
+    wrapped = StatefulAlgorithms.@Routine begin
         @repeat (total_sweeps * sweep_steps) routine()
     end
-    inputs = (Processes.Init(dynamics, model = graph),)
-    process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
+    inputs = (StatefulAlgorithms.Init(dynamics, model = graph),)
+    process = StatefulAlgorithms.Process(StatefulAlgorithms.resolve(wrapped), inputs...; repeats = 1)
     run(process)
     wait(process)
-    ctx = Processes.context(process).averager
+    ctx = StatefulAlgorithms.context(process).averager
     μ = edge_average_mean(ctx)
     σ = edge_average_std(ctx)
     close(process)

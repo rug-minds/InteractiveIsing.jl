@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Random
 using Statistics
 
@@ -71,7 +71,7 @@ end
 Create `ncontexts` independent graph copies and initialize one raw
 `LocalLangevin` context per graph. This deliberately avoids `Process` and
 `ProcessManager`; the only runtime call in the measured loop is
-`Processes.step!(langevin, context)`.
+`StatefulAlgorithms.step!(langevin, context)`.
 """
 function build_contexts(prototype::P, langevin::L, ncontexts::Integer) where {P,L}
     n = Int(ncontexts)
@@ -79,14 +79,14 @@ function build_contexts(prototype::P, langevin::L, ncontexts::Integer) where {P,
     first_graph = deepcopy(prototype.graph)
     temp!(first_graph, TEMP)
     IsingLearning.apply_input(first_graph, prototype.x)
-    first_context = Processes.init(langevin, (; model = first_graph))
+    first_context = StatefulAlgorithms.init(langevin, (; model = first_graph))
     contexts = Vector{typeof(first_context)}(undef, n)
     contexts[1] = first_context
     for idx in 2:n
         graph = deepcopy(prototype.graph)
         temp!(graph, TEMP)
         IsingLearning.apply_input(graph, prototype.x)
-        contexts[idx] = Processes.init(langevin, (; model = graph))
+        contexts[idx] = StatefulAlgorithms.init(langevin, (; model = graph))
     end
     build_seconds = (time_ns() - build_start) / 1.0e9
     return contexts, build_seconds
@@ -102,7 +102,7 @@ the context itself.
 function run_steps!(langevin::L, context::C, nsteps::Integer) where {L,C}
     last_result = nothing
     for _ in 1:Int(nsteps)
-        last_result = Processes.step!(langevin, context)
+        last_result = StatefulAlgorithms.step!(langevin, context)
     end
     return last_result
 end

@@ -968,12 +968,12 @@ end
     _debug_simulation_sync_close_graph(g; kwargs...) -> WindowHost
 
 Open the full simulation panel and deliberately register a bad synchronous
-`Processes.close(g)` close callback. This is a negative-control window.
+`StatefulAlgorithms.close(g)` close callback. This is a negative-control window.
 """
 function _debug_simulation_sync_close_graph(g; title = _debug_title(:simulation_bad_sync_close_graph), kwargs...)
     host = _debug_simulation(g; hide_left_buttons = false, title, kwargs...)
     onclose!(host) do _
-        Processes.close(g)
+        StatefulAlgorithms.close(g)
     end
     return host
 end
@@ -987,7 +987,7 @@ Tests whether explicit example-level graph cleanup changes close behavior.
 function _debug_simulation_async_close_graph(g; title = _debug_title(:simulation_async_close_graph), kwargs...)
     host = _debug_simulation(g; hide_left_buttons = false, title, kwargs...)
     onclose!(host) do _
-        @async Processes.close(g)
+        @async StatefulAlgorithms.close(g)
     end
     return host
 end

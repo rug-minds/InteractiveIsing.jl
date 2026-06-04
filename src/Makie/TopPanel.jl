@@ -1,4 +1,4 @@
-Processes.loopidx(::Nothing) = 0
+StatefulAlgorithms.loopidx(::Nothing) = 0
 
 function topPanel(window)
     ml = window[:layout]

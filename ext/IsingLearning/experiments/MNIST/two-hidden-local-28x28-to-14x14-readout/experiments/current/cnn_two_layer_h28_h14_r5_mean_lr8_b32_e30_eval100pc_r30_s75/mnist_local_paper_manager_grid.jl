@@ -12,7 +12,7 @@ using SparseArrays
 using Statistics
 
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 const PMNIST_FT = Float32
 const PMNIST_INPUT_SIDE = 28
 const PMNIST_INPUT_DIM = PMNIST_INPUT_SIDE^2
@@ -97,7 +97,7 @@ struct PaperMNISTJob{X<:AbstractVector,Y<:AbstractVector}
     y::Y
 end
 
-struct PaperMNISTWorkerStep <: Processes.ProcessAlgorithm end
+struct PaperMNISTWorkerStep <: StatefulAlgorithms.ProcessAlgorithm end
 
 mutable struct PaperMNISTManagerState{M,G}
     model::M
@@ -488,16 +488,16 @@ end
 
 """Return the mutable process subcontext used by a manager worker."""
 function worker_context(worker::W) where {W}
-    return Processes.context(worker)._state
+    return StatefulAlgorithms.context(worker)._state
 end
 
 """Initialize one persistent worker process context."""
-function Processes.init(::PaperMNISTWorkerStep, context)
+function StatefulAlgorithms.init(::PaperMNISTWorkerStep, context)
     model = context.model
     x = get(context, :x, zeros(PMNIST_FT, PMNIST_INPUT_DIM))
     y = get(context, :y, zeros(PMNIST_FT, PMNIST_NCLASSES * model.config.output_replicas))
     gradient = get(context, :gradient, gradient_buffer(model))
-    metropolis_context = Processes.init(II.Metropolis(), (; model = model.graph))
+    metropolis_context = StatefulAlgorithms.init(II.Metropolis(), (; model = model.graph))
     return (;
         model,
         x,
@@ -512,7 +512,7 @@ function Processes.init(::PaperMNISTWorkerStep, context)
 end
 
 """Accumulate one paper-style EP sample gradient inside a manager worker."""
-function Processes.step!(::PaperMNISTWorkerStep, context)
+function StatefulAlgorithms.step!(::PaperMNISTWorkerStep, context)
     stats = accumulate_sample_gradient!(context.gradient, context.model, context.x, context.y, context.metropolis_context)
     context.nsamples[] += 1
     context.ncorrect[] += stats.correct ? 1 : 0
@@ -522,16 +522,16 @@ function Processes.step!(::PaperMNISTWorkerStep, context)
 end
 
 """Keep the reusable worker context alive across manager jobs."""
-function Processes.cleanup(::PaperMNISTWorkerStep, context)
+function StatefulAlgorithms.cleanup(::PaperMNISTWorkerStep, context)
     return nothing
 end
 
 """Create one reusable manager-owned paper-style worker."""
 function paper_worker(source::M, worker_idx::I) where {M<:PaperMNISTModel,I<:Integer}
     model = worker_model(source, worker_idx)
-    return Processes.Process(
+    return StatefulAlgorithms.Process(
         :_state => PaperMNISTWorkerStep(),
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             model,
             x = zeros(PMNIST_FT, PMNIST_INPUT_DIM),
             y = zeros(PMNIST_FT, PMNIST_NCLASSES * source.config.output_replicas),
@@ -550,44 +550,44 @@ function paper_manager(source::M) where {M<:PaperMNISTModel}
             ctx = worker_context(slot.worker)
             ctx.x .= job.x
             ctx.y .= job.y
-            Processes.resetworker!(slot)
+            StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
         flush! = manager -> flush_manager_buffers!(manager),
     )
-    return Processes.ProcessManager(
+    return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = source.config.workers,
         config = source.config,
         state,
-        flush_policy = Processes.FlushAtEnd(),
-        worker_init = Processes.MakeEachWorker(),
+        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = PaperMNISTJob{Vector{PMNIST_FT},Vector{PMNIST_FT}},
     )
 end
 
 """Clear every manager and worker gradient/stat buffer before a minibatch."""
-function clear_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function clear_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_gradient!(manager.state.batch_gradient)
     manager.state.nsamples[] = 0
     manager.state.ncorrect[] = 0
     manager.state.nskipped[] = 0
     manager.state.total_loss[] = 0f0
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         reset_worker_stats!(worker_context(worker))
     end
     return manager
 end
 
 """Merge all worker-local paper-style buffers into the manager state."""
-function flush_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function flush_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_gradient!(manager.state.batch_gradient)
     manager.state.nsamples[] = 0
     manager.state.ncorrect[] = 0
     manager.state.nskipped[] = 0
     manager.state.total_loss[] = 0f0
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         ctx = worker_context(worker)
         add_gradient!(manager.state.batch_gradient, ctx.gradient)
         manager.state.nsamples[] += ctx.nsamples[]
@@ -600,9 +600,9 @@ function flush_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
 end
 
 """Run one manager minibatch and update the shared source parameters once."""
-function run_minibatch!(manager::M, jobs::J) where {M<:Processes.ProcessManager,J<:AbstractVector}
+function run_minibatch!(manager::M, jobs::J) where {M<:StatefulAlgorithms.ProcessManager,J<:AbstractVector}
     clear_manager_buffers!(manager)
-    Processes.run!(manager, jobs, Processes.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
     apply_gradient!(manager.state.model, manager.state.batch_gradient, manager.state.nsamples[])
     return (;
         nsamples = manager.state.nsamples[],
@@ -662,7 +662,7 @@ end
 function metropolis_sweep!(context::C, nactive::I) where {C,I<:Integer}
     algorithm = II.Metropolis()
     for _ in 1:Int(nactive)
-        Processes.step!(algorithm, context)
+        StatefulAlgorithms.step!(algorithm, context)
     end
     return context
 end
@@ -816,7 +816,7 @@ end
 """Evaluate balanced accuracy and output loss with free-phase sampling."""
 function evaluate(model::M, x::X, y::Y) where {M<:PaperMNISTModel,X<:AbstractMatrix,Y<:AbstractMatrix}
     config = model.config
-    context = Processes.init(II.Metropolis(), (; model = model.graph))
+    context = StatefulAlgorithms.init(II.Metropolis(), (; model = model.graph))
     correct = 0
     loss = 0f0
     pred_counts = zeros(Int, PMNIST_NCLASSES)

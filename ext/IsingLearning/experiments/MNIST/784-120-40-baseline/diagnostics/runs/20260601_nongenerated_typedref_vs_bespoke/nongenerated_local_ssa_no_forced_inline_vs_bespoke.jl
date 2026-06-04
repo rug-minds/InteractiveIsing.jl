@@ -34,45 +34,45 @@ function local_ssa_no_forced_inline_loop(
     context::C,
     r::R,
     inputs::NamedTuple,
-) where {P<:Processes.AbstractProcess,F<:Processes.AbstractLoopAlgorithm,C,R<:Processes.RepeatLifetime}
-    @assert Processes.isresolved(algo)
-    @inline Processes.before_while(process)
+) where {P<:StatefulAlgorithms.AbstractProcess,F<:StatefulAlgorithms.AbstractLoopAlgorithm,C,R<:StatefulAlgorithms.RepeatLifetime}
+    @assert StatefulAlgorithms.isresolved(algo)
+    @inline StatefulAlgorithms.before_while(process)
 
-    step_plan = @inline Processes.getplan(algo)
-    step_wiring = @inline Processes.getwiring(step_plan)
-    runtime_context = @inline Processes._merge_runtime_inputs(context, inputs)
+    step_plan = @inline StatefulAlgorithms.getplan(algo)
+    step_wiring = @inline StatefulAlgorithms.getwiring(step_plan)
+    runtime_context = @inline StatefulAlgorithms._merge_runtime_inputs(context, inputs)
 
-    stable_context = Processes._step!(
+    stable_context = StatefulAlgorithms._step!(
         step_plan,
         runtime_context,
         step_wiring,
-        Processes.Namespace{nothing}(),
+        StatefulAlgorithms.Namespace{nothing}(),
         process,
         r,
-        Processes.Stable(),
+        StatefulAlgorithms.Stable(),
     )
-    @inline Processes.tick!(process)
-    @inline Processes.inc!(process)
+    @inline StatefulAlgorithms.tick!(process)
+    @inline StatefulAlgorithms.inc!(process)
 
-    start_idx = @inline Processes.loopidx(process)
-    end_idx = @inline Processes.repeats(r)
+    start_idx = @inline StatefulAlgorithms.loopidx(process)
+    end_idx = @inline StatefulAlgorithms.repeats(r)
     for _ in start_idx:end_idx
-        stable_context = Processes._step!(
+        stable_context = StatefulAlgorithms._step!(
             step_plan,
             stable_context,
             step_wiring,
-            Processes.Namespace{nothing}(),
+            StatefulAlgorithms.Namespace{nothing}(),
             process,
             r,
-            Processes.Stable(),
+            StatefulAlgorithms.Stable(),
         )
-        @inline Processes.tick!(process)
-        @inline Processes.inc!(process)
-        if @inline Processes.breakcondition(r, process, stable_context)
+        @inline StatefulAlgorithms.tick!(process)
+        @inline StatefulAlgorithms.inc!(process)
+        if @inline StatefulAlgorithms.breakcondition(r, process, stable_context)
             break
         end
     end
-    return @inline Processes.after_while(process, algo, stable_context, context)
+    return @inline StatefulAlgorithms.after_while(process, algo, stable_context, context)
 end
 
 """Run one full serial `Process` minibatch through `local_ssa_no_forced_inline_loop`."""
@@ -88,7 +88,7 @@ function time_local_ssa_process_learning_minibatch!(
     params = initial_params
     opt_state = Optimisers.setup(Optimisers.Adam(config.lr), initial_params)
     batch_gradient = input_field_gradient_buffer(source_graph, input_hidden_w_ref[])
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(source_graph), input_hidden_w_ref)
 
     try
@@ -96,15 +96,15 @@ function time_local_ssa_process_learning_minibatch!(
             clear_buffer!(worker_context(worker).buffers)
             @inbounds for sample_idx in 1:config.batchsize
                 load_sample_into_worker!(worker_context(worker), xtrain, ytrain, sample_idx)
-                Processes.reset!(worker)
+                StatefulAlgorithms.reset!(worker)
                 @atomic worker.shouldrun = true
                 @atomic worker.paused = false
-                algo = Processes.getalgo(worker)
+                algo = StatefulAlgorithms.getalgo(worker)
                 result = local_ssa_no_forced_inline_loop(
                     worker,
                     algo,
-                    Processes.context(worker),
-                    Processes.lifetime(worker),
+                    StatefulAlgorithms.context(worker),
+                    StatefulAlgorithms.lifetime(worker),
                     (; phase_beta = config.β),
                 )
                 worker.lastresult = result

@@ -5,11 +5,11 @@ This page documents the Langevin algorithms currently implemented in
 
 There are three Langevin update types:
 
-- `LocalLangevin`: proposes one single-spin move per `Processes.step!`.
+- `LocalLangevin`: proposes one single-spin move per `StatefulAlgorithms.step!`.
 - `GlobalLangevin`: refreshes all active-spin derivatives, then proposes one
-  single-spin move per `Processes.step!`.
+  single-spin move per `StatefulAlgorithms.step!`.
 - `BlockLangevin`: refreshes derivatives on a shuffled group of active
-  spins, then proposes one single-spin move per `Processes.step!`.
+  spins, then proposes one single-spin move per `StatefulAlgorithms.step!`.
 
 The Boltzmann correctness argument for the adjusted algorithms is kept separate
 in the developer page `Langevin Boltzmann Proof`.
@@ -20,7 +20,7 @@ All Langevin algorithms use the model temperature from `temp(model)`. There is
 no separate Langevin temperature parameter.
 
 All constructors have a `stepsize` keyword. This constructor value is the
-default initial stepsize. During `Processes.init`, the algorithm checks the
+default initial stepsize. During `StatefulAlgorithms.init`, the algorithm checks the
 process context for a `:stepsize` variable. If the context provides one, that
 value is used instead of the constructor default. The initialized context stores
 the result as a `Ref`, so other process algorithms can share or tune it.
@@ -40,7 +40,7 @@ The common keywords are:
   path. The adjusted path uses the raw Langevin drift required by the MALA
   proposal density.
 - `group_steps`: retained for compatibility with existing contexts. A
-  `Processes.step!` call attempts one spin proposal for each Langevin algorithm;
+  `StatefulAlgorithms.step!` call attempts one spin proposal for each Langevin algorithm;
   it does not divide `stepsize`.
 - `adjusted`: selects between Metropolis-adjusted Langevin and always-accepted
   Langevin with clamped deterministic drift and reflected stochastic
@@ -78,7 +78,7 @@ LocalLangevin(;
 )
 ```
 
-`LocalLangevin` proposes exactly one spin update per `Processes.step!`.
+`LocalLangevin` proposes exactly one spin update per `StatefulAlgorithms.step!`.
 
 Internally it keeps a sweep cursor:
 
@@ -89,7 +89,7 @@ Internally it keeps a sweep cursor:
 
 When a new internal cycle starts, the algorithm computes the current derivative
 for every active spin and stores it in `dH_prealloc`. It then chooses a random
-cyclic offset. Each subsequent `Processes.step!` advances one position in that
+cyclic offset. Each subsequent `StatefulAlgorithms.step!` advances one position in that
 cyclic order and returns immediately after that single spin proposal. This keeps
 the old random cyclic sweep semantics while allowing other algorithms to observe
 accepted/rejected proposals after every spin update.
@@ -130,7 +130,7 @@ GlobalLangevin(;
 of a proposal cycle. With `adjusted=true`, it constructs and accepts/rejects the
 whole active-spin Langevin proposal at that global level. If accepted, the
 accepted vector proposal is then written as one `FlipProposal` per subsequent
-`Processes.step!`. With `adjusted=false`, it skips the global accept/reject and
+`StatefulAlgorithms.step!`. With `adjusted=false`, it skips the global accept/reject and
 streams reflected single-spin writes from the cached derivative cycle.
 
 For the selected spin `i`, the adjusted proposal is
@@ -148,7 +148,7 @@ If `adjusted=false`, the selected coordinate's deterministic drift result is
 clamped into its layer bounds. The stochastic displacement is then reflected into
 the bounds, written to the graph state, and marked accepted.
 
-`group_steps` does not repeat proposals inside one `Processes.step!`; each call
+`group_steps` does not repeat proposals inside one `StatefulAlgorithms.step!`; each call
 attempts one spin update.
 
 ## `BlockLangevin`
@@ -170,7 +170,7 @@ the algorithm walks that shuffled order in chunks of `m`, reshuffling when the
 next chunk would overrun the order. The selected group is therefore not a
 spatial block or a run of linear indices. With `adjusted=true`, it constructs
 and accepts/rejects the whole block proposal at that block level, then streams
-accepted block entries as one `FlipProposal` per subsequent `Processes.step!`.
+accepted block entries as one `FlipProposal` per subsequent `StatefulAlgorithms.step!`.
 With `adjusted=false`, it streams always-accepted single-spin writes from the
 cached block derivative cycle using clamped deterministic drift and reflected
 stochastic displacement.
@@ -181,7 +181,7 @@ the derivative refresh is restricted to the selected block.
 The unadjusted proposal and reflection rule are also the same as
 `GlobalLangevin`.
 
-`group_steps` does not repeat proposals inside one `Processes.step!`; each call
+`group_steps` does not repeat proposals inside one `StatefulAlgorithms.step!`; each call
 attempts one spin update.
 
 ## Adjusted Versus Unadjusted
@@ -190,7 +190,7 @@ attempts one spin update.
 Metropolis-Hastings/MALA correction at the algorithm's proposal scope:
 single-spin for local, all active spins for global, and the selected block for
 block Langevin. Accepted global/block vector proposals are streamed into the
-graph one spin per `Processes.step!` after the proposal-level accept decision.
+graph one spin per `StatefulAlgorithms.step!` after the proposal-level accept decision.
 
 `adjusted=false` means deterministic drift is clamped into bounds, stochastic
 displacement is reflected into bounds, and the result is accepted without a

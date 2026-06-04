@@ -1,5 +1,5 @@
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 using InteractiveUtils
 
 const LLVM_WG = @WG (; dr) -> dr == 1 ? 1f0 : 0f0 NN = 1
@@ -12,7 +12,7 @@ function make_example_process(; side_length = 100, temperature = 2.0f0, steps = 
     return (; graph = g, process = p)
 end
 
-runtime_context(p::InlineProcess) = Processes.merge_into_globals(Processes.context(p), (; process = p))
+runtime_context(p::InlineProcess) = StatefulAlgorithms.merge_into_globals(StatefulAlgorithms.context(p), (; process = p))
 loop_algo(p::InlineProcess) = p.taskdata.func
 
 function save_llvm(func, args...; filename)
@@ -40,9 +40,9 @@ function dump_generated_processloop_llvm(; side_length = 100, temperature = 2.0f
     reset!(p)
     algo = loop_algo(p)
     context = runtime_context(p)
-    lt = Processes.lifetime(p)
-    save_llvm(Processes.generated_processloop, p, algo, context, lt; filename = llvm_filename)
-    save_typed(Processes.generated_processloop, p, algo, context, lt; filename = typed_filename)
+    lt = StatefulAlgorithms.lifetime(p)
+    save_llvm(StatefulAlgorithms.generated_processloop, p, algo, context, lt; filename = llvm_filename)
+    save_typed(StatefulAlgorithms.generated_processloop, p, algo, context, lt; filename = typed_filename)
     return (; process = p, llvm_filename, typed_filename)
 end
 

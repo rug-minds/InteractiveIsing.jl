@@ -7,13 +7,13 @@
 │   state_paths = ("mnist_model <=> mnist_model", "x <=> x", "base_bias <=> base_bias", "sample_buffer <=> sample_buffer", "free_state <=> free_state", "free_best_energy <=> free_best_energy", "rng <=> rng")
 │   suggested_fixes = ("@merge mnist_model, mnist_model", "@merge x, x", "@merge base_bias, base_bias", "@merge sample_buffer, sample_buffer", "@merge free_state, free_state", "@merge free_best_energy, free_best_energy", "@merge rng, rng")
 │   default_conflicts = Union{}[]
-└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:138
+└ @ IsingLearning.InteractiveIsing.StatefulAlgorithms C:\Users\fenje\dev\InteractiveIsing.jl\deps\StatefulAlgorithms\src\Widgets\GeneralState.jl:138
 ┌ Warning: Overlapping GeneralState field names encountered during merge at mnist_model <=> mnist_model, x <=> x, y <=> y, base_bias <=> base_bias, sample_buffer <=> sample_buffer, free_state <=> free_state, nudged_state <=> nudged_state, nudged_best_energy <=> nudged_best_energy; add an explicit DSL state statement such as @merge mnist_model, mnist_model or @merge x, x or @merge y, y or @merge base_bias, base_bias or @merge sample_buffer, sample_buffer or @merge free_state, free_state or @merge nudged_state, nudged_state or @merge nudged_best_energy, nudged_best_energy when this sharing is intentional.
 │   overlapping_fields = 8-element Vector{Symbol}: …
 │   state_paths = ("mnist_model <=> mnist_model", "x <=> x", "y <=> y", "base_bias <=> base_bias", "sample_buffer <=> sample_buffer", "free_state <=> free_state", "nudged_state <=> nudged_state", "nudged_best_energy <=> nudged_best_energy")
 │   suggested_fixes = ("@merge mnist_model, mnist_model", "@merge x, x", "@merge y, y", "@merge base_bias, base_bias", "@merge sample_buffer, sample_buffer", "@merge free_state, free_state", "@merge nudged_state, nudged_state", "@merge nudged_best_energy, nudged_best_energy")
 │   default_conflicts = Union{}[]
-└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:138
+└ @ IsingLearning.InteractiveIsing.StatefulAlgorithms C:\Users\fenje\dev\InteractiveIsing.jl\deps\StatefulAlgorithms\src\Widgets\GeneralState.jl:138
 [2026-05-29T00:01:46] manager subset progress batch=1 samples=1 nsamples=1 elapsed_s=42.926
 [2026-05-29T00:01:46] manager warmup finished elapsed_s=4.952 samples=1
 [2026-05-29T00:01:46] manager measured run starting
@@ -22,13 +22,13 @@
 │   state_paths = ("mnist_model <=> mnist_model", "x <=> x", "base_bias <=> base_bias", "sample_buffer <=> sample_buffer", "free_state <=> free_state", "free_best_energy <=> free_best_energy", "rng <=> rng")
 │   suggested_fixes = ("@merge mnist_model, mnist_model", "@merge x, x", "@merge base_bias, base_bias", "@merge sample_buffer, sample_buffer", "@merge free_state, free_state", "@merge free_best_energy, free_best_energy", "@merge rng, rng")
 │   default_conflicts = Union{}[]
-└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:138
+└ @ IsingLearning.InteractiveIsing.StatefulAlgorithms C:\Users\fenje\dev\InteractiveIsing.jl\deps\StatefulAlgorithms\src\Widgets\GeneralState.jl:138
 ┌ Warning: Overlapping GeneralState field names encountered during merge at mnist_model <=> mnist_model, x <=> x, y <=> y, base_bias <=> base_bias, sample_buffer <=> sample_buffer, free_state <=> free_state, nudged_state <=> nudged_state, nudged_best_energy <=> nudged_best_energy; add an explicit DSL state statement such as @merge mnist_model, mnist_model or @merge x, x or @merge y, y or @merge base_bias, base_bias or @merge sample_buffer, sample_buffer or @merge free_state, free_state or @merge nudged_state, nudged_state or @merge nudged_best_energy, nudged_best_energy when this sharing is intentional.
 │   overlapping_fields = 8-element Vector{Symbol}: …
 │   state_paths = ("mnist_model <=> mnist_model", "x <=> x", "y <=> y", "base_bias <=> base_bias", "sample_buffer <=> sample_buffer", "free_state <=> free_state", "nudged_state <=> nudged_state", "nudged_best_energy <=> nudged_best_energy")
 │   suggested_fixes = ("@merge mnist_model, mnist_model", "@merge x, x", "@merge y, y", "@merge base_bias, base_bias", "@merge sample_buffer, sample_buffer", "@merge free_state, free_state", "@merge nudged_state, nudged_state", "@merge nudged_best_energy, nudged_best_energy")
 │   default_conflicts = Union{}[]
-└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:138
+└ @ IsingLearning.InteractiveIsing.StatefulAlgorithms C:\Users\fenje\dev\InteractiveIsing.jl\deps\StatefulAlgorithms\src\Widgets\GeneralState.jl:138
 [2026-05-29T00:01:51] manager subset progress batch=1 samples=32 nsamples=273 elapsed_s=47.467
 [2026-05-29T00:01:51] manager subset progress batch=2 samples=64 nsamples=273 elapsed_s=47.787
 [2026-05-29T00:01:51] manager subset progress batch=3 samples=96 nsamples=273 elapsed_s=48.081

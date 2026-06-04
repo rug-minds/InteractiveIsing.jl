@@ -6,7 +6,7 @@
 
 include(joinpath(@__DIR__, "common", "ManuscriptTools.jl"))
 import InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 
 MT = ManuscriptTools
 
@@ -431,7 +431,7 @@ if abspath(PROGRAM_FILE) == @__FILE__
     # run_one_split_pulse(base)
 
     # Start every process immediately. If there are more runs than CPU cores,
-    # the OS will time-slice them; Julia/Processes will not automatically cap
+    # the OS will time-slice them; Julia/StatefulAlgorithms will not automatically cap
     # concurrency for you.
     # paramsets = screening_paramsets(base)
     # paramsets = proposal_delta_paramsets(base)

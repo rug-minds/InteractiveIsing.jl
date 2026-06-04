@@ -9,7 +9,7 @@ using SparseArrays
 using Statistics
 
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 const INLAID_FT = Float32
 const INLAID_INPUT_SIDE = 28
 const INLAID_SIDE = 2 * INLAID_INPUT_SIDE - 1
@@ -243,7 +243,7 @@ function anneal_inlaid!(model::M, context::C, sweeps::I) where {M<:InlaidDiagnos
     steps = max(1, Int(sweeps) * length(model.active_idxs))
     dynamics_algorithm = II.Metropolis()
     temperature = GeometricTemperatureSchedule(; start_T = model.config.hot_temp, stop_T = model.config.cold_temp, n_steps = steps)
-    algorithm = Processes.resolve(Processes.@Routine begin
+    algorithm = StatefulAlgorithms.resolve(StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @alias relax_temperature = temperature
 
@@ -253,7 +253,7 @@ function anneal_inlaid!(model::M, context::C, sweeps::I) where {M<:InlaidDiagnos
         end
         II.temp!(dynamics.model, model.config.cold_temp)
     end)
-    process = Processes.Process(algorithm, Processes.Init(:dynamics; model = model.graph); repeat = 1)
+    process = StatefulAlgorithms.Process(algorithm, StatefulAlgorithms.Init(:dynamics; model = model.graph); repeat = 1)
     run(process)
     wait(process)
     return model
@@ -302,7 +302,7 @@ function inlaid_relax_algorithm(config::C, nactive::I) where {C<:InlaidDiagnosti
     steps = max(1, Int(config.sweeps) * Int(nactive))
     temperature = GeometricTemperatureSchedule(; start_T = config.hot_temp, stop_T = config.cold_temp, n_steps = steps)
     dynamics_algorithm = II.Metropolis()
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @alias relax_temperature = temperature
         @state inlaid_model
@@ -328,15 +328,15 @@ end
 
 """Return the mutable process subcontext used by a manager worker."""
 function worker_context(worker::W) where {W}
-    return Processes.context(worker)._state
+    return StatefulAlgorithms.context(worker)._state
 end
 
 """Create one reusable manager-owned inlaid-input worker."""
 function inlaid_worker(source::M, worker_idx::I, algorithm::A) where {M<:InlaidDiagnosticModel,I<:Integer,A}
     model = worker_model(source, worker_idx)
-    return Processes.Process(
+    return StatefulAlgorithms.Process(
         algorithm,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             inlaid_model = model,
             x = zeros(INLAID_FT, INLAID_INPUT_SIDE^2),
             pixel_state = zeros(INLAID_FT, length(model.pixel_idxs)),
@@ -344,7 +344,7 @@ function inlaid_worker(source::M, worker_idx::I, algorithm::A) where {M<:InlaidD
             jobs = Ref(0),
             checksum = Ref(0f0),
         ),
-        Processes.Init(:dynamics; model = model.graph);
+        StatefulAlgorithms.Init(:dynamics; model = model.graph);
         repeat = 1,
     )
 end
@@ -352,20 +352,20 @@ end
 """Create a ProcessManager for inlaid-input diagnostic relaxation jobs."""
 function inlaid_manager(source::M, nworkers::I) where {M<:InlaidDiagnosticModel,I<:Integer}
     state = InlaidDiagnosticState(source, Ref(0.0), Ref(0), Ref(0f0))
-    algorithm = Processes.resolve(inlaid_relax_algorithm(source.config, length(source.active_idxs)))
+    algorithm = StatefulAlgorithms.resolve(inlaid_relax_algorithm(source.config, length(source.active_idxs)))
     recipe = (;
         makeworker = (idx, manager) -> inlaid_worker(manager.state.model, idx, algorithm),
         prepare! = (slot, job, manager) -> begin
             ctx = worker_context(slot.worker)
             ctx.x .= job.x
-            Processes.resetworker!(slot)
+            StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
         flush! = manager -> begin
             manager.state.elapsed[] = 0.0
             manager.state.jobs[] = 0
             manager.state.checksum[] = 0f0
-            for worker in Processes.workers(manager)
+            for worker in StatefulAlgorithms.workers(manager)
                 ctx = worker_context(worker)
                 manager.state.elapsed[] += ctx.elapsed[]
                 manager.state.jobs[] += ctx.jobs[]
@@ -374,24 +374,24 @@ function inlaid_manager(source::M, nworkers::I) where {M<:InlaidDiagnosticModel,
             return nothing
         end,
     )
-    return Processes.ProcessManager(
+    return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = Int(nworkers),
         config = source.config,
         state,
-        flush_policy = Processes.FlushAtEnd(),
-        worker_init = Processes.MakeEachWorker(),
+        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = InlaidRelaxJob{Vector{INLAID_FT}},
     )
 end
 
 """Clear accumulated diagnostic timers on all manager workers."""
-function reset_diagnostic_worker_stats!(manager::M) where {M<:Processes.ProcessManager}
+function reset_diagnostic_worker_stats!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     manager.state.elapsed[] = 0.0
     manager.state.jobs[] = 0
     manager.state.checksum[] = 0f0
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         ctx = worker_context(worker)
         ctx.elapsed[] = 0.0
         ctx.jobs[] = 0
@@ -424,14 +424,14 @@ function run_scaling_probe(config::C) where {C<:InlaidDiagnosticConfig}
         jobs = synthetic_jobs(config, nworkers * config.jobs_per_worker)
 
         # Warm the compiled path and worker contexts before timing.
-        Processes.run!(manager, jobs, Processes.Dynamic())
+        StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
 
         elapsed_runs = Float64[]
         internal_runs = Float64[]
         for _ in 1:config.repeats
             reset_diagnostic_worker_stats!(manager)
             start = time_ns()
-            Processes.run!(manager, jobs, Processes.Dynamic())
+            StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
             elapsed = (time_ns() - start) / 1.0e9
             push!(elapsed_runs, elapsed)
             push!(internal_runs, manager.state.elapsed[] / max(manager.state.jobs[], 1))
@@ -452,7 +452,7 @@ end
 """Check whether relaxation sweeps materially change energy and output state."""
 function run_relaxation_probe(config::C) where {C<:InlaidDiagnosticConfig}
     model = init_inlaid_model(config, config.seed + 99)
-    context = Processes.init(II.Metropolis(), (; model = model.graph))
+    context = StatefulAlgorithms.init(II.Metropolis(), (; model = model.graph))
     rng = Random.MersenneTwister(config.seed + 321)
     x = [rand(rng, Bool) ? 1f0 : -1f0 for _ in 1:INLAID_INPUT_SIDE^2]
     rows = NamedTuple[]

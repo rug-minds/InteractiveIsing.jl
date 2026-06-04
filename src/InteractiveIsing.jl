@@ -13,11 +13,11 @@ using MacroTools
 
 
 
-include("../deps/Processes/src/Processes.jl")
+include("../deps/StatefulAlgorithms/src/StatefulAlgorithms.jl")
 
-using .Processes
-export Processes
-import .Processes: init, step!
+using .StatefulAlgorithms
+export StatefulAlgorithms
+import .StatefulAlgorithms: init, step!
 
 include("TypeDefs.jl")
 include("Utils/Utils.jl")
@@ -45,7 +45,7 @@ include("Windows/Windows.jl")
 include("Topology/TopologyDisplayExtensions.jl")
 
 # Diagnostic local edit: disable InteractiveIsing precompile workload while
-# isolating `Processes.loop(::Repeat, ::NonGenerated)` codegen behavior.
+# isolating `StatefulAlgorithms.loop(::Repeat, ::NonGenerated)` codegen behavior.
 # include("Precompile.jl")
 
 # include("Barebones.jl")

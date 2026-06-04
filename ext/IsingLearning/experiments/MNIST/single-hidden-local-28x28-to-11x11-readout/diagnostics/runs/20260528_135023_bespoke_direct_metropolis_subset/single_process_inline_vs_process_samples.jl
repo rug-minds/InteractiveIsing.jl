@@ -166,7 +166,7 @@ end
 
 """Create an isolated normal `Process` worker using the real MNIST worker algorithm."""
 function normal_worker_process(source::M, worker_idx::I) where {M<:LocalMNISTModel,I<:Integer}
-    algorithm = Processes.resolve(local_worker_algorithm(mnist_dynamics_algorithm(), source.config, length(II.state(source.graph))))
+    algorithm = StatefulAlgorithms.resolve(local_worker_algorithm(mnist_dynamics_algorithm(), source.config, length(II.state(source.graph))))
     return local_worker(source, worker_idx, algorithm)
 end
 
@@ -174,14 +174,14 @@ end
 function inline_worker_process(source::M, worker_idx::I) where {M<:LocalMNISTModel,I<:Integer}
     model = worker_model(source, worker_idx)
     graph_state = II.state(model.graph)
-    algorithm = Processes.resolve(local_worker_algorithm(mnist_dynamics_algorithm(), source.config, length(graph_state)))
+    algorithm = StatefulAlgorithms.resolve(local_worker_algorithm(mnist_dynamics_algorithm(), source.config, length(graph_state)))
 
     # InlineProcess stores a concrete context type. The worker routine widens a
     # few subcontexts on the first run (`current_T`, `stats`, `energy`), so warm a
     # normal process once and use that stable post-run context for the inline run.
-    warm_process = Processes.Process(
+    warm_process = StatefulAlgorithms.Process(
         algorithm,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             mnist_model = model,
             x = zeros(PMNIST_FT, PMNIST_INPUT_DIM),
             y = zeros(PMNIST_FT, PMNIST_NCLASSES * source.config.output_replicas),
@@ -196,14 +196,14 @@ function inline_worker_process(source::M, worker_idx::I) where {M<:LocalMNISTMod
             nskipped = Ref(0),
             total_loss = Ref(0f0),
         ),
-        Processes.Init(:dynamics; model = model.graph);
+        StatefulAlgorithms.Init(:dynamics; model = model.graph);
         repeat = 1,
     )
     run(warm_process)
     wait(warm_process)
-    stable_context = Processes.context(warm_process)
+    stable_context = StatefulAlgorithms.context(warm_process)
 
-    return Processes.InlineProcess(
+    return StatefulAlgorithms.InlineProcess(
         algorithm;
         context = stable_context,
         repeats = 1,
@@ -220,13 +220,13 @@ end
 end
 
 """Time a few samples through a normal asynchronous `Process` worker."""
-@inline function time_normal_process_samples!(worker::P, xtrain::X, ytrain::Y, nsamples::I) where {P<:Processes.Process,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
+@inline function time_normal_process_samples!(worker::P, xtrain::X, ytrain::Y, nsamples::I) where {P<:StatefulAlgorithms.Process,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
     ctx = worker_context(worker)
     return @elapsed begin
         @inbounds for sample_idx in 1:Int(nsamples)
             ctx.x .= view(xtrain, :, sample_idx)
             ctx.y .= view(ytrain, :, sample_idx)
-            Processes.reset!(worker)
+            StatefulAlgorithms.reset!(worker)
             @inline run(worker)
             @inline wait(worker)
         end
@@ -234,10 +234,10 @@ end
 end
 
 """Time a few samples through a synchronous `InlineProcess` worker."""
-@inline function time_inline_process_samples!(worker::P, xtrain::X, ytrain::Y, nsamples::I) where {P<:Processes.InlineProcess,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
+@inline function time_inline_process_samples!(worker::P, xtrain::X, ytrain::Y, nsamples::I) where {P<:StatefulAlgorithms.InlineProcess,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
     return @elapsed begin
         @inbounds for sample_idx in 1:Int(nsamples)
-            @inline set_worker_sample!(Processes.context(worker), xtrain, ytrain, sample_idx)
+            @inline set_worker_sample!(StatefulAlgorithms.context(worker), xtrain, ytrain, sample_idx)
             @inline run(worker; threaded = false)
         end
     end

@@ -9,7 +9,7 @@ function split_input_nudged_temp_algorithm(layer, base_temp::FT, nudged_temp::FT
     plus_dynamics_algorithm = deepcopy(layer.nudged_dynamics_algorithm)
     minus_dynamics_algorithm = deepcopy(layer.nudged_dynamics_algorithm)
 
-    plus = Processes.@Routine begin
+    plus = StatefulAlgorithms.@Routine begin
         @state equilibrium_state
         @state y
         @state x
@@ -27,7 +27,7 @@ function split_input_nudged_temp_algorithm(layer, base_temp::FT, nudged_temp::FT
         plus_capture(isinggraph = model)
     end
 
-    minus = Processes.@Routine begin
+    minus = StatefulAlgorithms.@Routine begin
         @state equilibrium_state
         @state y
         @state x
@@ -45,7 +45,7 @@ function split_input_nudged_temp_algorithm(layer, base_temp::FT, nudged_temp::FT
         minus_capture(isinggraph = model)
     end
 
-    final = Processes.@CompositeAlgorithm begin
+    final = StatefulAlgorithms.@CompositeAlgorithm begin
         @input clamping_beta = beta
         @alias plus = plus
         @alias minus = minus
@@ -62,7 +62,7 @@ function split_input_forward_and_nudged_temp(layer, base_temp::FT, nudged_temp::
     forward = IsingLearning.ForwardDynamics(layer).algorithm
     nudged = split_input_nudged_temp_algorithm(layer, base_temp, nudged_temp)
     beta = layer.β
-    final = Processes.@CompositeAlgorithm begin
+    final = StatefulAlgorithms.@CompositeAlgorithm begin
         @input clamping_beta = beta
         @state buffers
         @alias plus = nudged.plus
@@ -84,22 +84,22 @@ end
 
 """Create one worker process for the split-input nudged-temperature routine."""
 function split_input_nudged_temp_worker_process(layer, worker_graph, base_temp::FT, nudged_temp::FT)
-    algo = Processes.resolve(split_input_forward_and_nudged_temp(layer, base_temp, nudged_temp).algorithm)
+    algo = StatefulAlgorithms.resolve(split_input_forward_and_nudged_temp(layer, base_temp, nudged_temp).algorithm)
     xdim = length(layer.input_layer)
     ydim = length(layer.output_layer)
     buffers = IsingLearning.gradient_buffer(worker_graph)
 
-    return Processes.Process(
+    return StatefulAlgorithms.Process(
         algo,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             x = zeros(eltype(worker_graph), xdim),
             y = zeros(eltype(worker_graph), ydim),
             buffers = buffers,
             equilibrium_state = copy(II.state(worker_graph)),
         ),
-        Processes.Init(:dynamics, model = worker_graph),
-        Processes.Init(:plus_capture, state = worker_graph),
-        Processes.Init(:minus_capture, state = worker_graph);
+        StatefulAlgorithms.Init(:dynamics, model = worker_graph),
+        StatefulAlgorithms.Init(:plus_capture, state = worker_graph),
+        StatefulAlgorithms.Init(:minus_capture, state = worker_graph);
         repeat = 1,
     )
 end

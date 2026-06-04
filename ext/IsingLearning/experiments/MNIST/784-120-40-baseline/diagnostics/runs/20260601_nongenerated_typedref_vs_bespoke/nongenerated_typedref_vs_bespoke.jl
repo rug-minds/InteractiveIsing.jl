@@ -36,7 +36,7 @@ function time_serial_process_learning_minibatch!(
     params = initial_params
     opt_state = Optimisers.setup(Optimisers.Adam(config.lr), initial_params)
     batch_gradient = input_field_gradient_buffer(source_graph, input_hidden_w_ref[])
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(source_graph), input_hidden_w_ref)
 
     try
@@ -44,17 +44,17 @@ function time_serial_process_learning_minibatch!(
             clear_buffer!(worker_context(worker).buffers)
             @inbounds for sample_idx in 1:config.batchsize
                 load_sample_into_worker!(worker_context(worker), xtrain, ytrain, sample_idx)
-                Processes.reset!(worker)
+                StatefulAlgorithms.reset!(worker)
                 @atomic worker.shouldrun = true
                 @atomic worker.paused = false
-                algo = Processes.getalgo(worker)
-                result = Processes.loop(
+                algo = StatefulAlgorithms.getalgo(worker)
+                result = StatefulAlgorithms.loop(
                     worker,
                     algo,
-                    Processes.context(worker),
-                    Processes.lifetime(worker),
+                    StatefulAlgorithms.context(worker),
+                    StatefulAlgorithms.lifetime(worker),
                     (; phase_beta = config.β),
-                    Processes.Resuming{false}(),
+                    StatefulAlgorithms.Resuming{false}(),
                     looptype,
                 )
                 worker.lastresult = result
@@ -84,7 +84,7 @@ function time_serial_process_learning_minibatch!(
     end
 end
 
-"""Benchmark bespoke full learning against serial Processes full learning."""
+"""Benchmark bespoke full learning against serial StatefulAlgorithms full learning."""
 function main()
     mkpath(RUN_DIR)
     csv_path = joinpath(RUN_DIR, "nongenerated_typedref_vs_bespoke.csv")
@@ -93,7 +93,7 @@ function main()
     config = langevin_learning_config()
     repeats = parse(Int, get(ENV, "ISING_MNIST_TYPEDREF_REPEATS", "3"))
     xtrain, ytrain = balanced_mnist(:train, config.train_per_class, config)
-    looptype = Processes.NonGenerated()
+    looptype = StatefulAlgorithms.NonGenerated()
 
     println(now(), " begin typed-ref NonGenerated vs bespoke threads=$(Threads.nthreads()) batchsize=$(config.batchsize) sweeps=$(config.sweeps) looptype=$(looptype)")
     flush(stdout)

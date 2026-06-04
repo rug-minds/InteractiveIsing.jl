@@ -5,7 +5,7 @@ export LocalLangevin
 
 Single-spin Langevin Monte Carlo update.
 
-Each `Processes.step!` attempts one continuous spin move using the local energy
+Each `StatefulAlgorithms.step!` attempts one continuous spin move using the local energy
 derivative. The selected spin is taken from an ordered sweep over the active
 spins. `adjusted` and `order` are type parameters, so the inner step specializes
 on the chosen proposal structure. With `adjusted=true`, each proposal uses a
@@ -189,7 +189,7 @@ end
 @inline _langevin_context_value(context, name::Symbol, default) = get(context, name, default)
 @inline _langevin_unwrap_ref(x) = x isa Ref ? x[] : x
 
-@inline function Processes.init(langevin::LocalLangevin{Order,Adjusted}, context::Cont) where {Order,Adjusted,Cont}
+@inline function StatefulAlgorithms.init(langevin::LocalLangevin{Order,Adjusted}, context::Cont) where {Order,Adjusted,Cont}
     (;model) = context
 
     active_index_set = index_set(model)
@@ -497,7 +497,7 @@ Hamiltonian caches unchanged.
     return FlipProposal{T}(spin_idx, old_state, new_state, layer_idx, false), ΔE, 0, derivative
 end
 
-@inline function Processes.step!(langevin::LocalLangevin{Order,Adjusted}, context::C) where {Order,Adjusted,C}
+@inline function StatefulAlgorithms.step!(langevin::LocalLangevin{Order,Adjusted}, context::C) where {Order,Adjusted,C}
     (;hamiltonian, rng, model, dH_prealloc, layer_views, stepsize,
         max_drift_fraction, T) = context
 

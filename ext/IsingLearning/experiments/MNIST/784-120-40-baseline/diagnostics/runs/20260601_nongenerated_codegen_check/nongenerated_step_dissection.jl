@@ -22,14 +22,14 @@ function build_non_generated_probe()
     xtrain, ytrain = balanced_mnist(:train, config.train_per_class, config)
     setup = build_layer(config)
     trace("free_steps=$(setup.layer.free_relaxation_steps) nudged_steps=$(setup.layer.nudged_relaxation_steps)")
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(setup.graph), Ref(copy(setup.input_hidden_w)))
     load_sample_into_worker!(worker_context(worker), xtrain, ytrain, 1)
-    Processes.reset!(worker)
-    context = Processes.context(worker)
-    context = Processes._merge_runtime_inputs(context, (; phase_beta = config.β))
-    plan = Processes.getplan(algorithm)
-    wiring = Processes.getwiring(plan)
+    StatefulAlgorithms.reset!(worker)
+    context = StatefulAlgorithms.context(worker)
+    context = StatefulAlgorithms._merge_runtime_inputs(context, (; phase_beta = config.β))
+    plan = StatefulAlgorithms.getplan(algorithm)
+    wiring = StatefulAlgorithms.getwiring(plan)
     return (; config, setup, algorithm, worker, context, plan, wiring)
 end
 
@@ -43,7 +43,7 @@ end
 
 function main()
     probe = build_non_generated_probe()
-    plan_algos = Processes.getalgos(probe.plan)
+    plan_algos = StatefulAlgorithms.getalgos(probe.plan)
     trace("plan_type=$(typeof(probe.plan))")
     trace("context_type=$(typeof(probe.context))")
 
@@ -54,7 +54,7 @@ function main()
     trace("nudged_plan_type=$(typeof(nudged_plan))")
     trace("finish_algo_type=$(typeof(finish_algo))")
 
-    child_wiring = Processes.child_wiring(probe.wiring)
+    child_wiring = StatefulAlgorithms.child_wiring(probe.wiring)
     child_namespaces = getfield(probe.plan, :namespaces)
     free_wiring = getfield(child_wiring, 1)
     nudged_wiring = getfield(child_wiring, 2)
@@ -72,37 +72,37 @@ function main()
 
     context = probe.context
     initial_context = context
-    context = traced_step("free routine _step!", () -> Processes._step!(
+    context = traced_step("free routine _step!", () -> StatefulAlgorithms._step!(
         free_plan,
         context,
         free_wiring,
         free_namespace,
         probe.worker,
-        Processes.Repeat(1),
-        Processes.Stable(),
+        StatefulAlgorithms.Repeat(1),
+        StatefulAlgorithms.Stable(),
     ))
 
-    context = traced_step("nudged routine _step!", () -> Processes._step!(
+    context = traced_step("nudged routine _step!", () -> StatefulAlgorithms._step!(
         nudged_plan,
         context,
         nudged_wiring,
         nudged_namespace,
         probe.worker,
-        Processes.Repeat(1),
-        Processes.Stable(),
+        StatefulAlgorithms.Repeat(1),
+        StatefulAlgorithms.Stable(),
     ))
 
-    context = traced_step("finish algo _step!", () -> Processes._step!(
+    context = traced_step("finish algo _step!", () -> StatefulAlgorithms._step!(
         finish_algo,
         context,
         finish_wiring,
         finish_namespace,
         probe.worker,
-        Processes.Repeat(1),
-        Processes.Stable(),
+        StatefulAlgorithms.Repeat(1),
+        StatefulAlgorithms.Stable(),
     ))
 
-    traced_step("after_while", () -> Processes.after_while(probe.worker, probe.algorithm, context, initial_context))
+    traced_step("after_while", () -> StatefulAlgorithms.after_while(probe.worker, probe.algorithm, context, initial_context))
 
     trace("done final_context_type=$(typeof(context))")
     close(probe.worker)

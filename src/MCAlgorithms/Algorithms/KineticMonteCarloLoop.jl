@@ -3,10 +3,10 @@ export KineticMonteCarloLoop, IsingKineticMonteCarloLoop
 """
     KineticMonteCarloLoop(; r0=1.0, full_refresh_interval=0, rate_rule=:metropolis)
 
-Continuous-time single-spin kinetic Monte Carlo loop using the `Processes`
+Continuous-time single-spin kinetic Monte Carlo loop using the `StatefulAlgorithms`
 `init`/`step!` interface.
 
-Each `Processes.step!` selects one active spin event with probability
+Each `StatefulAlgorithms.step!` selects one active spin event with probability
 proportional to its cached transition rate, accepts it directly, advances the
 internal clock by an exponentially distributed waiting time, and refreshes the
 selected spin plus its graph neighbours. The default `:metropolis` rate is
@@ -269,7 +269,7 @@ end
 @inline update!(::KineticMonteCarloLoop, hterm::HamiltonianTerms, model::AbstractIsingGraph, proposal::FlipProposal) =
     update!(Metropolis(), hterm, model, proposal)
 
-@inline function Processes.init(kinetic::KineticMonteCarloLoop, context::Cont) where {Cont}
+@inline function StatefulAlgorithms.init(kinetic::KineticMonteCarloLoop, context::Cont) where {Cont}
     (;model) = context
 
     active_index_set = index_set(model)
@@ -292,7 +292,7 @@ end
     return (;init_context..., events, time, lasttemp, steps_since_refresh)
 end
 
-@inline function Processes.step!(kinetic::KineticMonteCarloLoop, context::C) where {C}
+@inline function StatefulAlgorithms.step!(kinetic::KineticMonteCarloLoop, context::C) where {C}
     (;model, rng, proposer, events) = context
     SType = eltype(model)
     t = SType(temp(model))

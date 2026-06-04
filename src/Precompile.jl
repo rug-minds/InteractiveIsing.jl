@@ -45,11 +45,11 @@ function _precompile_context_lines()
     Windows.tofigure(handle; size = (420, 320))
     close(host_lines)
 
-    ctx = Processes.ProcessContext(
+    ctx = StatefulAlgorithms.ProcessContext(
         (;
-            demo = Processes.SubContext(:demo, (; x = Float32[1, 2, 3], y = Float32[1, 4, 9])),
+            demo = StatefulAlgorithms.SubContext(:demo, (; x = Float32[1, 2, 3], y = Float32[1, 4, 9])),
         ),
-        Processes.NameSpaceRegistry(),
+        StatefulAlgorithms.NameSpaceRegistry(),
         (;),
         (;),
     )
@@ -136,11 +136,11 @@ end
 function _precompile_processes(g2, g3)
     p1 = createProcess(g2, Metropolis(); lifetime = 1)
     wait(p1)
-    Processes.close(g2)
+    StatefulAlgorithms.close(g2)
 
     p2 = createProcess(g3, LocalLangevin(stepsize = 0.05f0, adjusted = false); lifetime = 1)
     wait(p2)
-    Processes.close(g3)
+    StatefulAlgorithms.close(g3)
     return nothing
 end
 

@@ -43,7 +43,7 @@ function profile_manager_eval!(rows, trainer, x, y, config; seed_offset)
         trainer.current_sample_outputs = [NamedTuple{(:mean, :std),Tuple{FT,FT}}[] for _ in axes(x, 2)]
     end
     measure!(rows, "manager eval: ProcessManager.run!") do
-        Processes.run!(trainer.eval_manager, jobs)
+        StatefulAlgorithms.run!(trainer.eval_manager, jobs)
     end
     return measure!(rows, "manager eval: reduce metrics") do
         means = zeros(FT, size(x, 2))
@@ -76,7 +76,7 @@ function profile_manager_train_epoch!(rows, trainer, x, y, batch_gradient, epoch
         train_jobs(x, y, config, epoch)
     end
     measure!(rows, "manager train$(epoch): ProcessManager.run!") do
-        Processes.run!(trainer.train_manager, jobs)
+        StatefulAlgorithms.run!(trainer.train_manager, jobs)
     end
     grad = measure!(rows, "manager train$(epoch): optimizer update") do
         ntraj = length(jobs)

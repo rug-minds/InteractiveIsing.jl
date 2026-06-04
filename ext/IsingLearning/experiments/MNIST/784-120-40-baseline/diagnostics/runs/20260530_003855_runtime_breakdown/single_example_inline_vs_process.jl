@@ -19,10 +19,10 @@ function warmed_normal_process_worker(layer::L, source::G, xtrain::X, ytrain::Y)
     X<:AbstractMatrix,
     Y<:AbstractMatrix,
 }
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(layer))
     worker = input_field_worker(algorithm, layer, shared_worker_graph(source))
-    set_baseline_worker_sample!(Processes.context(worker), xtrain, ytrain, 1)
-    Processes.reset!(worker)
+    set_baseline_worker_sample!(StatefulAlgorithms.context(worker), xtrain, ytrain, 1)
+    StatefulAlgorithms.reset!(worker)
     run(worker)
     wait(worker)
     return worker
@@ -35,28 +35,28 @@ function warmed_inline_process_worker(layer::L, source::G, xtrain::X, ytrain::Y)
     X<:AbstractMatrix,
     Y<:AbstractMatrix,
 }
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(layer))
     warm_worker = input_field_worker(algorithm, layer, shared_worker_graph(source))
-    set_baseline_worker_sample!(Processes.context(warm_worker), xtrain, ytrain, 1)
-    Processes.reset!(warm_worker)
+    set_baseline_worker_sample!(StatefulAlgorithms.context(warm_worker), xtrain, ytrain, 1)
+    StatefulAlgorithms.reset!(warm_worker)
     run(warm_worker)
     wait(warm_worker)
 
-    return Processes.InlineProcess(
+    return StatefulAlgorithms.InlineProcess(
         algorithm;
-        context = Processes.context(warm_worker),
+        context = StatefulAlgorithms.context(warm_worker),
         repeats = 1,
         threaded = false,
     )
 end
 
 """Return the internally recorded process runtime in seconds."""
-@inline function process_internal_seconds(worker::W) where {W<:Processes.Process}
-    return Processes.runtime(worker)
+@inline function process_internal_seconds(worker::W) where {W<:StatefulAlgorithms.Process}
+    return StatefulAlgorithms.runtime(worker)
 end
 
 """Return the internally recorded inline-process runtime in seconds."""
-@inline function process_internal_seconds(worker::W) where {W<:Processes.InlineProcess}
+@inline function process_internal_seconds(worker::W) where {W<:StatefulAlgorithms.InlineProcess}
     isnothing(worker.starttime) && error("InlineProcess has not run yet")
     stop_time = isnothing(worker.endtime) ? time_ns() : worker.endtime
     return Int(stop_time - worker.starttime) / 1e9
@@ -64,13 +64,13 @@ end
 
 """Run one normal `Process` sample and return wall/internal timing."""
 function time_one_normal_process!(worker::W, xtrain::X, ytrain::Y, sample_idx::I) where {
-    W<:Processes.Process,
+    W<:StatefulAlgorithms.Process,
     X<:AbstractMatrix,
     Y<:AbstractMatrix,
     I<:Integer,
 }
-    set_baseline_worker_sample!(Processes.context(worker), xtrain, ytrain, sample_idx)
-    Processes.reset!(worker)
+    set_baseline_worker_sample!(StatefulAlgorithms.context(worker), xtrain, ytrain, sample_idx)
+    StatefulAlgorithms.reset!(worker)
     wall = @elapsed begin
         run(worker)
         wait(worker)
@@ -80,12 +80,12 @@ end
 
 """Run one synchronous `InlineProcess` sample and return wall/internal timing."""
 function time_one_inline_process!(worker::W, xtrain::X, ytrain::Y, sample_idx::I) where {
-    W<:Processes.InlineProcess,
+    W<:StatefulAlgorithms.InlineProcess,
     X<:AbstractMatrix,
     Y<:AbstractMatrix,
     I<:Integer,
 }
-    set_baseline_worker_sample!(Processes.context(worker), xtrain, ytrain, sample_idx)
+    set_baseline_worker_sample!(StatefulAlgorithms.context(worker), xtrain, ytrain, sample_idx)
     wall = @elapsed run(worker; threaded = false)
     return (; wall, internal = process_internal_seconds(worker))
 end

@@ -13,7 +13,7 @@ using SparseArrays
 using Statistics
 
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 const INMNIST_FT = Float32
 const INMNIST_INPUT_SIDE = 28
 const INMNIST_NCLASSES = 10
@@ -390,7 +390,7 @@ function learning_rate_at(config::C, update_idx::I) where {C<:InlaidMNISTConfig,
 end
 
 """Update the Optimisers.jl learning rate while preserving Adam moments."""
-function adjust_learning_rate!(manager::M) where {M<:Processes.ProcessManager}
+function adjust_learning_rate!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     η = learning_rate_at(manager.config, manager.state.update_idx[])
     Optimisers.adjust!(manager.state.opt_state, η)
     return η
@@ -504,7 +504,7 @@ end
 
 """Return the mutable process subcontext used by a manager worker."""
 function worker_context(worker::W) where {W}
-    return Processes.context(worker)._state
+    return StatefulAlgorithms.context(worker)._state
 end
 
 """Update worker-local counters after one inlaid contrastive sample."""
@@ -529,7 +529,7 @@ end
 
 """Build one temperature-scheduled free-phase dynamics step."""
 function free_phase_step_algorithm(dynamics_algorithm::D, temperature_algorithm::T) where {D,T}
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @alias free_temperature = temperature_algorithm
 
@@ -540,7 +540,7 @@ end
 
 """Build one temperature-scheduled nudged-phase dynamics step."""
 function nudged_phase_step_algorithm(dynamics_algorithm::D, temperature_algorithm::T) where {D,T}
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @alias nudge_temperature = temperature_algorithm
 
@@ -556,7 +556,7 @@ function free_phase_algorithm(
     steps::I,
 ) where {D,T,I<:Integer}
     phase_step = free_phase_step_algorithm(dynamics_algorithm, temperature_algorithm)
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @alias phase_step = phase_step
         @state inlaid_model
@@ -579,7 +579,7 @@ function nudged_phase_algorithm(
     steps::I,
 ) where {D,T,I<:Integer}
     phase_step = nudged_phase_step_algorithm(dynamics_algorithm, temperature_algorithm)
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @alias phase_step = phase_step
         @state inlaid_model
@@ -611,7 +611,7 @@ function inlaid_worker_algorithm(
     nudge_temperature = ReverseAnnealTemperatureSchedule(; cold_T = config.cold_temp, peak_T = config.reverse_temp, n_steps = nudge_steps)
     free_phase = free_phase_algorithm(dynamics_algorithm, free_temperature, free_steps)
     nudged_phase = nudged_phase_algorithm(dynamics_algorithm, nudge_temperature, nudge_steps)
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias free_phase = free_phase
         @alias nudged_phase = nudged_phase
         @state inlaid_model
@@ -643,10 +643,10 @@ function inlaid_worker(source::M, worker_idx::I, dynamics_algorithm::D) where {M
     model = worker_model(source, worker_idx)
     graph_state = II.state(model.graph)
     nactive = length(II.sampling_indices(model.graph))
-    algorithm = Processes.resolve(inlaid_worker_algorithm(deepcopy(dynamics_algorithm), model.config, nactive))
-    return Processes.Process(
+    algorithm = StatefulAlgorithms.resolve(inlaid_worker_algorithm(deepcopy(dynamics_algorithm), model.config, nactive))
+    return StatefulAlgorithms.Process(
         algorithm,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             inlaid_model = model,
             x = zeros(INMNIST_FT, INMNIST_INPUT_SIDE^2),
             y = zeros(INMNIST_FT, INMNIST_NCLASSES * source.config.output_replicas),
@@ -660,19 +660,19 @@ function inlaid_worker(source::M, worker_idx::I, dynamics_algorithm::D) where {M
             nskipped = Ref(0),
             total_loss = Ref(0f0),
         ),
-        Processes.Init(:dynamics; model = model.graph);
+        StatefulAlgorithms.Init(:dynamics; model = model.graph);
         repeat = 1,
     )
 end
 
 """Merge worker-local gradients and statistics into the manager state."""
-function flush_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function flush_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_gradient!(manager.state.batch_gradient)
     manager.state.nsamples[] = 0
     manager.state.ncorrect[] = 0
     manager.state.nskipped[] = 0
     manager.state.total_loss[] = 0f0
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         ctx = worker_context(worker)
         add_gradient!(manager.state.batch_gradient, ctx.gradient)
         manager.state.nsamples[] += ctx.nsamples[]
@@ -687,21 +687,21 @@ function flush_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
 end
 
 """Clear every manager and worker buffer before a minibatch."""
-function clear_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function clear_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_gradient!(manager.state.batch_gradient)
     manager.state.nsamples[] = 0
     manager.state.ncorrect[] = 0
     manager.state.nskipped[] = 0
     manager.state.total_loss[] = 0f0
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         reset_worker_stats!(worker_context(worker))
     end
     return manager
 end
 
 """Update worker parameter references after an optimizer step."""
-function sync_worker_params!(manager::M) where {M<:Processes.ProcessManager}
-    for worker in Processes.workers(manager)
+function sync_worker_params!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
+    for worker in StatefulAlgorithms.workers(manager)
         ctx = worker_context(worker)
         ctx.inlaid_model.weights_io = manager.state.model.weights_io
         ctx.inlaid_model.bias_o = manager.state.model.bias_o
@@ -734,27 +734,27 @@ function inlaid_manager(source::M) where {M<:InlaidMNISTModel}
             ctx = worker_context(slot.worker)
             ctx.x .= job.x
             ctx.y .= job.y
-            Processes.resetworker!(slot)
+            StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
         flush! = manager -> flush_manager_buffers!(manager),
     )
-    return Processes.ProcessManager(
+    return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = source.config.workers,
         config = source.config,
         state,
-        flush_policy = Processes.FlushAtEnd(),
-        worker_init = Processes.MakeEachWorker(),
+        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = InlaidMNISTJob{Vector{INMNIST_FT},Vector{INMNIST_FT}},
     )
 end
 
 """Run one minibatch and update shared source parameters once."""
-function run_minibatch!(manager::M, jobs::J) where {M<:Processes.ProcessManager,J<:AbstractVector}
+function run_minibatch!(manager::M, jobs::J) where {M<:StatefulAlgorithms.ProcessManager,J<:AbstractVector}
     clear_manager_buffers!(manager)
-    Processes.run!(manager, jobs, Processes.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
     add_weight_decay!(manager.state.batch_gradient, manager.state.params[], manager.config.weight_decay)
     η = adjust_learning_rate!(manager)
     manager.state.opt_state, ps_new = Optimisers.update(manager.state.opt_state, manager.state.params[], manager.state.batch_gradient)
@@ -825,7 +825,7 @@ function validation_free_phase_algorithm(
     free_reads = max(1, config.eval_reads)
     free_temperature = GeometricTemperatureSchedule(; start_T = config.hot_temp, stop_T = config.cold_temp, n_steps = free_steps)
     free_phase = free_phase_algorithm(dynamics_algorithm, free_temperature, free_steps)
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias free_phase = free_phase
         @state inlaid_model
         @state x
@@ -840,16 +840,16 @@ end
 """Create one reusable process for inlaid validation sampling."""
 function free_phase_process(model::M, dynamics_algorithm::D) where {M<:InlaidMNISTModel,D}
     graph_state = II.state(model.graph)
-    algorithm = Processes.resolve(validation_free_phase_algorithm(deepcopy(dynamics_algorithm), model.config, length(II.sampling_indices(model.graph))))
-    return Processes.Process(
+    algorithm = StatefulAlgorithms.resolve(validation_free_phase_algorithm(deepcopy(dynamics_algorithm), model.config, length(II.sampling_indices(model.graph))))
+    return StatefulAlgorithms.Process(
         algorithm,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             inlaid_model = model,
             x = zeros(INMNIST_FT, INMNIST_INPUT_SIDE^2),
             free_state = similar(graph_state),
             free_best_energy = Ref(INMNIST_FT(Inf)),
         ),
-        Processes.Init(:dynamics; model = model.graph);
+        StatefulAlgorithms.Init(:dynamics; model = model.graph);
         repeat = 1,
     )
 end

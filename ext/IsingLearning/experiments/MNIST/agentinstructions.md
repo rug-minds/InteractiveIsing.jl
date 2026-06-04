@@ -7,7 +7,7 @@ Use of this file: operational rules for future agents before running or editing 
 - Use `ProcessManager` for manager-backed MNIST training experiments. Start Julia with enough threads, normally `julia -t 32 --project=ext/IsingLearning ...`.
 - Do not use `ProcessManager` for interactive runtime demos. Interactive MNIST should be a continuous single-graph simulation, normally one `LocalLangevin` loop, with no training manager.
 - Reuse worker contexts after creation. Do not rebuild processes, graphs, or contexts per batch.
-- Use public `Processes`/`InteractiveIsing` APIs from experiments. Do not reach into `Processes` internals unless a confirmed package bug blocks the run.
+- Use public `StatefulAlgorithms`/`InteractiveIsing` APIs from experiments. Do not reach into `StatefulAlgorithms` internals unless a confirmed package bug blocks the run.
 - Do not use `createProcess` or graph-input merge helpers in MNIST training code. If the experiment authors the `LoopAlgorithm`, provide the needed `Init`s directly.
 - A minibatch is a minibatch, not an epoch. An epoch is the whole selected training split. Let each worker accumulate several examples into its own buffer, then flush/sync once after the minibatch.
 - Keep at least as many jobs as useful workers when benchmarking parallelism. For training, choose batch/chunking so worker jobs contain enough examples to amortize scheduling and still fill the workers.

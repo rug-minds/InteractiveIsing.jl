@@ -27,7 +27,7 @@ using Preferences
 using SparseArrays
 using UUIDs
 
-using ..Processes
+using ..StatefulAlgorithms
 using ..InteractiveIsing: AbstractIsingLayer, AbstractLayerTopology, Clamping, CoulombHamiltonian,
     CastVec, HamiltonianTerms, InteractiveGraphVarSpec, IsingGraph, KineticMC, MagField, PTimer, PolynomialHamiltonian,
     PolledObservable, Parameter, SingleLayerGraph, _mc_model_inits, _prepared_interactive_var_data,

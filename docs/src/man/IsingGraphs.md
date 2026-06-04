@@ -32,7 +32,7 @@ The current `examples/3D Graph.jl` file is a good template:
 
 ```julia
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 
 function isingweights(; dr)
     dr == 1 ? 1f0 : 0f0

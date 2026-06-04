@@ -1,7 +1,7 @@
  using Pkg
 Pkg.activate(joinpath(@__DIR__, ".."))
 
-using IsingLearning, IsingLearning.InteractiveIsing, IsingLearning.InteractiveIsing.Processes, Lux, Random, SparseArrays
+using IsingLearning, IsingLearning.InteractiveIsing, IsingLearning.InteractiveIsing.StatefulAlgorithms, Lux, Random, SparseArrays
 using BenchmarkTools
 
 # MNIST TEST
@@ -27,8 +27,8 @@ p = InlineProcess(dynamics.algorithm, Init(:_state; buffers, equilibrium_state =
 rc = run(p)
 @benchmark run(p)
 
-test(rc, rbm) = Processes.initcontext(rc, :dynamics, inputs = (;model = rbm))
-rc = Processes.initcontext(rc, :dynamics, inputs = (;model = rbm))
+test(rc, rbm) = StatefulAlgorithms.initcontext(rc, :dynamics, inputs = (;model = rbm))
+rc = StatefulAlgorithms.initcontext(rc, :dynamics, inputs = (;model = rbm))
 
 @code_warntype test(rc, rbm)
 

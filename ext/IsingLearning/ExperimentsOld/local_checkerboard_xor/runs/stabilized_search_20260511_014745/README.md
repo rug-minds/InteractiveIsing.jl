@@ -1,6 +1,6 @@
 # Local Checkerboard Stabilized Search
 
-This run is isolated from the toolbox code. It reuses the checkerboard graph/trainer helpers but replaces the annealed sampler wrapper with no-anneal Processes composites for this search.
+This run is isolated from the toolbox code. It reuses the checkerboard graph/trainer helpers but replaces the annealed sampler wrapper with no-anneal StatefulAlgorithms composites for this search.
 
 ## Brainstormed Fixes Tested
 

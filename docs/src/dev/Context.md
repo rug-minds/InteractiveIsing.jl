@@ -5,12 +5,12 @@ process run, while still being driven by backend registry and scoping rules. It 
 around `ProcessContext`, `SubContext`, and `SubContextView`.
 
 See:
-- `deps/Processes/src/Context/Context.jl`
-- `deps/Processes/src/Context/ProcessContexts.jl`
-- `deps/Processes/src/Context/SubContext.jl`
-- `deps/Processes/src/Context/SharingInterface.jl`
-- `deps/Processes/src/Context/Init.jl`
-- `deps/Processes/src/Context/ContextView.jl`
+- `deps/StatefulAlgorithms/src/Context/Context.jl`
+- `deps/StatefulAlgorithms/src/Context/ProcessContexts.jl`
+- `deps/StatefulAlgorithms/src/Context/SubContext.jl`
+- `deps/StatefulAlgorithms/src/Context/SharingInterface.jl`
+- `deps/StatefulAlgorithms/src/Context/Init.jl`
+- `deps/StatefulAlgorithms/src/Context/ContextView.jl`
 
 ## ProcessContext
 

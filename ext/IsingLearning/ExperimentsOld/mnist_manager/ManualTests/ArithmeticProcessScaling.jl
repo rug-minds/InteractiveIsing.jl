@@ -3,7 +3,7 @@ Pkg.activate(joinpath(@__DIR__, "..", "..", ".."))
 
 using Dates
 using IsingLearning
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Random
 using Statistics
 
@@ -22,7 +22,7 @@ Manager-owned `ProcessAlgorithm` that mutates only worker-local floating-point
 state. `inner_ops` controls arithmetic intensity: low values are memory-write
 heavy, high values are compute-heavy.
 """
-struct ArithmeticStateStep{I<:Integer} <: Processes.ProcessAlgorithm
+struct ArithmeticStateStep{I<:Integer} <: StatefulAlgorithms.ProcessAlgorithm
     len::I
     rounds::I
     inner_ops::I
@@ -30,12 +30,12 @@ struct ArithmeticStateStep{I<:Integer} <: Processes.ProcessAlgorithm
 end
 
 """
-    Processes.init(step, context)
+    StatefulAlgorithms.init(step, context)
 
 Allocate one private vector per worker and initialize deterministic scalar
 coefficients for the arithmetic loop.
 """
-function Processes.init(step::S, context) where {S<:ArithmeticStateStep}
+function StatefulAlgorithms.init(step::S, context) where {S<:ArithmeticStateStep}
     rng = Random.MersenneTwister(step.seed + get(context, :worker_idx, 0))
     data = rand(rng, Float64, Int(step.len))
     return (;
@@ -48,12 +48,12 @@ function Processes.init(step::S, context) where {S<:ArithmeticStateStep}
 end
 
 """
-    Processes.step!(step, context)
+    StatefulAlgorithms.step!(step, context)
 
 Run the worker-local arithmetic workload and store a checksum so the loop cannot
 be removed as dead work.
 """
-function Processes.step!(step::S, context::C) where {S<:ArithmeticStateStep,C}
+function StatefulAlgorithms.step!(step::S, context::C) where {S<:ArithmeticStateStep,C}
     data = context.data
     a = context.a[]
     b = context.b[]
@@ -141,8 +141,8 @@ function run_config(len::L, rounds::R, inner_ops::O, nworkers::N) where {L<:Inte
     total_seconds = @elapsed run_manager_once!(manager, nworkers)
     checksums = Float64[]
     for slot in slots(manager)
-        algo = only(Processes.getalgos(Processes.getalgo(slot.worker)))
-        push!(checksums, Processes.context(slot.worker)[algo].checksum[])
+        algo = only(StatefulAlgorithms.getalgos(StatefulAlgorithms.getalgo(slot.worker)))
+        push!(checksums, StatefulAlgorithms.context(slot.worker)[algo].checksum[])
     end
     close(manager)
 

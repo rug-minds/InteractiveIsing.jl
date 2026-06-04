@@ -12,7 +12,7 @@ using SparseArrays
 using Statistics
 
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 const FT = Float64
 const XOR_CASES = ((false, false), (false, true), (true, false), (true, true))
 
@@ -176,7 +176,7 @@ function initialize_majority_state_body!(isinggraph::G, init_mode) where {G}
     return nothing
 end
 
-Processes.@ProcessAlgorithm function InitializeMajorityState!(isinggraph::G, init_mode) where {G}
+StatefulAlgorithms.@ProcessAlgorithm function InitializeMajorityState!(isinggraph::G, init_mode) where {G}
     initialize_majority_state_body!(isinggraph, init_mode)
     return nothing
 end
@@ -203,17 +203,17 @@ function accumulate_free_minus_target_gradient_body!(isinggraph::G, target_state
     return buffers
 end
 
-Processes.@ProcessAlgorithm function AccumulateTargetMinusFreeGradient!(isinggraph, target_state, free_state, buffers)
+StatefulAlgorithms.@ProcessAlgorithm function AccumulateTargetMinusFreeGradient!(isinggraph, target_state, free_state, buffers)
     accumulate_target_minus_free_gradient_body!(isinggraph, target_state, free_state, buffers)
     return nothing
 end
 
-Processes.@ProcessAlgorithm function AccumulateFreeMinusTargetGradient!(isinggraph, target_state, free_state, buffers)
+StatefulAlgorithms.@ProcessAlgorithm function AccumulateFreeMinusTargetGradient!(isinggraph, target_state, free_state, buffers)
     accumulate_free_minus_target_gradient_body!(isinggraph, target_state, free_state, buffers)
     return nothing
 end
 
-Processes.@ProcessAlgorithm function TouchMajorityJob!(x, y)
+StatefulAlgorithms.@ProcessAlgorithm function TouchMajorityJob!(x, y)
     return nothing
 end
 
@@ -290,7 +290,7 @@ function majority_single_contrastive_algorithm(layer::L, config::C) where {L<:La
     n_units = layer.nunits
     init_value = config.init_mode
 
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @state x
         @state y
         @state buffers
@@ -339,12 +339,12 @@ function majority_contrastive_algorithm(layer::L, config::C) where {L<:LayeredIs
         throw(ArgumentError("unknown XOR majority training rule `$(config.training_rule)`; use `ep`, `target_free`, or `analytic_teacher`"))
     end
     repeat_count = repeats_per_majority_job(config)
-    return Processes.Routine(contrastive_algorithm, (repeat_count,))
+    return StatefulAlgorithms.Routine(contrastive_algorithm, (repeat_count,))
 end
 
 """Build one routable no-op job used by the analytic teacher rule."""
 function majority_single_teacher_algorithm()
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @state x
         @state y
         TouchMajorityJob!(x = x, y = y)
@@ -375,7 +375,7 @@ function majority_single_free_minus_target_algorithm(layer::L, config::C) where 
     n_units = layer.nunits
     init_value = config.init_mode
 
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @state x
         @state y
         @state buffers
@@ -413,7 +413,7 @@ function majority_single_target_minus_free_algorithm(layer::L, config::C) where 
     n_units = layer.nunits
     init_value = config.init_mode
 
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @state x
         @state y
         @state buffers
@@ -443,12 +443,12 @@ end
 
 """Return the mutable training context stored in one worker."""
 function worker_context(worker::W) where {W}
-    return Processes.context(worker)._state
+    return StatefulAlgorithms.context(worker)._state
 end
 
 """Return the worker graph owned by the free-phase dynamics subcontext."""
 function worker_model(worker::W) where {W}
-    return Processes.context(worker).dynamics.model
+    return StatefulAlgorithms.context(worker).dynamics.model
 end
 
 """Create a worker graph with fresh state and shared static parameter arrays."""
@@ -487,12 +487,12 @@ end
 
 """Build one reusable process worker from the composable contrastive routine."""
 function repeated_worker(layer::L, graph::G, config::C) where {L<:LayeredIsingGraphLayer,G,C<:MajorityVoteBaselineConfig}
-    algorithm = Processes.resolve(majority_contrastive_algorithm(layer, config))
+    algorithm = StatefulAlgorithms.resolve(majority_contrastive_algorithm(layer, config))
     state = II.state(graph)
     if config.training_rule === :analytic_teacher
-        return Processes.Process(
+        return StatefulAlgorithms.Process(
             algorithm,
-            Processes.Init(:_state;
+            StatefulAlgorithms.Init(:_state;
                 x = zeros(eltype(graph), length(layer.input_layer)),
                 y = zeros(eltype(graph), length(layer.output_layer)),
                 buffers = IsingLearning.layer_gradient_buffer(graph),
@@ -503,9 +503,9 @@ function repeated_worker(layer::L, graph::G, config::C) where {L<:LayeredIsingGr
             repeat = 1,
         )
     end
-    return Processes.Process(
+    return StatefulAlgorithms.Process(
         algorithm,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             model = graph,
             x = zeros(eltype(graph), length(layer.input_layer)),
             y = zeros(eltype(graph), length(layer.output_layer)),
@@ -514,7 +514,7 @@ function repeated_worker(layer::L, graph::G, config::C) where {L<:LayeredIsingGr
             plus_state = similar(state),
             minus_state = similar(state),
         ),
-        Processes.Init(:dynamics, model = graph);
+        StatefulAlgorithms.Init(:dynamics, model = graph);
         repeat = 1,
     )
 end
@@ -572,22 +572,22 @@ function gradient_scale(config::C, total::Integer) where {C<:MajorityVoteBaselin
 end
 
 """Clear batch and worker buffers before a new minibatch."""
-function clear_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function clear_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_buffer!(manager.state.batch_gradient)
     manager.config.training_rule === :analytic_teacher && return manager
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         clear_buffer!(worker_context(worker).buffers)
     end
     return manager
 end
 
 """Flush worker-local contrastive buffers into one averaged batch gradient."""
-function flush_majority_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function flush_majority_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_buffer!(manager.state.batch_gradient)
     if manager.config.training_rule === :analytic_teacher
         return analytic_teacher_gradient!(manager.state.batch_gradient, manager.state.params[], manager.state.teacher_params[])
     end
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         ctx = worker_context(worker)
         add_buffer!(manager.state.batch_gradient, ctx.buffers)
         clear_buffer!(ctx.buffers)
@@ -600,9 +600,9 @@ function flush_majority_buffers!(manager::M) where {M<:Processes.ProcessManager}
 end
 
 """Install updated shared parameters once after a manager batch."""
-function sync_worker_params!(manager::M, ps::P) where {M<:Processes.ProcessManager,P}
+function sync_worker_params!(manager::M, ps::P) where {M<:StatefulAlgorithms.ProcessManager,P}
     if manager.config.training_rule !== :analytic_teacher
-        for worker in Processes.workers(manager)
+        for worker in StatefulAlgorithms.workers(manager)
             IsingLearning.sync_params!(worker_model(worker), ps)
         end
     end
@@ -611,22 +611,22 @@ function sync_worker_params!(manager::M, ps::P) where {M<:Processes.ProcessManag
 end
 
 """Create one worker from the manager-owned layer and prototype graph."""
-function majority_makeworker(idx::Integer, manager::M) where {M<:Processes.ProcessManager}
+function majority_makeworker(idx::Integer, manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     graph = worker_graph(manager.state.prototype_graph, manager.state.params[], manager.config)
     return repeated_worker(manager.state.layer, graph, manager.config)
 end
 
 """Write one XOR job into a worker before the manager runs it."""
-function majority_prepare!(slot, job::J, manager::M) where {J<:MajorityVoteJob,M<:Processes.ProcessManager}
+function majority_prepare!(slot, job::J, manager::M) where {J<:MajorityVoteJob,M<:StatefulAlgorithms.ProcessManager}
     ctx = worker_context(slot.worker)
     ctx.x .= job.x
     ctx.y .= job.y
-    Processes.resetworker!(slot)
+    StatefulAlgorithms.resetworker!(slot)
     return nothing
 end
 
 """Manager recipe flush hook."""
-function majority_flush!(manager::M) where {M<:Processes.ProcessManager}
+function majority_flush!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     return flush_majority_buffers!(manager)
 end
 
@@ -640,13 +640,13 @@ function majority_manager(layer::L, graph::G, ps::P, config::C) where {L<:Layere
         prepare! = majority_prepare!,
         flush! = majority_flush!,
     )
-    return Processes.ProcessManager(
+    return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = Processes.FlushAtEnd(),
-        worker_init = Processes.MakeEachWorker(),
+        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = MajorityVoteJob{Vector{FT},Vector{FT}},
     )
@@ -676,10 +676,10 @@ function majority_jobs(config::C, x::X, y::Y) where {C<:MajorityVoteBaselineConf
 end
 
 """Run one manager minibatch and synchronize updated parameters."""
-function run_majority_batch!(manager::M, jobs::J) where {M<:Processes.ProcessManager,J}
+function run_majority_batch!(manager::M, jobs::J) where {M<:StatefulAlgorithms.ProcessManager,J}
     clear_manager_buffers!(manager)
     manager.state.total_repeats[] = sum(job.repeats for job in jobs)
-    Processes.run!(manager, jobs, Processes.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
     manager.state.opt_state, ps_new = Optimisers.update(manager.state.opt_state, manager.state.params[], manager.state.batch_gradient)
     manager.state.params[] = ps_new
     sync_worker_params!(manager, ps_new)
@@ -694,7 +694,7 @@ function evaluate_majority(layer::L, ps::P, st::S, x::X, y::Y, targets::Z, confi
     dynamics_algorithm = deepcopy(layer.validation_algorithm)
     validation_steps = layer.relaxation_steps
     init_mode = config.init_mode
-    validation = Processes.resolve(Processes.@Routine begin
+    validation = StatefulAlgorithms.resolve(StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @state x
 
@@ -702,10 +702,10 @@ function evaluate_majority(layer::L, ps::P, st::S, x::X, y::Y, targets::Z, confi
         IsingLearning.apply_input(dynamics.model, x)
         @repeat validation_steps dynamics()
     end)
-    process = Processes.Process(
+    process = StatefulAlgorithms.Process(
         validation,
-        Processes.Init(:_state; x = zeros(FT, size(x, 1))),
-        Processes.Init(:dynamics; model = graph);
+        StatefulAlgorithms.Init(:_state; x = zeros(FT, size(x, 1))),
+        StatefulAlgorithms.Init(:dynamics; model = graph);
         repeat = 1,
     )
     context = worker_context(process)

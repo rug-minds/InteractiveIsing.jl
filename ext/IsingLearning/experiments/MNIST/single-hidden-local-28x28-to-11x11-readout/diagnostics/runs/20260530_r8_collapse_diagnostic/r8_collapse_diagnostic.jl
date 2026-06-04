@@ -121,12 +121,12 @@ function main()
     )
 
     dynamics_algorithm = mnist_dynamics_algorithm()
-    worker_algorithm = Processes.resolve(contrastive_worker_algorithm(deepcopy(dynamics_algorithm), config, length(II.state(source.graph))))
+    worker_algorithm = StatefulAlgorithms.resolve(contrastive_worker_algorithm(deepcopy(dynamics_algorithm), config, length(II.state(source.graph))))
     worker = local_worker(source, 1, worker_algorithm)
     ctx = worker_context(worker)
     ctx.x .= x
     ctx.y .= y
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     t_run = @elapsed begin
         run(worker)
         wait(worker)

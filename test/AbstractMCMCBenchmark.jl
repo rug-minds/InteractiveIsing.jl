@@ -74,24 +74,24 @@ function make_interactiveising_graph(side_length::Int, temperature::T, spins::Ab
 end
 
 function make_inline_process(func; repeats::Int, inputs = tuple(), overrides = tuple(), threaded = false)
-    if !(func isa Processes.LoopAlgorithm)
-        func = Processes.CompositeAlgorithm(func)
+    if !(func isa StatefulAlgorithms.LoopAlgorithm)
+        func = StatefulAlgorithms.CompositeAlgorithm(func)
     end
 
     inputs = inputs isa Tuple ? inputs : (inputs,)
     overrides = overrides isa Tuple ? overrides : (overrides,)
 
-    empty_context = Processes.ProcessContext(func)
-    reg = Processes.getregistry(empty_context)
+    empty_context = StatefulAlgorithms.ProcessContext(func)
+    reg = StatefulAlgorithms.getregistry(empty_context)
 
-    named_inputs = Processes.to_named(reg, filter(x -> x isa Processes.Init, inputs)...)
-    named_overrides = Processes.to_named(reg, filter(x -> x isa Processes.Override, overrides)...)
+    named_inputs = StatefulAlgorithms.to_named(reg, filter(x -> x isa StatefulAlgorithms.Init, inputs)...)
+    named_overrides = StatefulAlgorithms.to_named(reg, filter(x -> x isa StatefulAlgorithms.Override, overrides)...)
 
-    lifetime = Processes.Repeat(repeats)
-    td = Processes.TaskData(func; lifetime, inputs = named_inputs, overrides = named_overrides)
-    context = Processes.init_context(td)
+    lifetime = StatefulAlgorithms.Repeat(repeats)
+    td = StatefulAlgorithms.TaskData(func; lifetime, inputs = named_inputs, overrides = named_overrides)
+    context = StatefulAlgorithms.init_context(td)
 
-    return Processes.InlineProcess{typeof(td), typeof(context), threaded}(
+    return StatefulAlgorithms.InlineProcess{typeof(td), typeof(context), threaded}(
         uuid1(),
         td,
         context,
@@ -105,34 +105,34 @@ end
 function make_interactiveising_process(side_length::Int, temperature::T, spins::AbstractMatrix{T}, nsteps::Int) where T
     g = make_interactiveising_graph(side_length, temperature, spins)
     algo = g.default_algorithm
-    return make_inline_process(algo; repeats = nsteps, inputs = Processes.Init(algo, state = g))
+    return make_inline_process(algo; repeats = nsteps, inputs = StatefulAlgorithms.Init(algo, state = g))
 end
 
 function make_warmed_interactiveising_process(side_length::Int, temperature::T, spins::AbstractMatrix{T}, nsteps::Int) where T
     g = make_interactiveising_graph(side_length, temperature, spins)
     algo = g.default_algorithm
 
-    warm_process = make_inline_process(algo; repeats = 1, inputs = Processes.Init(algo, state = g))
+    warm_process = make_inline_process(algo; repeats = 1, inputs = StatefulAlgorithms.Init(algo, state = g))
     run(warm_process)
 
     copyto!(state(g), vec(spins))
     temp!(g, temperature)
 
-    process = make_inline_process(algo; repeats = nsteps, inputs = Processes.Init(algo, state = g))
+    process = make_inline_process(algo; repeats = nsteps, inputs = StatefulAlgorithms.Init(algo, state = g))
     return (; process, graph = g)
 end
 
 function make_interactiveising_runner(side_length::Int, temperature::T, spins::AbstractMatrix{T}, nsteps::Int) where T
     g = make_interactiveising_graph(side_length, temperature, spins)
     algo = g.default_algorithm
-    process = make_inline_process(algo; repeats = nsteps, inputs = Processes.Init(algo, state = g))
+    process = make_inline_process(algo; repeats = nsteps, inputs = StatefulAlgorithms.Init(algo, state = g))
     return (; process, graph = g)
 end
 
 function reset_interactiveising_runner!(runner, temperature, spins)
     copyto!(state(runner.graph), vec(spins))
     temp!(runner.graph, temperature)
-    Processes.reset!(runner.process)
+    StatefulAlgorithms.reset!(runner.process)
     return runner
 end
 
@@ -163,7 +163,7 @@ function reset_abstractmcmc_runner!(runner, spins)
     return runner
 end
 
-function run_interactiveising_steps!(process::Processes.InlineProcess)
+function run_interactiveising_steps!(process::StatefulAlgorithms.InlineProcess)
     return run(process)
 end
 

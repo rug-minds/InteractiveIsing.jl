@@ -8,8 +8,8 @@ Short notes from the XOR debugging runs so we do not repeat the same sweeps.
 - The old `ComputeGradients.jl`, `ChainRules.jl`, and `ep_train_step!` path was not used by these runs.
 - Input is written by `apply_input`, which turns off layer 1 in the `ToggledIndexSet` and writes the 16-pattern vector into `state(graph[1])`.
 - Output is evaluated by comparing the output vector against the false/true target patterns using dot products.
-- In the `Processes` DSL, the dynamics graph must be passed as `model`, and repeated dynamics must be rebound as `model = @repeat ... dynamics()`. The assignment receives the repeated algorithm output fields; it is not a literal capture of the whole return object.
-- `ext/IsingLearning/examples/xor_manual_step_debug.jl` bypasses `Process` scheduling and directly calls `Processes.step!` on the sampler context for each free/plus/minus phase. This is now the cleanest scheduling-independent debugging path.
+- In the `StatefulAlgorithms` DSL, the dynamics graph must be passed as `model`, and repeated dynamics must be rebound as `model = @repeat ... dynamics()`. The assignment receives the repeated algorithm output fields; it is not a literal capture of the whole return object.
+- `ext/IsingLearning/examples/xor_manual_step_debug.jl` bypasses `Process` scheduling and directly calls `StatefulAlgorithms.step!` on the sampler context for each free/plus/minus phase. This is now the cleanest scheduling-independent debugging path.
 
 ## Gradient Sign
 
@@ -83,7 +83,7 @@ Short notes from the XOR debugging runs so we do not repeat the same sweeps.
 
 - `xor_manual_step_debug.jl` now uses `LayeredIsingGraphLayer` and `init_mnist_trainer` to build the same worker graph, `_state` buffers, and sampler context as the threaded path.
 - The manual loop now keeps the full worker `ProcessContext`, extracts the resolved identifiable `@dynamics` wrapper from the worker algorithm, and steps that wrapper directly.
-- The step call is `Processes.step!(dynamics_stepper, context, Processes.Unstable())`; the identifiable wrapper creates the context view and merges the return fields back into the full context.
+- The step call is `StatefulAlgorithms.step!(dynamics_stepper, context, StatefulAlgorithms.Unstable())`; the identifiable wrapper creates the context view and merges the return fields back into the full context.
 - `Unstable()` is intentional here because the first Langevin step adds diagnostics such as `acceptance_rate` and changes the initialized `group_steps` field from the config `Ref` into the scalar returned by `step!`.
 - This gives a scheduling-independent path while still using the real context initialization, input buffers, target buffers, and graph parameter sync helpers.
 - A one-epoch smoke with `relax=2` completed and showed nonzero gradients/updates, so the manual path is currently compiling and stepping through real dynamics contexts.

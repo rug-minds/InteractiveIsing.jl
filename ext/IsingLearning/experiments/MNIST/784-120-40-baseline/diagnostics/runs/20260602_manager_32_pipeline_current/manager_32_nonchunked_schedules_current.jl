@@ -49,7 +49,7 @@ function nonchunked_input_field_manager(
 ) where {L<:IsingLearning.LayeredIsingGraphLayer,G,C<:InputFieldMNISTConfig,R<:Base.RefValue}
     params = input_field_params(source, input_hidden_w[])
     optimiser = Optimisers.Adam(config.lr)
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(layer))
     state = InputFieldMNISTManagerState(
         layer,
         source,
@@ -73,19 +73,19 @@ function nonchunked_input_field_manager(
             copyto!(ctx.x[], job.x)
             copyto!(ctx.y[], job.y)
             manager.state.nsamples[] += 1
-            Processes.resetworker!(slot)
+            StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
         runarguments = (slot, job, manager) -> (; phase_beta = manager.config.β),
         flush! = flush_manager_buffers!,
     )
-    return Processes.ProcessManager(
+    return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = Processes.NoFlush(),
-        worker_init = Processes.MakeEachWorker(),
+        flush_policy = StatefulAlgorithms.NoFlush(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = InputFieldMNISTJob{Vector{FT},Vector{FT}},
     )
@@ -110,7 +110,7 @@ function time_nonchunked_schedule_batch!(
     indices::V,
     schedule_name::S,
 ) where {
-    M<:Processes.ProcessManager,
+    M<:StatefulAlgorithms.ProcessManager,
     B<:InputFieldMNISTJobBuffer,
     X<:AbstractMatrix,
     Y<:AbstractMatrix,
@@ -122,9 +122,9 @@ function time_nonchunked_schedule_batch!(
     schedule = nonchunked_schedule(schedule_name)
     run_seconds = @elapsed begin
         if isnothing(schedule)
-            Processes.run!(manager, jobs)
+            StatefulAlgorithms.run!(manager, jobs)
         else
-            Processes.run!(manager, jobs, schedule)
+            StatefulAlgorithms.run!(manager, jobs, schedule)
         end
     end
     flush_seconds = @elapsed flush_manager_buffers!(manager)

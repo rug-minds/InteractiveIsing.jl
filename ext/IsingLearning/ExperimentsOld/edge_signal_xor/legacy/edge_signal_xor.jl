@@ -11,7 +11,7 @@ using CairoMakie
 import IsingLearning.InteractiveIsing: @WG, WeightGenerator
 
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 const FT = Float64
 
 const XOR_CASES = ((false, false), (false, true), (true, false), (true, true))
@@ -398,7 +398,7 @@ end
 ResponseTrace() = ResponseTrace(Dict{String,Any}[], Dict{String,Any}[])
 
 """ProcessAlgorithm that records response metrics after scheduled dynamics steps."""
-struct SweepResponseLogger{Trace,State,Kind} <: Processes.ProcessAlgorithm
+struct SweepResponseLogger{Trace,State,Kind} <: StatefulAlgorithms.ProcessAlgorithm
     trace::Trace
     pre_state::State
     graph_kind::Kind
@@ -409,9 +409,9 @@ struct SweepResponseLogger{Trace,State,Kind} <: Processes.ProcessAlgorithm
     sweep::Base.RefValue{Int}
 end
 
-Processes.init(::SweepResponseLogger, context) = (;)
+StatefulAlgorithms.init(::SweepResponseLogger, context) = (;)
 
-function Processes.step!(logger::SweepResponseLogger, context)
+function StatefulAlgorithms.step!(logger::SweepResponseLogger, context)
     log_response!(
         logger.trace,
         context.model,
@@ -495,14 +495,14 @@ function randomize_graph_state!(graph)
     return graph
 end
 
-"""Run a fixed number of single-spin LocalLangevin steps through Processes."""
+"""Run a fixed number of single-spin LocalLangevin steps through StatefulAlgorithms."""
 function run_dynamics_steps!(graph, sampler, nsteps::Integer; seed::Integer)
     dynamics = deepcopy(sampler)
-    routine = II.Processes.@Routine begin
+    routine = II.StatefulAlgorithms.@Routine begin
         @repeat nsteps dynamics()
     end
-    inputs = (Processes.Init(dynamics, model = graph, rng = Random.MersenneTwister(seed)),)
-    process = Processes.Process(Processes.resolve(routine), inputs...; repeats = 1)
+    inputs = (StatefulAlgorithms.Init(dynamics, model = graph, rng = Random.MersenneTwister(seed)),)
+    process = StatefulAlgorithms.Process(StatefulAlgorithms.resolve(routine), inputs...; repeats = 1)
     run(process)
     wait(process)
     close(process)
@@ -526,17 +526,17 @@ function run_transition_response!(trace, graph, sampler, x; graph_kind, nn, sour
     sweep = Ref(1)
     logger = SweepResponseLogger(trace, pre_state, graph_kind, nn, source_case, target_case, repeat_idx, sweep)
     dynamics = deepcopy(sampler)
-    routine = II.Processes.@CompositeAlgorithm begin
+    routine = II.StatefulAlgorithms.@CompositeAlgorithm begin
         @alias dynamics = dynamics
         @every 1 dynamics()
         @every sweep_steps logger(model = dynamics.model)
     end
     total_steps = config.response_sweeps * sweep_steps
-    wrapped = II.Processes.@Routine begin
+    wrapped = II.StatefulAlgorithms.@Routine begin
         @repeat total_steps routine()
     end
-    inputs = (Processes.Init(dynamics, model = graph, rng = Random.MersenneTwister(seed_base + 2)),)
-    process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
+    inputs = (StatefulAlgorithms.Init(dynamics, model = graph, rng = Random.MersenneTwister(seed_base + 2)),)
+    process = StatefulAlgorithms.Process(StatefulAlgorithms.resolve(wrapped), inputs...; repeats = 1)
     run(process)
     wait(process)
     close(process)

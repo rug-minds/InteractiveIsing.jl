@@ -6,7 +6,7 @@ Create a new Makie window with a lines plot for the observables x and y
 function async_lines_window(func; fps = 30, lifetime, kwargs...)
 
     process = Process(func; lifetime , kwargs...)
-    Processes.preparedata!(process)
+    StatefulAlgorithms.preparedata!(process)
     (;x, y) = getcontext(process)
     w = axis_window(window_type = :Lines)
   
@@ -41,7 +41,7 @@ function async_lines_window(func; fps = 30, lifetime, kwargs...)
     pushtimer!(w, PTimer(timerfunc, 0., interval = 1/fps))
     
     reset() = begin
-        Processes.syncclose(process)
+        StatefulAlgorithms.syncclose(process)
         for line in w[:lines]
             delete!(w[:ax], line)
         end
@@ -58,7 +58,7 @@ function async_lines_window(func; fps = 30, lifetime, kwargs...)
     end
 
     function newlines!()
-        Processes.syncclose(process)
+        StatefulAlgorithms.syncclose(process)
         close.(w.timers)
         createtask!(process)
         (;x,y) = getcontext(process)
@@ -68,7 +68,7 @@ function async_lines_window(func; fps = 30, lifetime, kwargs...)
         newest_obs[1] = xob
         newest_obs[2] = yob
          
-        Processes.makeloop!(process)
+        StatefulAlgorithms.makeloop!(process)
         start.(w.timers)
         push!(w[:lines], lines!(w[:ax], xob, yob))
     end
@@ -108,7 +108,7 @@ function async_lines_window(func; fps = 30, lifetime, kwargs...)
         end
     end
 
-    Processes.makeloop!(process) 
+    StatefulAlgorithms.makeloop!(process) 
     return w
 end
 
@@ -127,7 +127,7 @@ change_context!(w::MakieWindow{:Lines}; context...) = changecontext!(w[:process]
 function sync_lines_window(proc1, func; fps = 30, lifetime, kwargs...)
 
     process = Process(func; lifetime, graphproc = proc1, kwargs...)
-    Processes.preparedata!(process)
+    StatefulAlgorithms.preparedata!(process)
     (;x, y) = getcontext(process)
     w = axis_window(window_type = :Lines)
   
@@ -162,7 +162,7 @@ function sync_lines_window(proc1, func; fps = 30, lifetime, kwargs...)
     pushtimer!(w, PTimer(timerfunc, 0., interval = 1/fps))
     
     reset() = begin
-        Processes.syncclose(process)
+        StatefulAlgorithms.syncclose(process)
         for line in w[:lines]
             delete!(w[:ax], line)
         end
@@ -179,7 +179,7 @@ function sync_lines_window(proc1, func; fps = 30, lifetime, kwargs...)
     end
 
     function newlines!()
-        Processes.syncclose(process)
+        StatefulAlgorithms.syncclose(process)
         close.(w.timers)
         createtask!(process)
         (;x,y) = getcontext(process)
@@ -189,7 +189,7 @@ function sync_lines_window(proc1, func; fps = 30, lifetime, kwargs...)
         newest_obs[1] = xob
         newest_obs[2] = yob
          
-        Processes.makeloop!(process)
+        StatefulAlgorithms.makeloop!(process)
         start.(w.timers)
         push!(w[:lines], lines!(w[:ax], xob, yob))
     end
@@ -229,6 +229,6 @@ function sync_lines_window(proc1, func; fps = 30, lifetime, kwargs...)
         end
     end
 
-    Processes.makeloop!(process) 
+    StatefulAlgorithms.makeloop!(process) 
     return w
 end

@@ -1,5 +1,5 @@
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 using InteractiveIsing.Windows
 using GLMakie
 using Printf
@@ -263,7 +263,7 @@ function xor_temperature_stability()
     end)
     InteractiveIsing.Windows.register!(host, on(pause_button.clicks) do _
         if running[]
-            Processes.close(graph)
+            StatefulAlgorithms.close(graph)
             running[] = false
         else
             process_ref[] = createProcess(graph, dynamics)

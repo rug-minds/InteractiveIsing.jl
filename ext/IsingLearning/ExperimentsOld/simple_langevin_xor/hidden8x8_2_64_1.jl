@@ -173,11 +173,11 @@ end
 """Run one validation relaxation and return the scalar output."""
 function scalar_output_8x8!(trainer, x; seed::Integer)
     worker = trainer.validation_worker
-    II.Processes.isdone(worker) && close(worker)
+    II.StatefulAlgorithms.isdone(worker) && close(worker)
     Random.seed!(seed)
-    hasproperty(Processes.context(worker).dynamics, :rng) && Random.seed!(Processes.context(worker).dynamics.rng, seed)
+    hasproperty(StatefulAlgorithms.context(worker).dynamics, :rng) && Random.seed!(StatefulAlgorithms.context(worker).dynamics.rng, seed)
     IsingLearning._write_input!(worker, x)
-    II.Processes.reset!(worker)
+    II.StatefulAlgorithms.reset!(worker)
     run(worker)
     wait(worker)
     close(worker)

@@ -14,7 +14,7 @@ reflection, which is faster but not an exact Boltzmann sampler.
 
 `stepsize` is the proposal size used by each single-spin Langevin proposal.
 `group_steps` repeats that full local sweep several times inside one
-`Processes.step!` call; it does not divide or reinterpret `stepsize`.
+`StatefulAlgorithms.step!` call; it does not divide or reinterpret `stepsize`.
 """
 struct LocalLangevin{T<:Real} <: IsingMCAlgorithm
     stepsize::T
@@ -90,7 +90,7 @@ end
 @inline _langevin_context_value(context, name::Symbol, default) = get(context, name, default)
 @inline _langevin_unwrap_ref(x) = x isa Ref ? x[] : x
 
-@inline function Processes.init(langevin::LocalLangevin, context::Cont) where {Cont}
+@inline function StatefulAlgorithms.init(langevin::LocalLangevin, context::Cont) where {Cont}
     (;model) = context
 
     hamiltonian = model.hamiltonian
@@ -126,7 +126,7 @@ end
 
 @inline update!(::LocalLangevin, hterm, model::AbstractIsingGraph, proposal::FlipProposal) = update!(Metropolis(), hterm, model, proposal)
 
-@inline function Processes.step!(langevin::LocalLangevin, context::C) where {C}
+@inline function StatefulAlgorithms.step!(langevin::LocalLangevin, context::C) where {C}
     (;hamiltonian, rng, model, dH_prealloc, layer_views, stepsize,
         max_drift_fraction, group_steps, adjusted) = context
 

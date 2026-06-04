@@ -11,7 +11,7 @@ using CairoMakie
 
 const FT = Float64
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 
 # Multiplexed XOR pattern experiment with a square-local, convnet-like graph:
 # input 16x16 -> hidden 16x16 -> hidden 16x16 -> output 16x16 by default.
@@ -346,18 +346,18 @@ end
 
 function seed_worker!(worker, seed::Integer)
     Random.seed!(seed)
-    hasproperty(Processes.context(worker).dynamics, :rng) && Random.seed!(Processes.context(worker).dynamics.rng, seed)
-    hasproperty(Processes.context(worker), :nudged_dynamics) &&
-        hasproperty(Processes.context(worker).nudged_dynamics, :rng) &&
-        Random.seed!(Processes.context(worker).nudged_dynamics.rng, seed + 1)
+    hasproperty(StatefulAlgorithms.context(worker).dynamics, :rng) && Random.seed!(StatefulAlgorithms.context(worker).dynamics.rng, seed)
+    hasproperty(StatefulAlgorithms.context(worker), :nudged_dynamics) &&
+        hasproperty(StatefulAlgorithms.context(worker).nudged_dynamics, :rng) &&
+        Random.seed!(StatefulAlgorithms.context(worker).nudged_dynamics.rng, seed + 1)
     return worker
 end
 
 function run_training_trajectory!(worker, x, y; seed::Integer)
-    Processes.isdone(worker) && close(worker)
+    StatefulAlgorithms.isdone(worker) && close(worker)
     seed_worker!(worker, seed)
     IsingLearning._write_example!(worker, x, y)
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     run(worker)
     wait(worker)
     close(worker)
@@ -365,9 +365,9 @@ function run_training_trajectory!(worker, x, y; seed::Integer)
 end
 
 function completed_training_response(worker)
-    free_state = Processes.context(worker)._state.equilibrium_state
-    plus_state = Processes.context(worker).plus_capture.captured
-    minus_state = Processes.context(worker).minus_capture.captured
+    free_state = StatefulAlgorithms.context(worker)._state.equilibrium_state
+    plus_state = StatefulAlgorithms.context(worker).plus_capture.captured
+    minus_state = StatefulAlgorithms.context(worker).minus_capture.captured
     response = (
         sqrt(sum(abs2, plus_state .- free_state) / FT(length(free_state))) +
         sqrt(sum(abs2, minus_state .- free_state) / FT(length(free_state)))
@@ -405,7 +405,7 @@ function train_epoch!(trainer, x, y, batch_gradient, epoch::Integer)
         made_progress = false
 
         for worker in workers
-            if !isnothing(worker.task) && Processes.isdone(worker)
+            if !isnothing(worker.task) && StatefulAlgorithms.isdone(worker)
                 total_response += completed_training_response(worker)
                 close(worker)
                 completed += 1
@@ -417,7 +417,7 @@ function train_epoch!(trainer, x, y, batch_gradient, epoch::Integer)
                 seed = BASE_SEED + 1_000_000 * epoch + 10_000 * sample_idx + init_idx
                 seed_worker!(worker, seed)
                 IsingLearning._write_example!(worker, view(x, :, sample_idx), view(y, :, sample_idx))
-                Processes.reset!(worker)
+                StatefulAlgorithms.reset!(worker)
 
                 # This is where the existing EP composite is executed.
                 # `init_mnist_trainer` builds each worker from
@@ -447,10 +447,10 @@ end
 
 function run_validation_output!(trainer, x; seed::Integer)
     worker = trainer.validation_worker
-    Processes.isdone(worker) && close(worker)
+    StatefulAlgorithms.isdone(worker) && close(worker)
     seed_worker!(worker, seed)
     IsingLearning._write_input!(worker, x)
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     run(worker)
     wait(worker)
     close(worker)

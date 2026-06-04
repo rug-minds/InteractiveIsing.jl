@@ -25,14 +25,14 @@ function build_probe(mode::AbstractString)
     end
     xtrain, ytrain = balanced_mnist(:train, config.train_per_class, config)
     setup = build_layer(config)
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(setup.graph), Ref(copy(setup.input_hidden_w)))
     load_sample_into_worker!(worker_context(worker), xtrain, ytrain, 1)
-    Processes.reset!(worker)
-    context = Processes.context(worker)
-    runtime_context = Processes._merge_runtime_inputs(context, (; phase_beta = config.β))
-    plan = Processes.getplan(algorithm)
-    wiring = Processes.getwiring(plan)
+    StatefulAlgorithms.reset!(worker)
+    context = StatefulAlgorithms.context(worker)
+    runtime_context = StatefulAlgorithms._merge_runtime_inputs(context, (; phase_beta = config.β))
+    plan = StatefulAlgorithms.getplan(algorithm)
+    wiring = StatefulAlgorithms.getwiring(plan)
     return (; config, setup, algorithm, worker, context, runtime_context, plan, wiring)
 end
 
@@ -48,69 +48,69 @@ end
 function manual_repeat_loop_untyped(process, algo, context, r, inputs)
     println("[manual untyped] enter"); flush(stdout)
     println("[manual untyped] before isresolved"); flush(stdout)
-    @assert Processes.isresolved(algo)
+    @assert StatefulAlgorithms.isresolved(algo)
     println("[manual untyped] after isresolved"); flush(stdout)
     println("[manual untyped] before before_while"); flush(stdout)
-    Processes.before_while(process)
+    StatefulAlgorithms.before_while(process)
     println("[manual untyped] after before_while"); flush(stdout)
 
     println("[manual untyped] before getplan"); flush(stdout)
-    step_plan = Processes.getplan(algo)
+    step_plan = StatefulAlgorithms.getplan(algo)
     println("[manual untyped] after getplan"); flush(stdout)
     println("[manual untyped] before getwiring"); flush(stdout)
-    step_wiring = Processes.getwiring(step_plan)
+    step_wiring = StatefulAlgorithms.getwiring(step_plan)
     println("[manual untyped] after getwiring"); flush(stdout)
 
     println("[manual untyped] before _merge_runtime_inputs"); flush(stdout)
-    runtime_context = Processes._merge_runtime_inputs(context, inputs)
+    runtime_context = StatefulAlgorithms._merge_runtime_inputs(context, inputs)
     println("[manual untyped] after _merge_runtime_inputs"); flush(stdout)
     println("[manual untyped] before initial _step!"); flush(stdout)
-    stablecontext = Processes._step!(
+    stablecontext = StatefulAlgorithms._step!(
         step_plan,
         runtime_context,
         step_wiring,
-        Processes.Namespace{nothing}(),
+        StatefulAlgorithms.Namespace{nothing}(),
         process,
         r,
-        Processes.Stable(),
+        StatefulAlgorithms.Stable(),
     )
     println("[manual untyped] after initial _step!"); flush(stdout)
     println("[manual untyped] before tick!"); flush(stdout)
-    Processes.tick!(process)
+    StatefulAlgorithms.tick!(process)
     println("[manual untyped] after tick!"); flush(stdout)
     println("[manual untyped] before inc!"); flush(stdout)
-    Processes.inc!(process)
+    StatefulAlgorithms.inc!(process)
     println("[manual untyped] after inc!"); flush(stdout)
 
     println("[manual untyped] before loopidx"); flush(stdout)
-    start_idx = Processes.loopidx(process)
+    start_idx = StatefulAlgorithms.loopidx(process)
     println("[manual untyped] after loopidx"); flush(stdout)
     println("[manual untyped] before repeats"); flush(stdout)
-    end_idx = Processes.repeats(r)
+    end_idx = StatefulAlgorithms.repeats(r)
     println("[manual untyped] after repeats start=$(start_idx) end=$(end_idx)"); flush(stdout)
 
     println("[manual untyped] before for"); flush(stdout)
     for _ in start_idx:end_idx
         println("[manual untyped] for before _step!"); flush(stdout)
-        nextcontext = Processes._step!(
+        nextcontext = StatefulAlgorithms._step!(
             step_plan,
             stablecontext,
             step_wiring,
-            Processes.Namespace{nothing}(),
+            StatefulAlgorithms.Namespace{nothing}(),
             process,
             r,
-            Processes.Stable(),
+            StatefulAlgorithms.Stable(),
         )
         println("[manual untyped] for after _step!"); flush(stdout)
         stablecontext = nextcontext
         println("[manual untyped] for before tick!"); flush(stdout)
-        Processes.tick!(process)
+        StatefulAlgorithms.tick!(process)
         println("[manual untyped] for after tick!"); flush(stdout)
         println("[manual untyped] for before inc!"); flush(stdout)
-        Processes.inc!(process)
+        StatefulAlgorithms.inc!(process)
         println("[manual untyped] for after inc!"); flush(stdout)
         println("[manual untyped] for before breakcondition"); flush(stdout)
-        if Processes.breakcondition(r, process, stablecontext)
+        if StatefulAlgorithms.breakcondition(r, process, stablecontext)
             println("[manual untyped] for break true"); flush(stdout)
             break
         end
@@ -119,7 +119,7 @@ function manual_repeat_loop_untyped(process, algo, context, r, inputs)
     println("[manual untyped] after for"); flush(stdout)
 
     println("[manual untyped] before after_while"); flush(stdout)
-    final_result = Processes.after_while(process, algo, stablecontext, context)
+    final_result = StatefulAlgorithms.after_while(process, algo, stablecontext, context)
     println("[manual untyped] after after_while"); flush(stdout)
     return final_result
 end
@@ -131,27 +131,27 @@ function manual_repeat_loop_typed(
     context::C,
     r::R,
     inputs::NamedTuple,
-) where {P<:Processes.AbstractProcess,F<:Processes.AbstractLoopAlgorithm,C,R<:Processes.RepeatLifetime}
+) where {P<:StatefulAlgorithms.AbstractProcess,F<:StatefulAlgorithms.AbstractLoopAlgorithm,C,R<:StatefulAlgorithms.RepeatLifetime}
     println("[manual typed] enter"); flush(stdout)
-    @assert Processes.isresolved(algo)
-    Processes.before_while(process)
-    step_plan = Processes.getplan(algo)
-    step_wiring = Processes.getwiring(step_plan)
-    runtime_context = Processes._merge_runtime_inputs(context, inputs)
-    stablecontext = Processes._step!(step_plan, runtime_context, step_wiring, Processes.Namespace{nothing}(), process, r, Processes.Stable())
-    Processes.tick!(process)
-    Processes.inc!(process)
-    start_idx = Processes.loopidx(process)
-    end_idx = Processes.repeats(r)
+    @assert StatefulAlgorithms.isresolved(algo)
+    StatefulAlgorithms.before_while(process)
+    step_plan = StatefulAlgorithms.getplan(algo)
+    step_wiring = StatefulAlgorithms.getwiring(step_plan)
+    runtime_context = StatefulAlgorithms._merge_runtime_inputs(context, inputs)
+    stablecontext = StatefulAlgorithms._step!(step_plan, runtime_context, step_wiring, StatefulAlgorithms.Namespace{nothing}(), process, r, StatefulAlgorithms.Stable())
+    StatefulAlgorithms.tick!(process)
+    StatefulAlgorithms.inc!(process)
+    start_idx = StatefulAlgorithms.loopidx(process)
+    end_idx = StatefulAlgorithms.repeats(r)
     for _ in start_idx:end_idx
-        nextcontext = Processes._step!(step_plan, stablecontext, step_wiring, Processes.Namespace{nothing}(), process, r, Processes.Stable())
+        nextcontext = StatefulAlgorithms._step!(step_plan, stablecontext, step_wiring, StatefulAlgorithms.Namespace{nothing}(), process, r, StatefulAlgorithms.Stable())
         stablecontext = nextcontext
-        Processes.tick!(process)
-        Processes.inc!(process)
-        Processes.breakcondition(r, process, stablecontext) && break
+        StatefulAlgorithms.tick!(process)
+        StatefulAlgorithms.inc!(process)
+        StatefulAlgorithms.breakcondition(r, process, stablecontext) && break
     end
     println("[manual typed] before after_while"); flush(stdout)
-    final_result = Processes.after_while(process, algo, stablecontext, context)
+    final_result = StatefulAlgorithms.after_while(process, algo, stablecontext, context)
     println("[manual typed] after after_while"); flush(stdout)
     return final_result
 end
@@ -163,35 +163,35 @@ function manual_repeat_loop_dispatchlike(
     context::C,
     r::R,
     inputs::NamedTuple,
-    ::Processes.Resuming{isresuming},
-    ::Processes.NonGenerated,
-) where {P<:Processes.AbstractProcess,F<:Processes.AbstractLoopAlgorithm,C,R<:Processes.RepeatLifetime,isresuming}
+    ::StatefulAlgorithms.Resuming{isresuming},
+    ::StatefulAlgorithms.NonGenerated,
+) where {P<:StatefulAlgorithms.AbstractProcess,F<:StatefulAlgorithms.AbstractLoopAlgorithm,C,R<:StatefulAlgorithms.RepeatLifetime,isresuming}
     println("[manual dispatchlike] enter isresuming=$(isresuming)"); flush(stdout)
-    @assert Processes.isresolved(algo)
-    Processes.before_while(process)
-    step_plan = Processes.getplan(algo)
-    step_wiring = Processes.getwiring(step_plan)
-    runtime_context = Processes._merge_runtime_inputs(context, inputs)
+    @assert StatefulAlgorithms.isresolved(algo)
+    StatefulAlgorithms.before_while(process)
+    step_plan = StatefulAlgorithms.getplan(algo)
+    step_wiring = StatefulAlgorithms.getwiring(step_plan)
+    runtime_context = StatefulAlgorithms._merge_runtime_inputs(context, inputs)
     stablecontext = if isresuming
         @atomic process.paused = false
         runtime_context
     else
-        stepped_context = Processes._step!(step_plan, runtime_context, step_wiring, Processes.Namespace{nothing}(), process, r, Processes.Stable())
-        Processes.tick!(process)
-        Processes.inc!(process)
+        stepped_context = StatefulAlgorithms._step!(step_plan, runtime_context, step_wiring, StatefulAlgorithms.Namespace{nothing}(), process, r, StatefulAlgorithms.Stable())
+        StatefulAlgorithms.tick!(process)
+        StatefulAlgorithms.inc!(process)
         stepped_context
     end
-    start_idx = Processes.loopidx(process)
-    end_idx = Processes.repeats(r)
+    start_idx = StatefulAlgorithms.loopidx(process)
+    end_idx = StatefulAlgorithms.repeats(r)
     for _ in start_idx:end_idx
-        nextcontext = Processes._step!(step_plan, stablecontext, step_wiring, Processes.Namespace{nothing}(), process, r, Processes.Stable())
+        nextcontext = StatefulAlgorithms._step!(step_plan, stablecontext, step_wiring, StatefulAlgorithms.Namespace{nothing}(), process, r, StatefulAlgorithms.Stable())
         stablecontext = nextcontext
-        Processes.tick!(process)
-        Processes.inc!(process)
-        Processes.breakcondition(r, process, stablecontext) && break
+        StatefulAlgorithms.tick!(process)
+        StatefulAlgorithms.inc!(process)
+        StatefulAlgorithms.breakcondition(r, process, stablecontext) && break
     end
     println("[manual dispatchlike] before after_while"); flush(stdout)
-    final_result = Processes.after_while(process, algo, stablecontext, context)
+    final_result = StatefulAlgorithms.after_while(process, algo, stablecontext, context)
     println("[manual dispatchlike] after after_while"); flush(stdout)
     return final_result
 end
@@ -203,155 +203,155 @@ function main()
     trace("stage=$(stage)")
     trace("mode=$(mode) free_steps=$(probe.setup.layer.free_relaxation_steps) nudged_steps=$(probe.setup.layer.nudged_relaxation_steps)")
     trace("plan_type=$(typeof(probe.plan))")
-    trace("worker_algo_type=$(typeof(Processes.getalgo(probe.worker)))")
-    trace("worker_plan_type=$(typeof(Processes.getplan(Processes.getalgo(probe.worker))))")
-    trace("worker_lifetime=$(Processes.lifetime(probe.worker))")
+    trace("worker_algo_type=$(typeof(StatefulAlgorithms.getalgo(probe.worker)))")
+    trace("worker_plan_type=$(typeof(StatefulAlgorithms.getplan(StatefulAlgorithms.getalgo(probe.worker))))")
+    trace("worker_lifetime=$(StatefulAlgorithms.lifetime(probe.worker))")
     trace("context_type=$(typeof(probe.runtime_context))")
 
     if stage == "inc" || stage == "all"
         timed("parent inc!", () -> begin
-            Processes.inc!(probe.plan)
-            return Processes.inc(probe.plan)
+            StatefulAlgorithms.inc!(probe.plan)
+            return StatefulAlgorithms.inc(probe.plan)
         end)
     end
 
     if stage == "top_step" || stage == "all"
-        timed("top composite _step!", () -> Processes._step!(
+        timed("top composite _step!", () -> StatefulAlgorithms._step!(
             probe.plan,
             probe.runtime_context,
             probe.wiring,
-            Processes.Namespace{nothing}(),
+            StatefulAlgorithms.Namespace{nothing}(),
             probe.worker,
-            Processes.Repeat(1),
-            Processes.Stable(),
+            StatefulAlgorithms.Repeat(1),
+            StatefulAlgorithms.Stable(),
         ))
     end
 
     if stage == "worker_top_step" || stage == "all"
-        worker_algo = Processes.getalgo(probe.worker)
-        worker_plan = Processes.getplan(worker_algo)
-        worker_context = Processes._merge_runtime_inputs(Processes.context(probe.worker), (; phase_beta = probe.config.β))
-        timed("worker top composite _step!", () -> Processes._step!(
+        worker_algo = StatefulAlgorithms.getalgo(probe.worker)
+        worker_plan = StatefulAlgorithms.getplan(worker_algo)
+        worker_context = StatefulAlgorithms._merge_runtime_inputs(StatefulAlgorithms.context(probe.worker), (; phase_beta = probe.config.β))
+        timed("worker top composite _step!", () -> StatefulAlgorithms._step!(
             worker_plan,
             worker_context,
-            Processes.getwiring(worker_plan),
-            Processes.Namespace{nothing}(),
+            StatefulAlgorithms.getwiring(worker_plan),
+            StatefulAlgorithms.Namespace{nothing}(),
             probe.worker,
-            Processes.lifetime(probe.worker),
-            Processes.Stable(),
+            StatefulAlgorithms.lifetime(probe.worker),
+            StatefulAlgorithms.Stable(),
         ))
     end
 
     if stage == "loop_manual" || stage == "all"
-        timed("before_while", () -> Processes.before_while(probe.worker))
-        stepped = timed("loop first top _step!", () -> Processes._step!(
+        timed("before_while", () -> StatefulAlgorithms.before_while(probe.worker))
+        stepped = timed("loop first top _step!", () -> StatefulAlgorithms._step!(
             probe.plan,
             probe.runtime_context,
             probe.wiring,
-            Processes.Namespace{nothing}(),
+            StatefulAlgorithms.Namespace{nothing}(),
             probe.worker,
-            Processes.Repeat(1),
-            Processes.Stable(),
+            StatefulAlgorithms.Repeat(1),
+            StatefulAlgorithms.Stable(),
         ))
         timed("process tick/inc", () -> begin
-            Processes.tick!(probe.worker)
-            Processes.inc!(probe.worker)
-            return Processes.loopidx(probe.worker)
+            StatefulAlgorithms.tick!(probe.worker)
+            StatefulAlgorithms.inc!(probe.worker)
+            return StatefulAlgorithms.loopidx(probe.worker)
         end)
-        trace("loopidx=$(Processes.loopidx(probe.worker)) repeat_end=$(Processes.repeats(Processes.Repeat(1)))")
-        timed("after_while", () -> Processes.after_while(probe.worker, probe.algorithm, stepped, probe.context))
+        trace("loopidx=$(StatefulAlgorithms.loopidx(probe.worker)) repeat_end=$(StatefulAlgorithms.repeats(StatefulAlgorithms.Repeat(1)))")
+        timed("after_while", () -> StatefulAlgorithms.after_while(probe.worker, probe.algorithm, stepped, probe.context))
     end
 
     if stage == "runinline" || stage == "all"
-        timed("runprocessinline! NonGenerated", () -> Processes.runprocessinline!(
+        timed("runprocessinline! NonGenerated", () -> StatefulAlgorithms.runprocessinline!(
             probe.worker;
             phase_beta = probe.config.β,
-            looptype = Processes.NonGenerated(),
+            looptype = StatefulAlgorithms.NonGenerated(),
         ))
     end
 
     if stage == "worker_loop" || stage == "all"
-        worker_algo = Processes.getalgo(probe.worker)
-        timed("loop(worker, worker_algo, NonGenerated)", () -> Processes.loop(
+        worker_algo = StatefulAlgorithms.getalgo(probe.worker)
+        timed("loop(worker, worker_algo, NonGenerated)", () -> StatefulAlgorithms.loop(
             probe.worker,
             worker_algo,
-            Processes.context(probe.worker),
-            Processes.lifetime(probe.worker),
+            StatefulAlgorithms.context(probe.worker),
+            StatefulAlgorithms.lifetime(probe.worker),
             (; phase_beta = probe.config.β),
-            Processes.Resuming{false}(),
-            Processes.NonGenerated(),
+            StatefulAlgorithms.Resuming{false}(),
+            StatefulAlgorithms.NonGenerated(),
         ))
     end
 
     if stage == "worker_loop_repeat2" || stage == "all"
-        worker_algo = Processes.getalgo(probe.worker)
-        Processes.reset!(probe.worker)
-        timed("loop(worker, worker_algo, Repeat(2), NonGenerated)", () -> Processes.loop(
+        worker_algo = StatefulAlgorithms.getalgo(probe.worker)
+        StatefulAlgorithms.reset!(probe.worker)
+        timed("loop(worker, worker_algo, Repeat(2), NonGenerated)", () -> StatefulAlgorithms.loop(
             probe.worker,
             worker_algo,
-            Processes.context(probe.worker),
-            Processes.Repeat(2),
+            StatefulAlgorithms.context(probe.worker),
+            StatefulAlgorithms.Repeat(2),
             (; phase_beta = probe.config.β),
-            Processes.Resuming{false}(),
-            Processes.NonGenerated(),
+            StatefulAlgorithms.Resuming{false}(),
+            StatefulAlgorithms.NonGenerated(),
         ))
     end
 
     if stage == "worker_loop_indefinite" || stage == "all"
-        worker_algo = Processes.getalgo(probe.worker)
-        timed("loop(worker, worker_algo, Indefinite, NonGenerated)", () -> Processes.loop(
+        worker_algo = StatefulAlgorithms.getalgo(probe.worker)
+        timed("loop(worker, worker_algo, Indefinite, NonGenerated)", () -> StatefulAlgorithms.loop(
             probe.worker,
             worker_algo,
-            Processes.context(probe.worker),
-            Processes.Indefinite(),
+            StatefulAlgorithms.context(probe.worker),
+            StatefulAlgorithms.Indefinite(),
             (; phase_beta = probe.config.β),
-            Processes.Resuming{false}(),
-            Processes.NonGenerated(),
+            StatefulAlgorithms.Resuming{false}(),
+            StatefulAlgorithms.NonGenerated(),
         ))
     end
 
     if stage == "manual_untyped" || stage == "all"
-        worker_algo = Processes.getalgo(probe.worker)
+        worker_algo = StatefulAlgorithms.getalgo(probe.worker)
         timed("manual_repeat_loop_untyped", () -> manual_repeat_loop_untyped(
             probe.worker,
             worker_algo,
-            Processes.context(probe.worker),
-            Processes.lifetime(probe.worker),
+            StatefulAlgorithms.context(probe.worker),
+            StatefulAlgorithms.lifetime(probe.worker),
             (; phase_beta = probe.config.β),
         ))
     end
 
     if stage == "manual_typed" || stage == "all"
-        worker_algo = Processes.getalgo(probe.worker)
+        worker_algo = StatefulAlgorithms.getalgo(probe.worker)
         timed("manual_repeat_loop_typed", () -> manual_repeat_loop_typed(
             probe.worker,
             worker_algo,
-            Processes.context(probe.worker),
-            Processes.lifetime(probe.worker),
+            StatefulAlgorithms.context(probe.worker),
+            StatefulAlgorithms.lifetime(probe.worker),
             (; phase_beta = probe.config.β),
         ))
     end
 
     if stage == "manual_dispatchlike" || stage == "all"
-        worker_algo = Processes.getalgo(probe.worker)
+        worker_algo = StatefulAlgorithms.getalgo(probe.worker)
         timed("manual_repeat_loop_dispatchlike", () -> manual_repeat_loop_dispatchlike(
             probe.worker,
             worker_algo,
-            Processes.context(probe.worker),
-            Processes.lifetime(probe.worker),
+            StatefulAlgorithms.context(probe.worker),
+            StatefulAlgorithms.lifetime(probe.worker),
             (; phase_beta = probe.config.β),
-            Processes.Resuming{false}(),
-            Processes.NonGenerated(),
+            StatefulAlgorithms.Resuming{false}(),
+            StatefulAlgorithms.NonGenerated(),
         ))
     end
 
     if stage == "process_helper_direct" || stage == "all"
-        worker_algo = Processes.getalgo(probe.worker)
-        timed("Processes._nongenerated_repeat_loop_impl direct", () -> Processes._nongenerated_repeat_loop_impl(
+        worker_algo = StatefulAlgorithms.getalgo(probe.worker)
+        timed("StatefulAlgorithms._nongenerated_repeat_loop_impl direct", () -> StatefulAlgorithms._nongenerated_repeat_loop_impl(
             probe.worker,
             worker_algo,
-            Processes.context(probe.worker),
-            Processes.lifetime(probe.worker),
+            StatefulAlgorithms.context(probe.worker),
+            StatefulAlgorithms.lifetime(probe.worker),
             (; phase_beta = probe.config.β),
         ))
     end

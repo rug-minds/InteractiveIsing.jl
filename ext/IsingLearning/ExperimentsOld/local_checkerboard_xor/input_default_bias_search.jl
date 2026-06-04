@@ -18,7 +18,7 @@ input protocol:
 
 The bias is fixed after every update in this experiment-local file. This avoids
 letting the optimizer erase the input convention while still using the normal
-Processes/contrastive-gradient training path.
+StatefulAlgorithms/contrastive-gradient training path.
 """
 function input_default_bias_searches(;
     epochs,

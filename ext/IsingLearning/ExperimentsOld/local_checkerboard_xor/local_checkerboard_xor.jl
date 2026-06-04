@@ -9,11 +9,11 @@ using LinearAlgebra
 using Statistics
 using Dates
 using CairoMakie
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 
 const FT = Float64
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 
 const DEFAULT_RUN_ROOT = joinpath(@__DIR__, "runs")
 const CASES = ((false, false), (true, false), (false, true), (true, true))
@@ -331,18 +331,18 @@ function TemperatureAnnealedSampler(::Val{Name}, sampler, start_T::Real, stop_T:
     return TemperatureAnnealedSampler{Name,typeof(sampler),typeof(start_T)}(sampler, start_T, stop_T, power, max(1, Int(n_steps)))
 end
 
-function Processes.init(algorithm::TemperatureAnnealedSampler, context)
-    inner = Processes.init(algorithm.sampler, context)
+function StatefulAlgorithms.init(algorithm::TemperatureAnnealedSampler, context)
+    inner = StatefulAlgorithms.init(algorithm.sampler, context)
     return merge(inner, (; anneal_step = Ref(0)))
 end
 
-function Processes.step!(algorithm::TemperatureAnnealedSampler, context)
+function StatefulAlgorithms.step!(algorithm::TemperatureAnnealedSampler, context)
     step_idx = context.anneal_step[]
     total = max(algorithm.n_steps, 1)
     progress = total == 1 ? one(FT) : FT(step_idx) / FT(total - 1)
     Tcur = algorithm.stop_T + (algorithm.start_T - algorithm.stop_T) * (one(FT) - clamp(progress, zero(FT), one(FT)))^algorithm.power
     II.temp!(context.model, Tcur)
-    out = Processes.step!(algorithm.sampler, context)
+    out = StatefulAlgorithms.step!(algorithm.sampler, context)
     context.anneal_step[] = min(step_idx + 1, total - 1)
     return merge(out, (; anneal_T = Tcur))
 end
@@ -884,7 +884,7 @@ function CheckerForwardAndNudged(layer, config::LocalCheckerboardConfig)
 end
 
 function checker_worker_process(layer, graph, config::LocalCheckerboardConfig)
-    algo = Processes.resolve(CheckerForwardAndNudged(layer, config).algorithm)
+    algo = StatefulAlgorithms.resolve(CheckerForwardAndNudged(layer, config).algorithm)
     buffers = IsingLearning.gradient_buffer(graph)
     return Process(
         algo,
@@ -904,7 +904,7 @@ function checker_worker_process(layer, graph, config::LocalCheckerboardConfig)
 end
 
 function checker_validation_process(layer, graph, config::LocalCheckerboardConfig)
-    algo = Processes.resolve(CheckerForwardDynamics(layer, config; dynamics_algorithm = layer.validation_algorithm).algorithm)
+    algo = StatefulAlgorithms.resolve(CheckerForwardDynamics(layer, config; dynamics_algorithm = layer.validation_algorithm).algorithm)
     return Process(
         algo,
         Init(:_state;
@@ -981,8 +981,8 @@ end
 
 function seed_sampler_rng!(worker, seed::Integer)
     for (offset, name) in enumerate((:dynamics, :free_dynamics, :plus_dynamics, :minus_dynamics))
-        hasproperty(Processes.context(worker), name) || continue
-        dynamics_context = getproperty(Processes.context(worker), name)
+        hasproperty(StatefulAlgorithms.context(worker), name) || continue
+        dynamics_context = getproperty(StatefulAlgorithms.context(worker), name)
         rng = hasproperty(dynamics_context, :rng) ? getproperty(dynamics_context, :rng) : nothing
         isnothing(rng) || Random.seed!(rng, seed + 10_000 * offset)
     end
@@ -995,11 +995,11 @@ end
 
 function start_worker!(worker, x, y; seed)
     Random.seed!(seed)
-    context = Processes.context(worker)
+    context = StatefulAlgorithms.context(worker)
     IsingLearning.zero_buffer!(context._state.buffers)
     context._state.x .= x
     context._state.y .= y
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     seed_sampler_rng!(worker, seed)
     run(worker)
     return worker
@@ -1013,24 +1013,24 @@ end
 
 function finish_worker!(worker, batch_gradient, responses)
     finish_worker!(worker)
-    free_state = Processes.context(worker)._state.equilibrium_state
-    plus_state = Processes.context(worker).plus_capture.captured
-    minus_state = Processes.context(worker).minus_capture.captured
+    free_state = StatefulAlgorithms.context(worker)._state.equilibrium_state
+    plus_state = StatefulAlgorithms.context(worker).plus_capture.captured
+    minus_state = StatefulAlgorithms.context(worker).minus_capture.captured
     push!(responses, (sqrt(mean(abs2, plus_state .- free_state)) + sqrt(mean(abs2, minus_state .- free_state))) / FT(2))
-    IsingLearning.add_buffer!(batch_gradient, Processes.context(worker)._state.buffers)
+    IsingLearning.add_buffer!(batch_gradient, StatefulAlgorithms.context(worker)._state.buffers)
     return worker
 end
 
 function run_validation!(worker, x; seed)
     Random.seed!(seed)
-    context = Processes.context(worker)
+    context = StatefulAlgorithms.context(worker)
     context._state.x .= x
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     seed_sampler_rng!(worker, seed)
     run(worker)
     wait(worker)
     close(worker)
-    return Processes.context(worker)._state.equilibrium_state
+    return StatefulAlgorithms.context(worker)._state.equilibrium_state
 end
 
 function add_weight_decay!(gradient, params, λ::Real)

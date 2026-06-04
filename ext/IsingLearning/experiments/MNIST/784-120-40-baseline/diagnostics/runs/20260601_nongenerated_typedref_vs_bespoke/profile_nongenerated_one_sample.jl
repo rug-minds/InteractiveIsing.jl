@@ -16,23 +16,23 @@ function main()
     xtrain, ytrain = balanced_mnist(:train, config.train_per_class, config)
     setup = build_layer(config)
     input_hidden_w_ref = Ref(copy(setup.input_hidden_w))
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(setup.graph), input_hidden_w_ref)
-    looptype = Processes.NonGenerated()
+    looptype = StatefulAlgorithms.NonGenerated()
 
     run_one! = function (sample_idx::I) where {I<:Integer}
         load_sample_into_worker!(worker_context(worker), xtrain, ytrain, sample_idx)
-        Processes.reset!(worker)
+        StatefulAlgorithms.reset!(worker)
         @atomic worker.shouldrun = true
         @atomic worker.paused = false
-        algo = Processes.getalgo(worker)
-        result = Processes.loop(
+        algo = StatefulAlgorithms.getalgo(worker)
+        result = StatefulAlgorithms.loop(
             worker,
             algo,
-            Processes.context(worker),
-            Processes.lifetime(worker),
+            StatefulAlgorithms.context(worker),
+            StatefulAlgorithms.lifetime(worker),
             (; phase_beta = config.β),
-            Processes.Resuming{false}(),
+            StatefulAlgorithms.Resuming{false}(),
             looptype,
         )
         worker.lastresult = result

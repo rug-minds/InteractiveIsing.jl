@@ -85,7 +85,7 @@ that may wait, such as closing graph-attached simulation processes.
 
 Built-in panels that store an Ising graph register one nonblocking stop request
 per host. `ContextLinesPanel` also registers a nonblocking stop request when it
-is constructed from a `Processes.AbstractProcess`.
+is constructed from a `StatefulAlgorithms.AbstractProcess`.
 
 ## Lifecycle Hooks
 

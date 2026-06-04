@@ -31,7 +31,7 @@ decision scores = [-2.0, 1.0, 1.625, -1.375]
 ```
 
 The run starts from the structured local circuit and then runs the normal
-Processes/contrastive-gradient path for 300 epochs. The best saved graph is the
+StatefulAlgorithms/contrastive-gradient path for 300 epochs. The best saved graph is the
 best validation checkpoint, not necessarily the final epoch.
 
 ## Exact Recipe

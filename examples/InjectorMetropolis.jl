@@ -1,5 +1,5 @@
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 
 function isingweights(; dr)
     return dr == 1 ? 1.0f0 : 0.0f0

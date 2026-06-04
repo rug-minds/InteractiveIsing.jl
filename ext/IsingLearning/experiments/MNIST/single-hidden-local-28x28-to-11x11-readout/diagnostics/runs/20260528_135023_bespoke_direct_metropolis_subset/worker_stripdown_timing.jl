@@ -49,7 +49,7 @@ end
 
 """Create a normal Process from an algorithm and init specs."""
 function normal_process(algorithm::A, inits::Vararg{Any,N}) where {A,N}
-    return Processes.Process(algorithm, inits...; repeat = 1)
+    return StatefulAlgorithms.Process(algorithm, inits...; repeat = 1)
 end
 
 """Create an InlineProcess from the stable post-first-run context of a normal Process."""
@@ -57,24 +57,24 @@ function warmed_inline_process(algorithm::A, inits::Vararg{Any,N}) where {A,N}
     warm_process = normal_process(algorithm, inits...)
     run(warm_process)
     wait(warm_process)
-    return Processes.InlineProcess(
+    return StatefulAlgorithms.InlineProcess(
         algorithm;
-        context = Processes.context(warm_process),
+        context = StatefulAlgorithms.context(warm_process),
         repeats = 1,
         threaded = false,
     )
 end
 
 """Run a Process through the asynchronous `run`/`wait` path."""
-@inline function run_async_once!(process::P) where {P<:Processes.Process}
-    Processes.reset!(process)
+@inline function run_async_once!(process::P) where {P<:StatefulAlgorithms.Process}
+    StatefulAlgorithms.reset!(process)
     @inline run(process)
     @inline wait(process)
     return process
 end
 
 """Run an InlineProcess once in synchronous mode."""
-@inline function run_inline_process_once!(process::P) where {P<:Processes.InlineProcess}
+@inline function run_inline_process_once!(process::P) where {P<:StatefulAlgorithms.InlineProcess}
     @inline run(process; threaded = false)
     return process
 end
@@ -82,7 +82,7 @@ end
 """Build a process algorithm for raw Metropolis repeated `nsteps` times."""
 function raw_metropolis_algorithm(nsteps::I) where {I<:Integer}
     dynamics = II.Metropolis()
-    return Processes.resolve(Processes.@Routine begin
+    return StatefulAlgorithms.resolve(StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics
         @repeat nsteps dynamics()
     end)
@@ -93,7 +93,7 @@ function scheduled_metropolis_algorithm(config::C, nsteps::I) where {C<:LocalMNI
     dynamics = II.Metropolis()
     temperature = GeometricDynamicsTemperatureSchedule(; start_T = config.hot_temp, stop_T = config.cold_temp, n_steps = Int(nsteps))
     phase_step = free_phase_step_algorithm(dynamics, temperature)
-    return Processes.resolve(Processes.@Routine begin
+    return StatefulAlgorithms.resolve(StatefulAlgorithms.@Routine begin
         @alias phase_step = phase_step
         @repeat nsteps phase_step()
     end)
@@ -104,12 +104,12 @@ function free_phase_once_algorithm(config::C, nstates::I) where {C<:LocalMNISTMa
     free_steps = config.free_sweeps * Int(nstates)
     dynamics = II.Metropolis()
     temperature = GeometricDynamicsTemperatureSchedule(; start_T = config.hot_temp, stop_T = config.cold_temp, n_steps = free_steps)
-    return Processes.resolve(free_phase_algorithm(dynamics, temperature, free_steps))
+    return StatefulAlgorithms.resolve(free_phase_algorithm(dynamics, temperature, free_steps))
 end
 
 """Build a process algorithm for the full local worker sample once."""
 function full_worker_algorithm(config::C, nstates::I) where {C<:LocalMNISTManagerConfig,I<:Integer}
-    return Processes.resolve(local_worker_algorithm(mnist_dynamics_algorithm(), config, nstates))
+    return StatefulAlgorithms.resolve(local_worker_algorithm(mnist_dynamics_algorithm(), config, nstates))
 end
 
 """Make a Process running a full worker sample."""
@@ -124,7 +124,7 @@ function full_worker_inline_process(source::M, worker_idx::I) where {M<:LocalMNI
     algorithm = full_worker_algorithm(source.config, length(graph_state))
     return warmed_inline_process(
         algorithm,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             mnist_model = model,
             x = zeros(PMNIST_FT, PMNIST_INPUT_DIM),
             y = zeros(PMNIST_FT, PMNIST_NCLASSES * source.config.output_replicas),
@@ -141,7 +141,7 @@ function full_worker_inline_process(source::M, worker_idx::I) where {M<:LocalMNI
             nskipped = Ref(0),
             total_loss = Ref(0f0),
         ),
-        Processes.Init(:dynamics; model = model.graph),
+        StatefulAlgorithms.Init(:dynamics; model = model.graph),
     )
 end
 
@@ -165,11 +165,11 @@ end
 
 """Time a full worker variant over concrete sample indices."""
 @inline function time_full_worker_variant!(runner::F, process, xtrain::X, ytrain::Y, nsamples::I) where {F,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
-    @inline set_full_worker_sample!(Processes.context(process), xtrain, ytrain, 1)
+    @inline set_full_worker_sample!(StatefulAlgorithms.context(process), xtrain, ytrain, 1)
     @inline runner(process)
     return @elapsed begin
         for sample_idx in 1:Int(nsamples)
-            @inline set_full_worker_sample!(Processes.context(process), xtrain, ytrain, sample_idx)
+            @inline set_full_worker_sample!(StatefulAlgorithms.context(process), xtrain, ytrain, sample_idx)
             @inline runner(process)
         end
     end
@@ -217,34 +217,34 @@ function main()
     strip_randomize!(raw_model.graph, Random.MersenneTwister(10))
     install_strip_sample_bias!(raw_model, source, view(xtrain, :, 1))
     raw_algo = raw_metropolis_algorithm(nsteps)
-    raw_async = normal_process(raw_algo, Processes.Init(:dynamics; model = raw_model.graph))
+    raw_async = normal_process(raw_algo, StatefulAlgorithms.Init(:dynamics; model = raw_model.graph))
     nrepeats = 3
     print_row("raw_metropolis", "normal_process_run_wait", nsteps * nrepeats, time_process_variant!(run_async_once!, raw_async, nrepeats), "steps")
 
     raw_model3 = worker_model(source, 12)
     strip_randomize!(raw_model3.graph, Random.MersenneTwister(12))
     install_strip_sample_bias!(raw_model3, source, view(xtrain, :, 1))
-    raw_inline = warmed_inline_process(raw_algo, Processes.Init(:dynamics; model = raw_model3.graph))
+    raw_inline = warmed_inline_process(raw_algo, StatefulAlgorithms.Init(:dynamics; model = raw_model3.graph))
     print_row("raw_metropolis", "inline_process", nsteps * nrepeats, time_process_variant!(run_inline_process_once!, raw_inline, nrepeats), "steps")
 
     sched_algo = scheduled_metropolis_algorithm(config, nsteps)
     sched_model = worker_model(source, 20)
     strip_randomize!(sched_model.graph, Random.MersenneTwister(20))
     install_strip_sample_bias!(sched_model, source, view(xtrain, :, 1))
-    sched_async = normal_process(sched_algo, Processes.Init(:dynamics; model = sched_model.graph))
+    sched_async = normal_process(sched_algo, StatefulAlgorithms.Init(:dynamics; model = sched_model.graph))
     print_row("scheduled_metropolis", "normal_process_run_wait", nsteps * nrepeats, time_process_variant!(run_async_once!, sched_async, nrepeats), "steps")
 
     sched_model3 = worker_model(source, 22)
     strip_randomize!(sched_model3.graph, Random.MersenneTwister(22))
     install_strip_sample_bias!(sched_model3, source, view(xtrain, :, 1))
-    sched_inline = warmed_inline_process(sched_algo, Processes.Init(:dynamics; model = sched_model3.graph))
+    sched_inline = warmed_inline_process(sched_algo, StatefulAlgorithms.Init(:dynamics; model = sched_model3.graph))
     print_row("scheduled_metropolis", "inline_process", nsteps * nrepeats, time_process_variant!(run_inline_process_once!, sched_inline, nrepeats), "steps")
 
     free_algo = free_phase_once_algorithm(config, nstates)
     free_model = worker_model(source, 30)
     free_proc = normal_process(
         free_algo,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             mnist_model = free_model,
             x = copy(view(xtrain, :, 1)),
             base_bias = base_magfield(source.graph).b,
@@ -253,7 +253,7 @@ function main()
             free_best_energy = Ref(PMNIST_FT(Inf)),
             rng = free_model.rng,
         ),
-        Processes.Init(:dynamics; model = free_model.graph),
+        StatefulAlgorithms.Init(:dynamics; model = free_model.graph),
     )
     print_row("free_phase_once", "normal_process_run_wait", config.free_sweeps * nstates * nrepeats, time_process_variant!(run_async_once!, free_proc, nrepeats), "steps")
 

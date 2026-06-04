@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Optimisers
 using Random
 using Statistics
@@ -74,7 +74,7 @@ function run_probe_for_workers(nworkers::Integer)
         jobs = [(; x = view(xbatch, :, sample_idx), y = view(ybatch, :, sample_idx)) for sample_idx in axes(xbatch, 2)]
 
         run_seconds = @elapsed run!(trainer.manager, jobs)
-        worker_norms = [buffer_norm(Processes.context(worker)._state.buffers) for worker in trainer.workers]
+        worker_norms = [buffer_norm(StatefulAlgorithms.context(worker)._state.buffers) for worker in trainer.workers]
         active_workers = count(>(0), worker_norms)
 
         collect_seconds = @elapsed IsingLearning._collect_batch_gradient!(trainer, batch_gradient, size(xbatch, 2))

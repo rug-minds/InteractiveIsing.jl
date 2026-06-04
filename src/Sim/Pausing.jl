@@ -4,7 +4,7 @@ function quit(g::IsingGraph)
     @warn "quit is deprecated, use close instead"
     close(g)
 end
-function Processes.close(g::IsingGraph)
+function StatefulAlgorithms.close(g::IsingGraph)
     for process in reverse(processes(g))
         try 
             close(process)
@@ -17,26 +17,26 @@ function Processes.close(g::IsingGraph)
     deleteat!(processes(g), 1:length(processes(g)))
 end
 
-function Processes.run(g::IsingGraph)
+function StatefulAlgorithms.run(g::IsingGraph)
     run.(processes(g))
 end
 
-function Processes.pause(g::IsingGraph)
+function StatefulAlgorithms.pause(g::IsingGraph)
     pause.(processes(g))
 end
 
 unpause(g::IsingGraph) = run.(processes(g))
 
 # For broadcasting
-Processes.pause(::Nothing) = nothing
-Processes.quit(::Nothing) = nothing
+StatefulAlgorithms.pause(::Nothing) = nothing
+StatefulAlgorithms.quit(::Nothing) = nothing
 unpause(::Nothing) = nothing
 
 
 export quitSim, quit, pause, unpause
 
 # TODO: Make this work with the new process system KWARGS
-function Processes.restart(g::IsingGraph; kwargs...)
+function StatefulAlgorithms.restart(g::IsingGraph; kwargs...)
     _processes = processes(g)
     for process in _processes
         # Is process being used? Otherwise nothing has to be started
@@ -48,7 +48,7 @@ export restart
 """
 Keep the keywords and recompile the processes
 """
-function Processes.reinit(g::IsingGraph; kwargs...)
+function StatefulAlgorithms.reinit(g::IsingGraph; kwargs...)
     _processes = processes(g)
     for process in _processes
         if isrunning(process)
@@ -64,7 +64,7 @@ export reinit
 # Reset the keywords to the standard values, and restart the processes
 
 # """
-# function Processes.reset(g::IsingGraph; kwargs...)
+# function StatefulAlgorithms.reset(g::IsingGraph; kwargs...)
 #     _processes = processes(g)
 #     for process in _processes
 #         # Is process being used? Otherwise nothing has to be started
@@ -83,7 +83,7 @@ function togglepause(g::IsingGraph)
         pause.(processes(g))
     else
         for process in processes(g)
-            if Processes.ispaused(process)
+            if StatefulAlgorithms.ispaused(process)
                 run(process)
             end
         end

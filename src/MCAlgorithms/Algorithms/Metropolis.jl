@@ -11,7 +11,7 @@ end
 
 @inline MetropolisTracked() = Metropolis()
 
-@inline function Processes.init(::Metropolis, context::Cont) where {Cont}
+@inline function StatefulAlgorithms.init(::Metropolis, context::Cont) where {Cont}
     # @show typeof(context)
     (;model) = context
 
@@ -28,7 +28,7 @@ end
 end
 
 # @inline function (::Metropolis)(context::As) where As
-@inline function Processes.step!(metro::Metropolis, context::C) where {C}
+@inline function StatefulAlgorithms.step!(metro::Metropolis, context::C) where {C}
     (;rng, model, hamiltonian, proposer, T) = context
 
     floattype = eltype(model)

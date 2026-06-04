@@ -31,12 +31,12 @@ end
 
 """Create a normal Process from an algorithm and init specs."""
 function normal_process(algorithm::A, inits::Vararg{Any,N}) where {A,N}
-    return Processes.Process(algorithm, inits...; repeat = 1)
+    return StatefulAlgorithms.Process(algorithm, inits...; repeat = 1)
 end
 
 """Run a Process through the asynchronous `run`/`wait` path."""
-@inline function run_async_once!(process::P) where {P<:Processes.Process}
-    Processes.reset!(process)
+@inline function run_async_once!(process::P) where {P<:StatefulAlgorithms.Process}
+    StatefulAlgorithms.reset!(process)
     @inline run(process)
     @inline wait(process)
     return process
@@ -132,7 +132,7 @@ function write_single_field_sample_bias!(
 end
 
 # Install free-phase sample fields into one combined MagField.
-Processes.@ProcessAlgorithm function InstallSingleFieldSampleBias!(
+StatefulAlgorithms.@ProcessAlgorithm function InstallSingleFieldSampleBias!(
     mnist_model::LocalMNISTModel,
     x::AbstractVector,
     base_bias::AbstractVector,
@@ -143,7 +143,7 @@ Processes.@ProcessAlgorithm function InstallSingleFieldSampleBias!(
 end
 
 # Install nudged sample fields into one combined MagField.
-Processes.@ProcessAlgorithm function InstallSingleFieldNudgedSampleBias!(
+StatefulAlgorithms.@ProcessAlgorithm function InstallSingleFieldNudgedSampleBias!(
     mnist_model::LocalMNISTModel,
     x::AbstractVector,
     y::AbstractVector,
@@ -161,7 +161,7 @@ function single_field_free_phase_algorithm(
     steps::I,
 ) where {D,T,I<:Integer}
     phase_step = free_phase_step_algorithm(dynamics_algorithm, temperature_algorithm)
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @alias phase_step = phase_step
         @state mnist_model
@@ -186,7 +186,7 @@ function single_field_nudged_phase_algorithm(
     steps::I,
 ) where {D,T,I<:Integer}
     phase_step = nudged_phase_step_algorithm(dynamics_algorithm, temperature_algorithm)
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @alias phase_step = phase_step
         @state mnist_model
@@ -219,7 +219,7 @@ function single_field_worker_algorithm(
     nudge_temperature = ReverseAnnealDynamicsTemperatureSchedule(; cold_T = config.cold_temp, peak_T = config.reverse_temp, n_steps = nudge_steps)
     free_phase = single_field_free_phase_algorithm(dynamics_algorithm, free_temperature, free_steps)
     nudged_phase = single_field_nudged_phase_algorithm(dynamics_algorithm, nudge_temperature, nudge_steps)
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias free_phase = free_phase
         @alias nudged_phase = nudged_phase
         @state mnist_model
@@ -263,10 +263,10 @@ end
 function single_field_worker_process(source::M, worker_idx::I) where {M<:LocalMNISTModel,I<:Integer}
     model = single_field_worker_model(source, worker_idx)
     graph_state = II.state(model.graph)
-    algorithm = Processes.resolve(single_field_worker_algorithm(mnist_dynamics_algorithm(), source.config, length(graph_state)))
+    algorithm = StatefulAlgorithms.resolve(single_field_worker_algorithm(mnist_dynamics_algorithm(), source.config, length(graph_state)))
     return normal_process(
         algorithm,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             mnist_model = model,
             x = zeros(PMNIST_FT, PMNIST_INPUT_DIM),
             y = zeros(PMNIST_FT, PMNIST_NCLASSES * source.config.output_replicas),
@@ -283,7 +283,7 @@ function single_field_worker_process(source::M, worker_idx::I) where {M<:LocalMN
             nskipped = Ref(0),
             total_loss = Ref(0f0),
         ),
-        Processes.Init(:dynamics; model = model.graph),
+        StatefulAlgorithms.Init(:dynamics; model = model.graph),
     )
 end
 
@@ -307,11 +307,11 @@ end
 
 """Time a full worker variant over concrete sample indices."""
 @inline function time_full_worker_variant!(runner::F, process, xtrain::X, ytrain::Y, nsamples::I) where {F,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
-    @inline set_full_worker_sample!(Processes.context(process), xtrain, ytrain, 1)
+    @inline set_full_worker_sample!(StatefulAlgorithms.context(process), xtrain, ytrain, 1)
     @inline runner(process)
     return @elapsed begin
         for sample_idx in 1:Int(nsamples)
-            @inline set_full_worker_sample!(Processes.context(process), xtrain, ytrain, sample_idx)
+            @inline set_full_worker_sample!(StatefulAlgorithms.context(process), xtrain, ytrain, sample_idx)
             @inline runner(process)
         end
     end
@@ -354,7 +354,7 @@ function main()
     println("label,path,work_units,unit,total_seconds,seconds_per_unit,units_per_second")
 
     free_steps = config.free_sweeps * nstates
-    two_free_algo = Processes.resolve(free_phase_algorithm(
+    two_free_algo = StatefulAlgorithms.resolve(free_phase_algorithm(
         II.Metropolis(),
         GeometricDynamicsTemperatureSchedule(; start_T = config.hot_temp, stop_T = config.cold_temp, n_steps = free_steps),
         free_steps,
@@ -362,18 +362,18 @@ function main()
     two_free_model = worker_model(source, 50)
     two_free_proc = normal_process(
         two_free_algo,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             mnist_model = two_free_model,
             x = copy(view(xtrain, :, 1)),
             free_state = similar(II.state(two_free_model.graph)),
             free_best_energy = Ref(PMNIST_FT(Inf)),
             rng = two_free_model.rng,
         ),
-        Processes.Init(:dynamics; model = two_free_model.graph),
+        StatefulAlgorithms.Init(:dynamics; model = two_free_model.graph),
     )
     print_row("two_field_free_phase", "normal_process_run_wait", free_steps * nrepeats, time_process_variant!(run_async_once!, two_free_proc, nrepeats), "steps")
 
-    single_free_algo = Processes.resolve(single_field_free_phase_algorithm(
+    single_free_algo = StatefulAlgorithms.resolve(single_field_free_phase_algorithm(
         II.Metropolis(),
         GeometricDynamicsTemperatureSchedule(; start_T = config.hot_temp, stop_T = config.cold_temp, n_steps = free_steps),
         free_steps,
@@ -381,7 +381,7 @@ function main()
     single_free_model = single_field_worker_model(source, 51)
     single_free_proc = normal_process(
         single_free_algo,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             mnist_model = single_free_model,
             x = copy(view(xtrain, :, 1)),
             base_bias = copy(base_magfield(source.graph).b),
@@ -390,14 +390,14 @@ function main()
             free_best_energy = Ref(PMNIST_FT(Inf)),
             rng = single_free_model.rng,
         ),
-        Processes.Init(:dynamics; model = single_free_model.graph),
+        StatefulAlgorithms.Init(:dynamics; model = single_free_model.graph),
     )
     print_row("single_field_free_phase", "normal_process_run_wait", free_steps * nrepeats, time_process_variant!(run_async_once!, single_free_proc, nrepeats), "steps")
 
     two_full_proc = local_worker(
         source,
         60,
-        Processes.resolve(local_worker_algorithm(mnist_dynamics_algorithm(), config, nstates)),
+        StatefulAlgorithms.resolve(local_worker_algorithm(mnist_dynamics_algorithm(), config, nstates)),
     )
     print_row("two_field_full_worker", "normal_process_run_wait", nsamples, time_full_worker_variant!(run_async_once!, two_full_proc, xtrain, ytrain, nsamples), "samples")
 

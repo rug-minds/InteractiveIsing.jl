@@ -78,7 +78,7 @@ end
 
 """Assert that one worker still aliases the shared trainable parameter arrays."""
 function assert_shared_worker_params_8x8(worker, params)
-    graph = Processes.context(worker).dynamics.model
+    graph = StatefulAlgorithms.context(worker).dynamics.model
     SparseArrays.getnzval(II.adj(graph)) === params.w ||
         error("worker adjacency weights do not alias shared parameter storage")
     II.getparam(graph.hamiltonian, II.MagField, :b) === params.b ||
@@ -103,7 +103,7 @@ the resolved composite come from the template worker, while this function makes
 the copied graph read the same trainable `J` and `b` arrays as the prototype.
 """
 function shared_worker_context_8x8(template, prototype_graph, params)
-    ctx = deepcopy(Processes.context(template))
+    ctx = deepcopy(StatefulAlgorithms.context(template))
     relink_shared_graph_8x8!(ctx.dynamics.model, prototype_graph, params)
     return ctx
 end
@@ -112,7 +112,7 @@ end
 function make_train_worker_shared_8x8(layer, prototype_graph, params, config::Hidden8x8Config, idx::Integer)
     graph = shared_worker_graph_8x8(prototype_graph, params, config)
     worker = IsingLearning._worker_process(layer, graph)
-    Random.seed!(Processes.context(worker).dynamics.rng, config.base_seed + idx)
+    Random.seed!(StatefulAlgorithms.context(worker).dynamics.rng, config.base_seed + idx)
     assert_shared_worker_params_8x8(worker, params)
     return worker
 end
@@ -121,27 +121,27 @@ end
 function make_eval_worker_shared_8x8(layer, prototype_graph, params, config::Hidden8x8Config, idx::Integer)
     graph = shared_worker_graph_8x8(prototype_graph, params, config)
     worker = IsingLearning._validation_process(layer, graph)
-    Random.seed!(Processes.context(worker).dynamics.rng, config.base_seed + 50_000 + idx)
+    Random.seed!(StatefulAlgorithms.context(worker).dynamics.rng, config.base_seed + 50_000 + idx)
     assert_shared_worker_params_8x8(worker, params)
     return worker
 end
 
 """Prepare one shared-parameter training worker for a fresh EqProp trajectory."""
 function prepare_train_worker_8x8!(worker, trainer::SharedParamHidden8x8Trainer, config::Hidden8x8Config, job::Hidden8x8TrainJob)
-    Processes8x8.isdone(worker) && close(worker)
+    StatefulAlgorithms8x8.isdone(worker) && close(worker)
     assert_shared_worker_params_8x8(worker, trainer.params)
     IsingLearning._write_example!(worker, job.x, job.y)
-    Processes8x8.reset!(worker)
+    StatefulAlgorithms8x8.reset!(worker)
     return worker
 end
 
 """Prepare one shared-parameter validation worker for a fresh free relaxation."""
 function prepare_eval_worker_8x8!(worker, trainer::SharedParamHidden8x8Trainer, config::Hidden8x8Config, job::Hidden8x8EvalJob)
-    Processes8x8.isdone(worker) && close(worker)
+    StatefulAlgorithms8x8.isdone(worker) && close(worker)
     assert_shared_worker_params_8x8(worker, trainer.params)
     seed_managed_worker_8x8!(worker, job.seed)
     IsingLearning._write_input!(worker, job.x)
-    Processes8x8.reset!(worker)
+    StatefulAlgorithms8x8.reset!(worker)
     return worker
 end
 
@@ -151,7 +151,7 @@ function train_manager_recipe_shared_8x8(layer, prototype_graph)
         makeworker = (idx, manager) -> make_train_worker_shared_8x8(layer, prototype_graph, manager.state.params, manager.config, idx),
         makecontext = (idx, manager, template) -> shared_worker_context_8x8(template, prototype_graph, manager.state.params),
         prepare! = (slot, job, manager) -> prepare_train_worker_8x8!(slot.worker, manager.state, manager.config, job),
-        isdone = (slot, manager) -> Processes8x8.isdone(slot.worker),
+        isdone = (slot, manager) -> StatefulAlgorithms8x8.isdone(slot.worker),
         runarguments = (slot, job, manager) -> (; clamping_beta = manager.config.β),
         consume! = (slot, job, manager) -> collect_train_response_8x8!(manager.state.current_responses, slot.worker),
         flush! = flush_train_buffers_8x8!,
@@ -164,9 +164,9 @@ function eval_manager_recipe_shared_8x8(layer, prototype_graph)
         makeworker = (idx, manager) -> make_eval_worker_shared_8x8(layer, prototype_graph, manager.state.params, manager.config, idx),
         makecontext = (idx, manager, template) -> shared_worker_context_8x8(template, prototype_graph, manager.state.params),
         prepare! = (slot, job, manager) -> prepare_eval_worker_8x8!(slot.worker, manager.state, manager.config, job),
-        isdone = (slot, manager) -> Processes8x8.isdone(slot.worker),
+        isdone = (slot, manager) -> StatefulAlgorithms8x8.isdone(slot.worker),
         consume! = (slot, job, manager) -> begin
-            output = only(II.state(Processes.context(slot.worker).dynamics.model[end]))
+            output = only(II.state(StatefulAlgorithms.context(slot.worker).dynamics.model[end]))
             push!(manager.state.current_sample_outputs[job.sample_idx], output)
         end,
     )
@@ -191,21 +191,21 @@ function shared_managed_trainer_8x8(config::Hidden8x8Config; workers::Integer = 
         FT[],
         nothing,
     )
-    trainer.train_manager = Processes8x8.ProcessManager(
+    trainer.train_manager = StatefulAlgorithms8x8.ProcessManager(
         train_manager_recipe_shared_8x8(layer, graph);
         nworkers = workers,
         config,
         state = trainer,
-        flush_policy = Processes8x8.FlushAtEnd(),
+        flush_policy = StatefulAlgorithms8x8.FlushAtEnd(),
         poll_interval = 0.0,
         job_type = Hidden8x8TrainJob,
     )
-    trainer.eval_manager = Processes8x8.ProcessManager(
+    trainer.eval_manager = StatefulAlgorithms8x8.ProcessManager(
         eval_manager_recipe_shared_8x8(layer, graph);
         nworkers = 1,
         config,
         state = trainer,
-        flush_policy = Processes8x8.NoFlush(),
+        flush_policy = StatefulAlgorithms8x8.NoFlush(),
         poll_interval = 0.0,
         job_type = Hidden8x8EvalJob,
     )
@@ -219,7 +219,7 @@ function train_epoch_shared_managed_8x8!(trainer::SharedParamHidden8x8Trainer, x
     trainer.current_batch_gradient = batch_gradient
     empty!(trainer.current_responses)
     jobs = train_jobs_8x8(x, y, config, epoch)
-    Processes8x8.run!(trainer.train_manager, jobs)
+    StatefulAlgorithms8x8.run!(trainer.train_manager, jobs)
 
     ntraj = length(jobs)
     IsingLearning.scale_buffer!(batch_gradient, inv(FT(2) * FT(config.β) * FT(max(ntraj, 1))))
@@ -233,7 +233,7 @@ end
 """Evaluate repeated free-relaxation scalar outputs through shared eval workers."""
 function evaluate_shared_managed_8x8!(trainer::SharedParamHidden8x8Trainer, x, y, config::Hidden8x8Config; seed_offset::Integer)
     trainer.current_sample_outputs = [FT[] for _ in axes(x, 2)]
-    Processes8x8.run!(trainer.eval_manager, eval_jobs_8x8(x, config; seed_offset))
+    StatefulAlgorithms8x8.run!(trainer.eval_manager, eval_jobs_8x8(x, config; seed_offset))
 
     means = zeros(FT, size(x, 2))
     stds = zeros(FT, size(x, 2))

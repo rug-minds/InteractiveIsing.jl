@@ -410,8 +410,8 @@ end
     @test deriv.db ≈ -h
 
     sampler = GaussianBernoulliGibbsLangevin(; stepsize = 0.05, langevin_steps = 3, group_steps = 1, adjusted = false)
-    context = InteractiveIsing.Processes.init(sampler, (; model = g))
-    update = InteractiveIsing.Processes.step!(sampler, context)
+    context = InteractiveIsing.StatefulAlgorithms.init(sampler, (; model = g))
+    update = InteractiveIsing.StatefulAlgorithms.step!(sampler, context)
     new_state = InteractiveIsing.graphstate(g)
     @test update.attempted == 1
     @test update.accepted == 1
@@ -419,8 +419,8 @@ end
     @test all(x -> x == 0.0 || x == 1.0, new_state[InteractiveIsing.hidden_indices(hterm, g)])
 
     adjusted_sampler = GaussianBernoulliGibbsLangevin(; stepsize = 0.01, langevin_steps = 3, adjusted = true)
-    adjusted_context = InteractiveIsing.Processes.init(adjusted_sampler, (; model = g))
-    adjusted_update = InteractiveIsing.Processes.step!(adjusted_sampler, adjusted_context)
+    adjusted_context = InteractiveIsing.StatefulAlgorithms.init(adjusted_sampler, (; model = g))
+    adjusted_update = InteractiveIsing.StatefulAlgorithms.step!(adjusted_sampler, adjusted_context)
     @test adjusted_update.attempted == 1
     @test adjusted_update.accepted in (0, 1)
 end

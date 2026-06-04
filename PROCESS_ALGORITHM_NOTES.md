@@ -5,7 +5,7 @@
 The target-free XOR worker originally used this `@ProcessAlgorithm` signature:
 
 ```julia
-Processes.@ProcessAlgorithm function AccumulateTargetFreeGradient!(
+StatefulAlgorithms.@ProcessAlgorithm function AccumulateTargetFreeGradient!(
     isinggraph::G,
     target_state::S,
     free_state::F,
@@ -20,7 +20,7 @@ with:
 UndefVarError: `S` not defined in `Main`
 ```
 
-The error came from the generated code in `deps/Processes/src/ProcessEntities/ProcessAlgorithmsNew.jl`.
+The error came from the generated code in `deps/StatefulAlgorithms/src/ProcessEntities/ProcessAlgorithmsNew.jl`.
 The macro did not propagate the `where` type variables for these runtime inputs
 into all generated definitions, so the generated implementation referenced `S`
 outside the scope where `S` was bound.
@@ -40,7 +40,7 @@ function accumulate_target_free_gradient_body!(
     # typed implementation
 end
 
-Processes.@ProcessAlgorithm function AccumulateTargetFreeGradient!(
+StatefulAlgorithms.@ProcessAlgorithm function AccumulateTargetFreeGradient!(
     isinggraph,
     target_state,
     free_state,
@@ -73,7 +73,7 @@ the generated routine body. This failed:
 ```julia
 target_free_sign = config.target_free_sign
 
-return Processes.@Routine begin
+return StatefulAlgorithms.@Routine begin
     AccumulateTargetFreeGradient!(target_free_sign = target_free_sign)
 end
 ```
@@ -89,7 +89,7 @@ Use a distinct outer binding and copy it into routine state:
 ```julia
 sign_value = config.target_free_sign
 
-return Processes.@Routine begin
+return StatefulAlgorithms.@Routine begin
     @state target_free_sign = sign_value
     AccumulateTargetFreeGradient!(target_free_sign = target_free_sign)
 end

@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using LinearAlgebra: dot
 using Random
 using SparseArrays
@@ -165,7 +165,7 @@ function run_to_checkpoints!(algorithm::A, context::C, steps::Vector{Int}) where
     current_step = 0
     for (checkpoint_idx, target_step) in enumerate(steps)
         while current_step < target_step
-            Processes.step!(algorithm, context)
+            StatefulAlgorithms.step!(algorithm, context)
             current_step += 1
         end
         snapshots[checkpoint_idx] = copy(state(context.model))
@@ -182,7 +182,7 @@ function free_phase_snapshots!(graph, algorithm, x, steps)
     resetstate!(graph)
     IsingLearning.apply_input(graph, x)
     IsingLearning.set_clamping_beta!(graph, zero(eltype(graph)))
-    context = Processes.init(deepcopy(algorithm), (; model = graph))
+    context = StatefulAlgorithms.init(deepcopy(algorithm), (; model = graph))
     return run_to_checkpoints!(algorithm, context, steps)
 end
 
@@ -197,7 +197,7 @@ function nudged_phase_snapshots!(graph, algorithm, free_state, x, y, beta, steps
     IsingLearning.apply_input(graph, x)
     IsingLearning.apply_targets(graph, y)
     IsingLearning.set_clamping_beta!(graph, beta)
-    context = Processes.init(deepcopy(algorithm), (; model = graph))
+    context = StatefulAlgorithms.init(deepcopy(algorithm), (; model = graph))
     snapshots = run_to_checkpoints!(algorithm, context, steps)
     IsingLearning.set_clamping_beta!(graph, zero(beta))
     return snapshots

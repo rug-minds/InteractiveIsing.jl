@@ -23,7 +23,7 @@ end
 
 getinterval(pt::PTimer) = pt.interval
 getdelay(pt::PTimer) = pt.delay
-Processes.ispaused(pt::PTimer) = isnothing(pt.timer)
+StatefulAlgorithms.ispaused(pt::PTimer) = isnothing(pt.timer)
 function Base.wait(pt::PTimer)
     timer = isnothing(pt.timer) ? pt.closed_timer : pt.timer
     isnothing(timer) && return nothing
@@ -44,7 +44,7 @@ function Base.close(pt::PTimer)
     return nothing
 end
 
-function Processes.start(pt::PTimer)
+function StatefulAlgorithms.start(pt::PTimer)
     close(pt)
     pt.closed_timer = nothing
     pt.timer = Timer(pt.callback, pt.delay, interval = pt.interval)

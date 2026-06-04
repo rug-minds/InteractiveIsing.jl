@@ -11,7 +11,7 @@ using CairoMakie
 
 const FT = Float64
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 
 const CASES = ((false, false), (false, true), (true, false), (true, true))
 const DETECTOR_SIGNS = ((-1, -1), (-1, 1), (1, -1), (1, 1))
@@ -182,11 +182,11 @@ end
 """Run one free validation relaxation and return the scalar output."""
 function scalar_output!(trainer, x; seed::Integer)
     worker = trainer.validation_worker
-    II.Processes.isdone(worker) && close(worker)
+    II.StatefulAlgorithms.isdone(worker) && close(worker)
     Random.seed!(seed)
-    hasproperty(Processes.context(worker).dynamics, :rng) && Random.seed!(Processes.context(worker).dynamics.rng, seed)
+    hasproperty(StatefulAlgorithms.context(worker).dynamics, :rng) && Random.seed!(StatefulAlgorithms.context(worker).dynamics.rng, seed)
     IsingLearning._write_input!(worker, x)
-    II.Processes.reset!(worker)
+    II.StatefulAlgorithms.reset!(worker)
     run(worker)
     wait(worker)
     close(worker)
@@ -278,15 +278,15 @@ function run_minibatch_241!(trainer, xbatch, ybatch, batch_gradient, config::Ana
 
     for sample_idx in 1:batchsize
         while true
-            worker_idx = findfirst(worker -> isnothing(worker.task) || Processes.isdone(worker), workers)
+            worker_idx = findfirst(worker -> isnothing(worker.task) || StatefulAlgorithms.isdone(worker), workers)
             isnothing(worker_idx) || break
             yield()
         end
 
-        worker = workers[findfirst(worker -> isnothing(worker.task) || Processes.isdone(worker), workers)]
-        Processes.isdone(worker) && close(worker)
+        worker = workers[findfirst(worker -> isnothing(worker.task) || StatefulAlgorithms.isdone(worker), workers)]
+        StatefulAlgorithms.isdone(worker) && close(worker)
         IsingLearning._write_example!(worker, view(xbatch, :, sample_idx), view(ybatch, :, sample_idx))
-        Processes.reset!(worker)
+        StatefulAlgorithms.reset!(worker)
         run(worker)
     end
 

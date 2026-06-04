@@ -2,7 +2,7 @@
 
 This note is for updating experiment files after the local MNIST worker
 diagnostics. `ProcessPerformanceConsiderations.md` is the package-facing note
-for `Processes` performance and algorithm authoring. This file is the practical
+for `StatefulAlgorithms` performance and algorithm authoring. This file is the practical
 experiment migration checklist.
 
 ## Goal
@@ -112,7 +112,7 @@ For side-effect-only steps:
 
 ```julia
 # Install free-phase sample fields in a stable process subcontext.
-Processes.@ProcessAlgorithm function InstallSampleBias!(
+StatefulAlgorithms.@ProcessAlgorithm function InstallSampleBias!(
     model,
     x,
 )
@@ -125,7 +125,7 @@ For finish/update steps with owned outputs:
 
 ```julia
 # Finish a sample and update counters without routed FuncWrapper outputs.
-Processes.@ProcessAlgorithm function FinishContrastiveSample!(
+StatefulAlgorithms.@ProcessAlgorithm function FinishContrastiveSample!(
     gradient,
     model,
     x,
@@ -159,7 +159,7 @@ algorithm owns both the stats computation and counter update.
 
 ## Macro Documentation Note
 
-When using `Processes.@ProcessAlgorithm` qualified, docstrings attached directly
+When using `StatefulAlgorithms.@ProcessAlgorithm` qualified, docstrings attached directly
 to the macro call can fail because Julia tries to document the expanded block.
 Use a plain comment above the macro call, or import the macro unqualified in a
 module where docstrings are known to work.
@@ -168,7 +168,7 @@ Example:
 
 ```julia
 # Side-effect-only graph reset for process routines.
-Processes.@ProcessAlgorithm function ResetGraphState!(graph)
+StatefulAlgorithms.@ProcessAlgorithm function ResetGraphState!(graph)
     resetstate!(graph)
     return nothing
 end

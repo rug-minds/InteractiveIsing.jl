@@ -4,14 +4,14 @@
 │    2-element Vector{Symbol}:
 │     :equilibrium_state
 │     :x
-└ @ IsingLearning.InteractiveIsing.Processes ~/Documents/GitHub/InteractiveIsing.jl/deps/Processes/src/Widgets/GeneralState.jl:54
+└ @ IsingLearning.InteractiveIsing.StatefulAlgorithms ~/Documents/GitHub/InteractiveIsing.jl/deps/StatefulAlgorithms/src/Widgets/GeneralState.jl:54
 ┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
 │   overlapping_fields =
 │    3-element Vector{Symbol}:
 │     :equilibrium_state
 │     :y
 │     :x
-└ @ IsingLearning.InteractiveIsing.Processes ~/Documents/GitHub/InteractiveIsing.jl/deps/Processes/src/Widgets/GeneralState.jl:54
+└ @ IsingLearning.InteractiveIsing.StatefulAlgorithms ~/Documents/GitHub/InteractiveIsing.jl/deps/StatefulAlgorithms/src/Widgets/GeneralState.jl:54
 Running 2-input statistical XOR EP: (epochs = 2000, log_every = 100, minit = 16, eval_repeats = 64, hidden = 16, beta = 0.5, lr = 0.0002, weight_decay = 0.0, temp = 0.0005, stepsize = 0.1, block_size = 8, free_relaxation = 80, nudged_relaxation = 80, state = :continuous, dynamics = :langevin, init_mode = :zero, training_rule = :ep, target_free_sign = :target_minus_free)
 epoch=0 mse=0.995544 acc=1.0
     case=(false, false) input=[-1.0, -1.0] target=[1.0, -1.0] mean=[-0.0441, -0.046] std=0.02286

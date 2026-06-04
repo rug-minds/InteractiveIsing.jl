@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Optimisers
 using Random
 using SparseArrays
@@ -164,7 +164,7 @@ end
     make_each_worker_manager(layer, params, nworkers)
 
 Create an MNIST training manager where every worker is constructed by the
-recipe `makeworker` callback. This uses the public Processes `MakeEachWorker`
+recipe `makeworker` callback. This uses the public StatefulAlgorithms `MakeEachWorker`
 mode and avoids manager-side copying or deep-copying of slot 1.
 """
 function make_each_worker_manager(layer::L, params::P, nworkers::T) where {L,P,T<:Integer}
@@ -184,7 +184,7 @@ function make_each_worker_manager(layer::L, params::P, nworkers::T) where {L,P,T
     return ProcessManager(
         recipe;
         nworkers = Int(nworkers),
-        worker_init = Processes.MakeEachWorker(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         flush_policy = NoFlush(),
         poll_interval = 0.0,
     )
@@ -214,13 +214,13 @@ function build_make_each_trainer(nworkers::T) where {T<:Integer}
     optimiser = Optimisers.Adam(LR)
     opt_state = Optimisers.setup(optimiser, params)
     manager = make_each_worker_manager(layer, params, nworkers)
-    workers = collect(Processes.workers(manager))
+    workers = collect(StatefulAlgorithms.workers(manager))
     worker_graphs = [IsingLearning._mnist_worker_state(worker).model for worker in workers]
 
     validation_graph = fresh_mnist_graph(110_000 + Int(nworkers))
     IsingLearning.sync_graph_params!(validation_graph, params)
     validation_worker = IsingLearning._validation_process(layer, validation_graph)
-    validation_graph = Processes.context(validation_worker).dynamics.model
+    validation_graph = StatefulAlgorithms.context(validation_worker).dynamics.model
 
     trainer = IsingLearning.MNISTThreadedTrainer(
         layer,
@@ -295,11 +295,11 @@ function run_manager_mode!(trainer::T, jobs::J, mode::Symbol) where {T,J}
     if mode === :normal
         run!(trainer.manager, jobs)
     elseif mode === :dynamic
-        runthreaded!(trainer.manager, jobs, Processes.Dynamic())
+        runthreaded!(trainer.manager, jobs, StatefulAlgorithms.Dynamic())
     elseif mode === :static
-        runthreaded!(trainer.manager, jobs, Processes.Static())
+        runthreaded!(trainer.manager, jobs, StatefulAlgorithms.Static())
     elseif mode === :greedy
-        runthreaded!(trainer.manager, jobs, Processes.Greedy())
+        runthreaded!(trainer.manager, jobs, StatefulAlgorithms.Greedy())
     else
         throw(ArgumentError("unknown manager mode $(mode)"))
     end

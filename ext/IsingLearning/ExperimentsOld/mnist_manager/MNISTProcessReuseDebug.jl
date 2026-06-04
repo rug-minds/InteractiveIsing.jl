@@ -3,7 +3,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Random
 using SparseArrays
 
@@ -167,9 +167,9 @@ function run_reuse_debug!()
                 job_idx = (local_job - 1) * NWORKERS + worker_idx
                 println("worker=", worker_idx, " local_job=", local_job, " before=", assert_worker_indices(worker))
                 IsingLearning._write_example!(worker, setup.jobs[job_idx].x, setup.jobs[job_idx].y)
-                Processes.reset!(worker)
-                Processes.runprocessinline!(worker)
-                println("worker=", worker_idx, " local_job=", local_job, " ticks=", Processes.getticks(worker), " runtime=", Processes.runtime(worker))
+                StatefulAlgorithms.reset!(worker)
+                StatefulAlgorithms.runprocessinline!(worker)
+                println("worker=", worker_idx, " local_job=", local_job, " ticks=", StatefulAlgorithms.getticks(worker), " runtime=", StatefulAlgorithms.runtime(worker))
                 flush(stdout)
             end
         end

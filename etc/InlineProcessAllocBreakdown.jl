@@ -1,5 +1,5 @@
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 using InteractiveUtils
 using Profile
 using Random
@@ -14,11 +14,11 @@ function make_example_process(; side_length = 100, temperature = 2.0f0, steps = 
     return (; graph = g, process = p)
 end
 
-runtime_context(p::InlineProcess) = Processes.merge_into_globals(Processes.context(p), (; process = p))
+runtime_context(p::InlineProcess) = StatefulAlgorithms.merge_into_globals(StatefulAlgorithms.context(p), (; process = p))
 loop_algo(p::InlineProcess) = p.taskdata.func
-named_algo(p::InlineProcess) = only(Processes.getalgos(loop_algo(p)))
+named_algo(p::InlineProcess) = only(StatefulAlgorithms.getalgos(loop_algo(p)))
 context_view(p::InlineProcess) = view(runtime_context(p), named_algo(p))
-metro_algo(p::InlineProcess) = Processes.getalgo(named_algo(p))
+metro_algo(p::InlineProcess) = StatefulAlgorithms.getalgo(named_algo(p))
 
 function metropolis_parts(p::InlineProcess)
     scv = context_view(p)
@@ -29,9 +29,9 @@ end
 
 run_call(p::InlineProcess) = run(p)
 merge_globals_call(p::InlineProcess) = runtime_context(p)
-generated_loop_call(p::InlineProcess) = Processes.generated_processloop(p, loop_algo(p), runtime_context(p), Processes.lifetime(p))
-identifiable_step_call(p::InlineProcess) = Processes.step!(named_algo(p), runtime_context(p))
-metropolis_step_call(p::InlineProcess) = Processes.step!(metro_algo(p), context_view(p))
+generated_loop_call(p::InlineProcess) = StatefulAlgorithms.generated_processloop(p, loop_algo(p), runtime_context(p), StatefulAlgorithms.lifetime(p))
+identifiable_step_call(p::InlineProcess) = StatefulAlgorithms.step!(named_algo(p), runtime_context(p))
+metropolis_step_call(p::InlineProcess) = StatefulAlgorithms.step!(metro_algo(p), context_view(p))
 
 function proposer_rand_call(p::InlineProcess)
     (; rng, proposer) = metropolis_parts(p)
@@ -102,7 +102,7 @@ function print_inlineprocess_llvm(p::InlineProcess)
     println("LLVM: run(::InlineProcess)")
     InteractiveUtils.code_llvm(stdout, run, Tuple{typeof(p)})
     println()
-    println("LLVM: Processes.step!(::$(typeof(metro)), ::$(typeof(scv)))")
-    InteractiveUtils.code_llvm(stdout, Processes.step!, Tuple{typeof(metro), typeof(scv)})
+    println("LLVM: StatefulAlgorithms.step!(::$(typeof(metro)), ::$(typeof(scv)))")
+    InteractiveUtils.code_llvm(stdout, StatefulAlgorithms.step!, Tuple{typeof(metro), typeof(scv)})
     return nothing
 end

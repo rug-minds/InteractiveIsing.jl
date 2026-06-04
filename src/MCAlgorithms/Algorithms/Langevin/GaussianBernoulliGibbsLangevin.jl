@@ -171,7 +171,7 @@ function _gb_log_acceptance!(
            log_reverse_v + log_reverse_h - log_forward_v - log_forward_h
 end
 
-function Processes.init(algorithm::GaussianBernoulliGibbsLangevin, context)
+function StatefulAlgorithms.init(algorithm::GaussianBernoulliGibbsLangevin, context)
     (; model) = context
     hamiltonian = init!(model.hamiltonian, model)
     hterm = _gb_find_hterm(hamiltonian)
@@ -248,7 +248,7 @@ function Processes.init(algorithm::GaussianBernoulliGibbsLangevin, context)
     )
 end
 
-function Processes.step!(algorithm::GaussianBernoulliGibbsLangevin, context)
+function StatefulAlgorithms.step!(algorithm::GaussianBernoulliGibbsLangevin, context)
     (; model, hamiltonian, hterm, rng, stepsize, group_steps_ref, adjusted_ref,
         adjust_step_ref, burnin_ref, langevin_steps_ref, old_v, old_h, new_v, new_h, grad,
         alphas, forward_mean, reverse_mean, proposal_variance, conditional_mean,

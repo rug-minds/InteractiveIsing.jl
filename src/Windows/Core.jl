@@ -684,7 +684,7 @@ _cleanup_resource!(observer::Observables.ObserverFunction) = off(observer)
 _cleanup_resource!(timer::PTimer) = close(timer)
 _cleanup_resource!(timer::Timer) = close(timer)
 _cleanup_resource!(po::PolledObservable) = close(po)
-function _cleanup_resource!(process::Processes.AbstractProcess)
+function _cleanup_resource!(process::StatefulAlgorithms.AbstractProcess)
     _request_process_close!(process)
     return nothing
 end
@@ -710,7 +710,7 @@ _cleanup_native_resource!(observer::Observables.ObserverFunction) = off(observer
 _cleanup_native_resource!(timer::PTimer) = close(timer)
 _cleanup_native_resource!(timer::Timer) = close(timer)
 _cleanup_native_resource!(po::PolledObservable) = close(po)
-_cleanup_native_resource!(process::Processes.AbstractProcess) = _cleanup_resource!(process)
+_cleanup_native_resource!(process::StatefulAlgorithms.AbstractProcess) = _cleanup_resource!(process)
 _cleanup_native_resource!(resource) = nothing
 
 function _shutdown_runtime_resource(resource)
@@ -736,7 +736,7 @@ _shutdown_runtime_resource!(::Observables.ObserverFunction) = nothing
 _shutdown_runtime_resource!(timer::PTimer) = close(timer)
 _shutdown_runtime_resource!(timer::Timer) = close(timer)
 _shutdown_runtime_resource!(po::PolledObservable) = close(po)
-function _shutdown_runtime_resource!(process::Processes.AbstractProcess)
+function _shutdown_runtime_resource!(process::StatefulAlgorithms.AbstractProcess)
     _request_process_close!(process)
     return nothing
 end
@@ -848,8 +848,8 @@ function _pause_resource(resource)
             close(resource)
         elseif resource isa PolledObservable
             close(resource)
-        elseif resource isa Processes.AbstractProcess
-            Processes.pause(resource)
+        elseif resource isa StatefulAlgorithms.AbstractProcess
+            StatefulAlgorithms.pause(resource)
         end
     catch err
         @warn "Error while pausing window resource" resource_type = typeof(resource) exception = (err, catch_backtrace())
@@ -860,10 +860,10 @@ end
 function _resume_resource(resource)
     try
         if resource isa PTimer
-            Processes.start(resource)
+            StatefulAlgorithms.start(resource)
         elseif resource isa PolledObservable
-            Processes.start(resource)
-        elseif resource isa Processes.AbstractProcess
+            StatefulAlgorithms.start(resource)
+        elseif resource isa StatefulAlgorithms.AbstractProcess
             run(resource)
         end
     catch err

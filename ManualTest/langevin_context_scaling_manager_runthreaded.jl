@@ -15,7 +15,7 @@ end
     print_manager_runthreaded_summary(; kwargs...) -> NamedTuple
 
 Compare normal `ProcessManager` scheduling against the native threaded manager
-runner added by Processes.jl.
+runner added by StatefulAlgorithms.jl.
 """
 function print_manager_runthreaded_summary(;
     runs::R = env_int("ISING_MANUAL_RUNS", 8),
@@ -48,13 +48,13 @@ function print_manager_runthreaded_summary(;
     run_manager!(warmup_normal.manager, 1)
     close(warmup_normal.manager)
     warmup_dynamic = build_manager(step, max(Threads.maxthreadid(), 1))
-    run_scheduled_manager!(warmup_dynamic, 1, Processes.Dynamic())
+    run_scheduled_manager!(warmup_dynamic, 1, StatefulAlgorithms.Dynamic())
     close(warmup_dynamic.manager)
     warmup_static = build_manager(step, max(Threads.maxthreadid(), 1))
-    run_scheduled_manager!(warmup_static, 1, Processes.Static())
+    run_scheduled_manager!(warmup_static, 1, StatefulAlgorithms.Static())
     close(warmup_static.manager)
     warmup_greedy = build_manager(step, max(Threads.maxthreadid(), 1))
-    run_scheduled_manager!(warmup_greedy, 1, Processes.Greedy())
+    run_scheduled_manager!(warmup_greedy, 1, StatefulAlgorithms.Greedy())
     close(warmup_greedy.manager)
 
     serial_contexts = [deepcopy(base_context) for _ in 1:runs]
@@ -76,19 +76,19 @@ function print_manager_runthreaded_summary(;
 
     dynamic_setup = build_manager(step, runs)
     dynamic_seconds, dynamic_results = elapsed_seconds() do
-        run_scheduled_manager!(dynamic_setup, runs, Processes.Dynamic())
+        run_scheduled_manager!(dynamic_setup, runs, StatefulAlgorithms.Dynamic())
     end
     close(dynamic_setup.manager)
 
     static_setup = build_manager(step, max(Int(runs), Threads.maxthreadid()))
     static_seconds, static_results = elapsed_seconds() do
-        run_scheduled_manager!(static_setup, runs, Processes.Static())
+        run_scheduled_manager!(static_setup, runs, StatefulAlgorithms.Static())
     end
     close(static_setup.manager)
 
     greedy_setup = build_manager(step, runs)
     greedy_seconds, greedy_results = elapsed_seconds() do
-        run_scheduled_manager!(greedy_setup, runs, Processes.Greedy())
+        run_scheduled_manager!(greedy_setup, runs, StatefulAlgorithms.Greedy())
     end
     close(greedy_setup.manager)
 

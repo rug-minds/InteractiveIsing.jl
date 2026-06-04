@@ -1,5 +1,5 @@
 using InteractiveIsing, JET, BenchmarkTools
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 import InteractiveIsing as ii
 
 function isingfunc(;dr::R = 1) where R
@@ -49,7 +49,7 @@ end
 @benchmark ReducedBoltzmannArchitecture(100, 100, 10)
 
 # interface(g)
-# createProcess(g, lifetime = Processes.Until(x -> x == 0, Var(g.default_algorithm, :T)))
+# createProcess(g, lifetime = StatefulAlgorithms.Until(x -> x == 0, Var(g.default_algorithm, :T)))
 
 
 

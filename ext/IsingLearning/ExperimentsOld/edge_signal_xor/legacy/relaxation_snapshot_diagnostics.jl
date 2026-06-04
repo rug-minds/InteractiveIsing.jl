@@ -38,7 +38,7 @@ end
 
 ProcessAlgorithm that copies the graph state whenever it is scheduled.
 """
-struct RelaxationSnapshotLogger{Trace,HiddenRange} <: Processes.ProcessAlgorithm
+struct RelaxationSnapshotLogger{Trace,HiddenRange} <: StatefulAlgorithms.ProcessAlgorithm
     trace::Trace
     next_sweep::Base.RefValue{Int}
     sweep_increment::Int
@@ -46,9 +46,9 @@ struct RelaxationSnapshotLogger{Trace,HiddenRange} <: Processes.ProcessAlgorithm
     output_idx::Int
 end
 
-Processes.init(::RelaxationSnapshotLogger, context) = (;)
+StatefulAlgorithms.init(::RelaxationSnapshotLogger, context) = (;)
 
-function Processes.step!(logger::RelaxationSnapshotLogger, context)
+function StatefulAlgorithms.step!(logger::RelaxationSnapshotLogger, context)
     record_snapshot!(logger.trace, context.model, logger.next_sweep[], logger.hidden_range, logger.output_idx)
     logger.next_sweep[] += logger.sweep_increment
     return (;)
@@ -199,16 +199,16 @@ function main()
     record_snapshot!(trace, graph, 0, hidden_range, output_idx)
     logger = RelaxationSnapshotLogger(trace, Ref(every_sweeps), every_sweeps, hidden_range, output_idx)
     dynamics = deepcopy(sampler)
-    routine = Processes.@CompositeAlgorithm begin
+    routine = StatefulAlgorithms.@CompositeAlgorithm begin
         @alias dynamics = dynamics
         @every 1 dynamics()
         @every interval_steps logger(model = dynamics.model)
     end
-    wrapped = Processes.@Routine begin
+    wrapped = StatefulAlgorithms.@Routine begin
         @repeat total_steps routine()
     end
-    inputs = (Processes.Init(dynamics, model = graph, rng = Random.MersenneTwister(seed + 1)),)
-    process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
+    inputs = (StatefulAlgorithms.Init(dynamics, model = graph, rng = Random.MersenneTwister(seed + 1)),)
+    process = StatefulAlgorithms.Process(StatefulAlgorithms.resolve(wrapped), inputs...; repeats = 1)
     run(process)
     wait(process)
     close(process)

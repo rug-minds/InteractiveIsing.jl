@@ -21,16 +21,16 @@ function run_threads_manager!(
             slot = selected_slots[idx]
             resetworker!(slot)
             runprocessinline!(slot.worker)
-            instance = only(Processes.getalgos(Processes.getalgo(slot.worker)))
-            results[idx] = view(Processes.context(slot.worker), instance).result
+            instance = only(StatefulAlgorithms.getalgos(StatefulAlgorithms.getalgo(slot.worker)))
+            results[idx] = view(StatefulAlgorithms.context(slot.worker), instance).result
         end
     elseif schedule === :dynamic
         Threads.@threads for idx in eachindex(selected_slots)
             slot = selected_slots[idx]
             resetworker!(slot)
             runprocessinline!(slot.worker)
-            instance = only(Processes.getalgos(Processes.getalgo(slot.worker)))
-            results[idx] = view(Processes.context(slot.worker), instance).result
+            instance = only(StatefulAlgorithms.getalgos(StatefulAlgorithms.getalgo(slot.worker)))
+            results[idx] = view(StatefulAlgorithms.context(slot.worker), instance).result
         end
     else
         throw(ArgumentError("schedule must be :dynamic or :static, got $(schedule)"))

@@ -1,5 +1,5 @@
 using InteractiveIsing, GLMakie, FileIO
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 import InteractiveIsing as II
 
 ## Utility functions for experiments
@@ -93,7 +93,7 @@ end
 ###     \  /
 ###      \/
 struct TrianglePulseA end
-function Processes.init(::TrianglePulseA, args)
+function StatefulAlgorithms.init(::TrianglePulseA, args)
     (;amp, numpulses, rise_point) = args
     steps = num_calls(args)
 

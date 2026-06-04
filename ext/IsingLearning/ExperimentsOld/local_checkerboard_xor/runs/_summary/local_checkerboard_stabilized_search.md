@@ -9,14 +9,14 @@ ext/IsingLearning/experiments/local_checkerboard_xor/local_checkerboard_stabiliz
 ```
 
 No toolbox code was changed for this pass. The file reuses the existing local
-checkerboard graph, clamping, trainer, and Processes helpers, but defines a
+checkerboard graph, clamping, trainer, and StatefulAlgorithms helpers, but defines a
 no-anneal worker composite for Metropolis and a few experiment-local projection
 hooks.
 
 ## Brainstormed Fixes
 
 - **No-anneal Metropolis composite.** The current annealing wrapper path does
-  not compose cleanly with Metropolis in Processes. The new file builds fresh
+  not compose cleanly with Metropolis in StatefulAlgorithms. The new file builds fresh
   `IsingMetropolis()` instances for free, plus, minus, and validation phases.
 - **Post-update projection.** Optional weight clipping, bias clipping/zeroing,
   and local-field normalization were added locally. These test whether training

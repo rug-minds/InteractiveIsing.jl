@@ -35,8 +35,8 @@ end
     @test !occursin("Figure", sprint(show, MIME("text/plain"), host))
     pause!(host)
     @test host.paused[]
-    @test !Processes.ispaused(host.frame_timer)
-    @test !Processes.ispaused(host.poll_timer)
+    @test !StatefulAlgorithms.ispaused(host.frame_timer)
+    @test !StatefulAlgorithms.ispaused(host.poll_timer)
     resume!(host)
     @test !host.paused[]
     close(host)
@@ -104,10 +104,10 @@ end
     timer = PTimer(_ -> put!(ticks, :tick), 0; interval = 0.01)
     @test take!(ticks) == :tick
     close(timer)
-    @test Processes.ispaused(timer)
+    @test StatefulAlgorithms.ispaused(timer)
     @test wait(timer) === nothing
-    Processes.start(timer)
-    @test !Processes.ispaused(timer)
+    StatefulAlgorithms.start(timer)
+    @test !StatefulAlgorithms.ispaused(timer)
     @test take!(ticks) == :tick
     close(timer)
     @test wait(timer) === nothing
@@ -153,11 +153,11 @@ end
 end
 
 @testset "InteractiveLinesPanel and ContextLinesPanel figure construction" begin
-    ctx = InteractiveIsing.Processes.ProcessContext(
+    ctx = InteractiveIsing.StatefulAlgorithms.ProcessContext(
         (;
-            demo = InteractiveIsing.Processes.SubContext(:demo, (; x = collect(1:5), y = collect(2:2:6))),
+            demo = InteractiveIsing.StatefulAlgorithms.SubContext(:demo, (; x = collect(1:5), y = collect(2:2:6))),
         ),
-        InteractiveIsing.Processes.NameSpaceRegistry(),
+        InteractiveIsing.StatefulAlgorithms.NameSpaceRegistry(),
         (;),
         (;),
     )
@@ -167,7 +167,7 @@ end
         Windows.ContextLinesPanel(
             ctx,
             :demo => :x,
-            InteractiveIsing.Processes.Var(:demo, :y);
+            InteractiveIsing.StatefulAlgorithms.Var(:demo, :y);
             xlabel = "x",
             ylabel = "y",
             title = "tracked",
@@ -407,12 +407,12 @@ end
 
     algorithm = Metropolis()
     process_inputs = InteractiveIsing._mc_model_inits(algorithm, g)
-    process = InteractiveIsing.Processes.Process(algorithm, process_inputs...; repeat = 1)
+    process = InteractiveIsing.StatefulAlgorithms.Process(algorithm, process_inputs...; repeat = 1)
     push!(processes(g), process)
     context_update = (; Metropolis_1 = (; T = Float32(3.0)))
-    InteractiveIsing.Processes.context(
+    InteractiveIsing.StatefulAlgorithms.context(
         process,
-        InteractiveIsing.Processes.merge_into_subcontexts(InteractiveIsing.Processes.context(process), context_update),
+        InteractiveIsing.StatefulAlgorithms.merge_into_subcontexts(InteractiveIsing.StatefulAlgorithms.context(process), context_update),
     )
     Windows._poll!(host)
     @test temperature_panel[:slider].value[] ≈ 3.0f0
@@ -428,7 +428,7 @@ end
 
     temperature_panel[:slider].value[] = 1.5f0
     @test temp(g) ≈ 1.5f0
-    @test getproperty(getproperty(Processes.context(process), :Metropolis_1), :T) ≈ 1.5f0
+    @test getproperty(getproperty(StatefulAlgorithms.context(process), :Metropolis_1), :T) ≈ 1.5f0
 
     close(host)
     @test host.closed
@@ -474,7 +474,7 @@ end
 
     proc = createProcess(g, LocalLangevin(); lifetime = 1)
     wait(proc)
-    stepsize = getproperty(getproperty(Processes.getcontext(proc), :LocalLangevin_1), :stepsize)
+    stepsize = getproperty(getproperty(StatefulAlgorithms.getcontext(proc), :LocalLangevin_1), :stepsize)
     @test stepsize[] ≈ 0.05f0
 
     entry.apply_step!(1)

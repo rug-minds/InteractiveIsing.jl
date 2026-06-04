@@ -11,7 +11,7 @@ mutable struct BareGraph{T}
     updates::UInt
 end
 stop(g::BareGraph) = g.shouldrun = false
-Processes.start(g::BareGraph) = g.shouldrun = true
+StatefulAlgorithms.start(g::BareGraph) = g.shouldrun = true
 
 
 function BareGraph(T, layers, adj, bias)

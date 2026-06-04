@@ -12,7 +12,7 @@ using Serialization
 
 const II = IsingLearning.InteractiveIsing
 const WIN = IsingLearning.InteractiveIsing.Windows
-const PROC = IsingLearning.InteractiveIsing.Processes
+const PROC = IsingLearning.InteractiveIsing.StatefulAlgorithms
 const DEMO_FT = Float32
 
 """

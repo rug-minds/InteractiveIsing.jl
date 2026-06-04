@@ -64,13 +64,13 @@ end
     return clamp(updated, lo, hi)
 end
 
-@inline function Processes.init(tuner::AcceptanceRateStepSizeTuner, context::Cont) where {Cont}
+@inline function StatefulAlgorithms.init(tuner::AcceptanceRateStepSizeTuner, context::Cont) where {Cont}
     stepsize = get(context, :stepsize, Ref(tuner.min_stepsize))
     adjusted = get(context, :adjusted, true)
     return (;stepsize, adjusted)
 end
 
-@inline function Processes.step!(tuner::AcceptanceRateStepSizeTuner, context::C) where {C}
+@inline function StatefulAlgorithms.step!(tuner::AcceptanceRateStepSizeTuner, context::C) where {C}
     stepsize = context.stepsize
     current = _tuner_value(stepsize)
     acceptance_rate = _tuner_value(context.acceptance_rate)
@@ -83,12 +83,12 @@ end
     return (;tuned_stepsize)
 end
 
-@inline function Processes.init(tuner::DriftStepSizeTuner, context::Cont) where {Cont}
+@inline function StatefulAlgorithms.init(tuner::DriftStepSizeTuner, context::Cont) where {Cont}
     stepsize = get(context, :stepsize, Ref(tuner.min_stepsize))
     return (;stepsize)
 end
 
-@inline function Processes.step!(tuner::DriftStepSizeTuner, context::C) where {C}
+@inline function StatefulAlgorithms.step!(tuner::DriftStepSizeTuner, context::C) where {C}
     stepsize = context.stepsize
     current = _tuner_value(stepsize)
     gradient_max = max(_tuner_value(context.gradient_max), eps(typeof(current)))

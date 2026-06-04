@@ -34,7 +34,7 @@ end
     return y <= span ? lo + y : hi - (y - span)
 end
 
-@inline function Processes.init(::LangevinDynamics, context::Cont) where {Cont}
+@inline function StatefulAlgorithms.init(::LangevinDynamics, context::Cont) where {Cont}
     (;model) = context
 
     hamiltonian = model.hamiltonian
@@ -66,7 +66,7 @@ end
 
 @inline update!(::LangevinDynamics, hterm, model::AbstractIsingGraph, proposal::FlipProposal) = update!(Metropolis(), hterm, model, proposal)
 
-@inline function Processes.step!(langevin::LangevinDynamics, context::C) where {C}
+@inline function StatefulAlgorithms.step!(langevin::LangevinDynamics, context::C) where {C}
     (;hamiltonian, rng, model, dH_prealloc, active_spins, layer_views, stepsize, max_substep, max_drift_fraction, proposal, T, η, ηmax, σ_sub, n_substeps) = context
 
     SType = eltype(model)

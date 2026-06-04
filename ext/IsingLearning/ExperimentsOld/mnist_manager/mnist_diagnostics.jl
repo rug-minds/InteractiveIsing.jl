@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Optimisers
 using Random
 using Statistics
@@ -68,7 +68,7 @@ function output_stats(trainer, x, y)
     for sample_idx in axes(x, 2)
         worker = trainer.validation_worker
         IsingLearning._write_input!(worker, view(x, :, sample_idx))
-        Processes.reset!(worker)
+        StatefulAlgorithms.reset!(worker)
         run(worker)
         wait(worker)
         close(worker)
@@ -108,7 +108,7 @@ function run_train_probe(; lr_sign = one(Float32), label = "normal")
         IsingLearning._reset_batch_buffers!(trainer)
         jobs = [(; x = view(xbatch, :, sample_idx), y = view(ybatch, :, sample_idx)) for sample_idx in axes(xbatch, 2)]
         run_seconds = @elapsed run!(trainer.manager, jobs)
-        worker_norms = [buffer_norm(Processes.context(worker)._state.buffers) for worker in trainer.workers]
+        worker_norms = [buffer_norm(StatefulAlgorithms.context(worker)._state.buffers) for worker in trainer.workers]
         collect_seconds = @elapsed IsingLearning._collect_batch_gradient!(trainer, batch_gradient, size(xbatch, 2))
         old_params = deepcopy(trainer.params)
         old_norm = param_norm(old_params)

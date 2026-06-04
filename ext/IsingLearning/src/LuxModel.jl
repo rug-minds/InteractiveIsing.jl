@@ -5,7 +5,7 @@ export LayeredIsingGraphLayer, LayerContrastiveStep, sync_params!
 
 Lux layer wrapper for an `InteractiveIsing.IsingGraph`.
 
-The layer owns the static architecture and prepares reusable `Processes`
+The layer owns the static architecture and prepares reusable `StatefulAlgorithms`
 objects in `initialstates`. A forward application writes Lux parameters into
 the graph, writes the input into the graph through the standard learning input
 path, runs the prepared forward process once, and returns the configured output
@@ -137,13 +137,13 @@ end
 """Run a prepared dynamics context for `nsteps` single-spin/process updates."""
 function relax_context!(algorithm::A, context::C, nsteps::Integer) where {A,C}
     @inbounds for _ in 1:Int(nsteps)
-        Processes.step!(algorithm, context)
+        StatefulAlgorithms.step!(algorithm, context)
     end
     return context
 end
 
 """Create persistent graph, sample, capture, sampler, and buffer storage."""
-function Processes.init(step::LayerContrastiveStep, context)
+function StatefulAlgorithms.init(step::LayerContrastiveStep, context)
     model = context.model
     T = eltype(model)
     x = get(context, :x, zeros(T, step.input_dim))
@@ -152,13 +152,13 @@ function Processes.init(step::LayerContrastiveStep, context)
     equilibrium_state = get(context, :equilibrium_state, copy(state(model)))
     plus_state = get(context, :plus_state, similar(equilibrium_state))
     minus_state = get(context, :minus_state, similar(equilibrium_state))
-    free_context = Processes.init(step.dynamics_algorithm, (; model))
-    nudged_context = Processes.init(step.nudged_dynamics_algorithm, (; model))
+    free_context = StatefulAlgorithms.init(step.dynamics_algorithm, (; model))
+    nudged_context = StatefulAlgorithms.init(step.nudged_dynamics_algorithm, (; model))
     return (; model, x, y, buffers, equilibrium_state, plus_state, minus_state, free_context, nudged_context)
 end
 
 """Run free, positive-nudged, and negative-nudged phases for one sample."""
-function Processes.step!(step::LayerContrastiveStep, context)
+function StatefulAlgorithms.step!(step::LayerContrastiveStep, context)
     model = context.model
     β = step.β
 
@@ -187,7 +187,7 @@ function Processes.step!(step::LayerContrastiveStep, context)
 end
 
 """Finalize a contrastive step; all state is intentionally reusable."""
-function Processes.cleanup(step::LayerContrastiveStep, context)
+function StatefulAlgorithms.cleanup(step::LayerContrastiveStep, context)
     return nothing
 end
 
@@ -246,10 +246,10 @@ function (layer::LayeredIsingGraphLayer)(x, ps, st)
     sync_params!(graph, ps)
 
     process = st.forward_process
-    context = Processes.context(process)
+    context = StatefulAlgorithms.context(process)
     context._state.x .= x
 
-    Processes.reset!(process)
+    StatefulAlgorithms.reset!(process)
     run(process)
     wait(process)
 

@@ -149,7 +149,7 @@ Public API use:
 
 - The MNIST training path now builds workers with the custom `MNISTContrastiveStep` directly. It does not use `createProcess` or the graph-input injection helper.
 - The manager recipe uses the public `WorkerSlot.worker` field, `resetworker!`, `NoFlush`, and `run!`.
-- `WorkerSlot.worker` is documented in `Processes` as intentionally public for recipes that mutate worker context directly.
+- `WorkerSlot.worker` is documented in `StatefulAlgorithms` as intentionally public for recipes that mutate worker context directly.
 - `reset!(::Process)` only resets process lifecycle counters/timing/algorithm state. It does not rebuild the context, so writing `x` and `y` into the existing `:_state` context and then calling `resetworker!` reuses the worker context.
 - The worker process has one named subcontext, `:_state`, containing the model graph, input vector, target vector, persistent gradient buffers, and phase state arrays.
 
@@ -633,9 +633,9 @@ Interpretation:
 Updated `ProcessOverhead.jl` to report both external end-to-end latency and the internal `Process` runtime clock:
 
 - Direct process external latency is measured from just before `run(worker)` through `wait(worker); fetch(worker)`.
-- Direct process internal time is `Processes.runtime(worker)` after `wait/fetch`.
+- Direct process internal time is `StatefulAlgorithms.runtime(worker)` after `wait/fetch`.
 - Manager external latency is `run!(manager, (job,))` for a one-worker `ProcessManager`.
-- Manager internal time is `Processes.runtime(manager_worker)` after `run!` returns.
+- Manager internal time is `StatefulAlgorithms.runtime(manager_worker)` after `run!` returns.
 
 Run target:
 
@@ -650,7 +650,7 @@ Measured averages after warmup:
 
 - Direct process:
   - external `run + wait + fetch` latency: `16.5391s`.
-  - internal `Processes.runtime(worker)`: `16.5391s`.
+  - internal `StatefulAlgorithms.runtime(worker)`: `16.5391s`.
   - external minus internal: about `0.000057s`.
   - `run(worker)` launch call itself: about `0.0000018s`.
 - One-worker manager:
@@ -713,14 +713,14 @@ Attempted a 10x-hidden pointer audit for worker graph arrays, but the command ti
 
 Purpose:
 
-- Check whether poor 10x-hidden scaling comes from `ProcessManager` or full `Process` scheduling, by bypassing both and manually spawning tasks that only run `Processes.step!(langevin, context)`.
+- Check whether poor 10x-hidden scaling comes from `ProcessManager` or full `Process` scheduling, by bypassing both and manually spawning tasks that only run `StatefulAlgorithms.step!(langevin, context)`.
 
 New script:
 
 - `ManualTests/ManualLangevinContextScheduling.jl`.
 - It builds independent graph/context copies, fixes one MNIST input on each graph, warms each context with one step, then schedules one task per context.
-- The measured loop is only `Processes.step!(langevin, context)` repeated for `500` active-layer sweeps.
-- This uses `Processes.init/step!` directly, but avoids `Process`, `ProcessManager`, `MNISTContrastiveStep`, job writing, gradient accumulation, target application, and sync.
+- The measured loop is only `StatefulAlgorithms.step!(langevin, context)` repeated for `500` active-layer sweeps.
+- This uses `StatefulAlgorithms.init/step!` directly, but avoids `Process`, `ProcessManager`, `MNISTContrastiveStep`, job writing, gradient accumulation, target application, and sync.
 
 Run target:
 
@@ -811,7 +811,7 @@ Interpretation:
 
 - This does not look like immediate out-of-memory on the tested 10x setup; 32 workers fit in about `10 GiB` private memory for a short run.
 - The fixed sparse matrix row indices and cached active spin indices are in range in the checked cases.
-- `@turbo` remains a plausible crash amplifier because it can turn any intermittent stale/bad index into an access violation, but the failure did not reproduce after the latest Processes refactor and current worker creation path.
+- `@turbo` remains a plausible crash amplifier because it can turn any intermittent stale/bad index into an access violation, but the failure did not reproduce after the latest StatefulAlgorithms refactor and current worker creation path.
 - The active cache changes from `8664` before the first job to `7880` after input clamping, which is expected for MNIST input-as-fixed-state: `8664 - 784 = 7880`.
 
 ## 2026-05-21 OC Warm Stability Retest

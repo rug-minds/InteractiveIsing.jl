@@ -12,7 +12,7 @@ using Serialization
 using Statistics
 
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 const FT = Float32
 
 const CNN_XOR_CASES = ((false, false), (false, true), (true, false), (true, true))
@@ -78,11 +78,11 @@ struct LocalCNNXORJob{X<:AbstractVector,Y<:AbstractVector}
     repeats::Int
 end
 
-struct AveragedCNNContrastiveStep{S} <: Processes.ProcessAlgorithm
+struct AveragedCNNContrastiveStep{S} <: StatefulAlgorithms.ProcessAlgorithm
     base::S
 end
 
-struct CNNContrastiveStep{D,N,T,I} <: Processes.ProcessAlgorithm
+struct CNNContrastiveStep{D,N,T,I} <: StatefulAlgorithms.ProcessAlgorithm
     dynamics_algorithm::D
     nudged_dynamics_algorithm::N
     β::T
@@ -389,7 +389,7 @@ function CNNContrastiveStep(layer::L, config::C) where {L<:LayeredIsingGraphLaye
 end
 
 """Initialize reusable storage for one configurable-init contrastive worker."""
-function Processes.init(step::CNNContrastiveStep, context)
+function StatefulAlgorithms.init(step::CNNContrastiveStep, context)
     model = context.model
     T = eltype(model)
     x = get(context, :x, zeros(T, step.input_dim))
@@ -398,13 +398,13 @@ function Processes.init(step::CNNContrastiveStep, context)
     equilibrium_state = get(context, :equilibrium_state, copy(II.state(model)))
     plus_state = get(context, :plus_state, similar(equilibrium_state))
     minus_state = get(context, :minus_state, similar(equilibrium_state))
-    free_context = Processes.init(step.dynamics_algorithm, (; model))
-    nudged_context = Processes.init(step.nudged_dynamics_algorithm, (; model))
+    free_context = StatefulAlgorithms.init(step.dynamics_algorithm, (; model))
+    nudged_context = StatefulAlgorithms.init(step.nudged_dynamics_algorithm, (; model))
     return (; model, x, y, buffers, equilibrium_state, plus_state, minus_state, free_context, nudged_context)
 end
 
 """Run free, positive-nudged, and negative-nudged phases for one sample."""
-function Processes.step!(step::CNNContrastiveStep, context)
+function StatefulAlgorithms.step!(step::CNNContrastiveStep, context)
     model = context.model
     β = step.β
 
@@ -433,34 +433,34 @@ function Processes.step!(step::CNNContrastiveStep, context)
 end
 
 """Keep the configurable-init contrastive context reusable."""
-function Processes.cleanup(step::CNNContrastiveStep, context)
+function StatefulAlgorithms.cleanup(step::CNNContrastiveStep, context)
     return nothing
 end
 
 """Initialize the worker-local input-averaging wrapper."""
-function Processes.init(step::AveragedCNNContrastiveStep{S}, context) where {S}
-    base_context = Processes.init(step.base, context)
+function StatefulAlgorithms.init(step::AveragedCNNContrastiveStep{S}, context) where {S}
+    base_context = StatefulAlgorithms.init(step.base, context)
     repeats = get(context, :repeats, Ref(1))
     repeats_ref = repeats isa Base.RefValue ? repeats : Ref(Int(repeats))
     return (; base_context, repeats = repeats_ref)
 end
 
 """Run several random-start contrastive repeats inside one worker execution."""
-function Processes.step!(step::AveragedCNNContrastiveStep{S}, context) where {S}
+function StatefulAlgorithms.step!(step::AveragedCNNContrastiveStep{S}, context) where {S}
     @inbounds for _ in 1:context.repeats[]
-        Processes.step!(step.base, context.base_context)
+        StatefulAlgorithms.step!(step.base, context.base_context)
     end
     return nothing
 end
 
 """Keep the averaged worker context reusable."""
-function Processes.cleanup(step::AveragedCNNContrastiveStep{S}, context) where {S}
+function StatefulAlgorithms.cleanup(step::AveragedCNNContrastiveStep{S}, context) where {S}
     return nothing
 end
 
 """Return the mutable state subcontext of one manager-owned worker."""
 function worker_context(worker::W) where {W}
-    return Processes.context(worker)._state
+    return StatefulAlgorithms.context(worker)._state
 end
 
 """Create a worker graph with fresh state and shared static parameter arrays."""
@@ -484,9 +484,9 @@ end
 """Build one reusable Process worker for the local CNN-like contrastive step."""
 function averaged_worker(layer::L, graph::G, config::C) where {L<:LayeredIsingGraphLayer,G,C<:LocalCNNXORConfig}
     step = AveragedCNNContrastiveStep(CNNContrastiveStep(layer, config))
-    return Processes.Process(
+    return StatefulAlgorithms.Process(
         :_state => step,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             model = graph,
             x = zeros(eltype(graph), length(layer.input_layer)),
             y = zeros(eltype(graph), length(layer.output_layer)),
@@ -531,18 +531,18 @@ function scale_buffer!(buffer::B, scale::T) where {B,T<:Real}
 end
 
 """Clear the batch buffer and every worker-local contrastive buffer."""
-function clear_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function clear_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_buffer!(manager.state.batch_gradient)
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         clear_buffer!(worker_context(worker).base_context.buffers)
     end
     return manager
 end
 
 """Merge all worker-local buffers once after a minibatch drains."""
-function flush_cnn_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function flush_cnn_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_buffer!(manager.state.batch_gradient)
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         ctx = worker_context(worker).base_context
         add_buffer!(manager.state.batch_gradient, ctx.buffers)
         clear_buffer!(ctx.buffers)
@@ -568,15 +568,15 @@ function learning_rate_at(config::C, update_idx::Integer) where {C<:LocalCNNXORC
 end
 
 """Adjust the Optimisers.jl state in place while preserving Adam moments."""
-function adjust_learning_rate!(manager::M, config::C, update_idx::Integer) where {M<:Processes.ProcessManager,C<:LocalCNNXORConfig}
+function adjust_learning_rate!(manager::M, config::C, update_idx::Integer) where {M<:StatefulAlgorithms.ProcessManager,C<:LocalCNNXORConfig}
     η = learning_rate_at(config, update_idx)
     Optimisers.adjust!(manager.state.opt_state, η)
     return η
 end
 
 """Install updated shared parameters once after a manager batch."""
-function sync_worker_params!(manager::M, ps::P) where {M<:Processes.ProcessManager,P}
-    worker = first(Processes.workers(manager))
+function sync_worker_params!(manager::M, ps::P) where {M<:StatefulAlgorithms.ProcessManager,P}
+    worker = first(StatefulAlgorithms.workers(manager))
     IsingLearning.sync_params!(worker_context(worker).base_context.model, ps)
     return manager
 end
@@ -595,18 +595,18 @@ function cnn_xor_manager(layer::L, graph::G, ps::P, config::C) where {L<:Layered
             ctx.base_context.x .= job.x
             ctx.base_context.y .= job.y
             ctx.repeats[] = job.repeats
-            Processes.resetworker!(slot)
+            StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
         flush! = manager -> flush_cnn_buffers!(manager),
     )
-    return Processes.ProcessManager(
+    return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = Processes.FlushAtEnd(),
-        worker_init = Processes.MakeEachWorker(),
+        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = LocalCNNXORJob{Vector{FT},Vector{FT}},
     )
@@ -637,10 +637,10 @@ function cnn_xor_jobs(config::C, x::X, y::Y) where {C<:LocalCNNXORConfig,X<:Abst
 end
 
 """Run one full XOR minibatch and synchronize updated parameters."""
-function run_cnn_batch!(manager::M, jobs::J, config::C, update_idx::Integer) where {M<:Processes.ProcessManager,J,C<:LocalCNNXORConfig}
+function run_cnn_batch!(manager::M, jobs::J, config::C, update_idx::Integer) where {M<:StatefulAlgorithms.ProcessManager,J,C<:LocalCNNXORConfig}
     clear_manager_buffers!(manager)
     manager.state.total_repeats[] = sum(job.repeats for job in jobs)
-    Processes.run!(manager, jobs, Processes.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
     add_weight_decay!(manager.state.batch_gradient, manager.state.params[], config.weight_decay)
     gradient_norm = parameter_norm(manager.state.batch_gradient)
     old_params = manager.state.params[]
@@ -717,7 +717,7 @@ function evaluate_cnn_xor(layer::L, ps::P, st::S, x::X, y::Y, config::C) where {
     outputs = zeros(FT, size(y, 1), size(y, 2))
     graph = st.graph
     algorithm = layer.validation_algorithm
-    context = Processes.init(algorithm, (; model = graph))
+    context = StatefulAlgorithms.init(algorithm, (; model = graph))
     for _ in 1:config.eval_repeats
         for case_idx in axes(x, 2)
             outputs[:, case_idx] .+= cnn_forward_output!(

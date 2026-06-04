@@ -1,5 +1,5 @@
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 using Statistics
 
 # Run with:
@@ -34,13 +34,13 @@ function make_graph()
 end
 
 function run_steps!(g, algorithm; nsteps = NSTEPS)
-    context = Processes.init(algorithm, (; model = g))
+    context = StatefulAlgorithms.init(algorithm, (; model = g))
     accepted = 0
     attempted = 0
     block_sizes = Int[]
 
     for _ in 1:nsteps
-        out = Processes.step!(algorithm, context)
+        out = StatefulAlgorithms.step!(algorithm, context)
         context = merge(context, out)
 
         accepted += out.accepted

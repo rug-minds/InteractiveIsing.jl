@@ -20,7 +20,7 @@ function restart!(panel::StatusPanel, handle::PanelHandle)
     had_processes = !isempty(processes(g))
     was_paused = _graph_paused(g)
 
-    Processes.close(g)
+    StatefulAlgorithms.close(g)
     reset!(g)
 
     if had_processes

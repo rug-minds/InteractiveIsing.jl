@@ -8,11 +8,11 @@ using SparseArrays
 using Statistics
 using Dates
 using CairoMakie
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 
 const FT = Float64
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 
 const CASES = ((false, false), (false, true), (true, false), (true, true))
 
@@ -293,7 +293,7 @@ end
 Create one training worker using either the normal or split-snapshot composite.
 """
 function simple_worker_process(layer, graph, config::SimpleXorConfig; split::Bool)
-    algo = Processes.resolve(simple_forward_and_nudged(layer, config; split).algorithm)
+    algo = StatefulAlgorithms.resolve(simple_forward_and_nudged(layer, config; split).algorithm)
     buffers = IsingLearning.gradient_buffer(graph)
     return Process(
         algo,
@@ -316,7 +316,7 @@ end
 Create a free-relaxation worker used for repeated output statistics.
 """
 function simple_validation_process(layer, graph, config::SimpleXorConfig)
-    algo = Processes.resolve(simple_forward(layer, config; split = false).algorithm)
+    algo = StatefulAlgorithms.resolve(simple_forward(layer, config; split = false).algorithm)
     return Process(
         algo,
         Init(:_state;
@@ -361,8 +361,8 @@ Seed all Langevin branch RNGs visible in a worker context.
 function seed_worker!(worker, seed::Integer)
     Random.seed!(seed)
     for (offset, name) in enumerate((:dynamics,))
-        hasproperty(Processes.context(worker), name) || continue
-        context = getproperty(Processes.context(worker), name)
+        hasproperty(StatefulAlgorithms.context(worker), name) || continue
+        context = getproperty(StatefulAlgorithms.context(worker), name)
         hasproperty(context, :rng) && Random.seed!(context.rng, seed + 10_000 * offset)
     end
     return worker
@@ -376,11 +376,11 @@ collect it with `finish_training_worker!`; this lets a batch of workers run in
 parallel instead of starting and waiting for each trajectory serially.
 """
 function start_training_worker!(worker, x, y, clamping_beta; seed::Integer)
-    Processes.isdone(worker) && close(worker)
+    StatefulAlgorithms.isdone(worker) && close(worker)
     seed_worker!(worker, seed)
-    IsingLearning.zero_buffer!(Processes.context(worker)._state.buffers)
+    IsingLearning.zero_buffer!(StatefulAlgorithms.context(worker)._state.buffers)
     IsingLearning._write_example!(worker, x, y)
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     run(worker; clamping_beta)
     return worker
 end
@@ -394,15 +394,15 @@ epoch buffer, and record the plus/minus response norm.
 function finish_training_worker!(worker, batch_gradient, responses)
     wait(worker)
     close(worker)
-    free_state = Processes.context(worker)._state.equilibrium_state
-    plus_state = Processes.context(worker).plus_capture.captured
-    minus_state = Processes.context(worker).minus_capture.captured
+    free_state = StatefulAlgorithms.context(worker)._state.equilibrium_state
+    plus_state = StatefulAlgorithms.context(worker).plus_capture.captured
+    minus_state = StatefulAlgorithms.context(worker).minus_capture.captured
     response = (
         sqrt(sum(abs2, plus_state .- free_state) / FT(length(free_state))) +
         sqrt(sum(abs2, minus_state .- free_state) / FT(length(free_state)))
     ) / 2
     push!(responses, response)
-    IsingLearning.add_buffer!(batch_gradient, Processes.context(worker)._state.buffers)
+    IsingLearning.add_buffer!(batch_gradient, StatefulAlgorithms.context(worker)._state.buffers)
     return worker
 end
 
@@ -451,10 +451,10 @@ Run one validation free relaxation and return the scalar output.
 """
 function validation_output!(trainer, x; seed::Integer)
     worker = trainer.validation_worker
-    Processes.isdone(worker) && close(worker)
+    StatefulAlgorithms.isdone(worker) && close(worker)
     seed_worker!(worker, seed)
     IsingLearning._write_input!(worker, x)
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     run(worker)
     wait(worker)
     close(worker)

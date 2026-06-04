@@ -30,7 +30,7 @@ function append_runtime_compare_row!(row::R) where {R<:NamedTuple}
     return path
 end
 
-"""Run the hot full-learning comparison for bespoke direct code and serial Processes code."""
+"""Run the hot full-learning comparison for bespoke direct code and serial StatefulAlgorithms code."""
 function main()
     mkpath(RUN_DIR)
     batchsize = parse(Int, get(ENV, "ISING_RUNTIME_COMPARE_BATCHSIZE", "1"))
@@ -53,13 +53,13 @@ function main()
 
         logline("repeat=$repeat_idx build serial process setup")
         process_setup = build_layer(config)
-        logline("repeat=$repeat_idx time serial Processes full learning minibatch")
+        logline("repeat=$repeat_idx time serial StatefulAlgorithms full learning minibatch")
         serial_process = time_serial_process_learning_minibatch!(process_setup, xtrain, ytrain, config)
         logline("repeat=$repeat_idx process wall=$(serial_process.wall) seconds_per_example=$(serial_process.seconds_per_example)")
 
         row = (;
             timestamp = Dates.format(now(), "yyyy-mm-ddTHH:MM:SS"),
-            processes_head = readchomp(`git -C $(joinpath(REPO_ROOT, "deps", "Processes")) rev-parse --short HEAD`),
+            processes_head = readchomp(`git -C $(joinpath(REPO_ROOT, "deps", "StatefulAlgorithms")) rev-parse --short HEAD`),
             threads = Threads.nthreads(),
             batchsize = config.batchsize,
             sweeps = config.sweeps,

@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Optimisers
 using Random
 using SparseArrays
@@ -77,11 +77,11 @@ function MNISTTimeAveragedStep(
 end
 
 """
-    Processes.init(step::MNISTTimeAveragedStep, context)
+    StatefulAlgorithms.init(step::MNISTTimeAveragedStep, context)
 
 Allocate persistent worker state for the time-averaged MNIST worker.
 """
-function Processes.init(step::MNISTTimeAveragedStep, context)
+function StatefulAlgorithms.init(step::MNISTTimeAveragedStep, context)
     model = context.model
     T = eltype(model)
     nstate = length(state(model))
@@ -92,8 +92,8 @@ function Processes.init(step::MNISTTimeAveragedStep, context)
     equilibrium_state = get(context, :equilibrium_state, copy(state(model)))
     plus_samples = get(context, :plus_samples, zeros(T, nstate, step.nudged_samples))
     minus_samples = get(context, :minus_samples, zeros(T, nstate, step.nudged_samples))
-    free_context = Processes.init(step.dynamics_algorithm, (; model))
-    nudged_context = Processes.init(step.nudged_dynamics_algorithm, (; model))
+    free_context = StatefulAlgorithms.init(step.dynamics_algorithm, (; model))
+    nudged_context = StatefulAlgorithms.init(step.nudged_dynamics_algorithm, (; model))
     return (; model, x, y, buffers, local_buffers, equilibrium_state, plus_samples, minus_samples, free_context, nudged_context)
 end
 
@@ -104,7 +104,7 @@ Run a fixed number of single-spin process steps.
 """
 function relax_steps!(algorithm::A, context::C, nsteps::Integer) where {A,C}
     for _ in 1:nsteps
-        Processes.step!(algorithm, context)
+        StatefulAlgorithms.step!(algorithm, context)
     end
     return context
 end
@@ -142,12 +142,12 @@ function add_scaled_buffer!(dest, src, scale)
 end
 
 """
-    Processes.step!(step::MNISTTimeAveragedStep, context)
+    StatefulAlgorithms.step!(step::MNISTTimeAveragedStep, context)
 
 Accumulate one sample's time-averaged symmetric EP gradient into the persistent
 worker buffer.
 """
-function Processes.step!(step::MNISTTimeAveragedStep, context)
+function StatefulAlgorithms.step!(step::MNISTTimeAveragedStep, context)
     model = context.model
     β = step.β
 
@@ -175,7 +175,7 @@ function Processes.step!(step::MNISTTimeAveragedStep, context)
     return nothing
 end
 
-function Processes.cleanup(::MNISTTimeAveragedStep, context)
+function StatefulAlgorithms.cleanup(::MNISTTimeAveragedStep, context)
     return nothing
 end
 
@@ -252,7 +252,7 @@ function worker_process(layer, graph, nudged_burnin_steps, nudged_sample_interva
     )
 end
 
-worker_state(worker) = Processes.context(worker)._state
+worker_state(worker) = StatefulAlgorithms.context(worker)._state
 
 function write_example!(worker, x, y)
     st = worker_state(worker)
@@ -354,7 +354,7 @@ function evaluate!(trainer, x, y)
     ncorrect = 0
     total_squared_error = zero(eltype(x))
     dynamics = deepcopy(trainer.layer.validation_algorithm)
-    context = Processes.init(dynamics, (; model = trainer.validation_graph))
+    context = StatefulAlgorithms.init(dynamics, (; model = trainer.validation_graph))
     for sample_idx in axes(x, 2)
         resetstate!(trainer.validation_graph)
         IsingLearning.apply_input(trainer.validation_graph, view(x, :, sample_idx))
@@ -410,7 +410,7 @@ function build_trainer(config_id, free_sweeps, nudged_burnin_sweeps, nudged_inte
     params = IsingLearning.read_graph_params(graph)
     opt_state = Optimisers.setup(Optimisers.Adam(lr), params)
     manager = training_manager(layer, graph, params, WORKERS, burnin_steps, interval_steps, nudged_samples)
-    workers = collect(Processes.workers(manager))
+    workers = collect(StatefulAlgorithms.workers(manager))
     worker_graphs = [worker_state(worker).model for worker in workers]
     validation_graph = worker_graph(graph, params)
     trainer = LocalMNISTTrainer(layer, graph, params, opt_state, worker_graphs, workers, validation_graph, Optimisers.Adam(lr), manager)

@@ -16,7 +16,7 @@ export gatherSusceptibility
 
 struct Susceptibility end
 
-function Processes.init(::Susceptibility, args)
+function StatefulAlgorithms.init(::Susceptibility, args)
     magnetizations = []
     processsizehint!(args, magnetizations)
     return (;magnetizations)

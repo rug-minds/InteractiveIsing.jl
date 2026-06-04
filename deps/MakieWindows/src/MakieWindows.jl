@@ -1,10 +1,10 @@
 module MakieWindows
-    include("../../Processes/src/Processes.jl")
+    include("../../StatefulAlgorithms/src/StatefulAlgorithms.jl")
 
     const windows = Dict{UUID,AbstractWindow}()
 
     using GLMakie
-    using .Processes
+    using .StatefulAlgorithms
 
     include("Windows.jl")
 end # module MakieWindows

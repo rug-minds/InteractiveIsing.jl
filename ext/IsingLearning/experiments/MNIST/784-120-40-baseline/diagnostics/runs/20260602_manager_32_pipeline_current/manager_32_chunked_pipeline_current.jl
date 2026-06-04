@@ -48,7 +48,7 @@ function time_manager32_minibatch!(
     indices::V,
     config::C,
 ) where {
-    M<:Processes.ProcessManager,
+    M<:StatefulAlgorithms.ProcessManager,
     B<:InputFieldMNISTChunkBuffer,
     X<:AbstractMatrix,
     Y<:AbstractMatrix,
