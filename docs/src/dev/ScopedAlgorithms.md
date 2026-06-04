@@ -1,6 +1,6 @@
 # IdentifiableAlgos (Developer Notes)
 
-Scoped algorithms are the backend identity and naming layer used by the Processes system.
+Scoped algorithms are the backend identity and naming layer used by the StatefulAlgorithms system.
 They provide a stable, registry-friendly wrapper around algorithm instances while keeping
 matching and scoping explicit.
 
@@ -11,7 +11,7 @@ matching and scoping explicit.
 - `Name`: a symbol used as the stable key in registries and contexts.
 - `Id`: optional identity used to distinguish otherwise identical algorithms.
 
-See `deps/Processes/src/Scoped/IdentifiableAlgos.jl`.
+See `deps/StatefulAlgorithms/src/Scoped/IdentifiableAlgos.jl`.
 
 ## Construction and naming
 
@@ -49,7 +49,7 @@ identity for matching and registry lookups.
 
 ## API surface (backend)
 
-Key functions used throughout Processes:
+Key functions used throughout StatefulAlgorithms:
 
 - `getkey(sa::IdentifiableAlgo)` / `getkey(::Type{<:IdentifiableAlgo})`
 - `getalgo(sa::IdentifiableAlgo)` / `getalgo(sa::IdentifiableAlgo)`

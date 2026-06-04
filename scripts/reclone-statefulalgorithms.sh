@@ -20,15 +20,15 @@ NO_BACKUP=0
 
 usage() {
   cat <<EOF
-Usage: scripts/reclone-processes.sh [--yes] [--no-backup] [--url <remote>] [--branch <branch>]
+Usage: scripts/reclone-statefulalgorithms.sh [--yes] [--no-backup] [--url <remote>] [--branch <branch>]
 
 Environment:
   STATEFULALGORITHMS_REMOTE_URL   default: $REMOTE_URL_DEFAULT
   STATEFULALGORITHMS_BRANCH       default: main
 
 Examples:
-  bash scripts/reclone-processes.sh
-  STATEFULALGORITHMS_REMOTE_URL=git@github.com:f-ij/StatefulAlgorithms.jl.git bash scripts/reclone-processes.sh --yes
+  bash scripts/reclone-statefulalgorithms.sh
+  STATEFULALGORITHMS_REMOTE_URL=git@github.com:f-ij/StatefulAlgorithms.jl.git bash scripts/reclone-statefulalgorithms.sh --yes
 EOF
 }
 
@@ -46,7 +46,7 @@ done
 cd "$ROOT"
 
 if [[ "$YES" -ne 1 ]]; then
-  echo "This will DELETE '$PREFIX' and re-clone Processes.jl into it."
+  echo "This will DELETE '$PREFIX' and re-clone StatefulAlgorithms.jl into it."
   read -r -p "Continue? [y/N] " ans
   case "${ans:-}" in
     y|Y|yes|YES) ;;
@@ -57,7 +57,7 @@ fi
 if [[ -d "$PREFIX" ]]; then
   if [[ "$NO_BACKUP" -ne 1 ]]; then
     ts="$(date +%Y%m%d-%H%M%S)"
-    backup="/tmp/Processes-backup-$ts"
+    backup="/tmp/StatefulAlgorithms-backup-$ts"
     echo "Backing up existing '$PREFIX' to '$backup' ..."
     cp -a "$PREFIX" "$backup"
   fi

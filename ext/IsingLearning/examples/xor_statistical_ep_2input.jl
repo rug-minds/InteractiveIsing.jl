@@ -7,11 +7,11 @@ using Random
 using LinearAlgebra
 using Dates
 using CairoMakie
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 
 const FT = Float64
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 
 const EPOCHS = parse(Int, get(ENV, "ISING_XOR_2IN_EPOCHS", "5000"))
 const LOG_EVERY = parse(Int, get(ENV, "ISING_XOR_2IN_LOG_EVERY", "100"))
@@ -222,7 +222,7 @@ function XorForwardAndNudged(layer)
 end
 
 function xor_worker_process(layer, worker_graph)
-    algo = Processes.resolve(XorForwardAndNudged(layer).algorithm)
+    algo = StatefulAlgorithms.resolve(XorForwardAndNudged(layer).algorithm)
     buffers = IsingLearning.gradient_buffer(worker_graph)
     return Process(
         algo,
@@ -240,7 +240,7 @@ function xor_worker_process(layer, worker_graph)
 end
 
 function xor_validation_process(layer, worker_graph)
-    algo = Processes.resolve(XorForwardDynamics(layer; dynamics_algorithm = layer.validation_algorithm).algorithm)
+    algo = StatefulAlgorithms.resolve(XorForwardDynamics(layer; dynamics_algorithm = layer.validation_algorithm).algorithm)
     return Process(
         algo,
         Init(:_state;
@@ -281,10 +281,10 @@ end
 
 function seed_worker!(worker, seed::Integer)
     Random.seed!(seed)
-    hasproperty(Processes.context(worker).dynamics, :rng) && Random.seed!(Processes.context(worker).dynamics.rng, seed)
-    hasproperty(Processes.context(worker), :nudged_dynamics) &&
-        hasproperty(Processes.context(worker).nudged_dynamics, :rng) &&
-        Random.seed!(Processes.context(worker).nudged_dynamics.rng, seed + 1)
+    hasproperty(StatefulAlgorithms.context(worker).dynamics, :rng) && Random.seed!(StatefulAlgorithms.context(worker).dynamics.rng, seed)
+    hasproperty(StatefulAlgorithms.context(worker), :nudged_dynamics) &&
+        hasproperty(StatefulAlgorithms.context(worker).nudged_dynamics, :rng) &&
+        Random.seed!(StatefulAlgorithms.context(worker).nudged_dynamics.rng, seed + 1)
     return worker
 end
 
@@ -292,9 +292,9 @@ function initialise_worker_state!(worker)
     if INIT_MODE === :random
         return worker
     elseif INIT_MODE === :zero
-        fill!(II.state(Processes.context(worker).dynamics.model), zero(FT))
-        hasproperty(Processes.context(worker), :nudged_dynamics) &&
-            fill!(II.state(Processes.context(worker).nudged_dynamics.model), zero(FT))
+        fill!(II.state(StatefulAlgorithms.context(worker).dynamics.model), zero(FT))
+        hasproperty(StatefulAlgorithms.context(worker), :nudged_dynamics) &&
+            fill!(II.state(StatefulAlgorithms.context(worker).nudged_dynamics.model), zero(FT))
         return worker
     else
         throw(ArgumentError("ISING_XOR_2IN_INIT_MODE must be random or zero, got $(INIT_MODE)"))
@@ -302,18 +302,18 @@ function initialise_worker_state!(worker)
 end
 
 function run_training_trajectory!(worker, x, y; seed::Integer)
-    Processes.isdone(worker) && close(worker)
+    StatefulAlgorithms.isdone(worker) && close(worker)
     seed_worker!(worker, seed)
     initialise_worker_state!(worker)
     IsingLearning._write_example!(worker, x, y)
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     run(worker)
     wait(worker)
     close(worker)
 
-    free_state = Processes.context(worker)._state.equilibrium_state
-    plus_state = Processes.context(worker).plus_capture.captured
-    minus_state = Processes.context(worker).minus_capture.captured
+    free_state = StatefulAlgorithms.context(worker)._state.equilibrium_state
+    plus_state = StatefulAlgorithms.context(worker).plus_capture.captured
+    minus_state = StatefulAlgorithms.context(worker).minus_capture.captured
     response = (
         sqrt(sum(abs2, plus_state .- free_state) / FT(length(free_state))) +
         sqrt(sum(abs2, minus_state .- free_state) / FT(length(free_state)))
@@ -348,11 +348,11 @@ end
 
 function collect_target_free_gradient!(dest, worker, trajectories::Integer)
     IsingLearning.zero_buffer!(dest)
-    worker_buffer = Processes.context(worker)._state.buffers
+    worker_buffer = StatefulAlgorithms.context(worker)._state.buffers
     IsingLearning.zero_buffer!(worker_buffer)
-    free_state = Processes.context(worker)._state.equilibrium_state
-    target_state = Processes.context(worker).plus_capture.captured
-    accumulate_target_free_gradient!(worker_buffer, Processes.context(worker).dynamics.model, target_state, free_state)
+    free_state = StatefulAlgorithms.context(worker)._state.equilibrium_state
+    target_state = StatefulAlgorithms.context(worker).plus_capture.captured
+    accumulate_target_free_gradient!(worker_buffer, StatefulAlgorithms.context(worker).dynamics.model, target_state, free_state)
     IsingLearning.add_buffer!(dest, worker_buffer)
     IsingLearning.scale_buffer!(dest, inv(FT(trajectories)))
     return dest
@@ -380,13 +380,13 @@ function train_epoch!(trainer, x, y, batch_gradient, epoch::Integer)
             )
             ntraj += 1
             if TRAINING_RULE === :target_free
-                worker_buffer = Processes.context(worker)._state.buffers
+                worker_buffer = StatefulAlgorithms.context(worker)._state.buffers
                 IsingLearning.zero_buffer!(worker_buffer)
                 accumulate_target_free_gradient!(
                     worker_buffer,
-                    Processes.context(worker).dynamics.model,
-                    Processes.context(worker).plus_capture.captured,
-                    Processes.context(worker)._state.equilibrium_state,
+                    StatefulAlgorithms.context(worker).dynamics.model,
+                    StatefulAlgorithms.context(worker).plus_capture.captured,
+                    StatefulAlgorithms.context(worker)._state.equilibrium_state,
                 )
                 IsingLearning.add_buffer!(batch_gradient, worker_buffer)
             end
@@ -412,11 +412,11 @@ end
 
 function run_validation_output!(trainer, x; seed::Integer)
     worker = trainer.validation_worker
-    Processes.isdone(worker) && close(worker)
+    StatefulAlgorithms.isdone(worker) && close(worker)
     seed_worker!(worker, seed)
     initialise_worker_state!(worker)
     IsingLearning._write_input!(worker, x)
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     run(worker)
     wait(worker)
     close(worker)

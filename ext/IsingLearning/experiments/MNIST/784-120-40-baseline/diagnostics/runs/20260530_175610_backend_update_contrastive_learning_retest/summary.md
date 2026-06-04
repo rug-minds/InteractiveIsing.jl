@@ -4,8 +4,8 @@ This folder reruns the same warmed 5-repeat **full contrastive learning**
 benchmark as `20260530_145920_backend_update_local_langevin_retest`, but
 against the newer backend package state visible in the workspace history:
 
-- `c55be32e Pull deps/Processes subtree`
-- `60feb1c9 Squashed 'deps/Processes/' changes from da5f10e81..fb7bb3f2b`
+- `c55be32e Pull deps/StatefulAlgorithms subtree`
+- `60feb1c9 Squashed 'deps/StatefulAlgorithms/' changes from da5f10e81..fb7bb3f2b`
 
 ## Mean Result Over 5 Repeats
 

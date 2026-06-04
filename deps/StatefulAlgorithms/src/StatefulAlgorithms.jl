@@ -29,7 +29,7 @@ module StatefulAlgorithms
     # include("Arena.jl")
 
 
-    include("AbstractProcesses.jl")
+    include("AbstractProcess.jl")
     include("Lifetime.jl")
     include("ProcessEntities/ProcessEntities.jl")
 

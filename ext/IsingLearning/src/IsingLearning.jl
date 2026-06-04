@@ -12,10 +12,10 @@ import LuxCore: initialparameters, initialstates
 
 # include local interactivesising
 include(joinpath(@__DIR__, "..", "..","..", "src", "InteractiveIsing.jl"))
-import .InteractiveIsing.Processes: init, step!
+import .InteractiveIsing.StatefulAlgorithms: init, step!
 using .InteractiveIsing
 using .InteractiveIsing: state, adj, setparam!, getparam, setSpins!, nStates
-using .InteractiveIsing.Processes
+using .InteractiveIsing.StatefulAlgorithms
 
 include("Utils.jl")
 include("Tools/LearningProcessTools.jl")

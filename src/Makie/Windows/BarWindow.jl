@@ -44,7 +44,7 @@ function BarWindow(func; fps = 30, lifetime, kwargs...)
     pushtimer!(w, PTimer(timerfunc, 0., interval = 1/fps))
     
     reset() = begin
-        Processes.syncclose(process)
+        StatefulAlgorithms.syncclose(process)
         for line in w[:lines]
             delete!(w[:ax], line)
         end
@@ -60,7 +60,7 @@ function BarWindow(func; fps = 30, lifetime, kwargs...)
     end
 
     function newlines!()
-        Processes.syncclose(process)
+        StatefulAlgorithms.syncclose(process)
         close.(w.timers)
         createtask!(process)
         (;x,y) = getcontext(process)

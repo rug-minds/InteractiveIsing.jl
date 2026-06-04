@@ -7,7 +7,7 @@ using SparseArrays
 using Statistics
 
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 const FT = Float32
 
 const DEFAULT_STEPS = 100_000
@@ -98,16 +98,16 @@ function custom_metropolis_loop!(
     return accepted
 end
 
-"""Build a `Processes` routine that runs the library `Metropolis` stepper."""
+"""Build a `StatefulAlgorithms` routine that runs the library `Metropolis` stepper."""
 function metropolis_process(graph::G, nsteps::I) where {G,I<:Integer}
     dynamics = II.Metropolis()
-    algorithm = Processes.resolve(Processes.@Routine begin
+    algorithm = StatefulAlgorithms.resolve(StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics
         @repeat nsteps dynamics()
     end)
-    return Processes.Process(
+    return StatefulAlgorithms.Process(
         algorithm,
-        Processes.Init(:dynamics; model = graph);
+        StatefulAlgorithms.Init(:dynamics; model = graph);
         repeat = 1,
     )
 end

@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Random
 using SparseArrays
 using Statistics
@@ -191,7 +191,7 @@ function build_contexts(layer::L, ncontexts::I) where {L<:LayeredIsingGraphLayer
     for idx in 1:Int(ncontexts)
         graph = deepcopy(layer.model_graph)
         temp!(graph, TEMP)
-        contexts[idx] = Processes.init(step, (; model = graph))
+        contexts[idx] = StatefulAlgorithms.init(step, (; model = graph))
     end
     return step, contexts
 end

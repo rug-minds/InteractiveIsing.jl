@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Optimisers
 using Random
 using Statistics
@@ -88,7 +88,7 @@ latencies around `run`/`wait`/`fetch` and the process' internal runtime clock.
 function time_direct_worker!(worker::W, job::J) where {W<:Process,J}
     prepare_seconds = @elapsed begin
         IsingLearning._write_example!(worker, job.x, job.y)
-        Processes.reset!(worker)
+        StatefulAlgorithms.reset!(worker)
     end
     fetched = Ref{Any}(nothing)
     run_call_seconds = 0.0
@@ -100,7 +100,7 @@ function time_direct_worker!(worker::W, job::J) where {W<:Process,J}
             fetched[] = fetch(worker)
         end
     end
-    internal_seconds = Processes.runtime(worker)
+    internal_seconds = StatefulAlgorithms.runtime(worker)
     close_seconds = @elapsed close(worker)
     return (; prepare_seconds, run_call_seconds, wait_fetch_seconds, run_wait_fetch_seconds, internal_seconds, close_seconds)
 end
@@ -148,7 +148,7 @@ function time_one_hidden(hidden::Integer)
         manager_worker = IsingLearning._worker_process(setup.layer, manager_graph)
         manager = build_one_worker_manager(manager_worker)
         manager_run_seconds = @elapsed run!(manager, (setup.job,))
-        manager_internal_seconds = Processes.runtime(manager_worker)
+        manager_internal_seconds = StatefulAlgorithms.runtime(manager_worker)
         close(manager)
 
         is_warmup = trial <= WARMUP

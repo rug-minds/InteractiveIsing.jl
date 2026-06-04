@@ -5,7 +5,7 @@ include(joinpath(@__DIR__, "..", "simple_langevin_xor", "simple_2_4_1_langevin.j
 
 using Logging
 
-import IsingLearning.InteractiveIsing.Processes: Process, TaskData, Init, Override, NamedInput, NamedOverride,
+import IsingLearning.InteractiveIsing.StatefulAlgorithms: Process, TaskData, Init, Override, NamedInput, NamedOverride,
     ProcessContext, normalize_process_algo, getregistry, resolve, get_target_name,
     getinputs, getoverrides, getlifetime, getalgo, taskdata, initcontext,
     processlist, remove_process!, RuntimeListeners, context, task, deletekeys
@@ -123,21 +123,21 @@ function init_timeavg_trainer(config::TimeAverageXorConfig)
         FT[],
         nothing,
     )
-    trainer.train_manager = Processes.ProcessManager(
+    trainer.train_manager = StatefulAlgorithms.ProcessManager(
         train_manager_recipe(layer, graph);
         nworkers = config.workers,
         config,
         state = trainer,
-        flush_policy = Processes.FlushAtEnd(),
+        flush_policy = StatefulAlgorithms.FlushAtEnd(),
         poll_interval = 0.0,
         job_type = TrainJob,
     )
-    trainer.eval_manager = Processes.ProcessManager(
+    trainer.eval_manager = StatefulAlgorithms.ProcessManager(
         eval_manager_recipe(layer, graph);
         nworkers = config.workers,
         config,
         state = trainer,
-        flush_policy = Processes.NoFlush(),
+        flush_policy = StatefulAlgorithms.NoFlush(),
         poll_interval = 0.0,
         job_type = EvalJob,
     )
@@ -148,18 +148,18 @@ end
     ReusableOutputAverager
 
 Context-owned output averager for reusable validation workers. The algorithm
-state is reset with `Processes.initcontext(context, :output_averager)`.
+state is reset with `StatefulAlgorithms.initcontext(context, :output_averager)`.
 """
-struct ReusableOutputAverager <: Processes.ProcessAlgorithm
+struct ReusableOutputAverager <: StatefulAlgorithms.ProcessAlgorithm
     output_idx::Int
     burnin_sweeps::Int
     average_sweeps::Int
 end
 
-Processes.init(::ReusableOutputAverager, context) =
+StatefulAlgorithms.init(::ReusableOutputAverager, context) =
     (; sum = zero(FT), sumsq = zero(FT), count = 0, seen_sweeps = 0)
 
-function Processes.step!(averager::ReusableOutputAverager, context)
+function StatefulAlgorithms.step!(averager::ReusableOutputAverager, context)
     seen = context.seen_sweeps + 1
     sum = context.sum
     sumsq = context.sumsq
@@ -192,12 +192,12 @@ averaging in the mathematically consistent sense: the output readout is averaged
 and the hidden/input coordinates needed for `J` and `b` gradients are averaged
 over the same time window.
 """
-struct StateAverager{Tag} <: Processes.ProcessAlgorithm end
+struct StateAverager{Tag} <: StatefulAlgorithms.ProcessAlgorithm end
 
-Processes.init(::StateAverager, context) =
+StatefulAlgorithms.init(::StateAverager, context) =
     (; sum = zeros(FT, length(II.state(context.model))), count = 0)
 
-function Processes.step!(::StateAverager, context)
+function StatefulAlgorithms.step!(::StateAverager, context)
     sum = context.sum
     sum .+= II.state(context.model)
     return (; sum, count = context.count + 1)
@@ -270,14 +270,14 @@ function timeavg_nudged_branch(graph, config::TimeAverageXorConfig, sc::SimpleXo
     average_count = max(1, config.train_average_sweeps)
     beta_value = beta_sign > 0 ? sc.β : -sc.β
     sample = if beta_sign > 0
-        Processes.@Routine begin
+        StatefulAlgorithms.@Routine begin
             @alias dynamics = dynamics_algorithm
             @repeat sample_interval dynamics()
             @alias plus_state_averager = state_averager
             plus_state_averager(model = dynamics.model)
         end
     else
-        Processes.@Routine begin
+        StatefulAlgorithms.@Routine begin
             @alias dynamics = dynamics_algorithm
             @repeat sample_interval dynamics()
             @alias minus_state_averager = state_averager
@@ -285,7 +285,7 @@ function timeavg_nudged_branch(graph, config::TimeAverageXorConfig, sc::SimpleXo
         end
     end
     branch = if beta_sign > 0
-        Processes.@Routine begin
+        StatefulAlgorithms.@Routine begin
             @state x
             @state y
             @state equilibrium_state
@@ -299,7 +299,7 @@ function timeavg_nudged_branch(graph, config::TimeAverageXorConfig, sc::SimpleXo
             @repeat average_count sample()
         end
     else
-        Processes.@Routine begin
+        StatefulAlgorithms.@Routine begin
             @state x
             @state y
             @state equilibrium_state
@@ -322,7 +322,7 @@ function timeavg_training_worker_process(layer, graph, sc::SimpleXorConfig, conf
     plus = timeavg_nudged_branch(graph, config, sc, +1)
     minus = timeavg_nudged_branch(graph, config, sc, -1)
     beta = layer.β
-    final = Processes.@CompositeAlgorithm begin
+    final = StatefulAlgorithms.@CompositeAlgorithm begin
         @input clamping_beta = beta
         @state buffers
         @alias plus_branch = plus.algorithm
@@ -334,7 +334,7 @@ function timeavg_training_worker_process(layer, graph, sc::SimpleXorConfig, conf
         @context c3 = minus_branch()
         IsingLearning.set_clamping_beta!(c1.dynamics.model, zero(beta))
     end
-    algo = Processes.resolve(final)
+    algo = StatefulAlgorithms.resolve(final)
     buffers = IsingLearning.gradient_buffer(graph)
     return Process(
         algo,
@@ -372,7 +372,7 @@ end
 
 """Resolve process inputs against `template` and build a fresh worker-local context."""
 function worker_context_from_inputs(template::Process, inputs)
-    return Processes.context(Processes.init(Processes.getalgo(template), inputs...))
+    return StatefulAlgorithms.context(StatefulAlgorithms.init(StatefulAlgorithms.getalgo(template), inputs...))
 end
 
 """Build a copied training context with worker-local graph inputs."""
@@ -391,17 +391,17 @@ function template_eval_worker(layer, prototype_graph, config::TimeAverageXorConf
     sweep_steps = length(II.sampling_indices(graph.index_set))
     sample_interval = config.eval_sample_every_sweeps * sweep_steps
     total_sweeps = config.eval_burnin_sweeps + config.eval_average_sweeps * config.eval_sample_every_sweeps
-    routine = Processes.@CompositeAlgorithm begin
+    routine = StatefulAlgorithms.@CompositeAlgorithm begin
         @alias dynamics = dynamics
         @every 1 dynamics()
         @alias output_averager = output_averager
         @every sample_interval output_averager(model = dynamics.model)
     end
-    wrapped = Processes.@Routine begin
+    wrapped = StatefulAlgorithms.@Routine begin
         @repeat (total_sweeps * sweep_steps) routine()
     end
     return Process(
-        Processes.resolve(wrapped),
+        StatefulAlgorithms.resolve(wrapped),
         dynamics_input(:dynamics, graph, config.base_seed + 70_000 + worker_idx);
         repeats = 1,
     )
@@ -427,14 +427,14 @@ end
 
 """Synchronize all graph models in a reusable worker context to current params."""
 function sync_worker_params!(worker::Process, params)
-    IsingLearning.sync_graph_params!(Processes.context(worker).dynamics.model, params)
+    IsingLearning.sync_graph_params!(StatefulAlgorithms.context(worker).dynamics.model, params)
     return worker
 end
 
 """Synchronize every worker graph owned by a manager."""
 function sync_manager_workers!(manager, params)
-    for worker in Processes.workers(manager)
-        Processes.isdone(worker) && close(worker)
+    for worker in StatefulAlgorithms.workers(manager)
+        StatefulAlgorithms.isdone(worker) && close(worker)
         sync_worker_params!(worker, params)
     end
     return manager
@@ -442,34 +442,34 @@ end
 
 """Reset worker-local gradient buffers once before a managed training batch."""
 function reset_manager_buffers!(manager)
-    for worker in Processes.workers(manager)
-        IsingLearning.zero_buffer!(Processes.context(worker)._state.buffers)
+    for worker in StatefulAlgorithms.workers(manager)
+        IsingLearning.zero_buffer!(StatefulAlgorithms.context(worker)._state.buffers)
     end
     return manager
 end
 
 """Prepare one reusable training worker for a new EqProp trajectory."""
 function prepare_train_worker!(worker::Process, trainer::ManagedTimeAvgTrainer, config::TimeAverageXorConfig, job::TrainJob)
-    Processes.isdone(worker) && close(worker)
+    StatefulAlgorithms.isdone(worker) && close(worker)
     seed_worker!(worker, job.seed)
     IsingLearning._write_example!(worker, job.x, job.y)
-    Processes.context(worker, Processes.initcontext(Processes.context(worker), :plus_state_averager))
-    Processes.context(worker, Processes.initcontext(Processes.context(worker), :minus_state_averager))
-    Processes.reset!(worker)
+    StatefulAlgorithms.context(worker, StatefulAlgorithms.initcontext(StatefulAlgorithms.context(worker), :plus_state_averager))
+    StatefulAlgorithms.context(worker, StatefulAlgorithms.initcontext(StatefulAlgorithms.context(worker), :minus_state_averager))
+    StatefulAlgorithms.reset!(worker)
     return worker
 end
 
 """Prepare one reusable validation worker for a new time-averaged readout."""
 function prepare_eval_worker!(worker::Process, trainer::ManagedTimeAvgTrainer, config::TimeAverageXorConfig, job::EvalJob)
-    Processes.isdone(worker) && close(worker)
-    graph = Processes.context(worker).dynamics.model
+    StatefulAlgorithms.isdone(worker) && close(worker)
+    graph = StatefulAlgorithms.context(worker).dynamics.model
     II.temp!(graph, config.eval_temp)
     Random.seed!(job.seed)
     simple_initstate!(graph, simple_config(config))
     IsingLearning.apply_input(graph, job.x)
-    hasproperty(Processes.context(worker).dynamics, :rng) && Random.seed!(Processes.context(worker).dynamics.rng, job.seed + 1)
-    Processes.context(worker, Processes.initcontext(Processes.context(worker), :output_averager))
-    Processes.reset!(worker)
+    hasproperty(StatefulAlgorithms.context(worker).dynamics, :rng) && Random.seed!(StatefulAlgorithms.context(worker).dynamics.rng, job.seed + 1)
+    StatefulAlgorithms.context(worker, StatefulAlgorithms.initcontext(StatefulAlgorithms.context(worker), :output_averager))
+    StatefulAlgorithms.reset!(worker)
     return worker
 end
 
@@ -509,8 +509,8 @@ end
 """Flush all worker-local gradient buffers into the epoch batch gradient once."""
 function flush_train_buffers!(manager)
     batch_gradient = manager.state.current_batch_gradient
-    for worker in Processes.workers(manager)
-        IsingLearning.add_buffer!(batch_gradient, Processes.context(worker)._state.buffers)
+    for worker in StatefulAlgorithms.workers(manager)
+        IsingLearning.add_buffer!(batch_gradient, StatefulAlgorithms.context(worker)._state.buffers)
     end
     reset_manager_buffers!(manager)
     return batch_gradient
@@ -522,11 +522,11 @@ function train_manager_recipe(layer, prototype_graph)
         makeworker = (idx, manager) -> template_train_worker(layer, prototype_graph, manager.config, idx),
         makecontext = (idx, manager, template) -> train_worker_context(template, prototype_graph, manager.config),
         prepare! = (slot, job, manager) -> prepare_train_worker!(slot.worker, manager.state, manager.config, job),
-        isdone = (slot, manager) -> Processes.isdone(slot.worker),
+        isdone = (slot, manager) -> StatefulAlgorithms.isdone(slot.worker),
         runarguments = (slot, job, manager) -> (; clamping_beta = manager.config.β),
         consume! = (slot, job, manager) -> collect_train_response!(
             manager.state.current_responses,
-            (; context = Processes.context(slot.worker), error = nothing),
+            (; context = StatefulAlgorithms.context(slot.worker), error = nothing),
             layer.β,
         ),
         flush! = flush_train_buffers!,
@@ -539,9 +539,9 @@ function eval_manager_recipe(layer, prototype_graph)
         makeworker = (idx, manager) -> template_eval_worker(layer, prototype_graph, manager.config, idx),
         makecontext = (idx, manager, template) -> eval_worker_context(template, prototype_graph, manager.config, idx),
         prepare! = (slot, job, manager) -> prepare_eval_worker!(slot.worker, manager.state, manager.config, job),
-        isdone = (slot, manager) -> Processes.isdone(slot.worker),
+        isdone = (slot, manager) -> StatefulAlgorithms.isdone(slot.worker),
         consume! = (slot, job, manager) -> begin
-            ctx = Processes.context(slot.worker).output_averager
+            ctx = StatefulAlgorithms.context(slot.worker).output_averager
             push!(manager.state.current_sample_outputs[job.sample_idx], (;
                 mean = reusable_average_mean(ctx),
                 std = reusable_average_std(ctx),
@@ -557,7 +557,7 @@ function train_epoch_managed!(trainer::ManagedTimeAvgTrainer, x, y, batch_gradie
     trainer.current_batch_gradient = batch_gradient
     empty!(trainer.current_responses)
     jobs = train_jobs(x, y, config, epoch)
-    Processes.run!(trainer.train_manager, jobs)
+    StatefulAlgorithms.run!(trainer.train_manager, jobs)
 
     ntraj = length(jobs)
     IsingLearning.scale_buffer!(batch_gradient, inv(FT(2) * FT(config.β) * FT(max(ntraj, 1))))
@@ -576,7 +576,7 @@ function evaluate_timeavg!(trainer::ManagedTimeAvgTrainer, x, y, config::TimeAve
     sync_manager_workers!(trainer.eval_manager, trainer.params)
     jobs = eval_jobs(x, config; seed_offset)
     trainer.current_sample_outputs = [NamedTuple{(:mean, :std),Tuple{FT,FT}}[] for _ in axes(x, 2)]
-    Processes.run!(trainer.eval_manager, jobs)
+    StatefulAlgorithms.run!(trainer.eval_manager, jobs)
 
     means = zeros(FT, size(x, 2))
     stds = zeros(FT, size(x, 2))

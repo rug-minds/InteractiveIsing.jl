@@ -45,7 +45,7 @@ function diagnostic_input_field_manager(layer::L, source::G, config::C) where {
 }
     params = IsingLearning.read_graph_params(source)
     optimiser = Optimisers.Adam(config.lr)
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(layer))
     state = InputFieldMNISTManagerState(
         layer,
         source,
@@ -67,24 +67,24 @@ function diagnostic_input_field_manager(layer::L, source::G, config::C) where {
             ctx.x[] = job.x
             ctx.y[] = job.y
             manager.state.nsamples[] += 1
-            Processes.resetworker!(slot)
+            StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
         runarguments = (slot, job, manager) -> (; phase_beta = manager.config.β),
         afterrun! = (slot, job, manager) -> begin
-            manager.recipe.runtime_sums[slot.idx] += Processes.runtime(slot.worker)
+            manager.recipe.runtime_sums[slot.idx] += StatefulAlgorithms.runtime(slot.worker)
             manager.recipe.runtime_counts[slot.idx] += 1
             return nothing
         end,
         flush! = flush_manager_buffers!,
     )
-    return Processes.ProcessManager(
+    return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = Processes.NoFlush(),
-        worker_init = Processes.MakeEachWorker(),
+        flush_policy = StatefulAlgorithms.NoFlush(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = InputFieldMNISTJob{Vector{FT},Vector{FT}},
     )
@@ -104,9 +104,9 @@ end
 
 """Return the concrete scheduler object for one diagnostic schedule name."""
 function manager_schedule(schedule_name::S) where {S<:Symbol}
-    schedule_name === :dynamic && return Processes.Dynamic()
-    schedule_name === :greedy && return Processes.Greedy()
-    schedule_name === :static && return Processes.Static()
+    schedule_name === :dynamic && return StatefulAlgorithms.Dynamic()
+    schedule_name === :greedy && return StatefulAlgorithms.Greedy()
+    schedule_name === :static && return StatefulAlgorithms.Static()
     schedule_name === :spawn && return nothing
     throw(ArgumentError("unknown schedule $(schedule_name)"))
 end
@@ -121,7 +121,7 @@ function timed_manager_batch!(
     schedule_name::S,
     batch_idx::I,
 ) where {
-    M<:Processes.ProcessManager,
+    M<:StatefulAlgorithms.ProcessManager,
     B<:InputFieldMNISTJobBuffer,
     X<:AbstractMatrix,
     Y<:AbstractMatrix,
@@ -136,9 +136,9 @@ function timed_manager_batch!(
     schedule = manager_schedule(schedule_name)
     run_seconds = @elapsed begin
         if isnothing(schedule)
-            Processes.run!(manager, jobs)
+            StatefulAlgorithms.run!(manager, jobs)
         else
-            Processes.run!(manager, jobs, schedule)
+            StatefulAlgorithms.run!(manager, jobs, schedule)
         end
     end
     worker_internal_sum_seconds = sum(manager.recipe.runtime_sums)

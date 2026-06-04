@@ -63,7 +63,7 @@ function free_phase_short_algorithm(layer::L) where {L<:IsingLearning.LayeredIsi
     short_steps = min(layer.free_relaxation_steps, 16)
     n_units = layer.nunits
 
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @state x
         @state input_hidden_w
         @state input_pattern = zeros(FT, n_units)
@@ -83,7 +83,7 @@ function free_then_nudged_algorithm(layer::L) where {L<:IsingLearning.LayeredIsi
     free_phase = input_field_free_phase_algorithm(layer)
     nudged_phase = input_field_nudged_phase_algorithm(layer)
 
-    return Processes.@CompositeAlgorithm begin
+    return StatefulAlgorithms.@CompositeAlgorithm begin
         @state x
         @state y
         @state input_hidden_w
@@ -107,7 +107,7 @@ function contrastive_static_beta_algorithm(layer::L) where {L<:IsingLearning.Lay
     free_phase = input_field_free_phase_algorithm(layer)
     nudged_phase = input_field_nudged_phase_algorithm(layer)
 
-    return Processes.@CompositeAlgorithm begin
+    return StatefulAlgorithms.@CompositeAlgorithm begin
         @state x
         @state y
         @state buffers
@@ -161,7 +161,7 @@ function buildup_state_init(graph::G, layer::L, input_hidden_w::R) where {
     R<:Base.RefValue,
 }
     state = II.state(graph)
-    return Processes.Init(:_state;
+    return StatefulAlgorithms.Init(:_state;
         x = Ref(zeros(eltype(graph), INPUT_DIM)),
         y = Ref(zeros(eltype(graph), length(layer.output_layer))),
         input_hidden_w = input_hidden_w,
@@ -173,7 +173,7 @@ end
 
 """Create the common `dynamics` payload shared by all staged process cases."""
 function buildup_dynamics_init(graph::G) where {G}
-    return Processes.Init(:dynamics, model = graph)
+    return StatefulAlgorithms.Init(:dynamics, model = graph)
 end
 
 """Build one normal `Process` for one staged diagnosis case."""
@@ -184,8 +184,8 @@ function buildup_process(algorithm::A, layer::L, source_graph::G, input_hidden_w
     R<:Base.RefValue,
 }
     graph = shared_worker_graph(source_graph)
-    return Processes.Process(
-        Processes.resolve(algorithm),
+    return StatefulAlgorithms.Process(
+        StatefulAlgorithms.resolve(algorithm),
         buildup_state_init(graph, layer, input_hidden_w),
         buildup_dynamics_init(graph);
         repeat = 1,
@@ -200,8 +200,8 @@ function buildup_inline_process(algorithm::A, layer::L, source_graph::G, input_h
     R<:Base.RefValue,
 }
     graph = shared_worker_graph(source_graph)
-    return Processes.InlineProcess(
-        Processes.resolve(algorithm),
+    return StatefulAlgorithms.InlineProcess(
+        StatefulAlgorithms.resolve(algorithm),
         buildup_state_init(graph, layer, input_hidden_w),
         buildup_dynamics_init(graph);
         repeats = 1,
@@ -232,7 +232,7 @@ function buildup_run_case!(stage::S, entrypoint::E, setup, xtrain::X, ytrain::Y)
         proc = buildup_process(algorithm, setup.layer, setup.graph, input_hidden_w)
         try
             buildup_prime_sample!(proc, xtrain, ytrain)
-            Processes.reset!(proc)
+            StatefulAlgorithms.reset!(proc)
             run(proc)
             wait(proc)
             return nothing
@@ -243,8 +243,8 @@ function buildup_run_case!(stage::S, entrypoint::E, setup, xtrain::X, ytrain::Y)
         proc = buildup_process(algorithm, setup.layer, setup.graph, input_hidden_w)
         try
             buildup_prime_sample!(proc, xtrain, ytrain)
-            Processes.reset!(proc)
-            Processes.runprocessinline!(proc)
+            StatefulAlgorithms.reset!(proc)
+            StatefulAlgorithms.runprocessinline!(proc)
             return nothing
         finally
             close(proc)
@@ -252,7 +252,7 @@ function buildup_run_case!(stage::S, entrypoint::E, setup, xtrain::X, ytrain::Y)
     elseif entrypoint === :inline_process
         proc = buildup_inline_process(algorithm, setup.layer, setup.graph, input_hidden_w)
         buildup_prime_sample!(proc, xtrain, ytrain)
-        Processes.reset!(proc)
+        StatefulAlgorithms.reset!(proc)
         Base.run(proc)
         return nothing
     else

@@ -1,3 +1,3 @@
 before using
 after using
-IsingLearning.InteractiveIsing.Processes.NonGenerated()
+IsingLearning.InteractiveIsing.StatefulAlgorithms.NonGenerated()

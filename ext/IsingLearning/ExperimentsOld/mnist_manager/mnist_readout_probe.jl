@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using LinearAlgebra
 using Random
 using Statistics
@@ -81,11 +81,11 @@ function collect_features(trainer, x, y; feature)
     worker = trainer.validation_worker
     for sample_idx in axes(x, 2)
         IsingLearning._write_input!(worker, view(x, :, sample_idx))
-        Processes.reset!(worker)
+        StatefulAlgorithms.reset!(worker)
         run(worker)
         wait(worker)
         close(worker)
-        s = Processes.context(worker)._state.equilibrium_state
+        s = StatefulAlgorithms.context(worker)._state.equilibrium_state
         if feature === :input
             X[1:nfeat, sample_idx] .= Float64.(view(s, input_idxs))
         elseif feature === :hidden

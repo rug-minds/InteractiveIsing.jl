@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using MLDatasets
 using Random
 using Serialization
@@ -269,7 +269,7 @@ Run one full active-spin sweep of the Metropolis dynamics.
 """
 function metropolis_sweep!(algorithm::A, context::C, nactive::Integer) where {A,C}
     for _ in 1:Int(nactive)
-        Processes.step!(algorithm, context)
+        StatefulAlgorithms.step!(algorithm, context)
     end
     return context
 end
@@ -320,7 +320,7 @@ function sample_phase!(
     initial_state = nothing,
     reverse::Bool = false,
 ) where {M<:PaperMLP,X<:AbstractVector}
-    context = Processes.init(II.Metropolis(), (; model = model.graph))
+    context = StatefulAlgorithms.init(II.Metropolis(), (; model = model.graph))
     best_energy = Inf32
     best_state = copy(II.state(model.graph))
     for _ in 1:Int(reads)

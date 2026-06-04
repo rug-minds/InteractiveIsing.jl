@@ -5,7 +5,7 @@ export GlobalLangevin
 
 Global-gradient Langevin Monte Carlo update.
 
-At the start of each internal cycle, one `Processes.step!` refreshes the
+At the start of each internal cycle, one `StatefulAlgorithms.step!` refreshes the
 derivative for all active spins at the current state. That step and subsequent
 steps then consume the cached derivatives one spin at a time. The default
 `adjusted=false` clamps deterministic drift into the state bounds, reflects
@@ -13,12 +13,12 @@ stochastic displacements back into the state bounds, and accepts moves directly,
 which is practical for large bounded systems but not an exact Boltzmann sampler.
 
 `stepsize` is the proposal size used by each single-spin Langevin proposal.
-`group_steps` is retained for interface compatibility; a `Processes.step!` call
+`group_steps` is retained for interface compatibility; a `StatefulAlgorithms.step!` call
 still attempts only one spin update.
 
 With `adjusted=true`, the full active-spin proposal is accepted or rejected
 with a Metropolis-adjusted Langevin probability, then accepted entries are
-written one spin per `Processes.step!`.
+written one spin per `StatefulAlgorithms.step!`.
 """
 struct GlobalLangevin{T<:Real} <: IsingMCAlgorithm
     stepsize::T
@@ -34,7 +34,7 @@ end
 
 GlobalLangevin(adjusted::Bool) = GlobalLangevin(; adjusted)
 
-@inline function Processes.init(langevin::GlobalLangevin, context::Cont) where {Cont}
+@inline function StatefulAlgorithms.init(langevin::GlobalLangevin, context::Cont) where {Cont}
     (;model) = context
 
     for layer in layers(model)
@@ -238,7 +238,7 @@ end
     return proposal, ΔE, 0, reflected
 end
 
-@inline function Processes.step!(langevin::GlobalLangevin, context::C) where {C}
+@inline function StatefulAlgorithms.step!(langevin::GlobalLangevin, context::C) where {C}
     (;hamiltonian, rng, model, dH_prealloc, layer_views, stepsize,
         max_drift_fraction, group_steps_ref, adjusted_ref, old_vals, new_vals,
         layer_idxs, schedule_idxs, schedule_position, schedule_length,

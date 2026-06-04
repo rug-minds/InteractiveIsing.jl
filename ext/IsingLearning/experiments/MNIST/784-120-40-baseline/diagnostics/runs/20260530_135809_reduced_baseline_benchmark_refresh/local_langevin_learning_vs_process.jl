@@ -43,7 +43,7 @@ end
 """Run one already-initialized dynamics context for the requested number of steps."""
 function relax_learning_context!(algorithm::A, context::C, nsteps::I) where {A,C,I<:Integer}
     @inbounds for _ in 1:Int(nsteps)
-        Processes.step!(algorithm, context)
+        StatefulAlgorithms.step!(algorithm, context)
     end
     return context
 end
@@ -59,7 +59,7 @@ function sync_direct_learning_params!(graph::G, input_hidden_w::W, params::P) wh
     return graph
 end
 
-"""Run one direct reduced-graph LocalLangevin learning sample without `Processes.Process` overhead."""
+"""Run one direct reduced-graph LocalLangevin learning sample without `StatefulAlgorithms.Process` overhead."""
 function direct_learning_sample!(
     graph::G,
     layer::L,
@@ -118,8 +118,8 @@ function time_direct_learning_minibatch!(setup, xtrain::X, ytrain::Y, config::C)
     input_pattern = zeros(FT, II.nstates(graph))
     equilibrium_state = copy(II.state(graph))
     nudged_state = similar(equilibrium_state)
-    free_context = Processes.init(layer.dynamics_algorithm, (; model = graph))
-    nudged_context = Processes.init(layer.nudged_dynamics_algorithm, (; model = graph))
+    free_context = StatefulAlgorithms.init(layer.dynamics_algorithm, (; model = graph))
+    nudged_context = StatefulAlgorithms.init(layer.nudged_dynamics_algorithm, (; model = graph))
     initial_params = input_field_params(graph, input_hidden_w)
     params = initial_params
     opt_state = Optimisers.setup(Optimisers.Adam(config.lr), initial_params)
@@ -172,7 +172,7 @@ function time_serial_process_learning_minibatch!(setup, xtrain::X, ytrain::Y, co
     params = initial_params
     opt_state = Optimisers.setup(Optimisers.Adam(config.lr), initial_params)
     batch_gradient = input_field_gradient_buffer(source_graph, input_hidden_w_ref[])
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(source_graph), input_hidden_w_ref)
 
     try
@@ -180,8 +180,8 @@ function time_serial_process_learning_minibatch!(setup, xtrain::X, ytrain::Y, co
             clear_buffer!(worker_context(worker).buffers)
             @inbounds for sample_idx in 1:config.batchsize
                 load_sample_into_worker!(worker_context(worker), xtrain, ytrain, sample_idx)
-                Processes.reset!(worker)
-                Processes.runprocessinline!(worker; phase_beta = config.β)
+                StatefulAlgorithms.reset!(worker)
+                StatefulAlgorithms.runprocessinline!(worker; phase_beta = config.β)
             end
             clear_buffer!(batch_gradient)
             add_buffer!(batch_gradient, worker_context(worker).buffers)
@@ -225,7 +225,7 @@ function time_manager_learning_minibatch!(setup, xtrain::X, ytrain::Y, config::C
         run_batch! = function ()
             clear_manager_buffers!(manager)
             manager.state.nsamples[] = sum(length, jobs)
-            Processes.run!(manager, jobs)
+            StatefulAlgorithms.run!(manager, jobs)
             manager.state.opt_state, params = Optimisers.update(
                 manager.state.opt_state,
                 manager.state.params[],

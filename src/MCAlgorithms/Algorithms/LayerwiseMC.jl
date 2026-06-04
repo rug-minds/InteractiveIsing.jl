@@ -105,12 +105,12 @@ end
     original_index_set = getfield(model, :index_set)
     layer_index_set = _layerwise_layer_range(model, spec.layer)
     setfield!(model, :index_set, layer_index_set)
-    subcontext = Processes.init(spec.algorithm, context)
+    subcontext = StatefulAlgorithms.init(spec.algorithm, context)
     setfield!(model, :index_set, original_index_set)
     return subcontext
 end
 
-function Processes.init(algorithm::LayerwiseMC, context)
+function StatefulAlgorithms.init(algorithm::LayerwiseMC, context)
     (; model) = context
 
     layer_index_sets = map(spec -> _layerwise_layer_range(model, spec.layer), algorithm.specs)
@@ -141,7 +141,7 @@ end
     spec = algorithm.specs[I]
     subcontext_ref = context.subcontexts[I]
     subcontext = subcontext_ref[]
-    out = Processes.step!(spec.algorithm, subcontext)
+    out = StatefulAlgorithms.step!(spec.algorithm, subcontext)
     subcontext_ref[] = _layerwise_update_context(subcontext, out)
     return out
 end
@@ -163,5 +163,5 @@ function _layerwise_scheduler_step!(scheduler::SequentialLayerScheduler, algorit
     return (; accepted, attempted, acceptance_rate)
 end
 
-Processes.step!(algorithm::LayerwiseMC, context) =
+StatefulAlgorithms.step!(algorithm::LayerwiseMC, context) =
     _layerwise_scheduler_step!(algorithm.scheduler, algorithm, context)

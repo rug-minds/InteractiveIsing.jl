@@ -6,7 +6,7 @@ after a burn-in period.
 
 The averaging is implemented by `OutputAverager`, an experiment-local
 `ProcessAlgorithm`. It is scheduled together with the Langevin dynamics, so the
-measurement is still done through the Processes machinery:
+measurement is still done through the StatefulAlgorithms machinery:
 
 ```text
 burn-in dynamics

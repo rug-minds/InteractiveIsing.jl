@@ -1,11 +1,11 @@
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 
 # Run with:
 #     julia --project examples/TwoLayerLangevinMetropolis.jl
 #
 # This demonstrates `LayerwiseMC`: a real composite MCAlgorithm that delegates
-# each layer to any existing MCAlgorithm through normal Processes.init/step!.
+# each layer to any existing MCAlgorithm through normal StatefulAlgorithms.init/step!.
 
 function make_two_layer_graph()
     continuous = Layer(16, Continuous(), StateSet(-1f0, 1f0); periodic = false)
@@ -28,12 +28,12 @@ end
 function run_example(; nsteps = 500)
     g = make_two_layer_graph()
     algorithm = make_layerwise_algorithm()
-    context = Processes.init(algorithm, (; model = g))
+    context = StatefulAlgorithms.init(algorithm, (; model = g))
 
     accepted = 0
     attempted = 0
     for _ in 1:nsteps
-        out = Processes.step!(algorithm, context)
+        out = StatefulAlgorithms.step!(algorithm, context)
         accepted += out.accepted
         attempted += out.attempted
     end

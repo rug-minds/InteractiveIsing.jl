@@ -43,7 +43,7 @@ function run_manager_subset!(
     xtrain::X,
     ytrain::Y,
     nsamples::I,
-) where {M<:Processes.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
+) where {M<:StatefulAlgorithms.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
     config = manager.config
     elapsed = @elapsed begin
         ncorrect = 0

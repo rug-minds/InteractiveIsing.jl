@@ -11,17 +11,17 @@ This diagnostic specialization preserves graph/state mutation, but intentionally
 does not persist per-step diagnostics such as `proposal`, `ΔE`, and
 `gradient_max` into the immutable process context.
 """
-@inline function Processes._step!(
+@inline function StatefulAlgorithms._step!(
     algo::LL,
     context::C,
     wiring::W,
-    namespace::Processes.Namespace{Name},
+    namespace::StatefulAlgorithms.Namespace{Name},
     process::P,
     lifetime::LT,
-    stability::S = Processes.Stable(),
-) where {LL<:LocalLangevin,C<:Processes.AbstractContext,W<:Processes.Wiring{Tuple{},Tuple{}},Name,P<:Processes.AbstractProcess,LT<:Processes.Lifetime,S<:Processes.Stability}
+    stability::S = StatefulAlgorithms.Stable(),
+) where {LL<:LocalLangevin,C<:StatefulAlgorithms.AbstractContext,W<:StatefulAlgorithms.Wiring{Tuple{},Tuple{}},Name,P<:StatefulAlgorithms.AbstractProcess,LT<:StatefulAlgorithms.Lifetime,S<:StatefulAlgorithms.Stability}
     contextview = @inline view(context, algo, namespace)
-    @inline Processes.step!(algo, contextview)
+    @inline StatefulAlgorithms.step!(algo, contextview)
     return context
 end
 
@@ -31,23 +31,23 @@ Run `LocalLangevin` as an in-place dynamics kernel for routed/shared views.
 This mirrors the normal view construction while skipping only the diagnostic
 return merge.
 """
-@inline function Processes._step!(
+@inline function StatefulAlgorithms._step!(
     algo::LL,
     context::C,
     wiring::W,
-    namespace::Processes.Namespace{Name},
+    namespace::StatefulAlgorithms.Namespace{Name},
     process::P,
     lifetime::LT,
-    stability::S = Processes.Stable(),
-) where {LL<:LocalLangevin,C<:Processes.AbstractContext,W<:Processes.Wiring,Name,P<:Processes.AbstractProcess,LT<:Processes.Lifetime,S<:Processes.Stability}
+    stability::S = StatefulAlgorithms.Stable(),
+) where {LL<:LocalLangevin,C<:StatefulAlgorithms.AbstractContext,W<:StatefulAlgorithms.Wiring,Name,P<:StatefulAlgorithms.AbstractProcess,LT<:StatefulAlgorithms.Lifetime,S<:StatefulAlgorithms.Stability}
     contextview = @inline view(
         context,
         algo,
         namespace;
-        sharedcontexts = (@inline Processes.shares(wiring)),
-        sharedvars = (@inline Processes.routes(wiring)),
+        sharedcontexts = (@inline StatefulAlgorithms.shares(wiring)),
+        sharedvars = (@inline StatefulAlgorithms.routes(wiring)),
     )
-    @inline Processes.step!(algo, contextview)
+    @inline StatefulAlgorithms.step!(algo, contextview)
     return context
 end
 
@@ -60,7 +60,7 @@ function main()
     config = langevin_learning_config()
     repeats = parse(Int, get(ENV, "ISING_MNIST_SKIP_MERGE_REPEATS", "1"))
     xtrain, ytrain = balanced_mnist(:train, config.train_per_class, config)
-    looptype = Processes.NonGenerated()
+    looptype = StatefulAlgorithms.NonGenerated()
 
     println(now(), " begin skip-merge NonGenerated vs bespoke threads=$(Threads.nthreads()) batchsize=$(config.batchsize) sweeps=$(config.sweeps) looptype=$(looptype)")
     flush(stdout)

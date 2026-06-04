@@ -17,7 +17,7 @@ function logline(message::M) where {M<:AbstractString}
     return nothing
 end
 
-"""Run the serial Processes full-learning path with markers around each expensive call."""
+"""Run the serial StatefulAlgorithms full-learning path with markers around each expensive call."""
 function main()
     batchsize = parse(Int, get(ENV, "ISING_RUNTIME_COMPARE_BATCHSIZE", "1"))
     config = updated_config(langevin_learning_config(); batchsize = batchsize)
@@ -35,7 +35,7 @@ function main()
     batch_gradient = input_field_gradient_buffer(source_graph, input_hidden_w_ref[])
 
     logline("resolve algorithm")
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     logline("build worker")
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(source_graph), input_hidden_w_ref)
 
@@ -47,10 +47,10 @@ function main()
                 logline("$label sample=$sample_idx load")
                 load_sample_into_worker!(worker_context(worker), xtrain, ytrain, sample_idx)
                 logline("$label sample=$sample_idx reset begin")
-                Processes.reset!(worker)
+                StatefulAlgorithms.reset!(worker)
                 logline("$label sample=$sample_idx reset end")
                 logline("$label sample=$sample_idx runprocessinline begin")
-                Processes.runprocessinline!(worker; phase_beta = config.β)
+                StatefulAlgorithms.runprocessinline!(worker; phase_beta = config.β)
                 logline("$label sample=$sample_idx runprocessinline end")
             end
             logline("$label gradient copy begin")

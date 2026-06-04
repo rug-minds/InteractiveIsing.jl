@@ -24,7 +24,7 @@ makedocs(
             "Interactive Contexts" => "user/interactive.md",
             "Lifetime" => "user/lifetime.md",
             "Running, Wait, Fetch" => "user/running.md",
-            "Copying Processes" => "user/copying_and_management.md",
+            "Copying StatefulAlgorithms" => "user/copying_and_management.md",
             "Threaded Process Managers" => "user/threaded_process_managers.md",
             "Value Semantics and Unique" => "user/value_semantics.md",
         ],

@@ -3,9 +3,9 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 
 include(joinpath(@__DIR__, "hidden8x8_2_64_1.jl"))
 
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 
-const Processes8x8 = IsingLearning.InteractiveIsing.Processes
+const StatefulAlgorithms8x8 = IsingLearning.InteractiveIsing.StatefulAlgorithms
 
 """Number of persistent worker slots used by the manager-backed experiment."""
 manager_workers_8x8() = parse(Int, get(ENV, "ISING_8X8_THREADS", string(max(1, min(Threads.nthreads(), 8)))))
@@ -56,7 +56,7 @@ end
 function make_train_worker_8x8(layer, prototype_graph, params, config::Hidden8x8Config, idx::Integer)
     graph = managed_worker_graph_8x8(prototype_graph, params, config)
     worker = IsingLearning._worker_process(layer, graph)
-    Random.seed!(Processes.context(worker).dynamics.rng, config.base_seed + idx)
+    Random.seed!(StatefulAlgorithms.context(worker).dynamics.rng, config.base_seed + idx)
     return worker
 end
 
@@ -64,27 +64,27 @@ end
 function make_eval_worker_8x8(layer, prototype_graph, params, config::Hidden8x8Config, idx::Integer)
     graph = managed_worker_graph_8x8(prototype_graph, params, config)
     worker = IsingLearning._validation_process(layer, graph)
-    Random.seed!(Processes.context(worker).dynamics.rng, config.base_seed + 50_000 + idx)
+    Random.seed!(StatefulAlgorithms.context(worker).dynamics.rng, config.base_seed + 50_000 + idx)
     return worker
 end
 
 """Seed all RNGs visible from one managed worker context."""
 function seed_managed_worker_8x8!(worker, seed::Integer; seed_global::Bool = true)
     seed_global && Random.seed!(seed)
-    Random.seed!(Processes.context(worker).dynamics.rng, seed + 10_000)
+    Random.seed!(StatefulAlgorithms.context(worker).dynamics.rng, seed + 10_000)
     return worker
 end
 
 """Synchronize one managed worker graph from the trainer parameter vector."""
 function sync_managed_worker_8x8!(worker, params)
-    IsingLearning.sync_graph_params!(Processes.context(worker).dynamics.model, params)
+    IsingLearning.sync_graph_params!(StatefulAlgorithms.context(worker).dynamics.model, params)
     return worker
 end
 
 """Synchronize all workers owned by a manager after a parameter update."""
 function sync_manager_workers_8x8!(manager, params)
-    for worker in Processes8x8.workers(manager)
-        Processes8x8.isdone(worker) && close(worker)
+    for worker in StatefulAlgorithms8x8.workers(manager)
+        StatefulAlgorithms8x8.isdone(worker) && close(worker)
         sync_managed_worker_8x8!(worker, params)
     end
     return manager
@@ -92,34 +92,34 @@ end
 
 """Zero all worker-local gradient buffers before one managed training epoch."""
 function reset_manager_buffers_8x8!(manager)
-    for worker in Processes8x8.workers(manager)
-        IsingLearning.zero_buffer!(Processes.context(worker)._state.buffers)
+    for worker in StatefulAlgorithms8x8.workers(manager)
+        IsingLearning.zero_buffer!(StatefulAlgorithms.context(worker)._state.buffers)
     end
     return manager
 end
 
 """Prepare one managed training worker for a fresh EqProp trajectory."""
 function prepare_train_worker_8x8!(worker, trainer::ManagedHidden8x8Trainer, config::Hidden8x8Config, job::Hidden8x8TrainJob)
-    Processes8x8.isdone(worker) && close(worker)
+    StatefulAlgorithms8x8.isdone(worker) && close(worker)
     IsingLearning._write_example!(worker, job.x, job.y)
-    Processes8x8.reset!(worker)
+    StatefulAlgorithms8x8.reset!(worker)
     return worker
 end
 
 """Prepare one managed validation worker for a fresh free relaxation."""
 function prepare_eval_worker_8x8!(worker, trainer::ManagedHidden8x8Trainer, config::Hidden8x8Config, job::Hidden8x8EvalJob)
-    Processes8x8.isdone(worker) && close(worker)
+    StatefulAlgorithms8x8.isdone(worker) && close(worker)
     seed_managed_worker_8x8!(worker, job.seed)
     IsingLearning._write_input!(worker, job.x)
-    Processes8x8.reset!(worker)
+    StatefulAlgorithms8x8.reset!(worker)
     return worker
 end
 
 """Record the response norm of one completed managed training trajectory."""
 function collect_train_response_8x8!(responses, worker)
-    free_state = Processes.context(worker)._state.equilibrium_state
-    plus_state = Processes.context(worker).plus_capture.captured
-    minus_state = Processes.context(worker).minus_capture.captured
+    free_state = StatefulAlgorithms.context(worker)._state.equilibrium_state
+    plus_state = StatefulAlgorithms.context(worker).plus_capture.captured
+    minus_state = StatefulAlgorithms.context(worker).minus_capture.captured
     response = (
         sqrt(sum(abs2, plus_state .- free_state) / FT(length(free_state))) +
         sqrt(sum(abs2, minus_state .- free_state) / FT(length(free_state)))
@@ -131,8 +131,8 @@ end
 """Flush worker-local accumulated gradient buffers into one epoch buffer."""
 function flush_train_buffers_8x8!(manager)
     batch_gradient = manager.state.current_batch_gradient
-    for worker in Processes8x8.workers(manager)
-        IsingLearning.add_buffer!(batch_gradient, Processes.context(worker)._state.buffers)
+    for worker in StatefulAlgorithms8x8.workers(manager)
+        IsingLearning.add_buffer!(batch_gradient, StatefulAlgorithms.context(worker)._state.buffers)
     end
     reset_manager_buffers_8x8!(manager)
     return batch_gradient
@@ -172,7 +172,7 @@ function train_manager_recipe_8x8(layer, prototype_graph)
     return (;
         makeworker = (idx, manager) -> make_train_worker_8x8(layer, prototype_graph, manager.state.params, manager.config, idx),
         prepare! = (slot, job, manager) -> prepare_train_worker_8x8!(slot.worker, manager.state, manager.config, job),
-        isdone = (slot, manager) -> Processes8x8.isdone(slot.worker),
+        isdone = (slot, manager) -> StatefulAlgorithms8x8.isdone(slot.worker),
         runarguments = (slot, job, manager) -> (; clamping_beta = manager.config.β),
         consume! = (slot, job, manager) -> collect_train_response_8x8!(manager.state.current_responses, slot.worker),
         flush! = flush_train_buffers_8x8!,
@@ -184,9 +184,9 @@ function eval_manager_recipe_8x8(layer, prototype_graph)
     return (;
         makeworker = (idx, manager) -> make_eval_worker_8x8(layer, prototype_graph, manager.state.params, manager.config, idx),
         prepare! = (slot, job, manager) -> prepare_eval_worker_8x8!(slot.worker, manager.state, manager.config, job),
-        isdone = (slot, manager) -> Processes8x8.isdone(slot.worker),
+        isdone = (slot, manager) -> StatefulAlgorithms8x8.isdone(slot.worker),
         consume! = (slot, job, manager) -> begin
-            output = only(II.state(Processes.context(slot.worker).dynamics.model[end]))
+            output = only(II.state(StatefulAlgorithms.context(slot.worker).dynamics.model[end]))
             push!(manager.state.current_sample_outputs[job.sample_idx], output)
         end,
     )
@@ -211,21 +211,21 @@ function managed_trainer_8x8(config::Hidden8x8Config; workers::Integer = manager
         FT[],
         nothing,
     )
-    trainer.train_manager = Processes8x8.ProcessManager(
+    trainer.train_manager = StatefulAlgorithms8x8.ProcessManager(
         train_manager_recipe_8x8(layer, graph);
         nworkers = workers,
         config,
         state = trainer,
-        flush_policy = Processes8x8.FlushAtEnd(),
+        flush_policy = StatefulAlgorithms8x8.FlushAtEnd(),
         poll_interval = 0.0,
         job_type = Hidden8x8TrainJob,
     )
-    trainer.eval_manager = Processes8x8.ProcessManager(
+    trainer.eval_manager = StatefulAlgorithms8x8.ProcessManager(
         eval_manager_recipe_8x8(layer, graph);
         nworkers = 1,
         config,
         state = trainer,
-        flush_policy = Processes8x8.NoFlush(),
+        flush_policy = StatefulAlgorithms8x8.NoFlush(),
         poll_interval = 0.0,
         job_type = Hidden8x8EvalJob,
     )
@@ -240,7 +240,7 @@ function train_epoch_managed_8x8!(trainer::ManagedHidden8x8Trainer, x, y, batch_
     trainer.current_batch_gradient = batch_gradient
     empty!(trainer.current_responses)
     jobs = train_jobs_8x8(x, y, config, epoch)
-    Processes8x8.run!(trainer.train_manager, jobs)
+    StatefulAlgorithms8x8.run!(trainer.train_manager, jobs)
 
     ntraj = length(jobs)
     IsingLearning.scale_buffer!(batch_gradient, inv(FT(2) * FT(config.β) * FT(max(ntraj, 1))))
@@ -257,7 +257,7 @@ end
 function evaluate_managed_8x8!(trainer::ManagedHidden8x8Trainer, x, y, config::Hidden8x8Config; seed_offset::Integer)
     sync_manager_workers_8x8!(trainer.eval_manager, trainer.params)
     trainer.current_sample_outputs = [FT[] for _ in axes(x, 2)]
-    Processes8x8.run!(trainer.eval_manager, eval_jobs_8x8(x, config; seed_offset))
+    StatefulAlgorithms8x8.run!(trainer.eval_manager, eval_jobs_8x8(x, config; seed_offset))
 
     means = zeros(FT, size(x, 2))
     stds = zeros(FT, size(x, 2))

@@ -19,7 +19,7 @@ println("[bootstrap] loaded packages")
 flush(stdout)
 
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 const FT = Float32
 const INPUT_DIM = IsingLearning.MNIST_INPUT_DIM
 const NCLASSES = IsingLearning.MNIST_NCLASSES
@@ -297,7 +297,7 @@ function fill_chunk_jobs!(buffer::B, indices::V, chunk_size::I) where {B<:InputF
 end
 
 """Point a manager at the matrices used by the current chunked job list."""
-function set_manager_inputs!(manager::M, x::X, y::Y) where {M<:Processes.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix}
+function set_manager_inputs!(manager::M, x::X, y::Y) where {M<:StatefulAlgorithms.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix}
     manager.state.current_x[] = x
     manager.state.current_y[] = y
     return manager
@@ -474,13 +474,13 @@ end
 @inline ref_value(x) = x
 
 # Apply a possibly reference-backed MNIST output target to one worker graph.
-Processes.@ProcessAlgorithm function ApplyTargetsRef!(isinggraph::G, y) where G
+StatefulAlgorithms.@ProcessAlgorithm function ApplyTargetsRef!(isinggraph::G, y) where G
     IsingLearning.apply_targets(isinggraph, ref_value(y))
     return nothing
 end
 
 # Project one reference-backed MNIST sample into the worker-local field buffer and install it.
-Processes.@ProcessAlgorithm function ApplyProjectedInputFieldRef!(
+StatefulAlgorithms.@ProcessAlgorithm function ApplyProjectedInputFieldRef!(
     isinggraph::G,
     input_hidden_w,
     x,
@@ -492,7 +492,7 @@ Processes.@ProcessAlgorithm function ApplyProjectedInputFieldRef!(
 end
 
 # Accumulate the input-field contrastive gradient from a reference-backed input.
-Processes.@ProcessAlgorithm function AccumulateInputFieldGradientRef!(
+StatefulAlgorithms.@ProcessAlgorithm function AccumulateInputFieldGradientRef!(
     isinggraph::G,
     nudged_state,
     equilibrium_state,
@@ -517,7 +517,7 @@ function input_field_free_phase_algorithm(layer::L) where {L<:IsingLearning.Laye
     free_steps = layer.free_relaxation_steps
     n_units = layer.nunits
 
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @state x
         @state input_hidden_w
         @state input_pattern = zeros(FT, n_units)
@@ -539,7 +539,7 @@ function input_field_nudged_phase_algorithm(layer::L) where {L<:IsingLearning.La
     n_units = layer.nunits
     default_β = layer.β
 
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @state x
         @state y
         @state input_hidden_w
@@ -568,7 +568,7 @@ function input_field_contrastive_algorithm(layer::L) where {L<:IsingLearning.Lay
     free_phase = input_field_free_phase_algorithm(layer)
     nudged_phase = input_field_nudged_phase_algorithm(layer)
 
-    return Processes.@CompositeAlgorithm begin
+    return StatefulAlgorithms.@CompositeAlgorithm begin
         @state x
         @state y
         @state buffers
@@ -599,12 +599,12 @@ end
 
 """Return the mutable sample/buffer context stored in one worker."""
 function worker_context(worker::W) where {W}
-    return Processes.context(worker)._state
+    return StatefulAlgorithms.context(worker)._state
 end
 
 """Return the graph owned by a worker dynamics context."""
 function worker_graph(worker::W) where {W}
-    return Processes.context(worker).dynamics.model
+    return StatefulAlgorithms.context(worker).dynamics.model
 end
 
 """Build a worker graph whose adjacency is the source graph adjacency object."""
@@ -619,7 +619,7 @@ function shared_worker_graph(source::G) where {G}
 end
 
 # Set the graph clamping beta from process state without capturing an external Ref.
-Processes.@ProcessAlgorithm function SetInputFieldClampingBeta!(isinggraph::G, phase_beta::Float32) where G
+StatefulAlgorithms.@ProcessAlgorithm function SetInputFieldClampingBeta!(isinggraph::G, phase_beta::Float32) where G
     IsingLearning.set_clamping_beta!(isinggraph, phase_beta)
     return nothing
 end
@@ -672,7 +672,7 @@ function accumulate_input_field_validation_stats!(
 end
 
 # Accumulate one validation sample into worker-local counters without score allocations.
-Processes.@ProcessAlgorithm function AccumulateInputFieldValidationStats!(
+StatefulAlgorithms.@ProcessAlgorithm function AccumulateInputFieldValidationStats!(
     y::AbstractVector,
     equilibrium_state::AbstractVector,
     output_idxs::AbstractVector{Int},
@@ -695,7 +695,7 @@ Processes.@ProcessAlgorithm function AccumulateInputFieldValidationStats!(
 end
 
 # Accumulate validation statistics from a reference-backed output target.
-Processes.@ProcessAlgorithm function AccumulateInputFieldValidationStatsRef!(
+StatefulAlgorithms.@ProcessAlgorithm function AccumulateInputFieldValidationStatsRef!(
     y,
     equilibrium_state::AbstractVector,
     output_idxs::AbstractVector{Int},
@@ -726,9 +726,9 @@ function input_field_worker(
     input_hidden_w::R,
 ) where {A,L<:IsingLearning.LayeredIsingGraphLayer,G,R<:Base.RefValue}
     state = II.state(graph)
-    return Processes.Process(
+    return StatefulAlgorithms.Process(
         algorithm,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             x = Ref(zeros(eltype(graph), INPUT_DIM)),
             y = Ref(zeros(eltype(graph), length(layer.output_layer))),
             input_hidden_w = input_hidden_w,
@@ -736,7 +736,7 @@ function input_field_worker(
             equilibrium_state = copy(state),
             nudged_state = similar(state),
         ),
-        Processes.Init(:dynamics, model = graph);
+        StatefulAlgorithms.Init(:dynamics, model = graph);
         repeat = 1,
     )
 end
@@ -748,7 +748,7 @@ function input_field_validation_algorithm(layer::L) where {L<:IsingLearning.Laye
     n_units = layer.nunits
     replica_count = length(layer.output_layer) ÷ NCLASSES
 
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @state x
         @state y
         @state input_hidden_w
@@ -788,9 +788,9 @@ function input_field_validation_worker(
     input_hidden_w::R,
 ) where {A,L<:IsingLearning.LayeredIsingGraphLayer,G,R<:Base.RefValue}
     state = II.state(graph)
-    return Processes.Process(
+    return StatefulAlgorithms.Process(
         algorithm,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             x = Ref(zeros(eltype(graph), INPUT_DIM)),
             y = Ref(zeros(eltype(graph), length(layer.output_layer))),
             input_hidden_w = input_hidden_w,
@@ -801,57 +801,57 @@ function input_field_validation_worker(
             total_loss = Ref(0f0),
             pred_counts = zeros(Int, NCLASSES),
         ),
-        Processes.Init(:dynamics, model = graph);
+        StatefulAlgorithms.Init(:dynamics, model = graph);
         repeat = 1,
     )
 end
 
 """Run one training chunk on its assigned normal `Process` worker."""
-function run_training_chunk_task!(worker::W, job::J, manager::M) where {W<:Processes.Process,J<:AbstractVector{Int},M<:Processes.ProcessManager}
+function run_training_chunk_task!(worker::W, job::J, manager::M) where {W<:StatefulAlgorithms.Process,J<:AbstractVector{Int},M<:StatefulAlgorithms.ProcessManager}
     ctx = worker_context(worker)
     x = manager.state.current_x[]
     y = manager.state.current_y[]
     @inbounds for sample_idx in job
         load_sample_into_worker!(ctx, x, y, sample_idx)
-        Processes.reset!(worker)
-        Processes.runprocessinline!(worker; phase_beta = manager.config.β)
+        StatefulAlgorithms.reset!(worker)
+        StatefulAlgorithms.runprocessinline!(worker; phase_beta = manager.config.β)
     end
     return worker
 end
 
 """Run one validation chunk on its assigned normal `Process` worker."""
-function run_validation_chunk_task!(worker::W, job::J, manager::M) where {W<:Processes.Process,J<:AbstractVector{Int},M<:Processes.ProcessManager}
+function run_validation_chunk_task!(worker::W, job::J, manager::M) where {W<:StatefulAlgorithms.Process,J<:AbstractVector{Int},M<:StatefulAlgorithms.ProcessManager}
     ctx = worker_context(worker)
     x = manager.state.current_x[]
     y = manager.state.current_y[]
     @inbounds for sample_idx in job
         load_sample_into_worker!(ctx, x, y, sample_idx)
-        Processes.reset!(worker)
-        Processes.runprocessinline!(worker)
+        StatefulAlgorithms.reset!(worker)
+        StatefulAlgorithms.runprocessinline!(worker)
     end
     return worker
 end
 
 """Start a spawned chunk task and store its task handle in the recipe."""
-function start_training_chunk!(slot::S, job::J, manager::M) where {S,J<:AbstractVector{Int},M<:Processes.ProcessManager}
+function start_training_chunk!(slot::S, job::J, manager::M) where {S,J<:AbstractVector{Int},M<:StatefulAlgorithms.ProcessManager}
     manager.recipe.tasks[slot.idx] = Threads.@spawn run_training_chunk_task!(slot.worker, job, manager)
     return slot.worker
 end
 
 """Start a spawned validation chunk task and store its task handle in the recipe."""
-function start_validation_chunk!(slot::S, job::J, manager::M) where {S,J<:AbstractVector{Int},M<:Processes.ProcessManager}
+function start_validation_chunk!(slot::S, job::J, manager::M) where {S,J<:AbstractVector{Int},M<:StatefulAlgorithms.ProcessManager}
     manager.recipe.tasks[slot.idx] = Threads.@spawn run_validation_chunk_task!(slot.worker, job, manager)
     return slot.worker
 end
 
 """Return whether a custom chunk task has finished."""
-function chunk_task_isdone(slot::S, manager::M) where {S,M<:Processes.ProcessManager}
+function chunk_task_isdone(slot::S, manager::M) where {S,M<:StatefulAlgorithms.ProcessManager}
     task = manager.recipe.tasks[slot.idx]
     return !isnothing(task) && istaskdone(task)
 end
 
 """Fetch a finished custom chunk task and make its normal `Process` reusable."""
-function finalize_chunk_task!(slot::S, job, manager::M) where {S,M<:Processes.ProcessManager}
+function finalize_chunk_task!(slot::S, job, manager::M) where {S,M<:StatefulAlgorithms.ProcessManager}
     task = manager.recipe.tasks[slot.idx]
     if !isnothing(task)
         fetch(task)
@@ -861,7 +861,7 @@ function finalize_chunk_task!(slot::S, job, manager::M) where {S,M<:Processes.Pr
 end
 
 """Close a normal Process worker after any custom chunk task has finished."""
-function close_chunk_worker!(slot::S, manager::M) where {S,M<:Processes.ProcessManager}
+function close_chunk_worker!(slot::S, manager::M) where {S,M<:StatefulAlgorithms.ProcessManager}
     task = manager.recipe.tasks[slot.idx]
     if !isnothing(task)
         fetch(task)
@@ -872,10 +872,10 @@ function close_chunk_worker!(slot::S, manager::M) where {S,M<:Processes.ProcessM
 end
 
 """Clear the manager batch buffer and all worker-local gradient buffers."""
-function clear_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function clear_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_buffer!(manager.state.batch_gradient)
     manager.state.nsamples[] = 0
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         clear_buffer!(worker_context(worker).buffers)
     end
     return manager
@@ -891,21 +891,21 @@ function reset_validation_worker_stats!(ctx::C) where {C}
 end
 
 """Clear validation manager and worker-local statistic buffers."""
-function clear_validation_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function clear_validation_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     manager.state.nsamples[] = 0
     manager.state.ncorrect[] = 0
     manager.state.total_loss[] = 0f0
     fill!(manager.state.pred_counts, 0)
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         reset_validation_worker_stats!(worker_context(worker))
     end
     return manager
 end
 
 """Flush worker gradients into one Adam-ready minibatch gradient."""
-function flush_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function flush_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_buffer!(manager.state.batch_gradient)
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         add_buffer!(manager.state.batch_gradient, worker_context(worker).buffers)
         clear_buffer!(worker_context(worker).buffers)
     end
@@ -921,12 +921,12 @@ function flush_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
 end
 
 """Flush validation worker counters into the validation manager state."""
-function flush_validation_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function flush_validation_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     manager.state.nsamples[] = 0
     manager.state.ncorrect[] = 0
     manager.state.total_loss[] = 0f0
     fill!(manager.state.pred_counts, 0)
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         ctx = worker_context(worker)
         manager.state.nsamples[] += ctx.nsamples[]
         manager.state.ncorrect[] += ctx.ncorrect[]
@@ -938,10 +938,10 @@ function flush_validation_buffers!(manager::M) where {M<:Processes.ProcessManage
 end
 
 """Synchronize the source graph and shared worker fields after an Adam update."""
-function sync_after_update!(manager::M, params::P) where {M<:Processes.ProcessManager,P}
+function sync_after_update!(manager::M, params::P) where {M<:StatefulAlgorithms.ProcessManager,P}
     IsingLearning.sync_graph_params!(manager.state.source_graph, (; w = params.w, b = params.b))
     manager.state.input_hidden_w[] = params.w_input
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         IsingLearning._sync_worker_graph_params!(worker_graph(worker), manager.state.source_graph, (; w = params.w, b = params.b))
     end
     return manager
@@ -956,7 +956,7 @@ function input_field_manager(
 ) where {L<:IsingLearning.LayeredIsingGraphLayer,G,C<:InputFieldMNISTConfig,R<:Base.RefValue}
     params = input_field_params(source, input_hidden_w[])
     optimiser = Optimisers.Adam(config.lr)
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(layer))
     state = InputFieldMNISTManagerState(
         layer,
         source,
@@ -983,13 +983,13 @@ function input_field_manager(
         close! = close_chunk_worker!,
         flush! = flush_manager_buffers!,
     )
-    return Processes.ProcessManager(
+    return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = Processes.FlushAtEnd(),
-        worker_init = Processes.MakeEachWorker(),
+        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = Vector{Int},
     )
@@ -1002,7 +1002,7 @@ function input_field_validation_manager(
     config::C,
     input_hidden_w::R,
 ) where {L<:IsingLearning.LayeredIsingGraphLayer,G,C<:InputFieldMNISTConfig,R<:Base.RefValue}
-    algorithm = Processes.resolve(input_field_validation_algorithm(layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_validation_algorithm(layer))
     state = InputFieldMNISTEvalManagerState(
         layer,
         source,
@@ -1029,13 +1029,13 @@ function input_field_validation_manager(
         close! = close_chunk_worker!,
         flush! = flush_validation_buffers!,
     )
-    return Processes.ProcessManager(
+    return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = Processes.FlushAtEnd(),
-        worker_init = Processes.MakeEachWorker(),
+        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = Vector{Int},
     )
@@ -1051,10 +1051,10 @@ function batch_jobs(x::X, y::Y, indices::V) where {X<:AbstractMatrix,Y<:Abstract
 end
 
 """Run one minibatch through the manager and apply one Adam update."""
-function run_minibatch!(manager::M, jobs::J) where {M<:Processes.ProcessManager,J<:AbstractVector}
+function run_minibatch!(manager::M, jobs::J) where {M<:StatefulAlgorithms.ProcessManager,J<:AbstractVector}
     clear_manager_buffers!(manager)
     manager.state.nsamples[] = sum(length, jobs)
-    Processes.run!(manager, jobs)
+    StatefulAlgorithms.run!(manager, jobs)
     manager.state.opt_state, params = Optimisers.update(manager.state.opt_state, manager.state.params[], manager.state.batch_gradient)
     manager.state.params[] = params
     sync_after_update!(manager, params)
@@ -1068,11 +1068,11 @@ function evaluate(
     y::Y,
     config::C,
     jobs::B,
-) where {M<:Processes.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix,C<:InputFieldMNISTConfig,B<:InputFieldMNISTChunkBuffer}
+) where {M<:StatefulAlgorithms.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix,C<:InputFieldMNISTConfig,B<:InputFieldMNISTChunkBuffer}
     clear_validation_buffers!(manager)
     set_manager_inputs!(manager, x, y)
     chunks = fill_chunk_jobs!(jobs, axes(x, 2), manager_chunk_size(config, size(x, 2)))
-    Processes.run!(manager, chunks)
+    StatefulAlgorithms.run!(manager, chunks)
     nsamples = manager.state.nsamples[]
     return (;
         accuracy = nsamples == 0 ? 0.0 : manager.state.ncorrect[] / nsamples,
@@ -1082,7 +1082,7 @@ function evaluate(
 end
 
 """Serialize optimizer-facing parameters and run metadata."""
-function save_checkpoint(path::P, manager::M, config::C, rows::R) where {P<:AbstractString,M<:Processes.ProcessManager,C<:InputFieldMNISTConfig,R<:AbstractVector}
+function save_checkpoint(path::P, manager::M, config::C, rows::R) where {P<:AbstractString,M<:StatefulAlgorithms.ProcessManager,C<:InputFieldMNISTConfig,R<:AbstractVector}
     mkpath(dirname(path))
     open(path, "w") do io
         serialize(io, (;
@@ -1225,7 +1225,7 @@ function checkpoint_start_epoch(checkpoint, config::C) where {C<:InputFieldMNIST
 end
 
 """Restore graph parameters and optimiser state into an already constructed manager."""
-function restore_manager_checkpoint!(manager::M, checkpoint) where {M<:Processes.ProcessManager}
+function restore_manager_checkpoint!(manager::M, checkpoint) where {M<:StatefulAlgorithms.ProcessManager}
     manager.state.params[] = checkpoint.params
     manager.state.opt_state = checkpoint.opt_state
     sync_after_update!(manager, checkpoint.params)

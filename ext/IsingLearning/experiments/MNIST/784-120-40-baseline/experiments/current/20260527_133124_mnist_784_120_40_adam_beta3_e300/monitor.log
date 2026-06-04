@@ -52,4 +52,4 @@
 [2026-05-27T13:44:58] running no-output-yet
 [2026-05-27T13:45:13] process exited
 [2026-05-27T13:45:13] final csv-missing
-[2026-05-27T13:45:13] stderr-last="Γöö @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54"
+[2026-05-27T13:45:13] stderr-last="Γöö @ IsingLearning.InteractiveIsing.StatefulAlgorithms C:\Users\fenje\dev\InteractiveIsing.jl\deps\StatefulAlgorithms\src\Widgets\GeneralState.jl:54"

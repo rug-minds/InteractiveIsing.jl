@@ -3,11 +3,11 @@
 Γöé   overlapping_fields =
 Γöé    1-element Vector{Symbol}:
 Γöé     :x
-Γöö @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+Γöö @ IsingLearning.InteractiveIsing.StatefulAlgorithms C:\Users\fenje\dev\InteractiveIsing.jl\deps\StatefulAlgorithms\src\Widgets\GeneralState.jl:54
 Γöî Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
 Γöé   overlapping_fields =
 Γöé    3-element Vector{Symbol}:
 Γöé     :x
 Γöé     :y
 Γöé     :equilibrium_state
-Γöö @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+Γöö @ IsingLearning.InteractiveIsing.StatefulAlgorithms C:\Users\fenje\dev\InteractiveIsing.jl\deps\StatefulAlgorithms\src\Widgets\GeneralState.jl:54

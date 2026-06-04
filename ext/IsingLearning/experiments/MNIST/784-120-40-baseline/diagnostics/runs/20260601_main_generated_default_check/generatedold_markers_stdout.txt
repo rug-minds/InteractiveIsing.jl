@@ -1,6 +1,6 @@
 [bootstrap] activated project
 [bootstrap] loaded packages
-2026-06-01T12:53:12 begin generatedold marker diagnostic threads=32 batchsize=1 sweeps=500.0 looptype=IsingLearning.InteractiveIsing.Processes.GeneratedOld()
+2026-06-01T12:53:12 begin generatedold marker diagnostic threads=32 batchsize=1 sweeps=500.0 looptype=IsingLearning.InteractiveIsing.StatefulAlgorithms.GeneratedOld()
 2026-06-01T12:53:14 build setup
 2026-06-01T12:53:16 resolve algorithm
 2026-06-01T12:53:27 build worker

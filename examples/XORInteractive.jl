@@ -1,5 +1,5 @@
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 using InteractiveIsing.Windows
 using GLMakie
 using Printf
@@ -95,7 +95,7 @@ function output_status(g, a::Bool, b::Bool)
 end
 
 function restart_xor_process!(g, dynamics, a::Bool, b::Bool)
-    Processes.close(g)
+    StatefulAlgorithms.close(g)
     apply_xor_case!(g, a, b)
     return createProcess(g, dynamics)
 end

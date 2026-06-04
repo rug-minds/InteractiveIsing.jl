@@ -34,7 +34,7 @@ using Statistics
 boot_progress("dependencies loaded"; t0 = t_imports)
 
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 const PMNIST_FT = Float32
 const PMNIST_INPUT_SIDE = 28
 const PMNIST_INPUT_DIM = PMNIST_INPUT_SIDE^2
@@ -745,7 +745,7 @@ function install_params!(model::M, params::P) where {M<:LocalMNISTModel,P<:Named
 end
 
 """Apply one optimizer update to all trainable parameter arrays."""
-function apply_optimizer_update!(manager::M) where {M<:Processes.ProcessManager}
+function apply_optimizer_update!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     params = manager.state.params[]
     gradient = manager.state.optimizer_gradient
     opt_state = manager.state.opt_state
@@ -762,7 +762,7 @@ function apply_optimizer_update!(manager::M) where {M<:Processes.ProcessManager}
 end
 
 """Install optimizer state from a full checkpoint when it is available."""
-function resume_manager_state!(manager::M, path::P) where {M<:Processes.ProcessManager,P<:AbstractString}
+function resume_manager_state!(manager::M, path::P) where {M<:StatefulAlgorithms.ProcessManager,P<:AbstractString}
     isempty(path) && return manager
     saved = load_checkpoint(path)
     install_checkpoint_params!(manager.state.model, saved)
@@ -797,7 +797,7 @@ end
 
 """Return the mutable process subcontext used by a manager worker."""
 function worker_context(worker::W) where {W}
-    return Processes.context(worker)._state
+    return StatefulAlgorithms.context(worker)._state
 end
 
 """Update worker-local counters after one contrastive sample."""
@@ -824,9 +824,9 @@ function local_worker(source::M, worker_idx::I, algorithm::A) where {M<:LocalMNI
     log_worker && progress_log(source.config, "worker model initialized"; t0 = t_model, worker = worker_idx)
     graph_state = II.state(model.graph)
     t_process = time()
-    proc = Processes.Process(
+    proc = StatefulAlgorithms.Process(
         algorithm,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             mnist_model = model,
             x = zeros(PMNIST_FT, PMNIST_INPUT_DIM),
             y = zeros(PMNIST_FT, PMNIST_NCLASSES * source.config.output_replicas),
@@ -843,7 +843,7 @@ function local_worker(source::M, worker_idx::I, algorithm::A) where {M<:LocalMNI
             nskipped = Ref(0),
             total_loss = Ref(0f0),
         ),
-        Processes.Init(:dynamics; model = model.graph);
+        StatefulAlgorithms.Init(:dynamics; model = model.graph);
         repeat = 1,
     )
     log_worker && progress_log(source.config, "worker process initialized"; t0 = t_process, worker = worker_idx)
@@ -870,7 +870,7 @@ function local_manager(source::M) where {M<:LocalMNISTModel}
     )
     dynamics_algorithm = mnist_dynamics_algorithm()
     t_resolve = time()
-    worker_algorithm = Processes.resolve(contrastive_worker_algorithm(deepcopy(dynamics_algorithm), source.config, length(II.state(source.graph))))
+    worker_algorithm = StatefulAlgorithms.resolve(contrastive_worker_algorithm(deepcopy(dynamics_algorithm), source.config, length(II.state(source.graph))))
     progress_log(source.config, "worker algorithm resolved"; t0 = t_resolve)
     recipe = (;
         makeworker = (idx, manager) -> begin
@@ -885,18 +885,18 @@ function local_manager(source::M) where {M<:LocalMNISTModel}
             ctx = worker_context(slot.worker)
             ctx.x .= job.x
             ctx.y .= job.y
-            Processes.resetworker!(slot)
+            StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
         flush! = manager -> flush_manager_buffers!(manager),
     )
-    manager = Processes.ProcessManager(
+    manager = StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = source.config.workers,
         config = source.config,
         state,
-        flush_policy = Processes.FlushAtEnd(),
-        worker_init = Processes.MakeEachWorker(),
+        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = LocalMNISTJob{Vector{PMNIST_FT},Vector{PMNIST_FT}},
     )
@@ -911,7 +911,7 @@ function validation_manager(source::M) where {M<:LocalMNISTModel}
     state = LocalMNISTEvalManagerState(source, Ref(0), Ref(0), Ref(0f0), zeros(Int, PMNIST_NCLASSES))
     dynamics_algorithm = mnist_dynamics_algorithm()
     t_resolve = time()
-    worker_algorithm = Processes.resolve(validation_free_phase_algorithm(deepcopy(dynamics_algorithm), source.config, length(II.state(source.graph))))
+    worker_algorithm = StatefulAlgorithms.resolve(validation_free_phase_algorithm(deepcopy(dynamics_algorithm), source.config, length(II.state(source.graph))))
     progress_log(source.config, "validation worker algorithm resolved"; t0 = t_resolve)
     recipe = (;
         makeworker = (idx, manager) -> validation_worker(manager.state.model, idx, worker_algorithm),
@@ -919,18 +919,18 @@ function validation_manager(source::M) where {M<:LocalMNISTModel}
             ctx = worker_context(slot.worker)
             ctx.x .= job.x
             ctx.y .= job.y
-            Processes.resetworker!(slot)
+            StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
         flush! = manager -> flush_validation_buffers!(manager),
     )
-    manager = Processes.ProcessManager(
+    manager = StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = source.config.workers,
         config = source.config,
         state,
-        flush_policy = Processes.FlushAtEnd(),
-        worker_init = Processes.MakeEachWorker(),
+        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = LocalMNISTJob{Vector{PMNIST_FT},Vector{PMNIST_FT}},
     )
@@ -939,38 +939,38 @@ function validation_manager(source::M) where {M<:LocalMNISTModel}
 end
 
 """Clear every manager and worker gradient/stat buffer before a minibatch."""
-function clear_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function clear_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_gradient!(manager.state.batch_gradient)
     manager.state.nsamples[] = 0
     manager.state.ncorrect[] = 0
     manager.state.nskipped[] = 0
     manager.state.total_loss[] = 0f0
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         reset_worker_stats!(worker_context(worker))
     end
     return manager
 end
 
 """Clear validation manager and worker accounting fields."""
-function clear_validation_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function clear_validation_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     manager.state.nsamples[] = 0
     manager.state.ncorrect[] = 0
     manager.state.total_loss[] = 0f0
     fill!(manager.state.pred_counts, 0)
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         reset_eval_worker_stats!(worker_context(worker))
     end
     return manager
 end
 
 """Merge all worker-local buffers into the manager state."""
-function flush_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function flush_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_gradient!(manager.state.batch_gradient)
     manager.state.nsamples[] = 0
     manager.state.ncorrect[] = 0
     manager.state.nskipped[] = 0
     manager.state.total_loss[] = 0f0
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         ctx = worker_context(worker)
         add_gradient!(manager.state.batch_gradient, ctx.gradient)
         manager.state.nsamples[] += ctx.nsamples[]
@@ -983,12 +983,12 @@ function flush_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
 end
 
 """Merge all validation worker-local accounting fields into manager state."""
-function flush_validation_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function flush_validation_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     manager.state.nsamples[] = 0
     manager.state.ncorrect[] = 0
     manager.state.total_loss[] = 0f0
     fill!(manager.state.pred_counts, 0)
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         ctx = worker_context(worker)
         manager.state.nsamples[] += ctx.nsamples[]
         manager.state.ncorrect[] += ctx.ncorrect[]
@@ -1000,13 +1000,13 @@ function flush_validation_buffers!(manager::M) where {M<:Processes.ProcessManage
 end
 
 """Run one manager minibatch and update the shared source parameters once."""
-function run_minibatch!(manager::M, jobs::J; log_progress::Bool = true) where {M<:Processes.ProcessManager,J<:AbstractVector}
+function run_minibatch!(manager::M, jobs::J; log_progress::Bool = true) where {M<:StatefulAlgorithms.ProcessManager,J<:AbstractVector}
     t_clear = time()
     clear_manager_buffers!(manager)
     log_progress && progress_log(manager.config, "minibatch buffers cleared"; t0 = t_clear, jobs = length(jobs))
     t_run = time()
     log_progress && progress_log(manager.config, "minibatch manager run started"; jobs = length(jobs), workers = manager.config.workers)
-    Processes.run!(manager, jobs, Processes.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
     log_progress && progress_log(manager.config, "minibatch manager run finished"; t0 = t_run, jobs = length(jobs))
     t_update = time()
     write_optimizer_gradient!(manager.state.optimizer_gradient, manager.state.batch_gradient, manager.config, manager.state.nsamples[])
@@ -1253,10 +1253,10 @@ end
 function free_phase_process(source::M, dynamics_algorithm::D) where {M<:LocalMNISTModel,D}
     model = worker_model(source, 0)
     graph_state = II.state(model.graph)
-    algorithm = Processes.resolve(validation_free_phase_algorithm(deepcopy(dynamics_algorithm), model.config, length(graph_state)))
-    return Processes.Process(
+    algorithm = StatefulAlgorithms.resolve(validation_free_phase_algorithm(deepcopy(dynamics_algorithm), model.config, length(graph_state)))
+    return StatefulAlgorithms.Process(
         algorithm,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             mnist_model = model,
             x = zeros(PMNIST_FT, PMNIST_INPUT_DIM),
             y = zeros(PMNIST_FT, PMNIST_NCLASSES * source.config.output_replicas),
@@ -1270,7 +1270,7 @@ function free_phase_process(source::M, dynamics_algorithm::D) where {M<:LocalMNI
             total_loss = Ref(0f0),
             pred_counts = zeros(Int, PMNIST_NCLASSES),
         ),
-        Processes.Init(:dynamics; model = model.graph);
+        StatefulAlgorithms.Init(:dynamics; model = model.graph);
         repeat = 1,
     )
 end
@@ -1279,9 +1279,9 @@ end
 function validation_worker(source::M, worker_idx::I, algorithm::A) where {M<:LocalMNISTModel,I<:Integer,A}
     model = worker_model(source, worker_idx)
     graph_state = II.state(model.graph)
-    return Processes.Process(
+    return StatefulAlgorithms.Process(
         algorithm,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             mnist_model = model,
             x = zeros(PMNIST_FT, PMNIST_INPUT_DIM),
             y = zeros(PMNIST_FT, PMNIST_NCLASSES * source.config.output_replicas),
@@ -1295,13 +1295,13 @@ function validation_worker(source::M, worker_idx::I, algorithm::A) where {M<:Loc
             total_loss = Ref(0f0),
             pred_counts = zeros(Int, PMNIST_NCLASSES),
         ),
-        Processes.Init(:dynamics; model = model.graph);
+        StatefulAlgorithms.Init(:dynamics; model = model.graph);
         repeat = 1,
     )
 end
 
 """Evaluate balanced accuracy and output loss with a free-phase ProcessManager."""
-function evaluate(manager::M, x::X, y::Y) where {M<:Processes.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix}
+function evaluate(manager::M, x::X, y::Y) where {M<:StatefulAlgorithms.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix}
     t_clear = time()
     clear_validation_buffers!(manager)
     progress_log(manager.config, "evaluation buffers cleared"; t0 = t_clear, samples = size(x, 2))
@@ -1312,7 +1312,7 @@ function evaluate(manager::M, x::X, y::Y) where {M<:Processes.ProcessManager,X<:
 
     t_run = time()
     progress_log(manager.config, "evaluation manager run started"; jobs = length(jobs), workers = manager.config.workers)
-    Processes.run!(manager, jobs, Processes.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
     progress_log(manager.config, "evaluation manager run finished"; t0 = t_run, jobs = length(jobs))
 
     nsamples = manager.state.nsamples[]
@@ -1342,7 +1342,7 @@ function save_checkpoint(
     manager::M;
     epoch = missing,
     best_accuracy = missing,
-) where {P<:AbstractString,M<:Processes.ProcessManager}
+) where {P<:AbstractString,M<:StatefulAlgorithms.ProcessManager}
     model = manager.state.model
     params = trainable_params(model)
     mkpath(dirname(path))

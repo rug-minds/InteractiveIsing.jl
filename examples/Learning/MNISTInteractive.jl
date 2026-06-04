@@ -13,7 +13,7 @@ using Serialization
 GLMakie.activate!()
 
 const MNIST_DEMO_WINDOWS = IsingLearning.InteractiveIsing.Windows
-const MNIST_DEMO_PROCESSES = IsingLearning.InteractiveIsing.Processes
+const MNIST_DEMO_PROCESSES = IsingLearning.InteractiveIsing.StatefulAlgorithms
 
 const MNIST_DEMO_FT = Float32
 const MNIST_DEMO_HIDDEN = parse(Int, get(ENV, "ISING_MNIST_DEMO_HIDDEN", "120"))

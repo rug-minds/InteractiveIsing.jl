@@ -3,10 +3,10 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 
 include(joinpath(@__DIR__, "simple_2_4_1_curriculum.jl"))
 
-using IsingLearning.InteractiveIsing.Processes:
+using IsingLearning.InteractiveIsing.StatefulAlgorithms:
     @Routine, @CompositeAlgorithm, @repeat, @state, @alias, @context, @input
 
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 
 """
     AnnealedLocalLangevin(inner, start_T, stop_T, nsteps, power)
@@ -41,27 +41,27 @@ function annealed_temperature(step::Integer, total::Integer, start_T, stop_T, po
 end
 
 """
-    II.Processes.init(annealed, context)
+    II.StatefulAlgorithms.init(annealed, context)
 
 Initialize the wrapped `LocalLangevin` context and add an annealing counter.
 """
-function II.Processes.init(annealed::AnnealedLocalLangevin, context)
-    base = II.Processes.init(annealed.inner, context)
+function II.StatefulAlgorithms.init(annealed::AnnealedLocalLangevin, context)
+    base = II.StatefulAlgorithms.init(annealed.inner, context)
     return merge(base, (; anneal_step = Ref(0)))
 end
 
 """
-    II.Processes.step!(annealed, context)
+    II.StatefulAlgorithms.step!(annealed, context)
 
 Set the current scheduled temperature, advance the cyclic annealing counter,
 and perform one wrapped `LocalLangevin` step.
 """
-function II.Processes.step!(annealed::AnnealedLocalLangevin, context)
+function II.StatefulAlgorithms.step!(annealed::AnnealedLocalLangevin, context)
     phase_step = context.anneal_step[] % max(annealed.nsteps, 1)
     Tcur = annealed_temperature(phase_step, annealed.nsteps, annealed.start_T, annealed.stop_T, annealed.power)
     II.temp!(context.model, Tcur)
     context.anneal_step[] += 1
-    result = II.Processes.step!(annealed.inner, context)
+    result = II.StatefulAlgorithms.step!(annealed.inner, context)
     return merge(result, (; scheduled_T = Tcur))
 end
 
@@ -229,21 +229,21 @@ end
 Create one training worker for the annealed nudged curriculum.
 """
 function annealed_worker_process(layer, worker_graph, config::Analytic241Config)
-    algo = II.Processes.resolve(forward_and_annealed_nudged(layer, config).algorithm)
+    algo = II.StatefulAlgorithms.resolve(forward_and_annealed_nudged(layer, config).algorithm)
     xdim = length(layer.input_layer)
     ydim = length(layer.output_layer)
     buffers = IsingLearning.gradient_buffer(worker_graph)
-    return II.Processes.Process(
+    return II.StatefulAlgorithms.Process(
         algo,
-        II.Processes.Init(:_state;
+        II.StatefulAlgorithms.Init(:_state;
             x = zeros(eltype(worker_graph), xdim),
             y = zeros(eltype(worker_graph), ydim),
             buffers = buffers,
             equilibrium_state = copy(II.state(worker_graph)),
         ),
-        II.Processes.Init(:dynamics, model = worker_graph),
-        II.Processes.Init(:plus_capture, state = worker_graph),
-        II.Processes.Init(:minus_capture, state = worker_graph);
+        II.StatefulAlgorithms.Init(:dynamics, model = worker_graph),
+        II.StatefulAlgorithms.Init(:plus_capture, state = worker_graph),
+        II.StatefulAlgorithms.Init(:minus_capture, state = worker_graph);
         repeat = 1,
     )
 end
@@ -265,11 +265,11 @@ function trainer_241(config::Analytic241Config)
     worker_template_graph = IsingLearning._worker_graph(graph, params)
     worker_template = annealed_worker_process(layer, worker_template_graph, config)
     workers = [worker_template]
-    worker_graphs = [Processes.context(worker).dynamics.model for worker in workers]
+    worker_graphs = [StatefulAlgorithms.context(worker).dynamics.model for worker in workers]
 
     validation_template_graph = IsingLearning._worker_graph(graph, params)
     validation_worker = IsingLearning._validation_process(layer, validation_template_graph)
-    validation_graph = Processes.context(validation_worker).dynamics.model
+    validation_graph = StatefulAlgorithms.context(validation_worker).dynamics.model
 
     return IsingLearning.MNISTThreadedTrainer(
         layer,

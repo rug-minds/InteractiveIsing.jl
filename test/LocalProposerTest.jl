@@ -25,9 +25,9 @@ using Random
     @test all(p -> p.to_val in stateset(discrete_graph[1]), discrete_proposals)
 
     parsed_graph = IsingGraph(8, LocalProposer(1), Discrete(), StateSet(-1.0f0, 1.0f0))
-    parsed_algo = InteractiveIsing.Processes.getalgo(parsed_graph.default_algorithm)
-    parsed_context = InteractiveIsing.Processes.init(parsed_algo, (;model = parsed_graph))
-    parsed_output = InteractiveIsing.Processes.step!(parsed_algo, parsed_context)
+    parsed_algo = InteractiveIsing.StatefulAlgorithms.getalgo(parsed_graph.default_algorithm)
+    parsed_context = InteractiveIsing.StatefulAlgorithms.init(parsed_algo, (;model = parsed_graph))
+    parsed_output = InteractiveIsing.StatefulAlgorithms.step!(parsed_algo, parsed_context)
 
     @test parsed_output.proposal isa FlipProposal
     @test parsed_output.proposal.to_val in stateset(parsed_graph[1])

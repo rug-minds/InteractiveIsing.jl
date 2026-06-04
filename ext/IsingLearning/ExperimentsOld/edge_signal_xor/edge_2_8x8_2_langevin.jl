@@ -10,7 +10,7 @@ using CairoMakie
 import IsingLearning.InteractiveIsing: @WG, WeightGenerator
 
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 const FT = Float64
 
 const EDGE_CASES = ((false, false), (false, true), (true, false), (true, true))
@@ -258,7 +258,7 @@ function edge_forward(layer, config::EdgeTwoOutConfig)
     dynamics_algorithm = edge_twoout_dynamics(config)
     n_units = layer.nunits
     steps = layer.free_relaxation_steps
-    forward = Processes.@Routine begin
+    forward = StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @state equilibrium_state = zeros(n_units)
         @state x
@@ -284,7 +284,7 @@ function edge_nudged(layer, config::EdgeTwoOutConfig)
     plus_capture = IsingLearning.Capturer()
     minus_capture = IsingLearning.Capturer()
 
-    plus = Processes.@Routine begin
+    plus = StatefulAlgorithms.@Routine begin
         @state equilibrium_state
         @state y
         @state x
@@ -306,7 +306,7 @@ function edge_nudged(layer, config::EdgeTwoOutConfig)
         plus_capture(isinggraph = model)
     end
 
-    minus = Processes.@Routine begin
+    minus = StatefulAlgorithms.@Routine begin
         @state equilibrium_state
         @state y
         @state x
@@ -328,7 +328,7 @@ function edge_nudged(layer, config::EdgeTwoOutConfig)
         minus_capture(isinggraph = model)
     end
 
-    final = Processes.@CompositeAlgorithm begin
+    final = StatefulAlgorithms.@CompositeAlgorithm begin
         @input clamping_beta = beta
         @state buffers
         @alias plus = plus
@@ -347,7 +347,7 @@ function edge_forward_and_nudged(layer, config::EdgeTwoOutConfig)
     nudged = edge_nudged(layer, config)
     beta = layer.β
     final = if config.gradient_mode == :symmetric
-        Processes.@CompositeAlgorithm begin
+        StatefulAlgorithms.@CompositeAlgorithm begin
             @input clamping_beta = beta
             @state buffers
             @state rng_seed = 1
@@ -368,7 +368,7 @@ function edge_forward_and_nudged(layer, config::EdgeTwoOutConfig)
             IsingLearning.contrastive_gradient(c1.dynamics.model, plus_capture.captured, minus_capture.captured, clamping_beta, buffers = buffers)
         end
     elseif config.gradient_mode == :plus_free
-        Processes.@CompositeAlgorithm begin
+        StatefulAlgorithms.@CompositeAlgorithm begin
             @input clamping_beta = beta
             @state buffers
             @state rng_seed = 1
@@ -385,7 +385,7 @@ function edge_forward_and_nudged(layer, config::EdgeTwoOutConfig)
             edge_difference_gradient!(c1.dynamics.model, plus_capture.captured, c1.equilibrium_state, buffers)
         end
     elseif config.gradient_mode == :free_plus
-        Processes.@CompositeAlgorithm begin
+        StatefulAlgorithms.@CompositeAlgorithm begin
             @input clamping_beta = beta
             @state buffers
             @state rng_seed = 1
@@ -409,34 +409,34 @@ end
 
 """Create a reusable training process for the zero-init edge composite."""
 function edge_worker_process(layer, worker_graph, config::EdgeTwoOutConfig)
-    algo = Processes.resolve(edge_forward_and_nudged(layer, config).algorithm)
+    algo = StatefulAlgorithms.resolve(edge_forward_and_nudged(layer, config).algorithm)
     buffers = IsingLearning.gradient_buffer(worker_graph)
-    return Processes.Process(
+    return StatefulAlgorithms.Process(
         algo,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             x = zeros(eltype(worker_graph), length(layer.input_layer)),
             y = zeros(eltype(worker_graph), length(layer.output_layer)),
             buffers = buffers,
             rng_seed = 1,
             equilibrium_state = copy(II.state(worker_graph)),
         ),
-        Processes.Init(:dynamics, model = worker_graph),
-        Processes.Init(:plus_capture, state = worker_graph),
-        Processes.Init(:minus_capture, state = worker_graph);
+        StatefulAlgorithms.Init(:dynamics, model = worker_graph),
+        StatefulAlgorithms.Init(:plus_capture, state = worker_graph),
+        StatefulAlgorithms.Init(:minus_capture, state = worker_graph);
         repeat = 1,
     )
 end
 
 """Create a reusable validation process for zero-init free relaxation."""
 function edge_validation_process(layer, worker_graph, config::EdgeTwoOutConfig)
-    algo = Processes.resolve(edge_forward(layer, config).algorithm)
-    return Processes.Process(
+    algo = StatefulAlgorithms.resolve(edge_forward(layer, config).algorithm)
+    return StatefulAlgorithms.Process(
         algo,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             x = zeros(eltype(worker_graph), length(layer.input_layer)),
             equilibrium_state = copy(II.state(worker_graph)),
         ),
-        Processes.Init(:dynamics, model = worker_graph);
+        StatefulAlgorithms.Init(:dynamics, model = worker_graph);
         repeat = 1,
     )
 end
@@ -450,10 +450,10 @@ function edge_twoout_trainer(graph, layer, config::EdgeTwoOutConfig)
     template_worker = edge_worker_process(layer, template_graph, config)
     workers = [
         idx == 1 ? template_worker :
-        Processes.copyprocess(template_worker; context = deepcopy(Processes.context(template_worker)))
+        StatefulAlgorithms.copyprocess(template_worker; context = deepcopy(StatefulAlgorithms.context(template_worker)))
         for idx in 1:config.workers
     ]
-    worker_graphs = [Processes.context(worker).dynamics.model for worker in workers]
+    worker_graphs = [StatefulAlgorithms.context(worker).dynamics.model for worker in workers]
     validation_graph = IsingLearning._worker_graph(graph, params)
     validation_worker = edge_validation_process(layer, validation_graph, config)
     return IsingLearning.MNISTThreadedTrainer(
@@ -492,12 +492,12 @@ function edge_evaluate!(trainer, x, y, config::EdgeTwoOutConfig)
     for sample_idx in 1:nsamples
         worker = trainer.validation_worker
         IsingLearning._write_input!(worker, view(xeval, :, sample_idx))
-        Processes.reset!(worker)
+        StatefulAlgorithms.reset!(worker)
         run(worker)
         wait(worker)
         close(worker)
 
-        output = @view Processes.context(worker)._state.equilibrium_state[trainer.layer.output_layer]
+        output = @view StatefulAlgorithms.context(worker)._state.equilibrium_state[trainer.layer.output_layer]
         target = view(yeval, :, sample_idx)
         total_squared_error += sum(abs2, output .- target)
         out0 = mean(@view output[1:config.output_repeats])
@@ -530,17 +530,17 @@ function edge_run_minibatch!(trainer, xbatch, ybatch, batch_gradient, clamping_b
     for sample_idx in 1:batchsize
         worker_idx = nothing
         while true
-            worker_idx = findfirst(worker -> isnothing(worker.task) || Processes.isdone(worker), workers)
+            worker_idx = findfirst(worker -> isnothing(worker.task) || StatefulAlgorithms.isdone(worker), workers)
             isnothing(worker_idx) || break
             yield()
         end
 
         worker = workers[something(worker_idx)]
-        Processes.isdone(worker) && close(worker)
+        StatefulAlgorithms.isdone(worker) && close(worker)
         IsingLearning._write_example!(worker, view(xbatch, :, sample_idx), view(ybatch, :, sample_idx))
-        state_context = Processes.context(worker)._state
-        Processes.newdata(state_context, merge(Processes.getdata(state_context), (; rng_seed = 10_000_000 + 100_000 * epoch + sample_idx)))
-        Processes.reset!(worker)
+        state_context = StatefulAlgorithms.context(worker)._state
+        StatefulAlgorithms.newdata(state_context, merge(StatefulAlgorithms.getdata(state_context), (; rng_seed = 10_000_000 + 100_000 * epoch + sample_idx)))
+        StatefulAlgorithms.reset!(worker)
         run(worker; clamping_beta = clamping_beta)
     end
 

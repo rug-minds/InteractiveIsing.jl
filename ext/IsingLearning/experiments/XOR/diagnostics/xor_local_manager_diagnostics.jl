@@ -25,12 +25,12 @@ function diagnostic_append_row!(path::P, row::R) where {P<:AbstractString,R<:Nam
 end
 
 """Return counts of unique shared model arrays across manager workers."""
-function sharing_counts(manager::M) where {M<:Processes.ProcessManager}
+function sharing_counts(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     adj_ids = UInt[]
     nz_ids = UInt[]
     bias_ids = UInt[]
-    for worker in Processes.workers(manager)
-        model = Processes.context(worker).dynamics.model
+    for worker in StatefulAlgorithms.workers(manager)
+        model = StatefulAlgorithms.context(worker).dynamics.model
         push!(adj_ids, objectid(II.adj(model)))
         push!(nz_ids, objectid(SparseArrays.nonzeros(II.adj(model))))
         push!(bias_ids, objectid(II.getparam(model.hamiltonian, II.MagField, :b)))

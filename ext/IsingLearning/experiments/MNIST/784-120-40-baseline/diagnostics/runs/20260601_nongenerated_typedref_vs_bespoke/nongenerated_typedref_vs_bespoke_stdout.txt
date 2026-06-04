@@ -1,6 +1,6 @@
 [bootstrap] activated project
 [bootstrap] loaded packages
-2026-06-01T18:52:26.954 begin typed-ref NonGenerated vs bespoke threads=32 batchsize=128 sweeps=500.0 looptype=IsingLearning.InteractiveIsing.Processes.NonGenerated()
+2026-06-01T18:52:26.954 begin typed-ref NonGenerated vs bespoke threads=32 batchsize=128 sweeps=500.0 looptype=IsingLearning.InteractiveIsing.StatefulAlgorithms.NonGenerated()
 2026-06-01T18:52:29.298 direct rep=1 begin
 2026-06-01T18:52:38.219 direct rep=1 wall=2.2940698 spe=0.0179224203125
 2026-06-01T18:52:38.220 process rep=1 begin

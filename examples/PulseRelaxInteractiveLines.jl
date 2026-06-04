@@ -1,5 +1,5 @@
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 using InteractiveIsing.Windows
 using Statistics
 
@@ -21,7 +21,7 @@ struct TrianglePulseA{T} <: ProcessAlgorithm
     numpulses::Int
 end
 
-function Processes.init(tp::TrianglePulseA, args)
+function StatefulAlgorithms.init(tp::TrianglePulseA, args)
     n_calls = num_calls(args)
     samples = max(1, round(Int, n_calls / (4 * tp.numpulses)))
     pulse = repeat(vcat(
@@ -34,7 +34,7 @@ function Processes.init(tp::TrianglePulseA, args)
     return (; pulse, step = 1, pulseval = pulse[1])
 end
 
-function Processes.step!(::TrianglePulseA, context)
+function StatefulAlgorithms.step!(::TrianglePulseA, context)
     (; pulse, step, hamiltonian) = context
     pulseval = pulse[min(step, length(pulse))]
     hamiltonian.b[] = pulseval
@@ -44,13 +44,13 @@ end
 struct ValueLogger{Name} <: ProcessAlgorithm end
 ValueLogger(name) = ValueLogger{Symbol(name)}()
 
-function Processes.init(::ValueLogger, args)
+function StatefulAlgorithms.init(::ValueLogger, args)
     values = Float32[]
     processsizehint!(values, args)
     return (; values)
 end
 
-function Processes.step!(::ValueLogger, context)
+function StatefulAlgorithms.step!(::ValueLogger, context)
     (; values, value) = context
     push!(values, Float32(value))
     return (;)
@@ -59,13 +59,13 @@ end
 struct StepLogger{Name} <: ProcessAlgorithm end
 StepLogger(name) = StepLogger{Symbol(name)}()
 
-function Processes.init(::StepLogger, args)
+function StatefulAlgorithms.init(::StepLogger, args)
     steps = Int[]
     processsizehint!(steps, args)
     return (; steps)
 end
 
-function Processes.step!(::StepLogger, context)
+function StatefulAlgorithms.step!(::StepLogger, context)
     (; steps) = context
     push!(steps, length(steps) + 1)
     return (;)
@@ -75,9 +75,9 @@ struct YieldControl <: ProcessAlgorithm
     seconds::Float64
 end
 
-Processes.init(::YieldControl, args) = (;)
+StatefulAlgorithms.init(::YieldControl, args) = (;)
 
-function Processes.step!(yield_control::YieldControl, context)
+function StatefulAlgorithms.step!(yield_control::YieldControl, context)
     sleep(yield_control.seconds)
     return (;)
 end
@@ -171,7 +171,7 @@ pulse_and_relax = @Routine begin
     @repeat relax_time relax_part()
 end
 
-Processes.close(g)
+StatefulAlgorithms.close(g)
 process_func = deepcopy(pulse_and_relax)
 process_inputs = (
     InteractiveIsing._mc_model_inits(process_func, g)...,

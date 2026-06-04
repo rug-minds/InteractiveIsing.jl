@@ -61,7 +61,7 @@ end
     split_free_dynamics_algorithm(config, split, graph)
 
 Create the Langevin sampler used for the split free phase. This experiment uses
-the direct sampler instead of a scheduler wrapper so the Processes context shape
+the direct sampler instead of a scheduler wrapper so the StatefulAlgorithms context shape
 matches the working checkerboard EqProp route.
 """
 function split_free_dynamics_algorithm(config::LocalCheckerboardConfig, split::SplitSnapshotSearchConfig, graph)
@@ -202,7 +202,7 @@ Create one training worker for the split-snapshot Langevin composite.
 """
 function split_snapshot_worker_process(layer, graph, split::SplitSnapshotSearchConfig)
     config = split.search.config
-    algo = Processes.resolve(SplitSnapshotForwardAndNudged(layer, config, split).algorithm)
+    algo = StatefulAlgorithms.resolve(SplitSnapshotForwardAndNudged(layer, config, split).algorithm)
     buffers = IsingLearning.gradient_buffer(graph)
     return Process(
         algo,

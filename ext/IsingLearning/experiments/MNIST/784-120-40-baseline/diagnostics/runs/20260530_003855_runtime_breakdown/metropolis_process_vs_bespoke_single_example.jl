@@ -1,12 +1,12 @@
 include(joinpath(@__DIR__, "hidden_output_field_input_single_example.jl"))
 
 """Return internal runtime seconds for `Process` and `InlineProcess` diagnostics."""
-@inline function diagnostic_internal_seconds(worker::W) where {W<:Processes.Process}
-    return Processes.runtime(worker)
+@inline function diagnostic_internal_seconds(worker::W) where {W<:StatefulAlgorithms.Process}
+    return StatefulAlgorithms.runtime(worker)
 end
 
 """Return internal runtime seconds for a synchronous `InlineProcess` diagnostic."""
-@inline function diagnostic_internal_seconds(worker::W) where {W<:Processes.InlineProcess}
+@inline function diagnostic_internal_seconds(worker::W) where {W<:StatefulAlgorithms.InlineProcess}
     isnothing(worker.starttime) && error("InlineProcess has not run yet")
     stop_time = isnothing(worker.endtime) ? time_ns() : worker.endtime
     return Int(stop_time - worker.starttime) / 1e9
@@ -21,7 +21,7 @@ function prepare_baseline_process_sample!(worker::W, xtrain::X, ytrain::Y, sampl
 }
     ctx = worker_context(worker)
     load_sample_into_worker!(ctx, xtrain, ytrain, sample_idx)
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     return worker
 end
 
@@ -33,7 +33,7 @@ function warmed_metropolis_process_worker(layer::L, source::G, input_hidden_w::R
     X<:AbstractMatrix,
     Y<:AbstractMatrix,
 }
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(layer))
     worker = input_field_worker(algorithm, layer, shared_worker_graph(source), input_hidden_w)
     prepare_baseline_process_sample!(worker, xtrain, ytrain, 1)
     run(worker)
@@ -53,10 +53,10 @@ function warmed_metropolis_inline_worker(layer::L, source::G, input_hidden_w::R,
     Y<:AbstractMatrix,
 }
     warm_worker = warmed_metropolis_process_worker(layer, source, input_hidden_w, xtrain, ytrain)
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(layer))
-    worker = Processes.InlineProcess(
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(layer))
+    worker = StatefulAlgorithms.InlineProcess(
         algorithm;
-        context = Processes.context(warm_worker),
+        context = StatefulAlgorithms.context(warm_worker),
         repeats = 1,
         threaded = false,
     )
@@ -66,7 +66,7 @@ end
 
 """Time one normal Process run path for a single Metropolis MNIST sample."""
 function time_metropolis_process!(worker::W, xtrain::X, ytrain::Y, sample_idx::I) where {
-    W<:Processes.Process,
+    W<:StatefulAlgorithms.Process,
     X<:AbstractMatrix,
     Y<:AbstractMatrix,
     I<:Integer,
@@ -81,12 +81,12 @@ end
 
 """Time one InlineProcess run path for a single Metropolis MNIST sample."""
 function time_metropolis_inline!(worker::W, xtrain::X, ytrain::Y, sample_idx::I) where {
-    W<:Processes.InlineProcess,
+    W<:StatefulAlgorithms.InlineProcess,
     X<:AbstractMatrix,
     Y<:AbstractMatrix,
     I<:Integer,
 }
-    ctx = Processes.context(worker)._state
+    ctx = StatefulAlgorithms.context(worker)._state
     load_sample_into_worker!(ctx, xtrain, ytrain, sample_idx)
     wall = @elapsed run(worker; threaded = false)
     return (; wall, internal = diagnostic_internal_seconds(worker))

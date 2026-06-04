@@ -18,7 +18,7 @@ include(DESTRUCTURED_MANAGER_FILE)
 
 using Random
 
-struct DestructuredMNISTWorker{M} <: Processes.ProcessAlgorithm
+struct DestructuredMNISTWorker{M} <: StatefulAlgorithms.ProcessAlgorithm
     model::M
 end
 
@@ -129,7 +129,7 @@ end
 end
 
 """Initialize the steady-state fields for one destructured worker process."""
-function Processes.init(worker::DestructuredMNISTWorker{M}, context) where {M<:LocalMNISTModel}
+function StatefulAlgorithms.init(worker::DestructuredMNISTWorker{M}, context) where {M<:LocalMNISTModel}
     model = worker.model
     graph = model.graph
     graph_state = II.state(graph)
@@ -157,7 +157,7 @@ function Processes.init(worker::DestructuredMNISTWorker{M}, context) where {M<:L
 end
 
 """Run one sample after destructuring context at the ProcessAlgorithm boundary."""
-function Processes.step!(worker::DestructuredMNISTWorker{M}, context) where {M<:LocalMNISTModel}
+function StatefulAlgorithms.step!(worker::DestructuredMNISTWorker{M}, context) where {M<:LocalMNISTModel}
     (;
         model,
         x,
@@ -208,13 +208,13 @@ function Processes.step!(worker::DestructuredMNISTWorker{M}, context) where {M<:
 end
 
 """Time normal Process runs while keeping context access at the outer boundary."""
-function time_destructured_process!(process::P, xtrain::X, ytrain::Y, nsamples::I) where {P<:Processes.Process,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
+function time_destructured_process!(process::P, xtrain::X, ytrain::Y, nsamples::I) where {P<:StatefulAlgorithms.Process,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
     return @elapsed begin
         @inbounds for sample_idx in 1:Int(nsamples)
-            process_state = Processes.context(process)[1]
+            process_state = StatefulAlgorithms.context(process)[1]
             process_state.x .= view(xtrain, :, sample_idx)
             process_state.y .= view(ytrain, :, sample_idx)
-            Processes.reset!(process)
+            StatefulAlgorithms.reset!(process)
             @inline run(process)
             @inline wait(process)
         end
@@ -235,10 +235,10 @@ function main()
     xtrain, ytrain = balanced_mnist(:train, config.train_per_class, config)
     source = init_model(config, config.seed)
 
-    warm_process = Processes.Process(DestructuredMNISTWorker(worker_model(source, 1)); repeats = 1)
+    warm_process = StatefulAlgorithms.Process(DestructuredMNISTWorker(worker_model(source, 1)); repeats = 1)
     time_destructured_process!(warm_process, xtrain, ytrain, 1)
 
-    process = Processes.Process(DestructuredMNISTWorker(worker_model(source, 2)); repeats = 1)
+    process = StatefulAlgorithms.Process(DestructuredMNISTWorker(worker_model(source, 2)); repeats = 1)
     seconds = time_destructured_process!(process, xtrain, ytrain, nsamples)
     steps_per_sample = (config.free_reads * config.free_sweeps + config.nudge_reads * config.nudge_sweeps) * length(II.state(source.graph))
 

@@ -3,7 +3,7 @@
 
 include(joinpath(@__DIR__, "common", "ManuscriptTools.jl"))
 import InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 MT = ManuscriptTools
 
 example_wg_skymion(; dc) = MT.weightfunc_skymion(; dc)

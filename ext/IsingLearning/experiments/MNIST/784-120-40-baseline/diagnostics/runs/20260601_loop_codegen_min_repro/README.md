@@ -1,6 +1,6 @@
 # NonGenerated Loop Codegen Reproducer
 
-This folder contains a reduced reproducer for the `Processes.loop(::Repeat, ::NonGenerated)` codegen stall seen with the MNIST contrastive worker context.
+This folder contains a reduced reproducer for the `StatefulAlgorithms.loop(::Repeat, ::NonGenerated)` codegen stall seen with the MNIST contrastive worker context.
 
 The script avoids loading MNIST data. It builds the reduced 120-40 field-input graph, creates one synthetic input/target sample, and runs one real repeated loop iteration with `Repeat(2)`.
 
@@ -20,7 +20,7 @@ julia --project=ext/IsingLearning $script bad-local 2
 `bad-local` reproduces the problematic shape:
 
 ```julia
-nextcontext = @inline Processes._step!(...)
+nextcontext = @inline StatefulAlgorithms._step!(...)
 stablecontext = nextcontext
 ```
 
@@ -30,7 +30,7 @@ On this machine it did not reach the first marker inside `bad_local_loop!` after
 
 ```julia
 refcontext = Base.RefValue{typeof(initial_context)}(initial_context)
-refcontext[] = @inline Processes._step!(..., refcontext[], ...)
+refcontext[] = @inline StatefulAlgorithms._step!(..., refcontext[], ...)
 ```
 
 Observed result: completed one real loop-body `_step!`; stage wall was about 42.9 seconds.

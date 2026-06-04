@@ -45,7 +45,7 @@ Base.close(po::PolledObservable) = begin
     return false
 end
 
-Processes.start(po::PolledObservable) = begin
+StatefulAlgorithms.start(po::PolledObservable) = begin
     if hastimer(po)
         start(po.timer)
         return true

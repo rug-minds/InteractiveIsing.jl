@@ -11,7 +11,7 @@ using CairoMakie
 import IsingLearning.InteractiveIsing: @WG, WeightGenerator
 
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 const FT = Float64
 
 const XOR_CASES = ((false, false), (false, true), (true, false), (true, true))
@@ -398,7 +398,7 @@ end
 ResponseTrace() = ResponseTrace(Dict{String,Any}[], Dict{String,Any}[])
 
 """ProcessAlgorithm that records response metrics after scheduled dynamics steps."""
-struct SweepResponseLogger{Trace,State,Kind} <: Processes.ProcessAlgorithm
+struct SweepResponseLogger{Trace,State,Kind} <: StatefulAlgorithms.ProcessAlgorithm
     trace::Trace
     pre_state::State
     graph_kind::Kind
@@ -409,9 +409,9 @@ struct SweepResponseLogger{Trace,State,Kind} <: Processes.ProcessAlgorithm
     sweep::Base.RefValue{Int}
 end
 
-Processes.init(::SweepResponseLogger, context) = (;)
+StatefulAlgorithms.init(::SweepResponseLogger, context) = (;)
 
-function Processes.step!(logger::SweepResponseLogger, context)
+function StatefulAlgorithms.step!(logger::SweepResponseLogger, context)
     log_response!(
         logger.trace,
         context.model,
@@ -495,14 +495,14 @@ function randomize_graph_state!(graph)
     return graph
 end
 
-"""Run a fixed number of single-spin LocalLangevin steps through Processes."""
+"""Run a fixed number of single-spin LocalLangevin steps through StatefulAlgorithms."""
 function run_dynamics_steps!(graph, sampler, nsteps::Integer; seed::Integer)
     dynamics = deepcopy(sampler)
-    routine = II.Processes.@Routine begin
+    routine = II.StatefulAlgorithms.@Routine begin
         @repeat nsteps dynamics()
     end
-    inputs = (Processes.Init(dynamics, model = graph),)
-    process = Processes.Process(Processes.resolve(routine), inputs...; repeats = 1)
+    inputs = (StatefulAlgorithms.Init(dynamics, model = graph),)
+    process = StatefulAlgorithms.Process(StatefulAlgorithms.resolve(routine), inputs...; repeats = 1)
     run(process)
     wait(process)
     close(process)
@@ -526,17 +526,17 @@ function run_transition_response!(trace, graph, sampler, x; graph_kind, nn, sour
     sweep = Ref(1)
     logger = SweepResponseLogger(trace, pre_state, graph_kind, nn, source_case, target_case, repeat_idx, sweep)
     dynamics = deepcopy(sampler)
-    routine = II.Processes.@CompositeAlgorithm begin
+    routine = II.StatefulAlgorithms.@CompositeAlgorithm begin
         @alias dynamics = dynamics
         @every 1 dynamics()
         @every sweep_steps logger(model = dynamics.model)
     end
     total_steps = config.response_sweeps * sweep_steps
-    wrapped = II.Processes.@Routine begin
+    wrapped = II.StatefulAlgorithms.@Routine begin
         @repeat total_steps routine()
     end
-    inputs = (Processes.Init(dynamics, model = graph),)
-    process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
+    inputs = (StatefulAlgorithms.Init(dynamics, model = graph),)
+    process = StatefulAlgorithms.Process(StatefulAlgorithms.resolve(wrapped), inputs...; repeats = 1)
     run(process)
     wait(process)
     close(process)
@@ -834,7 +834,7 @@ function split_input_nudged_temp_algorithm(layer, base_temp::FT, nudged_temp::FT
     plus_dynamics_algorithm = deepcopy(layer.nudged_dynamics_algorithm)
     minus_dynamics_algorithm = deepcopy(layer.nudged_dynamics_algorithm)
 
-    nudged = Processes.@Routine begin
+    nudged = StatefulAlgorithms.@Routine begin
         @state equilibrium_state
         @state y
         @state x
@@ -851,7 +851,7 @@ function split_input_nudged_temp_algorithm(layer, base_temp::FT, nudged_temp::FT
         @repeat relaxation_steps dynamics()
     end
 
-    final = Processes.@CompositeAlgorithm begin
+    final = StatefulAlgorithms.@CompositeAlgorithm begin
         @input clamping_beta = beta
         @alias plus_capture = plus_capture
         @alias minus_capture = minus_capture
@@ -872,7 +872,7 @@ function split_input_forward_and_nudged_temp(layer, base_temp::FT, nudged_temp::
     forward = IsingLearning.ForwardDynamics(layer).algorithm
     nudged = split_input_nudged_temp_algorithm(layer, base_temp, nudged_temp)
     beta = layer.β
-    final = Processes.@CompositeAlgorithm begin
+    final = StatefulAlgorithms.@CompositeAlgorithm begin
         @state buffers
         @input clamping_beta = beta
         @alias plus_capture = nudged.plus_capture
@@ -893,22 +893,22 @@ end
 
 """Create one split-edge training worker with nudged-temperature control."""
 function split_input_nudged_temp_worker_process(layer, worker_graph, base_temp::FT, nudged_temp::FT)
-    algo = Processes.resolve(split_input_forward_and_nudged_temp(layer, base_temp, nudged_temp).algorithm)
+    algo = StatefulAlgorithms.resolve(split_input_forward_and_nudged_temp(layer, base_temp, nudged_temp).algorithm)
     xdim = length(layer.input_layer)
     ydim = length(layer.output_layer)
     buffers = IsingLearning.gradient_buffer(worker_graph)
 
-    return Processes.Process(
+    return StatefulAlgorithms.Process(
         algo,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             x = zeros(eltype(worker_graph), xdim),
             y = zeros(eltype(worker_graph), ydim),
             buffers = buffers,
             equilibrium_state = copy(II.state(worker_graph)),
         ),
-        Processes.Init(:dynamics, model = worker_graph),
-        Processes.Init(:plus_capture, state = worker_graph),
-        Processes.Init(:minus_capture, state = worker_graph);
+        StatefulAlgorithms.Init(:dynamics, model = worker_graph),
+        StatefulAlgorithms.Init(:plus_capture, state = worker_graph),
+        StatefulAlgorithms.Init(:minus_capture, state = worker_graph);
         repeat = 1,
     )
 end

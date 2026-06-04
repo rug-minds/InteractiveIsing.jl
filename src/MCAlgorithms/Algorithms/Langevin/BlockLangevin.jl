@@ -5,7 +5,7 @@ export BlockLangevin, DynamicBlockLangevin
 
 Block-gradient Langevin Monte Carlo update.
 
-At the start of each internal cycle, one `Processes.step!` refreshes the
+At the start of each internal cycle, one `StatefulAlgorithms.step!` refreshes the
 derivative on a random group of active spins. That step and subsequent
 steps then consume the cached block derivatives one spin at a time. This is a
 compromise between `LocalLangevin` and `GlobalLangevin`: it avoids a full
@@ -19,7 +19,7 @@ reflected.
 
 `stepsize` is the proposal size. If a `stepsize` variable is supplied in the
 process context, it overrides this configured default at initialization.
-`group_steps` is retained for interface compatibility; a `Processes.step!` call
+`group_steps` is retained for interface compatibility; a `StatefulAlgorithms.step!` call
 still attempts only one spin update.
 """
 struct BlockLangevin{Adjusted,T<:Real} <: IsingMCAlgorithm
@@ -60,7 +60,7 @@ The maximum block size is a type parameter: `DynamicBlockLangevin{MaxBlockSize,
 Adjusted,T}`. Each proposal draws a block size uniformly from
 `1:min(MaxBlockSize, n_active)` and then chooses a random group of that size.
 In adjusted mode the selected block is accepted or rejected as one block
-proposal, then accepted entries are written one spin per `Processes.step!`.
+proposal, then accepted entries are written one spin per `StatefulAlgorithms.step!`.
 """
 struct DynamicBlockLangevin{MaxBlockSize,Adjusted,T<:Real} <: IsingMCAlgorithm
     stepsize::T
@@ -111,7 +111,7 @@ end
 
 DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
 
-@inline function Processes.init(langevin::BlockLangevin{Adjusted}, context::Cont) where {Adjusted,Cont}
+@inline function StatefulAlgorithms.init(langevin::BlockLangevin{Adjusted}, context::Cont) where {Adjusted,Cont}
     (;model) = context
 
     for layer in layers(model)
@@ -159,7 +159,7 @@ DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
         gradient_max_cache, gradient_sumsq_cache, T)
 end
 
-@inline function Processes.init(langevin::DynamicBlockLangevin{MaxBlockSize,Adjusted}, context::Cont) where {MaxBlockSize,Adjusted,Cont}
+@inline function StatefulAlgorithms.init(langevin::DynamicBlockLangevin{MaxBlockSize,Adjusted}, context::Cont) where {MaxBlockSize,Adjusted,Cont}
     (;model) = context
 
     for layer in layers(model)
@@ -241,11 +241,11 @@ end
     return @inline rand(rng, 1:min(MaxBlockSize, n_active))
 end
 
-@inline function Processes.step!(langevin::BlockLangevin{Adjusted}, context::C) where {Adjusted,C}
+@inline function StatefulAlgorithms.step!(langevin::BlockLangevin{Adjusted}, context::C) where {Adjusted,C}
     return @inline _block_langevin_step!(langevin, context, Val(Adjusted))
 end
 
-@inline function Processes.step!(langevin::DynamicBlockLangevin{MaxBlockSize,Adjusted}, context::C) where {MaxBlockSize,Adjusted,C}
+@inline function StatefulAlgorithms.step!(langevin::DynamicBlockLangevin{MaxBlockSize,Adjusted}, context::C) where {MaxBlockSize,Adjusted,C}
     return @inline _block_langevin_step!(langevin, context, Val(Adjusted))
 end
 

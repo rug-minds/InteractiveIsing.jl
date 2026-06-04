@@ -19,11 +19,11 @@ function main_normal_process_immediate_ticks()
     setup = build_layer(config)
     source_graph = setup.graph
     input_hidden_w_ref = Ref(copy(setup.input_hidden_w))
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(source_graph), input_hidden_w_ref)
     clear_buffer!(worker_context(worker).buffers)
     load_sample_into_worker!(worker_context(worker), xtrain, ytrain, 1)
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     println("before run elapsed=", round(time() - t0; digits = 3))
     flush(stdout)
 
@@ -31,8 +31,8 @@ function main_normal_process_immediate_ticks()
 
     # Do not print/flush between `run` and these reads; avoid yielding to the
     # worker before we capture the immediate counters.
-    ticks0 = Processes.getticks(worker)
-    loopidx0 = Processes.loopint(worker)
+    ticks0 = StatefulAlgorithms.getticks(worker)
+    loopidx0 = StatefulAlgorithms.loopint(worker)
     task_nothing0 = isnothing(worker.task)
     println(
         "after run immediate elapsed=", round(time() - t0; digits = 3),
@@ -45,8 +45,8 @@ function main_normal_process_immediate_ticks()
     sleep(2)
     println(
         "after sleep2 elapsed=", round(time() - t0; digits = 3),
-        " ticks=", Processes.getticks(worker),
-        " loopidx=", Processes.loopint(worker),
+        " ticks=", StatefulAlgorithms.getticks(worker),
+        " loopidx=", StatefulAlgorithms.loopint(worker),
         " task_is_nothing=", isnothing(worker.task),
     )
     flush(stdout)

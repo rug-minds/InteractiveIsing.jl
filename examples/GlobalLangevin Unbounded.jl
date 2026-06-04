@@ -1,5 +1,5 @@
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 
 # Nearest-neighbour ferromagnetic coupling.
 function isingweights(; dr::R) where {R}
@@ -43,7 +43,7 @@ algorithm = GlobalLangevin(
 function langevin_status(g)
     ps = processes(g)
     p = process(g)
-    ctx = isnothing(p) ? nothing : Processes.context(p)[:GlobalLangevin_1]
+    ctx = isnothing(p) ? nothing : StatefulAlgorithms.context(p)[:GlobalLangevin_1]
 
     return (
         temp = temp(g),
@@ -51,7 +51,7 @@ function langevin_status(g)
         adjusted = isnothing(ctx) ? nothing : ctx.adjusted[],
         group_steps = isnothing(ctx) ? nothing : ctx.group_steps[],
         process_count = length(ps),
-        ticks = isnothing(p) ? 0 : Processes.getticks(p),
+        ticks = isnothing(p) ? 0 : StatefulAlgorithms.getticks(p),
         extrema = extrema(state(g)),
         maxabs = maximum(abs, state(g)),
         finite = all(isfinite, state(g)),

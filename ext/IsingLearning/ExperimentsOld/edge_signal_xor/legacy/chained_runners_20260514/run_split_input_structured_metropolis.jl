@@ -78,20 +78,20 @@ function metropolis_timeavg_scalar_output!(trainer, x, config::EdgeSignalXORConf
     averager = EdgeOutputAverager(output_idx, Int(burnin_sweeps), Int(average_sweeps))
     sweep_steps = length(II.sampling_indices(graph.index_set))
     total_sweeps = burnin_sweeps + average_sweeps
-    routine = Processes.@CompositeAlgorithm begin
+    routine = StatefulAlgorithms.@CompositeAlgorithm begin
         @alias dynamics = dynamics
         @every 1 dynamics()
         @alias averager = averager
         @every sweep_steps averager(model = dynamics.model)
     end
-    wrapped = Processes.@Routine begin
+    wrapped = StatefulAlgorithms.@Routine begin
         @repeat (total_sweeps * sweep_steps) routine()
     end
-    inputs = (Processes.Init(dynamics, model = graph, rng = Random.MersenneTwister(seed)),)
-    process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
+    inputs = (StatefulAlgorithms.Init(dynamics, model = graph, rng = Random.MersenneTwister(seed)),)
+    process = StatefulAlgorithms.Process(StatefulAlgorithms.resolve(wrapped), inputs...; repeats = 1)
     run(process)
     wait(process)
-    ctx = Processes.context(process).averager
+    ctx = StatefulAlgorithms.context(process).averager
     μ = edge_average_mean(ctx)
     σ = edge_average_std(ctx)
     close(process)

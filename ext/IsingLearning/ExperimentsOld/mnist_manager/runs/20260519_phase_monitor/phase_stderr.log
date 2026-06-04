@@ -4,14 +4,14 @@
 │    2-element Vector{Symbol}:
 │     :equilibrium_state
 │     :x
-└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+└ @ IsingLearning.InteractiveIsing.StatefulAlgorithms C:\Users\fenje\dev\InteractiveIsing.jl\deps\StatefulAlgorithms\src\Widgets\GeneralState.jl:54
 ┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
 │   overlapping_fields =
 │    3-element Vector{Symbol}:
 │     :equilibrium_state
 │     :y
 │     :x
-└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+└ @ IsingLearning.InteractiveIsing.StatefulAlgorithms C:\Users\fenje\dev\InteractiveIsing.jl\deps\StatefulAlgorithms\src\Widgets\GeneralState.jl:54
 ┌ Warning: Assignment to `sample_idx` in soft scope is ambiguous because a global variable by the same name exists: `sample_idx` will be treated as a new local. Disambiguate by using `local sample_idx` to suppress this warning or `global sample_idx` to assign to the existing global variable.
 └ @ C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\mnist_manager\mnist_phase_response.jl:194
 ERROR: LoadError: UndefVarError: `sample_idx` not defined in local scope

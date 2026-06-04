@@ -22,8 +22,8 @@ function print_worker_progress(worker, label::S) where {S<:AbstractString}
     println(
         label,
         " elapsed=", round(time() - START_TIME; digits = 3),
-        " ticks=", Processes.getticks(worker),
-        " loopidx=", Processes.loopint(worker),
+        " ticks=", StatefulAlgorithms.getticks(worker),
+        " loopidx=", StatefulAlgorithms.loopint(worker),
         " task_is_nothing=", isnothing(worker.task),
     )
     flush(stdout)
@@ -40,11 +40,11 @@ function main_normal_process_tick_monitor()
     setup = build_layer(config)
     source_graph = setup.graph
     input_hidden_w_ref = Ref(copy(setup.input_hidden_w))
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(source_graph), input_hidden_w_ref)
     clear_buffer!(worker_context(worker).buffers)
     load_sample_into_worker!(worker_context(worker), xtrain, ytrain, 1)
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     marker("before run")
 
     run(worker; phase_beta = config.β)

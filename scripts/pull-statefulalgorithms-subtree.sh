@@ -6,7 +6,7 @@ branch="${1:-main}"
 stashed=0
 
 if [[ -n "$(git status --porcelain)" ]]; then
-  git stash push --include-untracked -m "pre-subtree-pull-processes-$(date +%s)"
+  git stash push --include-untracked -m "pre-subtree-pull-statefulalgorithms-$(date +%s)"
   stashed=1
 fi
 

@@ -300,7 +300,7 @@ end
 
 """Build one reusable free-phase temperature-scheduled dynamics step."""
 function free_phase_step_algorithm(dynamics_algorithm::D, temperature_algorithm::T) where {D,T}
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @alias free_temperature = temperature_algorithm
 
@@ -311,7 +311,7 @@ end
 
 """Build one reusable nudged-phase temperature-scheduled dynamics step."""
 function nudged_phase_step_algorithm(dynamics_algorithm::D, temperature_algorithm::T) where {D,T}
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @alias nudge_temperature = temperature_algorithm
 
@@ -327,7 +327,7 @@ function free_phase_algorithm(
     steps::I,
 ) where {D,T,I<:Integer}
     phase_step = free_phase_step_algorithm(dynamics_algorithm, temperature_algorithm)
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @alias phase_step = phase_step
         @state mnist_model
@@ -352,7 +352,7 @@ function nudged_phase_algorithm(
     steps::I,
 ) where {D,T,I<:Integer}
     phase_step = nudged_phase_step_algorithm(dynamics_algorithm, temperature_algorithm)
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @alias phase_step = phase_step
         @state mnist_model
@@ -385,7 +385,7 @@ function contrastive_worker_algorithm(
     nudge_temperature = ReverseAnnealDynamicsTemperatureSchedule(; cold_T = config.cold_temp, peak_T = config.reverse_temp, n_steps = nudge_steps)
     free_phase = free_phase_algorithm(dynamics_algorithm, free_temperature, free_steps)
     nudged_phase = nudged_phase_algorithm(dynamics_algorithm, nudge_temperature, nudge_steps)
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @state mnist_model
         @state x
         @state y
@@ -448,7 +448,7 @@ function validation_free_phase_algorithm(
     free_reads = max(1, config.free_reads)
     free_temperature = GeometricDynamicsTemperatureSchedule(; start_T = config.hot_temp, stop_T = config.cold_temp, n_steps = free_steps)
     free_phase = free_phase_algorithm(dynamics_algorithm, free_temperature, free_steps)
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @state mnist_model
         @state x
         @state y

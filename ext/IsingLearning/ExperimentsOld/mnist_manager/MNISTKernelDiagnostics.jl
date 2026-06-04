@@ -123,10 +123,10 @@ checks, to compare pure single-thread dynamics against manager runs.
 function run_langevin_steps!(graph::G, nsteps::T) where {G,T<:Integer}
     nsteps <= 0 && return (; steps = 0, seconds = 0.0)
     algorithm = LocalLangevin(stepsize = 0.5f0, adjusted = false)
-    context = Processes.init(algorithm, (; model = graph))
+    context = StatefulAlgorithms.init(algorithm, (; model = graph))
     seconds = @elapsed begin
         for _ in 1:Int(nsteps)
-            Processes.step!(algorithm, context)
+            StatefulAlgorithms.step!(algorithm, context)
         end
     end
     return (; steps = Int(nsteps), seconds)

@@ -1,6 +1,6 @@
 using Test
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 
 function layerwise_test_graph()
     continuous = Layer(8, Continuous(), StateSet(-1f0, 1f0); periodic = false)
@@ -20,7 +20,7 @@ end
         scheduler = SequentialLayerScheduler((2, 3)),
     )
 
-    context = Processes.init(algorithm, (; model = g))
+    context = StatefulAlgorithms.init(algorithm, (; model = g))
 
     @test getfield(g, :index_set) == original_index_set
     @test context.layer_index_sets isa Tuple
@@ -28,7 +28,7 @@ end
     @test collect(context.subcontexts[1][].active_spins) == collect(InteractiveIsing.graphidxs(g[1]))
     @test collect(context.subcontexts[2][].proposer.index_set) == collect(InteractiveIsing.graphidxs(g[2]))
 
-    out = Processes.step!(algorithm, context)
+    out = StatefulAlgorithms.step!(algorithm, context)
 
     @test getfield(g, :index_set) == original_index_set
     @test out.attempted == 5

@@ -17,7 +17,7 @@ function marker(label::S) where {S<:AbstractString}
     return nothing
 end
 
-"""Run one normal `Processes.Process` on one MNIST sample with `run` + `wait`."""
+"""Run one normal `StatefulAlgorithms.Process` on one MNIST sample with `run` + `wait`."""
 function main_normal_process_single_example()
     marker("after include")
     config = updated_config(langevin_learning_config(); batchsize = 1)
@@ -27,14 +27,14 @@ function main_normal_process_single_example()
     setup = build_layer(config)
     source_graph = setup.graph
     input_hidden_w_ref = Ref(copy(setup.input_hidden_w))
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(source_graph), input_hidden_w_ref)
     marker("after worker")
 
     try
         clear_buffer!(worker_context(worker).buffers)
         load_sample_into_worker!(worker_context(worker), xtrain, ytrain, 1)
-        Processes.reset!(worker)
+        StatefulAlgorithms.reset!(worker)
         marker("before run")
         run(worker; phase_beta = config.β)
         marker("after run returned")
@@ -46,7 +46,7 @@ function main_normal_process_single_example()
         close(worker)
         marker("after close")
     end
-    println("ticks=$(Processes.getticks(worker))")
+    println("ticks=$(StatefulAlgorithms.getticks(worker))")
     println("done")
     return nothing
 end

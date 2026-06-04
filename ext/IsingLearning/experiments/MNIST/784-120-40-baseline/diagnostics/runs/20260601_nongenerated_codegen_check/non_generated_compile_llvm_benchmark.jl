@@ -17,8 +17,8 @@ function nt_names(x::T) where {T}
 end
 
 """Run one MNIST worker sample through the explicit NonGenerated loop path."""
-function nongenerated_entry!(worker::P, phase_beta::Float32) where {P<:Processes.Process}
-    Processes.runprocessinline!(worker; phase_beta = phase_beta, looptype = Processes.NonGenerated())
+function nongenerated_entry!(worker::P, phase_beta::Float32) where {P<:StatefulAlgorithms.Process}
+    StatefulAlgorithms.runprocessinline!(worker; phase_beta = phase_beta, looptype = StatefulAlgorithms.NonGenerated())
     return worker
 end
 
@@ -36,7 +36,7 @@ function time_serial_process_learning_minibatch!(
     params = initial_params
     opt_state = Optimisers.setup(Optimisers.Adam(config.lr), initial_params)
     batch_gradient = input_field_gradient_buffer(source_graph, input_hidden_w_ref[])
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(source_graph), input_hidden_w_ref)
 
     try
@@ -44,8 +44,8 @@ function time_serial_process_learning_minibatch!(
             clear_buffer!(worker_context(worker).buffers)
             @inbounds for sample_idx in 1:config.batchsize
                 load_sample_into_worker!(worker_context(worker), xtrain, ytrain, sample_idx)
-                Processes.reset!(worker)
-                Processes.runprocessinline!(worker; phase_beta = config.β, looptype = looptype)
+                StatefulAlgorithms.reset!(worker)
+                StatefulAlgorithms.runprocessinline!(worker; phase_beta = config.β, looptype = looptype)
             end
             clear_buffer!(batch_gradient)
             add_buffer!(batch_gradient, worker_context(worker).buffers)
@@ -73,10 +73,10 @@ end
 """Build a one-sample worker suitable for codegen and context-shape probes."""
 function build_probe_worker(config::C, xtrain::X, ytrain::Y) where {C<:InputFieldMNISTConfig,X,Y}
     setup = build_layer(config)
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(setup.graph), Ref(copy(setup.input_hidden_w)))
     load_sample_into_worker!(worker_context(worker), xtrain, ytrain, 1)
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     return worker
 end
 
@@ -85,21 +85,21 @@ function main()
     xtrain, ytrain = balanced_mnist(:train, config.train_per_class, config)
 
     println(now(), " begin NonGenerated check threads=", Threads.nthreads(), " batchsize=", config.batchsize)
-    println(now(), " sys_looptype=", Processes.sys_looptype, " explicit_looptype=", Processes.NonGenerated())
+    println(now(), " sys_looptype=", StatefulAlgorithms.sys_looptype, " explicit_looptype=", StatefulAlgorithms.NonGenerated())
     flush(stdout)
 
     worker = build_probe_worker(config, xtrain, ytrain)
     try
-        before = Processes.context(worker)
-        println("probe_before_subcontexts=", nt_names(Processes.get_subcontexts(before)))
-        println("probe_before_widened=", nt_names(Processes.getwidened(before)))
+        before = StatefulAlgorithms.context(worker)
+        println("probe_before_subcontexts=", nt_names(StatefulAlgorithms.get_subcontexts(before)))
+        println("probe_before_widened=", nt_names(StatefulAlgorithms.getwidened(before)))
         flush(stdout)
 
         compile_wall = @elapsed nongenerated_entry!(worker, config.β)
-        after = Processes.context(worker)
+        after = StatefulAlgorithms.context(worker)
         println(now(), " nongenerated first sample wall=", compile_wall)
-        println("probe_after_subcontexts=", nt_names(Processes.get_subcontexts(after)))
-        println("probe_after_widened=", nt_names(Processes.getwidened(after)))
+        println("probe_after_subcontexts=", nt_names(StatefulAlgorithms.get_subcontexts(after)))
+        println("probe_after_widened=", nt_names(StatefulAlgorithms.getwidened(after)))
         println("probe_same_context_type=", typeof(before) === typeof(after))
         flush(stdout)
 
@@ -128,9 +128,9 @@ function main()
             xtrain,
             ytrain,
             config,
-            Processes.Generated(),
+            StatefulAlgorithms.Generated(),
         )
-        println(io, join(("serial_process", string(Processes.Generated()), generated.warmup_wall, generated.wall, generated.seconds_per_example), ","))
+        println(io, join(("serial_process", string(StatefulAlgorithms.Generated()), generated.warmup_wall, generated.wall, generated.seconds_per_example), ","))
         println(now(), " generated warmup=", generated.warmup_wall, " wall=", generated.wall, " spe=", generated.seconds_per_example)
         flush(stdout)
 
@@ -139,9 +139,9 @@ function main()
             xtrain,
             ytrain,
             config,
-            Processes.NonGenerated(),
+            StatefulAlgorithms.NonGenerated(),
         )
-        println(io, join(("serial_process", string(Processes.NonGenerated()), nongenerated.warmup_wall, nongenerated.wall, nongenerated.seconds_per_example), ","))
+        println(io, join(("serial_process", string(StatefulAlgorithms.NonGenerated()), nongenerated.warmup_wall, nongenerated.wall, nongenerated.seconds_per_example), ","))
         println(now(), " nongenerated warmup=", nongenerated.warmup_wall, " wall=", nongenerated.wall, " spe=", nongenerated.seconds_per_example)
         flush(stdout)
     end

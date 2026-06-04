@@ -7,7 +7,7 @@ One manager-owned `ProcessAlgorithm` job for the raw Langevin scaling benchmark.
 The process context owns the raw Langevin process context created from the same
 helpers as `langevin_context_scaling.jl`; `step!` runs the no-merge hot loop.
 """
-struct RawLangevinBenchmarkStep{A,T<:Integer,F<:Real,I<:Integer} <: Processes.ProcessAlgorithm
+struct RawLangevinBenchmarkStep{A,T<:Integer,F<:Real,I<:Integer} <: StatefulAlgorithms.ProcessAlgorithm
     algorithm::A
     side::T
     fullsweeps::T
@@ -16,22 +16,22 @@ struct RawLangevinBenchmarkStep{A,T<:Integer,F<:Real,I<:Integer} <: Processes.Pr
 end
 
 """
-    Processes.init(step::RawLangevinBenchmarkStep, context)
+    StatefulAlgorithms.init(step::RawLangevinBenchmarkStep, context)
 
 Build the manager-owned raw Langevin context for one worker process.
 """
-function Processes.init(step::RawLangevinBenchmarkStep, context)
+function StatefulAlgorithms.init(step::RawLangevinBenchmarkStep, context)
     template = make_context_template(step.algorithm, step.side; temperature = step.temperature, seed = step.seed)
     nsteps = fullsweep_steps(template.context, template.instance, step.fullsweeps)
     return (; instance = template.instance, raw_context = template.context, nsteps)
 end
 
 """
-    Processes.step!(step::RawLangevinBenchmarkStep, context)
+    StatefulAlgorithms.step!(step::RawLangevinBenchmarkStep, context)
 
 Run one raw no-merge Langevin workload inside a manager-owned process.
 """
-function Processes.step!(step::RawLangevinBenchmarkStep, context)
+function StatefulAlgorithms.step!(step::RawLangevinBenchmarkStep, context)
     result = run_raw_langevin!(context.instance, context.raw_context, context.nsteps)
     return (; result)
 end
@@ -79,8 +79,8 @@ function build_manager(step::S, runs::R) where {S<:RawLangevinBenchmarkStep,R<:I
         ),
         prepare! = (slot, job, manager) -> resetworker!(slot),
         consume! = (slot, job, manager) -> begin
-            instance = only(Processes.getalgos(Processes.getalgo(slot.worker)))
-            results[Int(job)] = view(Processes.context(slot.worker), instance).result
+            instance = only(StatefulAlgorithms.getalgos(StatefulAlgorithms.getalgo(slot.worker)))
+            results[Int(job)] = view(StatefulAlgorithms.context(slot.worker), instance).result
             return nothing
         end,
     )

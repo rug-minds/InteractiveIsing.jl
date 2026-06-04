@@ -83,18 +83,18 @@ context. The graph state is mutated in place and the context buffers are reused.
 """
 function _relax_mnist_context!(algorithm::A, context::C, nsteps::Integer) where {A,C}
     for _ in 1:nsteps
-        Processes.step!(algorithm, context)
+        StatefulAlgorithms.step!(algorithm, context)
     end
     return context
 end
 
 """
-    Processes.init(step::MNISTContrastiveStep, context)
+    StatefulAlgorithms.init(step::MNISTContrastiveStep, context)
 
 Create the persistent worker context for a custom MNIST contrastive step.
 The returned fields live under the algorithm context key, normally `:_state`.
 """
-function Processes.init(step::MNISTContrastiveStep, context)
+function StatefulAlgorithms.init(step::MNISTContrastiveStep, context)
     model = context.model
     T = eltype(model)
     x = get(context, :x, zeros(T, step.input_dim))
@@ -105,8 +105,8 @@ function Processes.init(step::MNISTContrastiveStep, context)
     minus_state = get(context, :minus_state, similar(equilibrium_state))
     input_pattern = get(context, :input_pattern, isnothing(_mnist_input_magfield(model)) ? nothing : zeros(T, nstates(model)))
 
-    free_context = Processes.init(step.dynamics_algorithm, (; model))
-    nudged_context = Processes.init(step.nudged_dynamics_algorithm, (; model))
+    free_context = StatefulAlgorithms.init(step.dynamics_algorithm, (; model))
+    nudged_context = StatefulAlgorithms.init(step.nudged_dynamics_algorithm, (; model))
 
     return (; model, x, y, buffers, equilibrium_state, plus_state, minus_state, input_pattern, free_context, nudged_context)
 end
@@ -202,12 +202,12 @@ function _accumulate_input_field_edge_gradient!(
 end
 
 """
-    Processes.step!(step::MNISTContrastiveStep, context)
+    StatefulAlgorithms.step!(step::MNISTContrastiveStep, context)
 
 Run free, positive nudged, and negative nudged phases for one MNIST sample and
 accumulate the symmetric contrastive gradient into `context.buffers`.
 """
-function Processes.step!(step::MNISTContrastiveStep, context)
+function StatefulAlgorithms.step!(step::MNISTContrastiveStep, context)
     model = context.model
     β = step.β
     x = _mnist_context_x(context)
@@ -248,12 +248,12 @@ function Processes.step!(step::MNISTContrastiveStep, context)
 end
 
 """
-    Processes.cleanup(step::MNISTContrastiveStep, context)
+    StatefulAlgorithms.cleanup(step::MNISTContrastiveStep, context)
 
 Finalize an MNIST contrastive worker step. The algorithm owns no external
 resources, so cleanup intentionally leaves the persistent buffers untouched.
 """
-function Processes.cleanup(step::MNISTContrastiveStep, context)
+function StatefulAlgorithms.cleanup(step::MNISTContrastiveStep, context)
     return nothing
 end
 
@@ -560,7 +560,7 @@ buffers. The legacy DSL worker names it `:_state`; the custom contrastive worker
 has one process subcontext, so that subcontext is used directly.
 """
 function _mnist_worker_state(worker::W) where {W}
-    return Processes.context(worker)._state
+    return StatefulAlgorithms.context(worker)._state
 end
 
 function _worker_process(layer, worker_graph)
@@ -688,7 +688,7 @@ function init_mnist_process_manager(
         end,
 
         consume! = (slot, job, manager) -> begin
-            ctx = Processes.context(slot.worker)
+            ctx = StatefulAlgorithms.context(slot.worker)
             _mnist_manager_output!(manager, ctx.dynamics.model)
             return nothing
         end,
@@ -768,17 +768,17 @@ function init_mnist_trainer(
         recipe;
         nworkers = Int(numthreads),
         config = (; share_static_model_data, input_mode),
-        worker_init = share_static_model_data ? Processes.MakeEachWorker() : Processes.CopyFirstWorker(),
+        worker_init = share_static_model_data ? StatefulAlgorithms.MakeEachWorker() : StatefulAlgorithms.CopyFirstWorker(),
         flush_policy = NoFlush(),
         poll_interval = 0.0,
     )
-    workers = collect(Processes.workers(manager))
+    workers = collect(StatefulAlgorithms.workers(manager))
     worker_graphs = [_mnist_worker_state(worker).model for worker in workers]
 
     validation_template_graph = _worker_graph(graph, params; share_static_model_data, input_mode)
     validation_worker = _validation_process(layer, validation_template_graph)
     # println("[threaded-mnist] built validation process id=", validation_worker.id)
-    validation_graph = Processes.context(validation_worker).dynamics.model
+    validation_graph = StatefulAlgorithms.context(validation_worker).dynamics.model
 
     return MNISTThreadedTrainer(
         layer,
@@ -874,7 +874,7 @@ function _broadcast_params!(trainer)
 end
 
 function _validation_output(trainer)
-    equilibrium_state = Processes.context(trainer.validation_worker)._state.equilibrium_state
+    equilibrium_state = StatefulAlgorithms.context(trainer.validation_worker)._state.equilibrium_state
     return @view equilibrium_state[trainer.layer.output_layer]
 end
 
@@ -893,7 +893,7 @@ function evaluate_mnist!(
     for sample_idx in 1:nsamples
         worker = trainer.validation_worker
         _write_input!(worker, view(x, :, sample_idx))
-        Processes.reset!(worker)
+        StatefulAlgorithms.reset!(worker)
         run(worker)
         wait(worker)
         close(worker)

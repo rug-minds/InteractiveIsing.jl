@@ -1,7 +1,7 @@
 module ManuscriptTools
 
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 using CairoMakie
 using GLMakie
 using Dates

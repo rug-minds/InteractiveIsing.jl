@@ -9,7 +9,7 @@ current_layer(g, layer_idx) = _with_layer(identity, g, layer_idx)
 _has_layer_selector(g) = length(layers(g)) > 1
 _has_layer_selector(g::SingleLayerGraph) = false
 
-@inline _panel_process_algos(algo::Processes.AbstractLoopAlgorithm) = Processes.flat_funcs(algo)
+@inline _panel_process_algos(algo::StatefulAlgorithms.AbstractLoopAlgorithm) = StatefulAlgorithms.flat_funcs(algo)
 @inline _panel_process_algos(algo) = (algo,)
 
 """
@@ -24,7 +24,7 @@ function _panel_source_algo(g::IsingGraph)
     if isempty(graph_processes)
         return g.default_algorithm
     end
-    return Processes.getalgo(graph_processes[end])
+    return StatefulAlgorithms.getalgo(graph_processes[end])
 end
 
 """
@@ -35,7 +35,7 @@ type is a subtype of `target_type`.
 """
 function _panel_has_algo_type(g::IsingGraph, target_type::Type)
     for algo in _panel_process_algos(_panel_source_algo(g))
-        Processes.algotype(algo) <: target_type && return true
+        StatefulAlgorithms.algotype(algo) <: target_type && return true
     end
     return false
 end
@@ -74,7 +74,7 @@ function _register_graph_close!(handle::PanelHandle, g)
     return nothing
 end
 
-function _register_process_close!(handle::PanelHandle, process::Processes.AbstractProcess)
+function _register_process_close!(handle::PanelHandle, process::StatefulAlgorithms.AbstractProcess)
     close_processes = get!(handle.host.data, :close_processes, IdDict{Any, Bool}())
     close_processes[process] = true
     onclose!(handle) do _
@@ -85,7 +85,7 @@ end
 
 function _register_process_close!(handle::PanelHandle, processes)
     for process in processes
-        process isa Processes.AbstractProcess || continue
+        process isa StatefulAlgorithms.AbstractProcess || continue
         _register_process_close!(handle, process)
     end
     return nothing
@@ -102,14 +102,14 @@ end
 
 _temperature_value(value::Real) = value
 _temperature_value(value::Base.RefValue{<:Real}) = value[]
-_temperature_value(value::Processes.InteractiveVar{<:Real}) = value[]
-_temperature_value(value::Processes.InteractiveVar{<:Base.RefValue{<:Real}}) = value[][]
+_temperature_value(value::StatefulAlgorithms.InteractiveVar{<:Real}) = value[]
+_temperature_value(value::StatefulAlgorithms.InteractiveVar{<:Base.RefValue{<:Real}}) = value[][]
 _temperature_value(_) = nothing
 
 _interactive_numeric_value(value::Real) = value
 _interactive_numeric_value(value::Base.RefValue{<:Real}) = value[]
-_interactive_numeric_value(value::Processes.InteractiveVar{<:Real}) = value[]
-_interactive_numeric_value(value::Processes.InteractiveVar{<:Base.RefValue{<:Real}}) = value[][]
+_interactive_numeric_value(value::StatefulAlgorithms.InteractiveVar{<:Real}) = value[]
+_interactive_numeric_value(value::StatefulAlgorithms.InteractiveVar{<:Base.RefValue{<:Real}}) = value[][]
 _interactive_numeric_value(_) = nothing
 
 function _set_interactive_numeric_value!(slot::Base.RefValue{T}, value) where {T<:Real}
@@ -117,31 +117,31 @@ function _set_interactive_numeric_value!(slot::Base.RefValue{T}, value) where {T
     return slot[]
 end
 
-function _set_interactive_numeric_value!(slot::Processes.InteractiveVar{T}, value) where {T<:Real}
+function _set_interactive_numeric_value!(slot::StatefulAlgorithms.InteractiveVar{T}, value) where {T<:Real}
     slot[] = convert(T, value)
     return slot[]
 end
 
-function _set_interactive_numeric_value!(slot::Processes.InteractiveVar{<:Base.RefValue{T}}, value) where {T<:Real}
+function _set_interactive_numeric_value!(slot::StatefulAlgorithms.InteractiveVar{<:Base.RefValue{T}}, value) where {T<:Real}
     slot[][] = convert(T, value)
     return slot[][]
 end
 
 @inline _set_interactive_numeric_value!(slot, value) = nothing
 
-function _interactive_process_slot(process::Processes.AbstractProcess, spec::InteractiveGraphVarSpec)
-    context = Processes.context(process)
-    context isa Processes.ProcessContext || return nothing
+function _interactive_process_slot(process::StatefulAlgorithms.AbstractProcess, spec::InteractiveGraphVarSpec)
+    context = StatefulAlgorithms.context(process)
+    context isa StatefulAlgorithms.ProcessContext || return nothing
 
     target_name = _resolve_interactive_target_key(
-        Processes.getregistry(Processes.getalgo(process)),
+        StatefulAlgorithms.getregistry(StatefulAlgorithms.getalgo(process)),
         spec.target,
     )
     isnothing(target_name) && return nothing
-    subcontexts = Processes.get_subcontexts(context)
+    subcontexts = StatefulAlgorithms.get_subcontexts(context)
     hasproperty(subcontexts, target_name) || return nothing
 
-    data = Processes.getdata(getproperty(subcontexts, target_name))
+    data = StatefulAlgorithms.getdata(getproperty(subcontexts, target_name))
     haskey(data, spec.varname) || return nothing
     return target_name, getproperty(data, spec.varname)
 end
@@ -149,7 +149,7 @@ end
 function _interactive_prepared_value(g::IsingGraph, spec::InteractiveGraphVarSpec)
     func = deepcopy(g.default_algorithm)
     graph_inputs = _mc_model_inits(func, g)
-    prepared = Processes.init(Processes.normalize_process_algo(func), graph_inputs...; lifetime = Processes.Indefinite())
+    prepared = StatefulAlgorithms.init(StatefulAlgorithms.normalize_process_algo(func), graph_inputs...; lifetime = StatefulAlgorithms.Indefinite())
     data = _prepared_interactive_var_data(prepared, spec.target, spec.varname)
     isnothing(data) && return nothing
     return _interactive_numeric_value(last(data))
@@ -182,10 +182,10 @@ function _set_graph_interactive_var!(g::IsingGraph, spec::InteractiveGraphVarSpe
         target_name, current = slot
         if !isnothing(_set_interactive_numeric_value!(current, value))
             continue
-        elseif !Processes.isrunning(process)
+        elseif !StatefulAlgorithms.isrunning(process)
             converted = convert(typeof(current), value)
             update = NamedTuple{(target_name,)}((NamedTuple{(spec.varname,)}((converted,)),))
-            Processes.context(process, Processes.merge_into_subcontexts(Processes.context(process), update))
+            StatefulAlgorithms.context(process, StatefulAlgorithms.merge_into_subcontexts(StatefulAlgorithms.context(process), update))
         end
     end
 
@@ -329,7 +329,7 @@ function _interactive_adjusted_value(value::T, delta::T, direction::Int, range::
 end
 
 function _temperature_vars(sc)
-    data = Processes.getdata(sc)
+    data = StatefulAlgorithms.getdata(sc)
     pairs = Pair{Symbol, Any}[]
     for name in (:temp, :T)
         haskey(data, name) || continue
@@ -339,11 +339,11 @@ function _temperature_vars(sc)
     return pairs
 end
 
-function _process_context_temperature(process::Processes.AbstractProcess)
-    context = Processes.context(process)
-    context isa Processes.ProcessContext || return nothing
+function _process_context_temperature(process::StatefulAlgorithms.AbstractProcess)
+    context = StatefulAlgorithms.context(process)
+    context isa StatefulAlgorithms.ProcessContext || return nothing
 
-    subcontexts = Processes.get_subcontexts(context)
+    subcontexts = StatefulAlgorithms.get_subcontexts(context)
     for subcontext_name in reverse(propertynames(subcontexts))
         subcontext_name === :globals && continue
         subcontext_name === :_injector && continue
@@ -363,11 +363,11 @@ function _process_context_temperature(g::IsingGraph)
     return nothing
 end
 
-function _set_process_context_temperature!(process::Processes.AbstractProcess, value)
-    context = Processes.context(process)
-    context isa Processes.ProcessContext || return nothing
+function _set_process_context_temperature!(process::StatefulAlgorithms.AbstractProcess, value)
+    context = StatefulAlgorithms.context(process)
+    context isa StatefulAlgorithms.ProcessContext || return nothing
 
-    subcontexts = Processes.get_subcontexts(context)
+    subcontexts = StatefulAlgorithms.get_subcontexts(context)
     for subcontext_name in propertynames(subcontexts)
         subcontext_name === :globals && continue
         subcontext_name === :_injector && continue
@@ -375,14 +375,14 @@ function _set_process_context_temperature!(process::Processes.AbstractProcess, v
 
         subcontext = getproperty(subcontexts, subcontext_name)
         for (varname, current) in _temperature_vars(subcontext)
-            if current isa Base.RefValue || current isa Processes.InteractiveVar
+            if current isa Base.RefValue || current isa StatefulAlgorithms.InteractiveVar
                 current[] = convert(typeof(current[]), value)
-            elseif Processes.isinteractive(process)
-                Processes.interact!(process, varname => value)
-            elseif !Processes.isrunning(process)
+            elseif StatefulAlgorithms.isinteractive(process)
+                StatefulAlgorithms.interact!(process, varname => value)
+            elseif !StatefulAlgorithms.isrunning(process)
                 converted = convert(typeof(current), value)
                 update = NamedTuple{(subcontext_name,)}((NamedTuple{(varname,)}((converted,)),))
-                Processes.context(process, Processes.merge_into_subcontexts(context, update))
+                StatefulAlgorithms.context(process, StatefulAlgorithms.merge_into_subcontexts(context, update))
             end
         end
     end
@@ -440,7 +440,7 @@ function _kinetic_lastdt(data)
 end
 
 function _kinetic_time_snapshot(sc)
-    data = Processes.getdata(sc)
+    data = StatefulAlgorithms.getdata(sc)
     has_time = haskey(data, :time) || haskey(data, :kmc_time)
     has_rate_table = haskey(data, :events) || haskey(data, :rates)
     (has_time || has_rate_table) || return nothing
@@ -454,15 +454,15 @@ function _kinetic_time_snapshot(sc)
     return (; time = kmc_time, dt, totalrate)
 end
 
-function _kinetic_time_snapshot(process::Processes.AbstractProcess)
+function _kinetic_time_snapshot(process::StatefulAlgorithms.AbstractProcess)
     context = try
-        Processes.getcontext(process)
+        StatefulAlgorithms.getcontext(process)
     catch
-        Processes.context(process)
+        StatefulAlgorithms.context(process)
     end
-    context isa Processes.ProcessContext || return nothing
+    context isa StatefulAlgorithms.ProcessContext || return nothing
 
-    subcontexts = Processes.get_subcontexts(context)
+    subcontexts = StatefulAlgorithms.get_subcontexts(context)
     for subcontext_name in reverse(propertynames(subcontexts))
         subcontext_name === :globals && continue
         subcontext_name === :_injector && continue
@@ -502,15 +502,15 @@ end
 function _total_ticks(g)
     total = 0
     for process in processes(g)
-        total += Int(Processes.getticks(process))
+        total += Int(StatefulAlgorithms.getticks(process))
     end
     return total
 end
 
 function _pause_graph_processes!(g)
     for process in processes(g)
-        if Processes.isrunning(process)
-            Processes.pause(process)
+        if StatefulAlgorithms.isrunning(process)
+            StatefulAlgorithms.pause(process)
         end
     end
     return nothing
@@ -518,7 +518,7 @@ end
 
 function _resume_graph_processes!(g)
     for process in processes(g)
-        if Processes.ispaused(process)
+        if StatefulAlgorithms.ispaused(process)
             run(process)
         end
     end
@@ -528,8 +528,8 @@ end
 function _graph_paused(g)
     graph_processes = processes(g)
     isempty(graph_processes) && return false
-    any(Processes.isrunning, graph_processes) && return false
-    return any(Processes.ispaused, graph_processes)
+    any(StatefulAlgorithms.isrunning, graph_processes) && return false
+    return any(StatefulAlgorithms.ispaused, graph_processes)
 end
 
 function _request_graph_process_close!(g)
@@ -546,10 +546,10 @@ function _request_graph_process_close!(g)
     return nothing
 end
 
-function _request_process_close!(process::Processes.AbstractProcess)
+function _request_process_close!(process::StatefulAlgorithms.AbstractProcess)
     try
-        if applicable(Processes.shouldrun, process, false)
-            Processes.shouldrun(process, false)
+        if applicable(StatefulAlgorithms.shouldrun, process, false)
+            StatefulAlgorithms.shouldrun(process, false)
         elseif applicable(close, process)
             @async close(process)
         end
@@ -565,7 +565,7 @@ function _reap_graph_processes_later!(graph_processes)
             any_running = false
             for process in graph_processes
                 try
-                    any_running |= Processes.isrunning(process)
+                    any_running |= StatefulAlgorithms.isrunning(process)
                 catch
                 end
             end

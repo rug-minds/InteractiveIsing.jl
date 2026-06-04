@@ -19,7 +19,7 @@ if ($LASTEXITCODE -ne 0) {
 
 if ($status) {
     $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-    git stash push --include-untracked -m "pre-subtree-pull-processes-$timestamp"
+    git stash push --include-untracked -m "pre-subtree-pull-statefulalgorithms-$timestamp"
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }

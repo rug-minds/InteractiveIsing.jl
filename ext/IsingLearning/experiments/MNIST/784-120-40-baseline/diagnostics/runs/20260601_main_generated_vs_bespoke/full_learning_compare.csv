@@ -1,4 +1,4 @@
 method,looptype,batchsize,wall,seconds_per_example
 bespoke_direct,none,128,2.2993168,0.0179634125
-serial_process,IsingLearning.InteractiveIsing.Processes.Generated(),128,3.4054914,0.0266054015625
-serial_process,IsingLearning.InteractiveIsing.Processes.RuntimeGenerated(),128,106.1325597,0.82916062265625
+serial_process,IsingLearning.InteractiveIsing.StatefulAlgorithms.Generated(),128,3.4054914,0.0266054015625
+serial_process,IsingLearning.InteractiveIsing.StatefulAlgorithms.RuntimeGenerated(),128,106.1325597,0.82916062265625

@@ -12,7 +12,7 @@ using Serialization
 using Statistics
 
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 const FT = Float32
 
 const EDGE_XOR_CASES = ((false, false), (false, true), (true, false), (true, true))
@@ -311,7 +311,7 @@ end
 
 """Build one reusable free-phase routine for an edge XOR worker."""
 function edge_free_phase_algorithm(dynamics_algorithm::D, init_mode, steps::I) where {D,I<:Integer}
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias dynamics = dynamics_algorithm
         @state x
         @state equilibrium_state
@@ -325,7 +325,7 @@ end
 
 """Build one reusable positive-nudge phase routine for an edge XOR worker."""
 function edge_plus_phase_algorithm(nudged_dynamics_algorithm::D, beta::T, steps::I) where {D,T<:Real,I<:Integer}
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias nudged_dynamics = nudged_dynamics_algorithm
         @state x
         @state y
@@ -343,7 +343,7 @@ end
 
 """Build one reusable negative-nudge phase routine for an edge XOR worker."""
 function edge_minus_phase_algorithm(nudged_dynamics_algorithm::D, beta::T, steps::I) where {D,T<:Real,I<:Integer}
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias nudged_dynamics = nudged_dynamics_algorithm
         @state x
         @state y
@@ -366,7 +366,7 @@ function edge_sample_algorithm(
     minus_phase,
     beta::T,
 ) where {T<:Real}
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias free_phase = free_phase
         @alias plus_phase = plus_phase
         @alias minus_phase = minus_phase
@@ -394,7 +394,7 @@ function edge_worker_algorithm(layer::L, config::C) where {L<:LayeredIsingGraphL
     plus_phase = edge_plus_phase_algorithm(nudged_dynamics_algorithm, β, nudged_steps)
     minus_phase = edge_minus_phase_algorithm(nudged_dynamics_algorithm, β, nudged_steps)
     sample_once = edge_sample_algorithm(free_phase, plus_phase, minus_phase, β)
-    return Processes.@Routine begin
+    return StatefulAlgorithms.@Routine begin
         @alias sample_once = sample_once
         @state repeats
 
@@ -404,7 +404,7 @@ end
 
 """Return the mutable training context stored in one worker."""
 function worker_context(worker::W) where {W}
-    return Processes.context(worker)._state
+    return StatefulAlgorithms.context(worker)._state
 end
 
 """Create a worker graph with fresh state and shared static parameter arrays."""
@@ -428,10 +428,10 @@ end
 """Build one reusable LoopAlgorithm process worker."""
 function edge_worker(layer::L, graph::G, config::C) where {L<:LayeredIsingGraphLayer,G,C<:EdgeApplicationConfig}
     graph_state = II.state(graph)
-    algorithm = Processes.resolve(edge_worker_algorithm(layer, config))
-    return Processes.Process(
+    algorithm = StatefulAlgorithms.resolve(edge_worker_algorithm(layer, config))
+    return StatefulAlgorithms.Process(
         algorithm,
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             x = zeros(eltype(graph), length(layer.input_layer)),
             y = zeros(eltype(graph), length(layer.output_layer)),
             buffers = IsingLearning.layer_gradient_buffer(graph),
@@ -440,8 +440,8 @@ function edge_worker(layer::L, graph::G, config::C) where {L<:LayeredIsingGraphL
             minus_state = similar(graph_state),
             repeats = Ref(1),
         ),
-        Processes.Init(:dynamics; model = graph),
-        Processes.Init(:nudged_dynamics; model = graph);
+        StatefulAlgorithms.Init(:dynamics; model = graph),
+        StatefulAlgorithms.Init(:nudged_dynamics; model = graph);
         repeat = 1,
     )
 end
@@ -481,18 +481,18 @@ function scale_buffer!(buffer::B, scale::T) where {B,T<:Real}
 end
 
 """Clear manager and worker-local buffers before a minibatch."""
-function clear_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function clear_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_buffer!(manager.state.batch_gradient)
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         clear_buffer!(worker_context(worker).buffers)
     end
     return manager
 end
 
 """Flush worker-local buffers into one averaged gradient."""
-function flush_edge_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function flush_edge_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_buffer!(manager.state.batch_gradient)
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         ctx = worker_context(worker)
         add_buffer!(manager.state.batch_gradient, ctx.buffers)
         clear_buffer!(ctx.buffers)
@@ -518,16 +518,16 @@ function learning_rate_at(config::C, update_idx::Integer) where {C<:EdgeApplicat
 end
 
 """Adjust the Optimisers.jl state in place while preserving Adam moments."""
-function adjust_learning_rate!(manager::M, config::C, update_idx::Integer) where {M<:Processes.ProcessManager,C<:EdgeApplicationConfig}
+function adjust_learning_rate!(manager::M, config::C, update_idx::Integer) where {M<:StatefulAlgorithms.ProcessManager,C<:EdgeApplicationConfig}
     η = learning_rate_at(config, update_idx)
     Optimisers.adjust!(manager.state.opt_state, η)
     return η
 end
 
 """Install updated shared parameters once after a manager batch."""
-function sync_worker_params!(manager::M, ps::P) where {M<:Processes.ProcessManager,P}
-    worker = first(Processes.workers(manager))
-    IsingLearning.sync_params!(Processes.context(worker).dynamics.model, ps)
+function sync_worker_params!(manager::M, ps::P) where {M<:StatefulAlgorithms.ProcessManager,P}
+    worker = first(StatefulAlgorithms.workers(manager))
+    IsingLearning.sync_params!(StatefulAlgorithms.context(worker).dynamics.model, ps)
     return manager
 end
 
@@ -545,18 +545,18 @@ function edge_xor_manager(layer::L, graph::G, ps::P, config::C) where {L<:Layere
             ctx.x .= job.x
             ctx.y .= job.y
             ctx.repeats[] = job.repeats
-            Processes.resetworker!(slot)
+            StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
         flush! = manager -> flush_edge_buffers!(manager),
     )
-    return Processes.ProcessManager(
+    return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = Processes.FlushAtEnd(),
-        worker_init = Processes.MakeEachWorker(),
+        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = EdgeApplicationJob{Vector{FT},Vector{FT}},
     )
@@ -587,10 +587,10 @@ function edge_xor_jobs(config::C, x::X, y::Y) where {C<:EdgeApplicationConfig,X<
 end
 
 """Run one XOR minibatch and synchronize updated parameters."""
-function run_edge_batch!(manager::M, jobs::J, config::C, update_idx::Integer) where {M<:Processes.ProcessManager,J,C<:EdgeApplicationConfig}
+function run_edge_batch!(manager::M, jobs::J, config::C, update_idx::Integer) where {M<:StatefulAlgorithms.ProcessManager,J,C<:EdgeApplicationConfig}
     clear_manager_buffers!(manager)
     manager.state.total_repeats[] = sum(job.repeats for job in jobs)
-    Processes.run!(manager, jobs, Processes.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
     add_weight_decay!(manager.state.batch_gradient, manager.state.params[], config.weight_decay)
     gradient_norm = parameter_norm(manager.state.batch_gradient)
     old_params = manager.state.params[]
@@ -657,7 +657,7 @@ function evaluate_edge_xor(layer::L, ps::P, st::S, x::X, y::Y, config::C) where 
     outputs = zeros(FT, size(y, 1), size(y, 2))
     graph = st.graph
     algorithm = layer.validation_algorithm
-    context = Processes.init(algorithm, (; model = graph))
+    context = StatefulAlgorithms.init(algorithm, (; model = graph))
     for _ in 1:config.eval_repeats
         for case_idx in axes(x, 2)
             outputs[:, case_idx] .+= edge_forward_output!(

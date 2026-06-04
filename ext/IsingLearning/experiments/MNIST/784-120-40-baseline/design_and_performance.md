@@ -33,7 +33,7 @@ focused on implementation decisions that should survive future experiment edits.
 - Moving sample loading into the worker task keeps the main thread from copying
   input and target vectors for every example before dispatch.
 - Keeping normal `Process` workers avoids relying on `InlineChunkWorker`, which
-  is still changing in the local Processes package.
+  is still changing in the local StatefulAlgorithms package.
 - Sharing `J` and the base bias avoids per-worker parameter synchronization after
   each Adam update. Only the source graph receives the optimizer write; workers
   already see the shared arrays.
@@ -57,12 +57,12 @@ focused on implementation decisions that should survive future experiment edits.
 - Old `784-120-40` diagnostics from before the reduced-graph change are not
   valid for current serial Process-versus-bespoke conclusions. Those rows mixed
   in the legacy structural input layer and should not be used to argue that
-  `Processes` is slower.
+  `StatefulAlgorithms` is slower.
 
-## What Made `Processes` Faster Now
+## What Made `StatefulAlgorithms` Faster Now
 
 - The biggest fix was architectural, not scheduler-related: the baseline no
-  longer samples a structural input layer. `Processes` now runs the intended
+  longer samples a structural input layer. `StatefulAlgorithms` now runs the intended
   hidden/output graph and applies the image through a worker-local magnetic
   field, which removes wasted work that the old path was still doing.
 - The worker algorithm now projects the image into a reusable local buffer and

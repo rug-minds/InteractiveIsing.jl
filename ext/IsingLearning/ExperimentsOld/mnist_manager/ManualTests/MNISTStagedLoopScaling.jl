@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Random
 using SparseArrays
 using Statistics
@@ -34,7 +34,7 @@ MNIST worker step with progressively more of the real contrastive-learning
 body enabled. `Stage` is part of the type so each stage compiles as its own
 specialized `ProcessAlgorithm`.
 """
-struct StagedMNISTStep{Stage,D,N,T} <: Processes.ProcessAlgorithm
+struct StagedMNISTStep{Stage,D,N,T} <: StatefulAlgorithms.ProcessAlgorithm
     dynamics_algorithm::D
     nudged_dynamics_algorithm::N
     β::T
@@ -134,12 +134,12 @@ function build_layer()
 end
 
 """
-    Processes.init(step, context)
+    StatefulAlgorithms.init(step, context)
 
 Create the reusable context for a staged MNIST worker. Every stage gets the same
 context layout so timing differences come from `step!`, not context shape.
 """
-function Processes.init(step::S, context) where {Stage,D,N,T,S<:StagedMNISTStep{Stage,D,N,T}}
+function StatefulAlgorithms.init(step::S, context) where {Stage,D,N,T,S<:StagedMNISTStep{Stage,D,N,T}}
     model = context.model
     GType = eltype(model)
     x = get(context, :x, zeros(GType, step.input_dim))
@@ -149,8 +149,8 @@ function Processes.init(step::S, context) where {Stage,D,N,T,S<:StagedMNISTStep{
     plus_state = get(context, :plus_state, similar(equilibrium_state))
     minus_state = get(context, :minus_state, similar(equilibrium_state))
     input_pattern = get(context, :input_pattern, isnothing(IsingLearning._mnist_input_magfield(model)) ? nothing : zeros(GType, InteractiveIsing.nstates(model)))
-    free_context = Processes.init(step.dynamics_algorithm, (; model))
-    nudged_context = Processes.init(step.nudged_dynamics_algorithm, (; model))
+    free_context = StatefulAlgorithms.init(step.dynamics_algorithm, (; model))
+    nudged_context = StatefulAlgorithms.init(step.nudged_dynamics_algorithm, (; model))
     return (; model, x, y, buffers, equilibrium_state, plus_state, minus_state, input_pattern, free_context, nudged_context)
 end
 
@@ -201,7 +201,7 @@ function manual_relaxation_ladder!(step::S, context::C, nsteps::I) where {Stage,
 end
 
 """
-    Processes.step!(step, context)
+    StatefulAlgorithms.step!(step, context)
 
 Run one staged MNIST sample. Stages are cumulative:
 manual stages add pieces inside relaxation, `one_relax` switches to the full
@@ -210,7 +210,7 @@ manual stages add pieces inside relaxation, `one_relax` switches to the full
 copies, `three_relax_clamp` adds target clamping, and `full` adds gradient
 accumulation.
 """
-function Processes.step!(step::S, context::C) where {Stage,D,N,T,S<:StagedMNISTStep{Stage,D,N,T},C}
+function StatefulAlgorithms.step!(step::S, context::C) where {Stage,D,N,T,S<:StagedMNISTStep{Stage,D,N,T},C}
     model = context.model
     β = step.β
 
@@ -302,7 +302,7 @@ function build_contexts(layer::L, step::S, ncontexts::I) where {L<:LayeredIsingG
             throw(ArgumentError("ISING_MNIST_STAGED_ADJ_MODE must be copied or shared, got $(repr(ADJ_MODE))."))
         end
         IsingLearning.apply_input(graph, fixed_input)
-        contexts[idx] = Processes.init(step, (; model = graph))
+        contexts[idx] = StatefulAlgorithms.init(step, (; model = graph))
     end
     return contexts
 end
@@ -324,7 +324,7 @@ function run_stage_batch!(step::S, contexts::C, x::X, y::Y) where {S<:StagedMNIS
                 if !isnothing(context.input_pattern)
                     IsingLearning.precompute_mnist_input_pattern!(context.model, context.input_pattern, view(x, :, sample_idx))
                 end
-                Processes.step!(step, context)
+                StatefulAlgorithms.step!(step, context)
             end
             task_seconds[worker_idx] = (time_ns() - worker_start) / 1.0e9
         end
@@ -349,7 +349,7 @@ function run_config(stage::S, nworkers::I) where {S<:Symbol,I<:Integer}
     if !isnothing(context.input_pattern)
         IsingLearning.precompute_mnist_input_pattern!(context.model, context.input_pattern, view(x, :, 1))
     end
-    Processes.step!(step, context)
+    StatefulAlgorithms.step!(step, context)
     IsingLearning.zero_buffer!(context.buffers)
 
     timed = run_stage_batch!(step, contexts, x, y)

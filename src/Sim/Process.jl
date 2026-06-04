@@ -5,7 +5,7 @@ Return the algorithm nodes that should be scanned for Ising Monte Carlo
 algorithms. Loop algorithms are flattened; non-loop algorithms are treated as a
 single node.
 """
-@inline _flat_process_algos(algo::Processes.AbstractLoopAlgorithm) = Processes.flat_funcs(algo)
+@inline _flat_process_algos(algo::StatefulAlgorithms.AbstractLoopAlgorithm) = StatefulAlgorithms.flat_funcs(algo)
 @inline _flat_process_algos(algo) = (algo,)
 
 """
@@ -14,7 +14,7 @@ single node.
 Return whether `algo` is an Ising Monte Carlo algorithm that needs the current
 graph injected as its `model` input.
 """
-@inline _is_ising_mc_target(algo) = Processes.algotype(algo) <: IsingMCAlgorithm
+@inline _is_ising_mc_target(algo) = StatefulAlgorithms.algotype(algo) <: IsingMCAlgorithm
 
 """
     _collect_ising_mc_targets(func)
@@ -36,7 +36,7 @@ end
 """
     _mc_model_inits(func, g)
 
-Create one `Processes.Init` per Ising Monte Carlo algorithm in `func`, assigning
+Create one `StatefulAlgorithms.Init` per Ising Monte Carlo algorithm in `func`, assigning
 `g` as that algorithm's `model`. User inputs are deliberately not inspected or
 merged here; `createProcess` splats them into `Process` unchanged after these
 graph-model inputs.
@@ -45,15 +45,15 @@ function _mc_model_inits(func::F, g::G) where {F,G<:IsingGraph}
     targets = _collect_ising_mc_targets(func)
     graph_inputs = ()
     for target in targets
-        graph_inputs = (graph_inputs..., Processes.Init(target, model = g))
+        graph_inputs = (graph_inputs..., StatefulAlgorithms.Init(target, model = g))
     end
     return graph_inputs
 end
 
 @inline _interactive_slot_value(value::Real) = value
 @inline _interactive_slot_value(value::Base.RefValue{<:Real}) = value[]
-@inline _interactive_slot_value(value::Processes.InteractiveVar{<:Real}) = value[]
-@inline _interactive_slot_value(value::Processes.InteractiveVar{<:Base.RefValue{<:Real}}) = value[][]
+@inline _interactive_slot_value(value::StatefulAlgorithms.InteractiveVar{<:Real}) = value[]
+@inline _interactive_slot_value(value::StatefulAlgorithms.InteractiveVar{<:Base.RefValue{<:Real}}) = value[][]
 @inline _interactive_slot_value(_) = nothing
 
 """
@@ -63,9 +63,9 @@ Resolve a graph-level interactive target to one concrete process namespace key.
 Broad type targets such as `LocalLangevin` are matched by registry subtype and
 must resolve to exactly one entry.
 """
-function _resolve_interactive_target_key(registry::R, target) where {R<:Processes.NameSpaceRegistry}
+function _resolve_interactive_target_key(registry::R, target) where {R<:StatefulAlgorithms.NameSpaceRegistry}
     key = try
-        Processes.static_findkey(registry, target)
+        StatefulAlgorithms.static_findkey(registry, target)
     catch
         nothing
     end
@@ -76,43 +76,43 @@ function _resolve_interactive_target_key(registry::R, target) where {R<:Processe
     isempty(matches) && return nothing
     length(matches) == 1 ||
         error("Interactive target $(target) is ambiguous in this process. Use a keyed algorithm instance instead.")
-    return Processes.getkey(only(matches))
+    return StatefulAlgorithms.getkey(only(matches))
 end
 
 function _prepared_interactive_var_data(prepared_algo, target, varname::Symbol)
-    registry = Processes.getregistry(prepared_algo)
+    registry = StatefulAlgorithms.getregistry(prepared_algo)
     target_name = _resolve_interactive_target_key(registry, target)
     isnothing(target_name) && return nothing
-    subcontexts = Processes.get_subcontexts(Processes.context(prepared_algo))
+    subcontexts = StatefulAlgorithms.get_subcontexts(StatefulAlgorithms.context(prepared_algo))
     hasproperty(subcontexts, target_name) || return nothing
-    data = Processes.getdata(getproperty(subcontexts, target_name))
+    data = StatefulAlgorithms.getdata(getproperty(subcontexts, target_name))
     haskey(data, varname) || return nothing
     return target_name, getproperty(data, varname)
 end
 
 @inline function _push_unique_interactive_spec(specs::Specs, target, varname::Symbol) where {Specs<:Tuple}
     for spec in specs
-        if isequal(Processes.get_target(spec), target) && only(Processes.interactive_names(spec)) === varname
+        if isequal(StatefulAlgorithms.get_target(spec), target) && only(StatefulAlgorithms.interactive_names(spec)) === varname
             return specs
         end
     end
-    return (specs..., Processes.Interactive(target, varname))
+    return (specs..., StatefulAlgorithms.Interactive(target, varname))
 end
 
 """
     _mc_interactive_specs(func, g)
 
-Build graph-driven `Processes.Interactive` lifecycle specs and matching
-`Processes.Override` values for designated interactive process variables.
+Build graph-driven `StatefulAlgorithms.Interactive` lifecycle specs and matching
+`StatefulAlgorithms.Override` values for designated interactive process variables.
 """
 function _mc_interactive_specs(func::F, g::G) where {F,G<:IsingGraph}
     Bool(get(g, :interactive, false)) || !isempty(interactivevars(g)) || return (), ()
 
     graph_inputs = _mc_model_inits(func, g)
-    prepared_algo = Processes.init(
-        Processes.normalize_process_algo(deepcopy(func)),
+    prepared_algo = StatefulAlgorithms.init(
+        StatefulAlgorithms.normalize_process_algo(deepcopy(func)),
         graph_inputs...;
-        lifetime = Processes.Indefinite(),
+        lifetime = StatefulAlgorithms.Indefinite(),
     )
 
     interactive_specs = ()
@@ -137,7 +137,7 @@ function _mc_interactive_specs(func::F, g::G) where {F,G<:IsingGraph}
         target_name, current = data
         value = isnothing(spec.value) ? _interactive_slot_value(current) : spec.value
         interactive_specs = _push_unique_interactive_spec(interactive_specs, target_name, spec.varname)
-        isnothing(value) || (overrides = (overrides..., Processes.Override(target_name, spec.varname => value)))
+        isnothing(value) || (overrides = (overrides..., StatefulAlgorithms.Override(target_name, spec.varname => value)))
     end
 
     return overrides, interactive_specs
@@ -160,7 +160,7 @@ function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.de
         func = g.default_algorithm
     end
 
-    if !isnothing(lifetime) && !(lifetime isa Processes.Lifetime)
+    if !isnothing(lifetime) && !(lifetime isa StatefulAlgorithms.Lifetime)
         isnothing(repeats) || error("Pass either `repeats = ...` or numeric `lifetime = ...`, not both.")
         repeats = lifetime
         lifetime = nothing
@@ -169,11 +169,11 @@ function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.de
     if isnothing(lifetime) && isnothing(repeats) && isnothing(repeat)
         # Interactive graph processes should keep running unless the caller
         # provides an explicit stopping condition.
-        lifetime = Processes.Indefinite()
+        lifetime = StatefulAlgorithms.Indefinite()
     end
 
     if !allow_multiple
-        Processes.close(g)
+        StatefulAlgorithms.close(g)
     end
     
     func = deepcopy(func)
@@ -207,5 +207,5 @@ Fetch last output
 Base.fetch(g::IsingGraph) = fetch(process(g))
 export wait, fetch
 
-Processes.getcontext(g::IsingGraph) = getcontext(process(g))
+StatefulAlgorithms.getcontext(g::IsingGraph) = getcontext(process(g))
 export getcontext

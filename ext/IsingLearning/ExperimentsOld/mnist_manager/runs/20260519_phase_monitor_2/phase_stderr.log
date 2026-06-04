@@ -4,14 +4,14 @@
 │    2-element Vector{Symbol}:
 │     :equilibrium_state
 │     :x
-└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+└ @ IsingLearning.InteractiveIsing.StatefulAlgorithms C:\Users\fenje\dev\InteractiveIsing.jl\deps\StatefulAlgorithms\src\Widgets\GeneralState.jl:54
 ┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
 │   overlapping_fields =
 │    3-element Vector{Symbol}:
 │     :equilibrium_state
 │     :y
 │     :x
-└ @ IsingLearning.InteractiveIsing.Processes C:\Users\fenje\dev\InteractiveIsing.jl\deps\Processes\src\Widgets\GeneralState.jl:54
+└ @ IsingLearning.InteractiveIsing.StatefulAlgorithms C:\Users\fenje\dev\InteractiveIsing.jl\deps\StatefulAlgorithms\src\Widgets\GeneralState.jl:54
 ERROR: LoadError: UndefVarError: `dot` not defined in `Main`
 Suggestion: check for spelling errors or missing imports.
 Hint: a global variable of this name also exists in LinearAlgebra.

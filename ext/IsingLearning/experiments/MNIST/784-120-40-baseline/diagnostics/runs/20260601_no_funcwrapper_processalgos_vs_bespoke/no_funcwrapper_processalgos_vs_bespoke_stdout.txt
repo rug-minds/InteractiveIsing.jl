@@ -1,6 +1,6 @@
 [bootstrap] activated project
 [bootstrap] loaded packages
-2026-06-01T13:34:30.615 begin no-funcwrapper ProcessAlgorithm compare threads=32 batchsize=128 looptype=IsingLearning.InteractiveIsing.Processes.Generated()
+2026-06-01T13:34:30.615 begin no-funcwrapper ProcessAlgorithm compare threads=32 batchsize=128 looptype=IsingLearning.InteractiveIsing.StatefulAlgorithms.Generated()
 2026-06-01T13:34:35.334 direct rep=1 begin
 2026-06-01T13:34:45.920 direct rep=1 wall=2.2910715 spe=0.01789899609375
 2026-06-01T13:34:45.953 generated process rep=1 begin

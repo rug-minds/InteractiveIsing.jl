@@ -1,6 +1,6 @@
-# Processes Usage Notes
+# StatefulAlgorithms Usage Notes
 
-Short notes for using `deps/Processes` correctly in the IsingLearning experiments.
+Short notes for using `deps/StatefulAlgorithms` correctly in the IsingLearning experiments.
 
 ## Algorithm Identity
 
@@ -64,12 +64,12 @@ contrastive_gradient(free.dynamics.model, ...)
   pattern as the working code:
 
 ```julia
-Processes.context(worker)._state.buffers
-Processes.context(worker).dynamics.model
-Processes.context(worker).plus_capture.captured
+StatefulAlgorithms.context(worker)._state.buffers
+StatefulAlgorithms.context(worker).dynamics.model
+StatefulAlgorithms.context(worker).plus_capture.captured
 ```
 
-- Do not use `hasproperty(Processes.context(worker), :dynamics)` as the test for whether a
+- Do not use `hasproperty(StatefulAlgorithms.context(worker), :dynamics)` as the test for whether a
   subcontext is reachable. `ProcessContext` access is registry/subcontext based,
   and `propertynames`/`hasproperty` can describe concrete struct fields rather
   than the user-facing subcontext lookup. If a required subcontext should exist,
@@ -92,10 +92,10 @@ Processes.context(worker).plus_capture.captured
 
 ```julia
 prepare! = (slot, job, manager) -> begin
-    ctx = Processes.context(slot.worker)
+    ctx = StatefulAlgorithms.context(slot.worker)
     ctx._state.x .= job.x
     ctx._state.y .= job.y
-    Processes.resetworker!(slot)
+    StatefulAlgorithms.resetworker!(slot)
 end
 ```
 
@@ -112,13 +112,13 @@ end
   objects already held by workers:
 
 ```julia
-for worker in Processes.workers(manager)
-    Processes.isdone(worker) && close(worker)
-    IsingLearning.sync_graph_params!(Processes.context(worker).dynamics.model, params)
+for worker in StatefulAlgorithms.workers(manager)
+    StatefulAlgorithms.isdone(worker) && close(worker)
+    IsingLearning.sync_graph_params!(StatefulAlgorithms.context(worker).dynamics.model, params)
 end
 ```
 
-- Do not call `initcontext(Processes.context(worker), :dynamics)` after this kind of
+- Do not call `initcontext(StatefulAlgorithms.context(worker), :dynamics)` after this kind of
   parameter sync. Reinitializing a subcontext rebuilds it from the process init
   path and can discard or overwrite in-place graph mutations. Use
   `reinitworker!`/partial reinit only when you intentionally want to rebuild
@@ -150,13 +150,13 @@ can recompile the same composite for each slot. Use `makeworker` once and
 recipe = (;
     makeworker = (idx, manager) -> make_template_worker(manager.state),
     makecontext = (idx, manager, template) -> begin
-        ctx = deepcopy(Processes.context(template))
+        ctx = deepcopy(StatefulAlgorithms.context(template))
         relink_trainable_parameters!(ctx.dynamics.model, manager.state.params)
         ctx
     end,
     prepare! = (slot, job, manager) -> begin
         write_job!(slot.worker, job)
-        Processes.resetworker!(slot)
+        StatefulAlgorithms.resetworker!(slot)
     end,
 )
 ```
@@ -204,9 +204,9 @@ the first manager training `run!` compile for about 35 seconds. Using one merged
    `makecontext`; do not rebuild the whole worker per slot.
 6. In `prepare!`, write the sample into `_state`, update only job-local state,
    and call `resetworker!(slot)`.
-7. In `consume!`, record diagnostics from `Processes.context(slot.worker)`.
+7. In `consume!`, record diagnostics from `StatefulAlgorithms.context(slot.worker)`.
 8. In `flush!`, merge worker-local gradient buffers once.
-9. After the optimiser update, synchronize `Processes.context(worker).dynamics.model`
+9. After the optimiser update, synchronize `StatefulAlgorithms.context(worker).dynamics.model`
    in-place for every worker.
 
 ## Debugging A Manager Port
@@ -222,7 +222,7 @@ old behavior exactly:
 - same validation worker behavior.
 
 If metrics stay flat while gradient norms are nonzero, first check parameter
-sync. In particular, verify that `Processes.context(worker).dynamics.model` changes after
+sync. In particular, verify that `StatefulAlgorithms.context(worker).dynamics.model` changes after
 the optimiser step and that validation workers read the synchronized graph.
 Do not add custom `copyworker`, custom ids, or subcontext reinitialization as a
 first response; those change the semantics and can hide the actual mismatch.

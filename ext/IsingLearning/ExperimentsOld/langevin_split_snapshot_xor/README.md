@@ -24,7 +24,7 @@ Current implementation notes:
 
 - Sampler: direct `LocalLangevin(adjusted=false)`.
 - No scheduler wrapper is used here; the earlier scheduler wrapper hit a
-  Processes context merge failure in this route.
+  StatefulAlgorithms context merge failure in this route.
 - Input is explicit bipolar checkerboard input from the included local
   checkerboard experiment code.
 - Hamiltonian has bilinear couplings, trainable magnetic field, and output

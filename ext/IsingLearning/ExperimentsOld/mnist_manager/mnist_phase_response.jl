@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using LinearAlgebra: dot
 using Optimisers
 using Random
@@ -61,7 +61,7 @@ function build_trainer()
 end
 
 function worker_phase_row(layer, worker)
-    ctx = Processes.context(worker)
+    ctx = StatefulAlgorithms.context(worker)
     free = ctx._state.equilibrium_state
     plus = ctx.plus_capture.captured
     minus = ctx.minus_capture.captured

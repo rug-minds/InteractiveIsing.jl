@@ -1,4 +1,4 @@
-# Processes Context Widening Diagnostic
+# StatefulAlgorithms Context Widening Diagnostic
 
 Diagnostic folder:
 
@@ -8,8 +8,8 @@ Diagnostic folder:
 
 `single_process_inline_vs_process_samples.jl` tried to run the same local MNIST worker routine as:
 
-- a normal `Processes.Process`
-- a synchronous `Processes.InlineProcess`
+- a normal `StatefulAlgorithms.Process`
+- a synchronous `StatefulAlgorithms.InlineProcess`
 - a direct fused reference loop
 
 The first `InlineProcess` version failed when calling `run(worker; threaded = false)` after constructing the inline worker from the initial context. The failure was a conversion error: the context returned by the first loop run had a wider concrete type than the context stored in the `InlineProcess.context` field.
@@ -80,7 +80,7 @@ Those added fields are loop outputs from:
 ## Local fixes applied
 
 The temperature and capture widenings were local IsingLearning issues, not
-package-level `Processes` issues:
+package-level `StatefulAlgorithms` issues:
 
 - `GeometricTemperatureSchedule` now initializes `current_T` as managed state.
 - `ReverseAnnealTemperatureSchedule` now initializes `current_T` as managed state.
@@ -151,12 +151,12 @@ The error was a `MethodError: Cannot convert ProcessContext{... widened ...} to 
 The first workaround in `single_process_inline_vs_process_samples.jl` was to construct a normal `Process`, run it once, take the stable post-run context, and then construct the `InlineProcess` from that warmed context:
 
 ```julia
-warm_process = Processes.Process(...)
+warm_process = StatefulAlgorithms.Process(...)
 run(warm_process)
 wait(warm_process)
-stable_context = Processes.context(warm_process)
+stable_context = StatefulAlgorithms.context(warm_process)
 
-inline_worker = Processes.InlineProcess(
+inline_worker = StatefulAlgorithms.InlineProcess(
     algorithm;
     context = stable_context,
     repeats = 1,
@@ -166,7 +166,7 @@ inline_worker = Processes.InlineProcess(
 
 That allows the inline path to run because its stored `ContextType` already includes the widened fields.
 
-## Why this is likely a Processes package issue
+## Why this is likely a StatefulAlgorithms package issue
 
 The process routine is type-unstable across the first run because outputs are added to subcontexts only after execution. Normal `Process` can tolerate this because it can replace its runtime context with a new concrete context. `InlineProcess` cannot tolerate it because its context field type is fixed.
 

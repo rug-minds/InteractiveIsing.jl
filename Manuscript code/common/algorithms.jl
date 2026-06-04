@@ -13,7 +13,7 @@ function accepted_proposal_delta(proposal::InteractiveIsing.MultiSpinProposal)
     return total
 end
 
-function Processes.init(tp::TrianglePulseA, args)
+function StatefulAlgorithms.init(tp::TrianglePulseA, args)
     steps = num_calls(args)
     num_samples = steps / (4 * tp.numpulses)
     first = LinRange(0, tp.amp, round(Int, num_samples))
@@ -27,7 +27,7 @@ function Processes.init(tp::TrianglePulseA, args)
     return (; pulse, step = 1, pulseval = pulse[1])
 end
 
-function Processes.step!(::TrianglePulseA, context::C) where {C}
+function StatefulAlgorithms.step!(::TrianglePulseA, context::C) where {C}
     (; pulse, step, hamiltonian) = context
     pulseval = pulse[step]
     hamiltonian.b[] = pulseval
@@ -38,7 +38,7 @@ struct BiasA{T} <: ProcessAlgorithm
     amp::T
 end
 
-function Processes.init(tp::BiasA, args)
+function StatefulAlgorithms.init(tp::BiasA, args)
     steps = num_calls(args)
     bias = ones(round(Int, steps)) .* tp.amp
     fix_num = steps - length(bias)
@@ -46,7 +46,7 @@ function Processes.init(tp::BiasA, args)
     return (; bias, step = 1, pulseval = bias[1])
 end
 
-function Processes.step!(::BiasA, context::C) where {C}
+function StatefulAlgorithms.step!(::BiasA, context::C) where {C}
     (; bias, step, hamiltonian) = context
     pulseval = bias[step]
     hamiltonian.b[] = pulseval
@@ -58,14 +58,14 @@ struct SinPulseA{T} <: ProcessAlgorithm
     numpulses::Int
 end
 
-function Processes.init(tp::SinPulseA, args)
+function StatefulAlgorithms.init(tp::SinPulseA, args)
     steps = num_calls(args)
     theta = LinRange(0, 2pi * tp.numpulses, round(Int, steps))
     sins = tp.amp .* sin.(theta)
     return (; sins, step = 1, pulseval = sins[1])
 end
 
-function Processes.step!(::SinPulseA, context::C) where {C}
+function StatefulAlgorithms.step!(::SinPulseA, context::C) where {C}
     (; sins, step, hamiltonian) = context
     pulseval = sins[step]
     hamiltonian.b[] = pulseval
@@ -77,13 +77,13 @@ struct LinAnealingA{T} <: ProcessAlgorithm
     stop_T::T
 end
 
-function Processes.init(tp::LinAnealingA, args)
+function StatefulAlgorithms.init(tp::LinAnealingA, args)
     n_calls = num_calls(args)
     dT = (tp.stop_T - tp.start_T) / n_calls
     return (; current_T = tp.start_T, dT)
 end
 
-function Processes.step!(::LinAnealingA, context::C) where {C}
+function StatefulAlgorithms.step!(::LinAnealingA, context::C) where {C}
     (; current_T, dT, model) = context
     temp!(model, max(current_T, 0))
     return (; current_T = current_T + dT)
@@ -94,7 +94,7 @@ struct LinAnealingB{T} <: ProcessAlgorithm
     stop_T::T
 end
 
-function Processes.init(tp::LinAnealingB, args)
+function StatefulAlgorithms.init(tp::LinAnealingB, args)
     steps = num_calls(args)
     num_samples = steps / 2
     first = LinRange(tp.start_T, tp.stop_T, round(Int, num_samples))
@@ -103,7 +103,7 @@ function Processes.init(tp::LinAnealingB, args)
     return (; tem_pulse, step = 1, temval = tem_pulse[1])
 end
 
-function Processes.step!(::LinAnealingB, context::C) where {C}
+function StatefulAlgorithms.step!(::LinAnealingB, context::C) where {C}
     (; tem_pulse, step, model) = context
     temval = tem_pulse[step]
     temp!(model, max(temval, 0))
@@ -113,22 +113,22 @@ end
 struct ValueLogger{Name} <: ProcessAlgorithm end
 ValueLogger(name) = ValueLogger{Symbol(name)}()
 
-function Processes.init(::ValueLogger, args)
+function StatefulAlgorithms.init(::ValueLogger, args)
     values = Float32[]
     processsizehint!(values, args)
     return (; values)
 end
 
-function Processes.step!(::ValueLogger, context::C) where {C}
+function StatefulAlgorithms.step!(::ValueLogger, context::C) where {C}
     (; values, value) = context
     push!(values, value)
     return (;)
 end
 
-struct Recalc{I} <: Processes.ProcessAlgorithm end
+struct Recalc{I} <: StatefulAlgorithms.ProcessAlgorithm end
 Recalc(i) = Recalc{Int(i)}()
 
-function Processes.step!(::Recalc{I}, context) where {I}
+function StatefulAlgorithms.step!(::Recalc{I}, context) where {I}
     (; hamiltonian) = context
     recalc!(hamiltonian[I])
     return (;)
@@ -141,12 +141,12 @@ end
 
 ImageCapture(name, min, max) = ImageCapture{Symbol(name), typeof(min)}(min, max)
 
-function Processes.init(::ImageCapture, input)
+function StatefulAlgorithms.init(::ImageCapture, input)
     (; filepath) = input
     return (; callnum = 1, filepath)
 end
 
-function Processes.step!(ic::ImageCapture, context::C) where {C}
+function StatefulAlgorithms.step!(ic::ImageCapture, context::C) where {C}
     (; array, filepath, callnum) = context
     if !(array isa AbstractArray{<:Real,3})
         @warn "ImageCapture expects a 3D numeric array" typeof(array)
@@ -197,14 +197,14 @@ end
 struct DatatoDataframe{Name} <: ProcessAlgorithm end
 DatatoDataframe(name) = DatatoDataframe{Symbol(name)}()
 
-function Processes.init(::DatatoDataframe, input)
+function StatefulAlgorithms.init(::DatatoDataframe, input)
     (; filepath) = input
     return (; callnum = 1, filepath)
 end
 
 dimnames(i) = (:x, :y, :z)[i]
 
-function Processes.step!(::DatatoDataframe, context::C) where {C}
+function StatefulAlgorithms.step!(::DatatoDataframe, context::C) where {C}
     (; array, filepath, callnum) = context
     dimvecs = (;)
     for i in 1:ndims(array)

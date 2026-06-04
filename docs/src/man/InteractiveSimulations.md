@@ -2,7 +2,7 @@
 
 Interactive simulations let the window control selected process variables while
 the simulation is running. The graph stores the requested controls, and
-`createProcess(g)` turns them into `Processes.Interactive` context variables for
+`createProcess(g)` turns them into `StatefulAlgorithms.Interactive` context variables for
 the running algorithm.
 
 The basic pattern is:
@@ -64,7 +64,7 @@ The arguments mean:
   `LocalLangevin`, `Metropolis`, or `KineticMC`.
 - `varname` is the context variable that should become interactive.
 - `value` is an optional initial value. If present, `createProcess(g)` inserts a
-  matching `Processes.Override` before marking the variable interactive.
+  matching `StatefulAlgorithms.Override` before marking the variable interactive.
 - `range` is the UI range. Prefer an explicit range for user-facing controls,
   because it gives the slider stable bounds and step size.
 - `label` is the text shown in the interactive variables panel.

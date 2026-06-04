@@ -191,7 +191,7 @@ end
 ```
 
 `@managed(...)` marks positional arguments that live in the local subcontext and are created by
-`Processes.init`. `@managed(name)` captures a same-named value from the init context into local
+`StatefulAlgorithms.init`. `@managed(name)` captures a same-named value from the init context into local
 state, and `@managed(a = ..., b = ...)` can declare multiple managed locals at once. The
 trailing `@inputs((; ...))` block declares init-only inputs that may be
 provided through the process context or through the standalone bootstrap call
@@ -258,7 +258,7 @@ macro ProcessAlgorithm(ex)
     managed_assignments = [_pa_managed_assignment(field, input_temps, :context) for field in signature.managed_pos]
     managed_tuple_expr = Expr(:tuple, Expr(:parameters, [Expr(:kw, field.name, field.name) for field in signature.managed_pos]...))
     init_def = quote
-        function Processes.init(_algo::$fname, context::C) where {C <: Union{Processes.AbstractContext, NamedTuple}}
+        function StatefulAlgorithms.init(_algo::$fname, context::C) where {C <: Union{StatefulAlgorithms.AbstractContext, NamedTuple}}
             $(input_assignments...)
             $(managed_assignments...)
             return $managed_tuple_expr
@@ -270,7 +270,7 @@ macro ProcessAlgorithm(ex)
     step_kw_forward = [Expr(:kw, kw.name, kw.name) for kw in signature.normal_kwargs]
     step_call_args = [arg.name for arg in signature.positional]
     step_def = quote
-        function Processes.step!(_algo::$fname, context::C) where {C <: Union{Processes.AbstractContext, NamedTuple}}
+        function StatefulAlgorithms.step!(_algo::$fname, context::C) where {C <: Union{StatefulAlgorithms.AbstractContext, NamedTuple}}
             $(step_pos_assignments...)
             $(step_kw_assignments...)
             return $impl_name($(step_call_args...); $(step_kw_forward...))
@@ -278,7 +278,7 @@ macro ProcessAlgorithm(ex)
     end
 
     q = quote
-        struct $fname <: Processes.ProcessAlgorithm end
+        struct $fname <: StatefulAlgorithms.ProcessAlgorithm end
         $impl_def
         $piped_def
         $bootstrap_def

@@ -70,12 +70,12 @@ function contrastive_train_step!(
     sync_params!(graph, ps)
 
     process = st.contrastive_process
-    context = Processes.context(process)._state
+    context = StatefulAlgorithms.context(process)._state
     context.x .= x
     context.y .= target
     clear_gradient_buffer!(context.buffers)
 
-    Processes.reset!(process)
+    StatefulAlgorithms.reset!(process)
     run(process)
     wait(process)
 

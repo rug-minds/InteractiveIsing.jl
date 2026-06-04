@@ -1,4 +1,4 @@
-# [Copying Processes](@id copying_processes_user)
+# [Copying StatefulAlgorithms](@id copying_processes_user)
 
 ```@meta
 CurrentModule = StatefulAlgorithms

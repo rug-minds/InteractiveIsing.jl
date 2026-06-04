@@ -58,7 +58,7 @@ function bestcase_workers(layer::L, source::G, config::C) where {
     G,
     C<:InputFieldMNISTConfig,
 }
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(layer))
     return [
         input_field_worker(deepcopy(algorithm), layer, shared_worker_graph(source))
         for _ in 1:config.workers
@@ -78,12 +78,12 @@ end
     ctx = worker_context(worker)
     ctx.x .= x
     ctx.y .= y
-    Processes.reset!(worker)
-    Processes.loop(
+    StatefulAlgorithms.reset!(worker)
+    StatefulAlgorithms.loop(
         worker,
-        Processes.getalgo(worker),
-        Processes.context(worker),
-        Processes.lifetime(worker),
+        StatefulAlgorithms.getalgo(worker),
+        StatefulAlgorithms.context(worker),
+        StatefulAlgorithms.lifetime(worker),
         (; phase_beta = β),
     )
     return worker

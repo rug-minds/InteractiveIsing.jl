@@ -13,7 +13,7 @@ using SparseArrays
 using Statistics
 
 const II = IsingLearning.InteractiveIsing
-const Processes = II.Processes
+const StatefulAlgorithms = II.StatefulAlgorithms
 const INMNIST_FT = Float32
 const INMNIST_INPUT_SIDE = 28
 const INMNIST_SIDE = 2 * INMNIST_INPUT_SIDE - 1
@@ -97,7 +97,7 @@ struct InlaidMNISTJob{X<:AbstractVector{INMNIST_FT},Y<:AbstractVector{INMNIST_FT
     y::Y
 end
 
-struct InlaidMNISTStep <: Processes.ProcessAlgorithm end
+struct InlaidMNISTStep <: StatefulAlgorithms.ProcessAlgorithm end
 
 mutable struct InlaidMNISTManagerState{M,G,P,O}
     model::M
@@ -356,7 +356,7 @@ function learning_rate_at(config::C, update_idx::I) where {C<:InlaidMNISTConfig,
 end
 
 """Update the Optimisers.jl learning rate while preserving Adam moments."""
-function adjust_learning_rate!(manager::M) where {M<:Processes.ProcessManager}
+function adjust_learning_rate!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     η = learning_rate_at(manager.config, manager.state.update_idx[])
     Optimisers.adjust!(manager.state.opt_state, η)
     return η
@@ -425,7 +425,7 @@ function anneal!(model::M, context::C, sweeps::I; reverse::Bool = false) where {
         end
         II.temp!(model.graph, temp)
         for _ in 1:nactive
-            Processes.step!(algorithm, context)
+            StatefulAlgorithms.step!(algorithm, context)
         end
     end
     II.temp!(model.graph, model.config.cold_temp)
@@ -529,16 +529,16 @@ end
 
 """Return the mutable process subcontext used by a manager worker."""
 function worker_context(worker::W) where {W}
-    return Processes.context(worker)._state
+    return StatefulAlgorithms.context(worker)._state
 end
 
 """Initialize one persistent inlaid MNIST worker context."""
-function Processes.init(::InlaidMNISTStep, context)
+function StatefulAlgorithms.init(::InlaidMNISTStep, context)
     model = context.model
     x = get(context, :x, zeros(INMNIST_FT, INMNIST_INPUT_SIDE^2))
     y = get(context, :y, zeros(INMNIST_FT, INMNIST_NCLASSES * model.config.output_replicas))
     gradient = get(context, :gradient, gradient_buffer(model))
-    metropolis_context = Processes.init(II.Metropolis(), (; model = model.graph))
+    metropolis_context = StatefulAlgorithms.init(II.Metropolis(), (; model = model.graph))
     return (;
         model,
         x,
@@ -553,7 +553,7 @@ function Processes.init(::InlaidMNISTStep, context)
 end
 
 """Run one contrastive inlaid MNIST sample inside a reusable worker."""
-function Processes.step!(::InlaidMNISTStep, context)
+function StatefulAlgorithms.step!(::InlaidMNISTStep, context)
     stats = accumulate_sample_gradient!(context.gradient, context.model, context.x, context.y, context.metropolis_context)
     context.nsamples[] += 1
     context.ncorrect[] += stats.correct ? 1 : 0
@@ -563,16 +563,16 @@ function Processes.step!(::InlaidMNISTStep, context)
 end
 
 """Keep persistent worker contexts alive across manager jobs."""
-function Processes.cleanup(::InlaidMNISTStep, context)
+function StatefulAlgorithms.cleanup(::InlaidMNISTStep, context)
     return nothing
 end
 
 """Create one reusable manager-owned inlaid MNIST worker."""
 function inlaid_worker(source::M, worker_idx::I) where {M<:InlaidMNISTModel,I<:Integer}
     model = worker_model(source, worker_idx)
-    return Processes.Process(
+    return StatefulAlgorithms.Process(
         :_state => InlaidMNISTStep(),
-        Processes.Init(:_state;
+        StatefulAlgorithms.Init(:_state;
             model,
             x = zeros(INMNIST_FT, INMNIST_INPUT_SIDE^2),
             y = zeros(INMNIST_FT, INMNIST_NCLASSES * source.config.output_replicas),
@@ -583,13 +583,13 @@ function inlaid_worker(source::M, worker_idx::I) where {M<:InlaidMNISTModel,I<:I
 end
 
 """Merge worker-local gradients and statistics into the manager state."""
-function flush_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function flush_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_gradient!(manager.state.batch_gradient)
     manager.state.nsamples[] = 0
     manager.state.ncorrect[] = 0
     manager.state.nskipped[] = 0
     manager.state.total_loss[] = 0f0
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         ctx = worker_context(worker)
         add_gradient!(manager.state.batch_gradient, ctx.gradient)
         manager.state.nsamples[] += ctx.nsamples[]
@@ -604,21 +604,21 @@ function flush_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
 end
 
 """Clear every manager and worker buffer before a minibatch."""
-function clear_manager_buffers!(manager::M) where {M<:Processes.ProcessManager}
+function clear_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_gradient!(manager.state.batch_gradient)
     manager.state.nsamples[] = 0
     manager.state.ncorrect[] = 0
     manager.state.nskipped[] = 0
     manager.state.total_loss[] = 0f0
-    for worker in Processes.workers(manager)
+    for worker in StatefulAlgorithms.workers(manager)
         reset_worker_stats!(worker_context(worker))
     end
     return manager
 end
 
 """Update worker parameter references after an optimizer step."""
-function sync_worker_params!(manager::M) where {M<:Processes.ProcessManager}
-    for worker in Processes.workers(manager)
+function sync_worker_params!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
+    for worker in StatefulAlgorithms.workers(manager)
         ctx = worker_context(worker)
         ctx.model.weights_io = manager.state.model.weights_io
         ctx.model.bias_o = manager.state.model.bias_o
@@ -650,27 +650,27 @@ function inlaid_manager(source::M) where {M<:InlaidMNISTModel}
             ctx = worker_context(slot.worker)
             ctx.x .= job.x
             ctx.y .= job.y
-            Processes.resetworker!(slot)
+            StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
         flush! = manager -> flush_manager_buffers!(manager),
     )
-    return Processes.ProcessManager(
+    return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = source.config.workers,
         config = source.config,
         state,
-        flush_policy = Processes.FlushAtEnd(),
-        worker_init = Processes.MakeEachWorker(),
+        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = InlaidMNISTJob{Vector{INMNIST_FT},Vector{INMNIST_FT}},
     )
 end
 
 """Run one minibatch and update shared source parameters once."""
-function run_minibatch!(manager::M, jobs::J) where {M<:Processes.ProcessManager,J<:AbstractVector}
+function run_minibatch!(manager::M, jobs::J) where {M<:StatefulAlgorithms.ProcessManager,J<:AbstractVector}
     clear_manager_buffers!(manager)
-    Processes.run!(manager, jobs, Processes.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
     add_weight_decay!(manager.state.batch_gradient, manager.state.params[], manager.config.weight_decay)
     η = adjust_learning_rate!(manager)
     manager.state.opt_state, ps_new = Optimisers.update(manager.state.opt_state, manager.state.params[], manager.state.batch_gradient)
@@ -727,7 +727,7 @@ end
 """Evaluate free-phase balanced accuracy and loss."""
 function evaluate(model::M, x::X, y::Y) where {M<:InlaidMNISTModel,X<:AbstractMatrix,Y<:AbstractMatrix}
     config = model.config
-    context = Processes.init(II.Metropolis(), (; model = model.graph))
+    context = StatefulAlgorithms.init(II.Metropolis(), (; model = model.graph))
     correct = 0
     loss = 0f0
     pred_counts = zeros(Int, INMNIST_NCLASSES)

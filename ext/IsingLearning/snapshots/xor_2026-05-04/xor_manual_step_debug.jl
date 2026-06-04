@@ -3,7 +3,7 @@ Pkg.activate(joinpath(@__DIR__, ".."))
 
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Optimisers
 using Random
 using SparseArrays
@@ -159,15 +159,15 @@ function dynamics_algorithm()
 end
 
 function resolved_dynamics_stepper(worker)
-    forward_routine = Processes.getalgo(worker.taskdata.func, 1)
-    for child in Processes.getalgos(forward_routine)
-        child isa Processes.AbstractIdentifiableAlgo && Base.getkey(child) === :dynamics && return child
+    forward_routine = StatefulAlgorithms.getalgo(worker.taskdata.func, 1)
+    for child in StatefulAlgorithms.getalgos(forward_routine)
+        child isa StatefulAlgorithms.AbstractIdentifiableAlgo && Base.getkey(child) === :dynamics && return child
     end
     error("could not find resolved @dynamics algorithm in worker process")
 end
 
 step_context!(dynamics_stepper, context) =
-    Processes.step!(dynamics_stepper, context, Processes.Unstable())
+    StatefulAlgorithms.step!(dynamics_stepper, context, StatefulAlgorithms.Unstable())
 
 function relax!(dynamics_stepper, context, n_steps::Integer)
     for _ in 1:n_steps
@@ -341,7 +341,7 @@ function train_manual!()
     Random.seed!(TRAIN_SEED)
     trainer = manual_trainer()
     worker = only(trainer.workers)
-    context = Processes.context(worker)
+    context = StatefulAlgorithms.context(worker)
     graph = context.dynamics.model
     dynamics_stepper = resolved_dynamics_stepper(worker)
     set_trainer_temperature!(trainer, START_TEMP)
@@ -351,7 +351,7 @@ function train_manual!()
     initial_params = deepcopy(params)
     best_params = deepcopy(params)
     opt_state = trainer.opt_state
-    batch_gradient = Processes.context(worker)._state.buffers
+    batch_gradient = StatefulAlgorithms.context(worker)._state.buffers
 
     context, before = evaluate!(dynamics_stepper, context, x, labels)
     best = (; epoch = 0, metrics = before)

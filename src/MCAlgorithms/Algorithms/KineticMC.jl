@@ -217,7 +217,7 @@ be Boltzmann-correct.
     return log_acceptance >= zero(T) || log(rand(rng, T)) < log_acceptance
 end
 
-@inline function Processes.init(algo::KineticMC, context::Cont) where {Cont}
+@inline function StatefulAlgorithms.init(algo::KineticMC, context::Cont) where {Cont}
     (;model) = context
 
     hamiltonian = model.hamiltonian
@@ -233,7 +233,7 @@ end
     return returnargs
 end
 
-@inline function Processes.step!(kinetic::KineticMC, context::C) where {C}
+@inline function StatefulAlgorithms.step!(kinetic::KineticMC, context::C) where {C}
     (;model, rng, proposer) = context
 
     T = eltype(model)

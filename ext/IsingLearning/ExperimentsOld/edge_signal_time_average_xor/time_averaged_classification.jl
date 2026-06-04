@@ -44,14 +44,14 @@ ProcessAlgorithm that records the current output spin whenever it is scheduled.
 Schedule it after a relaxation/burn-in period to average the fluctuating output
 observable instead of reading one final state.
 """
-struct OutputAverager{Trace} <: Processes.ProcessAlgorithm
+struct OutputAverager{Trace} <: StatefulAlgorithms.ProcessAlgorithm
     trace::Trace
     output_idx::Int
 end
 
-Processes.init(::OutputAverager, context) = (;)
+StatefulAlgorithms.init(::OutputAverager, context) = (;)
 
-function Processes.step!(averager::OutputAverager, context)
+function StatefulAlgorithms.step!(averager::OutputAverager, context)
     value = FT(II.state(context.model)[averager.output_idx])
     averager.trace.sum += value
     averager.trace.sumsq += value^2
@@ -126,16 +126,16 @@ function run_burnin_and_average!(graph, x, config::TimeAverageConfig, burnin_swe
     dynamics = deepcopy(sampler)
     sample_interval = config.sample_every_sweeps * sweep_steps
     total_steps = average_sweeps * sweep_steps
-    routine = Processes.@CompositeAlgorithm begin
+    routine = StatefulAlgorithms.@CompositeAlgorithm begin
         @alias dynamics = dynamics
         @every 1 dynamics()
         @every sample_interval averager(model = dynamics.model)
     end
-    wrapped = Processes.@Routine begin
+    wrapped = StatefulAlgorithms.@Routine begin
         @repeat total_steps routine()
     end
-    inputs = (Processes.Init(dynamics, model = graph, rng = Random.MersenneTwister(seed + 2)),)
-    process = Processes.Process(Processes.resolve(wrapped), inputs...; repeats = 1)
+    inputs = (StatefulAlgorithms.Init(dynamics, model = graph, rng = Random.MersenneTwister(seed + 2)),)
+    process = StatefulAlgorithms.Process(StatefulAlgorithms.resolve(wrapped), inputs...; repeats = 1)
     run(process)
     wait(process)
     close(process)

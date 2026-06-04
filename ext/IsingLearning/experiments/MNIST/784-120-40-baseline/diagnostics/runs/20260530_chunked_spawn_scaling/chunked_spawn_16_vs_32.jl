@@ -48,7 +48,7 @@ function timed_chunked_minibatch!(
     indices::V,
     config::C,
 ) where {
-    M<:Processes.ProcessManager,
+    M<:StatefulAlgorithms.ProcessManager,
     B<:InputFieldMNISTChunkBuffer,
     X<:AbstractMatrix,
     Y<:AbstractMatrix,
@@ -60,7 +60,7 @@ function timed_chunked_minibatch!(
     clear_seconds = @elapsed clear_manager_buffers!(manager)
     run_seconds = @elapsed begin
         manager.state.nsamples[] = sum(length, jobs)
-        Processes.run!(manager, jobs)
+        StatefulAlgorithms.run!(manager, jobs)
     end
     update_seconds = @elapsed begin
         manager.state.opt_state, params = Optimisers.update(

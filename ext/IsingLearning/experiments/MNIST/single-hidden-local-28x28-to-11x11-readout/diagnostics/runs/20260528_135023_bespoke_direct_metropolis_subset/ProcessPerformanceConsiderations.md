@@ -116,7 +116,7 @@ function helper!(context)
     work!(context.model, context.buffer)
 end
 
-function Processes.step!(algo::MyAlgorithm, context)
+function StatefulAlgorithms.step!(algo::MyAlgorithm, context)
     helper!(context)
     return nothing
 end
@@ -134,7 +134,7 @@ function helper!(state::S, work::W) where {S<:NamedTuple,W<:NamedTuple}
     work!(work.model, work.buffer)
 end
 
-function Processes.step!(algo::MyAlgorithm, context)
+function StatefulAlgorithms.step!(algo::MyAlgorithm, context)
     (; a, b, model, buffer) = context
     state = (; a, b)
     work = (; model, buffer)
@@ -170,8 +170,8 @@ surprising source of overhead if they are not inlined.
 Better pattern:
 
 ```julia
-@inline function run_once!(process::P) where {P<:Processes.Process}
-    Processes.reset!(process)
+@inline function run_once!(process::P) where {P<:StatefulAlgorithms.Process}
+    StatefulAlgorithms.reset!(process)
     @inline run(process)
     @inline wait(process)
     return process
@@ -264,7 +264,7 @@ function calls that return routed outputs.
 - Side-effect-only process algorithms should return `nothing`.
 - Prefer explicit `@ProcessAlgorithm`s over direct DSL function calls for hot
   routed outputs, especially when output slots need stable initial context shape.
-- Keep raw `context` at the top-level `Processes.step!` boundary when possible.
+- Keep raw `context` at the top-level `StatefulAlgorithms.step!` boundary when possible.
 - Destructure context once, then pass small typed named tuples or explicit
   values to helper functions.
 - Mark hot helpers and their call sites with `@inline` when they take process,
@@ -300,6 +300,6 @@ cost.
 One package-level issue remains: `@ProcessAlgorithm` currently does not handle
 some `where` type selectors on generated signatures correctly. A signature like
 `f(x::X, y::Y) where {X,Y}` can expand to code where a type variable is not in
-scope. Until that is fixed in Processes, hot process algorithms may need either
+scope. Until that is fixed in StatefulAlgorithms, hot process algorithms may need either
 abstract annotations on the DSL-facing wrapper or manual `ProcessAlgorithm`
 definitions that forward to typed helper functions.

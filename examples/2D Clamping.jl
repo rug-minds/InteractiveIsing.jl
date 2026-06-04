@@ -1,5 +1,5 @@
 using InteractiveIsing, JET, BenchmarkTools
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 import InteractiveIsing as ii
 
 function isingfunc(dr::R) where R

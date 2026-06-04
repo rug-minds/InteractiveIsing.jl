@@ -188,8 +188,8 @@ Base.get(g::IsingGraph, s, d) = get(addons(g), s, d)
 
 Graph addon specification for one interactively controlled process variable.
 
-`target` is the lifecycle target passed to `Processes.Interactive` and
-`Processes.Override`, for example `LocalLangevin` or a concrete keyed
+`target` is the lifecycle target passed to `StatefulAlgorithms.Interactive` and
+`StatefulAlgorithms.Override`, for example `LocalLangevin` or a concrete keyed
 algorithm instance. `value` is the persistent graph-side value used to seed new
 processes. `range` configures the UI slider when present; otherwise the slider
 panel infers a range heuristically from the current value.
@@ -236,7 +236,7 @@ end
 
 Register or replace one interactively controlled process variable on `g`.
 Stored values persist on the graph addon and seed future `createProcess` calls
-through `Processes.Override`.
+through `StatefulAlgorithms.Override`.
 """
 function interactivevar!(
     g::G,
@@ -305,7 +305,7 @@ function process(g::IsingGraph)
     return ps[end]
 end
 
-Processes.context(g::IsingGraph) = context(process(g))
+StatefulAlgorithms.context(g::IsingGraph) = context(process(g))
 export process
 
 

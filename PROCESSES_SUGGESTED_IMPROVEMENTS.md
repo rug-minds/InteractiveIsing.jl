@@ -1,6 +1,6 @@
-# Processes Suggested Improvements
+# StatefulAlgorithms Suggested Improvements
 
-Notes from using `deps/Processes` in the current InteractiveIsing codebase, especially for Langevin dynamics and the IsingLearning XOR/MNIST training path.
+Notes from using `deps/StatefulAlgorithms` in the current InteractiveIsing codebase, especially for Langevin dynamics and the IsingLearning XOR/MNIST training path.
 
 ## What Works Well
 
@@ -31,7 +31,7 @@ Example problem:
 
 The most important docs should explain exact guarantees for:
 
-- `Processes.reset!`
+- `StatefulAlgorithms.reset!`
 - `run`
 - `wait`
 - `close`
@@ -114,6 +114,6 @@ Most benefits are obvious in interactive simulation. More examples should show:
 
 ## Current Assessment
 
-Processes is useful and worth continuing. It speeds up development for composable interactive workflows. For learning code, it still needs better lifecycle docs, tracing, and strict debug tools so failures are easier to reason about.
+StatefulAlgorithms is useful and worth continuing. It speeds up development for composable interactive workflows. For learning code, it still needs better lifecycle docs, tracing, and strict debug tools so failures are easier to reason about.
 
 The main design issue is not that sharing/aliasing is undefined. The main issue is that user code needs better tools to inspect and validate that the sharing it intends is what the resolved process is actually doing.

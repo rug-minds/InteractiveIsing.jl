@@ -7,7 +7,7 @@ hangs, so future changes do not repeat the same mistakes.
 
 Closing a GLMakie window can freeze or pause Julia for a few seconds. The
 freeze has shown up most clearly when an interactive simulation window owns an
-`IsingGraph` with running `Processes.Process` tasks.
+`IsingGraph` with running `StatefulAlgorithms.Process` tasks.
 
 There are two separate close paths:
 
@@ -112,7 +112,7 @@ objects; it only swaps hot observable values away from live runtime memory.
 
 `examples/XORInteractiveLearning.jl` still had its own
 `on(host.open) do isopen` observer after the generic window lifecycle had been
-fixed. That observer called `Processes.close(graph)` and trainer cleanup when
+fixed. That observer called `StatefulAlgorithms.close(graph)` and trainer cleanup when
 the native window set `window_open=false`, which reintroduced the same close
 freeze outside `src/Windows`.
 
@@ -128,9 +128,9 @@ Rule: panel close during native window close should not call Makie deletion APIs
 
 ### Blocking Process Close In The Window Callback
 
-Calling `Processes.close(g)` or `close(process)` directly from close hooks is
-bad for interactive windows. `Processes.close(process)` waits for the process
-task, and `Processes.close(g)` does that for every graph-attached process.
+Calling `StatefulAlgorithms.close(g)` or `close(process)` directly from close hooks is
+bad for interactive windows. `StatefulAlgorithms.close(process)` waits for the process
+task, and `StatefulAlgorithms.close(g)` does that for every graph-attached process.
 
 This can block the close callback or occupy Julia while GLMakie is trying to
 finish its own close/renderloop shutdown.
@@ -232,7 +232,7 @@ For graph/process cleanup:
 
 - graph panels register one host-level cleanup per graph identity;
 - cleanup calls `_request_graph_process_close!(g)`;
-- that function requests each process stop with `Processes.shouldrun(process, false)`,
+- that function requests each process stop with `StatefulAlgorithms.shouldrun(process, false)`,
   empties `processes(g)`, and reaps process state later;
 - it does not wait for process tasks before returning.
 
@@ -536,7 +536,7 @@ and cleanup path than post-display mounting.
   Cmd+W keyboard handlers. Those callbacks run inside GLMakie's event/renderloop
   handling and can close re-entrantly. Flip `host.open[] = false` and let the
   `window_open` observer perform the same close path as the native window button.
-- Do not call `Processes.close(g)` from a native close callback.
+- Do not call `StatefulAlgorithms.close(g)` from a native close callback.
 - Do not call `close(process)` from a native close callback unless it is wrapped
   in a task and cannot block the close event.
 - Prefer nonblocking stop requests for graph-attached processes.

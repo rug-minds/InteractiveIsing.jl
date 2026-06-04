@@ -1,8 +1,8 @@
-name: Update Processes Subtree
+name: Update StatefulAlgorithms Subtree
 
 on:
   repository_dispatch:
-    types: [update-processes]
+    types: [update-statefulalgorithms]
   workflow_dispatch:
   schedule:
     - cron: '0 2 * * 1'
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: update-processes-subtree
+  group: update-statefulalgorithms-subtree
   cancel-in-progress: false
 
 jobs:
@@ -29,10 +29,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Pull Processes subtree
+      - name: Pull StatefulAlgorithms subtree
         run: |
           before_sha="$(git rev-parse HEAD)"
-          ./scripts/pull-processes-subtree-bash.sh
+          ./scripts/pull-statefulalgorithms-subtree-bash.sh
           after_sha="$(git rev-parse HEAD)"
 
           if [[ "$before_sha" != "$after_sha" ]]; then

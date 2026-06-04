@@ -1,7 +1,7 @@
 using AbstractMCMC
 using BenchmarkTools
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 using Random
 
 # Minimal steady-state comparison:
@@ -108,7 +108,7 @@ end
 function reset!(runner::PackageRunner)
     copyto!(InteractiveIsing.graphstate(runner.graph), runner.reference_spins)
     temp!(runner.graph, runner.temperature)
-    Processes.reset!(runner.process)
+    StatefulAlgorithms.reset!(runner.process)
     return runner
 end
 

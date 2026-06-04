@@ -1,5 +1,5 @@
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 using Random
 
 # Run from the repository root with:
@@ -84,8 +84,8 @@ function make_context_template(
 ) where {A<:II.LocalLangevin,T<:Integer,F<:Real,I<:Integer}
     graph = make_langevin_graph(side; temperature)
     process = Process(algorithm, Init(algorithm, model = graph); repeats = 1)
-    context = Processes.context(process)
-    instance = only(Processes.getalgos(Processes.getalgo(process)))
+    context = StatefulAlgorithms.context(process)
+    instance = only(StatefulAlgorithms.getalgos(StatefulAlgorithms.getalgo(process)))
     Random.seed!(view(context, instance).rng, seed)
     return (; context, instance)
 end
@@ -93,11 +93,11 @@ end
 """
     fullsweep_steps(context, instance, fullsweeps) -> Int
 
-Convert full sweeps to raw `Processes.step!` calls. `LocalLangevin` attempts
+Convert full sweeps to raw `StatefulAlgorithms.step!` calls. `LocalLangevin` attempts
 one active spin update per step, so one full sweep is one pass over all active
 spins.
 """
-function fullsweep_steps(context::C, instance::I, fullsweeps::T) where {C<:Processes.ProcessContext,I<:Processes.AbstractIdentifiableAlgo,T<:Integer}
+function fullsweep_steps(context::C, instance::I, fullsweeps::T) where {C<:StatefulAlgorithms.ProcessContext,I<:StatefulAlgorithms.AbstractIdentifiableAlgo,T<:Integer}
     return Int(fullsweeps) * length(view(context, instance).active_spins)
 end
 
@@ -107,8 +107,8 @@ end
 Run one raw Langevin step and assert the nonempty active-set output shape. This
 removes the `NamedTuple()` branch from the benchmark hot loop.
 """
-@inline function checked_langevin_step!(instance::I, context::C) where {I<:Processes.AbstractIdentifiableAlgo,C}
-    return Processes.step!(Processes.getalgo(instance), context)::NamedTuple{LOCAL_LANGEVIN_OUTPUT_NAMES}
+@inline function checked_langevin_step!(instance::I, context::C) where {I<:StatefulAlgorithms.AbstractIdentifiableAlgo,C}
+    return StatefulAlgorithms.step!(StatefulAlgorithms.getalgo(instance), context)::NamedTuple{LOCAL_LANGEVIN_OUTPUT_NAMES}
 end
 
 """
@@ -118,9 +118,9 @@ Run `nsteps` single-spin Langevin updates without merging scalar diagnostics
 back into the full context. This keeps one `SubContextView` because the full
 context shape never changes in the no-merge path.
 """
-function run_raw_langevin!(instance::I, context::C, nsteps::T) where {I<:Processes.AbstractIdentifiableAlgo,C<:Processes.ProcessContext,T<:Integer}
+function run_raw_langevin!(instance::I, context::C, nsteps::T) where {I<:StatefulAlgorithms.AbstractIdentifiableAlgo,C<:StatefulAlgorithms.ProcessContext,T<:Integer}
     contextview = view(context, instance)
-    algorithm = Processes.getalgo(instance)
+    algorithm = StatefulAlgorithms.getalgo(instance)
     accepted = 0
     attempted = 0
     last_gradient_max = zero(eltype(contextview.model))
@@ -129,7 +129,7 @@ function run_raw_langevin!(instance::I, context::C, nsteps::T) where {I<:Process
     # future raw steps is held in mutable context fields; merging allocates one
     # fresh NamedTuple per step and mostly updates diagnostics.
     for _ in 1:nsteps
-        out = Processes.step!(algorithm, contextview)
+        out = StatefulAlgorithms.step!(algorithm, contextview)
         accepted += out.accepted
         attempted += out.attempted
         last_gradient_max = out.gradient_max
@@ -150,10 +150,10 @@ end
 Run the initial shape-changing merge outside the timed stable loop. The process
 engine does this with an unstable warmup step before stable generated steps.
 """
-function stabilize_langevin_context(instance::I, context::C) where {I<:Processes.AbstractIdentifiableAlgo,C<:Processes.ProcessContext}
+function stabilize_langevin_context(instance::I, context::C) where {I<:StatefulAlgorithms.AbstractIdentifiableAlgo,C<:StatefulAlgorithms.ProcessContext}
     contextview = view(context, instance)
     out = checked_langevin_step!(instance, contextview)
-    return Processes.unstablemerge(contextview, out)
+    return StatefulAlgorithms.unstablemerge(contextview, out)
 end
 
 """
@@ -167,11 +167,11 @@ function run_raw_langevin_merged_inner!(
     nsteps::T,
     accepted::N,
     attempted::N,
-) where {I<:Processes.AbstractIdentifiableAlgo,C<:Processes.ProcessContext,T<:Integer,N<:Integer}
+) where {I<:StatefulAlgorithms.AbstractIdentifiableAlgo,C<:StatefulAlgorithms.ProcessContext,T<:Integer,N<:Integer}
     for _ in 1:nsteps
         contextview = view(context, instance)
         out = checked_langevin_step!(instance, contextview)
-        context = Processes.stablemerge(contextview, out)
+        context = StatefulAlgorithms.stablemerge(contextview, out)
         accepted += out.accepted
         attempted += out.attempted
     end
@@ -193,7 +193,7 @@ Run the same raw dynamics while stable-merging each returned diagnostic tuple
 into the context. Pass a context that has already gone through
 `stabilize_langevin_context`.
 """
-function run_raw_langevin_with_merge!(instance::I, context::C, nsteps::T) where {I<:Processes.AbstractIdentifiableAlgo,C<:Processes.ProcessContext,T<:Integer}
+function run_raw_langevin_with_merge!(instance::I, context::C, nsteps::T) where {I<:StatefulAlgorithms.AbstractIdentifiableAlgo,C<:StatefulAlgorithms.ProcessContext,T<:Integer}
     contextview = view(context, instance)
     nsteps <= 0 && return (;
         accepted = 0,
@@ -224,7 +224,7 @@ end
 
 Run all raw contexts one after another on the current Julia thread.
 """
-function run_serial!(instance::I, contexts::C, nsteps::T) where {I<:Processes.AbstractIdentifiableAlgo,C<:AbstractVector,T<:Integer}
+function run_serial!(instance::I, contexts::C, nsteps::T) where {I<:StatefulAlgorithms.AbstractIdentifiableAlgo,C<:AbstractVector,T<:Integer}
     return [run_raw_langevin!(instance, context, nsteps) for context in contexts]
 end
 
@@ -233,7 +233,7 @@ end
 
 Run all raw contexts concurrently using Julia thread tasks.
 """
-function run_threaded!(instance::I, contexts::C, nsteps::T) where {I<:Processes.AbstractIdentifiableAlgo,C<:AbstractVector,T<:Integer}
+function run_threaded!(instance::I, contexts::C, nsteps::T) where {I<:StatefulAlgorithms.AbstractIdentifiableAlgo,C<:AbstractVector,T<:Integer}
     tasks = map(eachindex(contexts)) do idx
         context = contexts[idx]
         Threads.@spawn run_raw_langevin!($instance, $context, $nsteps)
@@ -246,7 +246,7 @@ end
 
 Run all raw contexts concurrently using Julia's static thread scheduler.
 """
-function run_static_threaded!(instance::I, contexts::C, nsteps::T) where {I<:Processes.AbstractIdentifiableAlgo,C<:AbstractVector,T<:Integer}
+function run_static_threaded!(instance::I, contexts::C, nsteps::T) where {I<:StatefulAlgorithms.AbstractIdentifiableAlgo,C<:AbstractVector,T<:Integer}
     results = Vector{Any}(undef, length(contexts))
     Threads.@threads :static for idx in eachindex(contexts)
         results[idx] = run_raw_langevin!(instance, contexts[idx], nsteps)

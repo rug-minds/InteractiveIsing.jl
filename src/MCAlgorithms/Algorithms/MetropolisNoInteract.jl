@@ -6,7 +6,7 @@ end
 
 metropolis_nointeract(; T = 1.0f0) = metropolis_nointeract(T)
 
-@inline function Processes.init(metro::metropolis_nointeract, context::Cont) where {Cont}
+@inline function StatefulAlgorithms.init(metro::metropolis_nointeract, context::Cont) where {Cont}
     (;model) = context
 
     hamiltonian = model.hamiltonian
@@ -18,7 +18,7 @@ metropolis_nointeract(; T = 1.0f0) = metropolis_nointeract(T)
     return (;model, hamiltonian, proposer, rng)
 end
 
-@inline function Processes.step!(metro::metropolis_nointeract, context::C) where {C}
+@inline function StatefulAlgorithms.step!(metro::metropolis_nointeract, context::C) where {C}
     (;rng, model, hamiltonian, proposer) = context
 
     proposal = @inline rand(rng, proposer)

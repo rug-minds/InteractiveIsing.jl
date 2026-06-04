@@ -105,7 +105,7 @@ function Base.show(io::IO, graph::WorkerGraphView{DCA, C}) where {DCA<:DaggerCom
     dca = graph.algo
     info = _worker_graph_debug(DCA, C)
     n = numalgos(DCA)
-    _intervals = Processes.intervals(dca)
+    _intervals = StatefulAlgorithms.intervals(dca)
 
     println(io, "WorkerGraph")
     n == 0 && return print(io, "└── (empty)")
@@ -154,7 +154,7 @@ function Base.show(io::IO, dca::DaggerCompositeAlgorithm)
         print(io, "└── (empty)")
         return
     end
-    _intervals = Processes.intervals(dca)
+    _intervals = StatefulAlgorithms.intervals(dca)
     limit = get(io, :limit, false)
     show_ctx = IOContext(io, :limit => limit, :color => get(io, :color, false))
     total = length(funcs)
@@ -176,7 +176,7 @@ function Base.summary(io::IO, dca::DaggerCompositeAlgorithm)
         print(io, "WorkerCompositeAlgorithm (empty)")
         return
     end
-    _intervals = Processes.intervals(dca)
+    _intervals = StatefulAlgorithms.intervals(dca)
     println(io, "WorkerCompositeAlgorithm")
     total = length(funcs)
     for (idx, f) in enumerate(funcs)

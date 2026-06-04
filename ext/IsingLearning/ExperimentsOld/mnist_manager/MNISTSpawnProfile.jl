@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Optimisers
 using Random
 using SparseArrays
@@ -115,7 +115,7 @@ end
     make_each_worker_manager(layer, params, nworkers)
 
 Create an old-spawn MNIST manager where every worker is independently built by
-the public Processes `MakeEachWorker` construction mode.
+the public StatefulAlgorithms `MakeEachWorker` construction mode.
 """
 function make_each_worker_manager(layer::L, params::P, nworkers::T) where {L,P,T<:Integer}
     recipe = (;
@@ -134,7 +134,7 @@ function make_each_worker_manager(layer::L, params::P, nworkers::T) where {L,P,T
     return ProcessManager(
         recipe;
         nworkers = Int(nworkers),
-        worker_init = Processes.MakeEachWorker(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
         flush_policy = NoFlush(),
         poll_interval = 0.0,
     )
@@ -164,13 +164,13 @@ function build_make_each_trainer(nworkers::T) where {T<:Integer}
     optimiser = Optimisers.Adam(LR)
     opt_state = Optimisers.setup(optimiser, params)
     manager = make_each_worker_manager(layer, params, nworkers)
-    workers = collect(Processes.workers(manager))
+    workers = collect(StatefulAlgorithms.workers(manager))
     worker_graphs = [IsingLearning._mnist_worker_state(worker).model for worker in workers]
 
     validation_graph = fresh_mnist_graph(110_000 + Int(nworkers))
     IsingLearning.sync_graph_params!(validation_graph, params)
     validation_worker = IsingLearning._validation_process(layer, validation_graph)
-    validation_graph = Processes.context(validation_worker).dynamics.model
+    validation_graph = StatefulAlgorithms.context(validation_worker).dynamics.model
 
     trainer = IsingLearning.MNISTThreadedTrainer(
         layer,

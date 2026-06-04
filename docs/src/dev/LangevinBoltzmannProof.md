@@ -7,7 +7,7 @@ The goal is not to prove a generic Langevin method. The goal is to check the
 actual transition kernels used by this code.
 
 Implementation note: `GlobalLangevin` and `BlockLangevin` now expose one state
-write per `Processes.step!`, but `adjusted=true` still accepts/rejects at the
+write per `StatefulAlgorithms.step!`, but `adjusted=true` still accepts/rejects at the
 proposal scope: all active spins for global and the selected block for block
 Langevin. Accepted vector proposals are then streamed into the graph one
 `FlipProposal` at a time. Sections below that discuss historical immediate
@@ -241,7 +241,7 @@ kernel to conserve probability.
 
 ## `LocalLangevin(adjusted=true)`
 
-The local code moves one coordinate per `Processes.step!`.
+The local code moves one coordinate per `StatefulAlgorithms.step!`.
 
 For selected spin `i`, with all other coordinates fixed, the code proposes
 
@@ -461,7 +461,7 @@ detailed balance with the Boltzmann distribution on the bounded active state
 domain.
 
 `group_steps` repeats this same invariant kernel multiple times inside one
-`Processes.step!`. A composition of kernels that each leave `π` invariant also
+`StatefulAlgorithms.step!`. A composition of kernels that each leave `π` invariant also
 leaves `π` invariant.
 
 ## `BlockLangevin(adjusted=true)`

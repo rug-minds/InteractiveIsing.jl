@@ -5,7 +5,7 @@ using Dates
 using InteractiveUtils
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Optimisers
 using Random
 using SparseArrays

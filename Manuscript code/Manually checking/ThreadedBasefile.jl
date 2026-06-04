@@ -1,5 +1,5 @@
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 using Dates
 
 include(joinpath(@__DIR__, "..", "common", "ManuscriptTools.jl"))
@@ -228,7 +228,7 @@ end
 从已完成 worker 的 context 中读出实验曲线。读取发生在 worker 删除之前。
 """
 function read_basefile_result(worker::W, job::J, manager::M) where {W<:Process,J,M<:ProcessManager}
-    context = Processes.context(worker)
+    context = StatefulAlgorithms.context(worker)
     reader = jobfield(job, :readresult, nothing)
     isnothing(reader) && return context
     return reader(context, worker, job, manager)

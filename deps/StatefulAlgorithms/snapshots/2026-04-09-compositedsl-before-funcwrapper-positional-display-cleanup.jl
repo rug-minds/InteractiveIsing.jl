@@ -562,7 +562,7 @@ be renamed during composition.
 """
 function _dsl_known_owner_expr(entity_expr, name::Symbol)
     name == Symbol() && return entity_expr
-    return :(Processes.IdentifiableAlgo($entity_expr, $(QuoteNode(name))))
+    return :(StatefulAlgorithms.IdentifiableAlgo($entity_expr, $(QuoteNode(name))))
 end
 
 """Build the general state expression used by both `@state` and the block DSL."""
@@ -575,7 +575,7 @@ function _dsl_expand_state_expr(fields)
     return quote
         # The field metadata is kept in the type, while defaults are rebuilt on
         # each init call through the stored scheme closure.
-        Processes.GeneralState(() -> $defaults_expr, Val{$field_names}(), Val{$required_names}())
+        StatefulAlgorithms.GeneralState(() -> $defaults_expr, Val{$field_names}(), Val{$required_names}())
     end
 end
 
@@ -650,8 +650,8 @@ function _dsl_state_setup_expr(state_fields, state_name::Symbol)
         local _dsl_state = $state_expr
         push!(_dsl_states, $(QuoteNode(state_name)) => _dsl_state)
         local _dsl_state_owner = $state_owner_expr
-        Processes._composite_dsl_register_outputs!(_dsl_producers, _dsl_state_owner, $outputs_expr)
-        Processes._composite_dsl_register_state_outputs!(_dsl_state_owners, _dsl_state_owner, $outputs_expr)
+        StatefulAlgorithms._composite_dsl_register_outputs!(_dsl_producers, _dsl_state_owner, $outputs_expr)
+        StatefulAlgorithms._composite_dsl_register_state_outputs!(_dsl_state_owners, _dsl_state_owner, $outputs_expr)
     end
 end
 
@@ -1222,23 +1222,23 @@ function _dsl_build_statement(stmt, alias_map, context_map, known_outputs::Set{S
             local _dsl_outputs = $outputs_expr
             # Resolve the user-facing DSL entity into a normal algorithm/state
             # object plus the routed input metadata the builder needs.
-            local _dsl_resolved = Processes._resolve_composite_dsl_entity($(esc(parsed.spec_expr)), $inputs_expr, _dsl_outputs, Val{$(QuoteNode(customname))}())
+            local _dsl_resolved = StatefulAlgorithms._resolve_composite_dsl_entity($(esc(parsed.spec_expr)), $inputs_expr, _dsl_outputs, Val{$(QuoteNode(customname))}())
             local _dsl_owner = $share_target_expr
-            if _dsl_resolved isa Processes._CompositeDSLResolved{:state}
+            if _dsl_resolved isa StatefulAlgorithms._CompositeDSLResolved{:state}
                 # Inline states are stored separately and claim ownership of
                 # their outputs immediately.
                 push!(_dsl_states, _dsl_resolved.entity)
-                Processes._composite_dsl_register_outputs!(_dsl_producers, _dsl_owner, _dsl_outputs)
+                StatefulAlgorithms._composite_dsl_register_outputs!(_dsl_producers, _dsl_owner, _dsl_outputs)
             else
                 # Algorithms are appended to the constructor argument list and
                 # then wired into the routing tables.
                 push!(_dsl_algos, $algo_entry_expr)
                 push!(_dsl_specification, Int($schedule_expr))
                 $(map(parsed.shares) do share_source
-                    :(push!(_dsl_options, Processes.Share($(share_source), _dsl_owner)))
+                    :(push!(_dsl_options, StatefulAlgorithms.Share($(share_source), _dsl_owner)))
                 end...)
-                Processes._composite_dsl_add_routes!(_dsl_options, _dsl_producers, _dsl_external_inputs, _dsl_owner, _dsl_resolved.inputs)
-                Processes._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_state_owners, _dsl_owner, _dsl_outputs)
+                StatefulAlgorithms._composite_dsl_add_routes!(_dsl_options, _dsl_producers, _dsl_external_inputs, _dsl_owner, _dsl_resolved.inputs)
+                StatefulAlgorithms._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_state_owners, _dsl_owner, _dsl_outputs)
             end
         end
     end
@@ -1254,8 +1254,8 @@ function _dsl_build_statement(stmt, alias_map, context_map, known_outputs::Set{S
             local _dsl_owner = $owner_expr
             push!(_dsl_algos, $algo_entry_expr)
             push!(_dsl_specification, Int($schedule_expr))
-            Processes._composite_dsl_add_routes!(_dsl_options, _dsl_producers, _dsl_external_inputs, _dsl_owner, _dsl_resolved.inputs)
-            Processes._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_state_owners, _dsl_owner, _dsl_outputs)
+            StatefulAlgorithms._composite_dsl_add_routes!(_dsl_options, _dsl_producers, _dsl_external_inputs, _dsl_owner, _dsl_resolved.inputs)
+            StatefulAlgorithms._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_state_owners, _dsl_owner, _dsl_outputs)
         end
     end
 
@@ -1270,7 +1270,7 @@ function _dsl_build_statement(stmt, alias_map, context_map, known_outputs::Set{S
     if parsed.kind == :keyword_call
         return quote
             local _dsl_outputs = $outputs_expr
-            local _dsl_resolved = Processes._resolve_composite_dsl_keyword_call(
+            local _dsl_resolved = StatefulAlgorithms._resolve_composite_dsl_keyword_call(
                 $(esc(parsed.spec_expr)),
                 $keyword_args_expr,
                 $inputs_expr,
@@ -1281,10 +1281,10 @@ function _dsl_build_statement(stmt, alias_map, context_map, known_outputs::Set{S
             push!(_dsl_algos, $algo_entry_expr)
             push!(_dsl_specification, Int($schedule_expr))
             $(map(parsed.shares) do share_source
-                :(push!(_dsl_options, Processes.Share($(share_source), _dsl_owner)))
+                :(push!(_dsl_options, StatefulAlgorithms.Share($(share_source), _dsl_owner)))
             end...)
-            Processes._composite_dsl_add_routes!(_dsl_options, _dsl_producers, _dsl_external_inputs, _dsl_owner, _dsl_resolved.inputs)
-            Processes._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_state_owners, _dsl_owner, _dsl_outputs)
+            StatefulAlgorithms._composite_dsl_add_routes!(_dsl_options, _dsl_producers, _dsl_external_inputs, _dsl_owner, _dsl_resolved.inputs)
+            StatefulAlgorithms._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_state_owners, _dsl_owner, _dsl_outputs)
         end
     end
 
@@ -1292,7 +1292,7 @@ function _dsl_build_statement(stmt, alias_map, context_map, known_outputs::Set{S
         local _dsl_outputs = $outputs_expr
         # Function-call syntax stays on a dedicated path so we can recover
         # positional inputs and keyword captures for `FuncWrapper`.
-        local _dsl_resolved = Processes._resolve_composite_dsl_call(
+        local _dsl_resolved = StatefulAlgorithms._resolve_composite_dsl_call(
             $(esc(parsed.spec_expr)),
             $keyword_args_expr,
             $positional_values_expr,
@@ -1304,8 +1304,8 @@ function _dsl_build_statement(stmt, alias_map, context_map, known_outputs::Set{S
         local _dsl_owner = $share_target_expr
         push!(_dsl_algos, $algo_entry_expr)
         push!(_dsl_specification, Int($schedule_expr))
-        Processes._composite_dsl_add_routes!(_dsl_options, _dsl_producers, _dsl_external_inputs, _dsl_owner, _dsl_resolved.inputs)
-        Processes._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_state_owners, _dsl_owner, _dsl_outputs)
+        StatefulAlgorithms._composite_dsl_add_routes!(_dsl_options, _dsl_producers, _dsl_external_inputs, _dsl_owner, _dsl_resolved.inputs)
+        StatefulAlgorithms._composite_dsl_bind_outputs!(_dsl_options, _dsl_producers, _dsl_state_owners, _dsl_owner, _dsl_outputs)
     end
 end
 
@@ -1381,10 +1381,10 @@ function _dsl_expand_loopalgorithm(block, constructor_name::Symbol, expected_sch
             $(collected.step_exprs...)
 
             isempty(_dsl_algos) && error("`@$constructor_name` requires at least one algorithm entry.")
-            $(print_constructor ? :(Processes._dsl_print_constructor_call($(QuoteNode(constructor_name)), _dsl_algos, _dsl_specification, _dsl_states, _dsl_options)) : nothing)
+            $(print_constructor ? :(StatefulAlgorithms._dsl_print_constructor_call($(QuoteNode(constructor_name)), _dsl_algos, _dsl_specification, _dsl_states, _dsl_options)) : nothing)
             # Build the final `CompositeAlgorithm`/`Routine` using the same
             # constructor surface users would write by hand.
-            getproperty(Processes, $(QuoteNode(constructor_name)))(_dsl_algos..., Tuple(_dsl_specification), _dsl_states..., _dsl_options...)
+            getproperty(StatefulAlgorithms, $(QuoteNode(constructor_name)))(_dsl_algos..., Tuple(_dsl_specification), _dsl_states..., _dsl_options...)
         end
     end
 end
@@ -1432,11 +1432,11 @@ function _dsl_expand_simplealgorithm_resolved(block)
             $(collected.step_exprs...)
 
             isempty(_dsl_algos) && error("`@repeat n begin ... end` requires at least one algorithm entry.")
-            local _dsl_algo = Processes.SimpleAlgo(_dsl_algos..., _dsl_states..., _dsl_options...)
+            local _dsl_algo = StatefulAlgorithms.SimpleAlgo(_dsl_algos..., _dsl_states..., _dsl_options...)
             # Return the same resolved wrapper the outer builder expects from any
             # other DSL statement.
             local _dsl_inputs = Tuple((; kind = :simple, source = input.first, destination = input.second) for input in _dsl_external_inputs)
-            Processes._CompositeDSLResolved{:algo, typeof(_dsl_algo), typeof(_dsl_inputs)}(_dsl_algo, _dsl_inputs)
+            StatefulAlgorithms._CompositeDSLResolved{:algo, typeof(_dsl_algo), typeof(_dsl_inputs)}(_dsl_algo, _dsl_inputs)
         end
     end
 end
@@ -1450,9 +1450,9 @@ function _dsl_expand_repeated_block(block, repeats_expr)
             local _dsl_repeats = Int($(esc(repeats_expr)))
             # `Unique` gives the repeated block one stable identity so normal
             # routes and aliases can target it from the outer DSL block.
-            local _dsl_algo = Processes.Unique(Processes.Routine(_dsl_inner.entity, (_dsl_repeats,)))
+            local _dsl_algo = StatefulAlgorithms.Unique(StatefulAlgorithms.Routine(_dsl_inner.entity, (_dsl_repeats,)))
             local _dsl_inputs = _dsl_inner.inputs
-            Processes._CompositeDSLResolved{:algo, typeof(_dsl_algo), typeof(_dsl_inputs)}(_dsl_algo, _dsl_inputs)
+            StatefulAlgorithms._CompositeDSLResolved{:algo, typeof(_dsl_algo), typeof(_dsl_inputs)}(_dsl_algo, _dsl_inputs)
         end
     end
 end

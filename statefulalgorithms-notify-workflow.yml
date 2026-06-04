@@ -14,4 +14,4 @@ jobs:
           -H "Accept: application/vnd.github.v3+json" \
           -H "Authorization: token ${{ secrets.TRIGGER_TOKEN }}" \
           https://api.github.com/repos/rug-minds/InteractiveIsing.jl/dispatches \
-          -d '{"event_type":"update-processes"}'
+          -d '{"event_type":"update-statefulalgorithms"}'

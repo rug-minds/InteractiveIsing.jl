@@ -1,5 +1,5 @@
 using InteractiveIsing, GLMakie, FileIO, CairoMakie
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 import InteractiveIsing as II
 
 using Dates
@@ -235,7 +235,7 @@ struct TrianglePulseA{T} <: ProcessAlgorithm
     amp::T
     numpulses::Int
 end
-function Processes.init(tp::TrianglePulseA, args)
+function StatefulAlgorithms.init(tp::TrianglePulseA, args)
     amp = tp.amp
     numpulses = tp.numpulses
     steps = num_calls(args)
@@ -256,7 +256,7 @@ function Processes.init(tp::TrianglePulseA, args)
     step = 1
     return (;pulse, step, pulseval = pulse[1])
 end
-function Processes.step!(::TrianglePulseA, context::C) where C
+function StatefulAlgorithms.step!(::TrianglePulseA, context::C) where C
     (;pulse, step, hamiltonian) = context
     pulseval = pulse[step]
     hamiltonian.b[] = pulseval
@@ -360,7 +360,7 @@ function forc_values(fp::FORCPulseA)
     return (;pulse, curve_id, curve_end_field, end_fields, edge_dV, delta_Vtest, zero_hold_points)
 end
 
-function Processes.init(fp::FORCPulseA, args)
+function StatefulAlgorithms.init(fp::FORCPulseA, args)
     values = forc_values(fp)
     pulse = values.pulse
     curve_id = values.curve_id
@@ -385,7 +385,7 @@ function Processes.init(fp::FORCPulseA, args)
         forc_end_field = curve_end_field[1])
 end
 
-function Processes.step!(::FORCPulseA, context::C) where C
+function StatefulAlgorithms.step!(::FORCPulseA, context::C) where C
     (;pulse, curve_id, curve_end_field, step, hamiltonian) = context
     pulseval = pulse[step]
     hamiltonian.b[] = pulseval
@@ -402,7 +402,7 @@ end
 ### struct start: Snapshot (simple four-segment triangular waveform)
 struct Snapshot{DataType, Name} <: ProcessAlgorithm end
 
-function Processes.step!(::Snapshot{DT, Name}, context::C) where {DT, Name, C}
+function StatefulAlgorithms.step!(::Snapshot{DT, Name}, context::C) where {DT, Name, C}
     (;data) = context
     saveimg(data)
 end
@@ -424,7 +424,7 @@ end
 struct BiasA{T} <: ProcessAlgorithm
     amp::T
 end
-function Processes.init(tp::BiasA, args)
+function StatefulAlgorithms.init(tp::BiasA, args)
     amp = tp.amp
     steps = num_calls(args)
     bias  = ones(round(Int, steps)) .* amp
@@ -437,7 +437,7 @@ function Processes.init(tp::BiasA, args)
     step = 1
     return (;bias, step, pulseval = bias[1])
 end
-function Processes.step!(::BiasA, context::C) where C
+function StatefulAlgorithms.step!(::BiasA, context::C) where C
     (;bias, step, hamiltonian) = context
     pulseval = bias[step]
     hamiltonian.b[] = pulseval
@@ -455,7 +455,7 @@ struct SinPulseA{T} <: ProcessAlgorithm
     amp::T
     numpulses::Int
 end    
-function Processes.init(tp::SinPulseA, args)
+function StatefulAlgorithms.init(tp::SinPulseA, args)
     amp = tp.amp
     numpulses = tp.numpulses
     steps = num_calls(args)
@@ -466,7 +466,7 @@ function Processes.init(tp::SinPulseA, args)
     step = 1
     return (;sins, step, pulseval = sins[1])
 end
-function Processes.step!(::SinPulseA, context::C) where C
+function StatefulAlgorithms.step!(::SinPulseA, context::C) where C
     (;sins, step, hamiltonian) = context
     pulse_val = sins[step]
     hamiltonian.b[] = pulse_val
@@ -484,12 +484,12 @@ struct LinAnealingA{T} <: ProcessAlgorithm
     start_T::T
     stop_T::T
 end  
-function Processes.init(tp::LinAnealingA, args)
+function StatefulAlgorithms.init(tp::LinAnealingA, args)
     n_calls = num_calls(args)
     dT = (tp.stop_T - tp.start_T) / n_calls
     (;current_T = tp.start_T, dT)
 end
-function Processes.step!(::LinAnealingA, context::C) where C
+function StatefulAlgorithms.step!(::LinAnealingA, context::C) where C
     (;current_T, dT, model) = context
     temp!(model, max(current_T, 0))
     return (;current_T = current_T + dT)
@@ -504,7 +504,7 @@ struct LinAnealingB{T} <: ProcessAlgorithm
     stop_T::T
 end
 LinAnealingB(start_T, stop_T) = LinAnealingB(promote(start_T, stop_T)...)
-function Processes.init(tp::LinAnealingB, args)
+function StatefulAlgorithms.init(tp::LinAnealingB, args)
     start_T = tp.start_T
     stop_T = tp.stop_T
     steps = num_calls(args)
@@ -518,7 +518,7 @@ function Processes.init(tp::LinAnealingB, args)
     step = 1
     return (;tem_pulse, step, temval = tem_pulse[1])
 end
-function Processes.step!(::LinAnealingB, context::C) where C
+function StatefulAlgorithms.step!(::LinAnealingB, context::C) where C
     (;tem_pulse, step, model) = context
 
     temval = tem_pulse[step]
@@ -533,12 +533,12 @@ end
 ##################################################################################
 struct ValueLogger{Name} <: ProcessAlgorithm end
 ValueLogger(name) = ValueLogger{Symbol(name)}()
-function Processes.init(::ValueLogger, args)
+function StatefulAlgorithms.init(::ValueLogger, args)
     values = Float32[]
     processsizehint!(values, args)
     (;values)
 end
-function Processes.step!(::ValueLogger, context::C) where C
+function StatefulAlgorithms.step!(::ValueLogger, context::C) where C
     (;values, value) = context
     push!(values, value)
     return (;)
@@ -548,7 +548,7 @@ end
 ##################################################################################
 struct DepolLogger{Name} <: ProcessAlgorithm end
 DepolLogger(name) = DepolLogger{Symbol(name)}()
-function Processes.init(::DepolLogger, args)
+function StatefulAlgorithms.init(::DepolLogger, args)
     means = Float32[]
     medians = Float32[]
     maxima = Float32[]
@@ -567,7 +567,7 @@ function Processes.init(::DepolLogger, args)
     processsizehint!(poly_energy, args)
     (; means, medians, maxima, total_energy, depol_energy, interaction_energy, field_energy, poly_energy)
 end
-function Processes.step!(::DepolLogger, context::C) where C
+function StatefulAlgorithms.step!(::DepolLogger, context::C) where C
     (; means, medians, maxima, total_energy, depol_energy, interaction_energy, field_energy, poly_energy, model, hamiltonian) = context
     depol_term = find_first_term(hamiltonian, InteractiveIsing.CoulombHamiltonian)
     push!(total_energy, total_supported_energy(hamiltonian, model))
@@ -585,9 +585,9 @@ end
 ##################################################################################
 
 ##################################################################################
-struct Recalc{I} <: Processes.ProcessAlgorithm end
+struct Recalc{I} <: StatefulAlgorithms.ProcessAlgorithm end
 Recalc(i) = Recalc{Int(i)}()
-function Processes.step!(r::Recalc{I}, context) where I
+function StatefulAlgorithms.step!(r::Recalc{I}, context) where I
     (;hamiltonian) = context
     recalc!(hamiltonian[I])
     return (;)
@@ -604,11 +604,11 @@ end
 # fix: store (min,max) in the right order
 # ImageCapture(name, min, max; filepath = pwd()) = ImageCapture{Symbol(name), typeof(min)}(min, max, Symbol(filepath))
 ImageCapture(name, min, max) = ImageCapture{Symbol(name), typeof(min)}(min, max)
-function Processes.init(ic::ImageCapture, input)
+function StatefulAlgorithms.init(ic::ImageCapture, input)
     (;filepath) = input
     (;callnum = 1, filepath)
 end
-function Processes.step!(ic::ImageCapture, context::C) where C
+function StatefulAlgorithms.step!(ic::ImageCapture, context::C) where C
     (;array, filepath, callnum) = context
     A = array
     if !(A isa AbstractArray{<:Real,3})
@@ -683,12 +683,12 @@ end
 # fix: store (min,max) in the right order
 # ImageCapture(name, min, max; filepath = pwd()) = ImageCapture{Symbol(name), typeof(min)}(min, max, Symbol(filepath))
 DatatoDataframe(name) = DatatoDataframe{Symbol(name)}()
-function Processes.init(ic::DatatoDataframe, input)
+function StatefulAlgorithms.init(ic::DatatoDataframe, input)
     (;filepath) = input
     (;callnum = 1, filepath)
 end
 dimnames(i) = (:x, :y, :z)[i]
-function Processes.step!(ic::DatatoDataframe, context::C) where C
+function StatefulAlgorithms.step!(ic::DatatoDataframe, context::C) where C
     (;array, filepath, callnum) = context
     A = array
     arraysize = size(A)

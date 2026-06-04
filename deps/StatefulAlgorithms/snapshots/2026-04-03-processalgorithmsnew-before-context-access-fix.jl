@@ -203,12 +203,12 @@ Define a `ProcessAlgorithm` from a function-like signature.
 The macro splits the signature into three groups:
 
 1. Plain positional arguments:
-   Runtime values read from the process context during `Processes.step!`.
+   Runtime values read from the process context during `StatefulAlgorithms.step!`.
 2. `@managed(...)` positional arguments:
-   Local algorithm state created during `Processes.init` and then read back from the
-   algorithm's own subcontext during `Processes.step!`.
+   Local algorithm state created during `StatefulAlgorithms.init` and then read back from the
+   algorithm's own subcontext during `StatefulAlgorithms.step!`.
 3. Normal keyword arguments:
-   Runtime keyword-style values looked up from the context during `Processes.step!`, with
+   Runtime keyword-style values looked up from the context during `StatefulAlgorithms.step!`, with
    the declared default used when the key is missing.
 
 An optional trailing `@input((; ...))`, `@inputs((; ...))`, or `@init((; ...))` block declares
@@ -241,7 +241,7 @@ Plain positional arguments:
 end
 ```
 
-These are treated as runtime values and are looked up from the context inside `Processes.step!`.
+These are treated as runtime values and are looked up from the context inside `StatefulAlgorithms.step!`.
 
 Managed positional arguments:
 
@@ -262,11 +262,11 @@ The managed forms mean:
 - `@managed(name)`:
   create a managed local called `name` by reading `name` from the init context.
 - `@managed(name = expr)`:
-  create a managed local called `name` by evaluating `expr` during `Processes.init`.
+  create a managed local called `name` by evaluating `expr` during `StatefulAlgorithms.init`.
 - `@managed(a, b = expr, c = expr2)`:
   expand to multiple managed locals in the written order.
 
-Managed initializer expressions run during `Processes.init`, so they may refer to:
+Managed initializer expressions run during `StatefulAlgorithms.init`, so they may refer to:
 
 - init-time inputs declared by `@input/@inputs/@init`
 - earlier managed locals in the same generated init block
@@ -284,7 +284,7 @@ Regular keyword arguments:
 end
 ```
 
-These are runtime keyword-style values. During `Processes.step!`, the macro reads them from the
+These are runtime keyword-style values. During `StatefulAlgorithms.step!`, the macro reads them from the
 context with `get(context, :name, default)`.
 
 Init-time input block:
@@ -318,11 +318,11 @@ end
 
 the macro generates:
 
-- `struct MyAlgo <: Processes.ProcessAlgorithm end`
+- `struct MyAlgo <: StatefulAlgorithms.ProcessAlgorithm end`
 - a hidden implementation function that contains `body`
 - a public bootstrap call `MyAlgo(...)` that can be called directly
-- `Processes.init(::MyAlgo, context)` to build the managed local subcontext
-- `Processes.step!(::MyAlgo, context)` to read runtime values and call the hidden implementation
+- `StatefulAlgorithms.init(::MyAlgo, context)` to build the managed local subcontext
+- `StatefulAlgorithms.step!(::MyAlgo, context)` to read runtime values and call the hidden implementation
 
 # User entrypoints
 
@@ -339,7 +339,7 @@ This evaluates the managed init path immediately and then calls the generated im
 2. Process init hook:
 
 ```julia
-Processes.init(MyAlgo(), context)
+StatefulAlgorithms.init(MyAlgo(), context)
 ```
 
 This reads the declared init inputs from `context` and returns the managed local named tuple.
@@ -347,7 +347,7 @@ This reads the declared init inputs from `context` and returns the managed local
 3. Process step hook:
 
 ```julia
-Processes.step!(MyAlgo(), context)
+StatefulAlgorithms.step!(MyAlgo(), context)
 ```
 
 This reads plain positional and runtime keyword arguments from `context`, reads managed values
@@ -358,7 +358,7 @@ from the algorithm subcontext, and forwards everything to the generated implemen
 Argument type annotations are preserved on the generated public call signatures and on the hidden
 implementation function. `where` clauses are also preserved there.
 
-The generated `Processes.init` and `Processes.step!` methods currently extract values from the
+The generated `StatefulAlgorithms.init` and `StatefulAlgorithms.step!` methods currently extract values from the
 context into local bindings before calling the typed implementation. That means the original
 argument annotations still constrain the implementation entrypoint, but the context extraction
 bindings themselves are intentionally kept simple and untyped.
@@ -441,7 +441,7 @@ macro ProcessAlgorithm(ex)
     managed_assignments = [_pa_bind_managed_field(field, input_temps, :context) for field in signature.managed_pos]
     managed_tuple_expr = Expr(:tuple, Expr(:parameters, [Expr(:kw, field.name, field.name) for field in signature.managed_pos]...))
     init_def = quote
-        function Processes.init(_algo::$fname, context::C) where {C <: Union{Processes.AbstractContext, NamedTuple}}
+        function StatefulAlgorithms.init(_algo::$fname, context::C) where {C <: Union{StatefulAlgorithms.AbstractContext, NamedTuple}}
             $(input_assignments...)
             $(managed_assignments...)
             return $managed_tuple_expr
@@ -453,7 +453,7 @@ macro ProcessAlgorithm(ex)
     step_kw_forward = [Expr(:kw, kw.name, kw.name) for kw in signature.normal_kwargs]
     step_call_args = [arg.name for arg in signature.positional]
     step_def = quote
-        function Processes.step!(_algo::$fname, context::C) where {C <: Union{Processes.AbstractContext, NamedTuple}}
+        function StatefulAlgorithms.step!(_algo::$fname, context::C) where {C <: Union{StatefulAlgorithms.AbstractContext, NamedTuple}}
             $(step_pos_assignments...)
             $(step_kw_assignments...)
             return $impl_name($(step_call_args...); $(step_kw_forward...))
@@ -461,7 +461,7 @@ macro ProcessAlgorithm(ex)
     end
 
     q = quote
-        struct $fname <: Processes.ProcessAlgorithm end
+        struct $fname <: StatefulAlgorithms.ProcessAlgorithm end
         $impl_def
         $(public_defs...)
         $init_def

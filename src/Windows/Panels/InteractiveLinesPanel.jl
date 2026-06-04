@@ -80,11 +80,11 @@ InteractiveLinesPanel(x, y; kwargs...) = InteractiveLinesPanel(() -> (x, y); kwa
 Alternate constructor for `InteractiveLinesPanel` that maps process context
 variables to the generic interactive line source.
 
-`context` may be a `Processes.ProcessContext`, a `Processes.AbstractProcess`, or
+`context` may be a `StatefulAlgorithms.ProcessContext`, a `StatefulAlgorithms.AbstractProcess`, or
 a zero-argument function returning either of those. Supported variable selectors
 are:
 
-- `Processes.Var(:subcontext, :name)`
+- `StatefulAlgorithms.Var(:subcontext, :name)`
 - `:subcontext => :name`
 - `algorithm => :name`, where `algorithm` is a process algorithm object used
   in the context
@@ -138,8 +138,8 @@ function _resolved_context_and_close_resources(source::Function)
     return _resolved_context_and_close_resources(source())
 end
 
-function _resolved_context_and_close_resources(process::Processes.AbstractProcess)
-    return Processes.context(process), (process,)
+function _resolved_context_and_close_resources(process::StatefulAlgorithms.AbstractProcess)
+    return StatefulAlgorithms.context(process), (process,)
 end
 
 _resolved_context_and_close_resources(context) = context, ()
@@ -149,7 +149,7 @@ function _context_var_value(source, var)
     return _context_var_value_from_context(context, var)
 end
 
-_context_var_value_from_context(context, var::Processes.Var) = context[var]
+_context_var_value_from_context(context, var::StatefulAlgorithms.Var) = context[var]
 _context_var_value_from_context(context, var::Pair{Symbol, Symbol}) =
     getproperty(getproperty(context, first(var)), last(var))
 _context_var_value_from_context(context, var::Pair) =
@@ -157,8 +157,8 @@ _context_var_value_from_context(context, var::Pair) =
 _context_var_value_from_context(context, var::Tuple{Symbol, Symbol}) =
     getproperty(getproperty(context, first(var)), last(var))
 
-function _context_var_value_from_context(context::Processes.ProcessContext, var::Symbol)
-    globals = Processes.getglobals(context)
+function _context_var_value_from_context(context::StatefulAlgorithms.ProcessContext, var::Symbol)
+    globals = StatefulAlgorithms.getglobals(context)
     haskey(globals, var) && return getproperty(globals, var)
     return getproperty(context, var)
 end

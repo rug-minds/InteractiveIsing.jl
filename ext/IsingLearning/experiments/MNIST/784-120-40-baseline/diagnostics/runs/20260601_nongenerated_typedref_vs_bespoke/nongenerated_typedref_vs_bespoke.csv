@@ -1,4 +1,4 @@
 timestamp,repeat,threads,batchsize,sweeps,looptype,direct_seconds,direct_seconds_per_example,process_warmup_seconds,process_seconds,process_seconds_per_example,process_over_bespoke
-2026-06-02T18:54:02,1,32,128,500.0,IsingLearning.InteractiveIsing.Processes.NonGenerated(),2.9936475,0.02338787109375,15.2119524,4.0970735,0.03200838671875,1.3685891542006865
-2026-06-02T18:54:16,2,32,128,500.0,IsingLearning.InteractiveIsing.Processes.NonGenerated(),2.8723922,0.0224405640625,4.4076416,4.397944,0.0343589375,1.5311084607457155
-2026-06-02T18:54:31,3,32,128,500.0,IsingLearning.InteractiveIsing.Processes.NonGenerated(),2.9015011,0.02266797734375,4.2657621,4.1514154,0.0324329328125,1.4307819493847513
+2026-06-02T18:54:02,1,32,128,500.0,IsingLearning.InteractiveIsing.StatefulAlgorithms.NonGenerated(),2.9936475,0.02338787109375,15.2119524,4.0970735,0.03200838671875,1.3685891542006865
+2026-06-02T18:54:16,2,32,128,500.0,IsingLearning.InteractiveIsing.StatefulAlgorithms.NonGenerated(),2.8723922,0.0224405640625,4.4076416,4.397944,0.0343589375,1.5311084607457155
+2026-06-02T18:54:31,3,32,128,500.0,IsingLearning.InteractiveIsing.StatefulAlgorithms.NonGenerated(),2.9015011,0.02266797734375,4.2657621,4.1514154,0.0324329328125,1.4307819493847513

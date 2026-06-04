@@ -4,7 +4,7 @@ Pkg.activate(joinpath(@__DIR__, "..", ".."))
 using Dates
 using IsingLearning
 using IsingLearning.InteractiveIsing
-using IsingLearning.InteractiveIsing.Processes
+using IsingLearning.InteractiveIsing.StatefulAlgorithms
 using Random
 using Statistics
 
@@ -105,7 +105,7 @@ function run_direct_wave!(workers::W, jobs::J) where {W<:AbstractVector{<:Proces
     write_reset_seconds = @elapsed begin
         for idx in eachindex(jobs)
             IsingLearning._write_example!(workers[idx], jobs[idx].x, jobs[idx].y)
-            Processes.reset!(workers[idx])
+            StatefulAlgorithms.reset!(workers[idx])
         end
     end
 
@@ -122,7 +122,7 @@ function run_direct_wave!(workers::W, jobs::J) where {W<:AbstractVector{<:Proces
         end
     end
 
-    internal = [Processes.runtime(workers[idx]) for idx in eachindex(jobs)]
+    internal = [StatefulAlgorithms.runtime(workers[idx]) for idx in eachindex(jobs)]
     close_seconds = @elapsed begin
         for idx in eachindex(jobs)
             close(workers[idx])

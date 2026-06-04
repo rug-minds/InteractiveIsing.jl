@@ -1,6 +1,6 @@
 [bootstrap] activated project
 [bootstrap] loaded packages
-2026-06-01T12:50:16 begin runtimegenerated marker diagnostic threads=32 batchsize=1 sweeps=500.0 looptype=IsingLearning.InteractiveIsing.Processes.RuntimeGenerated()
+2026-06-01T12:50:16 begin runtimegenerated marker diagnostic threads=32 batchsize=1 sweeps=500.0 looptype=IsingLearning.InteractiveIsing.StatefulAlgorithms.RuntimeGenerated()
 2026-06-01T12:50:18 build setup
 2026-06-01T12:50:20 resolve algorithm
 2026-06-01T12:50:31 build worker

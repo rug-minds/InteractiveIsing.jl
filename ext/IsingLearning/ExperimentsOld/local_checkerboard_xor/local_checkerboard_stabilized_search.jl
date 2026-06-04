@@ -150,7 +150,7 @@ end
 Forward relaxation used by this search. It is intentionally the same as
 `CheckerForwardDynamics`, except that it does not wrap the sampler in
 `TemperatureAnnealedSampler`. This is important for the discrete Metropolis
-control path, where the wrapper caused a Processes context merge failure.
+control path, where the wrapper caused a StatefulAlgorithms context merge failure.
 """
 function StableForwardDynamics(layer, config::LocalCheckerboardConfig, search::StabilizedSearchConfig = StabilizedSearchConfig(config = config))
     relaxation_steps = layer.free_relaxation_steps
@@ -254,7 +254,7 @@ end
 
 function stable_checker_worker_process(layer, graph, search::StabilizedSearchConfig)
     config = search.config
-    algo = Processes.resolve(StableForwardAndNudged(layer, config, search).algorithm)
+    algo = StatefulAlgorithms.resolve(StableForwardAndNudged(layer, config, search).algorithm)
     buffers = IsingLearning.gradient_buffer(graph)
     return Process(
         algo,
@@ -273,7 +273,7 @@ end
 
 function stable_checker_validation_process(layer, graph, search::StabilizedSearchConfig)
     config = search.config
-    algo = Processes.resolve(StableForwardDynamics(layer, config, search).algorithm)
+    algo = StatefulAlgorithms.resolve(StableForwardDynamics(layer, config, search).algorithm)
     return Process(
         algo,
         Init(:_state;
@@ -515,7 +515,7 @@ function write_stabilized_readme(path, searches, results, csv_path, png_path)
     open(path, "w") do io
         println(io, "# Local Checkerboard Stabilized Search")
         println(io)
-        println(io, "This run is isolated from the toolbox code. It reuses the checkerboard graph/trainer helpers but replaces the annealed sampler wrapper with no-anneal Processes composites for this search.")
+        println(io, "This run is isolated from the toolbox code. It reuses the checkerboard graph/trainer helpers but replaces the annealed sampler wrapper with no-anneal StatefulAlgorithms composites for this search.")
         println(io)
         println(io, "## Brainstormed Fixes Tested")
         println(io)

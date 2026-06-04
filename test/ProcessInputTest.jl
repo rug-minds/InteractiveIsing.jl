@@ -1,6 +1,6 @@
 using Test
 using InteractiveIsing
-using InteractiveIsing.Processes
+using InteractiveIsing.StatefulAlgorithms
 using Random
 
 @testset "MC Process Inputs" begin
@@ -25,8 +25,8 @@ using Random
     @test_throws ArgumentError DynamicBlockLangevin{0}()
     @test_throws ArgumentError DynamicBlockLangevin{8,:unknown}()
 
-    step_ctx = Processes.init(LocalLangevin(adjusted = false, order = :deterministic), (;model = g))
-    step_result = Processes.step!(LocalLangevin(adjusted = false, order = :deterministic), step_ctx)
+    step_ctx = StatefulAlgorithms.init(LocalLangevin(adjusted = false, order = :deterministic), (;model = g))
+    step_result = StatefulAlgorithms.step!(LocalLangevin(adjusted = false, order = :deterministic), step_ctx)
     @test step_result.attempted == 1
 
     function single_spin_langevin_change_count(algorithm)
@@ -39,9 +39,9 @@ using Random
             initial_state = 1f0,
         )
         temp!(graph, 0f0)
-        context = Processes.init(algorithm, (;model = graph))
+        context = StatefulAlgorithms.init(algorithm, (;model = graph))
         before = copy(state(graph))
-        out = Processes.step!(algorithm, context)
+        out = StatefulAlgorithms.step!(algorithm, context)
         after = state(graph)
         return count(i -> before[i] != after[i], eachindex(before)), out
     end
@@ -71,10 +71,10 @@ using Random
             initial_state = 1f0,
         )
         temp!(graph, 0f0)
-        context = Processes.init(algorithm, (;model = graph))
+        context = StatefulAlgorithms.init(algorithm, (;model = graph))
         refreshed = Bool[]
         for _ in 1:(n + 1)
-            out = Processes.step!(algorithm, context)
+            out = StatefulAlgorithms.step!(algorithm, context)
             context = merge(context, out)
             push!(refreshed, out.refreshed_gradient)
         end
@@ -105,8 +105,8 @@ using Random
             initial_state = 0.9f0,
         )
         temp!(graph, 0f0)
-        context = Processes.init(algorithm, (;model = graph))
-        out = Processes.step!(algorithm, context)
+        context = StatefulAlgorithms.init(algorithm, (;model = graph))
+        out = StatefulAlgorithms.step!(algorithm, context)
         return state(graph)[1], out
     end
 
@@ -133,15 +133,15 @@ using Random
         )
         temp!(graph, 0f0)
         algorithm = BlockLangevin(stepsize = 0.1f0, adjusted = false, block_size = 3)
-        context = Processes.init(algorithm, (;model = graph))
+        context = StatefulAlgorithms.init(algorithm, (;model = graph))
         Random.seed!(context.rng, 1)
-        out = Processes.step!(algorithm, context)
+        out = StatefulAlgorithms.step!(algorithm, context)
         first = copy(@view context.block_idxs[1:out.block_size])
         for _ in 2:out.block_size
-            out = Processes.step!(algorithm, context)
+            out = StatefulAlgorithms.step!(algorithm, context)
             context = merge(context, out)
         end
-        out = Processes.step!(algorithm, context)
+        out = StatefulAlgorithms.step!(algorithm, context)
         second = copy(@view context.block_idxs[1:out.block_size])
         return first, second, out
     end
@@ -162,12 +162,12 @@ using Random
             initial_state = 1f0,
         )
         temp!(graph, 1f0)
-        context = Processes.init(algorithm, (;model = graph))
+        context = StatefulAlgorithms.init(algorithm, (;model = graph))
         Random.seed!(context.rng, 1)
         before = copy(state(graph))
         accepted = 0
         for _ in 1:32
-            out = Processes.step!(algorithm, context)
+            out = StatefulAlgorithms.step!(algorithm, context)
             context = merge(context, out)
             accepted += out.accepted
         end
@@ -195,10 +195,10 @@ using Random
     )
     temp!(zero_temp_graph, 0f0)
     zero_temp_alg = LocalLangevin(stepsize = 2.5f0, adjusted = false, order = :deterministic)
-    zero_temp_ctx = Processes.init(zero_temp_alg, (;model = zero_temp_graph))
+    zero_temp_ctx = StatefulAlgorithms.init(zero_temp_alg, (;model = zero_temp_graph))
     zero_temp_vals = Float32[]
     for _ in 1:8
-        zero_temp_out = Processes.step!(zero_temp_alg, zero_temp_ctx)
+        zero_temp_out = StatefulAlgorithms.step!(zero_temp_alg, zero_temp_ctx)
         zero_temp_ctx = merge(zero_temp_ctx, zero_temp_out)
         push!(zero_temp_vals, state(zero_temp_graph)[1])
     end
@@ -212,13 +212,13 @@ using Random
 
     @test loop_context[loop[1]].model === g
     @test loop_context[loop[2]].model === g
-    loop_algorithm = Processes.getalgo(loop_process)
-    @test Processes.getoptions(loop_algorithm) == Processes.getoptions(Processes.getplan(loop_algorithm))
-    @test Processes.get_shares(loop_algorithm) == Processes.get_shares(Processes.getplan(loop_algorithm))
-    @test Processes.get_routes(loop_algorithm) == Processes.get_routes(Processes.getplan(loop_algorithm))
-    @test Processes.getstates(loop_algorithm) == ()
-    @test Processes.getalgos(loop_algorithm) == Processes.getalgos(Processes.getplan(loop_algorithm))
-    @test keys(loop_algorithm) == keys(Processes.getplan(loop_algorithm))
+    loop_algorithm = StatefulAlgorithms.getalgo(loop_process)
+    @test StatefulAlgorithms.getoptions(loop_algorithm) == StatefulAlgorithms.getoptions(StatefulAlgorithms.getplan(loop_algorithm))
+    @test StatefulAlgorithms.get_shares(loop_algorithm) == StatefulAlgorithms.get_shares(StatefulAlgorithms.getplan(loop_algorithm))
+    @test StatefulAlgorithms.get_routes(loop_algorithm) == StatefulAlgorithms.get_routes(StatefulAlgorithms.getplan(loop_algorithm))
+    @test StatefulAlgorithms.getstates(loop_algorithm) == ()
+    @test StatefulAlgorithms.getalgos(loop_algorithm) == StatefulAlgorithms.getalgos(StatefulAlgorithms.getplan(loop_algorithm))
+    @test keys(loop_algorithm) == keys(StatefulAlgorithms.getplan(loop_algorithm))
 
     kinetic = deepcopy(KineticMC())
     kinetic_inputs = InteractiveIsing._mc_model_inits(kinetic, g)
@@ -245,10 +245,10 @@ using Random
 
     default_lifetime_process = createProcess(g, Metropolis())
     try
-        @test Processes.lifetime(default_lifetime_process) isa Processes.Indefinite
+        @test StatefulAlgorithms.lifetime(default_lifetime_process) isa StatefulAlgorithms.Indefinite
         @test length(processes(g)) == 1
     finally
-        Processes.close(g)
+        StatefulAlgorithms.close(g)
     end
 end
 
@@ -258,31 +258,31 @@ end
 
     metro_proc = createProcess(g, Metropolis(); lifetime = 1)
     wait(metro_proc)
-    metro_subcontexts = Processes.get_subcontexts(getcontext(metro_proc))
+    metro_subcontexts = StatefulAlgorithms.get_subcontexts(getcontext(metro_proc))
     metro_key = only(filter(name -> name !== :globals, propertynames(metro_subcontexts)))
-    metro_T = getproperty(Processes.getdata(getproperty(metro_subcontexts, metro_key)), :T)
-    @test metro_T isa Processes.InteractiveVar{Float32}
+    metro_T = getproperty(StatefulAlgorithms.getdata(getproperty(metro_subcontexts, metro_key)), :T)
+    @test metro_T isa StatefulAlgorithms.InteractiveVar{Float32}
 
     local_proc = createProcess(g, LocalLangevin(); lifetime = 1)
     wait(local_proc)
-    local_subcontexts = Processes.get_subcontexts(getcontext(local_proc))
+    local_subcontexts = StatefulAlgorithms.get_subcontexts(getcontext(local_proc))
     local_key = only(filter(name -> name !== :globals, propertynames(local_subcontexts)))
-    local_T = getproperty(Processes.getdata(getproperty(local_subcontexts, local_key)), :T)
-    @test local_T isa Processes.InteractiveVar{Float32}
+    local_T = getproperty(StatefulAlgorithms.getdata(getproperty(local_subcontexts, local_key)), :T)
+    @test local_T isa StatefulAlgorithms.InteractiveVar{Float32}
 
     global_proc = createProcess(g, GlobalLangevin(); lifetime = 1)
     wait(global_proc)
-    global_subcontexts = Processes.get_subcontexts(getcontext(global_proc))
+    global_subcontexts = StatefulAlgorithms.get_subcontexts(getcontext(global_proc))
     global_key = only(filter(name -> name !== :globals, propertynames(global_subcontexts)))
-    global_T = getproperty(Processes.getdata(getproperty(global_subcontexts, global_key)), :T)
-    @test global_T isa Processes.InteractiveVar{Float32}
+    global_T = getproperty(StatefulAlgorithms.getdata(getproperty(global_subcontexts, global_key)), :T)
+    @test global_T isa StatefulAlgorithms.InteractiveVar{Float32}
 
     block_proc = createProcess(g, BlockLangevin(); lifetime = 1)
     wait(block_proc)
-    block_subcontexts = Processes.get_subcontexts(getcontext(block_proc))
+    block_subcontexts = StatefulAlgorithms.get_subcontexts(getcontext(block_proc))
     block_key = only(filter(name -> name !== :globals, propertynames(block_subcontexts)))
-    block_T = getproperty(Processes.getdata(getproperty(block_subcontexts, block_key)), :T)
-    @test block_T isa Processes.InteractiveVar{Float32}
+    block_T = getproperty(StatefulAlgorithms.getdata(getproperty(block_subcontexts, block_key)), :T)
+    @test block_T isa StatefulAlgorithms.InteractiveVar{Float32}
 end
 
 @testset "Interactive Langevin parameter vars" begin
@@ -291,10 +291,10 @@ end
 
     proc = createProcess(g, LocalLangevin(); lifetime = 1)
     wait(proc)
-    subcontexts = Processes.get_subcontexts(getcontext(proc))
+    subcontexts = StatefulAlgorithms.get_subcontexts(getcontext(proc))
     key = only(filter(name -> name !== :globals, propertynames(subcontexts)))
-    stepsize = getproperty(Processes.getdata(getproperty(subcontexts, key)), :stepsize)
-    @test stepsize isa Processes.InteractiveVar{Float32}
+    stepsize = getproperty(StatefulAlgorithms.getdata(getproperty(subcontexts, key)), :stepsize)
+    @test stepsize isa StatefulAlgorithms.InteractiveVar{Float32}
     @test stepsize[] ≈ 0.025f0
 end
 

@@ -54,7 +54,7 @@ end
 # Dict accessing
 Base.getindex(w::MakieWindow, key) = w.other[key]
 Base.setindex!(w::MakieWindow, val, key) = setindex!(w.other, val, key)
-Processes.ispaused(w::MakieWindow) = w[:paused]::Observable{Bool}
+StatefulAlgorithms.ispaused(w::MakieWindow) = w[:paused]::Observable{Bool}
 togglepause(w::MakieWindow) = w[:paused][] = !w[:paused][]
 
 """
