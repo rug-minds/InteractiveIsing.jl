@@ -810,21 +810,22 @@ function local_manager(source::M) where {M<:LocalMNISTModel}
                 progress_log(manager.config, "manager constructed worker"; worker = idx, workers = manager.config.workers)
             return worker
         end,
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             ctx = worker_context(slot.worker)
             ctx.x .= job.x
             ctx.y .= job.y
             StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
-        flush! = manager -> flush_manager_buffers!(manager),
+        sync_to_state! = manager -> flush_manager_buffers!(manager),
     )
     manager = StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = source.config.workers,
         config = source.config,
         state,
-        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        sync_policy = StatefulAlgorithms.SyncAtEnd(),
+        execution = StatefulAlgorithms.ChannelWorkers(),
         worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = LocalMNISTJob{Vector{PMNIST_FT},Vector{PMNIST_FT}},
@@ -872,7 +873,7 @@ function run_minibatch!(manager::M, jobs::J; log_progress::Bool = true) where {M
     log_progress && progress_log(manager.config, "minibatch buffers cleared"; t0 = t_clear, jobs = length(jobs))
     t_run = time()
     log_progress && progress_log(manager.config, "minibatch manager run started"; jobs = length(jobs), workers = manager.config.workers)
-    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs)
     log_progress && progress_log(manager.config, "minibatch manager run finished"; t0 = t_run, jobs = length(jobs))
     t_update = time()
     write_optimizer_gradient!(manager.state.optimizer_gradient, manager.state.batch_gradient, manager.config, manager.state.nsamples[])
@@ -1227,7 +1228,7 @@ function write_settings!(path::P, config::C) where {P<:AbstractString,C<:LocalMN
         checkpoint = resume_checkpoint_path()
         !isempty(checkpoint) && println(io, "- resumed from: `$(checkpoint)`")
         println(io, "- worker graph adjacency: shared with source graph")
-        println(io, "- worker parameters: shared read-only during minibatch; source updates once after `FlushAtEnd()`")
+        println(io, "- worker parameters: shared read-only during minibatch; source updates once after `SyncAtEnd()`")
     end
     return path
 end

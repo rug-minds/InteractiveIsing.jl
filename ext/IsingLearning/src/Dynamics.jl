@@ -41,11 +41,11 @@ end
 """
     PowerLawStepsizeSchedule(; start_stepsize = 1f-2, stop_stepsize = 1f-3, power = 2f0)
 
-Process-algorithm scheduler that writes a power-law value into a Langevin
-context `stepsize::Ref` before the sampler is stepped.
+Process-algorithm scheduler that returns a routed power-law Langevin
+`stepsize` before the sampler is stepped.
 
 This is deliberately separate from the sampler. Use it in a composite next to
-the Langevin algorithm, passing the sampler context's `stepsize` ref.
+the Langevin algorithm and route its `stepsize` output into the sampler context.
 """
 @ProcessAlgorithm begin
     @config start_stepsize::Float32 = 1f-2
@@ -61,10 +61,8 @@ the Langevin algorithm, passing the sampler context's `stepsize` ref.
         total = max(total_steps, 1)
         progress = total == 1 ? 1f0 : Float32(step_idx) / Float32(total - 1)
         η = _power_law_value(progress, start_stepsize, stop_stepsize, power)
-        stepsize[] = convert(typeof(stepsize[]), η)
-
         next_step = min(step_idx + 1, total - 1)
-        return (; step_idx = next_step, stepsize = stepsize[])
+        return (; step_idx = next_step, stepsize = η)
     end
 end
 

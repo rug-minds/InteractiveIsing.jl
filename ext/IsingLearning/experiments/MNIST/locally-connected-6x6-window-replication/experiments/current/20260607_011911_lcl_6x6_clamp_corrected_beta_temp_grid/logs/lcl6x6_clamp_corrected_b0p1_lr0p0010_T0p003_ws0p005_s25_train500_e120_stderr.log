@@ -1,0 +1,11 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+Precompiling packages...
+    IsingLearning Being precompiled by another process (pid: 105356, pidfile: C:\Users\fenje\.julia\compiled\v1.12\IsingLearning\sAg6i_MwG1I.ji.pidfile)
+   7765.7 ms  ✓ IsingLearning
+  1 dependency successfully precompiled in 11 seconds. 557 already precompiled.
+┌ Warning: this run uses a subsampled balanced training split, so it is diagnostic, not a full-paper replication
+│   train_per_class = 500
+└ @ Main C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\locally-connected-6x6-window-replication\mnist_lcl_6x6_window_adam.jl:321
+┌ Warning: this run uses a subsampled balanced test split, so reported accuracy will be noisy
+│   test_per_class = 100
+└ @ Main C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\locally-connected-6x6-window-replication\mnist_lcl_6x6_window_adam.jl:322

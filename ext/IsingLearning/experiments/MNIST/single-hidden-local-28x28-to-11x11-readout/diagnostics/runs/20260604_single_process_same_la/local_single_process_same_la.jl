@@ -44,7 +44,7 @@ end
 """Build one normal Process with the same local-MNIST contrastive LoopAlgorithm as the manager."""
 function local_single_worker(source::M) where {M<:LocalMNISTModel}
     dynamics_algorithm = mnist_dynamics_algorithm()
-    algorithm = Processes.resolve(
+    algorithm = StatefulAlgorithms.resolve(
         contrastive_worker_algorithm(deepcopy(dynamics_algorithm), source.config, length(II.state(source.graph))),
     )
     return local_worker(source, 1, algorithm)
@@ -56,11 +56,11 @@ function run_one_local_single_sample!(
     x::X,
     y::Y,
     sample_idx::I,
-) where {W<:Processes.Process,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
+) where {W<:StatefulAlgorithms.Process,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
     context = worker_context(worker)
     load_sample_into_worker!(context, x, y, sample_idx)
-    Processes.reset!(worker)
-    return Processes.runprocessinline!(worker)
+    StatefulAlgorithms.reset!(worker)
+    return StatefulAlgorithms.runprocessinline!(worker)
 end
 
 """Measure warmed single-process local-MNIST samples with the manager LoopAlgorithm."""

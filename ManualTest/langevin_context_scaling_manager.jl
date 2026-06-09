@@ -77,8 +77,8 @@ function build_manager(step::S, runs::R) where {S<:RawLangevinBenchmarkStep,R<:I
             );
             repeats = 1,
         ),
-        prepare! = (slot, job, manager) -> resetworker!(slot),
-        consume! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> resetworker!(slot),
+        afterjob! = (slot, job, manager) -> begin
             instance = only(StatefulAlgorithms.getalgos(StatefulAlgorithms.getalgo(slot.worker)))
             results[Int(job)] = view(StatefulAlgorithms.context(slot.worker), instance).result
             return nothing
@@ -88,7 +88,7 @@ function build_manager(step::S, runs::R) where {S<:RawLangevinBenchmarkStep,R<:I
     manager = ProcessManager(
         recipe;
         nworkers = Int(runs),
-        flush_policy = NoFlush(),
+        sync_policy = NoSync(),
         poll_interval = 0.0,
         job_type = Int,
     )

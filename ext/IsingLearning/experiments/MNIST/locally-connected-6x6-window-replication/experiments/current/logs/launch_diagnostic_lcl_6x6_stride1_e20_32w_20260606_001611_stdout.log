@@ -1,0 +1,62 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+building MNIST 784-120-40 layer
+loading training split
+loading train-eval split
+loading test split
+constructing 32-worker Adam manager
+constructing 32-worker validation manager
+starting epochs
+epoch 0 evaluating
+(timestamp = "2026-06-06T00:17:05", epoch = 0, seconds = 0.0, train_accuracy = 0.1, train_loss = 17.64432f0, test_accuracy = 0.105, test_loss = 16.764677f0, pred_counts = "24-23-14-24-16-29-18-14-21-17", best_accuracy = 0.105, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 1 training
+(timestamp = "2026-06-06T00:17:13", epoch = 1, seconds = 6.8171991, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.105, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 2 training
+epoch 2 evaluating
+(timestamp = "2026-06-06T00:17:13", epoch = 2, seconds = 0.1991813, train_accuracy = 0.13, train_loss = 13.448398f0, test_accuracy = 0.1, test_loss = 13.667379f0, pred_counts = "18-14-16-28-18-23-13-21-29-20", best_accuracy = 0.105, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 3 training
+(timestamp = "2026-06-06T00:17:14", epoch = 3, seconds = 0.1760203, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.105, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 4 training
+epoch 4 evaluating
+(timestamp = "2026-06-06T00:17:14", epoch = 4, seconds = 0.1893084, train_accuracy = 0.075, train_loss = 8.064498f0, test_accuracy = 0.115, test_loss = 7.6678886f0, pred_counts = "13-18-11-18-12-38-13-18-39-20", best_accuracy = 0.115, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 5 training
+(timestamp = "2026-06-06T00:17:14", epoch = 5, seconds = 0.1884471, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.115, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 6 training
+epoch 6 evaluating
+(timestamp = "2026-06-06T00:17:14", epoch = 6, seconds = 0.1770649, train_accuracy = 0.05, train_loss = 4.6092644f0, test_accuracy = 0.08, test_loss = 4.730487f0, pred_counts = "19-17-13-15-16-33-16-23-29-19", best_accuracy = 0.115, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 7 training
+(timestamp = "2026-06-06T00:17:14", epoch = 7, seconds = 0.1831319, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.115, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 8 training
+epoch 8 evaluating
+(timestamp = "2026-06-06T00:17:15", epoch = 8, seconds = 0.1887304, train_accuracy = 0.075, train_loss = 4.3448877f0, test_accuracy = 0.085, test_loss = 4.630389f0, pred_counts = "21-13-22-24-22-18-17-24-19-20", best_accuracy = 0.115, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 9 training
+(timestamp = "2026-06-06T00:17:15", epoch = 9, seconds = 0.1840975, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.115, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 10 training
+epoch 10 evaluating
+(timestamp = "2026-06-06T00:17:15", epoch = 10, seconds = 0.180387, train_accuracy = 0.125, train_loss = 3.9036884f0, test_accuracy = 0.11, test_loss = 3.9862049f0, pred_counts = "10-19-25-22-18-18-26-21-12-29", best_accuracy = 0.115, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 11 training
+(timestamp = "2026-06-06T00:17:15", epoch = 11, seconds = 0.180645, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.115, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 12 training
+epoch 12 evaluating
+(timestamp = "2026-06-06T00:17:15", epoch = 12, seconds = 0.1769731, train_accuracy = 0.1, train_loss = 4.4453354f0, test_accuracy = 0.075, test_loss = 4.5380683f0, pred_counts = "12-21-27-23-21-24-22-17-17-16", best_accuracy = 0.115, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 13 training
+(timestamp = "2026-06-06T00:17:16", epoch = 13, seconds = 0.1757524, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.115, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 14 training
+epoch 14 evaluating
+(timestamp = "2026-06-06T00:17:16", epoch = 14, seconds = 0.1849067, train_accuracy = 0.1, train_loss = 4.973467f0, test_accuracy = 0.065, test_loss = 4.360461f0, pred_counts = "22-23-22-24-20-17-17-15-22-18", best_accuracy = 0.115, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 15 training
+(timestamp = "2026-06-06T00:17:16", epoch = 15, seconds = 0.1893525, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.115, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 16 training
+epoch 16 evaluating
+(timestamp = "2026-06-06T00:17:16", epoch = 16, seconds = 0.1994996, train_accuracy = 0.085, train_loss = 4.230081f0, test_accuracy = 0.12, test_loss = 4.8909297f0, pred_counts = "22-14-17-19-28-23-20-23-20-14", best_accuracy = 0.12, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 17 training
+(timestamp = "2026-06-06T00:17:17", epoch = 17, seconds = 0.2459319, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.12, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 18 training
+epoch 18 evaluating
+(timestamp = "2026-06-06T00:17:17", epoch = 18, seconds = 0.2659422, train_accuracy = 0.08, train_loss = 4.816912f0, test_accuracy = 0.08, test_loss = 4.5354404f0, pred_counts = "13-23-22-16-16-18-22-19-21-30", best_accuracy = 0.12, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 19 training
+(timestamp = "2026-06-06T00:17:17", epoch = 19, seconds = 0.2002607, train_accuracy = missing, train_loss = missing, test_accuracy = missing, test_loss = missing, pred_counts = missing, best_accuracy = 0.12, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "")
+epoch 20 training
+epoch 20 evaluating
+(timestamp = "2026-06-06T00:17:17", epoch = 20, seconds = 0.1862161, train_accuracy = 0.135, train_loss = 4.4940157f0, test_accuracy = 0.1, test_loss = 4.842481f0, pred_counts = "31-26-16-18-16-19-20-27-13-14", best_accuracy = 0.12, best_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\best_checkpoint.bin", final_path = "C:\\Users\\fenje\\dev\\InteractiveIsing.jl\\ext\\IsingLearning\\experiments\\MNIST\\locally-connected-6x6-window-replication\\experiments\\current\\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20\\final_checkpoint.bin")
+saved MNIST 784-120-40 baseline in C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\locally-connected-6x6-window-replication\experiments\current\20260606_001612_mnist_lcl_6x6_stride1_diagnostic_e20

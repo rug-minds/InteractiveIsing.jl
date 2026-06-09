@@ -1,0 +1,9 @@
+[2026-06-05T14:03:04] bootstrap script started elapsed_s=0.157
+[2026-06-05T14:03:05] bootstrap Pkg loaded elapsed_s=0.398
+[2026-06-05T14:03:05] bootstrap project activated elapsed_s=0.045
+[2026-06-05T14:03:12] bootstrap dependencies loaded elapsed_s=7.246
+logged sample 1
+logged sample 2
+logged sample 3
+wrote C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260605_radius_r10_to_r1_s25_b15_lr25_e200\diagnostics\low_beta_equilibrium\low_beta_output_trace_logger.csv
+wrote C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260605_radius_r10_to_r1_s25_b15_lr25_e200\diagnostics\low_beta_equilibrium\low_beta_output_trace_logger.png

@@ -1,0 +1,32 @@
+# MNIST 784-120-40 REINFORCE Minima-Fixes Adam
+
+- learning note: local `derivation.md`
+- architecture: `784 -> 120 -> 40`
+- sampled graph: hidden/output only, with no structural input layer
+- input handling: MNIST pixels in `[0, 1]` are projected through external `784 -> hidden` weights into a worker-local field
+- workers: `32`
+- manager execution: `ChannelWorkers()` with one sample per manager job
+- progress print interval: `50` batches
+- worker graph adjacency: pointer-shared with source graph
+- worker graph base bias: pointer-shared with source graph
+- learning step: configurable REINFORCE-style reward covariance over sampled minima
+- sparse coupling constraint: paired CSC entries are symmetrized before and after Adam updates
+- validation: `ChannelWorkers()` ProcessManager with worker-local stats
+- job buffers: preallocated per-sample jobs reused across minibatches/evaluations
+- optimiser: `Optimisers.Adam(0.001)`
+- epochs/batchsize: `6` / `128`
+- train/test per class: `5421` / `892`
+- train eval per class: `5421`
+- sweeps/relaxation steps: `25.0` / `4000`
+- covariance samples/sample sweeps: `20` / `50.0`
+- covariance kick steps/noise temp factor/stepsize: `25` / `4.0` / `1.0`
+- reward mode: `margin`
+- reward baseline: `label`
+- gradient sign: `1.0`
+- recurrent w normalization/norm: `global` / `0.5`
+- project output bias prior: `true`
+- w_input normalization/row norm: `row` / `0.14`
+- beta/temp/stepsize: `5.0` unused for training / `0.0001` / `0.5`
+- weight scale/decay: `0.005` / `0.0`
+- resume from: `none`
+- resume epoch: `-1`

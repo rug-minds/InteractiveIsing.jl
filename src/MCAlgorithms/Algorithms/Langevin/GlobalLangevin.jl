@@ -54,9 +54,9 @@ GlobalLangevin(adjusted::Bool) = GlobalLangevin(; adjusted)
     layer_views = layers(model)
     SType = eltype(model)
     stepsize_default = SType(langevin.stepsize)
-    stepsize = Ref(SType(_langevin_unwrap_ref(_langevin_context_value(context, :stepsize, stepsize_default))))
-    max_drift_fraction = Ref(SType(langevin.max_drift_fraction))
-    group_steps_ref = Ref(langevin.group_steps)
+    stepsize = SType(get(context, :stepsize, stepsize_default))
+    max_drift_fraction = SType(langevin.max_drift_fraction)
+    group_steps = langevin.group_steps
     adjusted_ref = Ref(langevin.adjusted)
 
     old_vals = Vector{SType}(undef, nstates_model)
@@ -72,7 +72,7 @@ GlobalLangevin(adjusted::Bool) = GlobalLangevin(; adjusted)
     T = SType(temp(model))
 
     return (;model, hamiltonian, rng, dH_prealloc, active_index_set, active_spins,
-                layer_views, stepsize, max_drift_fraction, group_steps_ref,
+                layer_views, stepsize, max_drift_fraction, group_steps,
                 adjusted_ref, old_vals, new_vals, layer_idxs,
                 schedule_idxs, schedule_position, schedule_length,
                 schedule_accepted, schedule_ΔE,
@@ -240,16 +240,16 @@ end
 
 @inline function StatefulAlgorithms.step!(langevin::GlobalLangevin, context::C) where {C}
     (;hamiltonian, rng, model, dH_prealloc, layer_views, stepsize,
-        max_drift_fraction, group_steps_ref, adjusted_ref, old_vals, new_vals,
+        max_drift_fraction, group_steps, adjusted_ref, old_vals, new_vals,
         layer_idxs, schedule_idxs, schedule_position, schedule_length,
         schedule_accepted, schedule_ΔE, gradient_max_cache, gradient_sumsq_cache, T) = context
 
     SType = eltype(model)
     epsT = eps(SType)
     t = max(SType(T), zero(SType))
-    η = max(stepsize[], epsT)
-    drift_fraction = clamp(max_drift_fraction[], epsT, one(SType))
-    n_group_steps = max(1, group_steps_ref[])
+    η = max(stepsize, epsT)
+    drift_fraction = clamp(max_drift_fraction, epsT, one(SType))
+    n_group_steps = max(1, group_steps)
     use_adjusted = adjusted_ref[]
     dh = d_iH()
     active_changed = @inline consume_changed!(context.active_index_set)
@@ -277,7 +277,7 @@ end
             acceptance_rate = one(SType)
             gradient_max = gradient_max_cache[]
             gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
-            return (;proposal, ΔE = schedule_ΔE[], accepted, attempted, acceptance_rate, η, σ,
+            return (;proposal, ΔE = schedule_ΔE[], accepted, attempted, acceptance_rate, η, stepsize = η, σ,
                 refreshed_gradient = false, gradient_max, gradient_rms,
                 reflected_fraction = zero(SType))
         end
@@ -294,7 +294,7 @@ end
         σ = t > zero(SType) ? sqrt(SType(2) * η * t) : zero(SType)
         proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
         return (;proposal, ΔE = zero(SType), accepted = 0, attempted = 0,
-            acceptance_rate = zero(SType), η, σ, refreshed_gradient = false,
+            acceptance_rate = zero(SType), η, stepsize = η, σ, refreshed_gradient = false,
             gradient_max = zero(SType), gradient_rms = zero(SType),
             reflected_fraction = zero(SType))
     end
@@ -394,7 +394,7 @@ end
         attempted = 1
         acceptance_rate = SType(accepted)
         gradient_rms = sqrt(gradient_sumsq / SType(n))
-        return (;proposal, ΔE, accepted, attempted, acceptance_rate, η, σ,
+        return (;proposal, ΔE, accepted, attempted, acceptance_rate, η, stepsize = η, σ,
             refreshed_gradient = true, gradient_max, gradient_rms,
             reflected_fraction = zero(SType))
     end
@@ -449,7 +449,7 @@ end
     gradient_max = gradient_max_cache[]
     gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
     reflected_fraction = SType(reflected)
-    return (;proposal, ΔE, accepted, attempted, acceptance_rate, η, σ,
+    return (;proposal, ΔE, accepted, attempted, acceptance_rate, η, stepsize = η, σ,
         refreshed_gradient = refreshed, gradient_max, gradient_rms,
         reflected_fraction)
 end

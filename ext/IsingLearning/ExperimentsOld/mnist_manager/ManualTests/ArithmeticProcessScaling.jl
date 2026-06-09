@@ -103,12 +103,12 @@ function build_manager(step::S, nworkers::I) where {S<:ArithmeticStateStep,I<:In
             ArithmeticStateStep(step.len, step.rounds, step.inner_ops, step.seed + idx);
             repeats = 1,
         ),
-        prepare! = (slot, job, manager) -> resetworker!(slot),
+        loadjob! = (slot, job, manager) -> resetworker!(slot),
     )
     return ProcessManager(
         recipe;
         nworkers = Int(nworkers),
-        flush_policy = NoFlush(),
+        sync_policy = NoSync(),
         poll_interval = 0.0,
         job_type = Int,
         result_type = Any,

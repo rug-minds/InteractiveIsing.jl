@@ -1,0 +1,24 @@
+[2026-06-05T14:46:49] START r8_sym_b0p1_Tc0p003_Tr0p3_burn25_avg10_e60 beta=0.1 cold_T=0.003 reverse_T=0.3
+[2026-06-05T14:51:12] END r8_sym_b0p1_Tc0p003_Tr0p3_burn25_avg10_e60 exit=0
+[2026-06-05T14:51:12] START r8_sym_b0p1_Tc0p003_Tr1p0_burn25_avg10_e60 beta=0.1 cold_T=0.003 reverse_T=1.0
+[2026-06-05T14:55:36] END r8_sym_b0p1_Tc0p003_Tr1p0_burn25_avg10_e60 exit=0
+[2026-06-05T14:55:36] START r8_sym_b0p1_Tc0p01_Tr0p3_burn25_avg10_e60 beta=0.1 cold_T=0.01 reverse_T=0.3
+[2026-06-05T15:00:03] END r8_sym_b0p1_Tc0p01_Tr0p3_burn25_avg10_e60 exit=0
+[2026-06-05T15:00:03] START r8_sym_b0p1_Tc0p01_Tr1p0_burn25_avg10_e60 beta=0.1 cold_T=0.01 reverse_T=1.0
+[2026-06-05T15:04:33] END r8_sym_b0p1_Tc0p01_Tr1p0_burn25_avg10_e60 exit=0
+[2026-06-05T15:04:33] START r8_sym_b0p1_Tc0p03_Tr0p3_burn25_avg10_e60 beta=0.1 cold_T=0.03 reverse_T=0.3
+[2026-06-05T15:09:43] END r8_sym_b0p1_Tc0p03_Tr0p3_burn25_avg10_e60 exit=0
+[2026-06-05T15:09:43] START r8_sym_b0p1_Tc0p03_Tr1p0_burn25_avg10_e60 beta=0.1 cold_T=0.03 reverse_T=1.0
+[2026-06-05T15:14:10] END r8_sym_b0p1_Tc0p03_Tr1p0_burn25_avg10_e60 exit=0
+[2026-06-05T15:14:10] START r8_sym_b0p25_Tc0p003_Tr0p3_burn25_avg10_e60 beta=0.25 cold_T=0.003 reverse_T=0.3
+[2026-06-05T15:18:39] END r8_sym_b0p25_Tc0p003_Tr0p3_burn25_avg10_e60 exit=0
+[2026-06-05T15:18:39] START r8_sym_b0p25_Tc0p003_Tr1p0_burn25_avg10_e60 beta=0.25 cold_T=0.003 reverse_T=1.0
+[2026-06-05T15:23:10] END r8_sym_b0p25_Tc0p003_Tr1p0_burn25_avg10_e60 exit=0
+[2026-06-05T15:23:10] START r8_sym_b0p25_Tc0p01_Tr0p3_burn25_avg10_e60 beta=0.25 cold_T=0.01 reverse_T=0.3
+[2026-06-05T15:27:39] END r8_sym_b0p25_Tc0p01_Tr0p3_burn25_avg10_e60 exit=0
+[2026-06-05T15:27:39] START r8_sym_b0p25_Tc0p01_Tr1p0_burn25_avg10_e60 beta=0.25 cold_T=0.01 reverse_T=1.0
+[2026-06-05T15:32:10] END r8_sym_b0p25_Tc0p01_Tr1p0_burn25_avg10_e60 exit=0
+[2026-06-05T15:32:10] START r8_sym_b0p25_Tc0p03_Tr0p3_burn25_avg10_e60 beta=0.25 cold_T=0.03 reverse_T=0.3
+[2026-06-05T15:36:39] END r8_sym_b0p25_Tc0p03_Tr0p3_burn25_avg10_e60 exit=0
+[2026-06-05T15:36:39] START r8_sym_b0p25_Tc0p03_Tr1p0_burn25_avg10_e60 beta=0.25 cold_T=0.03 reverse_T=1.0
+[2026-06-05T15:41:10] END r8_sym_b0p25_Tc0p03_Tr1p0_burn25_avg10_e60 exit=0

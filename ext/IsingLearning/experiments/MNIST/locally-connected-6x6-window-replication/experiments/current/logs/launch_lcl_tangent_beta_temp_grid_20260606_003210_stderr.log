@@ -1,0 +1,8 @@
+LCL run lcl6x6_tangent_b3p0_lr0p0001_T0p001_s25_e120 failed with exit code 1
+At C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\locally-connected-6x6-window-replication\
+launch_lcl_tangent_beta_temp_grid.ps1:63 char:9
++         throw "LCL run $name failed with exit code $exit"
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (LCL run lcl6x6_...ith exit code 1:String) [], RuntimeException
+    + FullyQualifiedErrorId : LCL run lcl6x6_tangent_b3p0_lr0p0001_T0p001_s25_e120 failed with exit code 1
+ 

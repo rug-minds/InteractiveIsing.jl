@@ -38,7 +38,7 @@ function manager_breakdown_config()
 end
 
 """Construct a diagnostic ProcessManager whose flush is timed manually."""
-function diagnostic_input_field_manager(layer::L, source::G, config::C) where {
+function diagnostic_input_field_manager(layer::L, source::G, config::C, execution) where {
     L<:IsingLearning.LayeredIsingGraphLayer,
     G,
     C<:InputFieldMNISTConfig,
@@ -62,7 +62,7 @@ function diagnostic_input_field_manager(layer::L, source::G, config::C) where {
         runtime_sums,
         runtime_counts,
         makeworker = (idx, manager) -> input_field_worker(algorithm, manager.state.layer, shared_worker_graph(manager.state.source_graph)),
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             ctx = worker_context(slot.worker)
             ctx.x[] = job.x
             ctx.y[] = job.y
@@ -70,20 +70,21 @@ function diagnostic_input_field_manager(layer::L, source::G, config::C) where {
             StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
-        runarguments = (slot, job, manager) -> (; phase_beta = manager.config.β),
-        afterrun! = (slot, job, manager) -> begin
+        providearguments = (slot, job, manager) -> (; phase_beta = manager.config.β),
+        afterjob! = (slot, job, manager) -> begin
             manager.recipe.runtime_sums[slot.idx] += StatefulAlgorithms.runtime(slot.worker)
             manager.recipe.runtime_counts[slot.idx] += 1
             return nothing
         end,
-        flush! = flush_manager_buffers!,
+        sync_to_state! = flush_manager_buffers!,
     )
     return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = StatefulAlgorithms.NoFlush(),
+        sync_policy = StatefulAlgorithms.NoSync(),
+        execution,
         worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = InputFieldMNISTJob{Vector{FT},Vector{FT}},
@@ -102,11 +103,11 @@ function append_manager_breakdown_row!(row::R) where {R<:NamedTuple}
     return path
 end
 
-"""Return the concrete scheduler object for one diagnostic schedule name."""
-function manager_schedule(schedule_name::S) where {S<:Symbol}
-    schedule_name === :dynamic && return StatefulAlgorithms.Dynamic()
-    schedule_name === :greedy && return StatefulAlgorithms.Greedy()
-    schedule_name === :static && return StatefulAlgorithms.Static()
+"""Return the concrete manager execution object for one diagnostic schedule name."""
+function manager_execution(schedule_name::S) where {S<:Symbol}
+    schedule_name === :dynamic && return StatefulAlgorithms.ThreadedWorkers(StatefulAlgorithms.Dynamic())
+    schedule_name === :greedy && return StatefulAlgorithms.ThreadedWorkers(StatefulAlgorithms.Greedy())
+    schedule_name === :static && return StatefulAlgorithms.ThreadedWorkers(StatefulAlgorithms.Static())
     schedule_name === :spawn && return nothing
     throw(ArgumentError("unknown schedule $(schedule_name)"))
 end
@@ -133,13 +134,8 @@ function timed_manager_batch!(
     clear_seconds = @elapsed clear_manager_buffers!(manager)
     fill!(manager.recipe.runtime_sums, 0.0)
     fill!(manager.recipe.runtime_counts, 0)
-    schedule = manager_schedule(schedule_name)
     run_seconds = @elapsed begin
-        if isnothing(schedule)
-            StatefulAlgorithms.run!(manager, jobs)
-        else
-            StatefulAlgorithms.run!(manager, jobs, schedule)
-        end
+        StatefulAlgorithms.run!(manager, jobs)
     end
     worker_internal_sum_seconds = sum(manager.recipe.runtime_sums)
     worker_internal_max_seconds = maximum(manager.recipe.runtime_sums)
@@ -199,7 +195,8 @@ function main()
 
     for schedule_name in schedules
         manager_breakdown_log("constructing diagnostic manager"; schedule = schedule_name)
-        manager_seconds = @elapsed manager = diagnostic_input_field_manager(setup.layer, setup.graph, config)
+        execution = manager_execution(schedule_name)
+        manager_seconds = @elapsed manager = diagnostic_input_field_manager(setup.layer, setup.graph, config, execution)
         try
             warm_indices = collect(1:config.batchsize)
             manager_breakdown_log("warming manager batch"; schedule = schedule_name)

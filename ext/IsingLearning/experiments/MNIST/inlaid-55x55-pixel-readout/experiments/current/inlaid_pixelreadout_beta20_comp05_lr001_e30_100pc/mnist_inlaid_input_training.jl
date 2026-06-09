@@ -646,21 +646,22 @@ function inlaid_manager(source::M) where {M<:InlaidMNISTModel}
     )
     recipe = (;
         makeworker = (idx, manager) -> inlaid_worker(manager.state.model, idx),
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             ctx = worker_context(slot.worker)
             ctx.x .= job.x
             ctx.y .= job.y
             StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
-        flush! = manager -> flush_manager_buffers!(manager),
+        sync_to_state! = manager -> flush_manager_buffers!(manager),
     )
     return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = source.config.workers,
         config = source.config,
         state,
-        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        sync_policy = StatefulAlgorithms.SyncAtEnd(),
+        execution = StatefulAlgorithms.ChannelWorkers(),
         worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = InlaidMNISTJob{Vector{INMNIST_FT},Vector{INMNIST_FT}},
@@ -670,7 +671,7 @@ end
 """Run one minibatch and update shared source parameters once."""
 function run_minibatch!(manager::M, jobs::J) where {M<:StatefulAlgorithms.ProcessManager,J<:AbstractVector}
     clear_manager_buffers!(manager)
-    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs)
     add_weight_decay!(manager.state.batch_gradient, manager.state.params[], manager.config.weight_decay)
     η = adjust_learning_rate!(manager)
     manager.state.opt_state, ps_new = Optimisers.update(manager.state.opt_state, manager.state.params[], manager.state.batch_gradient)

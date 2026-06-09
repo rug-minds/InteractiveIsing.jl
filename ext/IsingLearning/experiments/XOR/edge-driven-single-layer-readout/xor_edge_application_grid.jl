@@ -540,7 +540,7 @@ function edge_xor_manager(layer::L, graph::G, ps::P, config::C) where {L<:Layere
     state = EdgeManagerState(Ref(ps), parameter_buffer(ps), Ref(0), Optimisers.setup(optimiser, ps))
     recipe = (;
         makeworker = (idx, manager) -> edge_worker(layer, worker_graph(graph, manager.state.params[], manager.config), manager.config),
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             ctx = worker_context(slot.worker)
             ctx.x .= job.x
             ctx.y .= job.y
@@ -548,14 +548,15 @@ function edge_xor_manager(layer::L, graph::G, ps::P, config::C) where {L<:Layere
             StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
-        flush! = manager -> flush_edge_buffers!(manager),
+        sync_to_state! = manager -> flush_edge_buffers!(manager),
     )
     return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        sync_policy = StatefulAlgorithms.SyncAtEnd(),
+        execution = StatefulAlgorithms.ChannelWorkers(),
         worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = EdgeApplicationJob{Vector{FT},Vector{FT}},
@@ -590,7 +591,7 @@ end
 function run_edge_batch!(manager::M, jobs::J, config::C, update_idx::Integer) where {M<:StatefulAlgorithms.ProcessManager,J,C<:EdgeApplicationConfig}
     clear_manager_buffers!(manager)
     manager.state.total_repeats[] = sum(job.repeats for job in jobs)
-    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs)
     add_weight_decay!(manager.state.batch_gradient, manager.state.params[], config.weight_decay)
     gradient_norm = parameter_norm(manager.state.batch_gradient)
     old_params = manager.state.params[]

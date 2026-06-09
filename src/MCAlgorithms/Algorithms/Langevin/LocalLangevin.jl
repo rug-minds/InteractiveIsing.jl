@@ -186,9 +186,6 @@ iterables are materialized here.
     return active_spins isa AbstractVector ? active_spins : collect(active_spins)
 end
 
-@inline _langevin_context_value(context, name::Symbol, default) = get(context, name, default)
-@inline _langevin_unwrap_ref(x) = x isa Ref ? x[] : x
-
 @inline function StatefulAlgorithms.init(langevin::LocalLangevin{Order,Adjusted}, context::Cont) where {Order,Adjusted,Cont}
     (;model) = context
 
@@ -209,9 +206,9 @@ end
     dH_prealloc = zeros(eltype(model), InteractiveIsing.nstates(model))
     SType = eltype(model)
     stepsize_default = SType(langevin.stepsize)
-    stepsize = Ref(SType(@inline _langevin_unwrap_ref(@inline _langevin_context_value(context, :stepsize, stepsize_default))))
-    max_drift_fraction = Ref(SType(langevin.max_drift_fraction))
-    group_steps_ref = Ref(langevin.group_steps)
+    stepsize = SType(get(context, :stepsize, stepsize_default))
+    max_drift_fraction = SType(langevin.max_drift_fraction)
+    group_steps = langevin.group_steps
     adjusted = Adjusted
     sweep_position = Ref(0)
     sweep_order = Order === :random ? collect(1:length(active_spins)) : Int[]
@@ -220,7 +217,7 @@ end
     T = SType(temp(model))
 
     return (;model, hamiltonian, rng, dH_prealloc, active_index_set, active_spins,
-                layer_views, stepsize, max_drift_fraction, group_steps_ref,
+                layer_views, stepsize, max_drift_fraction, group_steps,
                 adjusted, sweep_position, sweep_order, sweep_offset, group_remaining, T)
 end
 
@@ -253,7 +250,7 @@ end
     end
 
     n = length(active_spins)
-    context.group_remaining[] = max(1, context.group_steps_ref[])
+    context.group_remaining[] = max(1, context.group_steps)
     context.sweep_position[] = 1
     if Order === :random
         @inline _reset_local_langevin_order!(context.sweep_order, n)
@@ -505,11 +502,11 @@ end
     spins = @inline InteractiveIsing.graphstate(model)
     epsT = eps(SType)
     t = max(SType(T), zero(SType))
-    η = max(stepsize[], epsT)
-    drift_fraction = clamp(max_drift_fraction[], epsT, one(SType))
+    η = max(stepsize, epsT)
+    drift_fraction = clamp(max_drift_fraction, epsT, one(SType))
     dh = d_iH()
-    gradient_max = SType(@inline _langevin_unwrap_ref(@inline _langevin_context_value(context, :gradient_max, zero(SType))))
-    active_index_set = @inline _langevin_context_value(context, :active_index_set, model)
+    gradient_max = SType(get(context, :gradient_max, zero(SType)))
+    active_index_set = get(context, :active_index_set, model)
     active_changed = @inline consume_changed!(active_index_set)
     if active_changed
         @inline _set_local_langevin_active_spins!(context.active_spins, @inline _active_spin_vector(active_index_set))
@@ -599,7 +596,7 @@ end
     gradient_rms = abs(derivative)
     reflected_fraction = SType(reflected)
    
-    return (;proposal, ΔE, accepted, acceptance_rate, η, σ,
+    return (;proposal, ΔE, accepted, acceptance_rate, η, stepsize = η, σ,
         gradient_max, gradient_rms, reflected_fraction)
     # return nothing
 end

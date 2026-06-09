@@ -194,7 +194,7 @@ function threaded_mode_manager(nworkers::T, jobs::J) where {T<:Integer, J<:Abstr
     return ProcessManager(
         threaded_mode_recipe();
         nworkers,
-        flush_policy = NoFlush(),
+        sync_policy = NoSync(),
         job_type = eltype(jobs),
         result_type = UInt64,
         error_type = Any,

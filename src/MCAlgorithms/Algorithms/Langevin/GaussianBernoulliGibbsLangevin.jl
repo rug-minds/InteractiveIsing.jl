@@ -186,7 +186,7 @@ function StatefulAlgorithms.init(algorithm::GaussianBernoulliGibbsLangevin, cont
     K = max(1, algorithm.langevin_steps)
 
     stepsize_default = SType(algorithm.stepsize)
-    stepsize = Ref(SType(_langevin_unwrap_ref(_langevin_context_value(context, :stepsize, stepsize_default))))
+    stepsize = SType(get(context, :stepsize, stepsize_default))
 
     old_v = similar(visible, SType, n_visible)
     old_h = similar(hidden, SType, n_hidden)
@@ -224,7 +224,7 @@ function StatefulAlgorithms.init(algorithm::GaussianBernoulliGibbsLangevin, cont
         hterm,
         rng,
         stepsize,
-        group_steps_ref = Ref(algorithm.group_steps),
+        group_steps = algorithm.group_steps,
         adjusted_ref = Ref(algorithm.adjusted),
         adjust_step_ref = Ref(algorithm.adjust_step),
         burnin_ref = Ref(algorithm.burnin),
@@ -249,7 +249,7 @@ function StatefulAlgorithms.init(algorithm::GaussianBernoulliGibbsLangevin, cont
 end
 
 function StatefulAlgorithms.step!(algorithm::GaussianBernoulliGibbsLangevin, context)
-    (; model, hamiltonian, hterm, rng, stepsize, group_steps_ref, adjusted_ref,
+    (; model, hamiltonian, hterm, rng, stepsize, group_steps, adjusted_ref,
         adjust_step_ref, burnin_ref, langevin_steps_ref, old_v, old_h, new_v, new_h, grad,
         alphas, forward_mean, reverse_mean, proposal_variance, conditional_mean,
         logits, at_idxs, layer_idxs, from_vals, to_vals, step_idx_ref) = context
@@ -260,9 +260,9 @@ function StatefulAlgorithms.step!(algorithm::GaussianBernoulliGibbsLangevin, con
     n_visible = length(visible)
     n_hidden = length(hidden)
     n_total = n_visible + n_hidden
-    n_group_steps = max(1, group_steps_ref[])
+    n_group_steps = max(1, group_steps)
     K = max(1, langevin_steps_ref[])
-    α0 = max(SType(stepsize[]), eps(SType))
+    α0 = max(SType(stepsize), eps(SType))
     αs = _gb_fill_alphas!(alphas, K, α0)
 
     accepted = 0
@@ -333,6 +333,7 @@ function StatefulAlgorithms.step!(algorithm::GaussianBernoulliGibbsLangevin, con
         acceptance_rate,
         log_acceptance,
         η = α0,
+        stepsize = α0,
         burned_in = step_idx_ref[] > burnin_ref[],
     )
 end

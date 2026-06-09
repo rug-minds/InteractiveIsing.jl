@@ -1,0 +1,39 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+building MNIST 784-120-40 layer
+loading training split
+training samples: 54210 (424 batches/epoch)
+loading train-eval split
+train-eval samples: 54210
+loading test split
+test samples: 8920
+constructing 32-worker surrogate-attractor Adam manager
+constructing 32-worker validation manager
+starting epochs
+epoch 0 train-eval: evaluating 54210 samples
+epoch 0 train-eval: done in 9.196s accuracy=0.09288 loss=57.849102
+epoch 0 evaluating
+epoch 0 test: evaluating 8920 samples
+epoch 0 test: done in 0.524s accuracy=0.08722 loss=57.754906
+(timestamp = "2026-06-09T14:06:00", epoch = 0, seconds = 0.0, train_accuracy = 0.09287954251983029, train_loss = 57.849102f0, test_accuracy = 0.08721973094170403, test_loss = 57.754906f0, pred_counts = "691-1043-784-833-885-808-872-1251-825-928", w_norm = 0.48583895f0, b_norm = 0.0f0, w_input_norm = 1.5336232f0, grad_w_norm = 0.0f0, grad_b_norm = 0.0f0, grad_w_input_norm = 0.0f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, attractor_samples = 0, reward_mean = 0.0f0, reward_std = 0.0f0, best_accuracy = 0.08721973094170403, best_path = "ext/IsingLearning/experiments/MNIST/784-120-40-reinforce-minima-fixes/experiments/current/grid_weight_decay_lr0005_full6_earlystop/wd_1e-5\\best_checkpoint.bin", final_path = "")
+epoch 1 training
+epoch 1 batch 1/424 samples 128/54210 elapsed 11.7s reward_mean -0.7914 reward_std 0.51516 minima 2560
+epoch 1 batch 50/424 samples 6400/54210 elapsed 29.9s reward_mean -0.00455 reward_std 0.00354 minima 2560
+epoch 1 batch 100/424 samples 12800/54210 elapsed 47.7s reward_mean -0.00462 reward_std 0.0036 minima 2560
+epoch 1 batch 150/424 samples 19200/54210 elapsed 66.4s reward_mean -0.00445 reward_std 0.00352 minima 2560
+epoch 1 batch 200/424 samples 25600/54210 elapsed 85.6s reward_mean -0.00446 reward_std 0.00354 minima 2560
+epoch 1 batch 250/424 samples 32000/54210 elapsed 104.3s reward_mean -0.0046 reward_std 0.00353 minima 2560
+epoch 1 batch 300/424 samples 38400/54210 elapsed 123.4s reward_mean -0.00446 reward_std 0.00355 minima 2560
+epoch 1 batch 350/424 samples 44800/54210 elapsed 142.8s reward_mean -0.00458 reward_std 0.00364 minima 2560
+epoch 1 batch 400/424 samples 51200/54210 elapsed 162.0s reward_mean -0.00463 reward_std 0.00358 minima 2560
+epoch 1 batch 424/424 samples 54210/54210 elapsed 171.3s reward_mean -0.00467 reward_std 0.0035 minima 1320
+epoch 1 training done in 171.335s
+epoch 1 train-eval: evaluating 54210 samples
+epoch 1 train-eval: done in 3.481s accuracy=0.11131 loss=77.84616
+epoch 1 evaluating
+epoch 1 test: evaluating 8920 samples
+epoch 1 test: done in 0.537s accuracy=0.10717 loss=77.88084
+(timestamp = "2026-06-09T14:08:57", epoch = 1, seconds = 171.3345804, train_accuracy = 0.11130787677550268, train_loss = 77.84616f0, test_accuracy = 0.10717488789237668, test_loss = 77.88084f0, pred_counts = "832-749-575-1381-530-800-1005-966-791-1291", w_norm = 0.6042259f0, b_norm = 0.05087043f0, w_input_norm = 1.5336232f0, grad_w_norm = 0.0004163231f0, grad_b_norm = 9.337001f-5, grad_w_input_norm = 0.00513868f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, attractor_samples = 1320, reward_mean = -0.0046721f0, reward_std = 0.0034969856f0, best_accuracy = 0.10717488789237668, best_path = "ext/IsingLearning/experiments/MNIST/784-120-40-reinforce-minima-fixes/experiments/current/grid_weight_decay_lr0005_full6_earlystop/wd_1e-5\\best_checkpoint.bin", final_path = "")
+epoch 2 training
+epoch 2 batch 1/424 samples 128/54210 elapsed 0.4s reward_mean -0.00455 reward_std 0.00355 minima 2560
+epoch 2 batch 50/424 samples 6400/54210 elapsed 20.0s reward_mean -0.00456 reward_std 0.00354 minima 2560

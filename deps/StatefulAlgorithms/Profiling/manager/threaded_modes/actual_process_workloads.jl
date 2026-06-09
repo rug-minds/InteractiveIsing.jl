@@ -290,13 +290,13 @@ Create a typed manager with reusable copies of a workload template process.
 function actual_process_manager(workload::W, nworkers::N) where {W<:ActualProcessWorkload, N<:Integer}
     recipe = (;
         makeworker = (idx, manager) -> copyprocess(workload.template; context = deepcopy(StatefulAlgorithms.context(workload.template))),
-        prepare! = workload.prepare!,
+        loadjob! = workload.prepare!,
     )
 
     return ProcessManager(
         recipe;
         nworkers,
-        flush_policy = NoFlush(),
+        sync_policy = NoSync(),
         job_type = eltype(workload.jobs),
         result_type = Any,
         error_type = Any,

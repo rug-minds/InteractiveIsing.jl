@@ -602,7 +602,7 @@ function cnn_xor_manager(layer::L, graph::G, ps::P, config::C) where {L<:Layered
     state = LocalCNNManagerState(Ref(ps), parameter_buffer(ps), Ref(0), Optimisers.setup(optimiser, ps))
     recipe = (;
         makeworker = (idx, manager) -> cnn_worker(layer, worker_graph(graph, manager.state.params[], manager.config), manager.config),
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             ctx = worker_context(slot.worker)
             ctx.x .= job.x
             ctx.y .= job.y
@@ -610,14 +610,15 @@ function cnn_xor_manager(layer::L, graph::G, ps::P, config::C) where {L<:Layered
             StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
-        flush! = manager -> flush_cnn_buffers!(manager),
+        sync_to_state! = manager -> flush_cnn_buffers!(manager),
     )
     return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        sync_policy = StatefulAlgorithms.SyncAtEnd(),
+        execution = StatefulAlgorithms.ChannelWorkers(),
         worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = LocalCNNXORJob{Vector{FT},Vector{FT}},
@@ -652,7 +653,7 @@ end
 function run_cnn_batch!(manager::M, jobs::J, config::C, update_idx::Integer) where {M<:StatefulAlgorithms.ProcessManager,J,C<:LocalCNNXORConfig}
     clear_manager_buffers!(manager)
     manager.state.total_repeats[] = sum(job.repeats for job in jobs)
-    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs)
     add_weight_decay!(manager.state.batch_gradient, manager.state.params[], config.weight_decay)
     gradient_norm = parameter_norm(manager.state.batch_gradient)
     old_params = manager.state.params[]

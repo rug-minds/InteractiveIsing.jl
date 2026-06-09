@@ -1,4 +1,5 @@
 function connection_iterator(g::UndirectedAdjacency, v, include_diag = separate_diagonal(g))
+    A = g.sp
     it = (
         (A.rowval[idx], j, A.nzval[idx])
         for j in 1:size(A,2)

@@ -46,6 +46,7 @@ function nonchunked_input_field_manager(
     source::G,
     config::C,
     input_hidden_w::R,
+    execution,
 ) where {L<:IsingLearning.LayeredIsingGraphLayer,G,C<:InputFieldMNISTConfig,R<:Base.RefValue}
     params = input_field_params(source, input_hidden_w[])
     optimiser = Optimisers.Adam(config.lr)
@@ -68,7 +69,7 @@ function nonchunked_input_field_manager(
             shared_worker_graph(manager.state.source_graph),
             manager.state.input_hidden_w,
         ),
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             ctx = worker_context(slot.worker)
             copyto!(ctx.x[], job.x)
             copyto!(ctx.y[], job.y)
@@ -76,15 +77,16 @@ function nonchunked_input_field_manager(
             StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
-        runarguments = (slot, job, manager) -> (; phase_beta = manager.config.β),
-        flush! = flush_manager_buffers!,
+        providearguments = (slot, job, manager) -> (; phase_beta = manager.config.β),
+        sync_to_state! = flush_manager_buffers!,
     )
     return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = StatefulAlgorithms.NoFlush(),
+        sync_policy = StatefulAlgorithms.NoSync(),
+        execution,
         worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = InputFieldMNISTJob{Vector{FT},Vector{FT}},
@@ -93,10 +95,10 @@ end
 
 """Return the concrete threaded schedule for a non-chunked schedule name."""
 function nonchunked_schedule(schedule_name::S) where {S<:Symbol}
-    schedule_name === :dynamic && return Processes.Dynamic()
-    schedule_name === :greedy && return Processes.Greedy()
-    schedule_name === :static && return Processes.Static()
-    schedule_name === :channelworkers && return Processes.ChannelWorkers()
+    schedule_name === :dynamic && return StatefulAlgorithms.ThreadedWorkers(StatefulAlgorithms.Dynamic())
+    schedule_name === :greedy && return StatefulAlgorithms.ThreadedWorkers(StatefulAlgorithms.Greedy())
+    schedule_name === :static && return StatefulAlgorithms.ThreadedWorkers(StatefulAlgorithms.Static())
+    schedule_name === :channelworkers && return StatefulAlgorithms.ChannelWorkers()
     schedule_name === :spawn && return nothing
     throw(ArgumentError("unknown schedule $(schedule_name)"))
 end
@@ -119,13 +121,8 @@ function time_nonchunked_schedule_batch!(
 }
     fill_seconds = @elapsed jobs = fill_jobs!(jobs_buffer, xtrain, ytrain, indices)
     clear_seconds = @elapsed clear_manager_buffers!(manager)
-    schedule = nonchunked_schedule(schedule_name)
     run_seconds = @elapsed begin
-        if isnothing(schedule)
-            StatefulAlgorithms.run!(manager, jobs)
-        else
-            StatefulAlgorithms.run!(manager, jobs, schedule)
-        end
+        StatefulAlgorithms.run!(manager, jobs)
     end
     flush_seconds = @elapsed flush_manager_buffers!(manager)
     update_seconds = @elapsed begin
@@ -176,7 +173,8 @@ function main()
     all_rows = NamedTuple[]
     for schedule_name in schedule_names
         input_hidden_w = Ref(copy(setup.input_hidden_w))
-        manager_seconds = @elapsed manager = nonchunked_input_field_manager(setup.layer, setup.graph, config, input_hidden_w)
+        execution = nonchunked_schedule(schedule_name)
+        manager_seconds = @elapsed manager = nonchunked_input_field_manager(setup.layer, setup.graph, config, input_hidden_w, execution)
         try
             println(now(), " warmup schedule=$(schedule_name)")
             flush(stdout)

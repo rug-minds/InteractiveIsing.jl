@@ -637,15 +637,16 @@ function majority_manager(layer::L, graph::G, ps::P, config::C) where {L<:Layere
     state = MajorityVoteManagerState(layer, graph, Ref(ps), Ref(teacher), parameter_buffer(ps), Ref(0), Optimisers.setup(optimiser, ps))
     recipe = (;
         makeworker = majority_makeworker,
-        prepare! = majority_prepare!,
-        flush! = majority_flush!,
+        loadjob! = majority_prepare!,
+        sync_to_state! = majority_flush!,
     )
     return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        sync_policy = StatefulAlgorithms.SyncAtEnd(),
+        execution = StatefulAlgorithms.ChannelWorkers(),
         worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = MajorityVoteJob{Vector{FT},Vector{FT}},
@@ -679,7 +680,7 @@ end
 function run_majority_batch!(manager::M, jobs::J) where {M<:StatefulAlgorithms.ProcessManager,J}
     clear_manager_buffers!(manager)
     manager.state.total_repeats[] = sum(job.repeats for job in jobs)
-    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs)
     manager.state.opt_state, ps_new = Optimisers.update(manager.state.opt_state, manager.state.params[], manager.state.batch_gradient)
     manager.state.params[] = ps_new
     sync_worker_params!(manager, ps_new)

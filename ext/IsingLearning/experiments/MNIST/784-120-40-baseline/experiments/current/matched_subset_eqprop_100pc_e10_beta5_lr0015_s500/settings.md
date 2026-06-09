@@ -1,0 +1,22 @@
+# MNIST 784-120-40 Adam Baseline
+
+- paper: https://arxiv.org/pdf/2305.18321
+- architecture: `784 -> 120 -> 40`
+- sampled graph: hidden/output only, with no structural input layer
+- input handling: MNIST pixels in `[0, 1]` are projected through external `784 -> hidden` weights into a worker-local field
+- workers: `32`
+- manager execution: `ChannelWorkers()` with one sample per manager job
+- worker graph adjacency: pointer-shared with source graph
+- worker graph base bias: pointer-shared with source graph
+- learning step: one-sided free/nudged inline `LoopAlgorithm` from `@Routine`
+- validation: `ChannelWorkers()` ProcessManager with worker-local stats
+- job buffers: preallocated per-sample jobs reused across minibatches/evaluations
+- optimiser: `Optimisers.Adam(0.0015)`
+- epochs/batchsize: `10` / `128`
+- train/test per class: `100` / `100`
+- train eval per class: `0`
+- sweeps/relaxation steps: `500.0` / `80000`
+- beta/temp/stepsize: `5.0` / `0.001` / `0.5`
+- weight scale/decay: `0.005` / `0.0`
+- resume from: `none`
+- resume epoch: `-1`

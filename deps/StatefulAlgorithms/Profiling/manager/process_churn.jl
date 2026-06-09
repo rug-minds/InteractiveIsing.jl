@@ -55,15 +55,15 @@ function process_churn_recipe(; inline::Bool = false)
 
     if inline
         return (;
-            prepare! = prepare_callback,
+            loadjob! = prepare_callback,
             start! = (slot, job, manager) -> runprocessinline!(slot.worker),
             isdone = (slot, manager) -> true,
             finalize! = (slot, job, manager) -> nothing,
-            consume! = consume_callback,
+            afterjob! = consume_callback,
         )
     end
 
-    return (; prepare! = prepare_callback, consume! = consume_callback)
+    return (; loadjob! = prepare_callback, afterjob! = consume_callback)
 end
 
 """
@@ -76,7 +76,7 @@ function process_churn_manager(; inline::Bool = false)
     return ProcessManager(
         process_churn_recipe(; inline);
         workers = (worker,),
-        flush_policy = NoFlush(),
+        sync_policy = NoSync(),
         job_type = Int,
         result_type = inline ? Nothing : Any,
         error_type = Any,

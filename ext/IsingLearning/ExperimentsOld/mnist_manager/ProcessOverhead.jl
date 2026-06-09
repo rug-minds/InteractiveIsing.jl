@@ -113,7 +113,7 @@ MNIST training.
 """
 function build_one_worker_manager(worker::W) where {W<:Process}
     recipe = (;
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             IsingLearning._write_example!(slot.worker, job.x, job.y)
             resetworker!(slot)
             return nothing
@@ -122,7 +122,7 @@ function build_one_worker_manager(worker::W) where {W<:Process}
     return ProcessManager(
         recipe;
         workers = (worker,),
-        flush_policy = NoFlush(),
+        sync_policy = NoSync(),
         poll_interval = 0.0,
     )
 end

@@ -602,25 +602,25 @@ end
 
 function _mnist_training_manager(workers)
     recipe = (;
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             _write_example!(slot.worker, job.x, job.y)
             resetworker!(slot)
             return nothing
         end,
     )
-    return ProcessManager(recipe; workers, flush_policy = NoFlush(), poll_interval = 0.0)
+    return ProcessManager(recipe; workers, sync_policy = NoSync(), poll_interval = 0.0)
 end
 
 function _mnist_training_manager(layer, graph, params, nworkers::Integer)
     recipe = (;
         makeworker = (idx, manager) -> _worker_process(layer, _worker_graph(graph, params)),
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             _write_example!(slot.worker, job.x, job.y)
             resetworker!(slot)
             return nothing
         end,
     )
-    return ProcessManager(recipe; nworkers, flush_policy = NoFlush(), poll_interval = 0.0)
+    return ProcessManager(recipe; nworkers, sync_policy = NoSync(), poll_interval = 0.0)
 end
 
 function MNISTThreadedTrainer(
@@ -680,14 +680,14 @@ function init_mnist_process_manager(
             label = Ref(-1),
         ),
 
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             resetworker!(slot)
             _write_input!(slot.worker, job.x)
             manager.state.label[] = get(job, :label, -1)
             return nothing
         end,
 
-        consume! = (slot, job, manager) -> begin
+        afterjob! = (slot, job, manager) -> begin
             ctx = StatefulAlgorithms.context(slot.worker)
             _mnist_manager_output!(manager, ctx.dynamics.model)
             return nothing
@@ -702,7 +702,7 @@ function init_mnist_process_manager(
     manager = ProcessManager(
         recipe;
         workers = (worker,),
-        flush_policy = NoFlush(),
+        sync_policy = NoSync(),
         poll_interval,
     )
     return MNISTForwardManager(layer, graph, manager)
@@ -758,7 +758,7 @@ function init_mnist_trainer(
                 input_mode = manager.config.input_mode,
             ),
         ),
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             _write_example!(slot.worker, job.x, job.y)
             resetworker!(slot)
             return nothing
@@ -769,7 +769,7 @@ function init_mnist_trainer(
         nworkers = Int(numthreads),
         config = (; share_static_model_data, input_mode),
         worker_init = share_static_model_data ? StatefulAlgorithms.MakeEachWorker() : StatefulAlgorithms.CopyFirstWorker(),
-        flush_policy = NoFlush(),
+        sync_policy = NoSync(),
         poll_interval = 0.0,
     )
     workers = collect(StatefulAlgorithms.workers(manager))

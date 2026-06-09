@@ -67,10 +67,6 @@ struct InputFieldMNISTJobBuffer{J<:AbstractVector}
     jobs::J
 end
 
-struct InputFieldMNISTChunkBuffer{J<:AbstractVector}
-    jobs::J
-end
-
 mutable struct InputFieldMNISTManagerState{L,G,P,B,O,X,Y,W}
     layer::L
     source_graph::G
@@ -188,6 +184,27 @@ function scale_buffer!(buffer::B, scale::T) where {B,T<:Real}
     return buffer
 end
 
+"""Return an `Float64` Euclidean norm for a dense or sparse parameter container."""
+function parameter_norm(x::X) where {X}
+    return sqrt(sum(abs2, x))
+end
+
+"""Return parameter and last-minibatch gradient norms for collapse diagnostics."""
+function training_norms(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
+    params = manager.state.params[]
+    grad = manager.state.batch_gradient
+    w_input_norm = hasproperty(params, :w_input) ? parameter_norm(params.w_input) : 0.0
+    grad_w_input_norm = hasproperty(grad, :w_input) ? parameter_norm(grad.w_input) : 0.0
+    return (;
+        w_norm = parameter_norm(params.w),
+        b_norm = parameter_norm(params.b),
+        w_input_norm,
+        grad_w_norm = parameter_norm(grad.w),
+        grad_b_norm = parameter_norm(grad.b),
+        grad_w_input_norm,
+    )
+end
+
 """Normalize raw MNIST images to `[0, 1]` input-field intensities."""
 function normalize_images(images::A, ::Type{T}) where {A,T<:AbstractFloat}
     x = T.(images)
@@ -264,39 +281,7 @@ function fill_jobs!(buffer::B, x::X, y::Y, indices::V) where {B<:InputFieldMNIST
     return @view buffer.jobs[1:n]
 end
 
-"""Create reusable manager chunk jobs that store sample indices only."""
-function InputFieldMNISTChunkBuffer(capacity::I, chunk_capacity::J) where {I<:Integer,J<:Integer}
-    jobs = [Int[] for _ in 1:Int(capacity)]
-    for job in jobs
-        sizehint!(job, Int(chunk_capacity))
-    end
-    return InputFieldMNISTChunkBuffer(jobs)
-end
-
-"""Return the configured per-manager-job chunk size, using one chunk per worker by default."""
-function manager_chunk_size(config::C, nsamples::I) where {C<:InputFieldMNISTConfig,I<:Integer}
-    requested = Int(config.chunk_size)
-    requested > 0 && return requested
-    return max(1, cld(Int(nsamples), max(1, Int(config.workers))))
-end
-
-"""Fill preallocated chunk jobs from selected sample indices and return the active view."""
-function fill_chunk_jobs!(buffer::B, indices::V, chunk_size::I) where {B<:InputFieldMNISTChunkBuffer,V<:AbstractVector{Int},I<:Integer}
-    n = length(indices)
-    n == 0 && return @view buffer.jobs[1:0]
-    chunks = cld(n, Int(chunk_size))
-    chunks <= length(buffer.jobs) || throw(ArgumentError("chunk buffer capacity $(length(buffer.jobs)) is smaller than requested chunks $(chunks)"))
-    @inbounds for chunk_idx in 1:chunks
-        job = buffer.jobs[chunk_idx]
-        empty!(job)
-        first_idx = (chunk_idx - 1) * Int(chunk_size) + 1
-        last_idx = min(chunk_idx * Int(chunk_size), n)
-        append!(job, @view indices[first_idx:last_idx])
-    end
-    return @view buffer.jobs[1:chunks]
-end
-
-"""Point a manager at the matrices used by the current chunked job list."""
+"""Point a manager at the matrices used by index-based jobs."""
 function set_manager_inputs!(manager::M, x::X, y::Y) where {M<:StatefulAlgorithms.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix}
     manager.state.current_x[] = x
     manager.state.current_y[] = y
@@ -458,10 +443,9 @@ function accumulate_input_field_gradient!(
     β::Real,
 ) where G
     IsingLearning.contrastive_gradient(isinggraph, nudged_state, equilibrium_state, β; buffers = buffers)
-    invβ = inv(FT(β))
     hidden_count = size(buffers.w_input, 1)
     @inbounds for input_idx in eachindex(x)
-        xval = x[input_idx] * invβ
+        xval = x[input_idx]
         for hidden_idx in 1:hidden_count
             buffers.w_input[hidden_idx, input_idx] += -xval * (nudged_state[hidden_idx] - equilibrium_state[hidden_idx])
         end
@@ -806,67 +790,34 @@ function input_field_validation_worker(
     )
 end
 
-"""Run one training chunk on its assigned normal `Process` worker."""
-function run_training_chunk_task!(worker::W, job::J, manager::M) where {W<:StatefulAlgorithms.Process,J<:AbstractVector{Int},M<:StatefulAlgorithms.ProcessManager}
-    ctx = worker_context(worker)
-    x = manager.state.current_x[]
-    y = manager.state.current_y[]
-    @inbounds for sample_idx in job
-        load_sample_into_worker!(ctx, x, y, sample_idx)
-        StatefulAlgorithms.reset!(worker)
-        StatefulAlgorithms.runprocessinline!(worker; phase_beta = manager.config.β)
-    end
-    return worker
+"""Load one prebuilt training job into a persistent field-input worker."""
+function load_input_field_training_job!(slot::S, job::J, manager::M) where {
+    S,
+    J<:InputFieldMNISTJob,
+    M<:StatefulAlgorithms.ProcessManager,
+}
+    ctx = worker_context(slot.worker)
+    copyto!(ctx.x[], job.x)
+    copyto!(ctx.y[], job.y)
+    StatefulAlgorithms.resetworker!(slot)
+    return nothing
 end
 
-"""Run one validation chunk on its assigned normal `Process` worker."""
-function run_validation_chunk_task!(worker::W, job::J, manager::M) where {W<:StatefulAlgorithms.Process,J<:AbstractVector{Int},M<:StatefulAlgorithms.ProcessManager}
-    ctx = worker_context(worker)
-    x = manager.state.current_x[]
-    y = manager.state.current_y[]
-    @inbounds for sample_idx in job
-        load_sample_into_worker!(ctx, x, y, sample_idx)
-        StatefulAlgorithms.reset!(worker)
-        StatefulAlgorithms.runprocessinline!(worker)
-    end
-    return worker
+"""Load one prebuilt validation job into a persistent field-input worker."""
+function load_input_field_validation_job!(slot::S, job::J, manager::M) where {
+    S,
+    J<:InputFieldMNISTJob,
+    M<:StatefulAlgorithms.ProcessManager,
+}
+    ctx = worker_context(slot.worker)
+    copyto!(ctx.x[], job.x)
+    copyto!(ctx.y[], job.y)
+    StatefulAlgorithms.resetworker!(slot)
+    return nothing
 end
 
-"""Start a spawned chunk task and store its task handle in the recipe."""
-function start_training_chunk!(slot::S, job::J, manager::M) where {S,J<:AbstractVector{Int},M<:StatefulAlgorithms.ProcessManager}
-    manager.recipe.tasks[slot.idx] = Threads.@spawn run_training_chunk_task!(slot.worker, job, manager)
-    return slot.worker
-end
-
-"""Start a spawned validation chunk task and store its task handle in the recipe."""
-function start_validation_chunk!(slot::S, job::J, manager::M) where {S,J<:AbstractVector{Int},M<:StatefulAlgorithms.ProcessManager}
-    manager.recipe.tasks[slot.idx] = Threads.@spawn run_validation_chunk_task!(slot.worker, job, manager)
-    return slot.worker
-end
-
-"""Return whether a custom chunk task has finished."""
-function chunk_task_isdone(slot::S, manager::M) where {S,M<:StatefulAlgorithms.ProcessManager}
-    task = manager.recipe.tasks[slot.idx]
-    return !isnothing(task) && istaskdone(task)
-end
-
-"""Fetch a finished custom chunk task and make its normal `Process` reusable."""
-function finalize_chunk_task!(slot::S, job, manager::M) where {S,M<:StatefulAlgorithms.ProcessManager}
-    task = manager.recipe.tasks[slot.idx]
-    if !isnothing(task)
-        fetch(task)
-        manager.recipe.tasks[slot.idx] = nothing
-    end
-    return slot.worker
-end
-
-"""Close a normal Process worker after any custom chunk task has finished."""
-function close_chunk_worker!(slot::S, manager::M) where {S,M<:StatefulAlgorithms.ProcessManager}
-    task = manager.recipe.tasks[slot.idx]
-    if !isnothing(task)
-        fetch(task)
-        manager.recipe.tasks[slot.idx] = nothing
-    end
+"""Close one persistent field-input Process worker."""
+function close_process_worker!(slot::S, manager::M) where {S,M<:StatefulAlgorithms.ProcessManager}
     close(slot.worker)
     return slot.worker
 end
@@ -968,30 +919,28 @@ function input_field_manager(
         Ref(zeros(FT, NCLASSES * config.output_replicas, 0)),
         input_hidden_w,
     )
-    tasks = Union{Nothing,Task}[nothing for _ in 1:config.workers]
     recipe = (;
-        tasks,
         makeworker = (idx, manager) -> input_field_worker(
             algorithm,
             manager.state.layer,
             shared_worker_graph(manager.state.source_graph),
             manager.state.input_hidden_w,
         ),
-        start! = start_training_chunk!,
-        isdone = (slot, manager) -> chunk_task_isdone(slot, manager),
-        finalize! = finalize_chunk_task!,
-        close! = close_chunk_worker!,
-        flush! = flush_manager_buffers!,
+        loadjob! = load_input_field_training_job!,
+        providearguments = (slot, job, manager) -> (; phase_beta = manager.config.β),
+        close! = close_process_worker!,
+        sync_to_state! = flush_manager_buffers!,
     )
     return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        sync_policy = StatefulAlgorithms.SyncAtEnd(),
         worker_init = StatefulAlgorithms.MakeEachWorker(),
+        execution = StatefulAlgorithms.ChannelWorkers(),
         poll_interval = 0.0,
-        job_type = Vector{Int},
+        job_type = InputFieldMNISTJob{Vector{FT},Vector{FT}},
     )
 end
 
@@ -1014,30 +963,27 @@ function input_field_validation_manager(
         Ref(zeros(FT, NCLASSES * config.output_replicas, 0)),
         input_hidden_w,
     )
-    tasks = Union{Nothing,Task}[nothing for _ in 1:config.workers]
     recipe = (;
-        tasks,
         makeworker = (idx, manager) -> input_field_validation_worker(
             algorithm,
             manager.state.layer,
             shared_worker_graph(manager.state.source_graph),
             manager.state.input_hidden_w,
         ),
-        start! = start_validation_chunk!,
-        isdone = (slot, manager) -> chunk_task_isdone(slot, manager),
-        finalize! = finalize_chunk_task!,
-        close! = close_chunk_worker!,
-        flush! = flush_validation_buffers!,
+        loadjob! = load_input_field_validation_job!,
+        close! = close_process_worker!,
+        sync_to_state! = flush_validation_buffers!,
     )
     return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = config.workers,
         config,
         state,
-        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        sync_policy = StatefulAlgorithms.SyncAtEnd(),
         worker_init = StatefulAlgorithms.MakeEachWorker(),
+        execution = StatefulAlgorithms.ChannelWorkers(),
         poll_interval = 0.0,
-        job_type = Vector{Int},
+        job_type = InputFieldMNISTJob{Vector{FT},Vector{FT}},
     )
 end
 
@@ -1053,7 +999,7 @@ end
 """Run one minibatch through the manager and apply one Adam update."""
 function run_minibatch!(manager::M, jobs::J) where {M<:StatefulAlgorithms.ProcessManager,J<:AbstractVector}
     clear_manager_buffers!(manager)
-    manager.state.nsamples[] = sum(length, jobs)
+    manager.state.nsamples[] = length(jobs)
     StatefulAlgorithms.run!(manager, jobs)
     manager.state.opt_state, params = Optimisers.update(manager.state.opt_state, manager.state.params[], manager.state.batch_gradient)
     manager.state.params[] = params
@@ -1068,11 +1014,10 @@ function evaluate(
     y::Y,
     config::C,
     jobs::B,
-) where {M<:StatefulAlgorithms.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix,C<:InputFieldMNISTConfig,B<:InputFieldMNISTChunkBuffer}
+) where {M<:StatefulAlgorithms.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix,C<:InputFieldMNISTConfig,B<:InputFieldMNISTJobBuffer}
     clear_validation_buffers!(manager)
-    set_manager_inputs!(manager, x, y)
-    chunks = fill_chunk_jobs!(jobs, axes(x, 2), manager_chunk_size(config, size(x, 2)))
-    StatefulAlgorithms.run!(manager, chunks)
+    active_jobs = fill_jobs!(jobs, x, y, collect(axes(x, 2)))
+    StatefulAlgorithms.run!(manager, active_jobs)
     nsamples = manager.state.nsamples[]
     return (;
         accuracy = nsamples == 0 ? 0.0 : manager.state.ncorrect[] / nsamples,
@@ -1318,12 +1263,12 @@ function write_settings!(path::P, config::C, relaxation_steps::I) where {P<:Abst
         println(io, "- sampled graph: hidden/output only, with no structural input layer")
         println(io, "- input handling: MNIST pixels in `[0, 1]` are projected through external `784 -> hidden` weights into a worker-local field")
         println(io, "- workers: `$(config.workers)`")
-        println(io, "- manager scheduler/chunk size: `$(config.scheduler)` / `$(manager_chunk_size(config, config.batchsize))`")
+        println(io, "- manager execution: `ChannelWorkers()` with one sample per manager job")
         println(io, "- worker graph adjacency: pointer-shared with source graph")
         println(io, "- worker graph base bias: pointer-shared with source graph")
-        println(io, "- learning step: chunked one-sided free/nudged inline `LoopAlgorithm` from `@Routine`")
-        println(io, "- validation: chunked ProcessManager with worker-local stats")
-        println(io, "- job buffers: preallocated sample-index chunks reused across minibatches/evaluations")
+        println(io, "- learning step: one-sided free/nudged inline `LoopAlgorithm` from `@Routine`")
+        println(io, "- validation: `ChannelWorkers()` ProcessManager with worker-local stats")
+        println(io, "- job buffers: preallocated per-sample jobs reused across minibatches/evaluations")
         println(io, "- optimiser: `Optimisers.Adam($(config.lr))`")
         println(io, "- epochs/batchsize: `$(config.epochs)` / `$(config.batchsize)`")
         println(io, "- train/test per class: `$(config.train_per_class)` / `$(config.test_per_class)`")
@@ -1341,9 +1286,6 @@ end
 function validate_config!(config::C) where {C<:InputFieldMNISTConfig}
     config.workers > 0 || throw(ArgumentError("ISING_MNIST_IF_WORKERS must be positive"))
     config.batchsize > 0 || throw(ArgumentError("ISING_MNIST_IF_BATCHSIZE must be positive"))
-    lowercase(String(config.scheduler)) == "spawn" ||
-        throw(ArgumentError("chunked baseline manager currently supports ISING_MNIST_IF_SCHEDULER=spawn only"))
-    config.chunk_size >= 0 || throw(ArgumentError("ISING_MNIST_IF_CHUNK_SIZE must be nonnegative"))
     config.epochs >= 0 || throw(ArgumentError("ISING_MNIST_IF_EPOCHS must be nonnegative"))
     config.hidden == 120 || @warn "baseline paper hidden count is 120" hidden = config.hidden
     config.output_replicas == 4 || @warn "baseline paper output count is 40, i.e. four replicas per digit" output_replicas = config.output_replicas
@@ -1381,10 +1323,9 @@ function create_session(config::C) where {C<:InputFieldMNISTConfig}
     println("constructing ", config.workers, "-worker validation manager")
     flush(stdout)
     validator = input_field_validation_manager(setup.layer, setup.graph, config, input_hidden_w)
-    train_jobs = InputFieldMNISTChunkBuffer(config.workers, manager_chunk_size(config, config.batchsize))
-    eval_capacity = max(1, config.workers)
-    eval_chunk_capacity = manager_chunk_size(config, max(size(xtrain_eval, 2), size(xtest, 2), 1))
-    eval_jobs = InputFieldMNISTChunkBuffer(eval_capacity, eval_chunk_capacity)
+    train_jobs = InputFieldMNISTJobBuffer(config.batchsize, INPUT_DIM, NCLASSES * config.output_replicas)
+    eval_capacity = max(size(xtrain_eval, 2), size(xtest, 2), 1)
+    eval_jobs = InputFieldMNISTJobBuffer(eval_capacity, INPUT_DIM, NCLASSES * config.output_replicas)
     println("starting epochs")
     flush(stdout)
     paths = session_paths(config.outdir)
@@ -1427,12 +1368,12 @@ function run_epochs!(session::S; start_epoch::Int = 0, stop_epoch::Int = session
             seconds = @elapsed begin
                 for first_idx in 1:config.batchsize:length(order)
                     last_idx = min(first_idx + config.batchsize - 1, length(order))
-                    set_manager_inputs!(session.manager, session.xtrain, session.ytrain)
                     batch_indices = @view order[first_idx:last_idx]
-                    jobs = fill_chunk_jobs!(
+                    jobs = fill_jobs!(
                         session.train_jobs,
+                        session.xtrain,
+                        session.ytrain,
                         batch_indices,
-                        manager_chunk_size(config, length(batch_indices)),
                     )
                     run_minibatch!(session.manager, jobs)
                 end
@@ -1462,6 +1403,7 @@ function run_epochs!(session::S; start_epoch::Int = 0, stop_epoch::Int = session
             end
         end
 
+        norms = training_norms(session.manager)
         row = (;
             timestamp = Dates.format(now(), "yyyy-mm-ddTHH:MM:SS"),
             epoch,
@@ -1471,6 +1413,12 @@ function run_epochs!(session::S; start_epoch::Int = 0, stop_epoch::Int = session
             test_accuracy,
             test_loss,
             pred_counts,
+            norms.w_norm,
+            norms.b_norm,
+            norms.w_input_norm,
+            norms.grad_w_norm,
+            norms.grad_b_norm,
+            norms.grad_w_input_norm,
             best_accuracy = session.best_accuracy[],
             best_path = session.best_path,
             final_path = epoch == config.epochs ? session.final_path : "",

@@ -546,21 +546,22 @@ function paper_manager(source::M) where {M<:PaperMNISTModel}
     state = PaperMNISTManagerState(source, gradient_buffer(source), Ref(0), Ref(0), Ref(0), Ref(0f0))
     recipe = (;
         makeworker = (idx, manager) -> paper_worker(manager.state.model, idx),
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             ctx = worker_context(slot.worker)
             ctx.x .= job.x
             ctx.y .= job.y
             StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
-        flush! = manager -> flush_manager_buffers!(manager),
+        sync_to_state! = manager -> flush_manager_buffers!(manager),
     )
     return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = source.config.workers,
         config = source.config,
         state,
-        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        sync_policy = StatefulAlgorithms.SyncAtEnd(),
+        execution = StatefulAlgorithms.ChannelWorkers(),
         worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = PaperMNISTJob{Vector{PMNIST_FT},Vector{PMNIST_FT}},
@@ -602,7 +603,7 @@ end
 """Run one manager minibatch and update the shared source parameters once."""
 function run_minibatch!(manager::M, jobs::J) where {M<:StatefulAlgorithms.ProcessManager,J<:AbstractVector}
     clear_manager_buffers!(manager)
-    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs)
     apply_gradient!(manager.state.model, manager.state.batch_gradient, manager.state.nsamples[])
     return (;
         nsamples = manager.state.nsamples[],
@@ -885,7 +886,7 @@ function write_settings!(path::P, config::C) where {P<:AbstractString,C<:PaperMN
         println(io, "- temperatures hot/cold/reverse: `$(config.hot_temp)`, `$(config.cold_temp)`, `$(config.reverse_temp)`")
         println(io, "- gradient normalization: `$(config.gradient_normalization)`")
         println(io, "- worker graph adjacency: shared with source graph")
-        println(io, "- worker parameters: shared read-only during minibatch; source updates once after `FlushAtEnd()`")
+        println(io, "- worker parameters: shared read-only during minibatch; source updates once after `SyncAtEnd()`")
     end
     return path
 end

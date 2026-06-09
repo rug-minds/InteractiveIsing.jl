@@ -1,0 +1,2 @@
+timestamp,epoch,seconds,train_accuracy,train_loss,test_accuracy,test_loss,pred_counts,w_norm,b_norm,w_input_norm,grad_w_norm,grad_b_norm,grad_w_input_norm,best_accuracy,best_path,final_path
+2026-06-08T20:05:25,0,0.0,0.0,54.254017,0.0,54.63089,0-3-2-1-1-0-1-0-1-1,0.48583895,0.0,1.5314544,0.0,0.0,0.0,0.0,ext/IsingLearning/experiments/MNIST/784-120-40-surrogate-attractor/experiments/current/smoke_transition\best_checkpoint.bin,

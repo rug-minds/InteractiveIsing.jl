@@ -42,7 +42,7 @@ end
 
 """Write one sample into a normal worker and run the current Process path inline."""
 function run_one_serial_process_sample!(worker::W, x::X, y::Y, sample_idx::I, config::C) where {
-    W<:Processes.Process,
+    W<:StatefulAlgorithms.Process,
     X<:AbstractMatrix,
     Y<:AbstractMatrix,
     I<:Integer,
@@ -50,13 +50,13 @@ function run_one_serial_process_sample!(worker::W, x::X, y::Y, sample_idx::I, co
 }
     ctx = worker_context(worker)
     load_sample_into_worker!(ctx, x, y, sample_idx)
-    Processes.reset!(worker)
-    return Processes.runprocessinline!(worker; phase_beta = config.β)
+    StatefulAlgorithms.reset!(worker)
+    return StatefulAlgorithms.runprocessinline!(worker; phase_beta = config.β)
 end
 
 """Measure warmed serial Process samples with the same config as the manager run."""
 function measure_serial_process!(setup, xtrain::X, ytrain::Y, config::C) where {X<:AbstractMatrix,Y<:AbstractMatrix,C<:InputFieldMNISTConfig}
-    algorithm = Processes.resolve(input_field_contrastive_algorithm(setup.layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(setup.layer))
     worker = input_field_worker(algorithm, setup.layer, shared_worker_graph(setup.graph), Ref(setup.input_hidden_w))
     try
         println("[", Dates.format(now(), "HH:MM:SS"), "] warming serial process")
@@ -109,12 +109,12 @@ function measure_one_worker_manager!(setup, xtrain::X, ytrain::Y, config::C) whe
         println("[", Dates.format(now(), "HH:MM:SS"), "] warming one-worker manager")
         flush(stdout)
         manager.state.nsamples[] = sum(length, jobs)
-        Processes.run!(manager, jobs)
+        StatefulAlgorithms.run!(manager, jobs)
 
         clear_manager_buffers!(manager)
         seconds = @elapsed begin
             manager.state.nsamples[] = sum(length, jobs)
-            Processes.run!(manager, jobs)
+            StatefulAlgorithms.run!(manager, jobs)
         end
         row = (;
             timestamp = Dates.format(now(), "yyyy-mm-ddTHH:MM:SS"),

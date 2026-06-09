@@ -16,7 +16,7 @@ allocating worker tasks or result buffers.
 function manager_profile_recipe()
     return (;
         makeworker = (idx, manager) -> ManagerProfileWorker(0, false),
-        prepare! = (slot, job, manager) -> (slot.worker.count += job; nothing),
+        loadjob! = (slot, job, manager) -> (slot.worker.count += job; nothing),
         start! = (slot, job, manager) -> (slot.worker.done = true; nothing),
         isdone = (slot, manager) -> slot.worker.done,
         finalize! = (slot, job, manager) -> (slot.worker.done = false; nothing),
@@ -32,7 +32,7 @@ function manager_profile_manager(nworkers::T) where {T<:Integer}
     return ProcessManager(
         manager_profile_recipe();
         nworkers,
-        flush_policy = NoFlush(),
+        sync_policy = NoSync(),
         job_type = Int,
         result_type = Nothing,
         error_type = Any,

@@ -171,11 +171,11 @@ end
 function train_manager_recipe_8x8(layer, prototype_graph)
     return (;
         makeworker = (idx, manager) -> make_train_worker_8x8(layer, prototype_graph, manager.state.params, manager.config, idx),
-        prepare! = (slot, job, manager) -> prepare_train_worker_8x8!(slot.worker, manager.state, manager.config, job),
+        loadjob! = (slot, job, manager) -> prepare_train_worker_8x8!(slot.worker, manager.state, manager.config, job),
         isdone = (slot, manager) -> StatefulAlgorithms8x8.isdone(slot.worker),
-        runarguments = (slot, job, manager) -> (; clamping_beta = manager.config.β),
-        consume! = (slot, job, manager) -> collect_train_response_8x8!(manager.state.current_responses, slot.worker),
-        flush! = flush_train_buffers_8x8!,
+        providearguments = (slot, job, manager) -> (; clamping_beta = manager.config.β),
+        afterjob! = (slot, job, manager) -> collect_train_response_8x8!(manager.state.current_responses, slot.worker),
+        sync_to_state! = flush_train_buffers_8x8!,
     )
 end
 
@@ -183,9 +183,9 @@ end
 function eval_manager_recipe_8x8(layer, prototype_graph)
     return (;
         makeworker = (idx, manager) -> make_eval_worker_8x8(layer, prototype_graph, manager.state.params, manager.config, idx),
-        prepare! = (slot, job, manager) -> prepare_eval_worker_8x8!(slot.worker, manager.state, manager.config, job),
+        loadjob! = (slot, job, manager) -> prepare_eval_worker_8x8!(slot.worker, manager.state, manager.config, job),
         isdone = (slot, manager) -> StatefulAlgorithms8x8.isdone(slot.worker),
-        consume! = (slot, job, manager) -> begin
+        afterjob! = (slot, job, manager) -> begin
             output = only(II.state(StatefulAlgorithms.context(slot.worker).dynamics.model[end]))
             push!(manager.state.current_sample_outputs[job.sample_idx], output)
         end,
@@ -216,7 +216,7 @@ function managed_trainer_8x8(config::Hidden8x8Config; workers::Integer = manager
         nworkers = workers,
         config,
         state = trainer,
-        flush_policy = StatefulAlgorithms8x8.FlushAtEnd(),
+        sync_policy = StatefulAlgorithms8x8.SyncAtEnd(),
         poll_interval = 0.0,
         job_type = Hidden8x8TrainJob,
     )
@@ -225,7 +225,7 @@ function managed_trainer_8x8(config::Hidden8x8Config; workers::Integer = manager
         nworkers = 1,
         config,
         state = trainer,
-        flush_policy = StatefulAlgorithms8x8.NoFlush(),
+        sync_policy = StatefulAlgorithms8x8.NoSync(),
         poll_interval = 0.0,
         job_type = Hidden8x8EvalJob,
     )

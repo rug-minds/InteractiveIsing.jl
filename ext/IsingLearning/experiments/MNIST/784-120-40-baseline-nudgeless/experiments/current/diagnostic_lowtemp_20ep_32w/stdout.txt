@@ -1,0 +1,72 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+building MNIST 784-120-40 layer
+loading training split
+loading train-eval split
+loading test split
+constructing 32-worker nudgeless Adam manager
+constructing 32-worker validation manager
+starting epochs
+epoch 0 evaluating
+(timestamp = "2026-06-08T17:50:37", epoch = 0, seconds = 0.0, train_accuracy = 0.095, train_loss = 53.909462f0, test_accuracy = 0.11, test_loss = 53.661747f0, pred_counts = "18-22-21-15-19-22-19-21-23-20", w_norm = 0.48583895f0, b_norm = 0.0f0, w_input_norm = 1.5314544f0, grad_w_norm = 0.0f0, grad_b_norm = 0.0f0, grad_w_input_norm = 0.0f0, best_accuracy = 0.11, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 1 training
+epoch 1 evaluating
+(timestamp = "2026-06-08T17:50:46", epoch = 1, seconds = 7.7375372, train_accuracy = 0.07, train_loss = 53.349308f0, test_accuracy = 0.135, test_loss = 52.859074f0, pred_counts = "16-25-18-23-18-15-26-16-24-19", w_norm = 0.48616803f0, b_norm = 0.0020227453f0, w_input_norm = 1.5319865f0, grad_w_norm = 74.12158f0, grad_b_norm = 30.253428f0, grad_w_input_norm = 205.00606f0, best_accuracy = 0.135, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 2 training
+epoch 2 evaluating
+(timestamp = "2026-06-08T17:50:46", epoch = 2, seconds = 0.2678744, train_accuracy = 0.1, train_loss = 53.766518f0, test_accuracy = 0.08, test_loss = 53.981113f0, pred_counts = "20-21-14-30-13-21-28-18-15-20", w_norm = 0.48621628f0, b_norm = 0.0032981127f0, w_input_norm = 1.5325367f0, grad_w_norm = 69.8153f0, grad_b_norm = 25.40257f0, grad_w_input_norm = 168.20792f0, best_accuracy = 0.135, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 3 training
+epoch 3 evaluating
+(timestamp = "2026-06-08T17:50:46", epoch = 3, seconds = 0.2715433, train_accuracy = 0.12, train_loss = 53.30803f0, test_accuracy = 0.115, test_loss = 52.978703f0, pred_counts = "19-20-15-23-15-22-19-25-27-15", w_norm = 0.48630655f0, b_norm = 0.004444194f0, w_input_norm = 1.5330904f0, grad_w_norm = 85.704544f0, grad_b_norm = 30.701069f0, grad_w_input_norm = 222.87619f0, best_accuracy = 0.135, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 4 training
+epoch 4 evaluating
+(timestamp = "2026-06-08T17:50:46", epoch = 4, seconds = 0.2811317, train_accuracy = 0.05, train_loss = 53.77272f0, test_accuracy = 0.075, test_loss = 53.620117f0, pred_counts = "16-23-16-23-25-16-21-18-23-19", w_norm = 0.4862812f0, b_norm = 0.005594616f0, w_input_norm = 1.5335535f0, grad_w_norm = 75.2791f0, grad_b_norm = 30.602135f0, grad_w_input_norm = 191.36441f0, best_accuracy = 0.135, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 5 training
+epoch 5 evaluating
+(timestamp = "2026-06-08T17:50:47", epoch = 5, seconds = 0.2787787, train_accuracy = 0.055, train_loss = 52.991486f0, test_accuracy = 0.11, test_loss = 53.482735f0, pred_counts = "19-33-26-15-16-24-17-14-19-17", w_norm = 0.48616195f0, b_norm = 0.006678174f0, w_input_norm = 1.5338907f0, grad_w_norm = 80.406555f0, grad_b_norm = 30.707525f0, grad_w_input_norm = 219.95041f0, best_accuracy = 0.135, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 6 training
+epoch 6 evaluating
+(timestamp = "2026-06-08T17:50:47", epoch = 6, seconds = 0.2725207, train_accuracy = 0.11, train_loss = 53.197025f0, test_accuracy = 0.075, test_loss = 53.55128f0, pred_counts = "17-20-16-20-14-30-22-24-15-22", w_norm = 0.48608568f0, b_norm = 0.007736904f0, w_input_norm = 1.5342206f0, grad_w_norm = 93.12107f0, grad_b_norm = 35.342354f0, grad_w_input_norm = 254.74228f0, best_accuracy = 0.135, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 7 training
+epoch 7 evaluating
+(timestamp = "2026-06-08T17:50:47", epoch = 7, seconds = 0.3042437, train_accuracy = 0.11, train_loss = 53.8175f0, test_accuracy = 0.135, test_loss = 52.9752f0, pred_counts = "10-17-23-21-21-27-29-15-18-19", w_norm = 0.4860581f0, b_norm = 0.008793805f0, w_input_norm = 1.5345651f0, grad_w_norm = 83.35514f0, grad_b_norm = 32.50869f0, grad_w_input_norm = 214.97264f0, best_accuracy = 0.135, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 8 training
+epoch 8 evaluating
+(timestamp = "2026-06-08T17:50:47", epoch = 8, seconds = 0.2829216, train_accuracy = 0.105, train_loss = 53.29958f0, test_accuracy = 0.085, test_loss = 53.087025f0, pred_counts = "19-19-22-13-18-23-23-19-23-21", w_norm = 0.48609105f0, b_norm = 0.009859582f0, w_input_norm = 1.5348495f0, grad_w_norm = 75.68711f0, grad_b_norm = 29.930977f0, grad_w_input_norm = 210.2283f0, best_accuracy = 0.135, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 9 training
+epoch 9 evaluating
+(timestamp = "2026-06-08T17:50:48", epoch = 9, seconds = 0.2812662, train_accuracy = 0.095, train_loss = 53.629204f0, test_accuracy = 0.14, test_loss = 52.615074f0, pred_counts = "25-22-18-14-16-26-16-19-19-25", w_norm = 0.48616573f0, b_norm = 0.01092525f0, w_input_norm = 1.5351887f0, grad_w_norm = 67.792015f0, grad_b_norm = 26.314486f0, grad_w_input_norm = 179.87727f0, best_accuracy = 0.14, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 10 training
+epoch 10 evaluating
+(timestamp = "2026-06-08T17:50:48", epoch = 10, seconds = 0.2823398, train_accuracy = 0.1, train_loss = 53.193188f0, test_accuracy = 0.08, test_loss = 54.13149f0, pred_counts = "24-16-18-20-19-12-20-27-22-22", w_norm = 0.48622608f0, b_norm = 0.011979742f0, w_input_norm = 1.535497f0, grad_w_norm = 77.28512f0, grad_b_norm = 29.73926f0, grad_w_input_norm = 202.77281f0, best_accuracy = 0.14, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 11 training
+epoch 11 evaluating
+(timestamp = "2026-06-08T17:50:48", epoch = 11, seconds = 0.2733896, train_accuracy = 0.07, train_loss = 52.31532f0, test_accuracy = 0.085, test_loss = 53.455147f0, pred_counts = "14-14-13-28-12-26-26-29-21-17", w_norm = 0.4863703f0, b_norm = 0.013058825f0, w_input_norm = 1.5358334f0, grad_w_norm = 77.95919f0, grad_b_norm = 30.754936f0, grad_w_input_norm = 221.27478f0, best_accuracy = 0.14, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 12 training
+epoch 12 evaluating
+(timestamp = "2026-06-08T17:50:49", epoch = 12, seconds = 0.271237, train_accuracy = 0.095, train_loss = 53.830856f0, test_accuracy = 0.085, test_loss = 52.93035f0, pred_counts = "16-24-18-22-22-24-16-15-20-23", w_norm = 0.48646536f0, b_norm = 0.014147362f0, w_input_norm = 1.536138f0, grad_w_norm = 87.40366f0, grad_b_norm = 34.072792f0, grad_w_input_norm = 244.2437f0, best_accuracy = 0.14, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 13 training
+epoch 13 evaluating
+(timestamp = "2026-06-08T17:50:49", epoch = 13, seconds = 0.2736463, train_accuracy = 0.09, train_loss = 53.478188f0, test_accuracy = 0.09, test_loss = 53.347378f0, pred_counts = "21-19-20-23-16-21-27-18-18-17", w_norm = 0.4864896f0, b_norm = 0.015228574f0, w_input_norm = 1.5364299f0, grad_w_norm = 73.23118f0, grad_b_norm = 28.576225f0, grad_w_input_norm = 188.80928f0, best_accuracy = 0.14, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 14 training
+epoch 14 evaluating
+(timestamp = "2026-06-08T17:50:49", epoch = 14, seconds = 0.275919, train_accuracy = 0.11, train_loss = 53.299793f0, test_accuracy = 0.105, test_loss = 53.360886f0, pred_counts = "23-14-27-23-16-17-19-19-17-25", w_norm = 0.4865411f0, b_norm = 0.016298804f0, w_input_norm = 1.5367815f0, grad_w_norm = 78.65682f0, grad_b_norm = 31.486696f0, grad_w_input_norm = 209.74304f0, best_accuracy = 0.14, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 15 training
+epoch 15 evaluating
+(timestamp = "2026-06-08T17:50:49", epoch = 15, seconds = 0.2907039, train_accuracy = 0.06, train_loss = 53.65437f0, test_accuracy = 0.075, test_loss = 53.360943f0, pred_counts = "17-19-20-24-18-21-18-18-25-20", w_norm = 0.48660356f0, b_norm = 0.017356481f0, w_input_norm = 1.5370744f0, grad_w_norm = 85.487015f0, grad_b_norm = 38.128067f0, grad_w_input_norm = 243.64497f0, best_accuracy = 0.14, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 16 training
+epoch 16 evaluating
+(timestamp = "2026-06-08T17:50:50", epoch = 16, seconds = 0.272843, train_accuracy = 0.105, train_loss = 54.2642f0, test_accuracy = 0.095, test_loss = 52.302773f0, pred_counts = "16-23-18-27-24-20-22-16-17-17", w_norm = 0.48664623f0, b_norm = 0.018395672f0, w_input_norm = 1.5372877f0, grad_w_norm = 81.883675f0, grad_b_norm = 34.073006f0, grad_w_input_norm = 237.56628f0, best_accuracy = 0.14, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 17 training
+epoch 17 evaluating
+(timestamp = "2026-06-08T17:50:50", epoch = 17, seconds = 0.2768249, train_accuracy = 0.09, train_loss = 53.150394f0, test_accuracy = 0.115, test_loss = 54.672184f0, pred_counts = "20-21-20-18-22-16-29-19-21-14", w_norm = 0.48676187f0, b_norm = 0.019442583f0, w_input_norm = 1.5375597f0, grad_w_norm = 72.99613f0, grad_b_norm = 28.114082f0, grad_w_input_norm = 186.62172f0, best_accuracy = 0.14, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 18 training
+epoch 18 evaluating
+(timestamp = "2026-06-08T17:50:50", epoch = 18, seconds = 0.2798138, train_accuracy = 0.07, train_loss = 53.358963f0, test_accuracy = 0.085, test_loss = 53.751514f0, pred_counts = "23-16-20-15-25-17-16-23-21-24", w_norm = 0.4868941f0, b_norm = 0.020509154f0, w_input_norm = 1.5378408f0, grad_w_norm = 95.3633f0, grad_b_norm = 36.660896f0, grad_w_input_norm = 236.27057f0, best_accuracy = 0.14, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 19 training
+epoch 19 evaluating
+(timestamp = "2026-06-08T17:50:51", epoch = 19, seconds = 0.2723032, train_accuracy = 0.09, train_loss = 53.72546f0, test_accuracy = 0.1, test_loss = 53.400703f0, pred_counts = "26-19-24-12-14-17-17-23-23-25", w_norm = 0.48702508f0, b_norm = 0.02161793f0, w_input_norm = 1.5380998f0, grad_w_norm = 72.34582f0, grad_b_norm = 27.705017f0, grad_w_input_norm = 202.39914f0, best_accuracy = 0.14, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "")
+epoch 20 training
+epoch 20 evaluating
+(timestamp = "2026-06-08T17:50:51", epoch = 20, seconds = 0.2796824, train_accuracy = 0.125, train_loss = 53.24089f0, test_accuracy = 0.09, test_loss = 54.080185f0, pred_counts = "20-27-21-23-21-17-22-23-19-7", w_norm = 0.48716736f0, b_norm = 0.022727571f0, w_input_norm = 1.5384444f0, grad_w_norm = 99.956825f0, grad_b_norm = 40.058662f0, grad_w_input_norm = 259.35138f0, best_accuracy = 0.14, best_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\best_checkpoint.bin", final_path = "ext\\IsingLearning\\experiments\\MNIST\\784-120-40-baseline-nudgeless\\experiments\\current\\diagnostic_lowtemp_20ep_32w\\final_checkpoint.bin")
+saved MNIST 784-120-40 nudgeless baseline in ext\IsingLearning\experiments\MNIST\784-120-40-baseline-nudgeless\experiments\current\diagnostic_lowtemp_20ep_32w

@@ -50,14 +50,6 @@ end
 
 @inline _tuner_value(x) = x isa Ref ? x[] : x
 
-@inline function _set_tuned_stepsize!(stepsize, value)
-    if stepsize isa Ref
-        stepsize[] = value
-        return stepsize
-    end
-    return value
-end
-
 @inline function _bounded_multiplicative_update(current, ratio, gain, lo, hi)
     ratio = max(ratio, eps(typeof(ratio)))
     updated = current * exp(gain * log(ratio))
@@ -65,7 +57,7 @@ end
 end
 
 @inline function StatefulAlgorithms.init(tuner::AcceptanceRateStepSizeTuner, context::Cont) where {Cont}
-    stepsize = get(context, :stepsize, Ref(tuner.min_stepsize))
+    stepsize = get(context, :stepsize, tuner.min_stepsize)
     adjusted = get(context, :adjusted, true)
     return (;stepsize, adjusted)
 end
@@ -79,12 +71,11 @@ end
 
     ratio = acceptance_rate / tuner.target
     tuned_stepsize = _bounded_multiplicative_update(current, ratio, tuner.gain, tuner.min_stepsize, tuner.max_stepsize)
-    _set_tuned_stepsize!(stepsize, tuned_stepsize)
-    return (;tuned_stepsize)
+    return (;stepsize = tuned_stepsize, tuned_stepsize)
 end
 
 @inline function StatefulAlgorithms.init(tuner::DriftStepSizeTuner, context::Cont) where {Cont}
-    stepsize = get(context, :stepsize, Ref(tuner.min_stepsize))
+    stepsize = get(context, :stepsize, tuner.min_stepsize)
     return (;stepsize)
 end
 
@@ -95,6 +86,5 @@ end
     current_drift = current * gradient_max
     ratio = tuner.target_drift / current_drift
     tuned_stepsize = _bounded_multiplicative_update(current, ratio, tuner.gain, tuner.min_stepsize, tuner.max_stepsize)
-    _set_tuned_stepsize!(stepsize, tuned_stepsize)
-    return (;tuned_stepsize, current_drift)
+    return (;stepsize = tuned_stepsize, tuned_stepsize, current_drift)
 end

@@ -355,13 +355,13 @@ function inlaid_manager(source::M, nworkers::I) where {M<:InlaidDiagnosticModel,
     algorithm = StatefulAlgorithms.resolve(inlaid_relax_algorithm(source.config, length(source.active_idxs)))
     recipe = (;
         makeworker = (idx, manager) -> inlaid_worker(manager.state.model, idx, algorithm),
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             ctx = worker_context(slot.worker)
             ctx.x .= job.x
             StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
-        flush! = manager -> begin
+        sync_to_state! = manager -> begin
             manager.state.elapsed[] = 0.0
             manager.state.jobs[] = 0
             manager.state.checksum[] = 0f0
@@ -379,7 +379,8 @@ function inlaid_manager(source::M, nworkers::I) where {M<:InlaidDiagnosticModel,
         nworkers = Int(nworkers),
         config = source.config,
         state,
-        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        sync_policy = StatefulAlgorithms.SyncAtEnd(),
+        execution = StatefulAlgorithms.ChannelWorkers(),
         worker_init = StatefulAlgorithms.MakeEachWorker(),
         poll_interval = 0.0,
         job_type = InlaidRelaxJob{Vector{INLAID_FT}},
@@ -424,14 +425,14 @@ function run_scaling_probe(config::C) where {C<:InlaidDiagnosticConfig}
         jobs = synthetic_jobs(config, nworkers * config.jobs_per_worker)
 
         # Warm the compiled path and worker contexts before timing.
-        StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
+        StatefulAlgorithms.run!(manager, jobs)
 
         elapsed_runs = Float64[]
         internal_runs = Float64[]
         for _ in 1:config.repeats
             reset_diagnostic_worker_stats!(manager)
             start = time_ns()
-            StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
+            StatefulAlgorithms.run!(manager, jobs)
             elapsed = (time_ns() - start) / 1.0e9
             push!(elapsed_runs, elapsed)
             push!(internal_runs, manager.state.elapsed[] / max(manager.state.jobs[], 1))

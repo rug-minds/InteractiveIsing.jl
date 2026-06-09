@@ -128,7 +128,7 @@ function init_timeavg_trainer(config::TimeAverageXorConfig)
         nworkers = config.workers,
         config,
         state = trainer,
-        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        sync_policy = StatefulAlgorithms.SyncAtEnd(),
         poll_interval = 0.0,
         job_type = TrainJob,
     )
@@ -137,7 +137,7 @@ function init_timeavg_trainer(config::TimeAverageXorConfig)
         nworkers = config.workers,
         config,
         state = trainer,
-        flush_policy = StatefulAlgorithms.NoFlush(),
+        sync_policy = StatefulAlgorithms.NoSync(),
         poll_interval = 0.0,
         job_type = EvalJob,
     )
@@ -521,15 +521,15 @@ function train_manager_recipe(layer, prototype_graph)
     return (;
         makeworker = (idx, manager) -> template_train_worker(layer, prototype_graph, manager.config, idx),
         makecontext = (idx, manager, template) -> train_worker_context(template, prototype_graph, manager.config),
-        prepare! = (slot, job, manager) -> prepare_train_worker!(slot.worker, manager.state, manager.config, job),
+        loadjob! = (slot, job, manager) -> prepare_train_worker!(slot.worker, manager.state, manager.config, job),
         isdone = (slot, manager) -> StatefulAlgorithms.isdone(slot.worker),
-        runarguments = (slot, job, manager) -> (; clamping_beta = manager.config.β),
-        consume! = (slot, job, manager) -> collect_train_response!(
+        providearguments = (slot, job, manager) -> (; clamping_beta = manager.config.β),
+        afterjob! = (slot, job, manager) -> collect_train_response!(
             manager.state.current_responses,
             (; context = StatefulAlgorithms.context(slot.worker), error = nothing),
             layer.β,
         ),
-        flush! = flush_train_buffers!,
+        sync_to_state! = flush_train_buffers!,
     )
 end
 
@@ -538,9 +538,9 @@ function eval_manager_recipe(layer, prototype_graph)
     return (;
         makeworker = (idx, manager) -> template_eval_worker(layer, prototype_graph, manager.config, idx),
         makecontext = (idx, manager, template) -> eval_worker_context(template, prototype_graph, manager.config, idx),
-        prepare! = (slot, job, manager) -> prepare_eval_worker!(slot.worker, manager.state, manager.config, job),
+        loadjob! = (slot, job, manager) -> prepare_eval_worker!(slot.worker, manager.state, manager.config, job),
         isdone = (slot, manager) -> StatefulAlgorithms.isdone(slot.worker),
-        consume! = (slot, job, manager) -> begin
+        afterjob! = (slot, job, manager) -> begin
             ctx = StatefulAlgorithms.context(slot.worker).output_averager
             push!(manager.state.current_sample_outputs[job.sample_idx], (;
                 mean = reusable_average_mean(ctx),

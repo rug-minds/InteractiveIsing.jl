@@ -1,0 +1,22 @@
+# MNIST Locally Connected 6x6 Window Replication
+
+- source paper: https://arxiv.org/abs/2601.21945
+- target section: layered LCL MNIST, Figure 5
+- architecture: `28x28 input field -> 529 hidden LCL units -> 10 output units`
+- LCL window/stride: `6` / `1`
+- hidden grid: `23 x 23`
+- trainable input weights: `19044`
+- hidden intralayer couplings: none
+- hidden/output readout: dense bidirectional couplings
+- input handling: pixels projected through masked local weights into worker-local magnetic field
+- nudging: `tangent fixed free-equilibrium error force`
+- workers: `32`
+- optimiser: `Optimisers.Adam(3.0e-5)`
+- epochs/batchsize: `160` / `100`
+- train/test per class: `100` / `40`
+- train eval per class: `20`
+- sweeps/relaxation steps: `25.0` / `13475`
+- beta/temp/stepsize: `5.0` / `0.001` / `0.5`
+- weight scale/decay: `0.005` / `0.0`
+- resume from: `none`
+- note: this is an Ising/Langevin implementation of the paper's LCL topology, not an exact XY-angle simulator.

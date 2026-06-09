@@ -121,7 +121,7 @@ DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
     end
 
     hamiltonian = init!(model.hamiltonian, model)
-    rng = @inline _langevin_context_value(context, :rng, Random.MersenneTwister())
+    rng = get(context, :rng, Random.MersenneTwister())
 
     nstates_model = InteractiveIsing.nstates(model)
     active_index_set = index_set(model)
@@ -130,10 +130,10 @@ DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
     SType = eltype(model)
 
     stepsize_default = SType(langevin.stepsize)
-    stepsize = Ref(SType(@inline _langevin_unwrap_ref(@inline _langevin_context_value(context, :stepsize, stepsize_default))))
-    max_drift_fraction = Ref(SType(langevin.max_drift_fraction))
-    block_size_ref = Ref(langevin.block_size)
-    group_steps_ref = Ref(langevin.group_steps)
+    stepsize = SType(get(context, :stepsize, stepsize_default))
+    max_drift_fraction = SType(langevin.max_drift_fraction)
+    block_size = langevin.block_size
+    group_steps = langevin.group_steps
     adjusted = Adjusted
 
     dH_prealloc = zeros(SType, nstates_model)
@@ -141,7 +141,7 @@ DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
     old_vals = Vector{SType}(undef, nstates_model)
     new_vals = Vector{SType}(undef, nstates_model)
     layer_idxs = Vector{Int}(undef, nstates_model)
-    block_idxs = Vector{Int}(undef, min(nstates_model, max(1, block_size_ref[])))
+    block_idxs = Vector{Int}(undef, min(nstates_model, max(1, block_size)))
     block_shuffle_position = Ref(length(active_spins) + 1)
 
     schedule_position = Ref(0)
@@ -153,7 +153,7 @@ DynamicBlockLangevin(adjusted::Bool) = DynamicBlockLangevin(; adjusted)
     T = SType(temp(model))
 
     return (;model, hamiltonian, rng, active_index_set, active_spins, layer_views, stepsize,
-        max_drift_fraction, block_size_ref, group_steps_ref, adjusted, dH_prealloc,
+        max_drift_fraction, block_size, group_steps, adjusted, dH_prealloc,
         derivatives, old_vals, new_vals, layer_idxs, block_idxs, block_shuffle_position,
         schedule_position, schedule_length, schedule_accepted, schedule_ΔE,
         gradient_max_cache, gradient_sumsq_cache, T)
@@ -169,7 +169,7 @@ end
     end
 
     hamiltonian = init!(model.hamiltonian, model)
-    rng = @inline _langevin_context_value(context, :rng, Random.MersenneTwister())
+    rng = get(context, :rng, Random.MersenneTwister())
 
     nstates_model = InteractiveIsing.nstates(model)
     active_index_set = index_set(model)
@@ -178,10 +178,10 @@ end
     SType = eltype(model)
 
     stepsize_default = SType(langevin.stepsize)
-    stepsize = Ref(SType(@inline _langevin_unwrap_ref(@inline _langevin_context_value(context, :stepsize, stepsize_default))))
-    max_drift_fraction = Ref(SType(langevin.max_drift_fraction))
+    stepsize = SType(get(context, :stepsize, stepsize_default))
+    max_drift_fraction = SType(langevin.max_drift_fraction)
     max_blocksize = MaxBlockSize
-    group_steps_ref = Ref(langevin.group_steps)
+    group_steps = langevin.group_steps
     adjusted = Adjusted
 
     dH_prealloc = zeros(SType, nstates_model)
@@ -201,7 +201,7 @@ end
     T = SType(temp(model))
 
     return (;model, hamiltonian, rng, active_index_set, active_spins, layer_views, stepsize,
-        max_drift_fraction, max_blocksize, group_steps_ref, adjusted, dH_prealloc,
+        max_drift_fraction, max_blocksize, group_steps, adjusted, dH_prealloc,
         derivatives, old_vals, new_vals, layer_idxs, block_idxs, block_shuffle_position,
         schedule_position, schedule_length, schedule_accepted, schedule_ΔE,
         gradient_max_cache, gradient_sumsq_cache, T)
@@ -234,7 +234,7 @@ end
 end
 
 @inline function _draw_langevin_block_size(::BlockLangevin, context, rng, n_active::Int)
-    return min(max(1, context.block_size_ref[]), n_active)
+    return min(max(1, context.block_size), n_active)
 end
 
 @inline function _draw_langevin_block_size(::DynamicBlockLangevin{MaxBlockSize}, context, rng, n_active::Int) where {MaxBlockSize}
@@ -251,7 +251,7 @@ end
 
 @inline function _block_langevin_step!(langevin, context::C, ::Val{Adjusted}) where {Adjusted,C}
     (;hamiltonian, rng, model, layer_views, stepsize,
-        max_drift_fraction, group_steps_ref, dH_prealloc,
+        max_drift_fraction, group_steps, dH_prealloc,
         derivatives, old_vals, new_vals, layer_idxs, block_idxs, block_shuffle_position,
         schedule_position, schedule_length, schedule_accepted, schedule_ΔE,
         gradient_max_cache, gradient_sumsq_cache, T) = context
@@ -259,10 +259,10 @@ end
     SType = eltype(model)
     epsT = eps(SType)
     t = max(SType(T), zero(SType))
-    η = max(stepsize[], epsT)
+    η = max(stepsize, epsT)
     σ = t > zero(SType) ? sqrt(SType(2) * η * t) : zero(SType)
-    drift_fraction = clamp(max_drift_fraction[], epsT, one(SType))
-    n_group_steps = max(1, group_steps_ref[])
+    drift_fraction = clamp(max_drift_fraction, epsT, one(SType))
+    n_group_steps = max(1, group_steps)
     active_changed = @inline consume_changed!(context.active_index_set)
     if active_changed
         @inline _set_local_langevin_active_spins!(context.active_spins, @inline _active_spin_vector(context.active_index_set))
@@ -275,7 +275,7 @@ end
         schedule_length[] = 0
         proposal = FlipProposal{SType}(1, zero(SType), zero(SType), 1, false)
         return (;proposal, ΔE = zero(SType), accepted = 0, attempted = 0,
-            acceptance_rate = zero(SType), η, σ, refreshed_gradient = false,
+            acceptance_rate = zero(SType), η, stepsize = η, σ, refreshed_gradient = false,
             gradient_max = zero(SType), gradient_rms = zero(SType),
             reflected_fraction = zero(SType))
     end
@@ -300,7 +300,7 @@ end
             acceptance_rate = one(SType)
             gradient_max = gradient_max_cache[]
             gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
-            return (;proposal, ΔE = schedule_ΔE[], accepted, attempted, acceptance_rate, η, σ,
+            return (;proposal, ΔE = schedule_ΔE[], accepted, attempted, acceptance_rate, η, stepsize = η, σ,
                 refreshed_gradient = false, gradient_max, gradient_rms,
                 reflected_fraction = zero(SType))
         end
@@ -397,7 +397,7 @@ end
         attempted = 1
         acceptance_rate = SType(accepted)
         gradient_rms = sqrt(gradient_sumsq / SType(m))
-        return (;proposal, ΔE, accepted, attempted, acceptance_rate, η, σ,
+        return (;proposal, ΔE, accepted, attempted, acceptance_rate, η, stepsize = η, σ,
             refreshed_gradient = true, gradient_max, gradient_rms,
             reflected_fraction = zero(SType))
     end
@@ -453,7 +453,7 @@ end
     gradient_rms = schedule_length[] == 0 ? zero(SType) : sqrt(gradient_sumsq_cache[] / SType(schedule_length[]))
     reflected_fraction = SType(reflected)
 
-    return (;proposal, ΔE, accepted, attempted, acceptance_rate, η, σ,
+    return (;proposal, ΔE, accepted, attempted, acceptance_rate, η, stepsize = η, σ,
         refreshed_gradient = refreshed, gradient_max, gradient_rms,
         reflected_fraction)
 end

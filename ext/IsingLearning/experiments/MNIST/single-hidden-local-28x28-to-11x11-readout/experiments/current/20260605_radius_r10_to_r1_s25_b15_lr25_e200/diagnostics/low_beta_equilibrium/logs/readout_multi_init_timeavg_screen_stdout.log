@@ -1,0 +1,10 @@
+[2026-06-05T14:02:05] bootstrap script started elapsed_s=0.162
+[2026-06-05T14:02:06] bootstrap Pkg loaded elapsed_s=0.375
+[2026-06-05T14:02:06] bootstrap project activated elapsed_s=0.042
+[2026-06-05T14:02:13] bootstrap dependencies loaded elapsed_s=7.509
+low-beta readout diagnostic
+checkpoint=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260605_radius_r10_to_r1_s25_b15_lr25_e200\r8\best_params.bin
+samples=10 max_repeats=4
+finished burnin=25 average=10
+wrote C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260605_radius_r10_to_r1_s25_b15_lr25_e200\diagnostics\low_beta_equilibrium\low_beta_multi_init_timeavg_summary.csv
+wrote C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260605_radius_r10_to_r1_s25_b15_lr25_e200\diagnostics\low_beta_equilibrium\low_beta_multi_init_timeavg_samples.csv

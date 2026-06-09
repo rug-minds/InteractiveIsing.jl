@@ -44,7 +44,7 @@ end
 """Resolve the same one-sample contrastive LoopAlgorithm used by local MNIST training."""
 function mode_bench_algorithm(source::M) where {M<:LocalMNISTModel}
     dynamics_algorithm = mnist_dynamics_algorithm()
-    return Processes.resolve(
+    return StatefulAlgorithms.resolve(
         contrastive_worker_algorithm(deepcopy(dynamics_algorithm), source.config, length(II.state(source.graph))),
     )
 end
@@ -60,11 +60,11 @@ function mode_bench_run_inline_sample!(
     x::X,
     y::Y,
     sample_idx::I,
-) where {W<:Processes.Process,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
+) where {W<:StatefulAlgorithms.Process,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
     context = worker_context(worker)
     load_sample_into_worker!(context, x, y, sample_idx)
-    Processes.reset!(worker)
-    return Processes.runprocessinline!(worker)
+    StatefulAlgorithms.reset!(worker)
+    return StatefulAlgorithms.runprocessinline!(worker)
 end
 
 """Load and run one sample through a normal Process using `run`/`wait`."""
@@ -73,10 +73,10 @@ function mode_bench_run_process_sample!(
     x::X,
     y::Y,
     sample_idx::I,
-) where {W<:Processes.Process,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
+) where {W<:StatefulAlgorithms.Process,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
     context = worker_context(worker)
     load_sample_into_worker!(context, x, y, sample_idx)
-    Processes.reset!(worker)
+    StatefulAlgorithms.reset!(worker)
     run(worker)
     wait(worker)
     return worker
@@ -120,7 +120,7 @@ function measure_serial_process_modes!(path::P, source::M, xtrain::X, ytrain::Y)
 end
 
 """Construct a per-sample-job manager so threaded/channel modes avoid per-job custom spawning."""
-function per_sample_local_manager(source::M) where {M<:LocalMNISTModel}
+function per_sample_local_manager(source::M, mode::S) where {M<:LocalMNISTModel,S<:Symbol}
     params = trainable_params(source)
     state = LocalMNISTManagerState(
         source,
@@ -139,33 +139,36 @@ function per_sample_local_manager(source::M) where {M<:LocalMNISTModel}
     algorithm = mode_bench_algorithm(source)
     recipe = (;
         makeworker = (idx, manager) -> local_worker(manager.state.model, idx, algorithm),
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             context = worker_context(slot.worker)
             x = manager.state.current_x[]
             y = manager.state.current_y[]
             load_sample_into_worker!(context, x, y, job)
-            Processes.resetworker!(slot)
+            StatefulAlgorithms.resetworker!(slot)
             return nothing
         end,
-        flush! = manager -> flush_manager_buffers!(manager),
+        sync_to_state! = manager -> flush_manager_buffers!(manager),
     )
-    return Processes.ProcessManager(
+    return StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = source.config.workers,
         config = source.config,
         state,
-        flush_policy = Processes.FlushAtEnd(),
-        worker_init = Processes.MakeEachWorker(),
+        sync_policy = StatefulAlgorithms.SyncAtEnd(),
+        worker_init = StatefulAlgorithms.MakeEachWorker(),
+        execution = mode_bench_execution(mode),
         poll_interval = 0.0,
         job_type = Int,
     )
 end
 
-"""Return the concrete manager scheduler object for one benchmark mode."""
-function mode_bench_schedule(mode::S) where {S<:Symbol}
+"""Return the concrete manager execution object for one benchmark mode."""
+function mode_bench_execution(mode::S) where {S<:Symbol}
     mode === :spawn && return nothing
-    mode === :greedy && return Processes.Greedy()
-    mode === :channelworkers && return Processes.ChannelWorkers()
+    mode === :dynamic && return StatefulAlgorithms.ThreadedWorkers(StatefulAlgorithms.Dynamic())
+    mode === :greedy && return StatefulAlgorithms.ThreadedWorkers(StatefulAlgorithms.Greedy())
+    mode === :static && return StatefulAlgorithms.ThreadedWorkers(StatefulAlgorithms.Static())
+    mode === :channelworkers && return StatefulAlgorithms.ChannelWorkers()
     throw(ArgumentError("unknown mode $(mode)"))
 end
 
@@ -185,26 +188,17 @@ function measure_manager_mode!(
     S<:Symbol,
     I<:Integer,
 }
-    manager = per_sample_local_manager(source)
+    manager = per_sample_local_manager(source, mode)
     try
         jobs = collect(1:source.config.batchsize)
         manager.state.current_x[] = xtrain
         manager.state.current_y[] = ytrain
-        schedule = mode_bench_schedule(mode)
         clear_manager_buffers!(manager)
-        if isnothing(schedule)
-            Processes.run!(manager, jobs)
-        else
-            Processes.run!(manager, jobs, schedule)
-        end
+        StatefulAlgorithms.run!(manager, jobs)
 
         clear_manager_buffers!(manager)
         seconds = @elapsed begin
-            if isnothing(schedule)
-                Processes.run!(manager, jobs)
-            else
-                Processes.run!(manager, jobs, schedule)
-            end
+            StatefulAlgorithms.run!(manager, jobs)
         end
         row = mode_bench_row(
             source.config,
@@ -279,7 +273,7 @@ function main()
     batchsize = parse(Int, get(ENV, "ISING_MODE_BENCH_BATCHSIZE", "128"))
     manager_repeats = parse(Int, get(ENV, "ISING_MODE_BENCH_MANAGER_REPEATS", "2"))
     worker_counts = Tuple(parse(Int, strip(part)) for part in split(get(ENV, "ISING_MODE_BENCH_WORKERS", "1,16,32"), ",") if !isempty(strip(part)))
-    manager_modes = Tuple(Symbol(strip(part)) for part in split(get(ENV, "ISING_MODE_BENCH_MODES", "spawn,greedy,channelworkers"), ",") if !isempty(strip(part)))
+    manager_modes = Tuple(Symbol(strip(part)) for part in split(get(ENV, "ISING_MODE_BENCH_MODES", "spawn,dynamic,greedy,static,channelworkers"), ",") if !isempty(strip(part)))
 
     base_config = mode_bench_config(; workers = 1, batchsize)
     println("[", Dates.format(now(), "HH:MM:SS"), "] building source")

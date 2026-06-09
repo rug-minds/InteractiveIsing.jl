@@ -237,6 +237,47 @@ function append_row!(path::P, row::R) where {P<:AbstractString,R<:NamedTuple}
     return path
 end
 
+"""Parse one metrics CSV cell back into the type used by plotting and resume bookkeeping."""
+function parse_metric_cell(name::Symbol, value::S) where {S<:AbstractString}
+    stripped = strip(value)
+    stripped == "missing" && return missing
+    name in (:epoch, :skipped) && return parse(Int, stripped)
+    name in (:seconds, :train_accuracy, :train_loss, :test_accuracy, :test_loss, :best_accuracy) &&
+        return parse(Float64, stripped)
+    return stripped
+end
+
+"""Load existing metrics rows so resumed runs keep prior epochs in summaries and plots."""
+function load_metric_rows(path::P) where {P<:AbstractString}
+    (!isfile(path) || filesize(path) == 0) && return NamedTuple[]
+    lines = readlines(path)
+    length(lines) <= 1 && return NamedTuple[]
+    names = Symbol.(split(lines[1], ","))
+    rows = NamedTuple[]
+    for line in lines[2:end]
+        isempty(strip(line)) && continue
+        cells = split(line, ",")
+        length(cells) == length(names) || continue
+        values = Tuple(parse_metric_cell(name, value) for (name, value) in zip(names, cells))
+        push!(rows, NamedTuple{Tuple(names)}(values))
+    end
+    return rows
+end
+
+"""Return the checkpoint epoch, or `-1` when a checkpoint has no usable epoch field."""
+function checkpoint_epoch(saved)::Int
+    hasproperty(saved, :epoch) || return -1
+    ismissing(saved.epoch) && return -1
+    return Int(saved.epoch)
+end
+
+"""Return the best accuracy recorded in a checkpoint when present."""
+function checkpoint_best_accuracy(saved)::Float64
+    hasproperty(saved, :best_accuracy) || return -Inf
+    ismissing(saved.best_accuracy) && return -Inf
+    return Float64(saved.best_accuracy)
+end
+
 """Print a timestamped progress checkpoint and flush stdout immediately."""
 function progress_log(config::C, message::S; t0 = nothing, kwargs...) where {C<:LocalMNISTManagerConfig,S<:AbstractString}
     config.progress || return nothing
@@ -814,75 +855,32 @@ function load_sample_into_worker!(
     return context
 end
 
-"""Run a chunk of training sample indices on one already-constructed worker."""
-function run_training_chunk_task!(
-    worker::W,
-    job::J,
-    manager::M,
-) where {W<:Processes.Process,J<:AbstractVector{Int},M<:Processes.ProcessManager}
-    context = worker_context(worker)
-    x = manager.state.current_x[]
-    y = manager.state.current_y[]
-    @inbounds for sample_idx in job
-        load_sample_into_worker!(context, x, y, sample_idx)
-        Processes.reset!(worker)
-        Processes.runprocessinline!(worker)
-    end
-    return worker
+"""Load one shared-matrix sample index into a persistent training worker."""
+function load_training_index_job!(slot::S, job::I, manager::M) where {
+    S,
+    I<:Integer,
+    M<:StatefulAlgorithms.ProcessManager,
+}
+    context = worker_context(slot.worker)
+    load_sample_into_worker!(context, manager.state.current_x[], manager.state.current_y[], job)
+    StatefulAlgorithms.resetworker!(slot)
+    return nothing
 end
 
-"""Run a chunk of validation sample indices on one already-constructed worker."""
-function run_validation_chunk_task!(
-    worker::W,
-    job::J,
-    manager::M,
-) where {W<:Processes.Process,J<:AbstractVector{Int},M<:Processes.ProcessManager}
-    context = worker_context(worker)
-    x = manager.state.current_x[]
-    y = manager.state.current_y[]
-    @inbounds for sample_idx in job
-        load_sample_into_worker!(context, x, y, sample_idx)
-        Processes.reset!(worker)
-        Processes.runprocessinline!(worker)
-    end
-    return worker
+"""Load one shared-matrix sample index into a persistent validation worker."""
+function load_validation_index_job!(slot::S, job::I, manager::M) where {
+    S,
+    I<:Integer,
+    M<:StatefulAlgorithms.ProcessManager,
+}
+    context = worker_context(slot.worker)
+    load_sample_into_worker!(context, manager.state.current_x[], manager.state.current_y[], job)
+    StatefulAlgorithms.resetworker!(slot)
+    return nothing
 end
 
-"""Start one spawned training chunk task through the manager recipe."""
-function start_training_chunk!(slot::S, job::J, manager::M) where {S,J<:AbstractVector{Int},M<:Processes.ProcessManager}
-    manager.recipe.tasks[slot.idx] = Threads.@spawn run_training_chunk_task!(slot.worker, job, manager)
-    return slot.worker
-end
-
-"""Start one spawned validation chunk task through the manager recipe."""
-function start_validation_chunk!(slot::S, job::J, manager::M) where {S,J<:AbstractVector{Int},M<:Processes.ProcessManager}
-    manager.recipe.tasks[slot.idx] = Threads.@spawn run_validation_chunk_task!(slot.worker, job, manager)
-    return slot.worker
-end
-
-"""Return whether the spawned task owned by one worker slot has completed."""
-function chunk_task_isdone(slot::S, manager::M) where {S,M<:Processes.ProcessManager}
-    task = manager.recipe.tasks[slot.idx]
-    return !isnothing(task) && istaskdone(task)
-end
-
-"""Fetch a completed spawned worker task and make that worker slot reusable."""
-function finalize_chunk_task!(slot::S, job, manager::M) where {S,M<:Processes.ProcessManager}
-    task = manager.recipe.tasks[slot.idx]
-    if !isnothing(task)
-        fetch(task)
-        manager.recipe.tasks[slot.idx] = nothing
-    end
-    return slot.worker
-end
-
-"""Close one worker after fetching any still-owned spawned chunk task."""
-function close_chunk_worker!(slot::S, manager::M) where {S,M<:Processes.ProcessManager}
-    task = manager.recipe.tasks[slot.idx]
-    if !isnothing(task)
-        fetch(task)
-        manager.recipe.tasks[slot.idx] = nothing
-    end
+"""Close one persistent local-MNIST Process worker."""
+function close_process_worker!(slot::S, manager::M) where {S,M<:StatefulAlgorithms.ProcessManager}
     close(slot.worker)
     return slot.worker
 end
@@ -961,9 +959,7 @@ function local_manager(source::M) where {M<:LocalMNISTModel}
     t_resolve = time()
     worker_algorithm = StatefulAlgorithms.resolve(contrastive_worker_algorithm(deepcopy(dynamics_algorithm), source.config, length(II.state(source.graph))))
     progress_log(source.config, "worker algorithm resolved"; t0 = t_resolve)
-    tasks = Union{Nothing,Task}[nothing for _ in 1:source.config.workers]
     recipe = (;
-        tasks,
         makeworker = (idx, manager) -> begin
             should_log_progress(manager.config, idx, manager.config.workers) &&
                 progress_log(manager.config, "manager constructing worker"; worker = idx, workers = manager.config.workers)
@@ -972,21 +968,20 @@ function local_manager(source::M) where {M<:LocalMNISTModel}
                 progress_log(manager.config, "manager constructed worker"; worker = idx, workers = manager.config.workers)
             return worker
         end,
-        start! = start_training_chunk!,
-        isdone = (slot, manager) -> chunk_task_isdone(slot, manager),
-        finalize! = finalize_chunk_task!,
-        close! = close_chunk_worker!,
-        flush! = manager -> flush_manager_buffers!(manager),
+        loadjob! = load_training_index_job!,
+        close! = close_process_worker!,
+        sync_to_state! = manager -> flush_manager_buffers!(manager),
     )
     manager = StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = source.config.workers,
         config = source.config,
         state,
-        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        sync_policy = StatefulAlgorithms.SyncAtEnd(),
         worker_init = StatefulAlgorithms.MakeEachWorker(),
+        execution = StatefulAlgorithms.ChannelWorkers(),
         poll_interval = 0.0,
-        job_type = Vector{Int},
+        job_type = Int,
     )
     progress_log(source.config, "manager constructed"; t0 = t_manager, workers = source.config.workers)
     return manager
@@ -1009,25 +1004,22 @@ function validation_manager(source::M) where {M<:LocalMNISTModel}
     t_resolve = time()
     worker_algorithm = StatefulAlgorithms.resolve(validation_free_phase_algorithm(deepcopy(dynamics_algorithm), source.config, length(II.state(source.graph))))
     progress_log(source.config, "validation worker algorithm resolved"; t0 = t_resolve)
-    tasks = Union{Nothing,Task}[nothing for _ in 1:source.config.workers]
     recipe = (;
-        tasks,
         makeworker = (idx, manager) -> validation_worker(manager.state.model, idx, worker_algorithm),
-        start! = start_validation_chunk!,
-        isdone = (slot, manager) -> chunk_task_isdone(slot, manager),
-        finalize! = finalize_chunk_task!,
-        close! = close_chunk_worker!,
-        flush! = manager -> flush_validation_buffers!(manager),
+        loadjob! = load_validation_index_job!,
+        close! = close_process_worker!,
+        sync_to_state! = manager -> flush_validation_buffers!(manager),
     )
     manager = StatefulAlgorithms.ProcessManager(
         recipe;
         nworkers = source.config.workers,
         config = source.config,
         state,
-        flush_policy = StatefulAlgorithms.FlushAtEnd(),
+        sync_policy = StatefulAlgorithms.SyncAtEnd(),
         worker_init = StatefulAlgorithms.MakeEachWorker(),
+        execution = StatefulAlgorithms.ChannelWorkers(),
         poll_interval = 0.0,
-        job_type = Vector{Int},
+        job_type = Int,
     )
     progress_log(source.config, "validation manager constructed"; t0 = t_manager, workers = source.config.workers)
     return manager
@@ -1101,7 +1093,7 @@ function run_minibatch!(manager::M, jobs::J; log_progress::Bool = true) where {M
     log_progress && progress_log(manager.config, "minibatch buffers cleared"; t0 = t_clear, jobs = length(jobs))
     t_run = time()
     log_progress && progress_log(manager.config, "minibatch manager run started"; jobs = length(jobs), workers = manager.config.workers)
-    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs)
     log_progress && progress_log(manager.config, "minibatch manager run finished"; t0 = t_run, jobs = length(jobs))
     t_update = time()
     write_optimizer_gradient!(manager.state.optimizer_gradient, manager.state.batch_gradient, manager.config, manager.state.nsamples[])
@@ -1122,7 +1114,7 @@ function run_minibatch!(
     y::Y,
     jobs::J;
     log_progress::Bool = true,
-) where {M<:Processes.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix,J<:AbstractVector}
+) where {M<:StatefulAlgorithms.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix,J<:AbstractVector}
     manager.state.current_x[] = x
     manager.state.current_y[] = y
     return run_minibatch!(manager, jobs; log_progress)
@@ -1348,15 +1340,9 @@ function balanced_mnist(split::Symbol, per_class::I, config::C) where {I<:Intege
     return x, y
 end
 
-"""Split selected sample indices into chunk jobs for self-loading workers."""
+"""Materialize selected sample indices as one manager job per sample."""
 function batch_jobs(indices::V, chunk_size::I) where {V<:AbstractVector{Int},I<:Integer}
-    chunk = max(1, Int(chunk_size))
-    jobs = Vector{Int}[]
-    for first_idx in firstindex(indices):chunk:lastindex(indices)
-        last_idx = min(first_idx + chunk - 1, lastindex(indices))
-        push!(jobs, collect(view(indices, first_idx:last_idx)))
-    end
-    return jobs
+    return collect(indices)
 end
 
 """Create one reusable process for free-phase validation sampling."""
@@ -1424,7 +1410,7 @@ function evaluate(manager::M, x::X, y::Y) where {M<:StatefulAlgorithms.ProcessMa
 
     t_run = time()
     progress_log(manager.config, "evaluation manager run started"; jobs = length(jobs), workers = manager.config.workers)
-    StatefulAlgorithms.run!(manager, jobs, StatefulAlgorithms.Dynamic())
+    StatefulAlgorithms.run!(manager, jobs)
     progress_log(manager.config, "evaluation manager run finished"; t0 = t_run, jobs = length(jobs))
 
     nsamples = manager.state.nsamples[]
@@ -1435,17 +1421,37 @@ function evaluate(manager::M, x::X, y::Y) where {M<:StatefulAlgorithms.ProcessMa
     )
 end
 
-"""Serialize trainable parameters for legacy parameter-only checkpoints."""
-function save_model(path::P, model::M) where {P<:AbstractString,M<:LocalMNISTModel}
+"""Serialize one payload through a temporary file before replacing the target path."""
+function serialize_atomically(path::P, payload) where {P<:AbstractString}
     mkpath(dirname(path))
-    open(path, "w") do io
-        serialize(io, (;
-            w = copy(SparseArrays.nonzeros(II.adj(model.graph))),
-            b = copy(base_magfield(model.graph).b),
-            config = model.config,
-        ))
+    tmp = tempname(dirname(path))
+    try
+        open(tmp, "w") do io
+            serialize(io, payload)
+        end
+        for attempt in 1:24
+            try
+                mv(tmp, path; force = true)
+                return path
+            catch err
+                attempt == 24 && rethrow()
+                sleep(min(0.25 * attempt, 2.0))
+            end
+        end
+    finally
+        isfile(tmp) && rm(tmp; force = true)
     end
     return path
+end
+
+"""Serialize trainable parameters for legacy parameter-only checkpoints."""
+function save_model(path::P, model::M) where {P<:AbstractString,M<:LocalMNISTModel}
+    payload = (;
+        w = copy(SparseArrays.nonzeros(II.adj(model.graph))),
+        b = copy(base_magfield(model.graph).b),
+        config = model.config,
+    )
+    return serialize_atomically(path, payload)
 end
 
 """Serialize model parameters and manager state needed for optimizer resume."""
@@ -1457,23 +1463,20 @@ function save_checkpoint(
 ) where {P<:AbstractString,M<:StatefulAlgorithms.ProcessManager}
     model = manager.state.model
     params = trainable_params(model)
-    mkpath(dirname(path))
-    open(path, "w") do io
-        serialize(io, (;
-            checkpoint_format = :local_mnist_manager_v2,
-            epoch,
-            best_accuracy,
-            update_idx = manager.state.update_idx[],
-            w = copy(params.w),
-            b = copy(params.b),
-            params = (; w = copy(params.w), b = copy(params.b)),
-            optimizer_state = deepcopy(manager.state.opt_state),
-            optimizer = model.config.optimizer,
-            config = model.config,
-            rng = deepcopy(model.rng),
-        ))
-    end
-    return path
+    payload = (;
+        checkpoint_format = :local_mnist_manager_v2,
+        epoch,
+        best_accuracy,
+        update_idx = manager.state.update_idx[],
+        w = copy(params.w),
+        b = copy(params.b),
+        params = (; w = copy(params.w), b = copy(params.b)),
+        optimizer_state = deepcopy(manager.state.opt_state),
+        optimizer = model.config.optimizer,
+        config = model.config,
+        rng = deepcopy(model.rng),
+    )
+    return serialize_atomically(path, payload)
 end
 
 """Load CairoMakie only when plots are written."""
@@ -1533,7 +1536,7 @@ function write_settings!(path::P, config::C) where {P<:AbstractString,C<:LocalMN
         println(io, "- radius: `$(config.local_radius)`")
         println(io, "- workers: `$(config.workers)`")
         println(io, "- batchsize: `$(config.batchsize)`")
-        println(io, "- job chunk size: `$(config.job_chunk_size)`")
+        println(io, "- manager jobs: one sample index per `ChannelWorkers()` job")
         println(io, "- train/test per class: `$(config.train_per_class)` / `$(config.test_per_class)`")
         println(io, "- free/nudge reads: `$(config.free_reads)` / `$(config.nudge_reads)`")
         println(io, "- free/nudge sweeps: `$(config.free_sweeps)` / `$(config.nudge_sweeps)`")
@@ -1550,8 +1553,8 @@ function write_settings!(path::P, config::C) where {P<:AbstractString,C<:LocalMN
         println(io, "- adjacency storage: `SparseMatrixCSC`")
         println(io, "- worker graph adjacency: shared with source graph")
         println(io, "- worker base bias: shared read-only; worker combined field is local")
-        println(io, "- manager jobs: chunked sample indices; workers self-load columns from shared data matrices")
-        println(io, "- worker parameters: source updates once after `FlushAtEnd()`")
+        println(io, "- manager jobs: per-sample indices; workers self-load columns from shared data matrices")
+        println(io, "- worker parameters: source updates once after `SyncAtEnd()`")
         println(io, "- checkpoints: include sparse `J`, bias, optimizer state, update index, config, and source RNG")
     end
     return path
@@ -1584,11 +1587,16 @@ function run_config!(config::C) where {C<:LocalMNISTManagerConfig}
     source = init_model(config)
     progress_log(config, "source model ready"; t0 = t_source)
     checkpoint = resume_checkpoint_path()
+    saved_checkpoint = nothing
+    start_epoch = 0
     if !isempty(checkpoint)
         t_resume = time()
         progress_log(config, "checkpoint resume started"; path = checkpoint)
-        resume_model!(source, checkpoint)
-        progress_log(config, "checkpoint resume finished"; t0 = t_resume, path = checkpoint)
+        saved_checkpoint = load_checkpoint(checkpoint)
+        install_checkpoint_params!(source, saved_checkpoint)
+        saved_epoch = checkpoint_epoch(saved_checkpoint)
+        start_epoch = saved_epoch < 0 ? 0 : saved_epoch + 1
+        progress_log(config, "checkpoint resume finished"; t0 = t_resume, path = checkpoint, saved_epoch, start_epoch)
     end
     t_manager = time()
     manager = local_manager(source)
@@ -1605,13 +1613,15 @@ function run_config!(config::C) where {C<:LocalMNISTManagerConfig}
     best_path = joinpath(config.outdir, "best_params.bin")
     final_path = joinpath(config.outdir, "final_params.bin")
     latest_path = joinpath(config.outdir, "latest_checkpoint.bin")
-    best_accuracy = Ref(-Inf)
-    rows = NamedTuple[]
+    rows = load_metric_rows(csv_path)
+    best_accuracy = Ref(maximum([checkpoint_best_accuracy(saved_checkpoint); -Inf; [Float64(row.best_accuracy) for row in rows if hasproperty(row, :best_accuracy) && !ismissing(row.best_accuracy)]]))
+    !isempty(rows) && progress_log(config, "existing metrics loaded"; rows = length(rows), best_accuracy = round(best_accuracy[]; digits = 4))
+    start_epoch > config.epochs && progress_log(config, "resume checkpoint already reached requested epoch count"; start_epoch, epochs = config.epochs)
 
     try
-        epoch_meter = progress_meter(config, config.epochs + 1, "epochs $(config.name): ")
+        epoch_meter = progress_meter(config, max(config.epochs - start_epoch + 1, 0), "epochs $(config.name): ")
         try
-            for epoch in 0:config.epochs
+            for epoch in start_epoch:config.epochs
             t_epoch = time()
             progress_log(config, "epoch started"; epoch)
             seconds = 0.0
@@ -1766,7 +1776,6 @@ function main()
     base = LocalMNISTManagerConfig()
     base.workers > 0 || throw(ArgumentError("ISING_MNIST_PM_WORKERS must be positive"))
     base.batchsize > 0 || throw(ArgumentError("ISING_MNIST_PM_BATCHSIZE must be positive"))
-    base.job_chunk_size > 0 || throw(ArgumentError("ISING_MNIST_PM_JOB_CHUNK_SIZE must be positive"))
     Threads.nthreads() < base.workers && @warn "Julia was started with fewer threads than requested manager workers" threads = Threads.nthreads() workers = base.workers
     radii = parse_int_list(get(ENV, "ISING_MNIST_PM_RADII", "1,2,3,4,5,6,7,8,9,10"), collect(1:10))
     root_outdir = haskey(ENV, "ISING_MNIST_PM_OUTDIR") ? base.outdir :

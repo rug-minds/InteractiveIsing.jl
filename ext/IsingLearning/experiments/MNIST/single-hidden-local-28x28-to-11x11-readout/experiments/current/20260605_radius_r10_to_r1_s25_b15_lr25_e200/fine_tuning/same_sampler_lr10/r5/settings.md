@@ -1,0 +1,25 @@
+# Single-Hidden Local MNIST
+
+- architecture: inactive input layer `784`, sampled layers `784 -> 121 -> 40`
+- radius: `5`
+- workers: `16`
+- batchsize: `128`
+- manager jobs: one sample index per `ChannelWorkers()` job
+- train/test per class: `100` / `20`
+- free/nudge reads: `3` / `3`
+- free/nudge sweeps: `25` / `25`
+- beta: `1.5`
+- optimizer: `adam`
+- learning rates W0/W12/W2O/B: `1.0e-5`, `1.0e-5`, `1.0e-5`, `1.0e-6`
+- train output bias: `false`
+- temperatures hot/cold/reverse: `5.0`, `0.01`, `1.0`
+- gradient normalization: `mean`
+- progress logging: `true`, every `5` indexed steps
+- progress bars: `false`
+- resumed from: `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260605_radius_r10_to_r1_s25_b15_lr25_e200\r5\best_params.bin`
+- adjacency storage: `SparseMatrixCSC`
+- worker graph adjacency: shared with source graph
+- worker base bias: shared read-only; worker combined field is local
+- manager jobs: per-sample indices; workers self-load columns from shared data matrices
+- worker parameters: source updates once after `SyncAtEnd()`
+- checkpoints: include sparse `J`, bias, optimizer state, update index, config, and source RNG

@@ -174,7 +174,7 @@ function make_each_worker_manager(layer::L, params::P, nworkers::T) where {L,P,T
             IsingLearning.sync_graph_params!(worker_graph, params)
             return IsingLearning._worker_process(layer, worker_graph)
         end,
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             IsingLearning._write_example!(slot.worker, job.x, job.y)
             resetworker!(slot)
             return nothing
@@ -185,7 +185,7 @@ function make_each_worker_manager(layer::L, params::P, nworkers::T) where {L,P,T
         recipe;
         nworkers = Int(nworkers),
         worker_init = StatefulAlgorithms.MakeEachWorker(),
-        flush_policy = NoFlush(),
+        sync_policy = NoSync(),
         poll_interval = 0.0,
     )
 end

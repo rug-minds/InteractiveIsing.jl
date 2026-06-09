@@ -261,7 +261,7 @@ function build_basefile_manager(
     recipe = (;
         makeworker = make_basefile_worker,
         workername = basefile_worker_name,
-        consume! = consume_basefile_job!,
+        afterjob! = consume_basefile_job!,
     )
 
     return ProcessManager(
@@ -270,7 +270,7 @@ function build_basefile_manager(
         state,
         worker_lifecycle = OnDemandWorkers(destroy_after_finalize = false),
         worker_type = Process,
-        flush_policy = NoFlush(),
+        sync_policy = NoSync(),
         poll_interval = 0.0,
         job_type = eltype(jobs),
         result_type = Any,

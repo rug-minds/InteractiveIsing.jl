@@ -270,13 +270,13 @@ function training_manager(layer, graph, params, nworkers, nudged_burnin_steps, n
             nudged_sample_interval_steps,
             nudged_samples,
         ),
-        prepare! = (slot, job, manager) -> begin
+        loadjob! = (slot, job, manager) -> begin
             write_example!(slot.worker, job.x, job.y)
             resetworker!(slot)
             return nothing
         end,
     )
-    return ProcessManager(recipe; nworkers, flush_policy = NoFlush(), poll_interval = 0.0)
+    return ProcessManager(recipe; nworkers, sync_policy = NoSync(), poll_interval = 0.0)
 end
 
 function zero_worker_buffers!(trainer)

@@ -1,0 +1,4 @@
+[2026-06-05T14:34:56] START r8_stateavg_beta0p10_lr1e-5_burn15_avg5_e15 beta=0.1 lr=0.00001
+[2026-06-05T14:36:45] END r8_stateavg_beta0p10_lr1e-5_burn15_avg5_e15 exit=0
+[2026-06-05T14:36:45] START r8_stateavg_beta0p05_lr5e-6_burn15_avg5_e15 beta=0.05 lr=0.000005
+[2026-06-05T14:38:33] END r8_stateavg_beta0p05_lr5e-6_burn15_avg5_e15 exit=0

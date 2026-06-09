@@ -1,0 +1,24 @@
+# Single-Hidden Local MNIST
+
+- architecture: inactive input layer `784`, sampled layers `784 -> 121 -> 40`
+- radius: `8`
+- workers: `16`
+- batchsize: `100`
+- manager jobs: one sample index per `ChannelWorkers()` job
+- train/test per class: `50` / `20`
+- free/nudge reads: `1` / `1`
+- free/nudge sweeps: `25` / `25`
+- beta: `0.25`
+- optimizer: `adam`
+- learning rates W0/W12/W2O/B: `2.5e-5`, `2.5e-5`, `2.5e-5`, `2.5e-6`
+- train output bias: `false`
+- temperatures hot/cold/reverse: `5.0`, `0.003`, `1.0`
+- gradient normalization: `mean`
+- progress logging: `true`, every `10` indexed steps
+- progress bars: `false`
+- adjacency storage: `SparseMatrixCSC`
+- worker graph adjacency: shared with source graph
+- worker base bias: shared read-only; worker combined field is local
+- manager jobs: per-sample indices; workers self-load columns from shared data matrices
+- worker parameters: source updates once after `SyncAtEnd()`
+- checkpoints: include sparse `J`, bias, optimizer state, update index, config, and source RNG

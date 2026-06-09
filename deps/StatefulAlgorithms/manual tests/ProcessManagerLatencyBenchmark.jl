@@ -95,21 +95,21 @@ function make_manager_benchmark(dataset; nworkers = PMB_NWORKERS)
     recipe = (;
         initstate = config -> make_bench_state(; initial_params = config.initial_params, lr = config.lr),
         makeworker = (idx, manager) -> copyprocess(template; context = deepcopy(template.context)),
-        prepare! = (slot, sample, manager) -> begin
+        loadjob! = (slot, sample, manager) -> begin
             ctx = bench_context(slot.worker)
             ctx.x[] = sample.x
             ctx.y[] = sample.y
             ctx.params[] = manager.state.params[]
             resetworker!(slot)
         end,
-        flush! = manager -> flush_bench_workers!(manager.state, StatefulAlgorithms.workers(manager)),
+        sync_to_state! = manager -> flush_bench_workers!(manager.state, StatefulAlgorithms.workers(manager)),
     )
 
     return ProcessManager(
         recipe;
         nworkers,
         config = (; initial_params = (w = 0.0, b = 0.0), lr = 0.03),
-        flush_policy = FlushAtEnd(),
+        sync_policy = SyncAtEnd(),
         job_type = eltype(dataset),
         result_type = typeof(template),
     )
