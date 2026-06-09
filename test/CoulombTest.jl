@@ -23,7 +23,12 @@ const COULOMB_WG = @WG (;dr) -> dr == 1 ? 1.0 : 0.0 NN = 1
     InteractiveIsing.init!(h, g)
 
     spin_idx = 3
-    analytic = InteractiveIsing.calculate(InteractiveIsing.d_iH(), h, g, spin_idx)
+    analytic = InteractiveIsing.calculate(
+        InteractiveIsing.d_iH(),
+        h,
+        g,
+        SingleSpinProposal(spin_idx, InteractiveIsing.graphstate(g)[spin_idx], NoChange(), 1),
+    )
 
     eps = 1e-6
     original = InteractiveIsing.graphstate(g)[spin_idx]
@@ -91,7 +96,7 @@ end
 
     outside = FlipProposal(3, InteractiveIsing.graphstate(g)[3], 0.9, 1)
     @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), h, g, outside) == 0.0
-    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), h, g, 3) == 0.0
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), h, g, SingleSpinProposal(3, InteractiveIsing.graphstate(g)[3], NoChange(), 1)) == 0.0
 
     rho_before = copy(h.ρ)
     accepted_outside = FlipProposal(3, InteractiveIsing.graphstate(g)[3], 0.9, 1, true)
@@ -105,8 +110,8 @@ end
 
     @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), h, g, global_prop) ≈
           InteractiveIsing.calculate(InteractiveIsing.ΔH(), h_single, single, local_prop)
-    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), h, g, global_idx) ≈
-          InteractiveIsing.calculate(InteractiveIsing.d_iH(), h_single, single, local_idx)
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), h, g, SingleSpinProposal(global_idx, InteractiveIsing.graphstate(g)[global_idx], NoChange(), 2)) ≈
+          InteractiveIsing.calculate(InteractiveIsing.d_iH(), h_single, single, SingleSpinProposal(local_idx, layer_state[local_idx], NoChange(), 1))
 end
 
 @testset "LayerTerm DepolField scoping" begin

@@ -82,9 +82,11 @@ end
     return hterm.β[] * hterm.mask[j] / 2 * (newstate^2 - spins[j]^2 - 2 * hterm.y[j] * (newstate - spins[j]))
 end
 
-@inline function calculate(::d_iH, hterm::Clamping, model, s_idx)
+@inline function calculate(::d_iH, hterm::Clamping, model, proposal::SingleSpinProposal)
     spins = @inline graphstate(model)
-    return hterm.β[] * hterm.mask[s_idx] * (spins[s_idx] - hterm.y[s_idx])
+    s_idx = @inline at_idx(proposal)
+    state = @inline proposed_value(spins, proposal)
+    return hterm.β[] * hterm.mask[s_idx] * (state - hterm.y[s_idx])
 end
 
 function clamp!(c::Clamping, layer::AbstractIsingLayer, vals::V) where {V <: AbstractVector}

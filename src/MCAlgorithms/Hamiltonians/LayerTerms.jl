@@ -91,7 +91,14 @@ end
     return @inline _calculate(hF, term, layer, local_fp)
 end
 
-@inline function calculate(hF::AbstractLinearFunctional, term::LayerTerm, model::AbstractIsingGraph, spin_idx::Integer)
+@inline function calculate(hF::d_iH, term::LayerTerm, model::AbstractIsingGraph, proposal::SingleSpinProposal)
+    (@inline in_bound_layer(term, proposal)) || return @inline _layerterm_zero(model)
+    layer = @inline boundlayer(term, model)
+    local_fp = @inline localproposal(term, model, proposal)
+    return @inline _calculate(hF, term, layer, local_fp)
+end
+
+@inline function calculate(hF::H_i, term::LayerTerm, model::AbstractIsingGraph, spin_idx::Integer)
     (@inline in_bound_layer(term, model, spin_idx)) || return @inline _layerterm_zero(model)
     layer = @inline boundlayer(term, model)
     local_idx = @inline local_spin_idx(term, model, spin_idx)

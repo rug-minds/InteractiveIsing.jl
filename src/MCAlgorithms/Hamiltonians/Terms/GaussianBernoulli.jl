@@ -368,19 +368,20 @@ function calculate(::ΔH, hterm::GaussianBernoulli, model::S, proposal) where {S
     throw(ArgumentError("Proposal index $(idx) is not in the GaussianBernoulli visible or hidden layer."))
 end
 
-function calculate(::d_iH, hterm::GaussianBernoulli, model::S, s_idx) where {S <: AbstractIsingGraph}
+function calculate(::d_iH, hterm::GaussianBernoulli, model::S, proposal::SingleSpinProposal) where {S <: AbstractIsingGraph}
+    s_idx = @inline at_idx(proposal)
     visible_i = _gb_local_visible_index(hterm, model, s_idx)
     isnothing(visible_i) &&
         throw(ArgumentError("GaussianBernoulli d_iH is only defined for visible continuous units; index $(s_idx) is not visible."))
 
-    v = _gb_visible_view(hterm, model)
+    state = @inline graphstate(model)
     h = _gb_hidden_view(hterm, model)
     i = visible_i
     wh = zero(eltype(model))
     @inbounds for j in eachindex(h)
         wh += hterm.w[i, j] * h[j]
     end
-    return (v[i] - hterm.μ[i] - wh) / exp(hterm.logσ2[i])
+    return ((@inline proposed_value(state, proposal)) - hterm.μ[i] - wh) / exp(hterm.logσ2[i])
 end
 
 function calculate(::H_i, hterm::GaussianBernoulli, model::S, idx) where {S <: AbstractIsingGraph}

@@ -407,7 +407,8 @@ end
     return ΔE_below + ΔE_above + ΔE_self
 end
 
-@inline function _calculate(::d_iH, c::CoulombHamiltonian, layer::AbstractIsingLayer, s_idx)
+@inline function _calculate(::d_iH, c::CoulombHamiltonian, layer::AbstractIsingLayer, proposal::SingleSpinProposal)
+    s_idx = @inline at_idx(proposal)
     lattice_size = size(c)
     charge_coord_below = idxToCoord(s_idx, lattice_size)
     charge_coord_above = (charge_coord_below[1], charge_coord_below[2], charge_coord_below[3] + 1)

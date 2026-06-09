@@ -208,6 +208,8 @@ function set_clamping_beta!(isinggraph, β)
 end
 
 function _find_hamiltonian_term(hts, ::Type{T}) where {T}
+    hts isa T && return hts
+    hts isa InteractiveIsing.HamiltonianTerm && return nothing
     for hterm in InteractiveIsing.hamiltonians(hts)
         hterm isa T && return hterm
     end
@@ -221,13 +223,27 @@ function _learning_clamping(isinggraph)
     readout_clamping = _find_hamiltonian_term(isinggraph.hamiltonian, LinearReadoutClamping)
     !isnothing(readout_clamping) && return readout_clamping
 
+    softplus_margin = _find_hamiltonian_term(isinggraph.hamiltonian, InteractiveIsing.SoftplusMarginNudging)
+    !isnothing(softplus_margin) && return softplus_margin
+
     direct_clamping = _find_hamiltonian_term(isinggraph.hamiltonian, InteractiveIsing.Clamping)
     !isnothing(direct_clamping) && return direct_clamping
 
-    error("isinggraph has neither LinearReadoutClamping nor InteractiveIsing.Clamping")
+    error("isinggraph has no recognized learning clamping or nudging term")
 end
 
 function _apply_targets!(clamping::InteractiveIsing.Clamping, isinggraph, y)
+    output_layer = isinggraph[end]
+    output_idxs = InteractiveIsing.layerrange(output_layer)
+    length(y) == length(output_idxs) || throw(DimensionMismatch("target length $(length(y)) does not match output layer length $(length(output_idxs))"))
+    fill!(clamping.y, zero(eltype(clamping.y)))
+    fill!(clamping.mask, zero(eltype(clamping.mask)))
+    clamping.y[output_idxs] .= y
+    clamping.mask[output_idxs] .= one(eltype(clamping.mask))
+    return clamping
+end
+
+function _apply_targets!(clamping::InteractiveIsing.SoftplusMarginNudging, isinggraph, y)
     output_layer = isinggraph[end]
     output_idxs = InteractiveIsing.layerrange(output_layer)
     length(y) == length(output_idxs) || throw(DimensionMismatch("target length $(length(y)) does not match output layer length $(length(output_idxs))"))

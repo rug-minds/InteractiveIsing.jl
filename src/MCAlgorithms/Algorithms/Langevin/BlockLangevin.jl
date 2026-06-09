@@ -319,14 +319,15 @@ end
         spins = @inline InteractiveIsing.graphstate(model)
         @inbounds for pos in 1:m
             spin_idx = block_idxs[pos]
-            derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+            low_state, high_state, _, layer_idx = @inline _local_langevin_bounds(spin_idx, layer_views)
+            old_state = spins[spin_idx]
+            request = SingleSpinProposal{SType}(spin_idx, old_state, NoChange(), layer_idx, false)
+            derivative = @inline calculate(dh, hamiltonian, model, request)
             derivative = @inline _finite_derivative(SType(derivative))
             dH_prealloc[spin_idx] = derivative
             derivatives[pos] = derivative
             gradient_sumsq += derivative * derivative
             gradient_max = max(gradient_max, abs(derivative))
-            low_state, high_state, _, layer_idx = @inline _local_langevin_bounds(spin_idx, layer_views)
-            old_state = spins[spin_idx]
             drift_step = η * derivative
             new_state = old_state - drift_step + (σ > zero(SType) ? (@inline randn(rng, SType)) * σ : zero(SType))
             old_vals[pos] = old_state
@@ -350,19 +351,20 @@ end
             if t <= zero(SType)
                 accept_move = isfinite(ΔE) && ΔE <= zero(SType)
             else
-                @inbounds for pos in 1:m
-                    spins[block_idxs[pos]] = new_vals[pos]
-                end
+                endpoint_proposal = MultiSpinProposal(
+                    @view(block_idxs[1:m]),
+                    @view(old_vals[1:m]),
+                    @view(new_vals[1:m]),
+                    @view(layer_idxs[1:m]),
+                    false,
+                )
                 log_reverse_q = zero(SType)
+                @inline calculate!(@view(derivatives[1:m]), dh, hamiltonian, model, endpoint_proposal)
                 @inbounds for pos in 1:m
-                    spin_idx = block_idxs[pos]
-                    reverse_derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+                    reverse_derivative = derivatives[pos]
                     reverse_derivative = @inline _finite_derivative(SType(reverse_derivative))
                     reverse_mean = new_vals[pos] - η * reverse_derivative
                     log_reverse_q += @inline _mala_log_kernel(old_vals[pos], reverse_mean, four_ηT)
-                end
-                @inbounds for pos in 1:m
-                    spins[block_idxs[pos]] = old_vals[pos]
                 end
                 log_acceptance = -ΔE / t + log_reverse_q - log_forward_q
                 accept_move = isfinite(log_acceptance) && (log_acceptance >= zero(SType) || log(@inline rand(rng, SType)) < log_acceptance)
@@ -414,7 +416,10 @@ end
         gradient_sumsq = zero(SType)
         @inbounds for pos in 1:m
             spin_idx = block_idxs[pos]
-            derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+            layer_idx = @inline spin_idx_to_layer_idx(spin_idx, layer_views)
+            old_state = @inbounds InteractiveIsing.graphstate(model)[spin_idx]
+            request = SingleSpinProposal{SType}(spin_idx, old_state, NoChange(), layer_idx, false)
+            derivative = @inline calculate(dh, hamiltonian, model, request)
             derivative = @inline _finite_derivative(SType(derivative))
             dH_prealloc[spin_idx] = derivative
             derivatives[pos] = derivative

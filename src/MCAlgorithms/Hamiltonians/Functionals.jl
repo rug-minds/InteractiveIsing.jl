@@ -23,6 +23,45 @@ struct H_i <: AbstractLinearFunctional end
 end
 
 """
+    calculate!(dest, d_iH(), hamiltonian, model, proposal::MultiSpinProposal)
+
+Write derivative components at the multi-spin proposal endpoint into `dest`.
+Entry `i` is the derivative for `proposal.at_idxs[i]`.
+"""
+@inline function calculate!(
+    dest,
+    dh::d_iH,
+    hamiltonian,
+    model,
+    proposal::MultiSpinProposal,
+)
+    spins = @inline graphstate(model)
+
+    # Present the full endpoint while each derivative request identifies its
+    # own target spin through a SingleSpinProposal.
+    @inbounds for i in 1:length(proposal)
+        spins[proposal.at_idxs[i]] = proposal.to_vals[i]
+    end
+    try
+        @inbounds for i in 1:length(proposal)
+            request = SingleSpinProposal{eltype(model)}(
+                proposal.at_idxs[i],
+                proposal.to_vals[i],
+                NoChange(),
+                proposal.layer_idxs[i],
+                false,
+            )
+            dest[i] = @inline calculate(dh, hamiltonian, model, request)
+        end
+    finally
+        @inbounds for i in 1:length(proposal)
+            spins[proposal.at_idxs[i]] = proposal.from_vals[i]
+        end
+    end
+    return dest
+end
+
+"""
     calculate(ΔH(), hts, model, proposal::MultiSpinProposal)
 
 Fallback energy-change calculation for a multi-spin move on a collection of

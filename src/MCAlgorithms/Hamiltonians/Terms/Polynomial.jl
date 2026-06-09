@@ -110,9 +110,11 @@ end
     return hterm.c[]*hterm.lp[j]*(to_val(proposal)^order(hterm) - spins[j]^order(hterm))
 end
 
-@inline function calculate(::d_iH, hterm::LH, model, s_idx) where {LH <: PolynomialHamiltonian}
+@inline function calculate(::d_iH, hterm::LH, model, proposal::SingleSpinProposal) where {LH <: PolynomialHamiltonian}
     spins = @inline graphstate(model)
-    return order(hterm)*hterm.c[]*hterm.lp[s_idx]*spins[s_idx]^(order(hterm)-1)
+    s_idx = @inline at_idx(proposal)
+    state = @inline proposed_value(spins, proposal)
+    return order(hterm)*hterm.c[]*hterm.lp[s_idx]*state^(order(hterm)-1)
 end
 
 @inline function calculate(::H_i, hterm::LH, model, idx) where {LH <: PolynomialHamiltonian}

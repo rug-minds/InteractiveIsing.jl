@@ -36,11 +36,17 @@ end
     return ising_energy
 end
 
-# function d_iH(::Bilinear, hargs, s_idx)
-@inline function calculate(::d_iH, hterm::Bilinear, model, s_idx)
+"""
+    calculate(d_iH(), hterm::Bilinear, model, proposal)
+
+Return the bilinear derivative for the spin identified by `proposal`, evaluated
+at the proposal endpoint state.
+"""
+@inline function calculate(::d_iH, hterm::Bilinear, model, proposal::SingleSpinProposal)
     s = @inline graphstate(model)
     J = hterm.J
-    total = @inline weighted_neighbors_sum(s_idx, J, s)
+    spin_idx = @inline at_idx(proposal)
+    total = @inline weighted_neighbors_sum(spin_idx, J, s)
     ising_energy = -total
     return ising_energy
 end

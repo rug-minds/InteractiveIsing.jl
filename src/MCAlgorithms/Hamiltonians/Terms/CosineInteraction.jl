@@ -271,11 +271,12 @@ end
     return total
 end
 
-@inline function calculate(::d_iH, hterm::CosineInteraction, model::S, s_idx) where {S<:AbstractIsingGraph}
+@inline function calculate(::d_iH, hterm::CosineInteraction, model::S, proposal::SingleSpinProposal) where {S<:AbstractIsingGraph}
     spins = @inline graphstate(model)
     J = hterm.J
-    j = Int(s_idx)
-    psi_j = @inline _site_phase(hterm, spins, j)
+    j = @inline at_idx(proposal)
+    proposed_state = @inline proposed_value(spins, proposal)
+    psi_j = (@inline _cosine_theta(hterm, proposed_state, j)) - @inbounds(hterm.phase[j])
     derivative = zero(eltype(model))
 
     for i in _cosine_column_indices(J, j)

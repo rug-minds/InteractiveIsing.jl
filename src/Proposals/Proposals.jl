@@ -3,4 +3,6 @@ abstract type AbstractProposal end
 
 include("IsingProposer.jl")
 include("LocalProposer.jl")
-include("FlipProposal.jl")
+include("SingleSpinProposal.jl")
+include("MultiSpinProposal.jl")
+include("ProposedState.jl")

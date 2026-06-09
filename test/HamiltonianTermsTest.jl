@@ -22,8 +22,8 @@ function TemplateLayerHookTerm(; layer = 1, c = nothing)
     return TemplateLayerHookTerm(Int(layer), params)
 end
 
-InteractiveIsing._calculate(::InteractiveIsing.d_iH, term::TemplateLayerHookTerm, layer, local_idx) =
-    term.c * local_idx
+InteractiveIsing._calculate(::InteractiveIsing.d_iH, term::TemplateLayerHookTerm, layer, proposal::InteractiveIsing.SingleSpinProposal) =
+    term.c * InteractiveIsing.at_idx(proposal)
 
 InteractiveIsing._calculate(::InteractiveIsing.ΔH, term::TemplateLayerHookTerm, layer, proposal) =
     term.c * getfield(proposal, :at_idx)
@@ -32,8 +32,22 @@ struct DirectCalculateLayerTerm <: InteractiveIsing.LayerTerm
     layer::Int
 end
 
-InteractiveIsing.calculate(::InteractiveIsing.d_iH, ::DirectCalculateLayerTerm, model::InteractiveIsing.AbstractIsingGraph, idx::Integer) =
+InteractiveIsing.calculate(::InteractiveIsing.d_iH, ::DirectCalculateLayerTerm, model::InteractiveIsing.AbstractIsingGraph, proposal::InteractiveIsing.SingleSpinProposal) =
     eltype(model)(99)
+
+@testset "SingleSpinProposal endpoint state API" begin
+    g = IsingGraph(2, 1, Continuous(), Quadratic(c = 1, localpotential = [1, 1]); precision = Float64)
+    InteractiveIsing.graphstate(g) .= [0.25, -0.5]
+
+    proposal = SingleSpinProposal(1, 0.25, 0.75, 1)
+    @test proposal isa FlipProposal
+    @test InteractiveIsing.proposed_value(InteractiveIsing.graphstate(g), proposal) == 0.75
+    @test InteractiveIsing.proposed_value(InteractiveIsing.graphstate(g), SingleSpinProposal(2, -0.5, NoChange(), 1)) == -0.5
+
+    derivative = InteractiveIsing.calculate(InteractiveIsing.d_iH(), g.hamiltonian, g, proposal)
+    @test derivative ≈ 1.5
+    @test InteractiveIsing.graphstate(g) == [0.25, -0.5]
+end
 
 @testset "Hamiltonian Term Field Access" begin
     g = IsingGraph(2, 2, Continuous(); precision = Float32)
@@ -119,8 +133,8 @@ end
     hterm = g.hamiltonian
 
     @test InteractiveIsing.layeridx(hterm) == 2
-    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, 1) == 0.0
-    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, 4) == 4.0
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, SingleSpinProposal(1, 0.0, NoChange(), 1)) == 0.0
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, SingleSpinProposal(4, 0.0, NoChange(), 2)) == 4.0
 
     outside = FlipProposal(1, 0.0, 1.0, 1)
     inside = FlipProposal(5, 0.0, 1.0, 2)
@@ -128,7 +142,7 @@ end
     @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), hterm, g, inside) == 6.0
 
     direct = DirectCalculateLayerTerm(2)
-    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), direct, g, 1) == 99.0
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), direct, g, SingleSpinProposal(1, 0.0, NoChange(), 1)) == 99.0
 end
 
 @testset "ToLayer Wrapper Semantics" begin
@@ -146,10 +160,10 @@ end
     inside = FlipProposal(4, 4.0, 8.0, 2)
     local_inside = FlipProposal(2, 4.0, 8.0, 1)
 
-    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), g.hamiltonian, g, 1) == 0.0
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), g.hamiltonian, g, SingleSpinProposal(1, 1.0, NoChange(), 1)) == 0.0
     @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), g.hamiltonian, g, outside) == 0.0
-    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), g.hamiltonian, g, 4) ≈
-          InteractiveIsing.calculate(InteractiveIsing.d_iH(), single.hamiltonian, single, 2)
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), g.hamiltonian, g, SingleSpinProposal(4, 4.0, NoChange(), 2)) ≈
+          InteractiveIsing.calculate(InteractiveIsing.d_iH(), single.hamiltonian, single, SingleSpinProposal(2, 4.0, NoChange(), 1))
     @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), g.hamiltonian, g, inside) ≈
           InteractiveIsing.calculate(InteractiveIsing.ΔH(), single.hamiltonian, single, local_inside)
 
@@ -181,7 +195,7 @@ end
     )
     InteractiveIsing.graphstate(wrapped_ising) .= Float64[1, 2, 3, 4]
     @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), wrapped_ising.hamiltonian, wrapped_ising, FlipProposal(1, 1.0, 7.0, 1)) == 0.0
-    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), wrapped_ising.hamiltonian, wrapped_ising, 4) ≈ -0.5
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), wrapped_ising.hamiltonian, wrapped_ising, SingleSpinProposal(4, 4.0, NoChange(), 2)) ≈ -0.5
 
     mixed = IsingGraph(
         Layer(2, Continuous(), StateSet(-10, 10); periodic = false),
@@ -191,8 +205,8 @@ end
         adj = zero_adj(4),
     )
     InteractiveIsing.graphstate(mixed) .= Float64[1, 2, 3, 4]
-    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), mixed.hamiltonian, mixed, 1) ≈ -1.0
-    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), mixed.hamiltonian, mixed, 4) ≈ -3.0
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), mixed.hamiltonian, mixed, SingleSpinProposal(1, 1.0, NoChange(), 1)) ≈ -1.0
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), mixed.hamiltonian, mixed, SingleSpinProposal(4, 4.0, NoChange(), 2)) ≈ -3.0
 
     lookup_h = IsingGraph(
         Layer(2, Continuous(), StateSet(-10, 10); periodic = false),
@@ -235,7 +249,7 @@ end
     InteractiveIsing.graphstate(g)[1] = old - eps_fd
     e_minus = InteractiveIsing.calculate(InteractiveIsing.H(), hterm, g)
     InteractiveIsing.graphstate(g)[1] = old
-    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, 1) ≈
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, SingleSpinProposal(1, old, NoChange(), 1)) ≈
           (e_plus - e_minus) / (2eps_fd) atol = 1e-7
 
     half_turn = IsingGraph(
@@ -254,7 +268,7 @@ end
     InteractiveIsing.graphstate(mixed_clock) .= [-1.0, -2.0]
     @test InteractiveIsing.calculate(InteractiveIsing.H(), mixed_clock.hamiltonian, mixed_clock) ≈
           -cos(0 - 2π / 7)
-    @test_throws ArgumentError InteractiveIsing.calculate(InteractiveIsing.d_iH(), mixed_clock.hamiltonian, mixed_clock, 1)
+    @test_throws ArgumentError InteractiveIsing.calculate(InteractiveIsing.d_iH(), mixed_clock.hamiltonian, mixed_clock, SingleSpinProposal(1, -1.0, NoChange(), 1))
 
     local_phase = IsingGraph(
         continuous_layer,
@@ -383,11 +397,11 @@ end
     expected_visible_ΔH = ((0.4 - μ[1])^2 - (v[1] - μ[1])^2) / (2 * σ2[1]) -
                           (0.4 - v[1]) * dot(w[1, :], h) / σ2[1]
     @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), hterm, g, visible_proposal) ≈ expected_visible_ΔH
-    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, 1) ≈ expected_joint_grad[1]
+    @test InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, SingleSpinProposal(1, v[1], NoChange(), 1)) ≈ expected_joint_grad[1]
 
     hidden_proposal = FlipProposal(4, 0.0, 1.0, 2)
     @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), hterm, g, hidden_proposal) ≈ -logits[2]
-    @test_throws ArgumentError InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, 4)
+    @test_throws ArgumentError InteractiveIsing.calculate(InteractiveIsing.d_iH(), hterm, g, SingleSpinProposal(4, 0.0, NoChange(), 2))
 
     eps_fd = 1e-6
     state = InteractiveIsing.graphstate(g)

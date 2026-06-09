@@ -1,57 +1,3 @@
-# Previous non-template sketch kept here while the template interface settles.
-#=
-"""
-H = -Σ_i b_i s_i
-
-The magnetic field part of the Ising Hamiltonian
-"""
-Base.@kwdef struct MagField{PV} <: HamiltonianTerm
-    # LEGACY / DEPRECATED:
-    # StateLike is kept only in this commented reference implementation. The
-    # active template version below uses `default = ConstFill(0)` plus generic
-    # ensure functions instead.
-    b::PV = StateLike(ConstFill, 0)
-end
-
-@inline function instantiate(hterm::MF, g::AbstractIsingGraph) where {MF <: MagField}
-    T = eltype(g)
-    len = statelen(g)
-    b = nothing
-    if hterm.b isa Function || hterm.b isa DerivedParameter
-        b = hterm.b(g)
-    else
-        b = hterm.b
-        @assert length(b) == len "Length of b must match number of spins in graph"
-    end
-    MagField(map(T, b))
-end
-
-@inline calculate(::H, hterm::MagField, model::S) where S <: AbstractIsingGraph = calculate(H(), hterm, model; b = hterm.b)
-@inline function calculate(::H, ::MagField, model::S; b) where S
-    s = @inline graphstate(model)
-    return -dot(b, s)
-end
-
-@inline function calculate(::ΔH, hterm::MagField, model::S, proposal) where {S <: AbstractIsingGraph}
-    j = at_idx(proposal)
-    spins = @inline graphstate(model)
-    return -hterm.b[j]*(to_val(proposal) - spins[j])
-end
-
-@inline function calculate(::d_iH, hterm::MagField, model::S, s_idx) where {S <: AbstractIsingGraph}
-    return -hterm.b[s_idx]
-end
-
-@inline function parameter_derivative(hterm::MagField, state::S; db = similar(hterm.b), buffermode::BufferMode = OverwriteBuffer()) where {S <: AbstractArray}
-    if buffermode isa OverwriteBuffer
-        db .= -state
-    else
-        db .+= sign(buffermode) * -state
-    end
-    return (; db = db)
-end
-=#
-
 """
 H = -Σ_i b_i s_i
 
@@ -94,7 +40,8 @@ end
     return -hterm.c * hterm.b[j] * (to_val(proposal) - spins[j])
 end
 
-@inline function calculate(::d_iH, hterm::MagField, model, s_idx)
+@inline function calculate(::d_iH, hterm::MagField, model, proposal::SingleSpinProposal)
+    s_idx = @inline at_idx(proposal)
     return -hterm.c * hterm.b[s_idx]
 end
 

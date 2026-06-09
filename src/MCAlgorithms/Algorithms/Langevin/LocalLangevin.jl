@@ -147,20 +147,19 @@ end
     hamiltonian,
     model,
     spin_idx::Int,
+    layer_idx::Int,
     old_state::T,
     trial_state::T,
     derivative::T,
 ) where {T}
     iszero(derivative) && return old_state, derivative
 
-    spins = @inline InteractiveIsing.graphstate(model)
     candidate = trial_state
     candidate_derivative = derivative
 
     for _ in 1:24
-        @inbounds spins[spin_idx] = candidate
-        candidate_derivative = @inline _finite_derivative(T(@inline calculate(dh, hamiltonian, model, spin_idx)))
-        @inbounds spins[spin_idx] = old_state
+        request = SingleSpinProposal{T}(spin_idx, old_state, candidate, layer_idx, false)
+        candidate_derivative = @inline _finite_derivative(T(@inline calculate(dh, hamiltonian, model, request)))
 
         if isfinite(candidate_derivative) && !(@inline _langevin_derivative_sign_flipped(derivative, candidate_derivative))
             return candidate, candidate_derivative
@@ -239,11 +238,14 @@ end
     return cached
 end
 
-@inline function _start_local_langevin_cycle!(langevin::LocalLangevin{Order}, context, dh, hamiltonian, model, active_spins) where {Order}
+@inline function _start_local_langevin_cycle!(langevin::LocalLangevin{Order}, context, dh, hamiltonian, model, active_spins, layer_views) where {Order}
     SType = eltype(model)
+    spins = @inline InteractiveIsing.graphstate(model)
     gradient_max = zero(SType)
     for spin_idx in active_spins
-        derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+        layer_idx = @inline spin_idx_to_layer_idx(spin_idx, layer_views)
+        request = SingleSpinProposal{SType}(spin_idx, @inbounds(spins[spin_idx]), NoChange(), layer_idx, false)
+        derivative = @inline calculate(dh, hamiltonian, model, request)
         derivative = @inline _finite_derivative(SType(derivative))
         @inbounds context.dH_prealloc[spin_idx] = derivative
         gradient_max = max(gradient_max, abs(derivative))
@@ -307,9 +309,11 @@ end
     return low_state, high_state, high_state - low_state, layer_idx
 end
 
-@inline function _local_langevin_derivative!(dH_prealloc, dh, hamiltonian, model, spin_idx::Int)
+@inline function _local_langevin_derivative!(dH_prealloc, dh, hamiltonian, model, spin_idx::Int, layer_idx::Int)
     SType = eltype(model)
-    derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+    spins = @inline InteractiveIsing.graphstate(model)
+    request = SingleSpinProposal{SType}(spin_idx, @inbounds(spins[spin_idx]), NoChange(), layer_idx, false)
+    derivative = @inline calculate(dh, hamiltonian, model, request)
     derivative = @inline _finite_derivative(SType(derivative))
     @inbounds dH_prealloc[spin_idx] = derivative
     return derivative
@@ -336,7 +340,7 @@ stored local derivative at that spin.
     proposal = FlipProposal{T}(spin_idx, old_state, new_state, layer_idx, true)
     @inbounds spins[spin_idx] = new_state
     @inline update!(langevin, hamiltonian, model, proposal)
-    post_derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+    post_derivative = @inline calculate(dh, hamiltonian, model, proposal)
     post_derivative = @inline _finite_derivative(T(post_derivative))
     @inbounds dH_prealloc[spin_idx] = post_derivative
     return proposal, post_derivative
@@ -381,6 +385,7 @@ local stationary point.
             hamiltonian,
             model,
             spin_idx,
+            layer_idx,
             old_state,
             new_state,
             derivative,
@@ -410,24 +415,19 @@ end
 """
     _local_langevin_reverse_mean(...)
 
-Temporarily evaluate the local derivative at the trial state and return the
-reverse Langevin proposal mean used in the MALA correction.
+Evaluate the local derivative at the proposal endpoint and return the reverse
+Langevin proposal mean used in the MALA correction.
 """
 @inline function _local_langevin_reverse_mean(
     dh,
     hamiltonian,
     model,
-    spin_idx::Int,
-    old_state::T,
-    new_state::T,
+    proposal::SingleSpinProposal{T},
     η::T,
 ) where {T}
-    spins = @inline InteractiveIsing.graphstate(model)
-    @inbounds spins[spin_idx] = new_state
-    reverse_derivative = @inline calculate(dh, hamiltonian, model, spin_idx)
+    reverse_derivative = @inline calculate(dh, hamiltonian, model, proposal)
     reverse_derivative = @inline _finite_derivative(T(reverse_derivative))
-    reverse_mean = new_state - η * reverse_derivative
-    @inbounds spins[spin_idx] = old_state
+    reverse_mean = to_val(proposal) - η * reverse_derivative
     return reverse_mean
 end
 
@@ -469,7 +469,7 @@ Hamiltonian caches unchanged.
         accept_move = isfinite(ΔE) && ΔE <= zero(T)
     else
         forward_mean = old_state - drift_step
-        reverse_mean = @inline _local_langevin_reverse_mean(dh, hamiltonian, model, spin_idx, old_state, new_state, η)
+        reverse_mean = @inline _local_langevin_reverse_mean(dh, hamiltonian, model, proposal_trial, η)
         log_forward_q = @inline _mala_log_kernel(new_state, forward_mean, four_ηT)
         log_reverse_q = @inline _mala_log_kernel(old_state, reverse_mean, four_ηT)
         log_acceptance = -ΔE / t + log_reverse_q - log_forward_q
@@ -521,7 +521,7 @@ end
         return (;)
     end
     if active_changed || context.sweep_position[] == 0 || context.sweep_position[] > n
-        gradient_max = @inline _start_local_langevin_cycle!(langevin, context, dh, hamiltonian, model, active_spins)
+        gradient_max = @inline _start_local_langevin_cycle!(langevin, context, dh, hamiltonian, model, active_spins, layer_views)
     end
 
     ΔE = zero(SType)
@@ -531,9 +531,9 @@ end
 
     k = @inline _next_local_langevin_order_index!(langevin, context, rng, n)
     spin_idx = @inbounds active_spins[k]
-    derivative = @inline _local_langevin_derivative!(dH_prealloc, dh, hamiltonian, model, spin_idx)
-    gradient_max = max(gradient_max, abs(derivative))
     low_state, high_state, local_span, layer_idx = @inline _local_langevin_bounds(spin_idx, layer_views)
+    derivative = @inline _local_langevin_derivative!(dH_prealloc, dh, hamiltonian, model, spin_idx, layer_idx)
+    gradient_max = max(gradient_max, abs(derivative))
 
     local_drift_cap = drift_fraction * local_span
     raw_drift_step = η * derivative

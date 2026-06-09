@@ -477,6 +477,31 @@ function Base.iterate(loader::MNISTDataLoader, state::Int = 1)
 end
 
 """
+    _shared_mnist_learning_term(prototype_graph)
+
+Return a fresh worker-local learning nudging term matching the prototype graph's
+target-loss term while keeping target buffers worker-local.
+"""
+function _shared_mnist_learning_term(prototype_graph::G) where {G}
+    softplus_margin = hamiltonian_or_nothing(
+        prototype_graph.hamiltonian,
+        InteractiveIsing.SoftplusMarginNudging,
+    )
+    if !isnothing(softplus_margin)
+        return InteractiveIsing.SoftplusMarginNudging(
+            β = InteractiveIsing.UniformArray(zero(eltype(prototype_graph))),
+            y = g -> InteractiveIsing.filltype(Vector, zero(eltype(prototype_graph)), statelen(g)),
+            τ = InteractiveIsing.UniformArray(eltype(prototype_graph)(softplus_margin.τ[])),
+        )
+    end
+
+    return Clamping(
+        β = InteractiveIsing.UniformArray(zero(eltype(prototype_graph))),
+        y = g -> InteractiveIsing.filltype(Vector, zero(eltype(prototype_graph)), statelen(g)),
+    )
+end
+
+"""
     _shared_mnist_worker_graph(prototype_graph; input_mode = :state)
 
 Create a worker graph with the same layer layout as `prototype_graph`, fresh
@@ -494,10 +519,7 @@ function _shared_mnist_worker_graph(prototype_graph::G; input_mode::Symbol = :st
     if !isnothing(input_b)
         hamiltonian = hamiltonian + MagField(b = input_b)
     end
-    hamiltonian = hamiltonian + Clamping(
-        β = InteractiveIsing.UniformArray(zero(eltype(prototype_graph))),
-        y = g -> InteractiveIsing.filltype(Vector, zero(eltype(prototype_graph)), statelen(g)),
-    )
+    hamiltonian = hamiltonian + _shared_mnist_learning_term(prototype_graph)
 
     worker_graph = IsingGraph(
         getfield(prototype_graph, :layers)...,

@@ -121,7 +121,7 @@ function InteractiveIsing.calculate(
 end
 
 raw"""
-    calculate(d_iH(), hterm::LinearReadoutClamping, model, s_idx)
+    calculate(d_iH(), hterm::LinearReadoutClamping, model, proposal)
 
 Derivative of the readout-clamping energy with respect to one state value:
 
@@ -136,13 +136,15 @@ function InteractiveIsing.calculate(
     ::InteractiveIsing.d_iH,
     hterm::LinearReadoutClamping,
     model::InteractiveIsing.AbstractIsingGraph,
-    s_idx,
+    proposal::InteractiveIsing.SingleSpinProposal,
 )
+    s_idx = InteractiveIsing.at_idx(proposal)
     pos = _readout_position(hterm, s_idx)
     isnothing(pos) && return zero(eltype(model))
 
     state = InteractiveIsing.graphstate(model)
     residual = readout_score(hterm, state) - hterm.target[]
+    residual += hterm.readout[pos] * (InteractiveIsing.proposed_value(state, proposal) - state[s_idx])
     return hterm.β[] * residual * hterm.readout[pos]
 end
 
