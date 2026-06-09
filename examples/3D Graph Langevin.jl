@@ -16,6 +16,8 @@ g = IsingGraph(40,40,10,
         Ising(c = ConstVal(0f0), b = 0) +
         CoulombHamiltonian(recalc = 5000),
         periodic = (:x,:y))
+g.addons[:interactive] = true
+
 
 
 

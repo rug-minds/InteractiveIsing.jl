@@ -102,7 +102,7 @@ grad_symmetry_error
 
 in the CSV. In the run below both stayed exactly `0.0`.
 
-### 6. Recurrent coupling norm projection
+### 6. Recurrent coupling regularization
 
 The recurrent Ising coupling scale is mostly interchangeable with temperature:
 
@@ -111,7 +111,7 @@ E / T
 ```
 
 so letting all recurrent weights grow mainly changes the effective temperature
-scale. The script now supports:
+scale. The script supports an explicit recurrent norm projection:
 
 ```text
 ISING_MNIST_IF_W_NORMALIZATION=global
@@ -138,6 +138,24 @@ epoch 1 w_norm = 0.99999994
 symmetry_error = 0.0
 grad_symmetry_error = 0.0
 ```
+
+For the current REINFORCE-minima branch, the more useful regularizer appears to
+be ordinary weight decay rather than hard recurrent norm projection. The script
+keeps norm projection available for diagnostics, but the later grid below used:
+
+```text
+ISING_MNIST_IF_W_NORMALIZATION=none
+ISING_MNIST_IF_WEIGHT_DECAY=<grid value>
+```
+
+The early-stop diagnostic is also implemented:
+
+```text
+ISING_MNIST_IF_EARLY_STOP_DECLINE_EPOCHS=2
+```
+
+If test accuracy drops on two evaluated epochs in a row, the script prints an
+early-stop message and exits the epoch loop.
 
 ## Full Balanced Run
 
@@ -244,3 +262,102 @@ The most plausible next changes are:
 
 The current result suggests that normalization and label baselines are useful,
 but the recurrent update still needs regularization or a lower learning rate.
+
+## Weight Decay Grid
+
+After the fixed full run, we tried weight decay without recurrent norm
+projection. These runs kept:
+
+```text
+full balanced MNIST
+workers = 32
+temp = 1e-4
+sweeps = 25
+covariance_samples = 20
+covariance_sample_sweeps = 50
+reward = margin
+reward_baseline = label
+w_input_normalization = row
+project_output_bias_prior = true
+w_normalization = none
+early_stop_decline_epochs = 2
+```
+
+Run root:
+
+```text
+experiments/current/grid_weight_decay_lr001_full6_earlystop
+```
+
+Results:
+
+```text
+lr = 0.001, weight_decay = 1e-3
+epoch 1 test = 0.09271
+epoch 2 test = 0.09809
+stopped manually because it was at chance
+```
+
+```text
+lr = 0.001, weight_decay = 1e-4
+epoch 1 test = 0.10034
+stopped manually because it was at chance and classes 4/5 vanished
+```
+
+```text
+lr = 0.001, weight_decay = 1e-5
+epoch 0 test = 0.08980
+epoch 1 test = 0.21726
+epoch 2 test = 0.21951
+epoch 3 test = 0.20617
+epoch 4 test = 0.20930
+epoch 5 test = 0.19686
+epoch 6 test = 0.20437
+best full-test accuracy = 0.21951
+```
+
+The `1e-5` run is the best result in this folder so far. It slightly improved
+over the previous best `0.21244`, but it still did not move past the same rough
+plateau. The recurrent norm still grew:
+
+```text
+w_norm = 0.4858 -> 1.9147
+```
+
+so light decay slowed the scale growth but did not control it strongly.
+
+A lower learning-rate check did not help:
+
+```text
+lr = 0.0005, weight_decay = 1e-5
+epoch 0 test = 0.08722
+epoch 1 test = 0.10717
+reward_std collapsed to about 0.0035 after the first epoch
+stopped manually
+```
+
+All weight-decay runs kept:
+
+```text
+symmetry_error = 0.0
+grad_symmetry_error = 0.0
+w_input_norm ~= 1.5336
+```
+
+## Current Recommendation
+
+Do not use hard recurrent norm projection as the main branch yet. It is useful
+as a diagnostic, but the `w_norm=0.5` trial only reached `0.19260` by epoch 3
+before we stopped it.
+
+The current best branch is:
+
+```text
+lr = 0.001
+weight_decay = 1e-5
+w_normalization = none
+temp = 1e-4
+```
+
+Stronger decay (`1e-4`, `1e-3`) suppresses the learning signal too much. Lower
+learning rate (`0.0005`) also looked bad with the same decay.
