@@ -1,8 +1,0 @@
-  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-[21:36:11] building local r8 source
-[21:36:42] warming local single Process
-(timestamp = "2026-06-04T21:36:50", mode = "local_serial_process_inline", threads = 1, workers = 1, sample_idx = 2, radius = 8, free_sweeps = 50, nudge_sweeps = 50, free_reads = 3, nudge_reads = 3, beta = 5.0f0, examples = 1, seconds = 0.1740716, seconds_per_example = 0.1740716, examples_per_second = 5.744762500028724)
-(timestamp = "2026-06-04T21:36:52", mode = "local_serial_process_inline", threads = 1, workers = 1, sample_idx = 3, radius = 8, free_sweeps = 50, nudge_sweeps = 50, free_reads = 3, nudge_reads = 3, beta = 5.0f0, examples = 1, seconds = 0.157217, seconds_per_example = 0.157217, examples_per_second = 6.360635300253789)
-(timestamp = "2026-06-04T21:36:52", mode = "local_serial_process_inline", threads = 1, workers = 1, sample_idx = 4, radius = 8, free_sweeps = 50, nudge_sweeps = 50, free_reads = 3, nudge_reads = 3, beta = 5.0f0, examples = 1, seconds = 0.2123779, seconds_per_example = 0.2123779, examples_per_second = 4.708587852125857)
-[21:36:54] warming local one-worker manager
-(timestamp = "2026-06-04T21:37:09", mode = "local_one_worker_manager_chunk", threads = 1, workers = 1, sample_idx = 0, radius = 8, free_sweeps = 50, nudge_sweeps = 50, free_reads = 3, nudge_reads = 3, beta = 5.0f0, examples = 32, seconds = 6.815092, seconds_per_example = 0.212971625, examples_per_second = 4.695461191132856)

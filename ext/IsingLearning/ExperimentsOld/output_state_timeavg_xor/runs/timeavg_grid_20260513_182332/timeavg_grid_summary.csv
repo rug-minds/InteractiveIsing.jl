@@ -1,2 +1,0 @@
-best_accuracy,best_epoch,best_means,best_mse,final_accuracy,final_epoch,final_grad_norm,final_margin,final_mse,label,run_dir
-1.0,1400,[-0.5664, 0.3412, 0.6655, -0.6241],0.21881932032816637,0.75,3000,0.0312881504228978,0.014116240176722245,0.7168375885668679,f300_n300_avg20_lr002,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/output_state_timeavg_xor/runs/timeavg_grid_20260513_182332/f300_n300_avg20_lr002

@@ -1,3 +1,0 @@
-timestamp,hidden,contexts,threads,order,schedule,sweeps,nsteps,graph_states,graph_edges,single_seconds,parallel_seconds,min_task_seconds,mean_task_seconds,max_task_seconds,speedup_vs_serial_all
-2026-05-21T18:30:45,784,16,32,shuffle,static,100000.0,82400000,1608,1292032,1.124123,1.8734288,1.3897283,1.5350578250000002,1.8587592,9.600561281005183
-2026-05-21T18:30:51,784,32,32,shuffle,static,100000.0,82400000,1608,1292032,1.1456222,2.9843094,2.3935201,2.618052724999999,2.9841465,12.284219055839184

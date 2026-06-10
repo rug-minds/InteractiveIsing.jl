@@ -1,557 +1,0 @@
-  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-epoch 1   0%|█                                          |  ETA: 0:37:23[K
-         batch: 2/424[K
-       samples: 256/54210[K
-   reward_mean: -0.55636[K
-    reward_std: 0.47063[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1   2%|██                                         |  ETA: 0:09:29[K
-         batch: 10/424[K
-       samples: 1280/54210[K
-   reward_mean: -0.09318[K
-    reward_std: 0.19041[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1   3%|██                                         |  ETA: 0:07:51[K
-         batch: 13/424[K
-       samples: 1664/54210[K
-   reward_mean: -0.10865[K
-    reward_std: 0.20236[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1   4%|██                                         |  ETA: 0:06:50[K
-         batch: 16/424[K
-       samples: 2048/54210[K
-   reward_mean: -0.10876[K
-    reward_std: 0.20243[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1   4%|██                                         |  ETA: 0:06:06[K
-         batch: 19/424[K
-       samples: 2432/54210[K
-   reward_mean: -0.06984[K
-    reward_std: 0.16826[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1   5%|███                                        |  ETA: 0:05:34[K
-         batch: 22/424[K
-       samples: 2816/54210[K
-   reward_mean: -0.11253[K
-    reward_std: 0.20482[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1   6%|███                                        |  ETA: 0:05:10[K
-         batch: 25/424[K
-       samples: 3200/54210[K
-   reward_mean: -0.1112[K
-    reward_std: 0.20367[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1   7%|███                                        |  ETA: 0:04:50[K
-         batch: 28/424[K
-       samples: 3584/54210[K
-   reward_mean: -0.09396[K
-    reward_std: 0.18975[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1   7%|████                                       |  ETA: 0:04:34[K
-         batch: 31/424[K
-       samples: 3968/54210[K
-   reward_mean: -0.04691[K
-    reward_std: 0.13906[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1   8%|████                                       |  ETA: 0:04:20[K
-         batch: 34/424[K
-       samples: 4352/54210[K
-   reward_mean: -0.0469[K
-    reward_std: 0.13909[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1   9%|████                                       |  ETA: 0:04:08[K
-         batch: 37/424[K
-       samples: 4736/54210[K
-   reward_mean: -0.0663[K
-    reward_std: 0.16412[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1   9%|█████                                      |  ETA: 0:03:58[K
-         batch: 40/424[K
-       samples: 5120/54210[K
-   reward_mean: -0.0507[K
-    reward_std: 0.14475[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  10%|█████                                      |  ETA: 0:03:50[K
-         batch: 43/424[K
-       samples: 5504/54210[K
-   reward_mean: -0.0393[K
-    reward_std: 0.12689[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  11%|█████                                      |  ETA: 0:03:42[K
-         batch: 46/424[K
-       samples: 5888/54210[K
-   reward_mean: -0.05474[K
-    reward_std: 0.14988[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  12%|█████                                      |  ETA: 0:03:35[K
-         batch: 49/424[K
-       samples: 6272/54210[K
-   reward_mean: -0.06233[K
-    reward_std: 0.15969[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  12%|██████                                     |  ETA: 0:03:28[K
-         batch: 52/424[K
-       samples: 6656/54210[K
-   reward_mean: -0.05866[K
-    reward_std: 0.15491[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  13%|██████                                     |  ETA: 0:03:23[K
-         batch: 55/424[K
-       samples: 7040/54210[K
-   reward_mean: -0.0509[K
-    reward_std: 0.14457[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  14%|██████                                     |  ETA: 0:03:17[K
-         batch: 58/424[K
-       samples: 7424/54210[K
-   reward_mean: -0.07404[K
-    reward_std: 0.17258[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  14%|███████                                    |  ETA: 0:03:12[K
-         batch: 61/424[K
-       samples: 7808/54210[K
-   reward_mean: -0.05483[K
-    reward_std: 0.14997[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  15%|███████                                    |  ETA: 0:03:08[K
-         batch: 64/424[K
-       samples: 8192/54210[K
-   reward_mean: -0.07403[K
-    reward_std: 0.17262[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  16%|███████                                    |  ETA: 0:03:04[K
-         batch: 67/424[K
-       samples: 8576/54210[K
-   reward_mean: -0.07018[K
-    reward_std: 0.16848[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  17%|████████                                   |  ETA: 0:03:00[K
-         batch: 70/424[K
-       samples: 8960/54210[K
-   reward_mean: -0.04308[K
-    reward_std: 0.13323[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  17%|████████                                   |  ETA: 0:02:56[K
-         batch: 73/424[K
-       samples: 9344/54210[K
-   reward_mean: -0.05068[K
-    reward_std: 0.14478[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  18%|████████                                   |  ETA: 0:02:53[K
-         batch: 76/424[K
-       samples: 9728/54210[K
-   reward_mean: -0.04696[K
-    reward_std: 0.13911[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  19%|█████████                                  |  ETA: 0:02:49[K
-         batch: 79/424[K
-       samples: 10112/54210[K
-   reward_mean: -0.03932[K
-    reward_std: 0.12687[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  19%|█████████                                  |  ETA: 0:02:46[K
-         batch: 82/424[K
-       samples: 10496/54210[K
-   reward_mean: -0.05083[K
-    reward_std: 0.14472[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  20%|█████████                                  |  ETA: 0:02:43[K
-         batch: 85/424[K
-       samples: 10880/54210[K
-   reward_mean: -0.04694[K
-    reward_std: 0.1392[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  21%|█████████                                  |  ETA: 0:02:40[K
-         batch: 88/424[K
-       samples: 11264/54210[K
-   reward_mean: -0.06247[K
-    reward_std: 0.15972[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  21%|██████████                                 |  ETA: 0:02:38[K
-         batch: 91/424[K
-       samples: 11648/54210[K
-   reward_mean: -0.04694[K
-    reward_std: 0.13914[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  22%|██████████                                 |  ETA: 0:02:35[K
-         batch: 94/424[K
-       samples: 12032/54210[K
-   reward_mean: -0.0469[K
-    reward_std: 0.1392[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  23%|██████████                                 |  ETA: 0:02:33[K
-         batch: 97/424[K
-       samples: 12416/54210[K
-   reward_mean: -0.06253[K
-    reward_std: 0.15969[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  24%|███████████                                |  ETA: 0:02:31[K
-         batch: 100/424[K
-       samples: 12800/54210[K
-   reward_mean: -0.03925[K
-    reward_std: 0.12693[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  24%|███████████                                |  ETA: 0:02:28[K
-         batch: 103/424[K
-       samples: 13184/54210[K
-   reward_mean: -0.07402[K
-    reward_std: 0.17255[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  25%|███████████                                |  ETA: 0:02:26[K
-         batch: 106/424[K
-       samples: 13568/54210[K
-   reward_mean: -0.05468[K
-    reward_std: 0.14991[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  26%|████████████                               |  ETA: 0:02:24[K
-         batch: 109/424[K
-       samples: 13952/54210[K
-   reward_mean: -0.03921[K
-    reward_std: 0.12695[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  26%|████████████                               |  ETA: 0:02:22[K
-         batch: 112/424[K
-       samples: 14336/54210[K
-   reward_mean: -0.05851[K
-    reward_std: 0.15488[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  27%|████████████                               |  ETA: 0:02:20[K
-         batch: 115/424[K
-       samples: 14720/54210[K
-   reward_mean: -0.06253[K
-    reward_std: 0.15965[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  28%|████████████                               |  ETA: 0:02:18[K
-         batch: 118/424[K
-       samples: 15104/54210[K
-   reward_mean: -0.06624[K
-    reward_std: 0.1642[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  29%|█████████████                              |  ETA: 0:02:16[K
-         batch: 121/424[K
-       samples: 15488/54210[K
-   reward_mean: -0.04321[K
-    reward_std: 0.13324[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  29%|█████████████                              |  ETA: 0:02:14[K
-         batch: 124/424[K
-       samples: 15872/54210[K
-   reward_mean: -0.05094[K
-    reward_std: 0.1447[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  30%|█████████████                              |  ETA: 0:02:12[K
-         batch: 127/424[K
-       samples: 16256/54210[K
-   reward_mean: -0.05854[K
-    reward_std: 0.15499[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  31%|██████████████                             |  ETA: 0:02:10[K
-         batch: 130/424[K
-       samples: 16640/54210[K
-   reward_mean: -0.05089[K
-    reward_std: 0.14463[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  31%|██████████████                             |  ETA: 0:02:09[K
-         batch: 133/424[K
-       samples: 17024/54210[K
-   reward_mean: -0.03548[K
-    reward_std: 0.12016[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  32%|██████████████                             |  ETA: 0:02:07[K
-         batch: 136/424[K
-       samples: 17408/54210[K
-   reward_mean: -0.0508[K
-    reward_std: 0.1448[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  33%|███████████████                            |  ETA: 0:02:05[K
-         batch: 139/424[K
-       samples: 17792/54210[K
-   reward_mean: -0.03922[K
-    reward_std: 0.12679[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  33%|███████████████                            |  ETA: 0:02:03[K
-         batch: 142/424[K
-       samples: 18176/54210[K
-   reward_mean: -0.04313[K
-    reward_std: 0.13318[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  34%|███████████████                            |  ETA: 0:02:02[K
-         batch: 145/424[K
-       samples: 18560/54210[K
-   reward_mean: -0.05854[K
-    reward_std: 0.15488[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  35%|████████████████                           |  ETA: 0:02:00[K
-         batch: 148/424[K
-       samples: 18944/54210[K
-   reward_mean: -0.04699[K
-    reward_std: 0.13909[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  36%|████████████████                           |  ETA: 0:01:58[K
-         batch: 151/424[K
-       samples: 19328/54210[K
-   reward_mean: -0.04692[K
-    reward_std: 0.13908[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  36%|████████████████                           |  ETA: 0:01:57[K
-         batch: 154/424[K
-       samples: 19712/54210[K
-   reward_mean: -0.05477[K
-    reward_std: 0.15[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  37%|████████████████                           |  ETA: 0:01:55[K
-         batch: 157/424[K
-       samples: 20096/54210[K
-   reward_mean: -0.04701[K
-    reward_std: 0.13904[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  38%|█████████████████                          |  ETA: 0:01:53[K
-         batch: 160/424[K
-       samples: 20480/54210[K
-   reward_mean: -0.04294[K
-    reward_std: 0.1332[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  38%|█████████████████                          |  ETA: 0:01:52[K
-         batch: 163/424[K
-       samples: 20864/54210[K
-   reward_mean: -0.0663[K
-    reward_std: 0.16416[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  39%|█████████████████                          |  ETA: 0:01:50[K
-         batch: 166/424[K
-       samples: 21248/54210[K
-   reward_mean: -0.05843[K
-    reward_std: 0.15484[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  40%|██████████████████                         |  ETA: 0:01:49[K
-         batch: 169/424[K
-       samples: 21632/54210[K
-   reward_mean: -0.08188[K
-    reward_std: 0.18012[K
-        minima: 2560[K[A[A[A[A[A
-
-
-
-
-[K[A[K[A[K[A[K[A[K[Aepoch 1  41%|██████████████████                         |  ETA: 0:01:47[K
-         batch: 172/424[K
-       samples: 22016/54210[K
-   reward_mean: -0.03919[K
-    reward_std: 0.12681[K
-        minima: 2560[K[A[A[A[A[A

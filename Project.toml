@@ -37,8 +37,6 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 VectorizationBase = "3d5dd08c-fd9d-11e8-17fa-ed2836048c2f"
 
-[extensions]
-
 [compat]
 Accessors = "0.1.44"
 RuntimeGeneratedFunctions = "0.5.19"

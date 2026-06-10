@@ -1,6 +1,0 @@
-[2026-06-05T13:31:49] START s50_beta15_lr10_r5 last_epoch=-1 target=238 resume=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260605_radius_r10_to_r1_s25_b15_lr25_e200\r5\best_params.bin
-[2026-06-05T13:31:49] PID s50_beta15_lr10_r5 723544
-[2026-06-05T13:51:04] END s50_beta15_lr10_r5 exit=0
-[2026-06-05T13:51:04] START s50_beta15_lr10_r10 last_epoch=-1 target=251 resume=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260605_radius_r10_to_r1_s25_b15_lr25_e200\r10\best_params.bin
-[2026-06-05T13:51:04] PID s50_beta15_lr10_r10 743892
-[2026-06-05T13:59:05] END s50_beta15_lr10_r10 exit=-1

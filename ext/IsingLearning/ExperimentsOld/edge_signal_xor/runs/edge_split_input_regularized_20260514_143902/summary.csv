@@ -1,6 +1,0 @@
-best_accuracy,best_epoch,best_mse,final_accuracy,final_mse,name,nudged_temp_factor,outdir,weight_decay
-0.25,3000,1.1463135960029553,0.25,1.2687880833040266,baseline_T0018,1.0,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_split_input_regularized_20260514_143902/baseline_T0018,0.0
-0.75,1,0.9012050758250265,0.5,1.0623143298748625,wd_1e_minus_2,1.0,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_split_input_regularized_20260514_143902/wd_1e_minus_2,0.01
-0.75,0,0.8477108066697108,0.5,0.8790422675993576,wd_5e_minus_2,1.0,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_split_input_regularized_20260514_143902/wd_5e_minus_2,0.05
-1.0,2400,0.8144528693260138,0.25,1.1762119862323757,nudged_Tx1p25,1.25,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_split_input_regularized_20260514_143902/nudged_Tx1p25,0.0
-1.0,2400,0.8289668683297615,0.5,1.0437278427742043,wd_1e_minus_2_nudged_Tx1p25,1.25,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_split_input_regularized_20260514_143902/wd_1e_minus_2_nudged_Tx1p25,0.01

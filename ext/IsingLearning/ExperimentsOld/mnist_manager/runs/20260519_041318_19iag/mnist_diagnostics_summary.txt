@@ -1,8 +1,0 @@
-normal_before=(accuracy = 0.125, classification_error = 0.875, mean_squared_error = 12.854106f0, nsamples = 128)
-normal_after=(accuracy = 0.140625, classification_error = 0.859375, mean_squared_error = 13.114847f0, nsamples = 128)
-normal_before_outputs=(mean_abs_output = 0.4892667f0, max_abs_output = 0.9997138f0, output_mean = 0.010037549f0, output_std = 0.5660812f0, pred_counts = [8, 12, 16, 8, 14, 6, 19, 15, 14, 16], target_counts = [18, 20, 10, 13, 13, 6, 13, 13, 9, 13], accuracy = 0.1328125, mse = 13.06944f0)
-normal_after_outputs=(mean_abs_output = 0.5024331f0, max_abs_output = 0.9993634f0, output_mean = -0.0005379905f0, output_std = 0.5796299f0, pred_counts = [11, 11, 12, 9, 16, 11, 14, 17, 12, 15], target_counts = [18, 20, 10, 13, 13, 6, 13, 13, 9, 13], accuracy = 0.125, mse = 13.065048f0)
-negative_before=(accuracy = 0.0703125, classification_error = 0.9296875, mean_squared_error = 13.284892f0, nsamples = 128)
-negative_after=(accuracy = 0.1328125, classification_error = 0.8671875, mean_squared_error = 13.284168f0, nsamples = 128)
-negative_before_outputs=(mean_abs_output = 0.5135194f0, max_abs_output = 0.9978825f0, output_mean = -0.012792274f0, output_std = 0.5896415f0, pred_counts = [12, 12, 19, 14, 10, 12, 17, 17, 8, 7], target_counts = [18, 20, 10, 13, 13, 6, 13, 13, 9, 13], accuracy = 0.140625, mse = 12.829323f0)
-negative_after_outputs=(mean_abs_output = 0.5089489f0, max_abs_output = 0.9989433f0, output_mean = 0.0011111886f0, output_std = 0.584894f0, pred_counts = [11, 16, 14, 17, 9, 18, 9, 13, 12, 9], target_counts = [18, 20, 10, 13, 13, 6, 13, 13, 9, 13], accuracy = 0.0859375, mse = 13.629416f0)

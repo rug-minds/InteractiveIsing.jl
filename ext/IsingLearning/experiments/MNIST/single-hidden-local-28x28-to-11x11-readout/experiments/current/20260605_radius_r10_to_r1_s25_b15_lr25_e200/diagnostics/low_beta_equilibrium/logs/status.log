@@ -1,7 +1,0 @@
-[2026-06-05T14:02:05] START readout_multi_init_timeavg_screen
-[2026-06-05T14:02:05] PID readout_multi_init_timeavg_screen 748496
-[2026-06-05T14:03:04] END readout_multi_init_timeavg_screen exit=0
-[2026-06-05T14:03:04] START output_trace_logger_beta0p1
-[2026-06-05T14:03:04] PID output_trace_logger_beta0p1 748896
-[2026-06-05T14:04:00] END output_trace_logger_beta0p1 exit=0
-[2026-06-05T14:04:00] LOW-BETA DIAGNOSTICS COMPLETE

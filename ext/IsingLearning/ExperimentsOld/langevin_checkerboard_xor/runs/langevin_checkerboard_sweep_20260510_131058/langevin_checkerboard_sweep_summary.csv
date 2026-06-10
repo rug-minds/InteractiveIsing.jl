@@ -1,2 +1,0 @@
-config,side,hidden_side,code_side,code_stride,relaxation,nudged_relaxation,temp,stepsize,best_epoch,best_mse,best_accuracy,best_min_margin,final_mse,final_accuracy,graph
-inlaid8_T0p02_eta0p1_r2000,8,8,4,2,2000,2000,0.02,0.1,200,0.981495304892077,0.75,0.033070677090182285,1.040188909216921,0.5,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/langevin_checkerboard_xor/runs/langevin_checkerboard_sweep_20260510_131058/inlaid8_T0p02_eta0p1_r2000/inlaid8_T0p02_eta0p1_r2000_best_graph.jld2

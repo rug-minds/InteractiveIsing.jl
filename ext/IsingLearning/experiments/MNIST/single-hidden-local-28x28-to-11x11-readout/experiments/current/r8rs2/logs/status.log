@@ -1,7 +1,0 @@
-[2026-06-04T13:31:43] START a15r outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\r8rs2\a15r resume=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260604_r8_rescue_series\a15_s50_b10_lr10_e200\r8\latest_checkpoint.bin
-[2026-06-04T13:31:43] PID a15r 29292
-[2026-06-04T13:50:39] END a15r
-[2026-06-04T13:50:39] START a16 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\r8rs2\a16 resume=
-[2026-06-04T13:50:39] PID a16 11948
-[2026-06-04T14:12:50] END a16
-[2026-06-04T14:12:50] CONTINUATION COMPLETE

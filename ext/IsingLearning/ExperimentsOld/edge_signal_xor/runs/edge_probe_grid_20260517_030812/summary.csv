@@ -1,5 +1,0 @@
-best_acc,best_epoch,best_mse,name,outdir
-0.5,0,1.030790783709157,nn1_T0008_b1_lr001,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_probe_grid_20260517_030812/nn1_T0008_b1_lr001
-1.0,0,0.43857053604971186,nn1_T0005_b2_lr0007,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_probe_grid_20260517_030812/nn1_T0005_b2_lr0007
-1.0,1,0.703673574000364,nn2_T0008_b1_lr001,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_probe_grid_20260517_030812/nn2_T0008_b1_lr001
-0.75,1,0.8130113679703939,nn3_T0008_b1_lr001,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_probe_grid_20260517_030812/nn3_T0008_b1_lr001

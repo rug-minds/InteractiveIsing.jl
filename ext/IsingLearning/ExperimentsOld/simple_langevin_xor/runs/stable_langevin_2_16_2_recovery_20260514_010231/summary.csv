@@ -1,7 +1,0 @@
-idx,T,beta,stepsize,weight_scale,lr,best_mse,best_acc,outdir
-1,0.03,0.5,0.6,0.2,0.001,1.0454004334783384,0.75,ext/IsingLearning/experiments/simple_langevin_xor/runs/stable_langevin_2_16_2_recovery_20260514_010231/run_1_T0.03_b0.5_eta0.6_w0.2
-2,0.05,0.5,0.8,0.2,0.001,1.0485514965116447,0.5,ext/IsingLearning/experiments/simple_langevin_xor/runs/stable_langevin_2_16_2_recovery_20260514_010231/run_2_T0.05_b0.5_eta0.8_w0.2
-3,0.07,0.5,0.8,0.2,0.0008,0.8647422906338122,0.5,ext/IsingLearning/experiments/simple_langevin_xor/runs/stable_langevin_2_16_2_recovery_20260514_010231/run_3_T0.07_b0.5_eta0.8_w0.2
-4,0.07,1.0,0.8,0.2,0.0008,0.44610667992559805,1.0,ext/IsingLearning/experiments/simple_langevin_xor/runs/stable_langevin_2_16_2_recovery_20260514_010231/run_4_T0.07_b1.0_eta0.8_w0.2
-5,0.1,0.5,1.0,0.3,0.0006,0.5549218443534282,0.75,ext/IsingLearning/experiments/simple_langevin_xor/runs/stable_langevin_2_16_2_recovery_20260514_010231/run_5_T0.1_b0.5_eta1.0_w0.3
-6,0.07,0.5,1.0,0.3,0.0006,0.9528166083684549,1.0,ext/IsingLearning/experiments/simple_langevin_xor/runs/stable_langevin_2_16_2_recovery_20260514_010231/run_6_T0.07_b0.5_eta1.0_w0.3

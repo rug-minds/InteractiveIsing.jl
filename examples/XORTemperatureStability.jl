@@ -9,10 +9,8 @@ using Printf
 # Architecture shown here:
 #   2 input spins -> 2x2 hidden spins -> 1 output spin
 #
-# The weights are hardwired from:
-# ext/IsingLearning/experiments/output_state_timeavg_xor/runs/
-# timeavg_grid_20260513_224406/trainT005_evalT0005/best_graph.jld2
-# That graph is not loaded here; this example is standalone in InteractiveIsing.
+# The weights are hardwired from an earlier learning run. That graph is not
+# loaded here; this example is standalone in InteractiveIsing.
 
 const XOR_TEMP_INITIAL = 0.005
 const XOR_TEMP_SLIDER_MAX = 0.05

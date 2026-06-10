@@ -1,3 +1,0 @@
-mode,batches,median_seconds_per_example,mean_seconds_per_example,median_examples_per_second,mean_examples_per_second
-current_channelworkers,3,0.00144732890625,0.0014672309895833336,690.9279540273812,681.9929674060612
-old_head_chunked_spawn,3,0.0015683921875,0.001593421875,637.595626890994,628.3292054109012

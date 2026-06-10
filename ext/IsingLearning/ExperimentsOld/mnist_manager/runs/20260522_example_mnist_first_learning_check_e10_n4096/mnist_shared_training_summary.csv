@@ -1,2 +1,0 @@
-timestamp,architecture,workers,threads,epochs,batchsize,sweeps,relaxation_steps,train_limit,validation_limit,elapsed_seconds,elapsed_minutes,checkpoint
-2026-05-22T01:13:58,784-120-40,32,32,10,256,500.0,80000,4096,none,282.6639906,4.711066509999999,ext/IsingLearning/experiments/mnist_manager/runs/20260522_example_mnist_first_learning_check_e10_n4096\mnist_shared_training.bin

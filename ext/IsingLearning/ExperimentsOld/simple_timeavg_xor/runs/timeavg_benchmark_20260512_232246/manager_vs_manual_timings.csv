@@ -1,8 +1,0 @@
-epoch,phase,route,seconds
-0,init,cache,35.908843667
-0,eval,manager_cached,6.792787166
-1,train,manager_cached,37.120679375
-1,eval,manager_cached,0.000287584
-0,eval,manual_cached,4.885956792
-1,train,manual_cached,35.421281709
-1,eval,manual_cached,0.000315291

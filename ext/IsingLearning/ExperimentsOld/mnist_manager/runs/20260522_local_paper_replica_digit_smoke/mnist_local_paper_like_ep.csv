@@ -1,3 +1,0 @@
-timestamp,epoch,seconds,train_accuracy,train_loss,skipped,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
-2026-05-22T03:54:11,0,0.0,missing,missing,missing,0.1,40.2,2-1-1-2-2-0-2-0-0-0,0.1,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_replica_digit_smoke\best_model.bin,
-2026-05-22T03:54:14,1,2.0410652,0.1,44.4,0,0.2,45.0,2-3-1-3-0-0-0-0-0-1,0.2,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_replica_digit_smoke\best_model.bin,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_replica_digit_smoke\final_model.bin

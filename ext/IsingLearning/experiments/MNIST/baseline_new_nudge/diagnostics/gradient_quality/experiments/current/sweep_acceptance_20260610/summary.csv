@@ -1,4 +1,0 @@
-sweeps,status,seconds,accepted,total,rejected,reject_fraction,avg_cosine,avg_angle_degrees,test_accuracy,test_loss,outdir
-500,done,18.2998792,64,260,196,0.7538461538461538,0.23514768281083753,75.34358211136757,0.115,63.851295,ext/IsingLearning/experiments/MNIST/baseline_new_nudge/diagnostics/gradient_quality/experiments/current/sweep_acceptance_20260610\sweeps500_b0p025_step0p35_cos0p5
-1000,done,12.1881232,85,260,175,0.6730769230769231,0.28158261514098853,71.49711444597878,0.07,67.80323,ext/IsingLearning/experiments/MNIST/baseline_new_nudge/diagnostics/gradient_quality/experiments/current/sweep_acceptance_20260610\sweeps1000_b0p025_step0p35_cos0p5
-1500,done,14.0551077,88,260,172,0.6615384615384615,0.275135179634386,71.49072059253734,0.065,67.47829,ext/IsingLearning/experiments/MNIST/baseline_new_nudge/diagnostics/gradient_quality/experiments/current/sweep_acceptance_20260610\sweeps1500_b0p025_step0p35_cos0p5

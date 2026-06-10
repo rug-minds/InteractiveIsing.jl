@@ -7,9 +7,8 @@ using Printf
 # Interactive demo for the honest 2-input XOR experiment:
 # input bits -> 16 hidden spins -> 2 output spins.
 #
-# The parameters are extracted from:
-# ext/IsingLearning/runs/xor_2input_discrete_T05_seed13/xor_statistical_ep_2input_trained_graph.jld2
-# That run used discrete spins, Metropolis dynamics, T = 0.5, β = 1.0,
+# The parameters are hardcoded from an earlier learning run that used discrete
+# spins, Metropolis dynamics, T = 0.5, β = 1.0,
 # hidden = 16, and reached repeated-state MSE ≈ 0.0024 with accuracy 1.0.
 
 const XORFloat = Float64

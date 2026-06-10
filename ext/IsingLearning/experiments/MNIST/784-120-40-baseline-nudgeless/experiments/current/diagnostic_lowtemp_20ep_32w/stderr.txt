@@ -1,7 +1,0 @@
-  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-┌ Warning: this run uses a subsampled balanced training split, so it is not the full balanced MNIST baseline
-│   train_per_class = 20
-└ @ Main C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline-nudgeless\mnist_784_120_40_nudgeless_adam.jl:1480
-┌ Warning: this run uses a subsampled balanced test split, so reported accuracy will be noisy
-│   test_per_class = 20
-└ @ Main C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\784-120-40-baseline-nudgeless\mnist_784_120_40_nudgeless_adam.jl:1481

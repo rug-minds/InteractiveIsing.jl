@@ -1,3 +1,0 @@
-best_accuracy,best_epoch,best_means,best_mse,final_accuracy,final_epoch,final_grad_norm,final_margin,final_mse,label,run_dir
-1.0,1800,[-0.5713, 0.6051, 0.6601, -0.7504],0.12939806231682524,1.0,1800,0.06318180657047866,0.5712678942385196,0.12939806231682524,f300_avg1_trainT005_evalT002,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/simple_timeavg_xor/runs/timeavg_grid_20260513_163921/f300_avg1_trainT005_evalT002
-1.0,1800,[-0.5976, 0.4851, 0.6539, -0.7366],0.1540530774764183,1.0,1800,0.06364264585990345,0.4851424134287127,0.1540530774764183,f300_avg1_trainT005_evalT001,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/simple_timeavg_xor/runs/timeavg_grid_20260513_163921/f300_avg1_trainT005_evalT001

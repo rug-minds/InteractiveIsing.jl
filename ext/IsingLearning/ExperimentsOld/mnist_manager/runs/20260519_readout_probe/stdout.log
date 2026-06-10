@@ -1,6 +1,0 @@
-readout probe hidden=512 digits=[0, 1] train=2048 val=1024 relaxation=1044 temp=0.001
-(feature = :input, train_acc = 0.9990234375, val_acc = 0.986328125, nfeat = 784) seconds=11.616
-(feature = :hidden, train_acc = 0.7431640625, val_acc = 0.544921875, nfeat = 512) seconds=2.492
-(feature = :hidden_output, train_acc = 0.763671875, val_acc = 0.5576171875, nfeat = 522) seconds=2.477
-(feature = :input_hidden, train_acc = 1.0, val_acc = 0.98828125, nfeat = 1296) seconds=2.534
-Saved readout probe in C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\mnist_manager\runs\20260519_readout_probe

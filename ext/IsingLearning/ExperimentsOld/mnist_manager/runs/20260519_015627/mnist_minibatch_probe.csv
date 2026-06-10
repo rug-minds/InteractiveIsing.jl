@@ -1,2 +1,0 @@
-workers,batch,run_seconds,collect_seconds,update_seconds,total_seconds,active_workers,min_worker_norm,mean_worker_norm,max_worker_norm,grad_norm
-2,1,11.930618,0.2436326,0.3517982,12.5260488,2,0.74629843,0.8784788,1.0106592,0.087818965

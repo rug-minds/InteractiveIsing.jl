@@ -1,5 +1,0 @@
-timestamp,epoch,seconds,train_accuracy,train_loss,skipped,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
-2026-05-22T04:52:04,0,0.0,missing,missing,missing,0.912,1.408,51-51-48-45-52-49-49-54-52-49,0.912,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_reads10_continue_lr0003\best_model.bin,
-2026-05-22T04:53:19,1,59.9200023,0.9625,0.592,1925,0.902,1.568,52-51-54-43-51-50-47-55-48-49,0.912,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_reads10_continue_lr0003\best_model.bin,
-2026-05-22T04:54:30,2,57.4328253,0.9665,0.532,1933,0.894,1.696,50-51-47-44-43-49-49-60-51-56,0.912,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_reads10_continue_lr0003\best_model.bin,
-2026-05-22T04:55:41,3,57.4739667,0.967,0.52,1934,0.896,1.664,50-51-55-47-49-50-46-53-48-51,0.912,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_reads10_continue_lr0003\best_model.bin,ext/IsingLearning/experiments/mnist_manager/runs/20260522_local_paper_h28_h11_reads10_continue_lr0003\final_model.bin

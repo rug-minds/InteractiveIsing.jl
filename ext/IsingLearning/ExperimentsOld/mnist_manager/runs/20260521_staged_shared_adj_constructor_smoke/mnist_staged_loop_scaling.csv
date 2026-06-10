@@ -1,3 +1,0 @@
-timestamp,stage,workers,threads,hidden,output_replicas,batchsize,sweeps,order,adj_mode,relaxation_steps,graph_states,graph_edges,total_seconds,min_task_seconds,mean_task_seconds,max_task_seconds
-2026-05-21T23:38:45,one_relax,1,2,120,4,4,1.0,cyclic,shared,160,944,197760,0.0292961,0.0003542,0.0003542,0.0003542
-2026-05-21T23:38:47,one_relax,2,2,120,4,4,1.0,cyclic,shared,160,944,197760,0.0002671,0.0002224,0.0002228,0.0002232

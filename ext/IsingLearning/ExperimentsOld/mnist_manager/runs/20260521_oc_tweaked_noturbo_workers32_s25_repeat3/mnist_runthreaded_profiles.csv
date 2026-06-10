@@ -1,4 +1,0 @@
-timestamp,workers,threads,mode,batch,warmup_batches,hidden,output_replicas,batchsize,jobs,sweeps,relaxation,graph_states,graph_edges,run_seconds,run_cpu_threads,active_workers,min_worker_norm,mean_worker_norm,max_worker_norm
-2026-05-21T17:42:31,32,32,greedy,1,0,7840,4,32,32,25.0,197000,8664,12920320,17.2701599,NaN,32,184.14532,209.74643,270.70383
-2026-05-21T17:42:48,32,32,greedy,2,0,7840,4,32,32,25.0,197000,8664,12920320,16.3981325,NaN,32,188.01286,219.2959,253.9927
-2026-05-21T17:43:05,32,32,greedy,3,0,7840,4,32,32,25.0,197000,8664,12920320,16.5873513,NaN,32,186.88437,219.5873,277.72238

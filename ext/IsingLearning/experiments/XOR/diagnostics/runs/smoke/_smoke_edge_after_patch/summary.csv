@@ -1,2 +1,0 @@
-config,nn,best_mse,best_accuracy,best_epoch,best_min_margin,best_margin_epoch,first_all_correct_epoch,run_dir
-nn5,5,0.9954261,0.5,0,-0.01124207,0,-1,ext/IsingLearning/experiments/XOR/diagnostics/runs/smoke/_smoke_edge_after_patch/nn5

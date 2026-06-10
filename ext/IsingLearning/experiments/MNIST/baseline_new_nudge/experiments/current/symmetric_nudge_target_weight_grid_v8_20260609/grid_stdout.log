@@ -1,1 +1,0 @@
-START beta=0.020 lr=0.00025 temp=0.00005 wd=0.001 step=0.5 posw=9.0 negw=0.45 prior=true adaptive=false outdir=ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\symmetric_nudge_target_weight_grid_v8_20260609\b0p020_lr0p00025_T0p00005_wd0p001_step0p5_pos9p0_neg0p45_priortrue_adaptivefalse 2026-06-09T22:47:13

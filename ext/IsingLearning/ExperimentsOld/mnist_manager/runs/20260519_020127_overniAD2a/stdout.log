@@ -1,1 +1,0 @@
-Starting MNIST manager run workers=8 epochs=5 train_limit=nothing validation_limit=1024 hidden=7840

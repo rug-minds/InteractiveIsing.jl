@@ -1,2 +1,0 @@
-best_accuracy,best_epoch,best_mse,final_accuracy,final_mse,name,nudged_temp_factor,outdir,weight_decay
-1.0,30000,0.6677416219883047,0.75,0.7723564195490267,wd003_Tx1p10_50k,1.1,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_split_input_50k_20260514_151912,0.003

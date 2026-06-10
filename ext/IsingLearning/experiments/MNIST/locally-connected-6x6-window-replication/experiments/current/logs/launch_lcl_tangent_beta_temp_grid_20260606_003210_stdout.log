@@ -1,8 +1,0 @@
-[2026-06-06T00:32:11] START lcl6x6_tangent_b1p0_lr0p0001_T0p001_s25_e120 beta=1.0 lr=0.0001 temp=0.001 sweeps=25 epochs=120
-[2026-06-06T00:34:36] END lcl6x6_tangent_b1p0_lr0p0001_T0p001_s25_e120 exit=0
-[2026-06-06T00:34:36] START lcl6x6_tangent_b1p0_lr0p0003_T0p001_s25_e120 beta=1.0 lr=0.0003 temp=0.001 sweeps=25 epochs=120
-[2026-06-06T00:37:01] END lcl6x6_tangent_b1p0_lr0p0003_T0p001_s25_e120 exit=0
-[2026-06-06T00:37:01] START lcl6x6_tangent_b3p0_lr0p00003_T0p001_s25_e120 beta=3.0 lr=0.00003 temp=0.001 sweeps=25 epochs=120
-[2026-06-06T00:39:25] END lcl6x6_tangent_b3p0_lr0p00003_T0p001_s25_e120 exit=0
-[2026-06-06T00:39:25] START lcl6x6_tangent_b3p0_lr0p0001_T0p001_s25_e120 beta=3.0 lr=0.0001 temp=0.001 sweeps=25 epochs=120
-[2026-06-06T00:40:54] END lcl6x6_tangent_b3p0_lr0p0001_T0p001_s25_e120 exit=1

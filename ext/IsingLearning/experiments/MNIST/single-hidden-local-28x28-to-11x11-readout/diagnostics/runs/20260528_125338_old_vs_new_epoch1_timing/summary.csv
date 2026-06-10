@@ -1,3 +1,0 @@
-"label","wall_seconds","exit_code","rows","final_epoch","epoch1_train_seconds","epoch1_train_accuracy","epoch1_test_accuracy","epoch1_skipped","run_dir"
-"old","421,936","0","2","1","231.3591895","0.098","0.1","0","C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260528_125338_old_epoch1_32w_timing"
-"new","408,935","0","2","1","221.1193774","0.098","0.1","0","C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260528_125338_new_epoch1_32w_timing"

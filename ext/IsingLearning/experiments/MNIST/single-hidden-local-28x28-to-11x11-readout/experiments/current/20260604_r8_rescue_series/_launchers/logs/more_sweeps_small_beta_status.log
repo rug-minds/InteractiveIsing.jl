@@ -1,8 +1,0 @@
-[2026-06-04T11:56:18] START a13_s35_b15_lr25_e160 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260604_r8_rescue_series\a13_s35_b15_lr25_e160
-[2026-06-04T11:56:18] PID a13_s35_b15_lr25_e160 1582424
-[2026-06-04T12:24:32] END a13_s35_b15_lr25_e160
-[2026-06-04T12:24:32] START a14_s35_b10_lr25_e160 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260604_r8_rescue_series\a14_s35_b10_lr25_e160
-[2026-06-04T12:24:32] PID a14_s35_b10_lr25_e160 1592808
-[2026-06-04T12:28:16] END a14_s35_b10_lr25_e160
-[2026-06-04T12:28:16] START a15_s50_b10_lr10_e200 outdir=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\experiments\current\20260604_r8_rescue_series\a15_s50_b10_lr10_e200
-[2026-06-04T12:28:16] PID a15_s50_b10_lr10_e200 1594920

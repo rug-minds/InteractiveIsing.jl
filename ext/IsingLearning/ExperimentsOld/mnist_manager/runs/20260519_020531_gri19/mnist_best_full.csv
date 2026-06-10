@@ -1,2 +1,0 @@
-timestamp,source_config_id,workers,epoch,seconds,hidden,train_limit,batchsize,relaxation,stepsize,temp,beta,lr,train_accuracy,train_mse,validation_accuracy,validation_mse
-2026-05-19T02:06:46,1,2,1,9.2771383,4,8,4,1,0.2,0.005,2.0,0.003,0.0,12.317826,0.25,10.209419

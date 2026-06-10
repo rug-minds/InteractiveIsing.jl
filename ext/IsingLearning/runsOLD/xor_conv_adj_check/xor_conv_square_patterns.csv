@@ -1,2 +1,0 @@
-epoch,mse,accuracy,grad_norm,response_norm,param_delta,ff_margin,ff_std,ft_margin,ft_std,tf_margin,tf_std,tt_margin,tt_std
-0,1.4373893299268408,0.5,0.0,0.0,0.0,0.16742759739896695,0.0,0.5651381844947232,0.0,-0.8112467305349993,0.0,-0.3268482806982236,0.0

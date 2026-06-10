@@ -1,2 +1,0 @@
-timestamp,epoch,seconds,train_accuracy,train_loss,skipped,test_accuracy,test_loss,pred_counts,best_accuracy,best_path,final_path
-2026-05-22T04:32:12,0,0.0,missing,missing,missing,0.842,2.7938569,100-101-87-92-82-115-91-96-111-125,0.842,ext\IsingLearning\experiments\mnist_manager\runs\20260522_local_paper_evalgrid_mean_r30_s50\best_model.bin,ext\IsingLearning\experiments\mnist_manager\runs\20260522_local_paper_evalgrid_mean_r30_s50\final_model.bin

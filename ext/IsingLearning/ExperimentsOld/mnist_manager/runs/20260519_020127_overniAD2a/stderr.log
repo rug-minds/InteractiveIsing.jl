@@ -1,40 +1,0 @@
-  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
-│   overlapping_fields =
-│    2-element Vector{Symbol}:
-│     :equilibrium_state
-│     :x
-└ @ IsingLearning.InteractiveIsing.StatefulAlgorithms C:\Users\fenje\dev\InteractiveIsing.jl\deps\StatefulAlgorithms\src\Widgets\GeneralState.jl:54
-┌ Warning: Overlapping GeneralState field names encountered during merge; later defaults will override earlier ones.
-│   overlapping_fields =
-│    3-element Vector{Symbol}:
-│     :equilibrium_state
-│     :y
-│     :x
-└ @ IsingLearning.InteractiveIsing.StatefulAlgorithms C:\Users\fenje\dev\InteractiveIsing.jl\deps\StatefulAlgorithms\src\Widgets\GeneralState.jl:54
-MNIST epoch 1   1%|█                                     |  ETA: 0:25:00[K
-   batch: 2[K[A
-[K[AMNIST epoch 1   1%|█                                     |  ETA: 0:19:59[K
-   batch: 3[K[A
-[K[AMNIST epoch 1   2%|█                                     |  ETA: 0:17:11[K
-   batch: 4[K[A
-[K[AMNIST epoch 1   2%|█                                     |  ETA: 0:15:50[K
-   batch: 5[K[A
-[K[AMNIST epoch 1   3%|█                                     |  ETA: 0:14:39[K
-   batch: 6[K[A
-[K[AMNIST epoch 1   3%|██                                    |  ETA: 0:13:49[K
-   batch: 7[K[A
-[K[AMNIST epoch 1   3%|██                                    |  ETA: 0:13:09[K
-   batch: 8[K[A
-[K[AMNIST epoch 1   4%|██                                    |  ETA: 0:12:39[K
-   batch: 9[K[A
-[K[AMNIST epoch 1   4%|██                                    |  ETA: 0:12:12[K
-   batch: 10[K[A
-[K[AMNIST epoch 1   5%|██                                    |  ETA: 0:11:50[K
-   batch: 11[K[A
-[K[AMNIST epoch 1   5%|██                                    |  ETA: 0:11:34[K
-   batch: 12[K[A
-[K[AMNIST epoch 1   6%|███                                   |  ETA: 0:11:19[K
-   batch: 13[K[A
-[K[AMNIST epoch 1   6%|███                                   |  ETA: 0:11:05[K
-   batch: 14[K[A

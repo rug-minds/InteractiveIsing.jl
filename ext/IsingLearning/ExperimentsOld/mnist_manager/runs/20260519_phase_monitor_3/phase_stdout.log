@@ -1,8 +1,0 @@
-MNIST phase response settings workers=16 threads=16 hidden=7840 samples=64 relaxation=300 stepsize=0.6 temp=0.005 beta=2.0
-chunk 1:16 seconds=5.229 rows=16 plus_improved=0.375 pm_aligned=0.0 mean_plus_delta=0.0 mean_minus_delta=0.0
-chunk 17:32 seconds=2.414 rows=32 plus_improved=0.406 pm_aligned=0.0 mean_plus_delta=0.0 mean_minus_delta=0.0
-chunk 33:48 seconds=0.129 rows=48 plus_improved=0.583 pm_aligned=0.312 mean_plus_delta=-0.1204 mean_minus_delta=-0.0
-chunk 49:64 seconds=0.13 rows=64 plus_improved=0.688 pm_aligned=0.484 mean_plus_delta=-0.3056 mean_minus_delta=-0.0
-summary=(nsamples = 64, plus_improved_fraction = 0.6875, minus_worsened_fraction = 0.515625, plusminus_aligned_fraction = 0.484375, mean_free_loss = 12.381361827254295, mean_plus_loss = 12.075761642507064, mean_minus_loss = 12.381361749029523, mean_plus_loss_delta = -0.3056001847472287, mean_minus_loss_delta = -7.822477046670606e-8, mean_plus_target_dot = 0.1725918907863203, mean_minus_target_dot = 0.0, mean_plusminus_target_dot = 0.1725918907863203, mean_plus_target_cos = 0.1649745473824143, mean_minus_target_cos = 0.0, mean_plusminus_target_cos = 0.1649745473824143, mean_plus_output_rms = 0.04201310695780296, mean_minus_output_rms = 0.0, mean_plusminus_output_rms = 0.04201310695780296, mean_plus_hidden_rms = 0.030941577438474213, mean_minus_hidden_rms = 0.03204223649463164, mean_plusminus_hidden_rms = 0.044549578692407485, mean_worker_buffer_norm = 75.8621346950531)
-saved_csv=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\mnist_manager\runs\20260519_phase_monitor_3\mnist_phase_response.csv
-saved_summary=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\mnist_manager\runs\20260519_phase_monitor_3\mnist_phase_response_summary.txt

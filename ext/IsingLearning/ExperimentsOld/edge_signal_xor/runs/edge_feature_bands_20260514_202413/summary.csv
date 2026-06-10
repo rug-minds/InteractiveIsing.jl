@@ -1,2 +1,0 @@
-best_accuracy,best_epoch,best_mse,beta,final_accuracy,final_mse,lr,name,nudged_temp_factor,outdir,stepsize,temp_fraction,weight_decay
-1.0,3000,0.87858173675001,0.35,0.5,0.9854399034747118,0.0004,feature_b0p35_T0p012_eta1p0_lr4e4_wd1e3,1.15,/Users/fabian/Documents/GitHub/InteractiveIsing.jl/ext/IsingLearning/experiments/edge_signal_xor/runs/edge_feature_bands_20260514_202413/feature_b0p35_T0p012_eta1p0_lr4e4_wd1e3,1.0,0.012,0.001

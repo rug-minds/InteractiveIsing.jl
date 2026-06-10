@@ -1,3 +1,0 @@
-START beta=0.05 lr=0.00075 temp=0.00005 wd=0.001 step=0.5 adaptive=false outdir=ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\symmetric_nudge_grid_20260609\b0p05_lr0p00075_T0p00005_wd0p001_step0p5_adaptivefalse 2026-06-09T20:55:24
-END beta=0.05 lr=0.00075 temp=0.00005 wd=0.001 step=0.5 adaptive=false 2026-06-09T20:59:35
-START beta=0.05 lr=0.0010 temp=0.00005 wd=0.001 step=0.5 adaptive=false outdir=ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\symmetric_nudge_grid_20260609\b0p05_lr0p0010_T0p00005_wd0p001_step0p5_adaptivefalse 2026-06-09T20:59:35

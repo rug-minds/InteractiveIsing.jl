@@ -1,3 +1,0 @@
-timestamp,contexts,threads,hidden,output_replicas,sweeps,relaxation_steps,serial_build_seconds,context_build_seconds,single_context_seconds,spawned_total_seconds,min_task_seconds,mean_task_seconds,max_task_seconds,ideal_one_wave_seconds,serial_all_seconds,spawned_over_ideal_one_wave,speedup_vs_serial_all
-2026-05-21T18:07:15,16,32,120,4,1000.0,160000,0.3715255,0.0054657,0.0874695,0.1601515,0.1083002,0.1115745875,0.1287623,0.0874695,1.399512,1.8309410708875664,8.738675566572901
-2026-05-21T18:07:17,32,32,120,4,1000.0,160000,0.0004221,0.0829206,0.0879814,0.2479832,0.2315573,0.23842364062500004,0.2471561,0.0879814,2.8154048,2.818586655815888,11.353207797947604

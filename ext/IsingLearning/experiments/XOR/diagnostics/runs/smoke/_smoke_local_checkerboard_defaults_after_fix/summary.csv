@@ -1,2 +1,0 @@
-config,radius,periodic,hidden_side,best_mse,best_accuracy,best_epoch,best_min_margin,best_margin_epoch,first_all_correct_epoch,run_dir
-h8_r8_open,8,false,8,0.9944651,0.5,0,-0.005352982,0,-1,ext/IsingLearning/experiments/XOR/diagnostics/runs/smoke/_smoke_local_checkerboard_defaults_after_fix/h8_r8_open

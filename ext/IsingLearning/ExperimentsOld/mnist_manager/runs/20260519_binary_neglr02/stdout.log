@@ -1,1 +1,0 @@
-MNIST small sweep grid workers=16 threads=16 hiddens=[512] epochs=12 train_limit=2048 digits=[0, 1] batchsize=128 minit=2 sweeps=2.0 target_off/on=-0.2/0.2 beta=0.1 lr=-0.02

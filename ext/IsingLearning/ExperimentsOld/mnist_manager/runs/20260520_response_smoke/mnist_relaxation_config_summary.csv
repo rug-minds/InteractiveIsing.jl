@@ -1,2 +1,0 @@
-config_id,stepsize,beta,mean_final_free_output_mse,mean_final_free_margin,mean_final_plus_loss_delta,mean_final_minus_loss_delta,mean_final_plusminus_target_dot,final_plus_improves_fraction,final_minus_worsens_fraction
-1,0.1,0.1,16.964850902557373,0.5344053506851196,-0.8645839691162109,0.5520343780517578,0.7126873731613159,1.0,1.0

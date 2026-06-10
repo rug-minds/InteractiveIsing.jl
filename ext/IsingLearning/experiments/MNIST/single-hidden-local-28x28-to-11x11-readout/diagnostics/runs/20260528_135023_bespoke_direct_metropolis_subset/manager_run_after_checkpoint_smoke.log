@@ -1,9 +1,0 @@
-  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
-[2026-05-29T00:15:33] loading balanced MNIST subset
-[2026-05-29T00:15:35] manager diagnostic configured workers=32 threads=32 full_n=1000 subset_n=1 warmup_n=1
-[2026-05-29T00:15:35] manager warmup starting
-[2026-05-29T00:16:04] manager subset progress batch=1 samples=1 nsamples=1 elapsed_s=44.231
-[2026-05-29T00:16:04] manager warmup finished elapsed_s=4.955 samples=1
-[2026-05-29T00:16:04] manager measured run starting
-[2026-05-29T00:16:09] manager subset progress batch=1 samples=1 nsamples=1 elapsed_s=48.38
-[2026-05-29T00:16:09] manager measured subset finished workers=32 subset_n=1 elapsed_s=0.14 estimated_epoch_s=139.632 seconds_per_sample=0.1396 summary=C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\single-hidden-local-28x28-to-11x11-readout\diagnostics\runs\20260528_135023_bespoke_direct_metropolis_subset\manager_summary.csv

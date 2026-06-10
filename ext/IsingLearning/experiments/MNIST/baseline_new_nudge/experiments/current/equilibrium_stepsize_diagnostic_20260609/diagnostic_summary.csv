@@ -1,3 +1,0 @@
-sweeps,stepsize,beta,temp,weight_decay,status,best_epoch,best_test_accuracy,best_test_loss,final_epoch,final_test_accuracy,final_test_loss,outdir
-1000,0.75,0.1,0.00005,0.001,done,8,0.489,13.743121,10,0.357,19.261122,ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\equilibrium_stepsize_diagnostic_20260609\sweeps1000_step0p75_b0p1_T0p00005_wd0p001
-1000,1.0,0.1,0.00005,0.001,stopped_after_epoch4,1,0.479,18.927998,4,0.455,19.549547,ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\equilibrium_stepsize_diagnostic_20260609\sweeps1000_step1p0_b0p1_T0p00005_wd0p001

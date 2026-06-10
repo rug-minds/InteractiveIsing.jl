@@ -1,3 +1,0 @@
-timestamp,workers,jobs,hidden,output_replicas,sweeps,relaxation,write_reset_seconds,launch_seconds,wait_fetch_seconds,total_latency_seconds,close_seconds,min_internal_seconds,mean_internal_seconds,max_internal_seconds
-2026-05-20T14:42:58,16,16,7840,4,500.0,3940000,0.8935436,0.0622469,116.5604856,116.62273250000001,0.0234316,113.114939,114.98504553749999,116.2641476
-2026-05-20T14:46:49,32,32,7840,4,500.0,3940000,9.42e-5,0.0001041,226.7691178,226.7692219,1.1e-5,217.7892472,222.53292152812506,226.7689249

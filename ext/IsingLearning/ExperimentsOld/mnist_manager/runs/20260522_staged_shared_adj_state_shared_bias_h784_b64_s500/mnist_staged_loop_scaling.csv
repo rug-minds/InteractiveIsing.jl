@@ -1,5 +1,0 @@
-timestamp,stage,workers,threads,hidden,output_replicas,batchsize,sweeps,order,adj_mode,bias_mode,input_mode,relaxation_steps,graph_states,graph_edges,total_seconds,min_task_seconds,mean_task_seconds,max_task_seconds
-2026-05-22T00:04:19,reset_input_one_relax,16,32,784,4,64,500.0,cyclic,shared,shared,state,412000,1608,1292032,1.3699418,1.2320911,1.2805096125,1.3390624
-2026-05-22T00:04:23,reset_input_one_relax,32,32,784,4,64,500.0,cyclic,shared,shared,state,412000,1608,1292032,1.2329407,1.1986188,1.217772675,1.2328544
-2026-05-22T00:04:30,full,16,32,784,4,64,500.0,cyclic,shared,shared,state,412000,1608,1292032,4.0505642,3.8028794,3.8734166375,3.9863918
-2026-05-22T00:04:37,full,32,32,784,4,64,500.0,cyclic,shared,shared,state,412000,1608,1292032,3.7078671,3.6467856,3.6695523687500002,3.7077997
