@@ -572,9 +572,14 @@ function accumulate_input_field_gradient!(
     equilibrium_state,
     x,
     buffers,
-    β::Real,
+    β::Real;
+    direct_contrast::Bool = false,
 ) where G
-    IsingLearning.contrastive_gradient(isinggraph, nudged_state, equilibrium_state, β; buffers = buffers)
+    if direct_contrast
+        IsingLearning.contrastive_gradient_new(isinggraph, nudged_state, equilibrium_state, β; buffers = buffers)
+    else
+        IsingLearning.contrastive_gradient(isinggraph, nudged_state, equilibrium_state, β; buffers = buffers)
+    end
     hidden_count = size(buffers.w_input, 1)
     @inbounds for input_idx in eachindex(x)
         xval = x[input_idx]
@@ -644,6 +649,7 @@ StatefulAlgorithms.@ProcessAlgorithm function AccumulateInputFieldGradientRef!(
     x,
     buffers,
     β::Real,
+    direct_contrast::Bool,
 ) where G
     accumulate_input_field_gradient!(
         isinggraph,
@@ -651,7 +657,8 @@ StatefulAlgorithms.@ProcessAlgorithm function AccumulateInputFieldGradientRef!(
         equilibrium_state,
         ref_value(x),
         buffers,
-        β,
+        β;
+        direct_contrast = direct_contrast,
     )
     return nothing
 end
@@ -799,6 +806,7 @@ function input_field_one_sided_contrastive_algorithm(layer::L, config::C) where 
             x,
             buffers,
             phase_beta,
+            true,
         )
     end
 end
@@ -852,6 +860,7 @@ function input_field_symmetric_contrastive_algorithm(layer::L, config::C) where 
             x,
             buffers,
             phase_beta,
+            false,
         )
     end
 end

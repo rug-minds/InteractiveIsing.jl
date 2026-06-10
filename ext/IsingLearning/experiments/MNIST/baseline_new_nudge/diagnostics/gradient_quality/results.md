@@ -148,3 +148,41 @@ Results:
 | 0.100 | 65 / 260 | 195 / 260 | 0.7500 | 0.2692 | 73.33 deg | 0.105 |
 
 Read: varying beta by `20x` around `0.025` does not repair the estimator agreement. The best average angle in this sweep is still about `72 deg`, so the disagreement is not mainly explained by this beta range.
+
+## Direct Symmetric Gradient Accumulation Check
+
+Run folder:
+
+`experiments/current/direct_contrast_check_20260610/beta0p025_s1000_step0p35_cos0p5`
+
+Change tested:
+
+- keep the existing `contrastive_gradient` behavior unchanged for old callers
+- add opt-in `contrastive_gradient_new`
+- use direct product-difference accumulation for the symmetric diagnostic buffer:
+  - `dJ += -0.5 * (p_i * p_j - m_i * m_j)`
+  - `db += -c * (p_i - m_i)`
+
+Settings:
+
+- from scratch
+- `beta=0.025`
+- `sweeps=1000`
+- `temp=0.00005`
+- nudged temperature schedule `reverse_anneal`
+- nudged temperature peak `0.00010`
+- `stepsize=0.35`
+- `min_cosine=0.5`
+- `workers=32`
+- training subset `26` per class, batch size `128`
+
+Result:
+
+- accepted `89 / 260`
+- rejected `171 / 260`
+- reject fraction `0.6577`
+- average cosine `0.2582`
+- average angle `72.94 deg`
+- test accuracy `0.095` on the small test subset
+
+Read: the direct numerical accumulation path is cleaner and should be safer for symmetric EP, but it does not materially repair the gradient-angle diagnostic under this setting. The large disagreement is therefore unlikely to be mainly caused by Float32 plus-pass/minus-pass cancellation in the recurrent gradient buffer.
