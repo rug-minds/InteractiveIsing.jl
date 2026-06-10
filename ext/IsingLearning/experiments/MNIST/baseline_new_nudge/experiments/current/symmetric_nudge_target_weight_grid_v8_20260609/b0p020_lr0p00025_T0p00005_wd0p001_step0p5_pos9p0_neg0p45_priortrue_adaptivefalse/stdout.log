@@ -1,0 +1,49 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+building MNIST 784-120-40 layer
+loading training split
+training samples: 12800 (100 batches/epoch)
+loading train-eval split
+train-eval samples: 1000
+loading test split
+test samples: 1000
+constructing 32-worker softplus-margin nudge Adam manager
+constructing 32-worker validation manager
+starting epochs
+epoch 0 train-eval: evaluating 1000 samples
+epoch 0 train accuracy 0.064 loss 74.872131
+epoch 0 evaluating
+epoch 0 test: evaluating 1000 samples
+epoch 0 test accuracy 0.081 loss 74.086205 best 0.081
+(timestamp = "2026-06-09T22:48:39", epoch = 0, seconds = 0.0, train_accuracy = 0.064, train_loss = 74.87213f0, test_accuracy = 0.081, test_loss = 74.086205f0, pred_counts = "43-172-78-68-85-42-82-228-102-100", w_norm = 0.48583895f0, b_norm = 0.0f0, w_input_norm = 1.5314544f0, grad_w_norm = 0.0f0, grad_b_norm = 0.0f0, grad_w_input_norm = 0.0f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.081, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_target_weight_grid_v8_20260609\\b0p020_lr0p00025_T0p00005_wd0p001_step0p5_pos9p0_neg0p45_priortrue_adaptivefalse\\best_checkpoint.bin", final_path = "")
+epoch 1 training
+epoch 1 batch 1/100 samples 128/12800 elapsed 13.2s
+epoch 1 batch 25/100 samples 3200/12800 elapsed 31.0s
+epoch 1 batch 50/100 samples 6400/12800 elapsed 49.5s
+epoch 1 batch 75/100 samples 9600/12800 elapsed 68.1s
+epoch 1 batch 100/100 samples 12800/12800 elapsed 88.0s
+epoch 1 training done in 88.042s
+epoch 1 train-eval: evaluating 1000 samples
+epoch 1 train accuracy 0.418 loss 26.71102
+epoch 1 evaluating
+epoch 1 test: evaluating 1000 samples
+epoch 1 test accuracy 0.402 loss 26.827246 best 0.402
+(timestamp = "2026-06-09T22:50:11", epoch = 1, seconds = 88.0419115, train_accuracy = 0.418, train_loss = 26.71102f0, test_accuracy = 0.402, test_loss = 26.827246f0, pred_counts = "161-231-10-49-61-0-6-0-236-246", w_norm = 0.54766214f0, b_norm = 0.022261377f0, w_input_norm = 1.4395572f0, grad_w_norm = 11.817268f0, grad_b_norm = 1.583038f0, grad_w_input_norm = 9.181399f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.402, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_target_weight_grid_v8_20260609\\b0p020_lr0p00025_T0p00005_wd0p001_step0p5_pos9p0_neg0p45_priortrue_adaptivefalse\\best_checkpoint.bin", final_path = "")
+epoch 2 training
+epoch 2 batch 1/100 samples 128/12800 elapsed 0.9s
+epoch 2 batch 25/100 samples 3200/12800 elapsed 21.8s
+epoch 2 batch 50/100 samples 6400/12800 elapsed 41.7s
+epoch 2 batch 75/100 samples 9600/12800 elapsed 62.2s
+epoch 2 batch 100/100 samples 12800/12800 elapsed 83.8s
+epoch 2 training done in 83.788s
+epoch 2 train-eval: evaluating 1000 samples
+epoch 2 train accuracy 0.439 loss 26.281303
+epoch 2 evaluating
+epoch 2 test: evaluating 1000 samples
+epoch 2 test accuracy 0.419 loss 26.213726 best 0.419
+(timestamp = "2026-06-09T22:51:39", epoch = 2, seconds = 83.7882304, train_accuracy = 0.439, train_loss = 26.281303f0, test_accuracy = 0.419, test_loss = 26.213726f0, pred_counts = "109-157-15-120-160-1-18-0-195-225", w_norm = 0.5722786f0, b_norm = 0.025212904f0, w_input_norm = 1.5079231f0, grad_w_norm = 8.681928f0, grad_b_norm = 1.1993924f0, grad_w_input_norm = 7.7819233f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.419, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_target_weight_grid_v8_20260609\\b0p020_lr0p00025_T0p00005_wd0p001_step0p5_pos9p0_neg0p45_priortrue_adaptivefalse\\best_checkpoint.bin", final_path = "")
+epoch 3 training
+epoch 3 batch 1/100 samples 128/12800 elapsed 1.0s
+epoch 3 batch 25/100 samples 3200/12800 elapsed 21.0s
+epoch 3 batch 50/100 samples 6400/12800 elapsed 41.9s
+epoch 3 batch 75/100 samples 9600/12800 elapsed 63.1s

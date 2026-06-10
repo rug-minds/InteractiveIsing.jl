@@ -1,0 +1,38 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+building MNIST 784-120-40 layer
+loading training split
+training samples: 12800 (100 batches/epoch)
+loading train-eval split
+train-eval samples: 1000
+loading test split
+test samples: 1000
+constructing 32-worker softplus-margin nudge Adam manager
+constructing 32-worker validation manager
+starting epochs
+restoring checkpoint state from ext/IsingLearning/experiments/MNIST/baseline_new_nudge/experiments/current/symmetric_nudge_beta_relax_from_0p714_20260610/b0p025_lr0p00015_s500_reverseT/best_checkpoint.bin
+epoch 22 training
+epoch 22 batch 1/100 samples 128/12800 elapsed 15.5s
+epoch 22 batch 25/100 samples 3200/12800 elapsed 33.0s
+epoch 22 batch 50/100 samples 6400/12800 elapsed 51.3s
+epoch 22 batch 75/100 samples 9600/12800 elapsed 69.7s
+epoch 22 batch 100/100 samples 12800/12800 elapsed 89.7s
+epoch 22 training done in 89.691s
+epoch 22 train-eval: evaluating 1000 samples
+epoch 22 train accuracy 0.691 loss 11.95041
+epoch 22 evaluating
+epoch 22 test: evaluating 1000 samples
+epoch 22 test accuracy 0.707 loss 11.56092 best 0.724
+(timestamp = "2026-06-10T10:37:58", epoch = 22, seconds = 89.6905785, train_accuracy = 0.691, train_loss = 11.95041f0, test_accuracy = 0.707, test_loss = 11.56092f0, pred_counts = "123-117-105-138-184-104-97-115-8-9", w_norm = 0.86521244f0, b_norm = 0.069886625f0, w_input_norm = 2.0399342f0, grad_w_norm = 2.3138056f0, grad_b_norm = 0.30155173f0, grad_w_input_norm = 1.7446198f0, effective_w_decay = 0.002f0, effective_w_input_decay = 0.002f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.724, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_stepsize_from_0p724_20260610\\step0p50_lr0p00010_wd0p002_s500_reverseT_patience\\best_checkpoint.bin", final_path = "")
+epoch 23 training
+epoch 23 batch 1/100 samples 128/12800 elapsed 0.7s
+epoch 23 batch 25/100 samples 3200/12800 elapsed 19.2s
+epoch 23 batch 50/100 samples 6400/12800 elapsed 37.8s
+epoch 23 batch 75/100 samples 9600/12800 elapsed 57.5s
+epoch 23 batch 100/100 samples 12800/12800 elapsed 76.7s
+epoch 23 training done in 76.664s
+epoch 23 train-eval: evaluating 1000 samples
+epoch 23 train accuracy 0.686 loss 11.995905
+epoch 23 evaluating
+epoch 23 test: evaluating 1000 samples
+epoch 23 test accuracy 0.7 loss 11.63609 best 0.724

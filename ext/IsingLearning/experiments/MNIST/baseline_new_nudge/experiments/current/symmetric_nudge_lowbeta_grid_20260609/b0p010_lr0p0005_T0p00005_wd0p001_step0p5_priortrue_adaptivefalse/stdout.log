@@ -1,0 +1,142 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+building MNIST 784-120-40 layer
+loading training split
+training samples: 12800 (100 batches/epoch)
+loading train-eval split
+train-eval samples: 1000
+loading test split
+test samples: 1000
+constructing 32-worker softplus-margin nudge Adam manager
+constructing 32-worker validation manager
+starting epochs
+epoch 0 train-eval: evaluating 1000 samples
+epoch 0 train accuracy 0.075 loss 74.636414
+epoch 0 evaluating
+epoch 0 test: evaluating 1000 samples
+epoch 0 test accuracy 0.062 loss 73.852745 best 0.062
+(timestamp = "2026-06-09T21:20:12", epoch = 0, seconds = 0.0, train_accuracy = 0.075, train_loss = 74.63641f0, test_accuracy = 0.062, test_loss = 73.852745f0, pred_counts = "40-151-101-81-84-45-76-243-83-96", w_norm = 0.48583895f0, b_norm = 0.0f0, w_input_norm = 1.5314544f0, grad_w_norm = 0.0f0, grad_b_norm = 0.0f0, grad_w_input_norm = 0.0f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.062, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_lowbeta_grid_20260609\\b0p010_lr0p0005_T0p00005_wd0p001_step0p5_priortrue_adaptivefalse\\best_checkpoint.bin", final_path = "")
+epoch 1 training
+epoch 1 batch 1/100 accuracy 0.1484 loss 62.12883 best_batch 0.1484 nonimprove 0/2 trained_batches 1
+epoch 1 batch 1/100 samples 128/12800 elapsed 14.8s
+epoch 1 batch 2/100 accuracy 0.0781 loss 51.614586 best_batch 0.1484 nonimprove 0/2 trained_batches 2
+epoch 1 batch 3/100 accuracy 0.1406 loss 43.918266 best_batch 0.1484 nonimprove 0/2 trained_batches 3
+epoch 1 batch 4/100 accuracy 0.125 loss 35.226334 best_batch 0.1484 nonimprove 0/2 trained_batches 4
+epoch 1 batch 5/100 accuracy 0.1172 loss 30.747185 best_batch 0.1484 nonimprove 0/2 trained_batches 5
+epoch 1 batch 6/100 accuracy 0.0859 loss 28.448225 best_batch 0.1484 nonimprove 0/2 trained_batches 6
+epoch 1 batch 7/100 accuracy 0.1328 loss 27.447866 best_batch 0.1484 nonimprove 0/2 trained_batches 7
+epoch 1 batch 8/100 accuracy 0.0703 loss 26.966442 best_batch 0.1484 nonimprove 0/2 trained_batches 8
+epoch 1 batch 9/100 accuracy 0.0781 loss 26.25124 best_batch 0.1484 nonimprove 0/2 trained_batches 9
+epoch 1 batch 10/100 accuracy 0.1797 loss 25.395424 best_batch 0.1797 nonimprove 0/2 trained_batches 10
+epoch 1 batch 11/100 accuracy 0.1016 loss 25.925938 best_batch 0.1797 nonimprove 0/2 trained_batches 11
+epoch 1 batch 12/100 accuracy 0.1172 loss 24.92058 best_batch 0.1797 nonimprove 0/2 trained_batches 12
+epoch 1 batch 13/100 accuracy 0.1016 loss 24.78673 best_batch 0.1797 nonimprove 0/2 trained_batches 13
+epoch 1 batch 14/100 accuracy 0.0938 loss 24.965483 best_batch 0.1797 nonimprove 0/2 trained_batches 14
+epoch 1 batch 15/100 accuracy 0.125 loss 24.483786 best_batch 0.1797 nonimprove 0/2 trained_batches 15
+epoch 1 batch 16/100 accuracy 0.1172 loss 23.768921 best_batch 0.1797 nonimprove 0/2 trained_batches 16
+epoch 1 batch 17/100 accuracy 0.1094 loss 23.123062 best_batch 0.1797 nonimprove 0/2 trained_batches 17
+epoch 1 batch 18/100 accuracy 0.0781 loss 23.551327 best_batch 0.1797 nonimprove 0/2 trained_batches 18
+epoch 1 batch 19/100 accuracy 0.1484 loss 22.868017 best_batch 0.1797 nonimprove 0/2 trained_batches 19
+epoch 1 batch 20/100 accuracy 0.0859 loss 22.82542 best_batch 0.1797 nonimprove 0/2 trained_batches 20
+epoch 1 batch 21/100 accuracy 0.1797 loss 22.641579 best_batch 0.1797 nonimprove 0/2 trained_batches 21
+epoch 1 batch 22/100 accuracy 0.1016 loss 22.94175 best_batch 0.1797 nonimprove 0/2 trained_batches 22
+epoch 1 batch 23/100 accuracy 0.0938 loss 22.472239 best_batch 0.1797 nonimprove 0/2 trained_batches 23
+epoch 1 batch 24/100 accuracy 0.1484 loss 22.621014 best_batch 0.1797 nonimprove 0/2 trained_batches 24
+epoch 1 batch 25/100 accuracy 0.1016 loss 22.224243 best_batch 0.1797 nonimprove 0/2 trained_batches 25
+epoch 1 batch 25/100 samples 3200/12800 elapsed 38.5s
+epoch 1 batch 26/100 accuracy 0.1172 loss 22.179461 best_batch 0.1797 nonimprove 0/2 trained_batches 26
+epoch 1 batch 27/100 accuracy 0.1484 loss 22.066423 best_batch 0.1797 nonimprove 0/2 trained_batches 27
+epoch 1 batch 28/100 accuracy 0.1406 loss 22.173883 best_batch 0.1797 nonimprove 0/2 trained_batches 28
+epoch 1 batch 29/100 accuracy 0.1328 loss 21.817667 best_batch 0.1797 nonimprove 0/2 trained_batches 29
+epoch 1 batch 30/100 accuracy 0.0781 loss 22.456186 best_batch 0.1797 nonimprove 0/2 trained_batches 30
+epoch 1 batch 31/100 accuracy 0.1172 loss 22.217232 best_batch 0.1797 nonimprove 0/2 trained_batches 31
+epoch 1 batch 32/100 accuracy 0.125 loss 22.461843 best_batch 0.1797 nonimprove 0/2 trained_batches 32
+epoch 1 batch 33/100 accuracy 0.1016 loss 22.979231 best_batch 0.1797 nonimprove 0/2 trained_batches 33
+epoch 1 batch 34/100 accuracy 0.1172 loss 22.953098 best_batch 0.1797 nonimprove 0/2 trained_batches 34
+epoch 1 batch 35/100 accuracy 0.1016 loss 22.639494 best_batch 0.1797 nonimprove 0/2 trained_batches 35
+epoch 1 batch 36/100 accuracy 0.1328 loss 22.31023 best_batch 0.1797 nonimprove 0/2 trained_batches 36
+epoch 1 batch 37/100 accuracy 0.1016 loss 22.432869 best_batch 0.1797 nonimprove 0/2 trained_batches 37
+epoch 1 batch 38/100 accuracy 0.0703 loss 22.603493 best_batch 0.1797 nonimprove 0/2 trained_batches 38
+epoch 1 batch 39/100 accuracy 0.1172 loss 22.674751 best_batch 0.1797 nonimprove 0/2 trained_batches 39
+epoch 1 batch 40/100 accuracy 0.1172 loss 22.509876 best_batch 0.1797 nonimprove 0/2 trained_batches 40
+epoch 1 batch 41/100 accuracy 0.1016 loss 22.060305 best_batch 0.1797 nonimprove 0/2 trained_batches 41
+epoch 1 batch 42/100 accuracy 0.1094 loss 21.851637 best_batch 0.1797 nonimprove 0/2 trained_batches 42
+epoch 1 batch 43/100 accuracy 0.1094 loss 22.311846 best_batch 0.1797 nonimprove 0/2 trained_batches 43
+epoch 1 batch 44/100 accuracy 0.1406 loss 21.859459 best_batch 0.1797 nonimprove 0/2 trained_batches 44
+epoch 1 batch 45/100 accuracy 0.1094 loss 22.432646 best_batch 0.1797 nonimprove 0/2 trained_batches 45
+epoch 1 batch 46/100 accuracy 0.0703 loss 22.870173 best_batch 0.1797 nonimprove 0/2 trained_batches 46
+epoch 1 batch 47/100 accuracy 0.1172 loss 22.958595 best_batch 0.1797 nonimprove 0/2 trained_batches 47
+epoch 1 batch 48/100 accuracy 0.1641 loss 23.775711 best_batch 0.1797 nonimprove 0/2 trained_batches 48
+epoch 1 batch 49/100 accuracy 0.0859 loss 24.376589 best_batch 0.1797 nonimprove 0/2 trained_batches 49
+epoch 1 batch 50/100 accuracy 0.0469 loss 25.439497 best_batch 0.1797 nonimprove 0/2 trained_batches 50
+epoch 1 batch 50/100 samples 6400/12800 elapsed 62.8s
+epoch 1 batch 51/100 accuracy 0.0938 loss 26.070257 best_batch 0.1797 nonimprove 0/2 trained_batches 51
+epoch 1 batch 52/100 accuracy 0.1094 loss 25.391064 best_batch 0.1797 nonimprove 0/2 trained_batches 52
+epoch 1 batch 53/100 accuracy 0.0938 loss 25.516787 best_batch 0.1797 nonimprove 0/2 trained_batches 53
+epoch 1 batch 54/100 accuracy 0.0859 loss 24.89698 best_batch 0.1797 nonimprove 0/2 trained_batches 54
+epoch 1 batch 55/100 accuracy 0.1016 loss 25.691118 best_batch 0.1797 nonimprove 0/2 trained_batches 55
+epoch 1 batch 56/100 accuracy 0.125 loss 25.091194 best_batch 0.1797 nonimprove 0/2 trained_batches 56
+epoch 1 batch 57/100 accuracy 0.1484 loss 25.237511 best_batch 0.1797 nonimprove 0/2 trained_batches 57
+epoch 1 batch 58/100 accuracy 0.0781 loss 25.520866 best_batch 0.1797 nonimprove 0/2 trained_batches 58
+epoch 1 batch 59/100 accuracy 0.1094 loss 25.388821 best_batch 0.1797 nonimprove 0/2 trained_batches 59
+epoch 1 batch 60/100 accuracy 0.1172 loss 25.236387 best_batch 0.1797 nonimprove 0/2 trained_batches 60
+epoch 1 batch 61/100 accuracy 0.0781 loss 25.208296 best_batch 0.1797 nonimprove 0/2 trained_batches 61
+epoch 1 batch 62/100 accuracy 0.1016 loss 25.882402 best_batch 0.1797 nonimprove 0/2 trained_batches 62
+epoch 1 batch 63/100 accuracy 0.1016 loss 24.926552 best_batch 0.1797 nonimprove 0/2 trained_batches 63
+epoch 1 batch 64/100 accuracy 0.1016 loss 25.639017 best_batch 0.1797 nonimprove 0/2 trained_batches 64
+epoch 1 batch 65/100 accuracy 0.1172 loss 25.175014 best_batch 0.1797 nonimprove 0/2 trained_batches 65
+epoch 1 batch 66/100 accuracy 0.1094 loss 24.79801 best_batch 0.1797 nonimprove 0/2 trained_batches 66
+epoch 1 batch 67/100 accuracy 0.0938 loss 25.537462 best_batch 0.1797 nonimprove 0/2 trained_batches 67
+epoch 1 batch 68/100 accuracy 0.1172 loss 25.543135 best_batch 0.1797 nonimprove 0/2 trained_batches 68
+epoch 1 batch 69/100 accuracy 0.1016 loss 25.238184 best_batch 0.1797 nonimprove 0/2 trained_batches 69
+epoch 1 batch 70/100 accuracy 0.0859 loss 25.240475 best_batch 0.1797 nonimprove 0/2 trained_batches 70
+epoch 1 batch 71/100 accuracy 0.125 loss 25.110497 best_batch 0.1797 nonimprove 0/2 trained_batches 71
+epoch 1 batch 72/100 accuracy 0.0625 loss 25.299204 best_batch 0.1797 nonimprove 0/2 trained_batches 72
+epoch 1 batch 73/100 accuracy 0.1328 loss 24.861412 best_batch 0.1797 nonimprove 0/2 trained_batches 73
+epoch 1 batch 74/100 accuracy 0.0938 loss 25.986164 best_batch 0.1797 nonimprove 0/2 trained_batches 74
+epoch 1 batch 75/100 accuracy 0.1172 loss 25.730001 best_batch 0.1797 nonimprove 0/2 trained_batches 75
+epoch 1 batch 75/100 samples 9600/12800 elapsed 89.4s
+epoch 1 batch 76/100 accuracy 0.1094 loss 25.354464 best_batch 0.1797 nonimprove 0/2 trained_batches 76
+epoch 1 batch 77/100 accuracy 0.1094 loss 25.610575 best_batch 0.1797 nonimprove 0/2 trained_batches 77
+epoch 1 batch 78/100 accuracy 0.1016 loss 25.168831 best_batch 0.1797 nonimprove 0/2 trained_batches 78
+epoch 1 batch 79/100 accuracy 0.1328 loss 24.922577 best_batch 0.1797 nonimprove 0/2 trained_batches 79
+epoch 1 batch 80/100 accuracy 0.0859 loss 25.738358 best_batch 0.1797 nonimprove 0/2 trained_batches 80
+epoch 1 batch 81/100 accuracy 0.0859 loss 25.542126 best_batch 0.1797 nonimprove 0/2 trained_batches 81
+epoch 1 batch 82/100 accuracy 0.0781 loss 25.544802 best_batch 0.1797 nonimprove 0/2 trained_batches 82
+epoch 1 batch 83/100 accuracy 0.0859 loss 26.286875 best_batch 0.1797 nonimprove 0/2 trained_batches 83
+epoch 1 batch 84/100 accuracy 0.0703 loss 25.543427 best_batch 0.1797 nonimprove 0/2 trained_batches 84
+epoch 1 batch 85/100 accuracy 0.0703 loss 25.704638 best_batch 0.1797 nonimprove 0/2 trained_batches 85
+epoch 1 batch 86/100 accuracy 0.1094 loss 25.608881 best_batch 0.1797 nonimprove 0/2 trained_batches 86
+epoch 1 batch 87/100 accuracy 0.1016 loss 25.789984 best_batch 0.1797 nonimprove 0/2 trained_batches 87
+epoch 1 batch 88/100 accuracy 0.1406 loss 25.116093 best_batch 0.1797 nonimprove 0/2 trained_batches 88
+epoch 1 batch 89/100 accuracy 0.0938 loss 25.352655 best_batch 0.1797 nonimprove 0/2 trained_batches 89
+epoch 1 batch 90/100 accuracy 0.0781 loss 25.666882 best_batch 0.1797 nonimprove 0/2 trained_batches 90
+epoch 1 batch 91/100 accuracy 0.1172 loss 25.481071 best_batch 0.1797 nonimprove 0/2 trained_batches 91
+epoch 1 batch 92/100 accuracy 0.0781 loss 25.29771 best_batch 0.1797 nonimprove 0/2 trained_batches 92
+epoch 1 batch 93/100 accuracy 0.1094 loss 24.991972 best_batch 0.1797 nonimprove 0/2 trained_batches 93
+epoch 1 batch 94/100 accuracy 0.0547 loss 25.735209 best_batch 0.1797 nonimprove 0/2 trained_batches 94
+epoch 1 batch 95/100 accuracy 0.0781 loss 25.91601 best_batch 0.1797 nonimprove 0/2 trained_batches 95
+epoch 1 batch 96/100 accuracy 0.0781 loss 25.672983 best_batch 0.1797 nonimprove 0/2 trained_batches 96
+epoch 1 batch 97/100 accuracy 0.0938 loss 25.080944 best_batch 0.1797 nonimprove 0/2 trained_batches 97
+epoch 1 batch 98/100 accuracy 0.1328 loss 25.230904 best_batch 0.1797 nonimprove 0/2 trained_batches 98
+epoch 1 batch 99/100 accuracy 0.1328 loss 25.357462 best_batch 0.1797 nonimprove 0/2 trained_batches 99
+epoch 1 batch 100/100 accuracy 0.1406 loss 25.151052 best_batch 0.1797 nonimprove 1/2 trained_batches 100
+epoch 1 batch 100/100 samples 12800/12800 elapsed 115.9s
+epoch 1 training done in 115.898s
+epoch 1 train-eval: evaluating 1000 samples
+epoch 1 train accuracy 0.112 loss 25.452295
+epoch 1 evaluating
+epoch 1 test: evaluating 1000 samples
+epoch 1 test accuracy 0.108 loss 25.445662 best 0.108
+(timestamp = "2026-06-09T21:22:13", epoch = 1, seconds = 115.897704, train_accuracy = 0.112, train_loss = 25.452295f0, test_accuracy = 0.108, test_loss = 25.445662f0, pred_counts = "336-0-343-0-321-0-0-0-0-0", w_norm = 0.60322386f0, b_norm = 0.042908657f0, w_input_norm = 1.7349786f0, grad_w_norm = 3.1842003f0, grad_b_norm = 0.68859625f0, grad_w_input_norm = 5.78424f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.108, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_lowbeta_grid_20260609\\b0p010_lr0p0005_T0p00005_wd0p001_step0p5_priortrue_adaptivefalse\\best_checkpoint.bin", final_path = "")
+epoch 2 training
+epoch 2 batch 1/100 accuracy 0.1172 loss 25.12269 best_batch 0.1797 nonimprove 2/2 trained_batches 101
+epoch 2 early stop: batch accuracy did not improve for 2 consecutive batches
+epoch 2 training done in 1.093s
+epoch 2 train-eval: evaluating 1000 samples
+epoch 2 train accuracy 0.108 loss 25.446037
+epoch 2 evaluating
+epoch 2 test: evaluating 1000 samples
+epoch 2 test accuracy 0.1 loss 25.44043 best 0.108
+(timestamp = "2026-06-09T21:22:18", epoch = 2, seconds = 1.0932207, train_accuracy = 0.108, train_loss = 25.446037f0, test_accuracy = 0.1, test_loss = 25.44043f0, pred_counts = "335-0-351-0-314-0-0-0-0-0", w_norm = 0.6030454f0, b_norm = 0.042879418f0, w_input_norm = 1.7374927f0, grad_w_norm = 4.7942696f0, grad_b_norm = 0.89342594f0, grad_w_input_norm = 8.910875f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.108, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_lowbeta_grid_20260609\\b0p010_lr0p0005_T0p00005_wd0p001_step0p5_priortrue_adaptivefalse\\best_checkpoint.bin", final_path = "")
+saved MNIST 784-120-40 softplus-margin nudge baseline in ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\symmetric_nudge_lowbeta_grid_20260609\b0p010_lr0p0005_T0p00005_wd0p001_step0p5_priortrue_adaptivefalse

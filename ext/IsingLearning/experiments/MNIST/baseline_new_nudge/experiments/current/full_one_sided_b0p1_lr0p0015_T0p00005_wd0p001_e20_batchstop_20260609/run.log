@@ -1,0 +1,34 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+building MNIST 784-120-40 layer
+loading training split
+training samples: 54210 (424 batches/epoch)
+loading train-eval split
+train-eval samples: 1000
+loading test split
+test samples: 8920
+constructing 32-worker softplus-margin nudge Adam manager
+constructing 32-worker validation manager
+starting epochs
+epoch 0 train-eval: evaluating 1000 samples
+epoch 0 train accuracy 0.073 loss 74.471642
+epoch 0 evaluating
+epoch 0 test: evaluating 8920 samples
+epoch 0 test accuracy 0.0664 loss 74.542679 best 0.0664
+(timestamp = "2026-06-09T20:47:59", epoch = 0, seconds = 0.0, train_accuracy = 0.073, train_loss = 74.47164f0, test_accuracy = 0.06636771300448431, test_loss = 74.54268f0, pred_counts = "368-1521-680-610-792-505-711-2183-707-843", w_norm = 0.48583895f0, b_norm = 0.0f0, w_input_norm = 1.5314544f0, grad_w_norm = 0.0f0, grad_b_norm = 0.0f0, grad_w_input_norm = 0.0f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.06636771300448431, best_path = "ext/IsingLearning/experiments/MNIST/baseline_new_nudge/experiments/current/full_one_sided_b0p1_lr0p0015_T0p00005_wd0p001_e20_batchstop_20260609\\best_checkpoint.bin", final_path = "")
+epoch 1 training
+epoch 1 batch 1/424 accuracy 0.0625 loss 66.197174 best_batch 0.0625 nonimprove 0/2
+epoch 1 batch 1/424 samples 128/54210 elapsed 10.5s
+epoch 1 batch 2/424 accuracy 0.125 loss 55.498039 best_batch 0.125 nonimprove 0/2
+epoch 1 batch 3/424 accuracy 0.1641 loss 54.081829 best_batch 0.1641 nonimprove 0/2
+epoch 1 batch 4/424 accuracy 0.0938 loss 55.55246 best_batch 0.1641 nonimprove 1/2
+epoch 1 batch 5/424 accuracy 0.0938 loss 55.580318 best_batch 0.1641 nonimprove 2/2
+epoch 1 early stop: batch accuracy did not improve for 2 consecutive batches
+epoch 1 training done in 13.324s
+epoch 1 train-eval: evaluating 1000 samples
+epoch 1 train accuracy 0.105 loss 54.581535
+epoch 1 evaluating
+epoch 1 test: evaluating 8920 samples
+epoch 1 test accuracy 0.1001 loss 54.62207 best 0.1001
+(timestamp = "2026-06-09T20:48:28", epoch = 1, seconds = 13.3235008, train_accuracy = 0.105, train_loss = 54.581535f0, test_accuracy = 0.10011210762331839, test_loss = 54.62207f0, pred_counts = "4453-4467-0-0-0-0-0-0-0-0", w_norm = 0.68364745f0, b_norm = 0.049417894f0, w_input_norm = 1.6665906f0, grad_w_norm = 3.8341453f0, grad_b_norm = 0.7648762f0, grad_w_input_norm = 5.930303f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.10011210762331839, best_path = "ext/IsingLearning/experiments/MNIST/baseline_new_nudge/experiments/current/full_one_sided_b0p1_lr0p0015_T0p00005_wd0p001_e20_batchstop_20260609\\best_checkpoint.bin", final_path = "")
+saved MNIST 784-120-40 softplus-margin nudge baseline in ext/IsingLearning/experiments/MNIST/baseline_new_nudge/experiments/current/full_one_sided_b0p1_lr0p0015_T0p00005_wd0p001_e20_batchstop_20260609

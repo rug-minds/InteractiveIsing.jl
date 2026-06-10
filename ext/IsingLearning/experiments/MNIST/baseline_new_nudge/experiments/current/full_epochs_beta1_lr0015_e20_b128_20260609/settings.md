@@ -1,0 +1,29 @@
+# MNIST 784-120-40 Softplus-Margin Nudge Adam Baseline
+
+- paper: https://arxiv.org/pdf/2305.18321
+- nudging term: `InteractiveIsing.SoftplusMarginNudging`
+- architecture: `784 -> 120 -> 40`
+- sampled graph: hidden/output only, with no structural input layer
+- input handling: MNIST pixels in `[0, 1]` are projected through external `784 -> hidden` weights into a worker-local field
+- workers: `32`
+- manager execution: `ChannelWorkers()` with one sample per manager job
+- progress print interval: `25` batches
+- early stop decline epochs: `0`
+- worker graph adjacency: pointer-shared with source graph
+- worker graph base bias: pointer-shared with source graph
+- learning step: original one-sided free/nudged EqProp contrastive gradient from inline `LoopAlgorithm`
+- sparse coupling constraint: paired CSC entries are symmetrized before and after Adam updates
+- validation: `ChannelWorkers()` ProcessManager with worker-local stats
+- job buffers: preallocated per-sample jobs reused across minibatches/evaluations
+- optimiser: `Optimisers.Adam(0.0015)`
+- epochs/batchsize: `20` / `128`
+- train/test per class: `5376` / `892`
+- train eval per class: `100`
+- sweeps/relaxation steps: `500.0` / `80000`
+- beta/nudge tau/temp/stepsize: `1.0` / `0.25` / `0.001` / `0.5`
+- recurrent w normalization/norm: `none` / `1.0`
+- project output bias prior: `false`
+- w_input normalization/row norm: `none` / `0.14`
+- weight scale/decay: `0.005` / `0.0`
+- resume from: `none`
+- resume epoch: `-1`

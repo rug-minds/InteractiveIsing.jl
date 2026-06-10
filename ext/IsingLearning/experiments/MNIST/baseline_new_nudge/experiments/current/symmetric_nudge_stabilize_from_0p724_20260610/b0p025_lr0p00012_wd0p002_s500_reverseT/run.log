@@ -1,0 +1,1854 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+┌ Warning: this run uses a subsampled balanced training split, so it is not the full balanced MNIST baseline
+│   train_per_class = 1280
+└ @ Main C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\baseline_new_nudge\mnist_784_120_40_softplus_margin_symmetric_nudge_adam.jl:1739
+┌ Warning: this run uses a subsampled balanced test split, so reported accuracy will be noisy
+│   test_per_class = 100
+└ @ Main C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\baseline_new_nudge\mnist_784_120_40_softplus_margin_symmetric_nudge_adam.jl:1740
+
+epoch 22   2%|█                                         |  ETA: 0:13:51[K
+     batch: 2/100[K
+   samples: 256/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22   4%|██                                        |  ETA: 0:07:26[K
+     batch: 4/100[K
+   samples: 512/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22   6%|███                                       |  ETA: 0:05:13[K
+     batch: 6/100[K
+   samples: 768/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22   8%|████                                      |  ETA: 0:04:06[K
+     batch: 8/100[K
+   samples: 1024/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  10%|█████                                     |  ETA: 0:03:25[K
+     batch: 10/100[K
+   samples: 1280/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  12%|██████                                    |  ETA: 0:02:58[K
+     batch: 12/100[K
+   samples: 1536/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  14%|██████                                    |  ETA: 0:02:38[K
+     batch: 14/100[K
+   samples: 1792/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  16%|███████                                   |  ETA: 0:02:22[K
+     batch: 16/100[K
+   samples: 2048/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  18%|████████                                  |  ETA: 0:02:10[K
+     batch: 18/100[K
+   samples: 2304/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  20%|█████████                                 |  ETA: 0:02:00[K
+     batch: 20/100[K
+   samples: 2560/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  22%|██████████                                |  ETA: 0:01:51[K
+     batch: 22/100[K
+   samples: 2816/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  24%|███████████                               |  ETA: 0:01:44[K
+     batch: 24/100[K
+   samples: 3072/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  26%|███████████                               |  ETA: 0:01:37[K
+     batch: 26/100[K
+   samples: 3328/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  28%|████████████                              |  ETA: 0:01:32[K
+     batch: 28/100[K
+   samples: 3584/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  30%|█████████████                             |  ETA: 0:01:26[K
+     batch: 30/100[K
+   samples: 3840/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  32%|██████████████                            |  ETA: 0:01:22[K
+     batch: 32/100[K
+   samples: 4096/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  34%|███████████████                           |  ETA: 0:01:17[K
+     batch: 34/100[K
+   samples: 4352/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  36%|████████████████                          |  ETA: 0:01:13[K
+     batch: 36/100[K
+   samples: 4608/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  38%|████████████████                          |  ETA: 0:01:10[K
+     batch: 38/100[K
+   samples: 4864/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  40%|█████████████████                         |  ETA: 0:01:06[K
+     batch: 40/100[K
+   samples: 5120/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  42%|██████████████████                        |  ETA: 0:01:03[K
+     batch: 42/100[K
+   samples: 5376/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  44%|███████████████████                       |  ETA: 0:01:00[K
+     batch: 44/100[K
+   samples: 5632/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  46%|████████████████████                      |  ETA: 0:00:57[K
+     batch: 46/100[K
+   samples: 5888/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  48%|█████████████████████                     |  ETA: 0:00:54[K
+     batch: 48/100[K
+   samples: 6144/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  50%|██████████████████████                    |  ETA: 0:00:51[K
+     batch: 50/100[K
+   samples: 6400/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  52%|██████████████████████                    |  ETA: 0:00:48[K
+     batch: 52/100[K
+   samples: 6656/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  54%|███████████████████████                   |  ETA: 0:00:46[K
+     batch: 54/100[K
+   samples: 6912/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  56%|████████████████████████                  |  ETA: 0:00:43[K
+     batch: 56/100[K
+   samples: 7168/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  58%|█████████████████████████                 |  ETA: 0:00:41[K
+     batch: 58/100[K
+   samples: 7424/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  60%|██████████████████████████                |  ETA: 0:00:39[K
+     batch: 60/100[K
+   samples: 7680/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  62%|███████████████████████████               |  ETA: 0:00:36[K
+     batch: 62/100[K
+   samples: 7936/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  64%|███████████████████████████               |  ETA: 0:00:34[K
+     batch: 64/100[K
+   samples: 8192/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  66%|████████████████████████████              |  ETA: 0:00:32[K
+     batch: 66/100[K
+   samples: 8448/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  68%|█████████████████████████████             |  ETA: 0:00:30[K
+     batch: 68/100[K
+   samples: 8704/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  70%|██████████████████████████████            |  ETA: 0:00:28[K
+     batch: 70/100[K
+   samples: 8960/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  72%|███████████████████████████████           |  ETA: 0:00:26[K
+     batch: 72/100[K
+   samples: 9216/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  74%|████████████████████████████████          |  ETA: 0:00:24[K
+     batch: 74/100[K
+   samples: 9472/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  76%|████████████████████████████████          |  ETA: 0:00:22[K
+     batch: 76/100[K
+   samples: 9728/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  78%|█████████████████████████████████         |  ETA: 0:00:20[K
+     batch: 78/100[K
+   samples: 9984/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  80%|██████████████████████████████████        |  ETA: 0:00:18[K
+     batch: 80/100[K
+   samples: 10240/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  82%|███████████████████████████████████       |  ETA: 0:00:16[K
+     batch: 82/100[K
+   samples: 10496/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  84%|████████████████████████████████████      |  ETA: 0:00:14[K
+     batch: 84/100[K
+   samples: 10752/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  86%|█████████████████████████████████████     |  ETA: 0:00:12[K
+     batch: 86/100[K
+   samples: 11008/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  88%|█████████████████████████████████████     |  ETA: 0:00:11[K
+     batch: 88/100[K
+   samples: 11264/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  90%|██████████████████████████████████████    |  ETA: 0:00:09[K
+     batch: 90/100[K
+   samples: 11520/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  92%|███████████████████████████████████████   |  ETA: 0:00:07[K
+     batch: 92/100[K
+   samples: 11776/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  94%|████████████████████████████████████████  |  ETA: 0:00:05[K
+     batch: 94/100[K
+   samples: 12032/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  96%|█████████████████████████████████████████ |  ETA: 0:00:03[K
+     batch: 96/100[K
+   samples: 12288/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22  98%|██████████████████████████████████████████|  ETA: 0:00:02[K
+     batch: 98/100[K
+   samples: 12544/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 22 100%|██████████████████████████████████████████| Time: 0:01:26[K
+     batch: 100/100[K
+   samples: 12800/12800[K
+
+epoch 23   2%|█                                         |  ETA: 0:01:07[K
+     batch: 2/100[K
+   samples: 256/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23   4%|██                                        |  ETA: 0:01:06[K
+     batch: 4/100[K
+   samples: 512/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23   6%|███                                       |  ETA: 0:01:05[K
+     batch: 6/100[K
+   samples: 768/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23   8%|████                                      |  ETA: 0:01:04[K
+     batch: 8/100[K
+   samples: 1024/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  10%|█████                                     |  ETA: 0:01:03[K
+     batch: 10/100[K
+   samples: 1280/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  12%|██████                                    |  ETA: 0:01:01[K
+     batch: 12/100[K
+   samples: 1536/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  14%|██████                                    |  ETA: 0:01:00[K
+     batch: 14/100[K
+   samples: 1792/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  16%|███████                                   |  ETA: 0:00:59[K
+     batch: 16/100[K
+   samples: 2048/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  18%|████████                                  |  ETA: 0:00:57[K
+     batch: 18/100[K
+   samples: 2304/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  20%|█████████                                 |  ETA: 0:00:56[K
+     batch: 20/100[K
+   samples: 2560/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  22%|██████████                                |  ETA: 0:00:55[K
+     batch: 22/100[K
+   samples: 2816/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  24%|███████████                               |  ETA: 0:00:54[K
+     batch: 24/100[K
+   samples: 3072/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  26%|███████████                               |  ETA: 0:00:52[K
+     batch: 26/100[K
+   samples: 3328/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  28%|████████████                              |  ETA: 0:00:51[K
+     batch: 28/100[K
+   samples: 3584/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  30%|█████████████                             |  ETA: 0:00:50[K
+     batch: 30/100[K
+   samples: 3840/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  32%|██████████████                            |  ETA: 0:00:48[K
+     batch: 32/100[K
+   samples: 4096/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  34%|███████████████                           |  ETA: 0:00:47[K
+     batch: 34/100[K
+   samples: 4352/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  36%|████████████████                          |  ETA: 0:00:46[K
+     batch: 36/100[K
+   samples: 4608/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  38%|████████████████                          |  ETA: 0:00:44[K
+     batch: 38/100[K
+   samples: 4864/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  40%|█████████████████                         |  ETA: 0:00:43[K
+     batch: 40/100[K
+   samples: 5120/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  42%|██████████████████                        |  ETA: 0:00:42[K
+     batch: 42/100[K
+   samples: 5376/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  44%|███████████████████                       |  ETA: 0:00:40[K
+     batch: 44/100[K
+   samples: 5632/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  46%|████████████████████                      |  ETA: 0:00:39[K
+     batch: 46/100[K
+   samples: 5888/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  48%|█████████████████████                     |  ETA: 0:00:38[K
+     batch: 48/100[K
+   samples: 6144/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  50%|██████████████████████                    |  ETA: 0:00:36[K
+     batch: 50/100[K
+   samples: 6400/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  52%|██████████████████████                    |  ETA: 0:00:35[K
+     batch: 52/100[K
+   samples: 6656/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  54%|███████████████████████                   |  ETA: 0:00:33[K
+     batch: 54/100[K
+   samples: 6912/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  56%|████████████████████████                  |  ETA: 0:00:32[K
+     batch: 56/100[K
+   samples: 7168/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  58%|█████████████████████████                 |  ETA: 0:00:30[K
+     batch: 58/100[K
+   samples: 7424/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  60%|██████████████████████████                |  ETA: 0:00:29[K
+     batch: 60/100[K
+   samples: 7680/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  62%|███████████████████████████               |  ETA: 0:00:28[K
+     batch: 62/100[K
+   samples: 7936/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  64%|███████████████████████████               |  ETA: 0:00:26[K
+     batch: 64/100[K
+   samples: 8192/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  66%|████████████████████████████              |  ETA: 0:00:25[K
+     batch: 66/100[K
+   samples: 8448/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  68%|█████████████████████████████             |  ETA: 0:00:23[K
+     batch: 68/100[K
+   samples: 8704/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  70%|██████████████████████████████            |  ETA: 0:00:22[K
+     batch: 70/100[K
+   samples: 8960/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  72%|███████████████████████████████           |  ETA: 0:00:21[K
+     batch: 72/100[K
+   samples: 9216/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  74%|████████████████████████████████          |  ETA: 0:00:19[K
+     batch: 74/100[K
+   samples: 9472/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  76%|████████████████████████████████          |  ETA: 0:00:18[K
+     batch: 76/100[K
+   samples: 9728/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  78%|█████████████████████████████████         |  ETA: 0:00:16[K
+     batch: 78/100[K
+   samples: 9984/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  80%|██████████████████████████████████        |  ETA: 0:00:15[K
+     batch: 80/100[K
+   samples: 10240/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  82%|███████████████████████████████████       |  ETA: 0:00:13[K
+     batch: 82/100[K
+   samples: 10496/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  84%|████████████████████████████████████      |  ETA: 0:00:12[K
+     batch: 84/100[K
+   samples: 10752/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  86%|█████████████████████████████████████     |  ETA: 0:00:10[K
+     batch: 86/100[K
+   samples: 11008/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  88%|█████████████████████████████████████     |  ETA: 0:00:09[K
+     batch: 88/100[K
+   samples: 11264/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  90%|██████████████████████████████████████    |  ETA: 0:00:07[K
+     batch: 90/100[K
+   samples: 11520/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  92%|███████████████████████████████████████   |  ETA: 0:00:06[K
+     batch: 92/100[K
+   samples: 11776/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  94%|████████████████████████████████████████  |  ETA: 0:00:04[K
+     batch: 94/100[K
+   samples: 12032/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  96%|█████████████████████████████████████████ |  ETA: 0:00:03[K
+     batch: 96/100[K
+   samples: 12288/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23  98%|██████████████████████████████████████████|  ETA: 0:00:01[K
+     batch: 98/100[K
+   samples: 12544/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 23 100%|██████████████████████████████████████████| Time: 0:01:14[K
+     batch: 100/100[K
+   samples: 12800/12800[K
+
+epoch 24   2%|█                                         |  ETA: 0:01:20[K
+     batch: 2/100[K
+   samples: 256/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24   4%|██                                        |  ETA: 0:01:17[K
+     batch: 4/100[K
+   samples: 512/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24   6%|███                                       |  ETA: 0:01:16[K
+     batch: 6/100[K
+   samples: 768/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24   8%|████                                      |  ETA: 0:01:13[K
+     batch: 8/100[K
+   samples: 1024/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  10%|█████                                     |  ETA: 0:01:12[K
+     batch: 10/100[K
+   samples: 1280/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  12%|██████                                    |  ETA: 0:01:10[K
+     batch: 12/100[K
+   samples: 1536/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  14%|██████                                    |  ETA: 0:01:08[K
+     batch: 14/100[K
+   samples: 1792/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  16%|███████                                   |  ETA: 0:01:07[K
+     batch: 16/100[K
+   samples: 2048/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  18%|████████                                  |  ETA: 0:01:06[K
+     batch: 18/100[K
+   samples: 2304/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  20%|█████████                                 |  ETA: 0:01:05[K
+     batch: 20/100[K
+   samples: 2560/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  22%|██████████                                |  ETA: 0:01:03[K
+     batch: 22/100[K
+   samples: 2816/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  24%|███████████                               |  ETA: 0:01:02[K
+     batch: 24/100[K
+   samples: 3072/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  26%|███████████                               |  ETA: 0:01:00[K
+     batch: 26/100[K
+   samples: 3328/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  28%|████████████                              |  ETA: 0:00:59[K
+     batch: 28/100[K
+   samples: 3584/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  30%|█████████████                             |  ETA: 0:00:57[K
+     batch: 30/100[K
+   samples: 3840/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  32%|██████████████                            |  ETA: 0:00:55[K
+     batch: 32/100[K
+   samples: 4096/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  34%|███████████████                           |  ETA: 0:00:53[K
+     batch: 34/100[K
+   samples: 4352/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  36%|████████████████                          |  ETA: 0:00:51[K
+     batch: 36/100[K
+   samples: 4608/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  38%|████████████████                          |  ETA: 0:00:50[K
+     batch: 38/100[K
+   samples: 4864/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  40%|█████████████████                         |  ETA: 0:00:48[K
+     batch: 40/100[K
+   samples: 5120/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  42%|██████████████████                        |  ETA: 0:00:46[K
+     batch: 42/100[K
+   samples: 5376/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  44%|███████████████████                       |  ETA: 0:00:45[K
+     batch: 44/100[K
+   samples: 5632/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  46%|████████████████████                      |  ETA: 0:00:43[K
+     batch: 46/100[K
+   samples: 5888/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  48%|█████████████████████                     |  ETA: 0:00:42[K
+     batch: 48/100[K
+   samples: 6144/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  50%|██████████████████████                    |  ETA: 0:00:40[K
+     batch: 50/100[K
+   samples: 6400/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  52%|██████████████████████                    |  ETA: 0:00:38[K
+     batch: 52/100[K
+   samples: 6656/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  54%|███████████████████████                   |  ETA: 0:00:37[K
+     batch: 54/100[K
+   samples: 6912/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  56%|████████████████████████                  |  ETA: 0:00:35[K
+     batch: 56/100[K
+   samples: 7168/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  58%|█████████████████████████                 |  ETA: 0:00:33[K
+     batch: 58/100[K
+   samples: 7424/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  60%|██████████████████████████                |  ETA: 0:00:32[K
+     batch: 60/100[K
+   samples: 7680/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  62%|███████████████████████████               |  ETA: 0:00:30[K
+     batch: 62/100[K
+   samples: 7936/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  64%|███████████████████████████               |  ETA: 0:00:28[K
+     batch: 64/100[K
+   samples: 8192/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  66%|████████████████████████████              |  ETA: 0:00:27[K
+     batch: 66/100[K
+   samples: 8448/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  68%|█████████████████████████████             |  ETA: 0:00:25[K
+     batch: 68/100[K
+   samples: 8704/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  70%|██████████████████████████████            |  ETA: 0:00:24[K
+     batch: 70/100[K
+   samples: 8960/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  72%|███████████████████████████████           |  ETA: 0:00:22[K
+     batch: 72/100[K
+   samples: 9216/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  74%|████████████████████████████████          |  ETA: 0:00:20[K
+     batch: 74/100[K
+   samples: 9472/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  76%|████████████████████████████████          |  ETA: 0:00:19[K
+     batch: 76/100[K
+   samples: 9728/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  78%|█████████████████████████████████         |  ETA: 0:00:17[K
+     batch: 78/100[K
+   samples: 9984/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  80%|██████████████████████████████████        |  ETA: 0:00:16[K
+     batch: 80/100[K
+   samples: 10240/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  82%|███████████████████████████████████       |  ETA: 0:00:14[K
+     batch: 82/100[K
+   samples: 10496/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  84%|████████████████████████████████████      |  ETA: 0:00:13[K
+     batch: 84/100[K
+   samples: 10752/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  86%|█████████████████████████████████████     |  ETA: 0:00:11[K
+     batch: 86/100[K
+   samples: 11008/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  88%|█████████████████████████████████████     |  ETA: 0:00:09[K
+     batch: 88/100[K
+   samples: 11264/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  90%|██████████████████████████████████████    |  ETA: 0:00:08[K
+     batch: 90/100[K
+   samples: 11520/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  92%|███████████████████████████████████████   |  ETA: 0:00:06[K
+     batch: 92/100[K
+   samples: 11776/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  94%|████████████████████████████████████████  |  ETA: 0:00:05[K
+     batch: 94/100[K
+   samples: 12032/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  96%|█████████████████████████████████████████ |  ETA: 0:00:03[K
+     batch: 96/100[K
+   samples: 12288/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24  98%|██████████████████████████████████████████|  ETA: 0:00:02[K
+     batch: 98/100[K
+   samples: 12544/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 24 100%|██████████████████████████████████████████| Time: 0:01:18[K
+     batch: 100/100[K
+   samples: 12800/12800[K
+
+epoch 25   2%|█                                         |  ETA: 0:01:09[K
+     batch: 2/100[K
+   samples: 256/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25   4%|██                                        |  ETA: 0:01:09[K
+     batch: 4/100[K
+   samples: 512/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25   6%|███                                       |  ETA: 0:01:10[K
+     batch: 6/100[K
+   samples: 768/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25   8%|████                                      |  ETA: 0:01:10[K
+     batch: 8/100[K
+   samples: 1024/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  10%|█████                                     |  ETA: 0:01:07[K
+     batch: 10/100[K
+   samples: 1280/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  12%|██████                                    |  ETA: 0:01:06[K
+     batch: 12/100[K
+   samples: 1536/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  14%|██████                                    |  ETA: 0:01:04[K
+     batch: 14/100[K
+   samples: 1792/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  16%|███████                                   |  ETA: 0:01:02[K
+     batch: 16/100[K
+   samples: 2048/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  18%|████████                                  |  ETA: 0:01:00[K
+     batch: 18/100[K
+   samples: 2304/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  20%|█████████                                 |  ETA: 0:00:58[K
+     batch: 20/100[K
+   samples: 2560/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  22%|██████████                                |  ETA: 0:00:57[K
+     batch: 22/100[K
+   samples: 2816/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  24%|███████████                               |  ETA: 0:00:55[K
+     batch: 24/100[K
+   samples: 3072/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  26%|███████████                               |  ETA: 0:00:53[K
+     batch: 26/100[K
+   samples: 3328/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  28%|████████████                              |  ETA: 0:00:52[K
+     batch: 28/100[K
+   samples: 3584/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  30%|█████████████                             |  ETA: 0:00:50[K
+     batch: 30/100[K
+   samples: 3840/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  32%|██████████████                            |  ETA: 0:00:49[K
+     batch: 32/100[K
+   samples: 4096/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  34%|███████████████                           |  ETA: 0:00:47[K
+     batch: 34/100[K
+   samples: 4352/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  36%|████████████████                          |  ETA: 0:00:46[K
+     batch: 36/100[K
+   samples: 4608/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  38%|████████████████                          |  ETA: 0:00:44[K
+     batch: 38/100[K
+   samples: 4864/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  40%|█████████████████                         |  ETA: 0:00:43[K
+     batch: 40/100[K
+   samples: 5120/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  42%|██████████████████                        |  ETA: 0:00:41[K
+     batch: 42/100[K
+   samples: 5376/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  44%|███████████████████                       |  ETA: 0:00:40[K
+     batch: 44/100[K
+   samples: 5632/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  46%|████████████████████                      |  ETA: 0:00:38[K
+     batch: 46/100[K
+   samples: 5888/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  48%|█████████████████████                     |  ETA: 0:00:37[K
+     batch: 48/100[K
+   samples: 6144/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  50%|██████████████████████                    |  ETA: 0:00:36[K
+     batch: 50/100[K
+   samples: 6400/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  52%|██████████████████████                    |  ETA: 0:00:34[K
+     batch: 52/100[K
+   samples: 6656/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  54%|███████████████████████                   |  ETA: 0:00:33[K
+     batch: 54/100[K
+   samples: 6912/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  56%|████████████████████████                  |  ETA: 0:00:31[K
+     batch: 56/100[K
+   samples: 7168/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  58%|█████████████████████████                 |  ETA: 0:00:30[K
+     batch: 58/100[K
+   samples: 7424/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  60%|██████████████████████████                |  ETA: 0:00:29[K
+     batch: 60/100[K
+   samples: 7680/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  62%|███████████████████████████               |  ETA: 0:00:27[K
+     batch: 62/100[K
+   samples: 7936/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  64%|███████████████████████████               |  ETA: 0:00:26[K
+     batch: 64/100[K
+   samples: 8192/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  66%|████████████████████████████              |  ETA: 0:00:25[K
+     batch: 66/100[K
+   samples: 8448/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  68%|█████████████████████████████             |  ETA: 0:00:23[K
+     batch: 68/100[K
+   samples: 8704/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  70%|██████████████████████████████            |  ETA: 0:00:22[K
+     batch: 70/100[K
+   samples: 8960/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  72%|███████████████████████████████           |  ETA: 0:00:20[K
+     batch: 72/100[K
+   samples: 9216/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  74%|████████████████████████████████          |  ETA: 0:00:19[K
+     batch: 74/100[K
+   samples: 9472/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  76%|████████████████████████████████          |  ETA: 0:00:17[K
+     batch: 76/100[K
+   samples: 9728/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  78%|█████████████████████████████████         |  ETA: 0:00:16[K
+     batch: 78/100[K
+   samples: 9984/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  80%|██████████████████████████████████        |  ETA: 0:00:15[K
+     batch: 80/100[K
+   samples: 10240/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  82%|███████████████████████████████████       |  ETA: 0:00:13[K
+     batch: 82/100[K
+   samples: 10496/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  84%|████████████████████████████████████      |  ETA: 0:00:12[K
+     batch: 84/100[K
+   samples: 10752/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  86%|█████████████████████████████████████     |  ETA: 0:00:10[K
+     batch: 86/100[K
+   samples: 11008/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  88%|█████████████████████████████████████     |  ETA: 0:00:09[K
+     batch: 88/100[K
+   samples: 11264/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  90%|██████████████████████████████████████    |  ETA: 0:00:07[K
+     batch: 90/100[K
+   samples: 11520/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  92%|███████████████████████████████████████   |  ETA: 0:00:06[K
+     batch: 92/100[K
+   samples: 11776/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  94%|████████████████████████████████████████  |  ETA: 0:00:04[K
+     batch: 94/100[K
+   samples: 12032/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  96%|█████████████████████████████████████████ |  ETA: 0:00:03[K
+     batch: 96/100[K
+   samples: 12288/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25  98%|██████████████████████████████████████████|  ETA: 0:00:01[K
+     batch: 98/100[K
+   samples: 12544/12800[K
+[A
+[A
+
+
+[K[A
+[K[A
+epoch 25 100%|██████████████████████████████████████████| Time: 0:01:13[K
+     batch: 100/100[K
+   samples: 12800/12800[K
+[bootstrap] activated project
+[bootstrap] loaded packages
+building MNIST 784-120-40 layer
+loading training split
+training samples: 12800 (100 batches/epoch)
+loading train-eval split
+train-eval samples: 1000
+loading test split
+test samples: 1000
+constructing 32-worker softplus-margin nudge Adam manager
+constructing 32-worker validation manager
+starting epochs
+restoring checkpoint state from ext/IsingLearning/experiments/MNIST/baseline_new_nudge/experiments/current/symmetric_nudge_beta_relax_from_0p714_20260610/b0p025_lr0p00015_s500_reverseT/best_checkpoint.bin
+epoch 22 training
+epoch 22 batch 1/100 samples 128/12800 elapsed 16.2s
+epoch 22 batch 25/100 samples 3200/12800 elapsed 33.5s
+epoch 22 batch 50/100 samples 6400/12800 elapsed 50.9s
+epoch 22 batch 75/100 samples 9600/12800 elapsed 68.6s
+epoch 22 batch 100/100 samples 12800/12800 elapsed 86.2s
+epoch 22 training done in 86.195s
+epoch 22 train-eval: evaluating 1000 samples
+epoch 22 train accuracy 0.673 loss 11.912241
+epoch 22 evaluating
+epoch 22 test: evaluating 1000 samples
+epoch 22 test accuracy 0.698 loss 11.647161 best 0.724
+(timestamp = "2026-06-10T09:42:11", epoch = 22, seconds = 86.1954968, train_accuracy = 0.673, train_loss = 11.912241f0, test_accuracy = 0.698, test_loss = 11.647161f0, pred_counts = "118-105-100-140-186-92-116-115-14-14", w_norm = 0.86123544f0, b_norm = 0.0712214f0, w_input_norm = 2.04601f0, grad_w_norm = 3.6729403f0, grad_b_norm = 0.3993485f0, grad_w_input_norm = 3.0477962f0, effective_w_decay = 0.002f0, effective_w_input_decay = 0.002f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.724, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_stabilize_from_0p724_20260610\\b0p025_lr0p00012_wd0p002_s500_reverseT\\best_checkpoint.bin", final_path = "")
+epoch 23 training
+epoch 23 batch 1/100 samples 128/12800 elapsed 0.7s
+epoch 23 batch 25/100 samples 3200/12800 elapsed 17.7s
+epoch 23 batch 50/100 samples 6400/12800 elapsed 36.1s
+epoch 23 batch 75/100 samples 9600/12800 elapsed 55.4s
+epoch 23 batch 100/100 samples 12800/12800 elapsed 75.0s
+epoch 23 training done in 74.95s
+epoch 23 train-eval: evaluating 1000 samples
+epoch 23 train accuracy 0.676 loss 11.759952
+epoch 23 evaluating
+epoch 23 test: evaluating 1000 samples
+epoch 23 test accuracy 0.703 loss 11.222038 best 0.724
+(timestamp = "2026-06-10T09:43:30", epoch = 23, seconds = 74.9496166, train_accuracy = 0.676, train_loss = 11.759952f0, test_accuracy = 0.703, test_loss = 11.222038f0, pred_counts = "121-125-123-135-173-93-99-103-9-19", w_norm = 0.8645767f0, b_norm = 0.07240999f0, w_input_norm = 2.0569367f0, grad_w_norm = 4.9299674f0, grad_b_norm = 0.727935f0, grad_w_input_norm = 5.0226593f0, effective_w_decay = 0.002f0, effective_w_input_decay = 0.002f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.724, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_stabilize_from_0p724_20260610\\b0p025_lr0p00012_wd0p002_s500_reverseT\\best_checkpoint.bin", final_path = "")
+epoch 24 training
+epoch 24 batch 1/100 samples 128/12800 elapsed 0.8s
+epoch 24 batch 25/100 samples 3200/12800 elapsed 20.3s
+epoch 24 batch 50/100 samples 6400/12800 elapsed 39.9s
+epoch 24 batch 75/100 samples 9600/12800 elapsed 58.9s
+epoch 24 batch 100/100 samples 12800/12800 elapsed 78.4s
+epoch 24 training done in 78.36s
+epoch 24 train-eval: evaluating 1000 samples
+epoch 24 train accuracy 0.666 loss 12.445623
+epoch 24 evaluating
+epoch 24 test: evaluating 1000 samples
+epoch 24 test accuracy 0.684 loss 12.096076 best 0.724
+(timestamp = "2026-06-10T09:44:52", epoch = 24, seconds = 78.3599095, train_accuracy = 0.666, train_loss = 12.445623f0, test_accuracy = 0.684, test_loss = 12.096076f0, pred_counts = "124-123-105-143-180-127-115-70-8-5", w_norm = 0.8718329f0, b_norm = 0.07508318f0, w_input_norm = 2.0733266f0, grad_w_norm = 5.016563f0, grad_b_norm = 0.7348943f0, grad_w_input_norm = 4.557429f0, effective_w_decay = 0.002f0, effective_w_input_decay = 0.002f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.724, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_stabilize_from_0p724_20260610\\b0p025_lr0p00012_wd0p002_s500_reverseT\\best_checkpoint.bin", final_path = "")
+epoch 25 training
+epoch 25 batch 1/100 samples 128/12800 elapsed 0.7s
+epoch 25 batch 25/100 samples 3200/12800 elapsed 18.1s
+epoch 25 batch 50/100 samples 6400/12800 elapsed 35.7s
+epoch 25 batch 75/100 samples 9600/12800 elapsed 54.5s
+epoch 25 batch 100/100 samples 12800/12800 elapsed 73.5s
+epoch 25 training done in 73.519s
+epoch 25 train-eval: evaluating 1000 samples
+epoch 25 train accuracy 0.651 loss 12.474239
+epoch 25 evaluating
+epoch 25 test: evaluating 1000 samples
+epoch 25 test accuracy 0.672 loss 12.169278 best 0.724
+epoch 25 early stop: test accuracy declined for 2 consecutive evaluated epochs
+(timestamp = "2026-06-10T09:46:08", epoch = 25, seconds = 73.5189013, train_accuracy = 0.651, train_loss = 12.474239f0, test_accuracy = 0.672, test_loss = 12.169278f0, pred_counts = "155-113-121-168-140-78-101-107-12-5", w_norm = 0.8785826f0, b_norm = 0.076158494f0, w_input_norm = 2.0858772f0, grad_w_norm = 5.6533437f0, grad_b_norm = 0.74416536f0, grad_w_input_norm = 2.408212f0, effective_w_decay = 0.002f0, effective_w_input_decay = 0.002f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.724, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_stabilize_from_0p724_20260610\\b0p025_lr0p00012_wd0p002_s500_reverseT\\best_checkpoint.bin", final_path = "")
+saved MNIST 784-120-40 softplus-margin nudge baseline in ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\symmetric_nudge_stabilize_from_0p724_20260610\b0p025_lr0p00012_wd0p002_s500_reverseT

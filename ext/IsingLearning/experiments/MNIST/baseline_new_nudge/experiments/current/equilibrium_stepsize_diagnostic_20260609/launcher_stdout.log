@@ -1,0 +1,3 @@
+START sweeps=1000 stepsize=0.75 beta=0.1 temp=0.00005 wd=0.001 outdir=ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\equilibrium_stepsize_diagnostic_20260609\sweeps1000_step0p75_b0p1_T0p00005_wd0p001 2026-06-09T18:26:36
+END sweeps=1000 stepsize=0.75 2026-06-09T18:43:11
+START sweeps=1000 stepsize=1.0 beta=0.1 temp=0.00005 wd=0.001 outdir=ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\equilibrium_stepsize_diagnostic_20260609\sweeps1000_step1p0_b0p1_T0p00005_wd0p001 2026-06-09T18:43:11

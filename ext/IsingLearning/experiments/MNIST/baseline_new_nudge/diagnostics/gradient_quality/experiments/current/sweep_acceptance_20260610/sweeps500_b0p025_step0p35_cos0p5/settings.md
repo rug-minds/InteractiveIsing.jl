@@ -1,0 +1,39 @@
+# MNIST 784-120-40 Softplus-Margin Gradient Quality Adam Diagnostic
+
+- paper: https://arxiv.org/pdf/2305.18321
+- nudging term: `InteractiveIsing.SoftplusMarginNudging`
+- architecture: `784 -> 120 -> 40`
+- sampled graph: hidden/output only, with no structural input layer
+- input handling: MNIST pixels in `[0, 1]` are projected through external `784 -> hidden` weights into a worker-local field
+- workers: `32`
+- manager execution: `ChannelWorkers()` with one sample per manager job
+- progress print interval: `1` batches
+- early stop decline epochs: `0`
+- early stop decline batches: `0`
+- early stop minimum batches: `25`
+- worker graph adjacency: pointer-shared with source graph
+- worker graph base bias: pointer-shared with source graph
+- learning step/nudge mode: `gradient_quality` contrastive gradient from inline `LoopAlgorithm`
+- sparse coupling constraint: paired CSC entries are symmetrized before and after Adam updates
+- validation: `ChannelWorkers()` ProcessManager with worker-local stats
+- job buffers: preallocated per-sample jobs reused across minibatches/evaluations
+- optimiser: `Optimisers.Adam(0.0001)`
+- epochs/batchsize: `1` / `128`
+- train/test per class: `26` / `20`
+- train eval per class: `0`
+- sweeps/relaxation steps: `500.0` / `80000`
+- beta/nudge tau/temp/stepsize: `0.025` / `0.25` / `5.0e-5` / `0.35`
+- nudged temperature schedule/peak: `reverse_anneal` / `0.0001`
+- gradient quality min cosine: `0.5`
+- gradient quality rule: compare raw forward `plus-free` gradient with raw symmetric `plus-minus` gradient; accept and average symmetric gradients only when cosine is at least the threshold
+- recurrent w normalization/norm: `none` / `1.0`
+- project output bias prior: `true`
+- positive/negative target mask weights: `9.0` / `0.5`
+- w_input normalization/row norm: `none` / `0.14`
+- weight scale/decay: `0.005` / `0.002`
+- adaptive weight decay: `false`
+- adaptive decay targets w/w_input: `2.0` / `5.0`
+- adaptive decay gain/max: `0.0005` / `0.003`
+- resume from: `none`
+- resume epoch: `-1`
+- reset optimizer state on resume: `false`

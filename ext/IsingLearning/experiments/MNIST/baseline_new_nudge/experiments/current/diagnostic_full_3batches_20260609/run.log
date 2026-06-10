@@ -1,0 +1,48 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+[bootstrap] activated project
+Precompiling packages...
+  58786.2 ms  ✓ IsingLearning
+  1 dependency successfully precompiled in 63 seconds. 557 already precompiled.
+[bootstrap] loaded packages
+┌ Warning: this run uses a subsampled balanced training split, so it is not the full balanced MNIST baseline
+│   train_per_class = 39
+└ @ Main C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\baseline_new_nudge\mnist_784_120_40_softplus_margin_nudge_adam.jl:1478
+┌ Warning: this run uses a subsampled balanced test split, so reported accuracy will be noisy
+│   test_per_class = 1
+└ @ Main C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\baseline_new_nudge\mnist_784_120_40_softplus_margin_nudge_adam.jl:1479
+building MNIST 784-120-40 layer
+loading training split
+training samples: 390 (4 batches/epoch)
+loading train-eval split
+train-eval samples: 0
+loading test split
+test samples: 10
+constructing 32-worker softplus-margin nudge Adam manager
+constructing 32-worker validation manager
+starting epochs
+epoch 0 evaluating
+epoch 0 test: evaluating 10 samples
+(timestamp = "2026-06-09T15:45:50", epoch = 0, seconds = 0.0, train_accuracy = missing, train_loss = missing, test_accuracy = 0.2, test_loss = 66.362656f0, pred_counts = "0-1-2-1-1-2-0-0-1-2", w_norm = 0.48583895f0, b_norm = 0.0f0, w_input_norm = 1.5314544f0, grad_w_norm = 0.0f0, grad_b_norm = 0.0f0, grad_w_input_norm = 0.0f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.2, best_path = "ext/IsingLearning/experiments/MNIST/baseline_new_nudge/experiments/current/diagnostic_full_3batches_20260609\\best_checkpoint.bin", final_path = "")
+epoch 1 training
+epoch 1 batch 1/4 samples 128/390 elapsed 6.9s
+
+epoch 1  50%|██████████████████████                     |  ETA: 0:00:07[K
+     batch: 2/4[K
+   samples: 256/390[K
+[A
+epoch 1 batch 2/4 samples 256/390 elapsed 7.4s
+epoch 1 batch 3/4 samples 384/390 elapsed 7.8s
+[A
+
+
+[K[A
+[K[A
+epoch 1 100%|███████████████████████████████████████████| Time: 0:00:07[K
+     batch: 4/4[K
+   samples: 390/390[K
+epoch 1 batch 4/4 samples 390/390 elapsed 7.9s
+epoch 1 training done in 7.863s
+epoch 1 evaluating
+epoch 1 test: evaluating 10 samples
+(timestamp = "2026-06-09T15:45:59", epoch = 1, seconds = 7.8634611, train_accuracy = missing, train_loss = missing, test_accuracy = 0.0, test_loss = 15.651525f0, pred_counts = "1-2-0-2-3-0-1-1-0-0", w_norm = 0.82941085f0, b_norm = 0.08998802f0, w_input_norm = 2.471868f0, grad_w_norm = 3.40827f0, grad_b_norm = 0.5181264f0, grad_w_input_norm = 2.2033355f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.2, best_path = "ext/IsingLearning/experiments/MNIST/baseline_new_nudge/experiments/current/diagnostic_full_3batches_20260609\\best_checkpoint.bin", final_path = "ext/IsingLearning/experiments/MNIST/baseline_new_nudge/experiments/current/diagnostic_full_3batches_20260609\\final_checkpoint.bin")
+saved MNIST 784-120-40 softplus-margin nudge baseline in ext/IsingLearning/experiments/MNIST/baseline_new_nudge/experiments/current/diagnostic_full_3batches_20260609

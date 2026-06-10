@@ -1,0 +1,409 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+┌ Warning: this run uses a subsampled balanced training split, so it is not the full balanced MNIST baseline
+│   train_per_class = 1280
+└ @ Main C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\baseline_new_nudge\mnist_784_120_40_softplus_margin_symmetric_nudge_adam.jl:1640
+┌ Warning: this run uses a subsampled balanced test split, so reported accuracy will be noisy
+│   test_per_class = 100
+└ @ Main C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning\experiments\MNIST\baseline_new_nudge\mnist_784_120_40_softplus_margin_symmetric_nudge_adam.jl:1641
+epoch 1   2%|█                                          |  ETA: 0:11:59[K
+     batch: 2/100[K
+   samples: 256/12800[K[A[A
+
+[K[A[K[Aepoch 1   4%|██                                         |  ETA: 0:06:33[K
+     batch: 4/100[K
+   samples: 512/12800[K[A[A
+
+[K[A[K[Aepoch 1   6%|███                                        |  ETA: 0:04:41[K
+     batch: 6/100[K
+   samples: 768/12800[K[A[A
+
+[K[A[K[Aepoch 1   8%|████                                       |  ETA: 0:03:43[K
+     batch: 8/100[K
+   samples: 1024/12800[K[A[A
+
+[K[A[K[Aepoch 1  10%|█████                                      |  ETA: 0:03:08[K
+     batch: 10/100[K
+   samples: 1280/12800[K[A[A
+
+[K[A[K[Aepoch 1  12%|██████                                     |  ETA: 0:02:44[K
+     batch: 12/100[K
+   samples: 1536/12800[K[A[A
+
+[K[A[K[Aepoch 1  14%|███████                                    |  ETA: 0:02:26[K
+     batch: 14/100[K
+   samples: 1792/12800[K[A[A
+
+[K[A[K[Aepoch 1  16%|███████                                    |  ETA: 0:02:13[K
+     batch: 16/100[K
+   samples: 2048/12800[K[A[A
+
+[K[A[K[Aepoch 1  18%|████████                                   |  ETA: 0:02:02[K
+     batch: 18/100[K
+   samples: 2304/12800[K[A[A
+
+[K[A[K[Aepoch 1  20%|█████████                                  |  ETA: 0:01:53[K
+     batch: 20/100[K
+   samples: 2560/12800[K[A[A
+
+[K[A[K[Aepoch 1  22%|██████████                                 |  ETA: 0:01:45[K
+     batch: 22/100[K
+   samples: 2816/12800[K[A[A
+
+[K[A[K[Aepoch 1  24%|███████████                                |  ETA: 0:01:38[K
+     batch: 24/100[K
+   samples: 3072/12800[K[A[A
+
+[K[A[K[Aepoch 1  26%|████████████                               |  ETA: 0:01:33[K
+     batch: 26/100[K
+   samples: 3328/12800[K[A[A
+
+[K[A[K[Aepoch 1  28%|█████████████                              |  ETA: 0:01:28[K
+     batch: 28/100[K
+   samples: 3584/12800[K[A[A
+
+[K[A[K[Aepoch 1  30%|█████████████                              |  ETA: 0:01:23[K
+     batch: 30/100[K
+   samples: 3840/12800[K[A[A
+
+[K[A[K[Aepoch 1  32%|██████████████                             |  ETA: 0:01:19[K
+     batch: 32/100[K
+   samples: 4096/12800[K[A[A
+
+[K[A[K[Aepoch 1  34%|███████████████                            |  ETA: 0:01:15[K
+     batch: 34/100[K
+   samples: 4352/12800[K[A[A
+
+[K[A[K[Aepoch 1  36%|████████████████                           |  ETA: 0:01:11[K
+     batch: 36/100[K
+   samples: 4608/12800[K[A[A
+
+[K[A[K[Aepoch 1  38%|█████████████████                          |  ETA: 0:01:08[K
+     batch: 38/100[K
+   samples: 4864/12800[K[A[A
+
+[K[A[K[Aepoch 1  40%|██████████████████                         |  ETA: 0:01:04[K
+     batch: 40/100[K
+   samples: 5120/12800[K[A[A
+
+[K[A[K[Aepoch 1  42%|███████████████████                        |  ETA: 0:01:01[K
+     batch: 42/100[K
+   samples: 5376/12800[K[A[A
+
+[K[A[K[Aepoch 1  44%|███████████████████                        |  ETA: 0:00:58[K
+     batch: 44/100[K
+   samples: 5632/12800[K[A[A
+
+[K[A[K[Aepoch 1  46%|████████████████████                       |  ETA: 0:00:56[K
+     batch: 46/100[K
+   samples: 5888/12800[K[A[A
+
+[K[A[K[Aepoch 1  48%|█████████████████████                      |  ETA: 0:00:53[K
+     batch: 48/100[K
+   samples: 6144/12800[K[A[A
+
+[K[A[K[Aepoch 1  50%|██████████████████████                     |  ETA: 0:00:50[K
+     batch: 50/100[K
+   samples: 6400/12800[K[A[A
+
+[K[A[K[Aepoch 1  52%|███████████████████████                    |  ETA: 0:00:48[K
+     batch: 52/100[K
+   samples: 6656/12800[K[A[A
+
+[K[A[K[Aepoch 1  54%|████████████████████████                   |  ETA: 0:00:45[K
+     batch: 54/100[K
+   samples: 6912/12800[K[A[A
+
+[K[A[K[Aepoch 1  56%|█████████████████████████                  |  ETA: 0:00:43[K
+     batch: 56/100[K
+   samples: 7168/12800[K[A[A
+
+[K[A[K[Aepoch 1  58%|█████████████████████████                  |  ETA: 0:00:41[K
+     batch: 58/100[K
+   samples: 7424/12800[K[A[A
+
+[K[A[K[Aepoch 1  60%|██████████████████████████                 |  ETA: 0:00:38[K
+     batch: 60/100[K
+   samples: 7680/12800[K[A[A
+
+[K[A[K[Aepoch 1  62%|███████████████████████████                |  ETA: 0:00:36[K
+     batch: 62/100[K
+   samples: 7936/12800[K[A[A
+
+[K[A[K[Aepoch 1  64%|████████████████████████████               |  ETA: 0:00:34[K
+     batch: 64/100[K
+   samples: 8192/12800[K[A[A
+
+[K[A[K[Aepoch 1  66%|█████████████████████████████              |  ETA: 0:00:32[K
+     batch: 66/100[K
+   samples: 8448/12800[K[A[A
+
+[K[A[K[Aepoch 1  68%|██████████████████████████████             |  ETA: 0:00:30[K
+     batch: 68/100[K
+   samples: 8704/12800[K[A[A
+
+[K[A[K[Aepoch 1  70%|███████████████████████████████            |  ETA: 0:00:28[K
+     batch: 70/100[K
+   samples: 8960/12800[K[A[A
+
+[K[A[K[Aepoch 1  72%|███████████████████████████████            |  ETA: 0:00:26[K
+     batch: 72/100[K
+   samples: 9216/12800[K[A[A
+
+[K[A[K[Aepoch 1  74%|████████████████████████████████           |  ETA: 0:00:24[K
+     batch: 74/100[K
+   samples: 9472/12800[K[A[A
+
+[K[A[K[Aepoch 1  76%|█████████████████████████████████          |  ETA: 0:00:22[K
+     batch: 76/100[K
+   samples: 9728/12800[K[A[A
+
+[K[A[K[Aepoch 1  78%|██████████████████████████████████         |  ETA: 0:00:20[K
+     batch: 78/100[K
+   samples: 9984/12800[K[A[A
+
+[K[A[K[Aepoch 1  80%|███████████████████████████████████        |  ETA: 0:00:18[K
+     batch: 80/100[K
+   samples: 10240/12800[K[A[A
+
+[K[A[K[Aepoch 1  82%|████████████████████████████████████       |  ETA: 0:00:16[K
+     batch: 82/100[K
+   samples: 10496/12800[K[A[A
+
+[K[A[K[Aepoch 1  84%|█████████████████████████████████████      |  ETA: 0:00:14[K
+     batch: 84/100[K
+   samples: 10752/12800[K[A[A
+
+[K[A[K[Aepoch 1  86%|█████████████████████████████████████      |  ETA: 0:00:13[K
+     batch: 86/100[K
+   samples: 11008/12800[K[A[A
+
+[K[A[K[Aepoch 1  88%|██████████████████████████████████████     |  ETA: 0:00:11[K
+     batch: 88/100[K
+   samples: 11264/12800[K[A[A
+
+[K[A[K[Aepoch 1  90%|███████████████████████████████████████    |  ETA: 0:00:09[K
+     batch: 90/100[K
+   samples: 11520/12800[K[A[A
+
+[K[A[K[Aepoch 1  92%|████████████████████████████████████████   |  ETA: 0:00:07[K
+     batch: 92/100[K
+   samples: 11776/12800[K[A[A
+
+[K[A[K[Aepoch 1  94%|█████████████████████████████████████████  |  ETA: 0:00:05[K
+     batch: 94/100[K
+   samples: 12032/12800[K[A[A
+
+[K[A[K[Aepoch 1  96%|██████████████████████████████████████████ |  ETA: 0:00:04[K
+     batch: 96/100[K
+   samples: 12288/12800[K[A[A
+
+[K[A[K[Aepoch 1  98%|███████████████████████████████████████████|  ETA: 0:00:02[K
+     batch: 98/100[K
+   samples: 12544/12800[K[A[A
+
+[K[A[K[Aepoch 1 100%|███████████████████████████████████████████| Time: 0:01:28[K
+     batch: 100/100[K
+   samples: 12800/12800[K
+epoch 2   2%|█                                          |  ETA: 0:01:17[K
+     batch: 2/100[K
+   samples: 256/12800[K[A[A
+
+[K[A[K[Aepoch 2   4%|██                                         |  ETA: 0:01:17[K
+     batch: 4/100[K
+   samples: 512/12800[K[A[A
+
+[K[A[K[Aepoch 2   6%|███                                        |  ETA: 0:01:15[K
+     batch: 6/100[K
+   samples: 768/12800[K[A[A
+
+[K[A[K[Aepoch 2   8%|████                                       |  ETA: 0:01:16[K
+     batch: 8/100[K
+   samples: 1024/12800[K[A[A
+
+[K[A[K[Aepoch 2  10%|█████                                      |  ETA: 0:01:15[K
+     batch: 10/100[K
+   samples: 1280/12800[K[A[A
+
+[K[A[K[Aepoch 2  12%|██████                                     |  ETA: 0:01:12[K
+     batch: 12/100[K
+   samples: 1536/12800[K[A[A
+
+[K[A[K[Aepoch 2  14%|███████                                    |  ETA: 0:01:12[K
+     batch: 14/100[K
+   samples: 1792/12800[K[A[A
+
+[K[A[K[Aepoch 2  16%|███████                                    |  ETA: 0:01:11[K
+     batch: 16/100[K
+   samples: 2048/12800[K[A[A
+
+[K[A[K[Aepoch 2  18%|████████                                   |  ETA: 0:01:09[K
+     batch: 18/100[K
+   samples: 2304/12800[K[A[A
+
+[K[A[K[Aepoch 2  20%|█████████                                  |  ETA: 0:01:08[K
+     batch: 20/100[K
+   samples: 2560/12800[K[A[A
+
+[K[A[K[Aepoch 2  22%|██████████                                 |  ETA: 0:01:06[K
+     batch: 22/100[K
+   samples: 2816/12800[K[A[A
+
+[K[A[K[Aepoch 2  24%|███████████                                |  ETA: 0:01:04[K
+     batch: 24/100[K
+   samples: 3072/12800[K[A[A
+
+[K[A[K[Aepoch 2  26%|████████████                               |  ETA: 0:01:02[K
+     batch: 26/100[K
+   samples: 3328/12800[K[A[A
+
+[K[A[K[Aepoch 2  28%|█████████████                              |  ETA: 0:01:01[K
+     batch: 28/100[K
+   samples: 3584/12800[K[A[A
+
+[K[A[K[Aepoch 2  30%|█████████████                              |  ETA: 0:00:59[K
+     batch: 30/100[K
+   samples: 3840/12800[K[A[A
+
+[K[A[K[Aepoch 2  32%|██████████████                             |  ETA: 0:00:57[K
+     batch: 32/100[K
+   samples: 4096/12800[K[A[A
+
+[K[A[K[Aepoch 2  34%|███████████████                            |  ETA: 0:00:55[K
+     batch: 34/100[K
+   samples: 4352/12800[K[A[A
+
+[K[A[K[Aepoch 2  36%|████████████████                           |  ETA: 0:00:53[K
+     batch: 36/100[K
+   samples: 4608/12800[K[A[A
+
+[K[A[K[Aepoch 2  38%|█████████████████                          |  ETA: 0:00:52[K
+     batch: 38/100[K
+   samples: 4864/12800[K[A[A
+
+[K[A[K[Aepoch 2  40%|██████████████████                         |  ETA: 0:00:50[K
+     batch: 40/100[K
+   samples: 5120/12800[K[A[A
+
+[K[A[K[Aepoch 2  42%|███████████████████                        |  ETA: 0:00:48[K
+     batch: 42/100[K
+   samples: 5376/12800[K[A[A
+
+[K[A[K[Aepoch 2  44%|███████████████████                        |  ETA: 0:00:46[K
+     batch: 44/100[K
+   samples: 5632/12800[K[A[A
+
+[K[A[K[Aepoch 2  46%|████████████████████                       |  ETA: 0:00:45[K
+     batch: 46/100[K
+   samples: 5888/12800[K[A[A
+
+[K[A[K[Aepoch 2  48%|█████████████████████                      |  ETA: 0:00:43[K
+     batch: 48/100[K
+   samples: 6144/12800[K[A[A
+
+[K[A[K[Aepoch 2  50%|██████████████████████                     |  ETA: 0:00:41[K
+     batch: 50/100[K
+   samples: 6400/12800[K[A[A
+
+[K[A[K[Aepoch 2  52%|███████████████████████                    |  ETA: 0:00:39[K
+     batch: 52/100[K
+   samples: 6656/12800[K[A[A
+
+[K[A[K[Aepoch 2  54%|████████████████████████                   |  ETA: 0:00:38[K
+     batch: 54/100[K
+   samples: 6912/12800[K[A[A
+
+[K[A[K[Aepoch 2  56%|█████████████████████████                  |  ETA: 0:00:36[K
+     batch: 56/100[K
+   samples: 7168/12800[K[A[A
+
+[K[A[K[Aepoch 2  58%|█████████████████████████                  |  ETA: 0:00:34[K
+     batch: 58/100[K
+   samples: 7424/12800[K[A[A
+
+[K[A[K[Aepoch 2  60%|██████████████████████████                 |  ETA: 0:00:33[K
+     batch: 60/100[K
+   samples: 7680/12800[K[A[A
+
+[K[A[K[Aepoch 2  62%|███████████████████████████                |  ETA: 0:00:31[K
+     batch: 62/100[K
+   samples: 7936/12800[K[A[A
+
+[K[A[K[Aepoch 2  64%|████████████████████████████               |  ETA: 0:00:29[K
+     batch: 64/100[K
+   samples: 8192/12800[K[A[A
+
+[K[A[K[Aepoch 2  66%|█████████████████████████████              |  ETA: 0:00:28[K
+     batch: 66/100[K
+   samples: 8448/12800[K[A[A
+
+[K[A[K[Aepoch 2  68%|██████████████████████████████             |  ETA: 0:00:26[K
+     batch: 68/100[K
+   samples: 8704/12800[K[A[A
+
+[K[A[K[Aepoch 2  70%|███████████████████████████████            |  ETA: 0:00:24[K
+     batch: 70/100[K
+   samples: 8960/12800[K[A[A
+
+[K[A[K[Aepoch 2  72%|███████████████████████████████            |  ETA: 0:00:23[K
+     batch: 72/100[K
+   samples: 9216/12800[K[A[A
+
+[K[A[K[Aepoch 2  74%|████████████████████████████████           |  ETA: 0:00:21[K
+     batch: 74/100[K
+   samples: 9472/12800[K[A[A
+
+[K[A[K[Aepoch 2  76%|█████████████████████████████████          |  ETA: 0:00:20[K
+     batch: 76/100[K
+   samples: 9728/12800[K[A[A
+
+[K[A[K[Aepoch 2  78%|██████████████████████████████████         |  ETA: 0:00:18[K
+     batch: 78/100[K
+   samples: 9984/12800[K[A[A
+
+[K[A[K[Aepoch 2  80%|███████████████████████████████████        |  ETA: 0:00:16[K
+     batch: 80/100[K
+   samples: 10240/12800[K[A[A
+
+[K[A[K[Aepoch 2  82%|████████████████████████████████████       |  ETA: 0:00:15[K
+     batch: 82/100[K
+   samples: 10496/12800[K[A[A
+
+[K[A[K[Aepoch 2  84%|█████████████████████████████████████      |  ETA: 0:00:13[K
+     batch: 84/100[K
+   samples: 10752/12800[K[A[A
+
+[K[A[K[Aepoch 2  86%|█████████████████████████████████████      |  ETA: 0:00:11[K
+     batch: 86/100[K
+   samples: 11008/12800[K[A[A
+
+[K[A[K[Aepoch 2  88%|██████████████████████████████████████     |  ETA: 0:00:10[K
+     batch: 88/100[K
+   samples: 11264/12800[K[A[A
+
+[K[A[K[Aepoch 2  90%|███████████████████████████████████████    |  ETA: 0:00:08[K
+     batch: 90/100[K
+   samples: 11520/12800[K[A[A
+
+[K[A[K[Aepoch 2  91%|████████████████████████████████████████   |  ETA: 0:00:07[K
+     batch: 91/100[K
+   samples: 11648/12800[K[A[A
+
+[K[A[K[Aepoch 2  93%|████████████████████████████████████████   |  ETA: 0:00:06[K
+     batch: 93/100[K
+   samples: 11904/12800[K[A[A
+
+[K[A[K[Aepoch 2  95%|█████████████████████████████████████████  |  ETA: 0:00:04[K
+     batch: 95/100[K
+   samples: 12160/12800[K[A[A
+
+[K[A[K[Aepoch 2  97%|██████████████████████████████████████████ |  ETA: 0:00:03[K
+     batch: 97/100[K
+   samples: 12416/12800[K[A[A
+
+[K[A[K[Aepoch 2  99%|███████████████████████████████████████████|  ETA: 0:00:01[K
+     batch: 99/100[K
+   samples: 12672/12800[K[A[A
+
+[K[A[K[Aepoch 2 100%|███████████████████████████████████████████| Time: 0:01:23[K
+     batch: 100/100[K
+   samples: 12800/12800[K

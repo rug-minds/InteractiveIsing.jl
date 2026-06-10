@@ -1,0 +1,48 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+building MNIST 784-120-40 layer
+loading training split
+training samples: 12800 (100 batches/epoch)
+loading train-eval split
+train-eval samples: 1000
+loading test split
+test samples: 1000
+constructing 32-worker softplus-margin nudge Adam manager
+constructing 32-worker validation manager
+starting epochs
+epoch 0 train-eval: evaluating 1000 samples
+epoch 0 train accuracy 0.065 loss 74.716095
+epoch 0 evaluating
+epoch 0 test: evaluating 1000 samples
+epoch 0 test accuracy 0.061 loss 74.396614 best 0.061
+(timestamp = "2026-06-09T22:21:59", epoch = 0, seconds = 0.0, train_accuracy = 0.065, train_loss = 74.716095f0, test_accuracy = 0.061, test_loss = 74.396614f0, pred_counts = "37-188-90-65-76-56-81-230-78-99", w_norm = 0.48583895f0, b_norm = 0.0f0, w_input_norm = 1.5314544f0, grad_w_norm = 0.0f0, grad_b_norm = 0.0f0, grad_w_input_norm = 0.0f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.061, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_target_weight_grid_v6_20260609\\b0p015_lr0p00025_T0p00005_wd0p001_step0p5_pos9p0_neg0p50_priortrue_adaptivefalse\\best_checkpoint.bin", final_path = "")
+epoch 1 training
+epoch 1 batch 1/100 samples 128/12800 elapsed 13.6s
+epoch 1 batch 25/100 samples 3200/12800 elapsed 31.6s
+epoch 1 batch 50/100 samples 6400/12800 elapsed 50.3s
+epoch 1 batch 75/100 samples 9600/12800 elapsed 69.2s
+epoch 1 batch 100/100 samples 12800/12800 elapsed 89.1s
+epoch 1 training done in 89.059s
+epoch 1 train-eval: evaluating 1000 samples
+epoch 1 train accuracy 0.178 loss 40.940334
+epoch 1 evaluating
+epoch 1 test: evaluating 1000 samples
+epoch 1 test accuracy 0.193 loss 40.926239 best 0.193
+(timestamp = "2026-06-09T22:23:32", epoch = 1, seconds = 89.0592836, train_accuracy = 0.178, train_loss = 40.940334f0, test_accuracy = 0.193, test_loss = 40.92624f0, pred_counts = "115-0-428-0-0-0-0-457-0-0", w_norm = 0.5303038f0, b_norm = 0.022244131f0, w_input_norm = 1.4293523f0, grad_w_norm = 5.9291773f0, grad_b_norm = 0.7815518f0, grad_w_input_norm = 6.898355f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.193, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_target_weight_grid_v6_20260609\\b0p015_lr0p00025_T0p00005_wd0p001_step0p5_pos9p0_neg0p50_priortrue_adaptivefalse\\best_checkpoint.bin", final_path = "")
+epoch 2 training
+epoch 2 batch 1/100 samples 128/12800 elapsed 0.8s
+epoch 2 batch 25/100 samples 3200/12800 elapsed 19.8s
+epoch 2 batch 50/100 samples 6400/12800 elapsed 40.0s
+epoch 2 batch 75/100 samples 9600/12800 elapsed 59.6s
+epoch 2 batch 100/100 samples 12800/12800 elapsed 79.6s
+epoch 2 training done in 79.611s
+epoch 2 train-eval: evaluating 1000 samples
+epoch 2 train accuracy 0.177 loss 38.189732
+epoch 2 evaluating
+epoch 2 test: evaluating 1000 samples
+epoch 2 test accuracy 0.2 loss 38.050392 best 0.2
+(timestamp = "2026-06-09T22:24:55", epoch = 2, seconds = 79.6112615, train_accuracy = 0.177, train_loss = 38.18973f0, test_accuracy = 0.2, test_loss = 38.050392f0, pred_counts = "179-0-407-0-0-0-0-414-0-0", w_norm = 0.53583664f0, b_norm = 0.02521573f0, w_input_norm = 1.4916031f0, grad_w_norm = 2.2547293f0, grad_b_norm = 0.49114585f0, grad_w_input_norm = 4.095194f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.2, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_target_weight_grid_v6_20260609\\b0p015_lr0p00025_T0p00005_wd0p001_step0p5_pos9p0_neg0p50_priortrue_adaptivefalse\\best_checkpoint.bin", final_path = "")
+epoch 3 training
+epoch 3 batch 1/100 samples 128/12800 elapsed 0.8s
+epoch 3 batch 25/100 samples 3200/12800 elapsed 20.9s
+epoch 3 batch 50/100 samples 6400/12800 elapsed 42.1s

@@ -1,0 +1,2 @@
+beta,temp,status,best_epoch,best_test_accuracy,best_test_loss,final_epoch,final_test_accuracy,final_test_loss,outdir
+0.05,0.0001,done,5,0.409,18.933546,8,0.394,19.416866,ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\scout_grid_lowbeta_lowtemp_20260609\b0p05_T0p0001_lr0p0015_e12_pc1280

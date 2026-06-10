@@ -1,0 +1,104 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+epoch 1   0%|█                                          |  ETA: 0:40:34[K
+     batch: 2/424[K
+   samples: 256/54210[K[A[A
+
+[K[A[K[Aepoch 1   1%|█                                          |  ETA: 0:22:51[K
+     batch: 4/424[K
+   samples: 512/54210[K[A[A
+
+[K[A[K[Aepoch 1   1%|█                                          |  ETA: 0:16:41[K
+     batch: 6/424[K
+   samples: 768/54210[K[A[A
+
+[K[A[K[Aepoch 1   2%|█                                          |  ETA: 0:13:37[K
+     batch: 8/424[K
+   samples: 1024/54210[K[A[A
+
+[K[A[K[Aepoch 1   2%|██                                         |  ETA: 0:11:46[K
+     batch: 10/424[K
+   samples: 1280/54210[K[A[A
+
+[K[A[K[Aepoch 1   3%|██                                         |  ETA: 0:10:31[K
+     batch: 12/424[K
+   samples: 1536/54210[K[A[A
+
+[K[A[K[Aepoch 1   3%|██                                         |  ETA: 0:09:37[K
+     batch: 14/424[K
+   samples: 1792/54210[K[A[A
+
+[K[A[K[Aepoch 1   4%|██                                         |  ETA: 0:08:55[K
+     batch: 16/424[K
+   samples: 2048/54210[K[A[A
+
+[K[A[K[Aepoch 1   4%|██                                         |  ETA: 0:08:25[K
+     batch: 18/424[K
+   samples: 2304/54210[K[A[A
+
+[K[A[K[Aepoch 1   5%|███                                        |  ETA: 0:07:59[K
+     batch: 20/424[K
+   samples: 2560/54210[K[A[A
+
+[K[A[K[Aepoch 1   5%|███                                        |  ETA: 0:07:39[K
+     batch: 22/424[K
+   samples: 2816/54210[K[A[A
+
+[K[A[K[Aepoch 1   6%|███                                        |  ETA: 0:07:21[K
+     batch: 24/424[K
+   samples: 3072/54210[K[A[A
+
+[K[A[K[Aepoch 1   6%|███                                        |  ETA: 0:07:05[K
+     batch: 26/424[K
+   samples: 3328/54210[K[A[A
+
+[K[A[K[Aepoch 1   7%|███                                        |  ETA: 0:06:51[K
+     batch: 28/424[K
+   samples: 3584/54210[K[A[A
+
+[K[A[K[Aepoch 1   7%|████                                       |  ETA: 0:06:39[K
+     batch: 30/424[K
+   samples: 3840/54210[K[A[A
+
+[K[A[K[Aepoch 1   8%|████                                       |  ETA: 0:06:28[K
+     batch: 32/424[K
+   samples: 4096/54210[K[A[A
+
+[K[A[K[Aepoch 1   8%|████                                       |  ETA: 0:06:19[K
+     batch: 34/424[K
+   samples: 4352/54210[K[A[A
+
+[K[A[K[Aepoch 1   8%|████                                       |  ETA: 0:06:11[K
+     batch: 36/424[K
+   samples: 4608/54210[K[A[A
+
+[K[A[K[Aepoch 1   9%|████                                       |  ETA: 0:06:04[K
+     batch: 38/424[K
+   samples: 4864/54210[K[A[A
+
+[K[A[K[Aepoch 1   9%|█████                                      |  ETA: 0:05:58[K
+     batch: 40/424[K
+   samples: 5120/54210[K[A[A
+
+[K[A[K[Aepoch 1  10%|█████                                      |  ETA: 0:05:53[K
+     batch: 42/424[K
+   samples: 5376/54210[K[A[A
+
+[K[A[K[Aepoch 1  10%|█████                                      |  ETA: 0:05:47[K
+     batch: 44/424[K
+   samples: 5632/54210[K[A[A
+
+[K[A[K[Aepoch 1  11%|█████                                      |  ETA: 0:05:42[K
+     batch: 46/424[K
+   samples: 5888/54210[K[A[A
+
+[K[A[K[Aepoch 1  11%|█████                                      |  ETA: 0:05:39[K
+     batch: 48/424[K
+   samples: 6144/54210[K[A[A
+
+[K[A[K[Aepoch 1  12%|██████                                     |  ETA: 0:05:34[K
+     batch: 50/424[K
+   samples: 6400/54210[K[A[A
+
+[K[A[K[Aepoch 1  12%|██████                                     |  ETA: 0:05:30[K
+     batch: 52/424[K
+   samples: 6656/54210[K[A[A

@@ -1,0 +1,74 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+building MNIST 784-120-40 layer
+loading training split
+training samples: 12800 (100 batches/epoch)
+loading train-eval split
+train-eval samples: 1000
+loading test split
+test samples: 1000
+constructing 32-worker softplus-margin nudge Adam manager
+constructing 32-worker validation manager
+starting epochs
+epoch 0 train-eval: evaluating 1000 samples
+epoch 0 train accuracy 0.063 loss 75.075325
+epoch 0 evaluating
+epoch 0 test: evaluating 1000 samples
+epoch 0 test accuracy 0.073 loss 73.316978 best 0.073
+(timestamp = "2026-06-09T18:44:09", epoch = 0, seconds = 0.0, train_accuracy = 0.063, train_loss = 75.075325f0, test_accuracy = 0.073, test_loss = 73.31698f0, pred_counts = "30-180-83-86-79-54-82-235-74-97", w_norm = 0.48583895f0, b_norm = 0.0f0, w_input_norm = 1.5314544f0, grad_w_norm = 0.0f0, grad_b_norm = 0.0f0, grad_w_input_norm = 0.0f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.073, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\equilibrium_stepsize_diagnostic_20260609\\sweeps1000_step1p0_b0p1_T0p00005_wd0p001\\best_checkpoint.bin", final_path = "")
+epoch 1 training
+epoch 1 batch 1/100 samples 128/12800 elapsed 7.6s
+epoch 1 batch 25/100 samples 3200/12800 elapsed 24.9s
+epoch 1 batch 50/100 samples 6400/12800 elapsed 42.6s
+epoch 1 batch 75/100 samples 9600/12800 elapsed 62.6s
+epoch 1 batch 100/100 samples 12800/12800 elapsed 83.3s
+epoch 1 training done in 83.333s
+epoch 1 train-eval: evaluating 1000 samples
+epoch 1 train accuracy 0.501 loss 18.538172
+epoch 1 evaluating
+epoch 1 test: evaluating 1000 samples
+epoch 1 test accuracy 0.479 loss 18.927998 best 0.479
+(timestamp = "2026-06-09T18:45:40", epoch = 1, seconds = 83.3327759, train_accuracy = 0.501, train_loss = 18.538172f0, test_accuracy = 0.479, test_loss = 18.927998f0, pred_counts = "117-118-54-131-363-145-70-2-0-0", w_norm = 1.4122485f0, b_norm = 0.10323249f0, w_input_norm = 3.38021f0, grad_w_norm = 8.336312f0, grad_b_norm = 1.378266f0, grad_w_input_norm = 8.001044f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.479, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\equilibrium_stepsize_diagnostic_20260609\\sweeps1000_step1p0_b0p1_T0p00005_wd0p001\\best_checkpoint.bin", final_path = "")
+epoch 2 training
+epoch 2 batch 1/100 samples 128/12800 elapsed 0.8s
+epoch 2 batch 25/100 samples 3200/12800 elapsed 20.3s
+epoch 2 batch 50/100 samples 6400/12800 elapsed 41.0s
+epoch 2 batch 75/100 samples 9600/12800 elapsed 61.4s
+epoch 2 batch 100/100 samples 12800/12800 elapsed 81.8s
+epoch 2 training done in 81.822s
+epoch 2 train-eval: evaluating 1000 samples
+epoch 2 train accuracy 0.444 loss 19.73794
+epoch 2 evaluating
+epoch 2 test: evaluating 1000 samples
+epoch 2 test accuracy 0.448 loss 19.731327 best 0.479
+(timestamp = "2026-06-09T18:47:08", epoch = 2, seconds = 81.8223427, train_accuracy = 0.444, train_loss = 19.73794f0, test_accuracy = 0.448, test_loss = 19.731327f0, pred_counts = "104-121-66-71-490-111-35-0-0-2", w_norm = 1.6679504f0, b_norm = 0.1117374f0, w_input_norm = 3.9539213f0, grad_w_norm = 1.4737041f0, grad_b_norm = 0.2124178f0, grad_w_input_norm = 0.94674784f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.479, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\equilibrium_stepsize_diagnostic_20260609\\sweeps1000_step1p0_b0p1_T0p00005_wd0p001\\best_checkpoint.bin", final_path = "")
+epoch 3 training
+epoch 3 batch 1/100 samples 128/12800 elapsed 0.8s
+epoch 3 batch 25/100 samples 3200/12800 elapsed 20.4s
+epoch 3 batch 50/100 samples 6400/12800 elapsed 40.9s
+epoch 3 batch 75/100 samples 9600/12800 elapsed 61.5s
+epoch 3 batch 100/100 samples 12800/12800 elapsed 81.7s
+epoch 3 training done in 81.677s
+epoch 3 train-eval: evaluating 1000 samples
+epoch 3 train accuracy 0.44 loss 20.16416
+epoch 3 evaluating
+epoch 3 test: evaluating 1000 samples
+epoch 3 test accuracy 0.449 loss 19.824463 best 0.479
+(timestamp = "2026-06-09T18:48:37", epoch = 3, seconds = 81.6767745, train_accuracy = 0.44, train_loss = 20.16416f0, test_accuracy = 0.449, test_loss = 19.824463f0, pred_counts = "98-127-62-97-461-107-48-0-0-0", w_norm = 1.9328345f0, b_norm = 0.12335337f0, w_input_norm = 4.3639946f0, grad_w_norm = 4.772535f0, grad_b_norm = 0.81880933f0, grad_w_input_norm = 5.4485817f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.479, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\equilibrium_stepsize_diagnostic_20260609\\sweeps1000_step1p0_b0p1_T0p00005_wd0p001\\best_checkpoint.bin", final_path = "")
+epoch 4 training
+epoch 4 batch 1/100 samples 128/12800 elapsed 0.8s
+epoch 4 batch 25/100 samples 3200/12800 elapsed 20.4s
+epoch 4 batch 50/100 samples 6400/12800 elapsed 39.7s
+epoch 4 batch 75/100 samples 9600/12800 elapsed 58.8s
+epoch 4 batch 100/100 samples 12800/12800 elapsed 77.5s
+epoch 4 training done in 77.511s
+epoch 4 train-eval: evaluating 1000 samples
+epoch 4 train accuracy 0.46 loss 19.549337
+epoch 4 evaluating
+epoch 4 test: evaluating 1000 samples
+epoch 4 test accuracy 0.455 loss 19.549547 best 0.479
+(timestamp = "2026-06-09T18:50:01", epoch = 4, seconds = 77.511087, train_accuracy = 0.46, train_loss = 19.549337f0, test_accuracy = 0.455, test_loss = 19.549547f0, pred_counts = "84-122-79-115-434-126-40-0-0-0", w_norm = 2.149933f0, b_norm = 0.13653266f0, w_input_norm = 4.796792f0, grad_w_norm = 2.8400433f0, grad_b_norm = 0.45758897f0, grad_w_input_norm = 2.651809f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.479, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\equilibrium_stepsize_diagnostic_20260609\\sweeps1000_step1p0_b0p1_T0p00005_wd0p001\\best_checkpoint.bin", final_path = "")
+epoch 5 training
+epoch 5 batch 1/100 samples 128/12800 elapsed 0.8s
+epoch 5 batch 25/100 samples 3200/12800 elapsed 20.1s
+epoch 5 batch 50/100 samples 6400/12800 elapsed 41.0s

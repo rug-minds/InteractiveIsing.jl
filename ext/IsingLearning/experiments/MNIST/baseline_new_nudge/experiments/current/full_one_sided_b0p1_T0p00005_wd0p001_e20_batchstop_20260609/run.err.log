@@ -1,0 +1,8 @@
+  Activating project at `C:\Users\fenje\dev\InteractiveIsing.jl\ext\IsingLearning`
+epoch 1   0%|█                                          |  ETA: 0:41:59[K
+     batch: 2/424[K
+   samples: 256/54210[K[A[A
+
+[K[A[K[Aepoch 1   1%|█                                          |  ETA: 0:23:36[K
+     batch: 4/424[K
+   samples: 512/54210[K[A[A

@@ -35,13 +35,17 @@ Base.@kwdef struct InputFieldMNISTConfig{T<:AbstractFloat,S<:AbstractString}
     epochs::Int = parse(Int, get(ENV, "ISING_MNIST_IF_EPOCHS", "200"))
     batchsize::Int = parse(Int, get(ENV, "ISING_MNIST_IF_BATCHSIZE", "128"))
     scheduler::S = get(ENV, "ISING_MNIST_IF_SCHEDULER", "spawn")
+    nudge_mode::S = get(ENV, "ISING_MNIST_IF_NUDGE_MODE", "one_sided")
+    nudge_temp_schedule::S = get(ENV, "ISING_MNIST_IF_NUDGE_TEMP_SCHEDULE", "fixed")
     chunk_size::Int = parse(Int, get(ENV, "ISING_MNIST_IF_CHUNK_SIZE", "0"))
     train_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_IF_TRAIN_PER_CLASS", "5421"))
     test_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_IF_TEST_PER_CLASS", "892"))
     train_eval_per_class::Int = parse(Int, get(ENV, "ISING_MNIST_IF_TRAIN_EVAL_PER_CLASS", "100"))
-    eval_every::Int = parse(Int, get(ENV, "ISING_MNIST_IF_EVAL_EVERY", "5"))
+    eval_every::Int = parse(Int, get(ENV, "ISING_MNIST_IF_EVAL_EVERY", "1"))
     progress_every_batches::Int = parse(Int, get(ENV, "ISING_MNIST_IF_PROGRESS_EVERY_BATCHES", "25"))
-    early_stop_decline_epochs::Int = parse(Int, get(ENV, "ISING_MNIST_IF_EARLY_STOP_DECLINE_EPOCHS", "0"))
+    early_stop_decline_epochs::Int = parse(Int, get(ENV, "ISING_MNIST_IF_EARLY_STOP_DECLINE_EPOCHS", "2"))
+    early_stop_decline_batches::Int = parse(Int, get(ENV, "ISING_MNIST_IF_EARLY_STOP_DECLINE_BATCHES", "2"))
+    early_stop_min_batches::Int = parse(Int, get(ENV, "ISING_MNIST_IF_EARLY_STOP_MIN_BATCHES", "25"))
     hidden::Int = parse(Int, get(ENV, "ISING_MNIST_IF_HIDDEN", "120"))
     output_replicas::Int = parse(Int, get(ENV, "ISING_MNIST_IF_OUTPUT_REPLICAS", "4"))
     sweeps::T = parse(FT, get(ENV, "ISING_MNIST_IF_SWEEPS", "500"))
@@ -51,15 +55,25 @@ Base.@kwdef struct InputFieldMNISTConfig{T<:AbstractFloat,S<:AbstractString}
     w_normalization::S = get(ENV, "ISING_MNIST_IF_W_NORMALIZATION", "none")
     w_norm::T = parse(FT, get(ENV, "ISING_MNIST_IF_W_NORM", "1.0"))
     project_output_bias_prior::Bool = parse(Bool, get(ENV, "ISING_MNIST_IF_PROJECT_OUTPUT_BIAS_PRIOR", "false"))
+    positive_target_weight::T = parse(FT, get(ENV, "ISING_MNIST_IF_POSITIVE_TARGET_WEIGHT", string(NCLASSES - 1)))
+    negative_target_weight::T = parse(FT, get(ENV, "ISING_MNIST_IF_NEGATIVE_TARGET_WEIGHT", "1.0"))
     w_input_normalization::S = get(ENV, "ISING_MNIST_IF_W_INPUT_NORMALIZATION", "none")
     w_input_row_norm::T = parse(FT, get(ENV, "ISING_MNIST_IF_W_INPUT_ROW_NORM", "0.14"))
-    temp::T = parse(FT, get(ENV, "ISING_MNIST_IF_TEMP", "0.001"))
+    temp::T = parse(FT, get(ENV, "ISING_MNIST_IF_TEMP", "0.0001"))
+    nudge_temp_peak::T = parse(FT, get(ENV, "ISING_MNIST_IF_NUDGE_TEMP_PEAK", string(temp)))
     stepsize::T = parse(FT, get(ENV, "ISING_MNIST_IF_STEPSIZE", "0.5"))
     weight_scale::T = parse(FT, get(ENV, "ISING_MNIST_IF_WEIGHT_SCALE", "0.005"))
-    weight_decay::T = parse(FT, get(ENV, "ISING_MNIST_IF_WEIGHT_DECAY", "0.0"))
+    weight_decay::T = parse(FT, get(ENV, "ISING_MNIST_IF_WEIGHT_DECAY", "0.0001"))
+    adaptive_weight_decay::Bool = parse(Bool, get(ENV, "ISING_MNIST_IF_ADAPTIVE_WEIGHT_DECAY", "false"))
+    adaptive_w_norm::T = parse(FT, get(ENV, "ISING_MNIST_IF_ADAPTIVE_W_NORM", "2.0"))
+    adaptive_w_input_norm::T = parse(FT, get(ENV, "ISING_MNIST_IF_ADAPTIVE_W_INPUT_NORM", "5.0"))
+    adaptive_decay_gain::T = parse(FT, get(ENV, "ISING_MNIST_IF_ADAPTIVE_DECAY_GAIN", "0.0005"))
+    adaptive_max_decay::T = parse(FT, get(ENV, "ISING_MNIST_IF_ADAPTIVE_MAX_DECAY", "0.003"))
+    skip_worker_close::Bool = parse(Bool, get(ENV, "ISING_MNIST_IF_SKIP_WORKER_CLOSE", "false"))
     seed::Int = parse(Int, get(ENV, "ISING_MNIST_IF_SEED", "20260526"))
     resume_from::S = get(ENV, "ISING_MNIST_IF_RESUME_FROM", "")
     resume_epoch::Int = parse(Int, get(ENV, "ISING_MNIST_IF_RESUME_EPOCH", "-1"))
+    reset_opt_state_on_resume::Bool = parse(Bool, get(ENV, "ISING_MNIST_IF_RESET_OPT_STATE_ON_RESUME", "false"))
     outdir::S = get(
         ENV,
         "ISING_MNIST_IF_OUTDIR",
@@ -76,27 +90,24 @@ struct InputFieldMNISTJobBuffer{J<:AbstractVector}
     jobs::J
 end
 
-mutable struct InputFieldMNISTManagerState{L,G,P,B,O,X,Y,W}
+mutable struct InputFieldMNISTManagerState{L,G,P,B,O,W,R}
     layer::L
     source_graph::G
     params::Base.RefValue{P}
     batch_gradient::B
     nsamples::Base.RefValue{Int}
     opt_state::O
-    current_x::Base.RefValue{X}
-    current_y::Base.RefValue{Y}
     input_hidden_w::Base.RefValue{W}
+    reverse_sparse_ptrs::R
 end
 
-mutable struct InputFieldMNISTEvalManagerState{L,G,P,X,Y,W}
+mutable struct InputFieldMNISTEvalManagerState{L,G,P,W}
     layer::L
     source_graph::G
     nsamples::Base.RefValue{Int}
     ncorrect::Base.RefValue{Int}
     total_loss::Base.RefValue{FT}
     pred_counts::P
-    current_x::Base.RefValue{X}
-    current_y::Base.RefValue{Y}
     input_hidden_w::Base.RefValue{W}
 end
 
@@ -134,6 +145,17 @@ end
 """Copy one config while replacing selected keyword fields."""
 function updated_config(config::C; kwargs...) where {C<:InputFieldMNISTConfig}
     return InputFieldMNISTConfig(; config_namedtuple(config)..., kwargs...)
+end
+
+"""Return `true` when the run uses the symmetric `+β/-β` contrastive estimator."""
+function uses_symmetric_nudging(config::C) where {C<:InputFieldMNISTConfig}
+    return String(config.nudge_mode) == "symmetric"
+end
+
+"""Return the per-sample contrastive scale denominator for the selected nudge mode."""
+function contrastive_beta_scale(config::C) where {C<:InputFieldMNISTConfig}
+    beta = FT(config.β)
+    return uses_symmetric_nudging(config) ? FT(2) * beta : beta
 end
 
 """Append one named-tuple row to a CSV file."""
@@ -204,6 +226,10 @@ function training_norms(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     grad = manager.state.batch_gradient
     w_input_norm = hasproperty(params, :w_input) ? parameter_norm(params.w_input) : 0.0
     grad_w_input_norm = hasproperty(grad, :w_input) ? parameter_norm(grad.w_input) : 0.0
+    effective_w_decay = effective_weight_decay(manager.config, parameter_norm(params.w), FT(manager.config.adaptive_w_norm))
+    effective_w_input_decay = hasproperty(params, :w_input) ?
+        effective_weight_decay(manager.config, parameter_norm(params.w_input), FT(manager.config.adaptive_w_input_norm)) :
+        FT(manager.config.weight_decay)
     return (;
         w_norm = parameter_norm(params.w),
         b_norm = parameter_norm(params.b),
@@ -211,8 +237,10 @@ function training_norms(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
         grad_w_norm = parameter_norm(grad.w),
         grad_b_norm = parameter_norm(grad.b),
         grad_w_input_norm,
-        symmetry_error = sparse_parameter_symmetry_error(params.w, II.adj(manager.state.source_graph)),
-        grad_symmetry_error = sparse_parameter_symmetry_error(grad.w, II.adj(manager.state.source_graph)),
+        effective_w_decay,
+        effective_w_input_decay,
+        symmetry_error = sparse_parameter_symmetry_error(params.w, II.adj(manager.state.source_graph), manager.state.reverse_sparse_ptrs),
+        grad_symmetry_error = sparse_parameter_symmetry_error(grad.w, II.adj(manager.state.source_graph), manager.state.reverse_sparse_ptrs),
     )
 end
 
@@ -292,20 +320,6 @@ function fill_jobs!(buffer::B, x::X, y::Y, indices::V) where {B<:InputFieldMNIST
     return @view buffer.jobs[1:n]
 end
 
-"""Point a manager at the matrices used by index-based jobs."""
-function set_manager_inputs!(manager::M, x::X, y::Y) where {M<:StatefulAlgorithms.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix}
-    manager.state.current_x[] = x
-    manager.state.current_y[] = y
-    return manager
-end
-
-"""Copy one sample column into a worker-local input/target buffer."""
-function load_sample_into_worker!(ctx::C, x::X, y::Y, sample_idx::I) where {C,X<:AbstractMatrix,Y<:AbstractMatrix,I<:Integer}
-    copyto!(ctx.x[], view(x, :, Int(sample_idx)))
-    copyto!(ctx.y[], view(y, :, Int(sample_idx)))
-    return ctx
-end
-
 """Create one gradient buffer matching the reduced field-input baseline parameters."""
 function input_field_gradient_buffer(graph::G, input_hidden_w::W) where {G,W<:AbstractMatrix}
     return (;
@@ -324,23 +338,48 @@ function input_field_params(graph::G, input_hidden_w::W) where {G,W<:AbstractMat
     )
 end
 
-"""Return the sparse-value pointer for the reverse directed edge `(row, col)`."""
-function reverse_sparse_ptr(rowvals::R, colptr::C, row::I, col::I) where {R<:AbstractVector,C<:AbstractVector,I<:Integer}
-    @inbounds for ptr in colptr[row]:(colptr[row + 1] - 1)
-        rowvals[ptr] == col && return ptr
+"""Build a CSC nonzero-pointer map from each directed edge to its reverse edge."""
+function sparse_reverse_ptrs(adjacency::A) where {A<:SparseArrays.AbstractSparseMatrix}
+    rowvals = SparseArrays.rowvals(adjacency)
+    colptr = SparseArrays.getcolptr(adjacency)
+    reverse_ptrs = Vector{Int}(undef, length(SparseArrays.nonzeros(adjacency)))
+    ptrs_by_edge = Dict{Tuple{Int,Int},Int}()
+    sizehint!(ptrs_by_edge, length(reverse_ptrs))
+
+    # Register every stored directed edge once in CSC pointer order.
+    @inbounds for col in axes(adjacency, 2)
+        for ptr in colptr[col]:(colptr[col + 1] - 1)
+            ptrs_by_edge[(Int(rowvals[ptr]), Int(col))] = Int(ptr)
+        end
     end
-    throw(ArgumentError("missing reverse sparse edge for ($(row), $(col))"))
+
+    # Resolve reverse pointers once so later symmetry passes only touch vectors.
+    @inbounds for col in axes(adjacency, 2)
+        for ptr in colptr[col]:(colptr[col + 1] - 1)
+            row = Int(rowvals[ptr])
+            reverse_ptrs[ptr] = get(
+                () -> throw(ArgumentError("missing reverse sparse edge for ($(row), $(col))")),
+                ptrs_by_edge,
+                (Int(col), row),
+            )
+        end
+    end
+    return reverse_ptrs
 end
 
 """Symmetrize paired directed sparse entries in-place for an undirected Ising coupling."""
-function symmetrize_sparse_parameter_values!(values::V, adjacency::A) where {V<:AbstractVector,A}
+function symmetrize_sparse_parameter_values!(
+    values::V,
+    adjacency::A,
+    reverse_ptrs::R,
+) where {V<:AbstractVector,A<:SparseArrays.AbstractSparseMatrix,R<:AbstractVector{<:Integer}}
     rowvals = SparseArrays.rowvals(adjacency)
     colptr = SparseArrays.getcolptr(adjacency)
     @inbounds for col in axes(adjacency, 2)
         for ptr in colptr[col]:(colptr[col + 1] - 1)
             row = rowvals[ptr]
             row <= col && continue
-            rev_ptr = reverse_sparse_ptr(rowvals, colptr, row, col)
+            rev_ptr = reverse_ptrs[ptr]
             avg = (values[ptr] + values[rev_ptr]) / eltype(values)(2)
             values[ptr] = avg
             values[rev_ptr] = avg
@@ -350,7 +389,11 @@ function symmetrize_sparse_parameter_values!(values::V, adjacency::A) where {V<:
 end
 
 """Return the maximum absolute mismatch between paired symmetric sparse entries."""
-function sparse_parameter_symmetry_error(values::V, adjacency::A) where {V<:AbstractVector,A}
+function sparse_parameter_symmetry_error(
+    values::V,
+    adjacency::A,
+    reverse_ptrs::R,
+) where {V<:AbstractVector,A<:SparseArrays.AbstractSparseMatrix,R<:AbstractVector{<:Integer}}
     rowvals = SparseArrays.rowvals(adjacency)
     colptr = SparseArrays.getcolptr(adjacency)
     err = zero(eltype(values))
@@ -358,7 +401,7 @@ function sparse_parameter_symmetry_error(values::V, adjacency::A) where {V<:Abst
         for ptr in colptr[col]:(colptr[col + 1] - 1)
             row = rowvals[ptr]
             row <= col && continue
-            rev_ptr = reverse_sparse_ptr(rowvals, colptr, row, col)
+            rev_ptr = reverse_ptrs[ptr]
             err = max(err, abs(values[ptr] - values[rev_ptr]))
         end
     end
@@ -476,9 +519,9 @@ function build_layer(config::C) where {C<:InputFieldMNISTConfig}
         β = config.β,
         free_relaxation_steps = relaxation_steps,
         nudged_relaxation_steps = relaxation_steps,
-        dynamics_algorithm = dynamics,
-        nudged_dynamics_algorithm = dynamics,
-        validation_algorithm = dynamics,
+        dynamics_algorithm = deepcopy(dynamics),
+        nudged_dynamics_algorithm = deepcopy(dynamics),
+        validation_algorithm = deepcopy(dynamics),
     )
     return (; graph, layer, relaxation_steps, input_hidden_w)
 end
@@ -503,7 +546,26 @@ function install_input_field_pattern!(isinggraph::G, pattern::P) where {G,P<:Abs
     return isinggraph
 end
 
-"""Accumulate the one-sided MNIST field-input gradient into one worker buffer."""
+"""Return the nudged-phase temperature algorithm selected by the experiment config."""
+function nudged_temperature_algorithm(config::C, n_steps::I) where {C<:InputFieldMNISTConfig,I<:Integer}
+    mode = String(config.nudge_temp_schedule)
+    if mode == "fixed"
+        return IsingLearning.GeometricDynamicsTemperatureSchedule(;
+            start_T = FT(config.temp),
+            stop_T = FT(config.temp),
+            n_steps = Int(n_steps),
+        )
+    elseif mode == "reverse_anneal"
+        return IsingLearning.ReverseAnnealDynamicsTemperatureSchedule(;
+            cold_T = FT(config.temp),
+            peak_T = FT(config.nudge_temp_peak),
+            n_steps = Int(n_steps),
+        )
+    end
+    throw(ArgumentError("ISING_MNIST_IF_NUDGE_TEMP_SCHEDULE must be fixed or reverse_anneal; got $(mode)"))
+end
+
+"""Accumulate one MNIST field-input contrastive gradient into one worker buffer."""
 function accumulate_input_field_gradient!(
     isinggraph::G,
     nudged_state,
@@ -527,9 +589,38 @@ end
 @inline ref_value(x::Base.RefValue) = x[]
 @inline ref_value(x) = x
 
+"""Balance softplus-margin target masks so sparse positive replicas are not drowned out."""
+function reweight_softplus_target_mask!(
+    isinggraph::G,
+    y::Y,
+    positive_target_weight::P,
+    negative_target_weight::N,
+) where {G,Y<:AbstractVector,P<:Real,N<:Real}
+    nudge = IsingLearning.hamiltonian_or_nothing(isinggraph.hamiltonian, II.SoftplusMarginNudging)
+    isnothing(nudge) && return isinggraph
+
+    output_idxs = II.layerrange(isinggraph[end])
+    length(y) == length(output_idxs) ||
+        throw(DimensionMismatch("target length $(length(y)) does not match output layer length $(length(output_idxs))"))
+    @inbounds for local_idx in eachindex(y)
+        graph_idx = output_idxs[local_idx]
+        nudge.mask[graph_idx] = y[local_idx] > zero(eltype(y)) ?
+            eltype(nudge.mask)(positive_target_weight) :
+            eltype(nudge.mask)(negative_target_weight)
+    end
+    return isinggraph
+end
+
 # Apply a possibly reference-backed MNIST output target to one worker graph.
-StatefulAlgorithms.@ProcessAlgorithm function ApplyTargetsRef!(isinggraph::G, y) where G
-    IsingLearning.apply_targets(isinggraph, ref_value(y))
+StatefulAlgorithms.@ProcessAlgorithm function ApplyTargetsRef!(
+    isinggraph::G,
+    y,
+    positive_target_weight::Float32,
+    negative_target_weight::Float32,
+) where G
+    target = ref_value(y)
+    IsingLearning.apply_targets(isinggraph, target)
+    reweight_softplus_target_mask!(isinggraph, target, positive_target_weight, negative_target_weight)
     return nothing
 end
 
@@ -575,7 +666,7 @@ function input_field_free_phase_algorithm(layer::L) where {L<:IsingLearning.Laye
         @state x
         @state input_hidden_w
         @state input_pattern = zeros(FT, n_units)
-        @state equilibrium_state = zeros(n_units)
+        @state equilibrium_state = zeros(FT, n_units)
         @alias dynamics = dynamics_algorithm
 
         # Fold the image into the worker-local input field, then relax once.
@@ -586,12 +677,30 @@ function input_field_free_phase_algorithm(layer::L) where {L<:IsingLearning.Laye
     end
 end
 
+"""Build one nudged dynamics step that refreshes temperature before stepping."""
+function input_field_nudged_phase_step_algorithm(dynamics_algorithm::D, temperature_algorithm::T) where {D,T}
+    return StatefulAlgorithms.@Routine begin
+        @alias dynamics = dynamics_algorithm
+        @alias temperature = temperature_algorithm
+
+        temperature(dynamics.T)
+        dynamics()
+    end
+end
+
 """Build the positive-nudged input-field routine for one MNIST sample."""
-function input_field_nudged_phase_algorithm(layer::L) where {L<:IsingLearning.LayeredIsingGraphLayer}
+function input_field_plus_nudged_phase_algorithm(layer::L, config::C) where {
+    L<:IsingLearning.LayeredIsingGraphLayer,
+    C<:InputFieldMNISTConfig,
+}
     dynamics_algorithm = deepcopy(layer.nudged_dynamics_algorithm)
     nudged_steps = layer.nudged_relaxation_steps
+    temperature_algorithm = nudged_temperature_algorithm(config, nudged_steps)
+    phase_step = input_field_nudged_phase_step_algorithm(dynamics_algorithm, temperature_algorithm)
     n_units = layer.nunits
     default_β = layer.β
+    default_positive_target_weight = FT(config.positive_target_weight)
+    default_negative_target_weight = FT(config.negative_target_weight)
 
     return StatefulAlgorithms.@Routine begin
         @state x
@@ -599,28 +708,71 @@ function input_field_nudged_phase_algorithm(layer::L) where {L<:IsingLearning.La
         @state input_hidden_w
         @state input_pattern
         @state phase_beta = default_β
+        @state positive_target_weight = default_positive_target_weight
+        @state negative_target_weight = default_negative_target_weight
         @state equilibrium_state
-        @state nudged_state = zeros(n_units)
+        @state plus_state = zeros(FT, n_units)
         @alias dynamics = dynamics_algorithm
+        @alias step = phase_step
 
         # Restart from the free equilibrium, add the target nudge, then relax.
         IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
         ApplyProjectedInputFieldRef!(dynamics.model, input_hidden_w, x, input_pattern)
-        ApplyTargetsRef!(dynamics.model, y)
-        SetInputFieldClampingBeta!(dynamics.model, phase_beta)
-        model = @repeat nudged_steps dynamics()
-        IsingLearning.CopyGraphState!(nudged_state, model)
+        ApplyTargetsRef!(dynamics.model, y, positive_target_weight, negative_target_weight)
+        SetInputFieldClampingBeta!(isinggraph = dynamics.model, phase_beta = phase_beta)
+        @repeat nudged_steps step()
+        IsingLearning.CopyGraphState!(plus_state, dynamics.model)
 
         # Reset clamping so the worker can be rerun without rebuilding state.
-        SetInputFieldClampingBeta!(dynamics.model, 0f0)
+        SetInputFieldClampingBeta!(isinggraph = dynamics.model, phase_beta = @transform(_ -> 0f0, phase_beta))
     end
 end
 
-"""Build the composite single-sample input-field equilibrium-propagation step."""
-function input_field_contrastive_algorithm(layer::L) where {L<:IsingLearning.LayeredIsingGraphLayer}
+"""Build the negative-nudged input-field routine for one MNIST sample."""
+function input_field_minus_nudged_phase_algorithm(layer::L, config::C) where {
+    L<:IsingLearning.LayeredIsingGraphLayer,
+    C<:InputFieldMNISTConfig,
+}
+    dynamics_algorithm = deepcopy(layer.nudged_dynamics_algorithm)
+    nudged_steps = layer.nudged_relaxation_steps
+    temperature_algorithm = nudged_temperature_algorithm(config, nudged_steps)
+    phase_step = input_field_nudged_phase_step_algorithm(dynamics_algorithm, temperature_algorithm)
+    n_units = layer.nunits
+
+    return StatefulAlgorithms.@Routine begin
+        @state x
+        @state y
+        @state input_hidden_w
+        @state input_pattern
+        @state phase_beta
+        @state positive_target_weight
+        @state negative_target_weight
+        @state equilibrium_state
+        @state minus_state = zeros(FT, n_units)
+        @alias dynamics = dynamics_algorithm
+        @alias step = phase_step
+
+        # Restart from the free equilibrium, add the negative target nudge, then relax.
+        IsingLearning.setgraph!(isinggraph = dynamics.model, target = equilibrium_state)
+        ApplyProjectedInputFieldRef!(dynamics.model, input_hidden_w, x, input_pattern)
+        ApplyTargetsRef!(dynamics.model, y, positive_target_weight, negative_target_weight)
+        SetInputFieldNegativeClampingBeta!(isinggraph = dynamics.model, phase_beta = phase_beta)
+        @repeat nudged_steps step()
+        IsingLearning.CopyGraphState!(minus_state, dynamics.model)
+
+        # Reset clamping so the worker can be rerun without rebuilding state.
+        SetInputFieldClampingBeta!(isinggraph = dynamics.model, phase_beta = @transform(_ -> 0f0, phase_beta))
+    end
+end
+
+"""Build the one-sided single-sample input-field equilibrium-propagation step."""
+function input_field_one_sided_contrastive_algorithm(layer::L, config::C) where {
+    L<:IsingLearning.LayeredIsingGraphLayer,
+    C<:InputFieldMNISTConfig,
+}
     default_β = layer.β
     free_phase = input_field_free_phase_algorithm(layer)
-    nudged_phase = input_field_nudged_phase_algorithm(layer)
+    nudged_phase = input_field_plus_nudged_phase_algorithm(layer, config)
 
     return StatefulAlgorithms.@CompositeAlgorithm begin
         @state x
@@ -642,13 +794,77 @@ function input_field_contrastive_algorithm(layer::L) where {L<:IsingLearning.Lay
 
         AccumulateInputFieldGradientRef!(
             nudged_context.dynamics.model,
-            nudged_context.nudged_state,
+            nudged_context.plus_state,
             free_context.equilibrium_state,
             x,
             buffers,
             phase_beta,
         )
     end
+end
+
+"""Build the symmetric `+β/-β` single-sample input-field contrastive step."""
+function input_field_symmetric_contrastive_algorithm(layer::L, config::C) where {
+    L<:IsingLearning.LayeredIsingGraphLayer,
+    C<:InputFieldMNISTConfig,
+}
+    default_β = layer.β
+    free_phase = input_field_free_phase_algorithm(layer)
+    plus_phase = input_field_plus_nudged_phase_algorithm(layer, config)
+    minus_phase = input_field_minus_nudged_phase_algorithm(layer, config)
+
+    return StatefulAlgorithms.@CompositeAlgorithm begin
+        @state x
+        @state y
+        @state buffers
+        @state input_hidden_w
+        @input phase_beta::FT = default_β
+
+        @context free_context = free_phase()
+        @context plus_context = plus_phase()
+        @context minus_context = minus_phase()
+        @bind x => free_context.x
+        @bind x => plus_context.x
+        @bind x => minus_context.x
+        @bind y => plus_context.y
+        @bind y => minus_context.y
+        @bind input_hidden_w => free_context.input_hidden_w
+        @bind input_hidden_w => plus_context.input_hidden_w
+        @bind input_hidden_w => minus_context.input_hidden_w
+        @merge free_context.input_pattern, plus_context.input_pattern
+        @merge free_context.input_pattern, minus_context.input_pattern
+        @merge free_context.equilibrium_state, plus_context.equilibrium_state
+        @merge free_context.equilibrium_state, minus_context.equilibrium_state
+        @bind phase_beta => plus_context.phase_beta
+        @merge plus_context.x, minus_context.x
+        @merge plus_context.y, minus_context.y
+        @merge plus_context.input_hidden_w, minus_context.input_hidden_w
+        @merge plus_context.input_pattern, minus_context.input_pattern
+        @merge plus_context.equilibrium_state, minus_context.equilibrium_state
+        @merge plus_context.phase_beta, minus_context.phase_beta
+        @merge plus_context.positive_target_weight, minus_context.positive_target_weight
+        @merge plus_context.negative_target_weight, minus_context.negative_target_weight
+
+        AccumulateInputFieldGradientRef!(
+            plus_context.dynamics.model,
+            plus_context.plus_state,
+            minus_context.minus_state,
+            x,
+            buffers,
+            phase_beta,
+        )
+    end
+end
+
+"""Build the selected single-sample input-field contrastive step."""
+function input_field_contrastive_algorithm(layer::L, config::C) where {
+    L<:IsingLearning.LayeredIsingGraphLayer,
+    C<:InputFieldMNISTConfig,
+}
+    if uses_symmetric_nudging(config)
+        return input_field_symmetric_contrastive_algorithm(layer, config)
+    end
+    return input_field_one_sided_contrastive_algorithm(layer, config)
 end
 
 """Return the mutable sample/buffer context stored in one worker."""
@@ -675,6 +891,12 @@ end
 # Set the graph clamping beta from process state without capturing an external Ref.
 StatefulAlgorithms.@ProcessAlgorithm function SetInputFieldClampingBeta!(isinggraph::G, phase_beta::Float32) where G
     IsingLearning.set_clamping_beta!(isinggraph, phase_beta)
+    return nothing
+end
+
+# Set the negative graph clamping beta for the symmetric `+β/-β` contrastive phase.
+StatefulAlgorithms.@ProcessAlgorithm function SetInputFieldNegativeClampingBeta!(isinggraph::G, phase_beta::Float32) where G
+    IsingLearning.set_clamping_beta!(isinggraph, -phase_beta)
     return nothing
 end
 
@@ -807,7 +1029,7 @@ function input_field_validation_algorithm(layer::L) where {L<:IsingLearning.Laye
         @state y
         @state input_hidden_w
         @state input_pattern = zeros(FT, n_units)
-        @state equilibrium_state = zeros(n_units)
+        @state equilibrium_state = zeros(FT, n_units)
         @state output_idxs
         @state output_replicas = replica_count
         @state nsamples
@@ -974,6 +1196,30 @@ function normalize_input_projection!(w_input::W, config::C) where {W<:AbstractMa
     return w_input
 end
 
+"""Return the decay coefficient for one parameter group under optional norm control."""
+function effective_weight_decay(config::C, norm::T, target_norm::T) where {C<:InputFieldMNISTConfig,T<:Real}
+    base_decay = T(config.weight_decay)
+    config.adaptive_weight_decay || return base_decay
+    target_norm > zero(T) || return base_decay
+
+    overshoot = max(zero(T), norm / target_norm - one(T))
+    adaptive_decay = base_decay + T(config.adaptive_decay_gain) * overshoot
+    return min(T(config.adaptive_max_decay), adaptive_decay)
+end
+
+"""Add recurrent and input-projection weight decay to one minibatch gradient."""
+function apply_weight_decay!(gradient::G, params::P, config::C) where {G,P,C<:InputFieldMNISTConfig}
+    w_decay = effective_weight_decay(config, parameter_norm(params.w), FT(config.adaptive_w_norm))
+    input_decay = effective_weight_decay(config, parameter_norm(params.w_input), FT(config.adaptive_w_input_norm))
+    if w_decay > zero(FT)
+        gradient.w .+= w_decay .* params.w
+    end
+    if input_decay > zero(FT)
+        gradient.w_input .+= input_decay .* params.w_input
+    end
+    return (; w_decay, input_decay)
+end
+
 """Flush worker gradients into one Adam-ready minibatch gradient."""
 function flush_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.ProcessManager}
     clear_buffer!(manager.state.batch_gradient)
@@ -984,14 +1230,15 @@ function flush_manager_buffers!(manager::M) where {M<:StatefulAlgorithms.Process
 
     nsamples = manager.state.nsamples[]
     nsamples > 0 || throw(ArgumentError("cannot flush an empty MNIST minibatch"))
-    scale_buffer!(manager.state.batch_gradient, inv(FT(manager.config.β) * FT(nsamples)))
-    symmetrize_sparse_parameter_values!(manager.state.batch_gradient.w, II.adj(manager.state.source_graph))
+    scale_buffer!(manager.state.batch_gradient, inv(contrastive_beta_scale(manager.config) * FT(nsamples)))
+    symmetrize_sparse_parameter_values!(
+        manager.state.batch_gradient.w,
+        II.adj(manager.state.source_graph),
+        manager.state.reverse_sparse_ptrs,
+    )
     manager.config.project_output_bias_prior &&
         project_output_bias_prior!(manager.state.batch_gradient, manager.state.layer, manager.config.output_replicas)
-    if manager.config.weight_decay > zero(FT)
-        manager.state.batch_gradient.w .+= manager.config.weight_decay .* manager.state.params[].w
-        manager.state.batch_gradient.w_input .+= manager.config.weight_decay .* manager.state.params[].w_input
-    end
+    apply_weight_decay!(manager.state.batch_gradient, manager.state.params[], manager.config)
     return manager.state.batch_gradient
 end
 
@@ -1014,7 +1261,7 @@ end
 
 """Synchronize the source graph and shared worker fields after an Adam update."""
 function sync_after_update!(manager::M, params::P) where {M<:StatefulAlgorithms.ProcessManager,P}
-    symmetrize_sparse_parameter_values!(params.w, II.adj(manager.state.source_graph))
+    symmetrize_sparse_parameter_values!(params.w, II.adj(manager.state.source_graph), manager.state.reverse_sparse_ptrs)
     normalize_sparse_couplings!(params.w, manager.config)
     normalize_input_projection!(params.w_input, manager.config)
     IsingLearning.sync_graph_params!(manager.state.source_graph, (; w = params.w, b = params.b))
@@ -1032,13 +1279,14 @@ function input_field_manager(
     config::C,
     input_hidden_w::R,
 ) where {L<:IsingLearning.LayeredIsingGraphLayer,G,C<:InputFieldMNISTConfig,R<:Base.RefValue}
+    reverse_ptrs = sparse_reverse_ptrs(II.adj(source))
     params = input_field_params(source, input_hidden_w[])
-    symmetrize_sparse_parameter_values!(params.w, II.adj(source))
+    symmetrize_sparse_parameter_values!(params.w, II.adj(source), reverse_ptrs)
     normalize_sparse_couplings!(params.w, config)
     normalize_input_projection!(params.w_input, config)
     input_hidden_w[] = params.w_input
     optimiser = Optimisers.Adam(config.lr)
-    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(layer))
+    algorithm = StatefulAlgorithms.resolve(input_field_contrastive_algorithm(layer, config))
     state = InputFieldMNISTManagerState(
         layer,
         source,
@@ -1046,9 +1294,8 @@ function input_field_manager(
         input_field_gradient_buffer(source, input_hidden_w[]),
         Ref(0),
         Optimisers.setup(optimiser, params),
-        Ref(zeros(FT, INPUT_DIM, 0)),
-        Ref(zeros(FT, NCLASSES * config.output_replicas, 0)),
         input_hidden_w,
+        reverse_ptrs,
     )
     recipe = (;
         makeworker = (idx, manager) -> input_field_worker(
@@ -1090,8 +1337,6 @@ function input_field_validation_manager(
         Ref(0),
         Ref(0f0),
         zeros(Int, NCLASSES),
-        Ref(zeros(FT, INPUT_DIM, 0)),
-        Ref(zeros(FT, NCLASSES * config.output_replicas, 0)),
         input_hidden_w,
     )
     recipe = (;
@@ -1118,15 +1363,6 @@ function input_field_validation_manager(
     )
 end
 
-"""Split a minibatch index view into concrete manager jobs."""
-function batch_jobs(x::X, y::Y, indices::V) where {X<:AbstractMatrix,Y<:AbstractMatrix,V<:AbstractVector{Int}}
-    jobs = InputFieldMNISTJob{Vector{FT},Vector{FT}}[]
-    for sample_idx in indices
-        push!(jobs, InputFieldMNISTJob(copy(view(x, :, sample_idx)), copy(view(y, :, sample_idx))))
-    end
-    return jobs
-end
-
 """Run one minibatch through the manager and apply one Adam update."""
 function run_minibatch!(manager::M, jobs::J) where {M<:StatefulAlgorithms.ProcessManager,J<:AbstractVector}
     clear_manager_buffers!(manager)
@@ -1138,6 +1374,21 @@ function run_minibatch!(manager::M, jobs::J) where {M<:StatefulAlgorithms.Proces
     return params
 end
 
+"""Evaluate accuracy and squared error for a prepared set of validation jobs."""
+function evaluate_jobs(manager::M, jobs::J) where {
+    M<:StatefulAlgorithms.ProcessManager,
+    J<:AbstractVector,
+}
+    clear_validation_buffers!(manager)
+    StatefulAlgorithms.run!(manager, jobs)
+    nsamples = manager.state.nsamples[]
+    return (;
+        accuracy = nsamples == 0 ? 0.0 : manager.state.ncorrect[] / nsamples,
+        loss = nsamples == 0 ? zero(FT) : manager.state.total_loss[] / nsamples,
+        pred_counts = copy(manager.state.pred_counts),
+    )
+end
+
 """Evaluate accuracy and squared error using preallocated validation-manager jobs."""
 function evaluate(
     manager::M,
@@ -1146,15 +1397,8 @@ function evaluate(
     config::C,
     jobs::B,
 ) where {M<:StatefulAlgorithms.ProcessManager,X<:AbstractMatrix,Y<:AbstractMatrix,C<:InputFieldMNISTConfig,B<:InputFieldMNISTJobBuffer}
-    clear_validation_buffers!(manager)
     active_jobs = fill_jobs!(jobs, x, y, collect(axes(x, 2)))
-    StatefulAlgorithms.run!(manager, active_jobs)
-    nsamples = manager.state.nsamples[]
-    return (;
-        accuracy = nsamples == 0 ? 0.0 : manager.state.ncorrect[] / nsamples,
-        loss = nsamples == 0 ? zero(FT) : manager.state.total_loss[] / nsamples,
-        pred_counts = copy(manager.state.pred_counts),
-    )
+    return evaluate_jobs(manager, active_jobs)
 end
 
 """Evaluate accuracy with a lightweight progress message for larger validation sets."""
@@ -1188,7 +1432,7 @@ function save_checkpoint(path::P, manager::M, config::C, rows::R) where {P<:Abst
             params = manager.state.params[],
             opt_state = manager.state.opt_state,
             rows,
-            config,
+            config = config_namedtuple(config),
         ))
     end
     return path
@@ -1203,13 +1447,13 @@ function ensure_cairomakie()
     return CM
 end
 
-"""Return the sidecar path used for legacy checkpoint recovery."""
+"""Return the sidecar path used for checkpoint schema recovery."""
 function recovered_checkpoint_path(path::P) where {P<:AbstractString}
     stem, ext = splitext(path)
     return stem * "_recovered" * ext
 end
 
-"""Recover one pre-resume baseline checkpoint into a neutral serialized payload."""
+"""Recover a checkpoint saved with the pre-reset-option config layout."""
 function recover_legacy_checkpoint!(recovered_path::P, path::Q) where {P<:AbstractString,Q<:AbstractString}
     project_path = abspath(joinpath(@__DIR__, "..", "..", ".."))
     julia_path = joinpath(Sys.BINDIR, Base.julia_exename())
@@ -1217,69 +1461,55 @@ function recover_legacy_checkpoint!(recovered_path::P, path::Q) where {P<:Abstra
     using Optimisers
     using Serialization
 
-    Base.@kwdef struct InputFieldMNISTConfig{T<:AbstractFloat,S<:AbstractString}
-        workers::Int = 0
-        epochs::Int = 0
-        batchsize::Int = 0
-        scheduler::S = ""
-        chunk_size::Int = 0
-        train_per_class::Int = 0
-        test_per_class::Int = 0
-        train_eval_per_class::Int = 0
-        eval_every::Int = 0
-        progress_every_batches::Int = 0
-        early_stop_decline_epochs::Int = 0
-        hidden::Int = 0
-        output_replicas::Int = 0
-        sweeps::T = zero(T)
-        β::T = zero(T)
-        nudge_tau::T = zero(T)
-        lr::T = zero(T)
-        w_normalization::S = ""
-        w_norm::T = zero(T)
-        project_output_bias_prior::Bool = false
-        w_input_normalization::S = ""
-        w_input_row_norm::T = zero(T)
-        temp::T = zero(T)
-        stepsize::T = zero(T)
-        weight_scale::T = zero(T)
-        weight_decay::T = zero(T)
-        seed::Int = 0
-        outdir::S = ""
+    struct InputFieldMNISTConfig{T<:AbstractFloat,S<:AbstractString}
+        workers::Int
+        epochs::Int
+        batchsize::Int
+        scheduler::S
+        nudge_mode::S
+        nudge_temp_schedule::S
+        chunk_size::Int
+        train_per_class::Int
+        test_per_class::Int
+        train_eval_per_class::Int
+        eval_every::Int
+        progress_every_batches::Int
+        early_stop_decline_epochs::Int
+        early_stop_decline_batches::Int
+        early_stop_min_batches::Int
+        hidden::Int
+        output_replicas::Int
+        sweeps::T
+        β::T
+        nudge_tau::T
+        lr::T
+        w_normalization::S
+        w_norm::T
+        project_output_bias_prior::Bool
+        positive_target_weight::T
+        negative_target_weight::T
+        w_input_normalization::S
+        w_input_row_norm::T
+        temp::T
+        nudge_temp_peak::T
+        stepsize::T
+        weight_scale::T
+        weight_decay::T
+        adaptive_weight_decay::Bool
+        adaptive_w_norm::T
+        adaptive_w_input_norm::T
+        adaptive_decay_gain::T
+        adaptive_max_decay::T
+        skip_worker_close::Bool
+        seed::Int
+        resume_from::S
+        resume_epoch::Int
+        outdir::S
     end
 
     checkpoint = deserialize(IOBuffer(read($(repr(path)))))
-    config = (
-        workers = checkpoint.config.workers,
-        epochs = checkpoint.config.epochs,
-        batchsize = checkpoint.config.batchsize,
-        scheduler = hasproperty(checkpoint.config, :scheduler) ? String(checkpoint.config.scheduler) : "spawn",
-        chunk_size = hasproperty(checkpoint.config, :chunk_size) ? checkpoint.config.chunk_size : 0,
-        train_per_class = checkpoint.config.train_per_class,
-        test_per_class = checkpoint.config.test_per_class,
-        train_eval_per_class = checkpoint.config.train_eval_per_class,
-        eval_every = checkpoint.config.eval_every,
-        progress_every_batches = hasproperty(checkpoint.config, :progress_every_batches) ? checkpoint.config.progress_every_batches : 25,
-        early_stop_decline_epochs = hasproperty(checkpoint.config, :early_stop_decline_epochs) ? checkpoint.config.early_stop_decline_epochs : 0,
-        hidden = checkpoint.config.hidden,
-        output_replicas = checkpoint.config.output_replicas,
-        sweeps = checkpoint.config.sweeps,
-        β = checkpoint.config.β,
-        nudge_tau = hasproperty(checkpoint.config, :nudge_tau) ? checkpoint.config.nudge_tau : Float32(0.25),
-        lr = checkpoint.config.lr,
-        w_normalization = hasproperty(checkpoint.config, :w_normalization) ? String(checkpoint.config.w_normalization) : "none",
-        w_norm = hasproperty(checkpoint.config, :w_norm) ? checkpoint.config.w_norm : Float32(1.0),
-        project_output_bias_prior = hasproperty(checkpoint.config, :project_output_bias_prior) ? checkpoint.config.project_output_bias_prior : false,
-        w_input_normalization = hasproperty(checkpoint.config, :w_input_normalization) ? String(checkpoint.config.w_input_normalization) : "none",
-        w_input_row_norm = hasproperty(checkpoint.config, :w_input_row_norm) ? checkpoint.config.w_input_row_norm : Float32(0.14),
-        temp = checkpoint.config.temp,
-        stepsize = checkpoint.config.stepsize,
-        weight_scale = checkpoint.config.weight_scale,
-        weight_decay = checkpoint.config.weight_decay,
-        seed = checkpoint.config.seed,
-        outdir = String(checkpoint.config.outdir),
-    )
-
+    names = fieldnames(typeof(checkpoint.config))
+    config = NamedTuple{names}(Tuple(getfield(checkpoint.config, name) for name in names))
     open($(repr(recovered_path)), "w") do io
         serialize(io, (
             architecture = checkpoint.architecture,
@@ -1346,6 +1576,12 @@ function restore_manager_checkpoint!(manager::M, checkpoint) where {M<:StatefulA
     return manager
 end
 
+"""Rebuild Adam state after restoring checkpoint parameters when a resumed branch changes LR."""
+function reset_manager_optimizer!(manager::M, config::C) where {M<:StatefulAlgorithms.ProcessManager,C<:InputFieldMNISTConfig}
+    manager.state.opt_state = Optimisers.setup(Optimisers.Adam(config.lr), manager.state.params[])
+    return manager
+end
+
 """Return the default file paths used by one retained run directory."""
 function session_paths(outdir::P) where {P<:AbstractString}
     return (
@@ -1390,6 +1626,7 @@ function restart_from_checkpoint!(
 
     # Reset manager/optimizer state in place, then point the session at the new run directory.
     restore_manager_checkpoint!(session.manager, checkpoint)
+    config.reset_opt_state_on_resume && reset_manager_optimizer!(session.manager, config)
     sync_session_config!(session, config)
     clear_manager_buffers!(session.manager)
 
@@ -1436,9 +1673,11 @@ function write_settings!(path::P, config::C, relaxation_steps::I) where {P<:Abst
         println(io, "- manager execution: `ChannelWorkers()` with one sample per manager job")
         println(io, "- progress print interval: `$(config.progress_every_batches)` batches")
         println(io, "- early stop decline epochs: `$(config.early_stop_decline_epochs)`")
+        println(io, "- early stop decline batches: `$(config.early_stop_decline_batches)`")
+        println(io, "- early stop minimum batches: `$(config.early_stop_min_batches)`")
         println(io, "- worker graph adjacency: pointer-shared with source graph")
         println(io, "- worker graph base bias: pointer-shared with source graph")
-        println(io, "- learning step: original one-sided free/nudged EqProp contrastive gradient from inline `LoopAlgorithm`")
+        println(io, "- learning step/nudge mode: `$(config.nudge_mode)` contrastive gradient from inline `LoopAlgorithm`")
         println(io, "- sparse coupling constraint: paired CSC entries are symmetrized before and after Adam updates")
         println(io, "- validation: `ChannelWorkers()` ProcessManager with worker-local stats")
         println(io, "- job buffers: preallocated per-sample jobs reused across minibatches/evaluations")
@@ -1448,12 +1687,18 @@ function write_settings!(path::P, config::C, relaxation_steps::I) where {P<:Abst
         println(io, "- train eval per class: `$(config.train_eval_per_class)`")
         println(io, "- sweeps/relaxation steps: `$(config.sweeps)` / `$(relaxation_steps)`")
         println(io, "- beta/nudge tau/temp/stepsize: `$(config.β)` / `$(config.nudge_tau)` / `$(config.temp)` / `$(config.stepsize)`")
+        println(io, "- nudged temperature schedule/peak: `$(config.nudge_temp_schedule)` / `$(config.nudge_temp_peak)`")
         println(io, "- recurrent w normalization/norm: `$(config.w_normalization)` / `$(config.w_norm)`")
         println(io, "- project output bias prior: `$(config.project_output_bias_prior)`")
+        println(io, "- positive/negative target mask weights: `$(config.positive_target_weight)` / `$(config.negative_target_weight)`")
         println(io, "- w_input normalization/row norm: `$(config.w_input_normalization)` / `$(config.w_input_row_norm)`")
         println(io, "- weight scale/decay: `$(config.weight_scale)` / `$(config.weight_decay)`")
+        println(io, "- adaptive weight decay: `$(config.adaptive_weight_decay)`")
+        println(io, "- adaptive decay targets w/w_input: `$(config.adaptive_w_norm)` / `$(config.adaptive_w_input_norm)`")
+        println(io, "- adaptive decay gain/max: `$(config.adaptive_decay_gain)` / `$(config.adaptive_max_decay)`")
         println(io, "- resume from: `$(isempty(config.resume_from) ? "none" : config.resume_from)`")
         println(io, "- resume epoch: `$(config.resume_epoch)`")
+        println(io, "- reset optimizer state on resume: `$(config.reset_opt_state_on_resume)`")
     end
     return path
 end
@@ -1465,14 +1710,30 @@ function validate_config!(config::C) where {C<:InputFieldMNISTConfig}
     config.epochs >= 0 || throw(ArgumentError("ISING_MNIST_IF_EPOCHS must be nonnegative"))
     config.progress_every_batches >= 0 || throw(ArgumentError("ISING_MNIST_IF_PROGRESS_EVERY_BATCHES must be nonnegative"))
     config.early_stop_decline_epochs >= 0 || throw(ArgumentError("ISING_MNIST_IF_EARLY_STOP_DECLINE_EPOCHS must be nonnegative"))
+    config.early_stop_decline_batches >= 0 || throw(ArgumentError("ISING_MNIST_IF_EARLY_STOP_DECLINE_BATCHES must be nonnegative"))
+    config.early_stop_min_batches >= 0 || throw(ArgumentError("ISING_MNIST_IF_EARLY_STOP_MIN_BATCHES must be nonnegative"))
+    String(config.nudge_mode) in ("one_sided", "symmetric") ||
+        throw(ArgumentError("ISING_MNIST_IF_NUDGE_MODE must be one_sided or symmetric"))
+    String(config.nudge_temp_schedule) in ("fixed", "reverse_anneal") ||
+        throw(ArgumentError("ISING_MNIST_IF_NUDGE_TEMP_SCHEDULE must be fixed or reverse_anneal"))
     config.nudge_tau > zero(FT) || throw(ArgumentError("ISING_MNIST_IF_NUDGE_TAU must be positive"))
     String(config.w_normalization) in ("none", "global") ||
         throw(ArgumentError("ISING_MNIST_IF_W_NORMALIZATION must be one of none, global"))
     config.w_norm > zero(FT) || throw(ArgumentError("ISING_MNIST_IF_W_NORM must be positive"))
     String(config.w_input_normalization) in ("none", "row", "global") ||
         throw(ArgumentError("ISING_MNIST_IF_W_INPUT_NORMALIZATION must be one of none, row, global"))
+    config.positive_target_weight > zero(FT) || throw(ArgumentError("ISING_MNIST_IF_POSITIVE_TARGET_WEIGHT must be positive"))
+    config.negative_target_weight >= zero(FT) || throw(ArgumentError("ISING_MNIST_IF_NEGATIVE_TARGET_WEIGHT must be nonnegative"))
     config.w_input_row_norm > zero(FT) || throw(ArgumentError("ISING_MNIST_IF_W_INPUT_ROW_NORM must be positive"))
     config.temp > zero(FT) || throw(ArgumentError("ISING_MNIST_IF_TEMP must be positive for Langevin noise"))
+    config.nudge_temp_peak >= config.temp ||
+        throw(ArgumentError("ISING_MNIST_IF_NUDGE_TEMP_PEAK must be at least ISING_MNIST_IF_TEMP"))
+    config.weight_decay >= zero(FT) || throw(ArgumentError("ISING_MNIST_IF_WEIGHT_DECAY must be nonnegative"))
+    config.adaptive_w_norm > zero(FT) || throw(ArgumentError("ISING_MNIST_IF_ADAPTIVE_W_NORM must be positive"))
+    config.adaptive_w_input_norm > zero(FT) || throw(ArgumentError("ISING_MNIST_IF_ADAPTIVE_W_INPUT_NORM must be positive"))
+    config.adaptive_decay_gain >= zero(FT) || throw(ArgumentError("ISING_MNIST_IF_ADAPTIVE_DECAY_GAIN must be nonnegative"))
+    config.adaptive_max_decay >= config.weight_decay ||
+        throw(ArgumentError("ISING_MNIST_IF_ADAPTIVE_MAX_DECAY must be at least ISING_MNIST_IF_WEIGHT_DECAY"))
     config.hidden == 120 || @warn "baseline paper hidden count is 120" hidden = config.hidden
     config.output_replicas == 4 || @warn "baseline paper output count is 40, i.e. four replicas per digit" output_replicas = config.output_replicas
     config.train_per_class < 5421 && @warn "this run uses a subsampled balanced training split, so it is not the full balanced MNIST baseline" train_per_class = config.train_per_class
@@ -1547,6 +1808,10 @@ function run_epochs!(session::S; start_epoch::Int = 0, stop_epoch::Int = session
     config = session.config
     prev_eval_accuracy = Ref{Union{Nothing,Float64}}(nothing)
     decline_streak = Ref(0)
+    best_batch_accuracy = Ref(-Inf)
+    prev_batch_accuracy = Ref{Union{Nothing,Float64}}(nothing)
+    batch_decline_streak = Ref(0)
+    trained_batches = Ref(0)
     for epoch in start_epoch:stop_epoch
         seconds = 0.0
         train_accuracy = missing
@@ -1575,6 +1840,41 @@ function run_epochs!(session::S; start_epoch::Int = 0, stop_epoch::Int = session
                         batch_indices,
                     )
                     run_minibatch!(session.manager, jobs)
+                    trained_batches[] += 1
+                    if config.early_stop_decline_batches > 0
+                        batch_eval = evaluate_jobs(session.validator, jobs)
+                        batch_accuracy = Float64(batch_eval.accuracy)
+                        if batch_accuracy > best_batch_accuracy[]
+                            best_batch_accuracy[] = batch_accuracy
+                        end
+                        if trained_batches[] >= config.early_stop_min_batches && !isnothing(prev_batch_accuracy[])
+                            if batch_accuracy < prev_batch_accuracy[]
+                                batch_decline_streak[] += 1
+                            else
+                                batch_decline_streak[] = 0
+                            end
+                        end
+                        prev_batch_accuracy[] = batch_accuracy
+                        println(
+                            "epoch ", epoch, " batch ", batch_idx, "/", nbatches,
+                            " accuracy ", round(batch_accuracy; digits = 4),
+                            " loss ", round(Float64(batch_eval.loss); digits = 6),
+                            " best_batch ", round(best_batch_accuracy[]; digits = 4),
+                            " declines ", batch_decline_streak[], "/", config.early_stop_decline_batches,
+                            " trained_batches ", trained_batches[],
+                        )
+                        flush(stdout)
+                        if trained_batches[] >= config.early_stop_min_batches &&
+                                batch_decline_streak[] >= config.early_stop_decline_batches
+                            should_stop_early = true
+                            println(
+                                "epoch ", epoch, " early stop: batch accuracy declined for ",
+                                batch_decline_streak[], " consecutive batches",
+                            )
+                            flush(stdout)
+                            break
+                        end
+                    end
                     if progress !== nothing
                         ProgressMeter.next!(
                             progress;
@@ -1613,6 +1913,12 @@ function run_epochs!(session::S; start_epoch::Int = 0, stop_epoch::Int = session
             )
             train_accuracy = train.accuracy
             train_loss = train.loss
+            println(
+                "epoch ", epoch,
+                " train accuracy ", round(Float64(train_accuracy); digits = 4),
+                " loss ", round(Float64(train_loss); digits = 6),
+            )
+            flush(stdout)
         end
         should_eval_test = epoch == 0 || epoch == config.epochs ||
             (epoch > 0 && config.eval_every > 0 && mod(epoch, config.eval_every) == 0)
@@ -1630,6 +1936,13 @@ function run_epochs!(session::S; start_epoch::Int = 0, stop_epoch::Int = session
             test_accuracy = test.accuracy
             test_loss = test.loss
             pred_counts = join(test.pred_counts, "-")
+            println(
+                "epoch ", epoch,
+                " test accuracy ", round(Float64(test_accuracy); digits = 4),
+                " loss ", round(Float64(test_loss); digits = 6),
+                " best ", round(Float64(max(session.best_accuracy[], test_accuracy)); digits = 4),
+            )
+            flush(stdout)
             if test.accuracy > session.best_accuracy[]
                 session.best_accuracy[] = test.accuracy
                 is_new_best = true
@@ -1671,6 +1984,8 @@ function run_epochs!(session::S; start_epoch::Int = 0, stop_epoch::Int = session
             norms.grad_w_norm,
             norms.grad_b_norm,
             norms.grad_w_input_norm,
+            norms.effective_w_decay,
+            norms.effective_w_input_decay,
             norms.symmetry_error,
             norms.grad_symmetry_error,
             best_accuracy = session.best_accuracy[],
@@ -1698,6 +2013,7 @@ end
 
 """Close manager-backed state held by one live softplus-margin nudge session."""
 function close_session!(session::S) where {S<:InputFieldMNISTSession}
+    session.config.skip_worker_close && return nothing
     close(session.manager)
     close(session.validator)
     return nothing
@@ -1729,7 +2045,7 @@ end
 
 """Entry point for command-line runs."""
 function main()
-    return run_config!(InputFieldMNISTConfig())
+    return run_config!(updated_config(InputFieldMNISTConfig(), nudge_mode = "one_sided"))
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__

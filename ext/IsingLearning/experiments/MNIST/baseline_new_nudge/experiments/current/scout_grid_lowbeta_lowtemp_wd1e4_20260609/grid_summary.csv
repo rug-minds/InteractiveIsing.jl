@@ -1,0 +1,4 @@
+beta,temp,weight_decay,status,best_epoch,best_test_accuracy,best_test_loss,final_epoch,final_test_accuracy,final_test_loss,outdir
+0.05,0.00005,0.0001,done,2,0.405,15.31118,10,0.361,15.97124,ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\scout_grid_lowbeta_lowtemp_wd1e4_20260609\b0p05_T0p00005_wd1e4_lr0p0015_e12_pc1280
+0.1,0.00005,0.0001,done,4,0.513,12.955752,6,0.498,14.235217,ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\scout_grid_lowbeta_lowtemp_wd1e4_20260609\b0p1_T0p00005_wd1e4_lr0p0015_e12_pc1280
+0.2,0.00005,0.0001,done,2,0.483,26.30074,4,0.41,30.53182,ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\scout_grid_lowbeta_lowtemp_wd1e4_20260609\b0p2_T0p00005_wd1e4_lr0p0015_e12_pc1280

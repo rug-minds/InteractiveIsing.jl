@@ -1,0 +1,32 @@
+# MNIST 784-120-40 Softplus-Margin Nudge Adam Baseline
+
+- paper: https://arxiv.org/pdf/2305.18321
+- nudging term: `InteractiveIsing.SoftplusMarginNudging`
+- architecture: `784 -> 120 -> 40`
+- sampled graph: hidden/output only, with no structural input layer
+- input handling: MNIST pixels in `[0, 1]` are projected through external `784 -> hidden` weights into a worker-local field
+- workers: `32`
+- manager execution: `ChannelWorkers()` with one sample per manager job
+- progress print interval: `25` batches
+- early stop decline epochs: `2`
+- worker graph adjacency: pointer-shared with source graph
+- worker graph base bias: pointer-shared with source graph
+- learning step: original one-sided free/nudged EqProp contrastive gradient from inline `LoopAlgorithm`
+- sparse coupling constraint: paired CSC entries are symmetrized before and after Adam updates
+- validation: `ChannelWorkers()` ProcessManager with worker-local stats
+- job buffers: preallocated per-sample jobs reused across minibatches/evaluations
+- optimiser: `Optimisers.Adam(0.0015)`
+- epochs/batchsize: `10` / `128`
+- train/test per class: `1280` / `100`
+- train eval per class: `100`
+- sweeps/relaxation steps: `1000.0` / `160000`
+- beta/nudge tau/temp/stepsize: `0.1` / `0.25` / `5.0e-5` / `1.0`
+- recurrent w normalization/norm: `none` / `1.0`
+- project output bias prior: `false`
+- w_input normalization/row norm: `none` / `0.14`
+- weight scale/decay: `0.005` / `0.001`
+- adaptive weight decay: `false`
+- adaptive decay targets w/w_input: `2.0` / `5.0`
+- adaptive decay gain/max: `0.0005` / `0.003`
+- resume from: `none`
+- resume epoch: `-1`

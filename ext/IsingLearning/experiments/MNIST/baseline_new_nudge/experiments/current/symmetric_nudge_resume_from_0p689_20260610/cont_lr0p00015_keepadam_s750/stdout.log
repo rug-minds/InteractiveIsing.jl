@@ -1,0 +1,93 @@
+[bootstrap] activated project
+[bootstrap] loaded packages
+building MNIST 784-120-40 layer
+loading training split
+training samples: 12800 (100 batches/epoch)
+loading train-eval split
+train-eval samples: 1000
+loading test split
+test samples: 1000
+constructing 32-worker softplus-margin nudge Adam manager
+constructing 32-worker validation manager
+starting epochs
+restoring checkpoint state from ext/IsingLearning/experiments/MNIST/baseline_new_nudge/experiments/current/symmetric_nudge_resume_from_v4_best_20260609/resume_lr0p00015_reset/best_checkpoint.bin
+epoch 13 training
+epoch 13 batch 1/100 samples 128/12800 elapsed 16.8s
+epoch 13 batch 25/100 samples 3200/12800 elapsed 43.0s
+epoch 13 batch 50/100 samples 6400/12800 elapsed 69.5s
+epoch 13 batch 75/100 samples 9600/12800 elapsed 95.8s
+epoch 13 batch 100/100 samples 12800/12800 elapsed 122.3s
+epoch 13 training done in 122.246s
+epoch 13 train-eval: evaluating 1000 samples
+epoch 13 train accuracy 0.667 loss 12.19945
+epoch 13 evaluating
+epoch 13 test: evaluating 1000 samples
+epoch 13 test accuracy 0.67 loss 12.170594 best 0.689
+(timestamp = "2026-06-10T01:16:12", epoch = 13, seconds = 122.2463934, train_accuracy = 0.667, train_loss = 12.1994505f0, test_accuracy = 0.67, test_loss = 12.170594f0, pred_counts = "105-123-132-161-147-86-105-121-7-13", w_norm = 0.7496898f0, b_norm = 0.060103305f0, w_input_norm = 1.9097168f0, grad_w_norm = 9.320987f0, grad_b_norm = 1.100901f0, grad_w_input_norm = 8.980885f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.689, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_resume_from_0p689_20260610\\cont_lr0p00015_keepadam_s750\\best_checkpoint.bin", final_path = "")
+epoch 14 training
+epoch 14 batch 1/100 samples 128/12800 elapsed 1.1s
+epoch 14 batch 25/100 samples 3200/12800 elapsed 29.4s
+epoch 14 batch 50/100 samples 6400/12800 elapsed 57.6s
+epoch 14 batch 75/100 samples 9600/12800 elapsed 88.4s
+epoch 14 batch 100/100 samples 12800/12800 elapsed 117.9s
+epoch 14 training done in 117.883s
+epoch 14 train-eval: evaluating 1000 samples
+epoch 14 train accuracy 0.657 loss 12.989617
+epoch 14 evaluating
+epoch 14 test: evaluating 1000 samples
+epoch 14 test accuracy 0.652 loss 13.014113 best 0.689
+(timestamp = "2026-06-10T01:18:16", epoch = 14, seconds = 117.8828939, train_accuracy = 0.657, train_loss = 12.989617f0, test_accuracy = 0.652, test_loss = 13.014113f0, pred_counts = "130-101-138-172-110-86-88-166-2-7", w_norm = 0.76179725f0, b_norm = 0.0601922f0, w_input_norm = 1.9340371f0, grad_w_norm = 5.29271f0, grad_b_norm = 0.67917824f0, grad_w_input_norm = 2.1825817f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.689, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_resume_from_0p689_20260610\\cont_lr0p00015_keepadam_s750\\best_checkpoint.bin", final_path = "")
+epoch 15 training
+epoch 15 batch 1/100 samples 128/12800 elapsed 1.5s
+epoch 15 batch 25/100 samples 3200/12800 elapsed 29.9s
+epoch 15 batch 50/100 samples 6400/12800 elapsed 59.0s
+epoch 15 batch 75/100 samples 9600/12800 elapsed 89.9s
+epoch 15 batch 100/100 samples 12800/12800 elapsed 118.2s
+epoch 15 training done in 118.177s
+epoch 15 train-eval: evaluating 1000 samples
+epoch 15 train accuracy 0.645 loss 12.38879
+epoch 15 evaluating
+epoch 15 test: evaluating 1000 samples
+epoch 15 test accuracy 0.67 loss 12.031573 best 0.689
+(timestamp = "2026-06-10T01:20:18", epoch = 15, seconds = 118.1768137, train_accuracy = 0.645, train_loss = 12.38879f0, test_accuracy = 0.67, test_loss = 12.031573f0, pred_counts = "101-117-126-176-165-98-97-103-6-11", w_norm = 0.77271116f0, b_norm = 0.062163923f0, w_input_norm = 1.9654706f0, grad_w_norm = 7.906063f0, grad_b_norm = 1.1241088f0, grad_w_input_norm = 6.939264f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.689, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_resume_from_0p689_20260610\\cont_lr0p00015_keepadam_s750\\best_checkpoint.bin", final_path = "")
+epoch 16 training
+epoch 16 batch 1/100 samples 128/12800 elapsed 1.1s
+epoch 16 batch 25/100 samples 3200/12800 elapsed 27.1s
+epoch 16 batch 50/100 samples 6400/12800 elapsed 54.5s
+epoch 16 batch 75/100 samples 9600/12800 elapsed 85.0s
+epoch 16 batch 100/100 samples 12800/12800 elapsed 116.7s
+epoch 16 training done in 116.656s
+epoch 16 train-eval: evaluating 1000 samples
+epoch 16 train accuracy 0.673 loss 12.454476
+epoch 16 evaluating
+epoch 16 test: evaluating 1000 samples
+epoch 16 test accuracy 0.68 loss 12.355998 best 0.689
+(timestamp = "2026-06-10T01:22:20", epoch = 16, seconds = 116.6559216, train_accuracy = 0.673, train_loss = 12.454476f0, test_accuracy = 0.68, test_loss = 12.355998f0, pred_counts = "112-105-158-103-140-101-128-141-3-9", w_norm = 0.7970753f0, b_norm = 0.066324204f0, w_input_norm = 1.9994081f0, grad_w_norm = 7.571449f0, grad_b_norm = 0.98063993f0, grad_w_input_norm = 5.037367f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.689, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_resume_from_0p689_20260610\\cont_lr0p00015_keepadam_s750\\best_checkpoint.bin", final_path = "")
+epoch 17 training
+epoch 17 batch 1/100 samples 128/12800 elapsed 1.3s
+epoch 17 batch 25/100 samples 3200/12800 elapsed 27.9s
+epoch 17 batch 50/100 samples 6400/12800 elapsed 54.9s
+epoch 17 batch 75/100 samples 9600/12800 elapsed 84.0s
+epoch 17 batch 100/100 samples 12800/12800 elapsed 113.4s
+epoch 17 training done in 113.394s
+epoch 17 train-eval: evaluating 1000 samples
+epoch 17 train accuracy 0.633 loss 13.06122
+epoch 17 evaluating
+epoch 17 test: evaluating 1000 samples
+epoch 17 test accuracy 0.642 loss 13.124812 best 0.689
+(timestamp = "2026-06-10T01:24:18", epoch = 17, seconds = 113.394006, train_accuracy = 0.633, train_loss = 13.06122f0, test_accuracy = 0.642, test_loss = 13.124812f0, pred_counts = "156-119-150-106-224-62-79-90-9-5", w_norm = 0.8102108f0, b_norm = 0.06721865f0, w_input_norm = 2.0184853f0, grad_w_norm = 8.543354f0, grad_b_norm = 1.1548291f0, grad_w_input_norm = 5.8059406f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.689, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_resume_from_0p689_20260610\\cont_lr0p00015_keepadam_s750\\best_checkpoint.bin", final_path = "")
+epoch 18 training
+epoch 18 batch 1/100 samples 128/12800 elapsed 1.1s
+epoch 18 batch 25/100 samples 3200/12800 elapsed 29.1s
+epoch 18 batch 50/100 samples 6400/12800 elapsed 58.3s
+epoch 18 batch 75/100 samples 9600/12800 elapsed 88.5s
+epoch 18 batch 100/100 samples 12800/12800 elapsed 117.5s
+epoch 18 training done in 117.484s
+epoch 18 train-eval: evaluating 1000 samples
+epoch 18 train accuracy 0.614 loss 13.077569
+epoch 18 evaluating
+epoch 18 test: evaluating 1000 samples
+epoch 18 test accuracy 0.63 loss 12.799269 best 0.689
+epoch 18 early stop: test accuracy declined for 2 consecutive evaluated epochs
+(timestamp = "2026-06-10T01:26:20", epoch = 18, seconds = 117.484353, train_accuracy = 0.614, train_loss = 13.077569f0, test_accuracy = 0.63, test_loss = 12.799269f0, pred_counts = "126-115-153-118-266-53-59-93-9-8", w_norm = 0.8076332f0, b_norm = 0.06525024f0, w_input_norm = 2.0331194f0, grad_w_norm = 6.685742f0, grad_b_norm = 0.78561234f0, grad_w_input_norm = 4.673176f0, effective_w_decay = 0.001f0, effective_w_input_decay = 0.001f0, symmetry_error = 0.0f0, grad_symmetry_error = 0.0f0, best_accuracy = 0.689, best_path = "ext\\IsingLearning\\experiments\\MNIST\\baseline_new_nudge\\experiments\\current\\symmetric_nudge_resume_from_0p689_20260610\\cont_lr0p00015_keepadam_s750\\best_checkpoint.bin", final_path = "")
+saved MNIST 784-120-40 softplus-margin nudge baseline in ext\IsingLearning\experiments\MNIST\baseline_new_nudge\experiments\current\symmetric_nudge_resume_from_0p689_20260610\cont_lr0p00015_keepadam_s750
