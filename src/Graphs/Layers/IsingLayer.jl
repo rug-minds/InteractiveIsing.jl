@@ -62,7 +62,7 @@ end
 Offset the stateindex range, and set the stateset to be compatible with the precision
 """
 function fix_layerdata(ild::IsingLayerData{ST,SS,Dim,Size,PtrRange,Top}, precision, offset) where {ST,SS,Dim,Size,PtrRange,Top}
-    newset = convert.(precision, stateset(ild))
+    newset = convert_stateset(precision, stateset(ild))
     newrange = (1+offset):(offset + prod(size(ild)))
     return IsingLayerData{ST, newset, Dim, Size, newrange, Top}(
         name(ild),
@@ -485,6 +485,10 @@ clamp_to_stateset(l::IsingLayer{ST}, dest, source) where {ST} = map!(x -> closes
 Given a value, return the closest value in the stateset of the layer
 """
 function closestTo(l::IsingLayer{ST}, x) where {ST}
+    if is_periodic_stateset(stateset(l))
+        return wrap_to_stateset(x, stateset(l))
+    end
+
     if x < stateset(l)[1]
         return stateset(l)[1]
     elseif x > stateset(l)[end]

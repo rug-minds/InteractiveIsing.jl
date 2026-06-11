@@ -32,3 +32,20 @@ using Random
     @test parsed_output.proposal isa FlipProposal
     @test parsed_output.proposal.to_val in stateset(parsed_graph[1])
 end
+
+@testset "XY periodic angle proposals" begin
+    upper = 2 * pi
+    g = XYGraph(4, LocalProposer(0.5); precision = Float64, initial_state = upper - 0.01)
+    angle_set = stateset(g[1])
+
+    @test angle_set isa InteractiveIsing.PeriodicStateSet
+    @test g.hamiltonian isa InteractiveIsing.CosineInteraction
+    @test collect(sampling_indices(g)) == collect(1:4)
+    @test isapprox(InteractiveIsing.closestTo(g[1], upper + 0.2), 0.2; atol = 1e-12)
+
+    proposer = InteractiveIsing.LocalProposer(g, 0.5)
+    proposals = [rand(MersenneTwister(i), proposer) for i in 1:200]
+
+    @test all(p -> 0.0 <= p.to_val < upper, proposals)
+    @test any(p -> p.to_val < 0.25, proposals)
+end

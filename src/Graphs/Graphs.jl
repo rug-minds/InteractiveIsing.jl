@@ -22,12 +22,14 @@ include("GraphDefects.jl")
 include("GraphDefectsNew.jl")
 include("IsingGraph.jl")
 
+include("PeriodicStateSet.jl")
 
 include("Layers/Layers.jl")
 include("StatePartition.jl")
 include("SingleLayerGraph.jl")
 include("InitialState.jl")
 include("Constructors.jl")
+include("XYGraph.jl")
 
 
 include("User.jl")

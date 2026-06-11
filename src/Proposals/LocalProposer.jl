@@ -49,6 +49,9 @@ end
 
     states = stateset(layer)
     proposal_state = old_state + (2 * rand(rng, typeof(old_state)) - one(typeof(old_state))) * step
+    if is_periodic_stateset(states)
+        return wrap_to_stateset(proposal_state, states)
+    end
     return _reflect_to_stateset(proposal_state, states)
 end
 

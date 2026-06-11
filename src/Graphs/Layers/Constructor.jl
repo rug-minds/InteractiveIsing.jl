@@ -42,8 +42,14 @@ function parse_isinglayer(args...; periodic = true)
     args = remove_parsed_args(args, size_idxs[end])
 
     # Parse optional stateset
-    stateset_idx = findfirst(x -> x isa StateSet, args)
-    stateset = stateset_idx |> isnothing ? (-1, 1) : args[stateset_idx].states
+    stateset_idx = findfirst(x -> x isa Union{StateSet, PeriodicStateSet}, args)
+    stateset = if stateset_idx |> isnothing
+        (-1, 1)
+    elseif args[stateset_idx] isa StateSet
+        args[stateset_idx].states
+    else
+        args[stateset_idx]
+    end
     args = remove_optional_parsed_arg(args, stateset_idx)
 
     # Parse optional WeightGenerator
