@@ -64,12 +64,23 @@ Broad type targets such as `LocalLangevin` are matched by registry subtype and
 must resolve to exactly one entry.
 """
 function _resolve_interactive_target_key(registry::R, target) where {R<:StatefulAlgorithms.NameSpaceRegistry}
+    target isa Symbol && return target
+
     key = try
         StatefulAlgorithms.static_findkey(registry, target)
     catch
         nothing
     end
     !isnothing(key) && return key
+
+    if target isa StatefulAlgorithms.AbstractMatcher
+        entry = try
+            StatefulAlgorithms.get_by_matcher(registry, target)
+        catch
+            nothing
+        end
+        isnothing(entry) || return StatefulAlgorithms.getkey(entry)
+    end
 
     target isa Type || return nothing
     matches = Base.findall(target, registry)
@@ -99,6 +110,34 @@ end
     return (specs..., StatefulAlgorithms.Interactive(target, varname))
 end
 
+@inline _interactive_addon_enabled(addon::Bool) = addon
+@inline _interactive_addon_enabled(::Any) = true
+@inline _interactive_addon_enabled(::Nothing) = false
+
+@inline _legacy_interactive_temperature(addon) = addon === true
+
+@inline _interactive_addon_specs(::Bool) = ()
+@inline _interactive_addon_specs(::Nothing) = ()
+@inline _interactive_addon_specs(spec::StatefulAlgorithms.Interactive) = (spec,)
+@inline _interactive_addon_specs(specs::Tuple) = filter(spec -> spec isa StatefulAlgorithms.Interactive, specs)
+
+"""
+    _push_prepared_interactive_spec(prepared_algo, specs, spec)
+
+Resolve one graph-addon `Interactive` spec against a prepared process and add
+the variable names that are present in the target subcontext.
+"""
+function _push_prepared_interactive_spec(prepared_algo, specs::Specs, spec::StatefulAlgorithms.Interactive) where {Specs<:Tuple}
+    target = StatefulAlgorithms.get_target(spec)
+    for varname in StatefulAlgorithms.interactive_names(spec)
+        data = _prepared_interactive_var_data(prepared_algo, target, varname)
+        isnothing(data) && continue
+        target_name, _ = data
+        specs = _push_unique_interactive_spec(specs, target_name, varname)
+    end
+    return specs
+end
+
 """
     _mc_interactive_specs(func, g)
 
@@ -106,7 +145,8 @@ Build graph-driven `StatefulAlgorithms.Interactive` lifecycle specs and matching
 `StatefulAlgorithms.Override` values for designated interactive process variables.
 """
 function _mc_interactive_specs(func::F, g::G) where {F,G<:IsingGraph}
-    Bool(get(g, :interactive, false)) || !isempty(interactivevars(g)) || return (), ()
+    interactive_addon = get(g, :interactive, false)
+    (_interactive_addon_enabled(interactive_addon) || !isempty(interactivevars(g))) || return (), ()
 
     graph_inputs = _mc_model_inits(func, g)
     prepared_algo = StatefulAlgorithms.init(
@@ -118,7 +158,7 @@ function _mc_interactive_specs(func::F, g::G) where {F,G<:IsingGraph}
     interactive_specs = ()
     overrides = ()
 
-    if Bool(get(g, :interactive, false))
+    if _legacy_interactive_temperature(interactive_addon)
         for target in _collect_ising_mc_targets(func)
             for varname in (:T, :temp)
                 data = _prepared_interactive_var_data(prepared_algo, target, varname)
@@ -128,6 +168,10 @@ function _mc_interactive_specs(func::F, g::G) where {F,G<:IsingGraph}
                 break
             end
         end
+    end
+
+    for spec in _interactive_addon_specs(interactive_addon)
+        interactive_specs = _push_prepared_interactive_spec(prepared_algo, interactive_specs, spec)
     end
 
     for spec in interactivevars(g)

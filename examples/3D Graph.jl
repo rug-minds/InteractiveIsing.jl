@@ -15,9 +15,7 @@ g = IsingGraph(100,100,10,
         LatticeConstants(1f0, 1f0, 1f0),
         StateSet(-1f0, 1f0),
         Ising(c = ConstVal(0f0), b = 0, localpotential = 0),
-        periodic = (:x,:y))
+        periodic = (:x,:y),
+        temp = 0)
 
-g.addons[:interactive] = true
-temp!(g, 0)
-interface(g)
-createProcess(g)
+run_interface(g)

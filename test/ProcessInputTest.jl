@@ -298,6 +298,22 @@ end
     @test stepsize[] ≈ 0.025f0
 end
 
+@testset "Interactive addon specs" begin
+    g = IsingGraph(4, 4, Continuous(); precision = Float32)
+    dynamics = LocalLangevin(stepsize = 0.05f0)
+    g.addons[:interactive] = StatefulAlgorithms.Interactive(dynamics, :T, :stepsize)
+
+    proc = createProcess(g, dynamics; lifetime = 1)
+    wait(proc)
+    subcontexts = StatefulAlgorithms.get_subcontexts(getcontext(proc))
+    key = only(filter(name -> name !== :globals, propertynames(subcontexts)))
+    data = StatefulAlgorithms.getdata(getproperty(subcontexts, key))
+
+    @test getproperty(data, :T) isa StatefulAlgorithms.InteractiveVar{Float32}
+    @test getproperty(data, :stepsize) isa StatefulAlgorithms.InteractiveVar{Float32}
+    @test getproperty(data, :stepsize)[] ≈ 0.05f0
+end
+
 @testset "Index Set API" begin
     toggled = ToggledIndexSet(1:2, 3:5)
     @test collect(InteractiveIsing.sampling_indices(toggled)) == [1, 2, 3, 4, 5]

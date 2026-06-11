@@ -46,7 +46,7 @@ export AbstractPanel, PanelHandle, WindowHost, SimulationPanel, StatusPanel,
     hot_observable_zero,
     interface, layer_display, mount!, new_interface, onclose!, panel!,
     parameter_display, pause!, register!, register_frame!, register_hot_observable!,
-    register_polled!, restart!, resume!, tofigure, toimage, toimage!,
+    register_polled!, restart!, resume!, run_interface, tofigure, toimage, toimage!,
     topology_layer_display!, window,
     displayable_hamiltonian_parameters, hamiltonian_visualizations,
     close_debug_window_descriptions, close_debug_window_names,
@@ -65,7 +65,57 @@ arguments are forwarded to `new_interface`.
 """
 interface(g; kwargs...) = new_interface(g; kwargs...)
 
+"""
+    run_interface(g, func = nothing, inputs...; dynamics = g.default_algorithm, interactive = nothing, interface_kwargs = (;), kwargs...)
+
+Open the default graph interface and start a graph process. Process-facing
+keywords are forwarded to `createProcess`. UI-facing keywords can be passed
+directly for the standard interface options, or collected in `interface_kwargs`.
+
+By default this enables the standard graph-interactive temperature behavior
+before creating the process, so the process `:T` variable is interactive. Pass
+`interactive = false` to leave the graph addon unchanged, or an explicit
+`Interactive(...)`/tuple of `Interactive(...)` specs to choose variables.
+"""
+function run_interface(
+    g::IsingGraph,
+    func = nothing,
+    inputs...;
+    dynamics = g.default_algorithm,
+    interactive = nothing,
+    interface_kwargs = (;),
+    framerate = nothing,
+    polling_rate = nothing,
+    size = nothing,
+    title = nothing,
+    hide_left_buttons = nothing,
+    kwargs...,
+)
+    # Store graph-level interactivity before process creation so createProcess
+    # can resolve it against the prepared algorithm context.
+    if interactive === true
+        g.addons[:interactive] = true
+    elseif interactive === false
+        nothing
+    elseif isnothing(interactive)
+        g.addons[:interactive] = true
+    else
+        g.addons[:interactive] = interactive
+    end
+
+    ui_kwargs = (; interface_kwargs...)
+    isnothing(framerate) || (ui_kwargs = (; ui_kwargs..., framerate))
+    isnothing(polling_rate) || (ui_kwargs = (; ui_kwargs..., polling_rate))
+    isnothing(size) || (ui_kwargs = (; ui_kwargs..., size))
+    isnothing(title) || (ui_kwargs = (; ui_kwargs..., title))
+    isnothing(hide_left_buttons) || (ui_kwargs = (; ui_kwargs..., hide_left_buttons))
+
+    host = interface(g; ui_kwargs...)
+    process = createProcess(g, func, inputs...; dynamics, kwargs...)
+    return (; host, process)
 end
 
-using .Windows: interface, new_interface
-export Windows, interface, new_interface
+end
+
+using .Windows: interface, new_interface, run_interface
+export Windows, interface, new_interface, run_interface

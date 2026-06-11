@@ -42,6 +42,22 @@ end
     @test Matrix(adj(regenerated)) == Matrix(adj(sparse_graph))
 end
 
+@testset "Initial Temperature" begin
+    explicit_temperature = IsingGraph(3, 3, Continuous(); precision = Float32, temperature = 0.25)
+    @test temp(explicit_temperature) === 0.25f0
+
+    short_alias = IsingGraph(3, 3, Continuous(); precision = Float32, temp = 0.5)
+    @test temp(short_alias) === 0.5f0
+
+    layer = Layer(2, Continuous(); periodic = false)
+    custom_state = fill(0.0, 2)
+    state_precision = IsingGraph(layer; precision = Float32, state = custom_state, temperature = 0.75f0)
+    @test temp(state_precision) === 0.75
+
+    @test_throws ArgumentError IsingGraph(3, 3, Continuous(); temperature = 0.25, temp = 0.5)
+    @test_throws ArgumentError IsingGraph(3, 3, Continuous(); temperature = "hot")
+end
+
 @testset "Initial State" begin
     bounded = IsingGraph(3, 3, Continuous(), StateSet(-1.0f0, 1.0f0); precision = Float32)
     @test all(x -> -1.0f0 <= x <= 1.0f0, InteractiveIsing.graphstate(bounded))

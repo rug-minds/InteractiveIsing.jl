@@ -117,6 +117,26 @@ function graph_constructor_state_storage(state_storage, precision, total_length)
 end
 
 """
+    graph_constructor_temperature(precision, temperature, temp)
+
+Resolve the public graph-constructor temperature aliases and return the initial
+graph temperature converted to the graph storage precision.
+"""
+function graph_constructor_temperature(::Type{P}, temperature::Temperature, temp::Temp) where {P <: AbstractFloat, Temperature, Temp}
+    # Keep the two accepted spellings explicit so accidental conflicting
+    # constructor inputs do not silently choose one temperature.
+    if !isnothing(temperature) && !isnothing(temp)
+        throw(ArgumentError("Pass only one of `temperature` or `temp` to IsingGraph."))
+    end
+
+    initial_temperature = isnothing(temperature) ? temp : temperature
+    isnothing(initial_temperature) && return P(1.0)
+    initial_temperature isa Real ||
+        throw(ArgumentError("Initial graph temperature must be Real; got $(typeof(initial_temperature))."))
+    return P(initial_temperature)
+end
+
+"""
     instantiate_adjacency_from_triplets(adjtype, rows, cols, vals, total_length; diag, fastwrite)
 
 Build the graph adjacency from generated sparse triplets using the requested
@@ -149,14 +169,15 @@ function instantiate_adjacency_from_triplets(
 end
 
 """
-    IsingGraph(layers...; precision = Float32, state = nothing, initial_state = nothing, ...)
+    IsingGraph(layers...; precision = Float32, temperature = nothing, temp = nothing, state = nothing, initial_state = nothing, ...)
 
 Construct a graph from one or more layers, with optional between-layer weight
 generators between adjacent layer arguments. `state` may be any
 `AbstractVector{<:AbstractFloat}` with the total graph length; it is used
 directly as the graph state storage. `initial_state` controls values written
-into that storage. If custom `state` is supplied without `initial_state`, its
-current contents are preserved.
+into that storage. `temperature` sets the graph's initial temperature, and
+`temp` is accepted as a short alias. If custom `state` is supplied without
+`initial_state`, its current contents are preserved.
 """
 function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamiltonian, AbstractProposer}...;
     precision = Float32, 
@@ -164,6 +185,8 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
     diag = StateLike(OffsetArray, 0),
     index_set = nothing,
     initial_state = nothing,
+    temperature = nothing,
+    temp = nothing,
     state = nothing,
     fastwrite = false,
     callback! = identity,
@@ -177,6 +200,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
     total_length = sum(lengths)
     state_storage, initialize_state = graph_constructor_state_storage(state, precision, total_length)
     graph_precision = eltype(state_storage)
+    initial_temperature = graph_constructor_temperature(graph_precision, temperature, temp)
 
     # Fix the layers first
     layers = ntuple(length(layers)) do i
@@ -196,7 +220,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         # Adjacency
         UndirectedAdjacency(total_length, total_length),
         # Temp
-        graph_precision(1.0),
+        initial_temperature,
         # Proposer
         proposer,
         # Default Algo
@@ -236,7 +260,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         # Adjacency
         adj,
         # Temp
-        graph_precision(1.0),
+        initial_temperature,
         # Proposer
         proposer,
         # Default Algo
@@ -258,7 +282,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         # Adjacency
         adj,
         # Temp
-        graph_precision(1.0),
+        initial_temperature,
         # Proposer
         proposer,
         # Default Algo
@@ -280,13 +304,17 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
 end
 
 """
-Single Layer Constructor
+    IsingGraph(size1::Int, args...; temperature = nothing, temp = nothing, ...)
+
+Construct a single-layer graph from dimension arguments and layer options.
+`temperature` sets the graph's initial temperature, while `temp` is the short
+alias accepted by the layer-based constructor.
 """
-function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, diag = StateLike(OffsetArray, 0), initial_state = nothing, state = nothing, fastwrite = false)
+function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, diag = StateLike(OffsetArray, 0), initial_state = nothing, temperature = nothing, temp = nothing, state = nothing, fastwrite = false)
     ham, args = _parse_hamiltonian_constructor_arg(args...)
     proposer, args = type_parse(AbstractProposer, args...; default = IsingGraphProposer(), error = false)
 
     layer = parse_isinglayer(size1, args...; periodic = periodic)
 
-    return IsingGraph(ham, proposer, layer; precision, adj, diag, initial_state, state, fastwrite)
+    return IsingGraph(ham, proposer, layer; precision, adj, diag, initial_state, temperature, temp, state, fastwrite)
 end
