@@ -17,10 +17,12 @@ getNN(::AllToAllWeightGenerator, dims) = ntuple(_ -> :all, dims)
     return @inline wg.func(;dr = dr, c1 = c1, c2 = c2, dc = dc)
 end
 
+const AllToAllWeightGeneratorLike = Union{AllToAllWeightGenerator,PhysicalWeightGenerator{<:AllToAllWeightGenerator}}
+
 """
 Fully connect a layer to itself, excluding self-connections.
 """
-function genLayerConnections(layer::AbstractLayerData{D}, precision, wg::AllToAllWeightGenerator, nstates) where D
+function genLayerConnections(layer::L, precision, wg::WG, nstates) where {D,L<:AbstractLayerData{D},WG<:AllToAllWeightGeneratorLike}
     row_idxs = Int32[]
     col_idxs = Int32[]
     weights = Float32[]
@@ -35,7 +37,7 @@ function genLayerConnections(layer::AbstractLayerData{D}, precision, wg::AllToAl
     return row_idxs, col_idxs, weights
 end
 
-function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_idxs, weights, topology, wg::AllToAllWeightGenerator) where D
+function _fillSparseVecs(layer::L, precision, row_idxs, col_idxs, weights, topology, wg::WG) where {D,L<:AbstractLayerData{D},WG<:AllToAllWeightGeneratorLike}
     pr = parentindices(layer)[1]
     LI = LinearIndices(size(layer))
 
@@ -53,7 +55,7 @@ function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_i
             row_idx == col_idx && continue
             c2 = coords[row_idx]
             wc2 = woorldcoordinate(topology, c2)
-            w = precision(wg(;dr = dist(wc1, wc2), c1 = wc1, c2 = wc2))
+            w = precision(getWeight(wg; dr = dist(wc1, wc2), c1 = wc1, c2 = wc2))
             (w == 0 || isnan(w)) && continue
 
             push!(row_idxs, Int32(pr[row_idx]))
@@ -67,7 +69,7 @@ end
 """
 Fully connect two layers by iterating all pairs of layer indices.
 """
-function genLayerConnections(layer1::AbstractIsingLayer{T1,D}, layer2::AbstractIsingLayer{T2,D}, wg::AllToAllWeightGenerator) where {T1,T2,D}
+function genLayerConnections(layer1::L1, layer2::L2, wg::WG) where {T1,T2,D,L1<:AbstractIsingLayer{T1,D},L2<:AbstractIsingLayer{T2,D},WG<:AllToAllWeightGeneratorLike}
     row_idxs = Int32[]
     col_idxs = Int32[]
     weights = Float32[]
@@ -86,7 +88,7 @@ function genLayerConnections(layer1::AbstractIsingLayer{T1,D}, layer2::AbstractI
     )
 end
 
-function _fillSparseVecs(layer1::AbstractIsingLayer{T1,D}, layer2::AbstractIsingLayer{T2,D}, row_idxs, col_idxs, weights, wg::AllToAllWeightGenerator) where {T1,T2,D}
+function _fillSparseVecs(layer1::L1, layer2::L2, row_idxs, col_idxs, weights, wg::WG) where {T1,T2,D,L1<:AbstractIsingLayer{T1,D},L2<:AbstractIsingLayer{T2,D},WG<:AllToAllWeightGeneratorLike}
     top1 = topology(layer1)
     top2 = topology(layer2)
     pr1 = parentindices(layer1)[1]
@@ -108,7 +110,7 @@ function _fillSparseVecs(layer1::AbstractIsingLayer{T1,D}, layer2::AbstractIsing
 
         for idx2 in eachindex(wcoords2)
             wc2 = wcoords2[idx2]
-            w = Float32(wg(;dr = dist(wc1, wc2), c1 = wc1, c2 = wc2))
+            w = Float32(getWeight(wg; dr = dist(wc1, wc2), c1 = wc1, c2 = wc2))
             (w == 0 || isnan(w)) && continue
 
             push!(row_idxs, Int32(pr2[idx2]))

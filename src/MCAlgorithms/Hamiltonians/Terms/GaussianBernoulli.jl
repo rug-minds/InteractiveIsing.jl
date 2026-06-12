@@ -104,9 +104,10 @@ end
 
 @inline _gb_resolve_value(x, model) = applicable(x, model) ? x(model) : x
 
-function _gb_resolve_vector(x, model::AbstractIsingGraph, n::Integer, default_value)
+function _gb_resolve_vector(x, model::AbstractIsingGraph, n::Integer, default_value, name::Symbol)
     T = eltype(model)
     x = isnothing(x) ? default_value : _gb_resolve_value(x, model)
+    x = internalvalue(x, physicalunits(role = :dimensionless), physicalscales(model), model; parameter = name)
     if x isa Number
         return fill(convert(T, x), n)
     elseif x isa Base.RefValue
@@ -123,6 +124,7 @@ end
 function _gb_resolve_matrix(x, model::AbstractIsingGraph, n_visible::Integer, n_hidden::Integer, visible_layer::Int, hidden_layer::Int)
     T = eltype(model)
     x = isnothing(x) ? _gb_default_w(model, visible_layer, hidden_layer) : _gb_resolve_value(x, model)
+    x = internalvalue(x, physicalunits(role = :dimensionless), physicalscales(model), model; parameter = :w)
     x isa AbstractMatrix ||
         throw(ArgumentError("GaussianBernoulli `w` must resolve to an AbstractMatrix; got $(typeof(x))."))
     size(x) == (n_visible, n_hidden) ||
@@ -136,9 +138,9 @@ function instantiate(hterm::GaussianBernoulli, model::AbstractIsingGraph)
     n_hidden = length(hidden_indices(hterm, model))
 
     w = _gb_resolve_matrix(hterm.w, model, n_visible, n_hidden, hterm.visible_layer, hterm.hidden_layer)
-    μ = _gb_resolve_vector(hterm.μ, model, n_visible, zero(eltype(model)))
-    logσ2 = _gb_resolve_vector(hterm.logσ2, model, n_visible, zero(eltype(model)))
-    b = _gb_resolve_vector(hterm.b, model, n_hidden, zero(eltype(model)))
+    μ = _gb_resolve_vector(hterm.μ, model, n_visible, zero(eltype(model)), :μ)
+    logσ2 = _gb_resolve_vector(hterm.logσ2, model, n_visible, zero(eltype(model)), :logσ2)
+    b = _gb_resolve_vector(hterm.b, model, n_hidden, zero(eltype(model)), :b)
 
     return GaussianBernoulli(w, μ, logσ2, b, hterm.visible_layer, hterm.hidden_layer)
 end

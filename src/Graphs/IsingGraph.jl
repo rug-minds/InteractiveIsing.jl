@@ -93,9 +93,42 @@ export coords
 @inline clamprange!(g::IsingGraph, clamp, idxs) = setrange!(index_set(g), clamp, idxs)
 export clamprange!
 
-@Setter!Getter IsingGraph adj params layers
+@Setter!Getter IsingGraph adj params layers temp
 # @inline params(g::IsingGraph) = g.params
 export params
+
+@inline temp(g::G) where {G<:IsingGraph} = getproperty(g, :temp)
+
+"""
+    temp!(g, value)
+
+Set graph temperature. Plain real values are stored directly in graph-internal
+units. Unitful values dispatch to the physical conversion path and are stored
+as plain graph-precision numbers.
+"""
+@inline function temp!(g::G, value::T) where {G<:IsingGraph,T<:Real}
+    setproperty!(g, :temp, convert(eltype(g), value))
+end
+
+@inline function temp!(g::G, value::T) where {G<:IsingGraph,T<:Unitful.AbstractQuantity}
+    scales = physicalscales(g)
+    converted = internalvalue(
+        value,
+        _temperature_unit_spec(value, scales),
+        scales,
+        g;
+        parameter = :temperature,
+    )
+    converted isa Real ||
+        throw(ArgumentError("Graph temperature must convert to Real; got $(typeof(converted))."))
+    setproperty!(g, :temp, convert(eltype(g), converted))
+end
+
+function temp!(g::G, value::T) where {G<:IsingGraph,T}
+    throw(ArgumentError("Graph temperature must be Real or Unitful.AbstractQuantity; got $(T)."))
+end
+
+export temp, temp!
 @inline nStates(g::IsingGraph) = length(state(g))::Int
 
 @inline nstates(g) = length(state(g))::Int

@@ -7,7 +7,8 @@ using   SparseArrays, StaticArrays, LoopVectorization,
         Distributions, Observables, LinearAlgebra,
         StatsBase, LaTeXStrings, DataStructures, 
         Preferences, GLMakie, SparseArrays, 
-        FFTW, ExprTools, UUIDs, DataStructures, Images
+        FFTW, ExprTools, UUIDs, DataStructures, Images,
+        Unitful
 using PrecompileTools
 using MacroTools
 

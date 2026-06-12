@@ -37,4 +37,5 @@ include("Macros.jl")
 include("DirectMethod.jl")
 include("Setfield.jl")
 
+include("PhysicalParameters.jl")
 include("Parameters/Parameters.jl")

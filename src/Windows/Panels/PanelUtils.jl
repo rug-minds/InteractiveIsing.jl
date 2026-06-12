@@ -106,6 +106,63 @@ _temperature_value(value::StatefulAlgorithms.InteractiveVar{<:Real}) = value[]
 _temperature_value(value::StatefulAlgorithms.InteractiveVar{<:Base.RefValue{<:Real}}) = value[][]
 _temperature_value(_) = nothing
 
+"""
+    _temperature_display_scale(g)
+
+Return the physical scale used only for displaying graph temperature. An
+explicit temperature scale wins; otherwise the energy scale is used so the UI
+can show `k_B T` in Hamiltonian energy units.
+"""
+function _temperature_display_scale(g::G) where {G<:IsingGraph}
+    scales = physicalscales(g)
+    temperature_scale = scales.temperature[]
+    isnothing(temperature_scale) || return temperature_scale
+    return scales.energy[]
+end
+
+"""
+    _temperature_number_text(value)
+
+Format one real temperature coefficient compactly for UI labels.
+"""
+function _temperature_number_text(value::T) where {T<:Real}
+    numeric = Float64(value)
+    isfinite(numeric) || return string(value)
+    return string(round(numeric, sigdigits = 4))
+end
+
+"""
+    _temperature_display_text(value, scale)
+
+Format an internal temperature against one Unitful display scale.
+"""
+function _temperature_display_text(value::T, scale::Unitful.AbstractQuantity) where {T<:Real}
+    quantity = value * scale
+    return "$(_temperature_number_text(Unitful.ustrip(quantity))) $(Unitful.unit(quantity))"
+end
+
+"""
+    _temperature_display_text(value, scale)
+
+Format an internal temperature against a non-Unitful scale or without a scale.
+"""
+function _temperature_display_text(value::T, scale) where {T<:Real}
+    isnothing(scale) && return _temperature_number_text(value)
+    scaled = value * scale
+    scaled isa Real || return string(scaled)
+    return _temperature_number_text(scaled)
+end
+
+"""
+    _temperature_label(g, value)
+
+Format the temperature label shown by the interface without changing the
+internal slider/process value.
+"""
+function _temperature_label(g::G, value::T) where {G<:IsingGraph,T<:Real}
+    return "T: $(_temperature_display_text(value, _temperature_display_scale(g)))"
+end
+
 _interactive_numeric_value(value::Real) = value
 _interactive_numeric_value(value::Base.RefValue{<:Real}) = value[]
 _interactive_numeric_value(value::StatefulAlgorithms.InteractiveVar{<:Real}) = value[]
@@ -390,11 +447,7 @@ function _set_process_context_temperature!(process::StatefulAlgorithms.AbstractP
 end
 
 function _set_temperature!(g, value)
-    temp!(g, value)
-    for process in processes(g)
-        _set_process_context_temperature!(process, value)
-    end
-    return value
+    return settemp!(g, value)
 end
 
 function _poll_temperature!(g, last_graph_temp, last_context_temp)

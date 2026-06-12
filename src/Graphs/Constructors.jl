@@ -123,6 +123,10 @@ Resolve the public graph-constructor temperature aliases and return the initial
 graph temperature converted to the graph storage precision.
 """
 function graph_constructor_temperature(::Type{P}, temperature::Temperature, temp::Temp) where {P <: AbstractFloat, Temperature, Temp}
+    return graph_constructor_temperature(P, temperature, temp, PhysicalScales())
+end
+
+function graph_constructor_temperature(::Type{P}, temperature::Temperature, temp::Temp, physical_scales) where {P <: AbstractFloat, Temperature, Temp}
     # Keep the two accepted spellings explicit so accidental conflicting
     # constructor inputs do not silently choose one temperature.
     if !isnothing(temperature) && !isnothing(temp)
@@ -131,6 +135,13 @@ function graph_constructor_temperature(::Type{P}, temperature::Temperature, temp
 
     initial_temperature = isnothing(temperature) ? temp : temperature
     isnothing(initial_temperature) && return P(1.0)
+    initial_temperature = internalvalue(
+        initial_temperature,
+        _temperature_unit_spec(initial_temperature, physical_scales),
+        physical_scales,
+        nothing;
+        parameter = :temperature,
+    )
     initial_temperature isa Real ||
         throw(ArgumentError("Initial graph temperature must be Real; got $(typeof(initial_temperature))."))
     return P(initial_temperature)
@@ -188,19 +199,24 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
     temperature = nothing,
     temp = nothing,
     state = nothing,
+    physical_scales = nothing,
     fastwrite = false,
     callback! = identity,
     )
+    physical_scales = _physical_scales_argument(physical_scales)
 
     #Parse hamiltonian and filter
     ham, layers = _parse_hamiltonian_constructor_arg(layers...)
     proposer, layers = type_parse(AbstractProposer, layers...; default = IsingGraphProposer(), error = false)
     layers, between_layer_wgs = _parse_multilayer_constructor_args(layers)
+    between_layer_wgs = map(between_layer_wgs) do (layer_idx, wg)
+        return (layer_idx, _bind_physical_weight_scales(wg, physical_scales))
+    end
     lengths = map(l -> length(l), layers)
     total_length = sum(lengths)
     state_storage, initialize_state = graph_constructor_state_storage(state, precision, total_length)
     graph_precision = eltype(state_storage)
-    initial_temperature = graph_constructor_temperature(graph_precision, temperature, temp)
+    initial_temperature = graph_constructor_temperature(graph_precision, temperature, temp, physical_scales)
 
     # Fix the layers first
     layers = ntuple(length(layers)) do i
@@ -229,7 +245,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         EmptyHamiltonian(),
         #Defects
         1:total_length,
-        Dict{Symbol, Any}(),
+        Dict{Symbol, Any}(:physical_scales => physical_scales),
         layers
     )
 
@@ -269,7 +285,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         EmptyHamiltonian(),
         #Defects
         it,
-        Dict{Symbol, Any}(),
+        Dict{Symbol, Any}(:physical_scales => physical_scales),
         layers
     )
 
@@ -291,7 +307,7 @@ function IsingGraph(layers::Union{IsingLayerData, AbstractWeightGenerator, Hamil
         ham,
         #Defects
         it,
-        Dict{Symbol, Any}(),
+        Dict{Symbol, Any}(:physical_scales => physical_scales),
         layers
     )
     
@@ -310,11 +326,12 @@ Construct a single-layer graph from dimension arguments and layer options.
 `temperature` sets the graph's initial temperature, while `temp` is the short
 alias accepted by the layer-based constructor.
 """
-function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, diag = StateLike(OffsetArray, 0), initial_state = nothing, temperature = nothing, temp = nothing, state = nothing, fastwrite = false)
+function IsingGraph(size1::Int, args...; periodic = true, precision = Float32, adj = nothing, diag = StateLike(OffsetArray, 0), initial_state = nothing, temperature = nothing, temp = nothing, state = nothing, physical_scales = nothing, fastwrite = false)
     ham, args = _parse_hamiltonian_constructor_arg(args...)
     proposer, args = type_parse(AbstractProposer, args...; default = IsingGraphProposer(), error = false)
+    physical_scales = _physical_scales_argument(physical_scales)
 
-    layer = parse_isinglayer(size1, args...; periodic = periodic)
+    layer = parse_isinglayer(size1, args...; periodic = periodic, physical_scales = physical_scales)
 
-    return IsingGraph(ham, proposer, layer; precision, adj, diag, initial_state, temperature, temp, state, fastwrite)
+    return IsingGraph(ham, proposer, layer; precision, adj, diag, initial_state, temperature, temp, state, physical_scales, fastwrite)
 end

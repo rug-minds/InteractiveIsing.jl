@@ -61,6 +61,7 @@ function PolynomialHamiltonian(order; c = nothing, localpotential = nothing)
             default = UniformArray(1),
             ensure = ensure_isinggraph_scalar,
             info = "Polynomial coupling constant c",
+            units = physicalunits(energy = 1, role = :polynomial_energy),
         ),
         parameter(;
             lp,
@@ -69,6 +70,7 @@ function PolynomialHamiltonian(order; c = nothing, localpotential = nothing)
             default_type = Vector,
             ensure = (ensure_isinggraph_state_length, ensure_isinggraph_eltype),
             info = "Local polynomial potential l_i",
+            units = physicalunits(role = :dimensionless),
         ),
     )
     return PolynomialHamiltonian{order, typeof(params)}(params)

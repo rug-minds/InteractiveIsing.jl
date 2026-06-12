@@ -20,6 +20,7 @@ end
             default = ConstVal(1f0),
             ensure = ensure_isinggraph_scalar,
             info = "Clamping strength β",
+            units = physicalunits(energy = 1, role = :clamping_energy),
         ),
         parameter(;
             y,
@@ -28,6 +29,7 @@ end
             default_type = Vector,
             ensure = ensure_isinggraph_state_vector,
             info = "Target state y_i",
+            units = physicalunits(state = 1, role = :state),
         ),
         parameter(;
             mask,
@@ -36,6 +38,7 @@ end
             default_type = Vector,
             ensure = ensure_isinggraph_state_vector,
             info = "Clamping mask m_i; zero entries are unconstrained",
+            units = physicalunits(role = :dimensionless),
         ),
     )
     return Clamping(params)

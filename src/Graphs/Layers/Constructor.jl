@@ -36,7 +36,8 @@ args:
         -> DEFAULT: 1.0 for each dimension. This cannot be combined with an explicit topology.
     
 """
-function parse_isinglayer(args...; periodic = true)
+function parse_isinglayer(args...; periodic = true, physical_scales = nothing)
+    physical_scales = _physical_scales_argument(physical_scales)
     size_idxs = 1:findlast(x -> x isa Integer, args)
     size = tuple(args[size_idxs]...)
     args = remove_parsed_args(args, size_idxs[end])
@@ -69,11 +70,12 @@ function parse_isinglayer(args...; periodic = true)
     end
     topology = if isnothing(topology_idx)
         constants = isnothing(latconst) ? tuple(fill(1.0, length(size))...) : latconst
-        SquareTopology(size; lattice_constants = constants, periodic)
+        SquareTopology(size; lattice_constants = constants, periodic = periodic, physical_scales = physical_scales)
     else
         sizeto(args[topology_idx], size)
     end
     args = remove_optional_parsed_arg(args, topology_idx)
+    weightgen = _bind_physical_weight_scales(weightgen, physical_scales)
 
     # Parse optional Coords
     coords_idx = findfirst(x -> x isa Coords, args)

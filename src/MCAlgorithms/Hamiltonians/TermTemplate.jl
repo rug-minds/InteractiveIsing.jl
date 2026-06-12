@@ -362,6 +362,16 @@ end
 _origin(input) = isnothing(input) ? Defaulted() : Passed()
 _resolve_default(default, model) = applicable(default, model) ? default(model) : default
 
+"""
+    _physical_parameter_value(spec, value, model)
+
+Convert Unitful constructor input for one Hamiltonian parameter before the
+ordinary `ensure` pipeline normalizes storage and graph precision.
+"""
+function _physical_parameter_value(spec::ParameterSpec, value, model)
+    return internalvalue(value, spec.units, physicalscales(model), model; parameter = spec.name)
+end
+
 function _conversion_default(spec::ParameterSpec)
     isnothing(spec.default_type) && return spec.default
     return ConversionDefault{spec.default_type, typeof(spec.default)}(spec.default)
@@ -399,16 +409,18 @@ function instantiate(spec::ParameterSpec, model)
     input isa DerivedParameter && @warn _deprecated_derived_parameter_message(spec.name, input) maxlog = 1
 
     if isnothing(input)
-        resolved = _apply_ensure(spec.ensure, _resolve_default(spec.default, model), spec.default, model)
+        default_value = _physical_parameter_value(spec, _resolve_default(spec.default, model), model)
+        resolved = _apply_ensure(spec.ensure, default_value, spec.default, model)
         run_check = true
     elseif input isa NoEnsure
-        resolved = input.value
+        resolved = _physical_parameter_value(spec, input.value, model)
         run_check = true
     elseif input isa Force
-        resolved = input.value
+        resolved = _physical_parameter_value(spec, input.value, model)
         run_check = false
     else
-        resolved = _apply_ensure(spec.ensure, input, _conversion_default(spec), model)
+        converted = _physical_parameter_value(spec, input, model)
+        resolved = _apply_ensure(spec.ensure, converted, _conversion_default(spec), model)
         run_check = true
     end
 

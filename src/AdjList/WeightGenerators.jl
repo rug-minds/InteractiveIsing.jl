@@ -1,7 +1,18 @@
-export AbstractWeightGenerator, WeightGenerator, IsingWG, @WG
+export AbstractWeightGenerator, WeightGenerator, getWeight, IsingWG, @WG
 export WeightGeneratorOld, @WGOld
 
 abstract type AbstractWeightGenerator end
+
+"""
+    getWeight(wg; dr, c1 = nothing, c2 = nothing, dc = nothing)
+
+Evaluate one adjacency edge weight in internal dimensionless units. Physical
+weight generators specialize this boundary so sparse-fill loops do not need
+to know about Unitful values.
+"""
+@inline function getWeight(wg::WG; dr::DR, c1::C1 = nothing, c2::C2 = nothing, dc::DC = nothing) where {WG<:AbstractWeightGenerator,DR,C1,C2,DC}
+    return wg(; dr = dr, c1 = c1, c2 = c2, dc = dc)
+end
 
 struct WeightGenerator{F, NN, Symmetric} <: AbstractWeightGenerator
     func::F
@@ -108,10 +119,6 @@ Old version
 end
 
 const IsingWG = @WG dr -> dr == 1 ? 1 : 0 NN=1
-
-
-
-
 
 
 

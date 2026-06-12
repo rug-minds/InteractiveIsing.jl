@@ -401,7 +401,6 @@ clampsvec(layer::AbstractIsingLayer) = (@view clamps(graph(layer))[graphidxs(lay
 export bfield, bvec
 # Inherited from Graph
 @inline nStates(layer::AbstractIsingLayer) = length(graphidxs(layer))
-@inline sim(layer::AbstractIsingLayer) = sim(graph(layer))
 
 ##
 function aliveidxs(layer::AbstractIsingLayer)

@@ -2,6 +2,7 @@ using Test
 using GLMakie
 using InteractiveIsing
 using InteractiveIsing.Windows
+using Unitful
 
 struct TestResource
     closed::Base.RefValue{Bool}
@@ -97,6 +98,33 @@ end
     backing[] = 3
     InteractiveIsing.poll!(po)
     @test po[] == 3
+end
+
+@testset "TemperaturePanel physical scale label" begin
+    scales = PhysicalScales(energy = 1u"meV")
+    g = IsingGraph(
+        2,
+        2,
+        Continuous();
+        precision = Float64,
+        physical_scales = scales,
+        temperature = 3.0,
+    )
+    host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
+    handle = Windows.panel!(host, Windows.TemperaturePanel(g), (1, 1))
+
+    @test handle[:label_text][] == "T: 3.0 meV"
+
+    temp!(g, 4.0)
+    Windows._poll!(host)
+    @test handle[:slider].value[] ≈ 4.0
+    @test handle[:label_text][] == "T: 4.0 meV"
+
+    handle[:slider].value[] = 5.0
+    @test temp(g) ≈ 5.0
+    @test handle[:label_text][] == "T: 5.0 meV"
+
+    close(host)
 end
 
 @testset "PTimer close and wait" begin

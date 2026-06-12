@@ -25,6 +25,7 @@ using GLMakie: to_native
 using Observables
 using Preferences
 using SparseArrays
+using Unitful
 using UUIDs
 
 using ..StatefulAlgorithms
@@ -34,7 +35,7 @@ using ..InteractiveIsing: AbstractIsingLayer, AbstractLayerTopology, Clamping, C
     _resolve_interactive_target_key, _set_interactive_graph_var_value!, addRandomDefects!, adj, createProcess, graphidxs,
     Coordinate, hamiltonian, hamiltonians, idxToCoord, inline_layer_dispatch, interactivevars, layers, modulefolder,
     nstates, origin, parameters, plotCorr, poll!, processes, coords, reset!, saveGImg, state,
-    stateset, temp, temp!, topology, value, wg, woorldcoordinate
+    stateset, temp, temp!, settemp!, topology, value, wg, woorldcoordinate, physicalscales
 
 export AbstractPanel, PanelHandle, WindowHost, SimulationPanel, StatusPanel,
     AllLayersViewPanel, ConnectionsPanel, ContextLinesPanel, HamiltonianDisplaySpec, HamiltonianParameterPanel,

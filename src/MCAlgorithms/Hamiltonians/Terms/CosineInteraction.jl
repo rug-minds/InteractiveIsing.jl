@@ -65,6 +65,7 @@ function CosineInteraction(;
             default = _default_cosine_adjacency,
             ensure = ensure_isinggraph_adjacency,
             info = "Cosine coupling matrix J_ij",
+            units = physicalunits(energy = 1, role = :coupling_energy),
         ),
         parameter(;
             phase,
@@ -73,6 +74,7 @@ function CosineInteraction(;
             default_type = UniformArray,
             ensure = (ensure_isinggraph_state_length, ensure_isinggraph_eltype),
             info = "Local phase offsets phi_i in radians",
+            units = physicalunits(role = :angle),
         ),
         parameter(;
             edge_phase,
@@ -80,6 +82,7 @@ function CosineInteraction(;
             default = nothing,
             ensure = _ensure_optional_adjacency,
             info = "Directed edge phase offsets A_ij in radians",
+            units = physicalunits(role = :angle),
         ),
     )
     internal = InternalPlan((; period, turns, edge_phase_orientation)) do plan, g

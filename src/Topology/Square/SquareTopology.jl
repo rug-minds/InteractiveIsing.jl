@@ -21,11 +21,15 @@ function SquareTopology(
     lattice_constants = nothing,
     origin = nothing,
     periodic::Union{Bool,<:Tuple,Nothing} = true,
+    physical_scales = nothing,
 ) where {S<:Tuple}
     DIMS = isempty(size) ? _square_template_dim(lattice_constants, origin) : length(size)
     size_int = isempty(size) ? ntuple(_ -> 0, Val(DIMS)) : ntuple(i -> Int(size[i]), Val(DIMS))
     constants = isnothing(lattice_constants) ? tuple(fill(1.0, DIMS)...) : tuple(lattice_constants...)
     origin_tuple = isnothing(origin) ? tuple(fill(0.0, DIMS)...) : tuple(origin...)
+    length_scale = _length_reference_scale(physical_scales, constants, origin_tuple)
+    constants = _internal_length_container(constants, length_scale)
+    origin_tuple = _internal_length_container(origin_tuple, length_scale)
 
     @assert length(constants) == DIMS "lattice_constants must be same length as size"
     @assert length(origin_tuple) == DIMS "origin must be same length as size"
@@ -84,6 +88,8 @@ Return the world-space origin of a square topology.
 Update the per-axis lattice constants in-place and return `top`.
 """
 function setdist!(lt::T, lattice_constants::NTuple{DIMS}) where {Periodicity,DIMS,P,T<:SquareTopology{Periodicity,DIMS,P}}
+    length_scale = _length_reference_scale(nothing, lattice_constants)
+    lattice_constants = _internal_length_container(lattice_constants, length_scale)
     lt.lattice_constants .= lattice_constants
     return lt
 end

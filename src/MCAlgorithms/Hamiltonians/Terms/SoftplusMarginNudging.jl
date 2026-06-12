@@ -32,6 +32,7 @@ end
             default = ConstVal(1f0),
             ensure = ensure_isinggraph_scalar,
             info = "Softplus margin nudging strength β",
+            units = physicalunits(energy = 1, role = :nudging_energy),
         ),
         parameter(;
             y,
@@ -40,6 +41,7 @@ end
             default_type = Vector,
             ensure = ensure_isinggraph_state_vector,
             info = "Bipolar target state y_i",
+            units = physicalunits(state = 1, role = :state),
         ),
         parameter(;
             mask,
@@ -48,6 +50,7 @@ end
             default_type = Vector,
             ensure = ensure_isinggraph_state_vector,
             info = "Nudging mask m_i; zero entries are unconstrained",
+            units = physicalunits(role = :dimensionless),
         ),
         parameter(;
             τ,
@@ -55,6 +58,7 @@ end
             default = ConstVal(0.25f0),
             ensure = ensure_isinggraph_scalar,
             info = "Softplus smoothing temperature τ",
+            units = physicalunits(state = 1, role = :state_width),
         ),
     )
     return SoftplusMarginNudging(params)

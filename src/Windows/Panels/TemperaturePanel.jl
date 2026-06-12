@@ -23,7 +23,7 @@ function mount!(panel::TemperaturePanel, host::WindowHost, cell; kwargs...)
     g = panel.graph
     _register_graph_close!(handle, g)
 
-    Box(grid[1, 1], width = 110, height = 50, visible = false)
+    Box(grid[1, 1], width = 150, height = 50, visible = false)
     last_graph_temp = Ref{Any}(temp(g))
     last_context_temp = Ref{Any}(_process_context_temperature(g))
     po = register_polled!(
@@ -53,12 +53,12 @@ function mount!(panel::TemperaturePanel, host::WindowHost, cell; kwargs...)
         end
     end)
 
-    handle[:label_text] = lift(x -> "T: $(round(x, digits = 2))", po)
+    handle[:label_text] = lift(x -> _temperature_label(g, x), po)
     handle[:label] = Label(grid[1, 1], handle[:label_text], fontsize = 18)
     return handle
 end
 
 function toimage!(cell, panel::TemperaturePanel, handle::PanelHandle; kwargs...)
     value = haskey(handle, :slider) ? handle[:slider].value[] : temp(panel.graph)
-    return Label(cell, "T: $(round(value, digits = 2))", fontsize = 14, tellwidth = false, halign = :center)
+    return Label(cell, _temperature_label(panel.graph, value), fontsize = 14, tellwidth = false, halign = :center)
 end

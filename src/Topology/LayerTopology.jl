@@ -78,6 +78,7 @@ function LatticeTopology(
     origin = nothing,
     precision = nothing,
     lattice_type::Type{<:LatticeType} = AnyLattice,
+    physical_scales = nothing,
 ) where {D}
     if _lattice_unsized_vector_call(size, vecs, primitive_vectors)
         return LatticeTopology(
@@ -88,6 +89,7 @@ function LatticeTopology(
             origin,
             precision,
             lattice_type,
+            physical_scales = physical_scales,
         )
     end
     raw_vecs = _lattice_vector_args(Val(D), vecs, primitive_vectors)
@@ -99,6 +101,7 @@ function LatticeTopology(
         origin,
         precision,
         lattice_type,
+        physical_scales = physical_scales,
     )
 end
 
@@ -110,6 +113,7 @@ function LatticeTopology(
     origin = nothing,
     precision = nothing,
     lattice_type::Type{<:LatticeType} = AnyLattice,
+    physical_scales = nothing,
 )
     raw_vecs = _lattice_vector_args_without_size(vecs, primitive_vectors)
     D = _lattice_dimension(raw_vecs, origin)
@@ -122,6 +126,7 @@ function LatticeTopology(
         origin,
         precision,
         lattice_type,
+        physical_scales = physical_scales,
     )
 end
 
@@ -153,8 +158,12 @@ function _lattice_topology(
     origin = nothing,
     precision = nothing,
     lattice_type::Type{<:LatticeType} = AnyLattice,
+    physical_scales = nothing,
 ) where {D}
     @assert D in (2, 3) "LatticeTopology currently supports only two- and three-dimensional layers"
+    length_scale = _length_reference_scale(physical_scales, raw_vecs, origin)
+    raw_vecs = _internal_length_container(raw_vecs, length_scale)
+    origin = _internal_length_container(origin, length_scale)
     layout_instance = _lattice_layout(layout)
     P = _lattice_precision(raw_vecs, origin, precision)
     pvecs = _lattice_primitive_vectors(Val(D), P, raw_vecs)
@@ -397,6 +406,8 @@ end
 Rescale each primitive vector to the requested length and refresh covectors.
 """
 function setdist!(top::T, lattice_constants::NTuple{D}) where {Kind,Layout,U,D,P,T<:LatticeTopology{Kind,Layout,U,D,P}}
+    length_scale = _length_reference_scale(nothing, lattice_constants)
+    lattice_constants = _internal_length_container(lattice_constants, length_scale)
     top.pvecs = ntuple(Val(D)) do i
         old_length = norm(top.pvecs[i])
         old_length == 0 && throw(ArgumentError("Cannot rescale a zero primitive vector."))

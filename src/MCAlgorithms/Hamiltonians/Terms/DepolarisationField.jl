@@ -25,6 +25,7 @@ Base.Expr(::DepolField) = :( -(dpf[j]/(surface_NxNy * c[]))*(s[j]) )
             default = ConstVal(1f0),
             ensure = ensure_isinggraph_scalar,
             info = "Depolarisation coupling constant",
+            units = physicalunits(energy = 1, role = :depolarisation_energy),
         ),
     )
     internal = InternalPlan((; top_layers, bottom_layers, zfunc)) do plan, g

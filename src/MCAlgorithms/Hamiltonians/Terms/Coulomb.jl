@@ -67,6 +67,7 @@ Base.size(c::CoulombHamiltonian) = c.size
             default = ConstVal(1f0),
             ensure = ensure_isinggraph_scalar,
             info = "Dipole-to-charge scaling factor",
+            units = physicalunits(dipole = 1, role = :dipole_scale),
         ),
     )
     internal = InternalPlan((; screen_len_top, screen_len_bot, recalc)) do plan, g
@@ -91,8 +92,8 @@ Base.size(c::CoulombHamiltonian) = c.size
             ρhat,                                         # ρhat
             uhat,                                         # uhat
             u,                                            # u
-            T(config.screen_len_top),                     # screen_top
-            T(config.screen_len_bot),                     # screen_bot
+            T(internalvalue(config.screen_len_top, physicalunits(length = 1), physicalscales(g), g; parameter = :screen_len_top)), # screen_top
+            T(internalvalue(config.screen_len_bot, physicalunits(length = 1), physicalscales(g), g; parameter = :screen_len_bot)), # screen_bot
             T(constants[1]),                              # ax
             T(constants[2]),                              # ay
             T(constants[3]),                              # az

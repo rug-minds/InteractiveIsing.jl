@@ -23,6 +23,7 @@ function HexagonalTopology(
     origin = (0.0, 0.0),
     orientation::Symbol = :pointy,
     periodic::Union{Bool,<:Tuple,Nothing} = true,
+    physical_scales = nothing,
 ) where {S<:Tuple}
     @assert length(size) == 2 "HexagonalTopology currently supports only two-dimensional layers"
     @assert length(origin) == 2 "origin must have two entries for HexagonalTopology"
@@ -36,6 +37,9 @@ function HexagonalTopology(
         @assert length(lattice_constants) == 2 "lattice_constants must have two entries for HexagonalTopology"
         tuple(lattice_constants...)
     end
+    length_scale = _length_reference_scale(physical_scales, constants, origin)
+    constants = _internal_length_container(constants, length_scale)
+    origin = _internal_length_container(origin, length_scale)
 
     U = if periodic isa Bool
         periodic ? Periodic : NonPeriodic
@@ -76,6 +80,8 @@ Return the world-space origin of a hexagonal topology.
 Update the axial-axis lattice constants in-place and return `top`.
 """
 function setdist!(lt::T, lattice_constants::NTuple{2}) where {Periodicity,S,L,O,Orientation,T<:HexagonalTopology{Periodicity,S,L,O,Orientation}}
+    length_scale = _length_reference_scale(nothing, lattice_constants)
+    lattice_constants = _internal_length_container(lattice_constants, length_scale)
     lt.lattice_constants .= lattice_constants
     return lt
 end

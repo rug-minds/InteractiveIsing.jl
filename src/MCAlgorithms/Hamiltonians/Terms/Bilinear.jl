@@ -18,6 +18,7 @@ _default_bilinear_adjacency(g) = adj(g)
             default = _default_bilinear_adjacency,
             ensure = ensure_isinggraph_adjacency,
             info = "Bilinear coupling matrix J_ij",
+            units = physicalunits(energy = 1, role = :coupling_energy),
         ),
     )
     return Bilinear(params)

@@ -126,15 +126,187 @@ For a layer, set all to zero and 1 to 1
 """
 activateone!(l::IsingLayer, idx, val = 1, allval = 0) = begin state(l) .= allval; state(l)[idx] = val end
 """
-Set the temperature and notify the simulation
+    _process_temperature_value(value)
+
+Return the numeric payload for process-context temperature storage, or
+`nothing` when the slot is not a supported temperature value.
 """
-function settemp!(g,val)
-    temp!(g, val)
-    if !isnothing(sim(g))
-        temp(sim(g), val)
+@inline _process_temperature_value(value::T) where {T<:Real} = value
+@inline _process_temperature_value(value::Base.RefValue{T}) where {T<:Real} = value[]
+@inline _process_temperature_value(value::StatefulAlgorithms.InteractiveVar{T}) where {T<:Real} = value[]
+@inline _process_temperature_value(value::StatefulAlgorithms.InteractiveVar{<:Base.RefValue{T}}) where {T<:Real} = value[][]
+@inline _process_temperature_value(_) = nothing
+
+"""
+    _process_temperature_vars(subcontext)
+
+Collect the process-context variables that represent Monte Carlo temperature.
+Both `:temp` and `:T` are accepted for compatibility with existing algorithms.
+"""
+function _process_temperature_vars(subcontext)
+    data = StatefulAlgorithms.getdata(subcontext)
+    pairs = Pair{Symbol, Any}[]
+    for name in (:temp, :T)
+        haskey(data, name) || continue
+        value = getproperty(data, name)
+        isnothing(_process_temperature_value(value)) || push!(pairs, name => value)
+    end
+    return pairs
+end
+
+"""
+    _set_process_temperature_slot!(slot, value)
+
+Write a converted internal temperature into mutable process-context storage.
+Returns `nothing` when the slot is immutable and must be handled by rebuilding
+or interacting with the process context instead.
+"""
+function _set_process_temperature_slot!(slot::Base.RefValue{T}, value) where {T<:Real}
+    slot[] = convert(T, value)
+    return slot[]
+end
+
+function _set_process_temperature_slot!(slot::StatefulAlgorithms.InteractiveVar{T}, value) where {T<:Real}
+    slot[] = convert(T, value)
+    return slot[]
+end
+
+function _set_process_temperature_slot!(slot::StatefulAlgorithms.InteractiveVar{<:Base.RefValue{T}}, value) where {T<:Real}
+    slot[][] = convert(T, value)
+    return slot[][]
+end
+
+@inline _set_process_temperature_slot!(slot, value) = nothing
+
+"""
+    _set_process_context_temperature!(process, value)
+
+Propagate one converted internal graph temperature into the modern process-list
+state without using the deprecated graph `sim` slot.
+"""
+function _set_process_context_temperature!(process::P, value) where {P<:StatefulAlgorithms.AbstractProcess}
+    context = StatefulAlgorithms.context(process)
+    context isa StatefulAlgorithms.ProcessContext || return nothing
+
+    # Existing algorithms use either `:temp` or `:T`; update all visible
+    # subcontexts while skipping framework-owned bookkeeping contexts.
+    subcontexts = StatefulAlgorithms.get_subcontexts(context)
+    for subcontext_name in propertynames(subcontexts)
+        subcontext_name === :globals && continue
+        subcontext_name === :_injector && continue
+        subcontext_name === :_exchange && continue
+
+        subcontext = getproperty(subcontexts, subcontext_name)
+        for (varname, current) in _process_temperature_vars(subcontext)
+            if !isnothing(_set_process_temperature_slot!(current, value))
+                continue
+            elseif StatefulAlgorithms.isinteractive(process)
+                StatefulAlgorithms.interact!(process, varname => value)
+            elseif !StatefulAlgorithms.isrunning(process)
+                converted = convert(typeof(current), value)
+                update = NamedTuple{(subcontext_name,)}((NamedTuple{(varname,)}((converted,)),))
+                StatefulAlgorithms.context(process, StatefulAlgorithms.merge_into_subcontexts(context, update))
+            end
+        end
+    end
+    return nothing
+end
+
+"""
+    settemp!(g, value)
+
+Set graph temperature, converting Unitful inputs through `temp!`, then mirror
+the converted internal value into any attached process contexts.
+"""
+function settemp!(g::G, value) where {G<:IsingGraph}
+    temp!(g, value)
+    converted = temp(g)
+    for process in processes(g)
+        _set_process_context_temperature!(process, converted)
+    end
+    return converted
+end
+export settemp!
+
+function _physical_parameter_units(term, param::Symbol)
+    params = parameters(term)
+    if params isa Parameters
+        return get(getfield(params, :units), param, nothing)
+    elseif term isa GaussianBernoulli && param in (:w, :W, :μ, :mu, :logσ2, :logsigma2, :b)
+        return physicalunits(role = :dimensionless)
+    else
+        return nothing
     end
 end
-export settemp
+
+function _assign_physical_value!(storage::Base.RefValue, converted, idxs)
+    storage[] = converted
+    return storage
+end
+
+function _assign_physical_value!(storage::AbstractArray, converted, idxs)
+    if Base.ndims(storage) == 0
+        storage[] = converted
+    elseif idxs isa Colon
+        converted isa AbstractArray ? (storage .= converted) : fill!(storage, converted)
+    else
+        converted isa AbstractArray ? (storage[idxs] .= converted) : (storage[idxs] .= converted)
+    end
+    return storage
+end
+
+function _assign_physical_value!(storage, converted, idxs)
+    throw(ArgumentError("Hamiltonian parameter storage $(typeof(storage)) is not mutable through `setphysical!`. Use mutable storage such as `UniformArray`, `Vector`, or `Ref`."))
+end
+
+"""
+    setphysical!(model, term_type, param, value; idxs = :)
+
+Convert a physical value with the parameter's unit metadata and write the
+result into the instantiated Hamiltonian storage.
+"""
+function setphysical!(model::M, ::Type{H}, param::Symbol, value; idxs = Colon()) where {M<:AbstractIsingGraph,H<:Hamiltonian}
+    term = gethamiltonian(hamiltonian(model), H)
+    return setphysical!(model, term, param, value; idxs)
+end
+
+function setphysical!(layer::L, ::Type{H}, param::Symbol, value; idxs = Colon()) where {L<:AbstractIsingLayer,H<:Hamiltonian}
+    term = gethamiltonian(hamiltonian(graph(layer)), H)
+    local_idxs = idxs isa Colon ? graphidxs(layer) : idxs
+    return setphysical!(layer, term, param, value; idxs = local_idxs)
+end
+
+function setphysical!(model, term::Hamiltonian, param::Symbol, value; idxs = Colon())
+    units = _physical_parameter_units(term, param)
+    converted = internalvalue(value, units, physicalscales(model), model; parameter = param)
+    storage = getproperty(term, param)
+    _assign_physical_value!(storage, converted, idxs)
+    return storage
+end
+
+"""
+    physicalvalue(model, term_type, param)
+
+Return the current instantiated parameter value multiplied by its physical
+scale metadata. Parameters without physical metadata are returned unchanged.
+"""
+function physicalvalue(model::M, ::Type{H}, param::Symbol) where {M<:AbstractIsingGraph,H<:Hamiltonian}
+    term = gethamiltonian(hamiltonian(model), H)
+    return physicalvalue(model, term, param)
+end
+
+function physicalvalue(layer::L, ::Type{H}, param::Symbol) where {L<:AbstractIsingLayer,H<:Hamiltonian}
+    term = gethamiltonian(hamiltonian(graph(layer)), H)
+    return physicalvalue(layer, term, param)
+end
+
+function physicalvalue(model, term::Hamiltonian, param::Symbol)
+    units = _physical_parameter_units(term, param)
+    storage = getproperty(term, param)
+    return physicalvalue(storage, units, physicalscales(model), model; parameter = param)
+end
+
+export setphysical!, physicalvalue
 
 """
 Linear annealing of a graph

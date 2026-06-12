@@ -16,6 +16,7 @@ function MagField(; b = nothing, c = nothing)
             default = 1,
             ensure = ensure_isinggraph_eltype,
             info = "Magnetic field coupling constant",
+            units = physicalunits(role = :dimensionless),
         ),
         parameter(;
             b,
@@ -24,6 +25,7 @@ function MagField(; b = nothing, c = nothing)
             default_type = UniformArray,
             ensure = (ensure_isinggraph_state_length, ensure_isinggraph_eltype),
             info = "Local magnetic field values b_i for each spin i",
+            units = physicalunits(energy = 1, role = :field_energy),
         ),
     )
     return MagField(params)
