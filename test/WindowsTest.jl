@@ -101,7 +101,7 @@ end
 end
 
 @testset "TemperaturePanel physical scale label" begin
-    scales = PhysicalScales(energy = 1u"meV")
+    scales = PhysicalScales(energy = 1u"meV", temperature = u"meV")
     g = IsingGraph(
         2,
         2,
@@ -113,16 +113,16 @@ end
     host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10)
     handle = Windows.panel!(host, Windows.TemperaturePanel(g), (1, 1))
 
-    @test handle[:label_text][] == "T: 3.0 meV"
+    @test handle[:label_text][] == "T: 34.81 K"
 
     temp!(g, 4.0)
     Windows._poll!(host)
     @test handle[:slider].value[] ≈ 4.0
-    @test handle[:label_text][] == "T: 4.0 meV"
+    @test handle[:label_text][] == "T: 46.42 K"
 
     handle[:slider].value[] = 5.0
     @test temp(g) ≈ 5.0
-    @test handle[:label_text][] == "T: 5.0 meV"
+    @test handle[:label_text][] == "T: 58.02 K"
 
     close(host)
 end
@@ -556,6 +556,44 @@ end
 
     close(host)
     @test host.closed
+end
+
+@testset "3D topology coordinates use hexagonal lattice layout" begin
+    row_spacing = sqrt(3.0f0) / 2
+    square_top = SquareTopology(
+        (2, 2, 2);
+        lattice_constants = (2.0f0, 3.0f0, 4.0f0),
+        periodic = false,
+    )
+    square_xs, square_ys, square_zs = Windows._coordinates_3d!(nothing, square_top, size(square_top))
+
+    @test square_xs == [1, 2, 1, 2, 1, 2, 1, 2]
+    @test square_ys == [1, 1, 2, 2, 1, 1, 2, 2]
+    @test square_zs == [1, 1, 1, 1, 2, 2, 2, 2]
+
+    top = sizeto(
+        LatticeTopology(
+            (0.0f0, row_spacing, 0.0f0),
+            (1.0f0, 0.0f0, 0.0f0),
+            (0.0f0, 0.0f0, 1.0f0);
+            layout = ZigZagRows(),
+            periodic = false,
+            lattice_type = Hexagonal,
+        ),
+        (3, 3, 2),
+    )
+
+    xs, ys, zs = Windows._coordinates_3d!(nothing, top, size(top))
+    linear = LinearIndices(size(top))
+    first_row = linear[CartesianIndex(1, 1, 1)]
+    staggered_row = linear[CartesianIndex(2, 1, 1)]
+
+    @test xs[first_row] ≈ 1.0f0
+    @test ys[first_row] ≈ row_spacing
+    @test zs[first_row] ≈ 1.0f0
+    @test xs[staggered_row] ≈ 1.5f0
+    @test ys[staggered_row] ≈ 2row_spacing
+    @test zs[staggered_row] ≈ 1.0f0
 end
 
 @testset "3D SimulationPanel figure construction" begin

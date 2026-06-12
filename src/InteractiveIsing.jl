@@ -45,9 +45,11 @@ include("Images.jl")
 include("Windows/Windows.jl")
 include("Topology/TopologyDisplayExtensions.jl")
 
-# Diagnostic local edit: disable InteractiveIsing precompile workload while
-# isolating `StatefulAlgorithms.loop(::Repeat, ::NonGenerated)` codegen behavior.
-# include("Precompile.jl")
+# Keep package precompile coverage enabled by default, while allowing local
+# checkouts to opt out with `precompile_workload = false` in LocalPreferences.toml.
+if @load_preference("precompile_workload", true)
+    include("Precompile.jl")
+end
 
 # include("Barebones.jl")
 

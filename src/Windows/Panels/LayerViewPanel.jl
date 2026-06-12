@@ -64,6 +64,24 @@ function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,2}) where {
 end
 
 function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,3}) where {T}
+    top = topology(layer)
+    if _topology_3d_display_enabled(top)
+        return topology_layer_display!(
+            handle,
+            grid[1, 1],
+            top,
+            _layer_state_view(layer),
+            layer;
+            axis_key = :axis,
+            obs_key = :img_obs,
+            plot_key = :plot,
+            colormap = :thermal,
+            hot = true,
+            axis3_state = get(handle.data, :axis3_state, nothing),
+        )
+    end
+
+    # Keep the original square/default 3D interface construction path intact.
     ax = handle[:axis] = Axis3(grid[1, 1], tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :axis3_state, nothing))
     xs, ys, zs = _coordinates_3d!(handle, layer)
@@ -91,6 +109,27 @@ function _layer_view_toimage!(cell, layer::AbstractIsingLayer{T,2}, handle) wher
 end
 
 function _layer_view_toimage!(cell, layer::AbstractIsingLayer{T,3}, handle) where {T}
+    top = topology(layer)
+    if _topology_3d_display_enabled(top)
+        axis3_state = haskey(handle, :axis) ? _axis3_state(handle[:axis]) : get(handle.data, :axis3_state, nothing)
+        export_handle = PanelHandle(handle.panel, handle.host, cell)
+        topology_layer_display!(
+            export_handle,
+            cell,
+            top,
+            state(layer),
+            layer;
+            axis_key = :axis,
+            obs_key = :img_obs,
+            plot_key = :plot,
+            colormap = :thermal,
+            display_vals = _cast_layer_state_vector(layer),
+            axis3_state = axis3_state,
+        )
+        return export_handle[:axis]
+    end
+
+    # Keep exports of square/default 3D layers on the original meshscatter path.
     ax = Axis3(cell)
     if haskey(handle, :axis)
         _restore_axis3_state!(ax, _axis3_state(handle[:axis]))

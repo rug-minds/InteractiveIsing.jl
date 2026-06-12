@@ -110,15 +110,47 @@ _temperature_value(_) = nothing
     _temperature_display_scale(g)
 
 Return the physical scale used only for displaying graph temperature. An
-explicit temperature scale wins; otherwise the energy scale is used so the UI
-can show `k_B T` in Hamiltonian energy units.
+explicit temperature scale wins. Energy-like scales are interpreted as `k_B T`
+and converted to kelvin for display only.
 """
 function _temperature_display_scale(g::G) where {G<:IsingGraph}
     scales = physicalscales(g)
     temperature_scale = scales.temperature[]
-    isnothing(temperature_scale) || return temperature_scale
-    return scales.energy[]
+    isnothing(temperature_scale) || return _temperature_kelvin_display_scale(temperature_scale)
+    return _temperature_kelvin_display_scale(scales.energy[])
 end
+
+"""
+    _temperature_kelvin_display_scale(scale)
+
+Return a display scale that shows energy-like `k_B T` units as kelvin while
+leaving non-convertible scales unchanged.
+"""
+function _temperature_kelvin_display_scale(scale::Unitful.AbstractQuantity)
+    try
+        return Unitful.uconvert(u"K", scale / Unitful.k)
+    catch
+        nothing
+    end
+
+    try
+        return Unitful.uconvert(u"K", scale)
+    catch
+        return scale
+    end
+end
+
+"""
+    _temperature_kelvin_display_scale(scale::Unitful.Units)
+
+Promote a bare Unitful unit object to a unit quantity before applying the
+temperature display conversion.
+"""
+function _temperature_kelvin_display_scale(scale::U) where {U<:Unitful.Units}
+    return _temperature_kelvin_display_scale(1 * scale)
+end
+
+_temperature_kelvin_display_scale(scale) = scale
 
 """
     _temperature_number_text(value)
@@ -691,6 +723,16 @@ function _remember_axis3_state!(handle, key::Symbol, axis)
     state = _axis3_state(axis)
     isnothing(state) || (handle[key] = state)
     return state
+end
+
+"""
+    _topology_3d_display_enabled(topology)
+
+Return whether a three-dimensional topology should use the topology-specific
+Windows display path instead of the original size-based meshscatter path.
+"""
+function _topology_3d_display_enabled(top::T) where {T<:AbstractLayerTopology}
+    return false
 end
 
 function _delete_makie_object!(handle, object)

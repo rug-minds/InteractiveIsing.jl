@@ -188,6 +188,95 @@ function Windows.topology_layer_display!(
 end
 
 """
+    Windows.topology_layer_display!(handle, cell, top::LatticeTopology{Hexagonal,<:Any,<:Any,3}, vals, layer; kwargs...)
+
+Draw a three-dimensional hexagonal lattice topology by placing one mesh marker
+at each topology-specific display coordinate.
+"""
+function Windows.topology_layer_display!(
+    handle::Windows.PanelHandle,
+    cell,
+    top::T,
+    vals,
+    layer::L;
+    axis_key::Symbol,
+    obs_key::Symbol,
+    plot_key::Symbol,
+    vectorized_key::Union{Symbol,Nothing} = nothing,
+    colormap = :thermal,
+    colorrange = nothing,
+    hot::Bool = false,
+    yflip_default::Bool = false,
+    display_vals = nothing,
+    axis3_state = nothing,
+    markersize = 0.3f0,
+) where {Layout,U,P,T<:LatticeTopology{Hexagonal,Layout,U,3,P},L<:AbstractIsingLayer}
+    vals_size = size(vals)
+    length(vals_size) == 3 || throw(ArgumentError("3D topology display needs a 3D array, got size $(vals_size)."))
+    ax = handle[axis_key] = Axis3(cell, tellheight = true)
+    Windows._restore_axis3_state!(ax, axis3_state)
+
+    xs, ys, zs = Windows._coordinates_3d!(handle, top, vals_size)
+    color_vals = isnothing(display_vals) ? vec(vals) : display_vals
+    length(color_vals) == prod(vals_size) ||
+        throw(ArgumentError("3D topology display needs $(prod(vals_size)) color values, got $(length(color_vals))."))
+    obs = handle[obs_key] = hot ? Windows.hot_observable!(handle, color_vals) : Observable(color_vals)
+    isnothing(vectorized_key) || (handle[vectorized_key] = true)
+
+    # The topology owns the embedding; meshscatter only consumes the resulting
+    # display-coordinate positions and the flattened layer values.
+    plot = handle[plot_key] = meshscatter!(
+        ax,
+        xs,
+        ys,
+        zs;
+        markersize,
+        color = obs,
+        colormap = colormap,
+    )
+    _set_topology_display_colorrange!(plot, obs, layer, colorrange)
+    return handle
+end
+
+"""
+    Windows._topology_3d_display_enabled(top::LatticeTopology{Hexagonal,<:Any,<:Any,3})
+
+Enable the topology-specific 3D display path for hexagonal lattice topologies.
+"""
+function Windows._topology_3d_display_enabled(top::T) where {Layout,U,P,T<:LatticeTopology{Hexagonal,Layout,U,3,P}}
+    return true
+end
+
+"""
+    Windows._coordinates_3d!(handle, top::SquareTopology{<:Any,3}, vals_size)
+
+Return the legacy integer-grid display coordinates for three-dimensional square
+topologies.
+"""
+function Windows._coordinates_3d!(
+    handle,
+    top::T,
+    vals_size::NTuple{3,<:Integer},
+) where {U,P,T<:SquareTopology{U,3,P}}
+    isnothing(handle) && return Windows._old_linear_layer_coordinates(vals_size)
+    return Windows._coordinates_3d!(handle, vals_size)
+end
+
+"""
+    Windows._coordinates_3d!(handle, top::LatticeTopology{Hexagonal,<:Any,<:Any,3}, vals_size)
+
+Return topology-world display coordinates for three-dimensional hexagonal
+lattice topologies.
+"""
+function Windows._coordinates_3d!(
+    handle,
+    top::T,
+    vals_size::NTuple{3,<:Integer},
+) where {Layout,U,P,T<:LatticeTopology{Hexagonal,Layout,U,3,P}}
+    return Windows._world_layer_coordinates_3d(top, vals_size)
+end
+
+"""
     _hexagonal_layer_points(top, vals_size)
 
 Return one Makie point per axial coordinate in a hexagonal layer.

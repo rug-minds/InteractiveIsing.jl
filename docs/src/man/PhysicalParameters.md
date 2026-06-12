@@ -50,7 +50,7 @@ g = IsingGraph(
     Ising(b = 0.25u"meV");
     physical_scales = scales,
     temperature = 2.15u"meV",
-    precision = Float64,
+    precision = Float32,
 )
 ```
 
@@ -135,8 +135,8 @@ temp!(g, 3.0u"meV")
 In the Windows interface, the temperature slider still edits the internal
 numeric value. Its label is display-only scale-aware: it uses
 `PhysicalScales.temperature` when available, otherwise it falls back to
-`PhysicalScales.energy`. This makes a graph with an energy scale show `T` as
-`k_B T` in the same units as the Hamiltonian.
+`PhysicalScales.energy`. If the selected display scale has energy units, it is
+interpreted as `k_B T` and shown as the corresponding kelvin value.
 
 ## Topology Lengths
 
@@ -198,7 +198,11 @@ wg = PhysicalWeightGenerator(
 
 ## Example
 
-See `examples/Physical Parameters.jl` for a complete non-GUI example using
+See `examples/Physical Parameters.jl` for a complete 3D non-GUI example using
 meV energies, nm lattice spacing, Unitful Hamiltonian inputs, kelvin
 temperatures converted explicitly to `k_B T`, and a physical nearest-neighbor
 weight generator.
+
+See `examples/Physical Coulomb Parameters.jl` for the same physical-scale
+pattern with `CoulombHamiltonian`, Unitful dipole scaling, and Unitful screening
+lengths.
