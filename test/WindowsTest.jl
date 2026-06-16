@@ -625,7 +625,7 @@ end
     @test parameter_panel[:display_is_3d]
     @test length(parameter_panel[:display_obs][]) == nstates(g)
     @test parameter_panel[:display_plot].transform_marker[] == true
-    @test all(parameter_panel[:display_plot].markersize[] .≈ 0.10f0)
+    @test all(parameter_panel[:display_plot].markersize[] .≈ 0.25f0)
     parameter_panel[:display_axis].azimuth[] = 1.1
     parameter_panel[:display_axis].elevation[] = 0.7
 
@@ -634,7 +634,7 @@ end
     @test parameter_panel[:display_is_3d]
     @test length(parameter_panel[:display_obs][]) == prod(size(coulomb.u))
     @test parameter_panel[:display_plot].transform_marker[] == true
-    @test all(parameter_panel[:display_plot].markersize[] .≈ 0.10f0)
+    @test all(parameter_panel[:display_plot].markersize[] .≈ 0.25f0)
     @test parameter_panel[:display_plot].colorrange[][1] == -parameter_panel[:display_plot].colorrange[][2]
     u_obs = parameter_panel[:display_obs][]
     @test pointer(u_obs) == pointer(coulomb.u)

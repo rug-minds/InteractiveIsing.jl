@@ -374,7 +374,7 @@ function _topology_3d_marker_size(top::T, vals_size::NTuple{3,<:Integer}) where 
 end
 
 function _topology_3d_marker_size(top::T, vals_size::NTuple{3,<:Integer}) where {U,P,T<:SquareTopology{U,3,P}}
-    return 0.10f0
+    return 0.25f0
 end
 
 function _set_topology_display_colorrange!(plot, obs, layer::L, colorrange) where {L<:AbstractIsingLayer}
