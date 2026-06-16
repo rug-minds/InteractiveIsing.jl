@@ -248,13 +248,16 @@ end
 function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,3}) where {T}
     top = topology(layer)
     if _topology_3d_display_enabled(top)
-        topology_layer_display!(
+        ax = handle[:display_axis] = Axis3(cell, tellheight = true)
+        _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
+
+        # The graph panel owns the axis and state; topology dispatch fills it.
+        fill_topology_layer_axis!(
             handle,
-            cell,
+            ax,
             top,
             state(layer),
             layer;
-            axis_key = :display_axis,
             obs_key = :display_obs,
             plot_key = :display_plot,
             vectorized_key = :display_vectorized,
@@ -262,7 +265,6 @@ function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,3})
             colorrange = _entry_colorrange(entry, state(layer)),
             hot = true,
             display_vals = _cast_layer_state_vector(layer),
-            axis3_state = get(handle.data, :display_axis3_state, nothing),
         )
         handle[:display_is_3d] = true
         handle[:display_use_data_colorrange] = _uses_data_colorrange(entry)
@@ -286,6 +288,7 @@ function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,3})
         markersize = 0.3,
         color = obs,
         colormap = entry.colormap,
+        transform_marker = false,
     )
     _set_display_colorrange!(plot, obs, layer, _entry_colorrange(entry, state(layer)))
     return handle
@@ -346,20 +349,22 @@ function _draw_layer_array!(
 ) where {T}
     handle[:display_is_3d] = false
     handle[:display_use_data_colorrange] = use_data_colorrange
-    return topology_layer_display!(
+    ax = handle[:display_axis] = Axis(cell, aspect = DataAspect(), tellheight = true)
+    ax.yreversed = @load_preference("makie_y_flip", default = false)
+
+    # The graph panel chooses axis policy; topology dispatch chooses geometry.
+    return fill_topology_layer_axis!(
         handle,
-        cell,
+        ax,
         topology(layer),
         vals,
         layer;
-        axis_key = :display_axis,
         obs_key = :display_obs,
         plot_key = :display_plot,
         vectorized_key = :display_vectorized,
         colormap,
         colorrange,
         hot,
-        yflip_default = false,
     )
 end
 
@@ -379,20 +384,22 @@ function _draw_layer_array!(
     handle[:display_use_data_colorrange] = use_data_colorrange
 
     if vals_size == size(layer) && _topology_3d_display_enabled(topology(layer))
-        return topology_layer_display!(
+        ax = handle[:display_axis] = Axis3(cell, tellheight = true)
+        _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
+
+        # The graph panel owns the 3D axis and camera; topology fills geometry.
+        return fill_topology_layer_axis!(
             handle,
-            cell,
+            ax,
             topology(layer),
             vals,
             layer;
-            axis_key = :display_axis,
             obs_key = :display_obs,
             plot_key = :display_plot,
             vectorized_key = :display_vectorized,
             colormap,
             colorrange,
             hot,
-            axis3_state = get(handle.data, :display_axis3_state, nothing),
         )
     end
 
@@ -401,7 +408,16 @@ function _draw_layer_array!(
     xs, ys, zs = vals_size == size(layer) ? _coordinates_3d!(handle, layer) : _coordinates_3d!(handle, vals_size)
     display_vals = vec(vals)
     obs = handle[:display_obs] = hot ? hot_observable!(handle, display_vals) : Observable(display_vals)
-    plot = handle[:display_plot] = meshscatter!(ax, xs, ys, zs, markersize = 0.3, color = obs, colormap = colormap)
+    plot = handle[:display_plot] = meshscatter!(
+        ax,
+        xs,
+        ys,
+        zs;
+        markersize = 0.3,
+        color = obs,
+        colormap = colormap,
+        transform_marker = false,
+    )
     _set_display_colorrange!(plot, obs, layer, colorrange)
     return handle
 end

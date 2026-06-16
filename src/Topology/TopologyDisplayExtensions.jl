@@ -1,91 +1,88 @@
 # This page is AI generated.
 
 """
-    Windows.topology_layer_display!(handle, cell, top, vals, layer; kwargs...)
+    Windows.fill_topology_layer_axis!(handle, ax, top, vals, layer; kwargs...)
 
-Draw a rectangular two-dimensional topology as a raster image in the Windows
-interactive display system.
+Fill an existing two-dimensional Windows axis with a rectangular raster view.
 """
-function Windows.topology_layer_display!(
+function Windows.fill_topology_layer_axis!(
     handle::Windows.PanelHandle,
-    cell,
+    ax,
     top::T,
     vals,
     layer::L;
-    axis_key::Symbol,
     obs_key::Symbol,
     plot_key::Symbol,
     vectorized_key::Union{Symbol,Nothing} = nothing,
     colormap = :thermal,
     colorrange = nothing,
     hot::Bool = false,
-    yflip_default::Bool = false,
+    display_vals = nothing,
+    markersize = 0.3f0,
 ) where {U,T<:AbstractLayerTopology{U,2},L<:AbstractIsingLayer}
     return _raster_topology_layer_display!(
         handle,
-        cell,
+        ax,
         vals,
         layer;
-        axis_key,
         obs_key,
         plot_key,
         vectorized_key,
         colormap,
         colorrange,
         hot,
-        yflip_default,
+        display_vals,
+        markersize,
     )
 end
 
-function Windows.topology_layer_display!(
+function Windows.fill_topology_layer_axis!(
     handle::Windows.PanelHandle,
-    cell,
+    ax,
     top::T,
     vals,
     layer::L;
-    axis_key::Symbol,
     obs_key::Symbol,
     plot_key::Symbol,
     vectorized_key::Union{Symbol,Nothing} = nothing,
     colormap = :thermal,
     colorrange = nothing,
     hot::Bool = false,
-    yflip_default::Bool = false,
+    display_vals = nothing,
+    markersize = 0.3f0,
 ) where {U,P,T<:SquareTopology{U,2,P},L<:AbstractIsingLayer}
     return _raster_topology_layer_display!(
         handle,
-        cell,
+        ax,
         vals,
         layer;
-        axis_key,
         obs_key,
         plot_key,
         vectorized_key,
         colormap,
         colorrange,
         hot,
-        yflip_default,
+        display_vals,
+        markersize,
     )
 end
 
 function _raster_topology_layer_display!(
     handle::Windows.PanelHandle,
-    cell,
+    ax,
     vals,
     layer::L;
-    axis_key::Symbol,
     obs_key::Symbol,
     plot_key::Symbol,
     vectorized_key::Union{Symbol,Nothing} = nothing,
     colormap = :thermal,
     colorrange = nothing,
     hot::Bool = false,
-    yflip_default::Bool = false,
+    display_vals = nothing,
+    markersize = 0.3f0,
 ) where {L<:AbstractIsingLayer}
     vals_size = size(vals)
     length(vals_size) == 2 || throw(ArgumentError("2D topology display needs a matrix, got size $(vals_size)."))
-    ax = handle[axis_key] = Axis(cell, xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
-    ax.yreversed = @load_preference("makie_y_flip", default = yflip_default)
     obs = handle[obs_key] = hot ? Windows.hot_observable!(handle, vals) : Observable(vals)
     isnothing(vectorized_key) || (handle[vectorized_key] = false)
     plot = handle[plot_key] = image!(ax, obs, colormap = colormap, fxaa = false, interpolate = false)
@@ -95,29 +92,28 @@ function _raster_topology_layer_display!(
 end
 
 """
-    Windows.topology_layer_display!(handle, cell, top::HexagonalTopology, vals, layer; kwargs...)
+    Windows.fill_topology_layer_axis!(handle, ax, top::HexagonalTopology, vals, layer; kwargs...)
 
-Draw a hexagonal topology as one data-space hex marker per axial coordinate.
+Fill an existing two-dimensional Windows axis with one data-space hex marker
+per axial coordinate.
 """
-function Windows.topology_layer_display!(
+function Windows.fill_topology_layer_axis!(
     handle::Windows.PanelHandle,
-    cell,
+    ax,
     top::T,
     vals,
     layer::L;
-    axis_key::Symbol,
     obs_key::Symbol,
     plot_key::Symbol,
     vectorized_key::Union{Symbol,Nothing} = nothing,
     colormap = :thermal,
     colorrange = nothing,
     hot::Bool = false,
-    yflip_default::Bool = false,
+    display_vals = nothing,
+    markersize = 0.3f0,
 ) where {T<:HexagonalTopology,L<:AbstractIsingLayer}
     vals_size = size(vals)
     length(vals_size) == 2 || throw(ArgumentError("Hexagonal topology display needs a matrix, got size $(vals_size)."))
-    ax = handle[axis_key] = Axis(cell, xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
-    ax.yreversed = @load_preference("makie_y_flip", default = yflip_default)
     points = _hexagonal_layer_points(top, vals_size)
     display_vals = vec(vals)
     obs = handle[obs_key] = hot ? Windows.hot_observable!(handle, display_vals) : Observable(display_vals)
@@ -141,30 +137,29 @@ function Windows.topology_layer_display!(
 end
 
 """
-    Windows.topology_layer_display!(handle, cell, top::LatticeTopology, vals, layer; kwargs...)
+    Windows.fill_topology_layer_axis!(handle, ax, top::LatticeTopology, vals, layer; kwargs...)
 
-Draw a two-dimensional general lattice topology at its world-coordinate layout.
-This is needed for staggered layouts where a raster would hide the geometry.
+Fill an existing two-dimensional Windows axis with a general lattice topology
+at its world-coordinate layout. This is needed for staggered layouts where a
+raster would hide the geometry.
 """
-function Windows.topology_layer_display!(
+function Windows.fill_topology_layer_axis!(
     handle::Windows.PanelHandle,
-    cell,
+    ax,
     top::T,
     vals,
     layer::L;
-    axis_key::Symbol,
     obs_key::Symbol,
     plot_key::Symbol,
     vectorized_key::Union{Symbol,Nothing} = nothing,
     colormap = :thermal,
     colorrange = nothing,
     hot::Bool = false,
-    yflip_default::Bool = false,
+    display_vals = nothing,
+    markersize = 0.3f0,
 ) where {Kind,Layout,U,P,T<:LatticeTopology{Kind,Layout,U,2,P},L<:AbstractIsingLayer}
     vals_size = size(vals)
     length(vals_size) == 2 || throw(ArgumentError("Lattice topology display needs a matrix, got size $(vals_size)."))
-    ax = handle[axis_key] = Axis(cell, xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
-    ax.yreversed = @load_preference("makie_y_flip", default = yflip_default)
     points = _topology_world_layer_points(top, vals_size)
     display_vals = vec(vals)
     obs = handle[obs_key] = hot ? Windows.hot_observable!(handle, display_vals) : Observable(display_vals)
@@ -188,33 +183,28 @@ function Windows.topology_layer_display!(
 end
 
 """
-    Windows.topology_layer_display!(handle, cell, top::LatticeTopology{Hexagonal,<:Any,<:Any,3}, vals, layer; kwargs...)
+    Windows.fill_topology_layer_axis!(handle, ax, top::LatticeTopology{Hexagonal,<:Any,<:Any,3}, vals, layer; kwargs...)
 
-Draw a three-dimensional hexagonal lattice topology by placing one mesh marker
-at each topology-specific display coordinate.
+Fill an existing three-dimensional Windows axis by placing one mesh marker at
+each topology-specific display coordinate.
 """
-function Windows.topology_layer_display!(
+function Windows.fill_topology_layer_axis!(
     handle::Windows.PanelHandle,
-    cell,
+    ax,
     top::T,
     vals,
     layer::L;
-    axis_key::Symbol,
     obs_key::Symbol,
     plot_key::Symbol,
     vectorized_key::Union{Symbol,Nothing} = nothing,
     colormap = :thermal,
     colorrange = nothing,
     hot::Bool = false,
-    yflip_default::Bool = false,
     display_vals = nothing,
-    axis3_state = nothing,
     markersize = 0.3f0,
 ) where {Layout,U,P,T<:LatticeTopology{Hexagonal,Layout,U,3,P},L<:AbstractIsingLayer}
     vals_size = size(vals)
     length(vals_size) == 3 || throw(ArgumentError("3D topology display needs a 3D array, got size $(vals_size)."))
-    ax = handle[axis_key] = Axis3(cell, tellheight = true)
-    Windows._restore_axis3_state!(ax, axis3_state)
 
     xs, ys, zs = Windows._coordinates_3d!(handle, top, vals_size)
     color_vals = isnothing(display_vals) ? vec(vals) : display_vals

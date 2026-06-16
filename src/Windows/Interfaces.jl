@@ -83,13 +83,13 @@ image_trait(panel::AbstractPanel) = image_trait(typeof(panel))
 image_trait(handle::PanelHandle) = image_trait(handle.panel)
 
 """
-    topology_layer_display!(handle, cell, topology, vals, layer; kwargs...)
+    fill_topology_layer_axis!(handle, axis, topology, vals, layer; kwargs...)
 
-Draw an interactive two-dimensional layer display into `cell`. The Windows
-framework calls this API, while concrete packages extend it for their topology
-types.
+Fill an existing graph-panel axis with topology-specific layer geometry. Graph
+panels create and manage the axis, while concrete topologies extend this API
+for their coordinate and marker choices.
 """
-function topology_layer_display!(handle::PanelHandle, cell, top::T, vals, layer; kwargs...) where {T<:AbstractLayerTopology}
+function fill_topology_layer_axis!(handle::PanelHandle, axis, top::T, vals, layer; kwargs...) where {T<:AbstractLayerTopology}
     throw(ArgumentError("No Windows layer display is registered for topology $(typeof(top))."))
 end
 

@@ -48,36 +48,40 @@ function _redraw_layer!(handle::PanelHandle)
 end
 
 function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,2}) where {T}
-    return topology_layer_display!(
+    ax = handle[:axis] = Axis(grid[1, 1], xrectzoom = false, yrectzoom = false, aspect = DataAspect(), tellheight = true)
+    ax.yreversed = @load_preference("makie_y_flip", default = true)
+
+    # The graph panel owns axis construction; topology dispatch owns geometry.
+    return fill_topology_layer_axis!(
         handle,
-        grid[1, 1],
+        ax,
         topology(layer),
         _layer_state_view(layer),
         layer;
-        axis_key = :axis,
         obs_key = :img_obs,
         plot_key = :plot,
         colormap = :thermal,
         hot = true,
-        yflip_default = true,
     )
 end
 
 function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,3}) where {T}
     top = topology(layer)
     if _topology_3d_display_enabled(top)
-        return topology_layer_display!(
+        ax = handle[:axis] = Axis3(grid[1, 1], tellheight = true)
+        _restore_axis3_state!(ax, get(handle.data, :axis3_state, nothing))
+
+        # The graph panel owns the 3D axis and camera; topology fills geometry.
+        return fill_topology_layer_axis!(
             handle,
-            grid[1, 1],
+            ax,
             top,
             _layer_state_view(layer),
             layer;
-            axis_key = :axis,
             obs_key = :img_obs,
             plot_key = :plot,
             colormap = :thermal,
             hot = true,
-            axis3_state = get(handle.data, :axis3_state, nothing),
         )
     end
 
@@ -87,7 +91,16 @@ function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,3}) where {
     xs, ys, zs = _coordinates_3d!(handle, layer)
     vals = _layer_state_vector_view(layer)
     obs = handle[:img_obs] = hot_observable!(handle, vals)
-    plot = handle[:plot] = meshscatter!(ax, xs, ys, zs, markersize = 0.3, color = obs, colormap = :thermal)
+    plot = handle[:plot] = meshscatter!(
+        ax,
+        xs,
+        ys,
+        zs;
+        markersize = 0.3,
+        color = obs,
+        colormap = :thermal,
+        transform_marker = false,
+    )
     _bind_layer_colorrange!(plot, obs, layer)
     return handle
 end
@@ -99,12 +112,22 @@ function toimage!(cell, panel::LayerViewPanel, handle::PanelHandle; kwargs...)
 end
 
 function _layer_view_toimage!(cell, layer::AbstractIsingLayer{T,2}, handle) where {T}
-    ax = Axis(cell, xrectzoom = false, yrectzoom = false, aspect = DataAspect())
+    export_handle = PanelHandle(handle.panel, handle.host, cell)
+    ax = export_handle[:axis] = Axis(cell, xrectzoom = false, yrectzoom = false, aspect = DataAspect())
     ax.yreversed = @load_preference("makie_y_flip", default = true)
     vals = _layer_state_values(layer)
-    plot = image!(ax, vals, colormap = :thermal, fxaa = false, interpolate = false)
-    _bind_layer_colorrange!(plot, Observable(vals), layer)
-    reset_limits!(ax)
+
+    # Export uses the same topology geometry path as the live layer panel.
+    fill_topology_layer_axis!(
+        export_handle,
+        ax,
+        topology(layer),
+        vals,
+        layer;
+        obs_key = :img_obs,
+        plot_key = :plot,
+        colormap = :thermal,
+    )
     return ax
 end
 
@@ -113,18 +136,20 @@ function _layer_view_toimage!(cell, layer::AbstractIsingLayer{T,3}, handle) wher
     if _topology_3d_display_enabled(top)
         axis3_state = haskey(handle, :axis) ? _axis3_state(handle[:axis]) : get(handle.data, :axis3_state, nothing)
         export_handle = PanelHandle(handle.panel, handle.host, cell)
-        topology_layer_display!(
+        ax = export_handle[:axis] = Axis3(cell)
+        _restore_axis3_state!(ax, axis3_state)
+
+        # Export follows the same graph-panel axis ownership as live display.
+        fill_topology_layer_axis!(
             export_handle,
-            cell,
+            ax,
             top,
             state(layer),
             layer;
-            axis_key = :axis,
             obs_key = :img_obs,
             plot_key = :plot,
             colormap = :thermal,
             display_vals = _cast_layer_state_vector(layer),
-            axis3_state = axis3_state,
         )
         return export_handle[:axis]
     end
@@ -138,7 +163,16 @@ function _layer_view_toimage!(cell, layer::AbstractIsingLayer{T,3}, handle) wher
     end
     xs, ys, zs = _coordinates_3d!(handle, layer)
     vals = _cast_layer_state_vector(layer)
-    plot = meshscatter!(ax, xs, ys, zs, markersize = 0.3, color = vals, colormap = :thermal)
+    plot = meshscatter!(
+        ax,
+        xs,
+        ys,
+        zs;
+        markersize = 0.3,
+        color = vals,
+        colormap = :thermal,
+        transform_marker = false,
+    )
     _bind_layer_colorrange!(plot, Observable(vals), layer)
     return ax
 end
