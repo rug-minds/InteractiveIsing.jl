@@ -50,8 +50,6 @@ function _precompile_context_lines()
             demo = StatefulAlgorithms.SubContext(:demo, (; x = Float32[1, 2, 3], y = Float32[1, 4, 9])),
         ),
         StatefulAlgorithms.NameSpaceRegistry(),
-        (;),
-        (;),
     )
     host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10, start_timers = false)
     Windows.panel!(

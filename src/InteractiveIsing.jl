@@ -43,6 +43,7 @@ include("Makie/Makie.jl")
 include("Images.jl")
 
 include("Windows/Windows.jl")
+include("Graphs/DefectHopping/Interface.jl")
 include("Topology/TopologyDisplayExtensions.jl")
 
 # Keep package precompile coverage enabled by default, while allowing local

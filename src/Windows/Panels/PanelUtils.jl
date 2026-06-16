@@ -603,7 +603,7 @@ end
 
 function _resume_graph_processes!(g)
     for process in processes(g)
-        if StatefulAlgorithms.ispaused(process)
+        if StatefulAlgorithms.isidle(process)
             run(process)
         end
     end
@@ -614,7 +614,7 @@ function _graph_paused(g)
     graph_processes = processes(g)
     isempty(graph_processes) && return false
     any(StatefulAlgorithms.isrunning, graph_processes) && return false
-    return any(StatefulAlgorithms.ispaused, graph_processes)
+    return any(StatefulAlgorithms.isidle, graph_processes)
 end
 
 function _request_graph_process_close!(g)
