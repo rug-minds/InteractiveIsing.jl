@@ -50,8 +50,6 @@ function _precompile_context_lines()
             demo = StatefulAlgorithms.SubContext(:demo, (; x = Float32[1, 2, 3], y = Float32[1, 4, 9])),
         ),
         StatefulAlgorithms.NameSpaceRegistry(),
-        (;),
-        (;),
     )
     host = Windows.WindowHost(Figure(); screen = nothing, fps = 30, polling_rate = 10, start_timers = false)
     Windows.panel!(
@@ -147,7 +145,6 @@ end
 function _precompile_windows_entrypoints(g)
     precompile(Tuple{typeof(interface), typeof(g)})
     precompile(Tuple{typeof(Windows.interface), typeof(g)})
-    precompile(Tuple{typeof(Windows.new_interface), typeof(g)})
     precompile(Tuple{typeof(Windows._display_host!), Windows.WindowHost, String})
     precompile(Tuple{typeof(Windows._start_host_timers!), Windows.WindowHost})
     precompile(Tuple{typeof(Windows.window)})

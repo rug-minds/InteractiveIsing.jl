@@ -102,16 +102,16 @@ function toimage!(cell, panel::SimulationPanel, handle::PanelHandle; kwargs...)
 end
 
 """
-    new_interface(g; framerate = 30, polling_rate = 10,
-                  size = (1500, 1000),
-                  title = "Interactive Ising Simulation",
-                  hide_left_buttons = false) -> WindowHost
+    interface(g; framerate = 30, polling_rate = 10,
+              size = (1500, 1000),
+              title = "Interactive Ising Simulation",
+              hide_left_buttons = false) -> WindowHost
 
 Open the Windows-based simulation interface for graph `g`. This is the
-implementation behind `interface(g)`. Set `hide_left_buttons = true` to hide
-the Hamiltonian selector buttons while keeping the graph/field display.
+public interface entrypoint. Set `hide_left_buttons = true` to hide the
+Hamiltonian selector buttons while keeping the graph/field display.
 """
-function new_interface(
+function interface(
     g;
     framerate = 30,
     polling_rate = 10,

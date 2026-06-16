@@ -246,51 +246,27 @@ function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,2})
 end
 
 function _draw_graph_state!(handle, entry, cell, layer::AbstractIsingLayer{T,3}) where {T}
-    top = topology(layer)
-    if _topology_3d_display_enabled(top)
-        ax = handle[:display_axis] = Axis3(cell, tellheight = true)
-        _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
-
-        # The graph panel owns the axis and state; topology dispatch fills it.
-        fill_topology_layer_axis!(
-            handle,
-            ax,
-            top,
-            state(layer),
-            layer;
-            obs_key = :display_obs,
-            plot_key = :display_plot,
-            vectorized_key = :display_vectorized,
-            colormap = entry.colormap,
-            colorrange = _entry_colorrange(entry, state(layer)),
-            hot = true,
-            display_vals = _cast_layer_state_vector(layer),
-        )
-        handle[:display_is_3d] = true
-        handle[:display_use_data_colorrange] = _uses_data_colorrange(entry)
-        handle[:display_notify_only] = true
-        return handle
-    end
-
-    # Keep the original square/default graph-state display path intact.
     ax = handle[:display_axis] = Axis3(cell, tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
-    xs, ys, zs = _coordinates_3d!(handle, layer)
-    obs = handle[:display_obs] = hot_observable!(handle, _cast_layer_state_vector(layer))
+
+    # The graph panel owns the axis and state; topology dispatch fills it.
+    fill_topology_layer_axis!(
+        handle,
+        ax,
+        topology(layer),
+        state(layer),
+        layer;
+        obs_key = :display_obs,
+        plot_key = :display_plot,
+        vectorized_key = :display_vectorized,
+        colormap = entry.colormap,
+        colorrange = _entry_colorrange(entry, state(layer)),
+        hot = true,
+        display_vals = _cast_layer_state_vector(layer),
+    )
     handle[:display_is_3d] = true
     handle[:display_use_data_colorrange] = _uses_data_colorrange(entry)
     handle[:display_notify_only] = true
-    plot = handle[:display_plot] = meshscatter!(
-        ax,
-        xs,
-        ys,
-        zs;
-        markersize = 0.3,
-        color = obs,
-        colormap = entry.colormap,
-        transform_marker = false,
-    )
-    _set_display_colorrange!(plot, obs, layer, _entry_colorrange(entry, state(layer)))
     return handle
 end
 
@@ -383,7 +359,7 @@ function _draw_layer_array!(
     handle[:display_is_3d] = true
     handle[:display_use_data_colorrange] = use_data_colorrange
 
-    if vals_size == size(layer) && _topology_3d_display_enabled(topology(layer))
+    if vals_size == size(layer)
         ax = handle[:display_axis] = Axis3(cell, tellheight = true)
         _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
 
@@ -405,7 +381,7 @@ function _draw_layer_array!(
 
     ax = handle[:display_axis] = Axis3(cell, tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :display_axis3_state, nothing))
-    xs, ys, zs = vals_size == size(layer) ? _coordinates_3d!(handle, layer) : _coordinates_3d!(handle, vals_size)
+    xs, ys, zs = _coordinates_3d!(handle, vals_size)
     display_vals = vec(vals)
     obs = handle[:display_obs] = hot ? hot_observable!(handle, display_vals) : Observable(display_vals)
     plot = handle[:display_plot] = meshscatter!(
@@ -413,10 +389,9 @@ function _draw_layer_array!(
         xs,
         ys,
         zs;
-        markersize = 0.3,
+        markersize = 0.08,
         color = obs,
         colormap = colormap,
-        transform_marker = false,
     )
     _set_display_colorrange!(plot, obs, layer, colorrange)
     return handle
