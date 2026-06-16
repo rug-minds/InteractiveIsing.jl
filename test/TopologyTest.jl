@@ -69,6 +69,35 @@ end
     @test count(!iszero, adjmat[:, corner_idx]) == 2
 end
 
+@testset "Default Topology Neighbor Iterator" begin
+    top = SquareTopology((3, 3, 3); periodic = false)
+    candidates = collect(nearest_neighbor_iterator(top, (1, 1, 1)))
+    axial = only(filter(c -> c.offset == (1, 0, 0), candidates))
+    diagonal = only(filter(c -> c.offset == (1, 1, 0), candidates))
+
+    @test length(candidates) == 26
+    @test all(c -> c.offset != (0, 0, 0), candidates)
+    @test axial.has_dr
+    @test axial.dr == 1.0
+    @test diagonal.dr ≈ sqrt(2.0)
+
+    row_spacing = sqrt(3.0f0) / 2
+    zigzag = sizeto(
+        LatticeTopology(
+            (0.0f0, row_spacing),
+            (1.0f0, 0.0f0);
+            layout = ZigZagRows(),
+            periodic = false,
+            lattice_type = Hexagonal,
+        ),
+        (3, 3),
+    )
+    zigzag_candidates = collect(nearest_neighbor_iterator(zigzag, (1, 1)))
+
+    @test length(zigzag_candidates) == 8
+    @test all(c -> !c.has_dr, zigzag_candidates)
+end
+
 @testset "General Lattice Topology" begin
     top = LatticeTopology(
         (4, 4),

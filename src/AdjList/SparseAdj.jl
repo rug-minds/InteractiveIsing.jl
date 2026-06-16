@@ -62,47 +62,18 @@ function _fillSparseVecs(layer::AbstractLayerData{D}, precision, row_idxs, col_i
     pr = parentindices(layer)[1]
     layer_size = size(layer)
     LI = LinearIndices(layer_size)
-    ps = whichperiodic(topology)
-    translation_invariant = is_translation_invariant(topology)
-
-    n_offsets = prod(2 .* NNt .+ 1) - 1
-    offsets = Vector{NTuple{D,Int}}(undef, n_offsets)
-    dcs = Vector{DeltaCoordinate{D}}(undef, n_offsets)
-    drs = Vector{Float64}(undef, n_offsets)
-
-    ranges = ntuple(i -> (-NNt[i]):NNt[i], Val(D))
-    o = 1
-    for offset_ci in CartesianIndices(ranges)
-        delta_offset = offset_ci.I
-        all(iszero, delta_offset) && continue
-
-        offsets[o] = delta_offset
-
-        wrapped_offset = ntuple(Val(D)) do i
-            di = delta_offset[i]
-            if ps[i]
-                halfsize = layer_size[i] >>> 1
-                abs(di) > halfsize && (di -= sign(di) * layer_size[i])
-            end
-            di
-        end
-        # Let the topology define the metric so non-square lattices get the
-        # correct distance for weight-generator shells.
-        dcs[o] = DeltaCoordinate(wrapped_offset)
-        drs[o] = translation_invariant ? delta_distance(topology, dcs[o]) : NaN
-        o += 1
-    end
+    candidates = nearest_neighbor_iterator(topology, NNt, layer_size)
 
     for col_idx in 1:length(layer)
         c1 = Coordinate(topology, col_idx)
         g_col_idx = pr[col_idx]
 
-        for oi in eachindex(offsets)
-            c2 = @inline offset(topology, c1, offsets[oi]...; check = false)
+        for candidate in candidates
+            c2 = @inline offset(topology, c1, candidate.offset...; check = false)
             in(c2, topology) || continue
 
-            dr = translation_invariant ? drs[oi] : dist(topology, c1, c2)
-            w = precision(getWeight(wg; dr = dr, c1 = c1, c2 = c2, dc = dcs[oi]))
+            dr = @inline _candidate_distance(candidate, topology, c1, c2)
+            w = precision(getWeight(wg; dr = dr, c1 = c1, c2 = c2, dc = candidate.dc))
             (w == 0 || isnan(w)) && continue
 
             conn_idx = LI[c2]
@@ -132,51 +103,22 @@ function _fillSparseVecsSymmetricUnique!(layer::AbstractLayerData{D}, precision,
     pr = parentindices(layer)[1]
     layer_size = size(layer)
     LI = LinearIndices(layer_size)
-    ps = whichperiodic(topology)
-    translation_invariant = is_translation_invariant(topology)
-
-    n_offsets = prod(2 .* NNt .+ 1) - 1
-    offsets = Vector{NTuple{D,Int}}(undef, n_offsets)
-    dcs = Vector{DeltaCoordinate{D}}(undef, n_offsets)
-    drs = Vector{Float64}(undef, n_offsets)
-
-    ranges = ntuple(i -> (-NNt[i]):NNt[i], Val(D))
-    o = 1
-    for offset_ci in CartesianIndices(ranges)
-        delta_offset = offset_ci.I
-        all(iszero, delta_offset) && continue
-
-        offsets[o] = delta_offset
-
-        wrapped_offset = ntuple(Val(D)) do i
-            di = delta_offset[i]
-            if ps[i]
-                halfsize = layer_size[i] >>> 1
-                abs(di) > halfsize && (di -= sign(di) * layer_size[i])
-            end
-            di
-        end
-        # Let the topology define the metric so non-square lattices get the
-        # correct distance for weight-generator shells.
-        dcs[o] = DeltaCoordinate(wrapped_offset)
-        drs[o] = translation_invariant ? delta_distance(topology, dcs[o]) : NaN
-        o += 1
-    end
+    candidates = nearest_neighbor_iterator(topology, NNt, layer_size)
 
     for col_idx in 1:length(layer)
         c1 = Coordinate(topology, col_idx)
         g_col_idx = pr[col_idx]
 
-        for oi in eachindex(offsets)
-            c2 = @inline offset(topology, c1, offsets[oi]...; check = false)
+        for candidate in candidates
+            c2 = @inline offset(topology, c1, candidate.offset...; check = false)
             in(c2, topology) || continue
 
             conn_idx = LI[c2]
             g_conn_idx = pr[conn_idx]
             g_col_idx < g_conn_idx || continue
 
-            dr = translation_invariant ? drs[oi] : dist(topology, c1, c2)
-            w = precision(getWeight(wg; dr = dr, c1 = c1, c2 = c2, dc = dcs[oi]))
+            dr = @inline _candidate_distance(candidate, topology, c1, c2)
+            w = precision(getWeight(wg; dr = dr, c1 = c1, c2 = c2, dc = candidate.dc))
             (w == 0 || isnan(w)) && continue
 
             push!(row_idxs, Int32(g_conn_idx))

@@ -238,6 +238,12 @@ using Random
     @test istaskdone(runtime_kinetic_process.task)
     @test length(processes(g)) == 1
 
+    keyword_dynamics_process = createProcess(g; dynamics = LocalLangevin(stepsize = 0.01f0, adjusted = true), lifetime = 1)
+    wait(keyword_dynamics_process)
+    @test istaskdone(keyword_dynamics_process.task)
+    @test occursin("LocalLangevin", sprint(show, keyword_dynamics_process))
+    @test length(processes(g)) == 1
+
     extra_process = createProcess(g, Metropolis(); lifetime = 1, allow_multiple = true)
     wait(extra_process)
     @test istaskdone(extra_process.task)

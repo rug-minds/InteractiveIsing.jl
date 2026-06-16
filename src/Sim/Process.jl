@@ -200,8 +200,7 @@ given, the launched graph process runs indefinitely until it is closed.
 """
 function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.default_algorithm, lifetime = nothing, repeats = nothing, repeat = nothing, allow_multiple = false, args...)
     if isnothing(func)
-        # func = get(args, :algorithm, g.default_algorithm)
-        func = g.default_algorithm
+        func = dynamics
     end
 
     if !isnothing(lifetime) && !(lifetime isa StatefulAlgorithms.Lifetime)
