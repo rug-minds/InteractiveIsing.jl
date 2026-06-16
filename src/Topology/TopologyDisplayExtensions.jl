@@ -223,6 +223,7 @@ function Windows.fill_topology_layer_axis!(
         markersize,
         color = obs,
         colormap = colormap,
+        transform_marker = false,
     )
     _set_topology_display_colorrange!(plot, obs, layer, colorrange)
     return handle

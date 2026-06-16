@@ -775,10 +775,14 @@ end
 """
     _coordinates_3d!(handle, top, vals_size)
 
-Return 3D display coordinates for a three-dimensional topology.
+Return fallback 3D display coordinates for a three-dimensional topology.
+
+The fallback intentionally keeps the legacy integer-grid view. Topologies that
+need geometric/world-coordinate display should opt in by extending this method
+next to their display code.
 """
 function _coordinates_3d!(handle, top::AbstractLayerTopology{U,3}, vals_size::NTuple{3,<:Integer}) where {U}
-    return _world_layer_coordinates_3d(top, vals_size)
+    return _coordinates_3d!(handle, vals_size)
 end
 
 """
