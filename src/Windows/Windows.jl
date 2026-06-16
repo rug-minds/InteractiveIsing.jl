@@ -45,7 +45,7 @@ export AbstractPanel, PanelHandle, WindowHost, SimulationPanel, StatusPanel,
     axis_to_png, axis_trait, axiskey, fullimage, image_trait,
     close!, detach_hot_observable!, getaxis, hasaxis, hasimage, hot_observable!,
     hot_observable_zero,
-    fill_topology_layer_axis!, interface, layer_display, mount!, new_interface, onclose!, panel!,
+    fill_topology_layer_axis!, interface, layer_display, mount!, onclose!, panel!,
     parameter_display, pause!, register!, register_frame!, register_hot_observable!,
     register_polled!, restart!, resume!, run_interface, tofigure, toimage, toimage!,
     window,
@@ -57,14 +57,6 @@ include("Core.jl")
 include("Interfaces.jl")
 include("Panels/Panels.jl")
 include("Debugging/CloseDebugWindows.jl")
-
-"""
-    interface(g; kwargs...) -> WindowHost
-
-Open the Windows-based default simulation interface for graph `g`. Keyword
-arguments are forwarded to `new_interface`.
-"""
-interface(g; kwargs...) = new_interface(g; kwargs...)
 
 """
     run_interface(g, func = nothing, inputs...; dynamics = g.default_algorithm, interactive = nothing, interface_kwargs = (;), kwargs...)
@@ -118,5 +110,5 @@ end
 
 end
 
-using .Windows: interface, new_interface, run_interface
-export Windows, interface, new_interface, run_interface
+using .Windows: interface, run_interface
+export Windows, interface, run_interface

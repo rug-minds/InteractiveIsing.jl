@@ -66,43 +66,21 @@ function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,2}) where {
 end
 
 function _draw_layer_view!(handle, grid, layer::AbstractIsingLayer{T,3}) where {T}
-    top = topology(layer)
-    if _topology_3d_display_enabled(top)
-        ax = handle[:axis] = Axis3(grid[1, 1], tellheight = true)
-        _restore_axis3_state!(ax, get(handle.data, :axis3_state, nothing))
-
-        # The graph panel owns the 3D axis and camera; topology fills geometry.
-        return fill_topology_layer_axis!(
-            handle,
-            ax,
-            top,
-            _layer_state_view(layer),
-            layer;
-            obs_key = :img_obs,
-            plot_key = :plot,
-            colormap = :thermal,
-            hot = true,
-        )
-    end
-
-    # Keep the original square/default 3D interface construction path intact.
     ax = handle[:axis] = Axis3(grid[1, 1], tellheight = true)
     _restore_axis3_state!(ax, get(handle.data, :axis3_state, nothing))
-    xs, ys, zs = _coordinates_3d!(handle, layer)
-    vals = _layer_state_vector_view(layer)
-    obs = handle[:img_obs] = hot_observable!(handle, vals)
-    plot = handle[:plot] = meshscatter!(
+
+    # The graph panel owns the 3D axis and camera; topology fills geometry.
+    return fill_topology_layer_axis!(
+        handle,
         ax,
-        xs,
-        ys,
-        zs;
-        markersize = 0.3,
-        color = obs,
+        topology(layer),
+        _layer_state_view(layer),
+        layer;
+        obs_key = :img_obs,
+        plot_key = :plot,
         colormap = :thermal,
-        transform_marker = false,
+        hot = true,
     )
-    _bind_layer_colorrange!(plot, obs, layer)
-    return handle
 end
 
 function toimage!(cell, panel::LayerViewPanel, handle::PanelHandle; kwargs...)
@@ -132,47 +110,22 @@ function _layer_view_toimage!(cell, layer::AbstractIsingLayer{T,2}, handle) wher
 end
 
 function _layer_view_toimage!(cell, layer::AbstractIsingLayer{T,3}, handle) where {T}
-    top = topology(layer)
-    if _topology_3d_display_enabled(top)
-        axis3_state = haskey(handle, :axis) ? _axis3_state(handle[:axis]) : get(handle.data, :axis3_state, nothing)
-        export_handle = PanelHandle(handle.panel, handle.host, cell)
-        ax = export_handle[:axis] = Axis3(cell)
-        _restore_axis3_state!(ax, axis3_state)
+    axis3_state = haskey(handle, :axis) ? _axis3_state(handle[:axis]) : get(handle.data, :axis3_state, nothing)
+    export_handle = PanelHandle(handle.panel, handle.host, cell)
+    ax = export_handle[:axis] = Axis3(cell)
+    _restore_axis3_state!(ax, axis3_state)
 
-        # Export follows the same graph-panel axis ownership as live display.
-        fill_topology_layer_axis!(
-            export_handle,
-            ax,
-            top,
-            state(layer),
-            layer;
-            obs_key = :img_obs,
-            plot_key = :plot,
-            colormap = :thermal,
-            display_vals = _cast_layer_state_vector(layer),
-        )
-        return export_handle[:axis]
-    end
-
-    # Keep exports of square/default 3D layers on the original meshscatter path.
-    ax = Axis3(cell)
-    if haskey(handle, :axis)
-        _restore_axis3_state!(ax, _axis3_state(handle[:axis]))
-    else
-        _restore_axis3_state!(ax, get(handle.data, :axis3_state, nothing))
-    end
-    xs, ys, zs = _coordinates_3d!(handle, layer)
-    vals = _cast_layer_state_vector(layer)
-    plot = meshscatter!(
+    # Export follows the same graph-panel axis ownership as live display.
+    fill_topology_layer_axis!(
+        export_handle,
         ax,
-        xs,
-        ys,
-        zs;
-        markersize = 0.3,
-        color = vals,
+        topology(layer),
+        state(layer),
+        layer;
+        obs_key = :img_obs,
+        plot_key = :plot,
         colormap = :thermal,
-        transform_marker = false,
+        display_vals = _cast_layer_state_vector(layer),
     )
-    _bind_layer_colorrange!(plot, Observable(vals), layer)
-    return ax
+    return export_handle[:axis]
 end

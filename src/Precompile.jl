@@ -145,7 +145,6 @@ end
 function _precompile_windows_entrypoints(g)
     precompile(Tuple{typeof(interface), typeof(g)})
     precompile(Tuple{typeof(Windows.interface), typeof(g)})
-    precompile(Tuple{typeof(Windows.new_interface), typeof(g)})
     precompile(Tuple{typeof(Windows._display_host!), Windows.WindowHost, String})
     precompile(Tuple{typeof(Windows._start_host_timers!), Windows.WindowHost})
     precompile(Tuple{typeof(Windows.window)})

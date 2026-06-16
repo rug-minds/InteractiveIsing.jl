@@ -183,10 +183,10 @@ function Windows.fill_topology_layer_axis!(
 end
 
 """
-    Windows.fill_topology_layer_axis!(handle, ax, top::LatticeTopology{Hexagonal,<:Any,<:Any,3}, vals, layer; kwargs...)
+    Windows.fill_topology_layer_axis!(handle, ax, top::AbstractLayerTopology{<:Any,3}, vals, layer; kwargs...)
 
-Fill an existing three-dimensional Windows axis by placing one mesh marker at
-each topology-specific display coordinate.
+Fill an existing three-dimensional Windows axis with topology-specific
+coordinates and marker scale.
 """
 function Windows.fill_topology_layer_axis!(
     handle::Windows.PanelHandle,
@@ -201,7 +201,52 @@ function Windows.fill_topology_layer_axis!(
     colorrange = nothing,
     hot::Bool = false,
     display_vals = nothing,
-    markersize = 0.3f0,
+    markersize = _topology_3d_marker_size(top, size(vals)),
+) where {U,T<:AbstractLayerTopology{U,3},L<:AbstractIsingLayer}
+    vals_size = size(vals)
+    length(vals_size) == 3 || throw(ArgumentError("3D topology display needs a 3D array, got size $(vals_size)."))
+
+    xs, ys, zs = Windows._coordinates_3d!(handle, top, vals_size)
+    color_vals = isnothing(display_vals) ? vec(vals) : display_vals
+    length(color_vals) == prod(vals_size) ||
+        throw(ArgumentError("3D topology display needs $(prod(vals_size)) color values, got $(length(color_vals))."))
+    obs = handle[obs_key] = hot ? Windows.hot_observable!(handle, color_vals) : Observable(color_vals)
+    isnothing(vectorized_key) || (handle[vectorized_key] = true)
+
+    # Topology owns coordinates and marker scale; the graph panel owns the axis.
+    plot = handle[plot_key] = meshscatter!(
+        ax,
+        xs,
+        ys,
+        zs;
+        markersize,
+        color = obs,
+        colormap = colormap,
+    )
+    _set_topology_display_colorrange!(plot, obs, layer, colorrange)
+    return handle
+end
+
+"""
+    Windows.fill_topology_layer_axis!(handle, ax, top::LatticeTopology{Hexagonal,<:Any,<:Any,3}, vals, layer; kwargs...)
+
+Fill an existing three-dimensional Windows axis for a hexagonal lattice
+topology.
+"""
+function Windows.fill_topology_layer_axis!(
+    handle::Windows.PanelHandle,
+    ax,
+    top::T,
+    vals,
+    layer::L;
+    obs_key::Symbol,
+    plot_key::Symbol,
+    vectorized_key::Union{Symbol,Nothing} = nothing,
+    colormap = :thermal,
+    colorrange = nothing,
+    hot::Bool = false,
+    display_vals = nothing,
+    markersize = _topology_3d_marker_size(top, size(vals)),
 ) where {Layout,U,P,T<:LatticeTopology{Hexagonal,Layout,U,3,P},L<:AbstractIsingLayer}
     vals_size = size(vals)
     length(vals_size) == 3 || throw(ArgumentError("3D topology display needs a 3D array, got size $(vals_size)."))
@@ -223,19 +268,9 @@ function Windows.fill_topology_layer_axis!(
         markersize,
         color = obs,
         colormap = colormap,
-        transform_marker = false,
     )
     _set_topology_display_colorrange!(plot, obs, layer, colorrange)
     return handle
-end
-
-"""
-    Windows._topology_3d_display_enabled(top::LatticeTopology{Hexagonal,<:Any,<:Any,3})
-
-Enable the topology-specific 3D display path for hexagonal lattice topologies.
-"""
-function Windows._topology_3d_display_enabled(top::T) where {Layout,U,P,T<:LatticeTopology{Hexagonal,Layout,U,3,P}}
-    return true
 end
 
 """
@@ -328,6 +363,19 @@ round markers.
 _topology_marker_fill_factor(::Type{T}) where {T} = 1.04
 _topology_marker_fill_factor(::Type{T}) where {T<:HexagonalTopology} = 1.12
 _topology_marker_fill_factor(::Type{Hexagonal}) = 1.12
+
+"""
+    _topology_3d_marker_size(top, vals_size)
+
+Return the mesh marker diameter for a three-dimensional topology display.
+"""
+function _topology_3d_marker_size(top::T, vals_size::NTuple{3,<:Integer}) where {T<:AbstractLayerTopology}
+    return 0.3f0
+end
+
+function _topology_3d_marker_size(top::T, vals_size::NTuple{3,<:Integer}) where {U,P,T<:SquareTopology{U,3,P}}
+    return 0.25f0
+end
 
 function _set_topology_display_colorrange!(plot, obs, layer::L, colorrange) where {L<:AbstractIsingLayer}
     if isnothing(colorrange)
