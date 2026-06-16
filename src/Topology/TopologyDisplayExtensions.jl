@@ -370,11 +370,11 @@ _topology_marker_fill_factor(::Type{Hexagonal}) = 1.12
 Return the mesh marker diameter for a three-dimensional topology display.
 """
 function _topology_3d_marker_size(top::T, vals_size::NTuple{3,<:Integer}) where {T<:AbstractLayerTopology}
-    return 0.3f0
+    return 0.28f0
 end
 
 function _topology_3d_marker_size(top::T, vals_size::NTuple{3,<:Integer}) where {U,P,T<:SquareTopology{U,3,P}}
-    return 0.25f0
+    return 0.28f0
 end
 
 function _set_topology_display_colorrange!(plot, obs, layer::L, colorrange) where {L<:AbstractIsingLayer}
