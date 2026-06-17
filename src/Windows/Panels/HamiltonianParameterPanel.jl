@@ -389,7 +389,7 @@ function _draw_layer_array!(
         xs,
         ys,
         zs;
-        markersize = 0.08,
+        markersize = _default_3d_marker_size(vals_size),
         color = obs,
         colormap = colormap,
     )

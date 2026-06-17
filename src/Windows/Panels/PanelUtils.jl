@@ -9,6 +9,16 @@ current_layer(g, layer_idx) = _with_layer(identity, g, layer_idx)
 _has_layer_selector(g) = length(layers(g)) > 1
 _has_layer_selector(g::SingleLayerGraph) = false
 
+"""
+    _default_3d_marker_size(vals_size)
+
+Return the mesh marker diameter used for generic three-dimensional layer
+displays in the Windows panels.
+"""
+function _default_3d_marker_size(vals_size::NTuple{3,<:Integer})
+    return 0.28f0
+end
+
 @inline _panel_process_algos(algo::StatefulAlgorithms.AbstractLoopAlgorithm) = StatefulAlgorithms.flat_funcs(algo)
 @inline _panel_process_algos(algo) = (algo,)
 
