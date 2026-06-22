@@ -9,8 +9,12 @@ function _defect_bound_layer(defects::D) where {D<:DefectHopping}
     return defects.state[Int(defects.layer)]
 end
 
-function _defect_bound_layer(charges::C) where {C<:ChargeHopProposer}
-    return _defect_bound_layer(charges.positive)
+function _defect_bound_layer(model::M) where {M<:DefectsModel}
+    return _defect_bound_layer(model.vacancies)
+end
+
+function _defect_bound_layer(proposer::P) where {P<:ChargeHopProposer}
+    return _defect_bound_layer(proposer.model)
 end
 
 """
@@ -44,12 +48,20 @@ function _defect_display_points(defects::D) where {D<:DefectHopping}
     return points
 end
 
-function _defect_positive_display_points(charges::C) where {C<:ChargeHopProposer}
-    return _defect_display_points(charges.positive)
+function _defect_positive_display_points(model::M) where {M<:DefectsModel}
+    return _defect_display_points(model.vacancies)
 end
 
-function _defect_negative_display_points(charges::C) where {C<:ChargeHopProposer}
-    return _defect_display_points(charges.negative)
+function _defect_negative_display_points(model::M) where {M<:DefectsModel}
+    return _defect_display_points(model.charges)
+end
+
+function _defect_positive_display_points(proposer::P) where {P<:ChargeHopProposer}
+    return _defect_positive_display_points(proposer.model)
+end
+
+function _defect_negative_display_points(proposer::P) where {P<:ChargeHopProposer}
+    return _defect_negative_display_points(proposer.model)
 end
 
 """
@@ -124,13 +136,13 @@ function Windows.interface(
 end
 
 """
-    Windows.interface(charges::ChargeHopProposer; kwargs...)
+    Windows.interface(model::DefectsModel; kwargs...)
 
 Open one live GLMakie display for a mobile-charge hopping model, with positive and
 negative mobile charges shown in different colors.
 """
 function Windows.interface(
-    charges::C;
+    model::M;
     framerate = 30,
     polling_rate = 10,
     size = (900, 800),
@@ -144,7 +156,7 @@ function Windows.interface(
     lattice_color = (:gray70, 0.18),
     show_lattice = true,
     focus = true,
-) where {C<:ChargeHopProposer}
+) where {M<:DefectsModel}
     host = Windows.window(; title, size, fps = framerate, polling_rate, focus)
     ax = host[:axis] = Axis3(host.figure[1, 1])
     ax.xlabel = "x"
@@ -156,15 +168,15 @@ function Windows.interface(
         # unobtrusive in dense 3D systems.
         host[:lattice_plot] = scatter!(
             ax,
-            _defect_lattice_points(charges.positive);
+            _defect_lattice_points(model.vacancies);
             markersize = lattice_markersize,
             color = lattice_color,
             transparency = true,
         )
     end
 
-    positive_points = Windows.hot_observable!(host, _defect_positive_display_points(charges))
-    negative_points = Windows.hot_observable!(host, _defect_negative_display_points(charges))
+    positive_points = Windows.hot_observable!(host, _defect_positive_display_points(model))
+    negative_points = Windows.hot_observable!(host, _defect_negative_display_points(model))
     host[:positive_points] = positive_points
     host[:negative_points] = negative_points
     host[:positive_plot] = meshscatter!(
@@ -179,13 +191,17 @@ function Windows.interface(
         markersize = negative_markersize,
         color = negative_color,
     )
-    host[:charges] = charges
+    host[:charges] = model
 
     Windows.register_frame!(host) do _
-        positive_points[] = _defect_positive_display_points(charges)
-        negative_points[] = _defect_negative_display_points(charges)
+        positive_points[] = _defect_positive_display_points(model)
+        negative_points[] = _defect_negative_display_points(model)
         return nothing
     end
 
     return host
+end
+
+function Windows.interface(proposer::P; kwargs...) where {P<:ChargeHopProposer}
+    return Windows.interface(proposer.model; kwargs...)
 end

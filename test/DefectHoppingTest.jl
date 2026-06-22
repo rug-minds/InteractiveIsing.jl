@@ -37,6 +37,24 @@ end
 defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
 
 @testset "DefectHopping" begin
+    @testset "Monte Carlo Model Interface" begin
+        g = defect_hopping_graph((3,), Quadratic(c = ConstVal(0.0), localpotential = zeros(3)); periodic = true)
+        neutral_hamiltonian = LocalPotentialShiftCoupling(2, 0.0)
+        defects = DefectsModel(
+            g;
+            vacancies = MobileVacancies([1]; hamiltonian = neutral_hamiltonian),
+            charges = MobileCharges([2]; hamiltonian = neutral_hamiltonian),
+            electron_attempt_rate = 2.0,
+        )
+
+        @test g isa AbstractMonteCarloModel
+        @test defects isa AddOnAbstractMonteCarloModel
+        @test MobileChargeHopping === DefectsModel
+        @test InteractiveIsing.requires(DefectsModel) == (AbstractIsingGraph,)
+        @test InteractiveIsing.requires(defects) == (AbstractIsingGraph,)
+        @test InteractiveIsing.dependson(defects) === g
+    end
+
     @testset "Polynomial ΔH" begin
         g = defect_hopping_graph((2, 2), Quadratic(c = ConstVal(3.0), localpotential = zeros(4)))
         InteractiveIsing.graphstate(g) .= [1.0, 2.0, 3.0, 4.0]
@@ -100,6 +118,22 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
 
         @test g.hamiltonian.lp == [0.2, 0.0]
         @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), context.hamiltonian, g, proposal) ≈ 5.0 * 0.2 * (3.0^2 - 1.0^2)
+    end
+
+    @testset "Local Potential Scale Coupling" begin
+        coupling = LocalPotentialScaleCoupling(2, 2.0)
+        proposer = DefectHopping(defects = [1], hamiltonian = coupling)
+        g = defect_hopping_graph((2,), Quadratic(c = ConstVal(2.0), localpotential = [2.0, 3.0]), proposer; periodic = true)
+        InteractiveIsing.graphstate(g) .= [2.0, 3.0]
+
+        context = StatefulAlgorithms.init(Metropolis(), (; model = g))
+        proposal = InteractiveIsing.DefectHopProposal(1, 1, 2, 1.0, (1,), context.proposer.effects, true, false)
+        accepted = InteractiveIsing.accept(context.proposer, proposal)
+
+        @test context.hamiltonian.lp == [4.0, 3.0]
+        @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), context.hamiltonian, g, proposal) ≈ 38.0
+        InteractiveIsing.update!(Metropolis(), context.hamiltonian, g, accepted)
+        @test context.hamiltonian.lp == [2.0, 6.0]
     end
 
     @testset "ExtField Charge Coupling" begin
@@ -178,8 +212,7 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
             ),
             positive_charge = 2.0u"C",
             negative_charge = -1.0u"C",
-            positive_attempt_rate = 7.0,
-            negative_attempt_rate = 11.0,
+            electron_attempt_rate = 11.0,
         )
         T = eltype(InteractiveIsing.graphstate(g))
         coulomb = InteractiveIsing.gethamiltonian(g.hamiltonian, CoulombHamiltonian)
@@ -217,11 +250,11 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
             negative = [2],
             positive_effects = neutral_effects,
             negative_effects = neutral_effects,
-            positive_attempt_rate = 0.0,
-            negative_attempt_rate = 1.0,
+            vacancy_attempt_rate = 0.0,
         )
+        negative_only_proposer = InteractiveIsing.get_proposer(negative_only)
         for _ in 1:20
-            @test rand(rng, negative_only).species isa NegativeFreeCharge
+            @test rand(rng, negative_only_proposer).species isa NegativeFreeCharge
         end
 
         fast_negative = ChargeHopProposer(
@@ -230,10 +263,10 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
             negative = [2],
             positive_effects = neutral_effects,
             negative_effects = neutral_effects,
-            positive_attempt_rate = 1.0,
-            negative_attempt_rate = 100.0,
+            electron_attempt_rate = 100.0,
         )
-        negative_draws = count(_ -> rand(rng, fast_negative).species isa NegativeFreeCharge, 1:300)
+        fast_negative_proposer = InteractiveIsing.get_proposer(fast_negative)
+        negative_draws = count(_ -> rand(rng, fast_negative_proposer).species isa NegativeFreeCharge, 1:300)
         @test negative_draws > 285
 
         @test_throws ArgumentError ChargeHopProposer(
@@ -242,8 +275,7 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
             negative = [2],
             positive_effects = neutral_effects,
             negative_effects = neutral_effects,
-            positive_attempt_rate = -1.0,
-            negative_attempt_rate = 1.0,
+            vacancy_attempt_rate = -1.0,
         )
         @test_throws ArgumentError ChargeHopProposer(
             g;
@@ -251,8 +283,8 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
             negative = [2],
             positive_effects = neutral_effects,
             negative_effects = neutral_effects,
-            positive_attempt_rate = 0.0,
-            negative_attempt_rate = 0.0,
+            vacancy_attempt_rate = 1.0,
+            electron_attempt_rate = 1.0,
         )
     end
 

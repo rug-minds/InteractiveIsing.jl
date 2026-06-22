@@ -1,33 +1,36 @@
-export CoulombChargeShift
+export CoulombChargeCoupling, CoulombChargeShift
 
 """
-    CoulombChargeShift(charge; split=0.5, charge_sign=nothing)
+    CoulombChargeCoupling(charge; split=0.5, charge_sign=nothing)
 
-Defect mode for a mobile Coulomb free charge. Positive `charge` values use the
-positive free-charge occupancy in `CoulombHamiltonian`; negative values use the
-negative occupancy and store `abs(charge)` as the species magnitude.
+Mobile-species coupling hamiltonian for Coulomb free charge. Positive `charge`
+values use the positive free-charge occupancy in `CoulombHamiltonian`; negative
+values use the negative occupancy and store `abs(charge)` as the species
+magnitude.
 """
-struct CoulombChargeShift{A,S,C,K} <: AbstractDefectMode
+struct CoulombChargeCoupling{A,S,C,K} <: AbstractDefectCoupling
     charge::A
     split::S
     charge_sign::C
     kernel::K
 end
 
-function CoulombChargeShift(charge::A; split::S = 0.5, charge_sign = nothing, kernel = nothing) where {A,S}
+function CoulombChargeCoupling(charge::A; split::S = 0.5, charge_sign = nothing, kernel = nothing) where {A,S}
     selected_sign = isnothing(charge_sign) ? _defect_charge_sign(charge) : charge_sign
-    return CoulombChargeShift{typeof(abs(charge)),S,typeof(selected_sign),typeof(kernel)}(abs(charge), split, selected_sign, kernel)
+    return CoulombChargeCoupling{typeof(abs(charge)),S,typeof(selected_sign),typeof(kernel)}(abs(charge), split, selected_sign, kernel)
 end
+
+const CoulombChargeShift = CoulombChargeCoupling
 
 @inline _defect_charge_sign(charge) = charge < zero(charge) ? NegativeFreeCharge() : PositiveFreeCharge()
 
-@inline function _defect_convert_mode(mode::M, g::G) where {M<:CoulombChargeShift,G<:AbstractIsingGraph}
+@inline function _defect_convert_mode(mode::M, g::G) where {M<:CoulombChargeCoupling,G<:AbstractIsingGraph}
     charge = _defect_internal_value(mode.charge, physicalunits(charge = 1, role = :free_charge), g, :coulomb_charge_shift)
     split = _defect_internal_value(mode.split, physicalunits(role = :dimensionless), g, :free_charge_split)
-    return CoulombChargeShift(charge; split, charge_sign = mode.charge_sign)
+    return CoulombChargeCoupling(charge; split, charge_sign = mode.charge_sign)
 end
 
-@inline _defect_mode_uses_physical_charge(::CoulombChargeShift) = true
+@inline _defect_mode_uses_physical_charge(::CoulombChargeCoupling) = true
 
 """
     _defect_has_coulomb_charge(effects)
@@ -35,26 +38,26 @@ end
 Return whether a defect effect tuple contains a charged Coulomb mode.
 """
 @inline _defect_has_coulomb_charge(::Tuple{}) = false
-@inline _defect_has_coulomb_charge(effects::Tuple{<:CoulombChargeShift,Vararg}) = true
+@inline _defect_has_coulomb_charge(effects::Tuple{<:CoulombChargeCoupling,Vararg}) = true
 @inline _defect_has_coulomb_charge(effects::Tuple) = _defect_has_coulomb_charge(Base.tail(effects))
 
 @inline _defect_charge_magnitude(c::CoulombHamiltonian, ::PositiveFreeCharge) = c.q_positive
 @inline _defect_charge_magnitude(c::CoulombHamiltonian, ::NegativeFreeCharge) = c.q_negative
 
 """
-    _defect_validate_mode!(mode::CoulombChargeShift, hterm, idx)
+    _defect_validate_mode!(mode::CoulombChargeCoupling, hterm, idx)
 
 Validate that a charged-defect mode targets a Coulomb term, has a valid cell
 split, and matches the Coulomb term's configured charge magnitude.
 """
-function _defect_validate_mode!(mode::M, hterm::H, idx::I) where {M<:CoulombChargeShift,H<:CoulombHamiltonian,I<:Integer}
+function _defect_validate_mode!(mode::M, hterm::H, idx::I) where {M<:CoulombChargeCoupling,H<:CoulombHamiltonian,I<:Integer}
     zero(mode.split) <= mode.split <= one(mode.split) ||
-        throw(ArgumentError("CoulombChargeShift split must lie in [0, 1]; got $(mode.split)."))
+        throw(ArgumentError("CoulombChargeCoupling split must lie in [0, 1]; got $(mode.split)."))
     expected = _defect_charge_magnitude(hterm, mode.charge_sign)
     isapprox(mode.charge, expected) ||
-        throw(ArgumentError("CoulombChargeShift charge $(mode.charge) must match CoulombHamiltonian $(typeof(mode.charge_sign)) magnitude $expected. Configure q_positive/q_negative on CoulombHamiltonian."))
+        throw(ArgumentError("CoulombChargeCoupling charge $(mode.charge) must match CoulombHamiltonian $(typeof(mode.charge_sign)) magnitude $expected. Configure q_positive/q_negative on CoulombHamiltonian."))
     isapprox(mode.split, hterm.free_charge_split) ||
-        throw(ArgumentError("CoulombChargeShift split $(mode.split) must match CoulombHamiltonian free_charge_split $(hterm.free_charge_split)."))
+        throw(ArgumentError("CoulombChargeCoupling split $(mode.split) must match CoulombHamiltonian free_charge_split $(hterm.free_charge_split)."))
     return true
 end
 
@@ -65,7 +68,7 @@ Map a defect graph index to the dipole cell occupied by that free charge.
 """
 function _defect_coulomb_cell_coord(c::C, g::G, layer_arg::L, graph_idx::I) where {C<:CoulombHamiltonian,G<:AbstractIsingGraph,L,I<:Integer}
     layeridx(c) == Int(layer_arg) ||
-        throw(ArgumentError("CoulombChargeShift targets CoulombHamiltonian layer $(layeridx(c)), but DefectHopping is bound to layer $(Int(layer_arg))."))
+        throw(ArgumentError("CoulombChargeCoupling targets CoulombHamiltonian layer $(layeridx(c)), but DefectHopping is bound to layer $(Int(layer_arg))."))
 
     layer = g[Int(layer_arg)]
     local_idx = Int(graph_idx) - Int(startidx(layer)) + 1
@@ -80,7 +83,7 @@ end
 
 Add or remove one mobile free-charge occupancy represented by `mode`.
 """
-function _defect_adjust_coulomb_occupancy!(mode::M, c::C, g::G, layer_arg::L, graph_idx::I, sign::S) where {M<:CoulombChargeShift,C<:CoulombHamiltonian,G<:AbstractIsingGraph,L,I<:Integer,S}
+function _defect_adjust_coulomb_occupancy!(mode::M, c::C, g::G, layer_arg::L, graph_idx::I, sign::S) where {M<:CoulombChargeCoupling,C<:CoulombHamiltonian,G<:AbstractIsingGraph,L,I<:Integer,S}
     coord = _defect_coulomb_cell_coord(c, g, layer_arg, graph_idx)
     if sign > 0
         add_cell_free_charge!(c, mode.charge_sign, coord)
@@ -167,21 +170,21 @@ function _defect_free_charge_kernel(c::C) where {C<:CoulombHamiltonian}
     return kernel::Array{T,4}
 end
 
-@inline _defect_mode_kernel(mode::CoulombChargeShift{A,S,C,Nothing}, c::CoulombHamiltonian) where {A,S,C} =
+@inline _defect_mode_kernel(mode::CoulombChargeCoupling{A,S,C,Nothing}, c::CoulombHamiltonian) where {A,S,C} =
     _defect_free_charge_kernel(c)
 
-@inline _defect_mode_kernel(mode::CoulombChargeShift{A,S,C,K}, c::CoulombHamiltonian) where {A,S,C,K<:Array} =
+@inline _defect_mode_kernel(mode::CoulombChargeCoupling{A,S,C,K}, c::CoulombHamiltonian) where {A,S,C,K<:Array} =
     mode.kernel
 
 """
-    _defect_bind_mode(mode::CoulombChargeShift, coulomb, graph, layer)
+    _defect_bind_mode(mode::CoulombChargeCoupling, coulomb, graph, layer)
 
 Attach the Coulomb free-charge Green kernel to a bound defect mode. The kernel
 remains owned by this coupling extension, but the hot hop path can read it
 directly from the mode without a cache lookup.
 """
-function _defect_bind_mode(mode::M, c::C, g::G, layer_arg::L) where {M<:CoulombChargeShift,C<:CoulombHamiltonian,G<:AbstractIsingGraph,L}
-    return CoulombChargeShift(
+function _defect_bind_mode(mode::M, c::C, g::G, layer_arg::L) where {M<:CoulombChargeCoupling,C<:CoulombHamiltonian,G<:AbstractIsingGraph,L}
+    return CoulombChargeCoupling(
         mode.charge;
         split = mode.split,
         charge_sign = mode.charge_sign,
@@ -229,13 +232,13 @@ function _defect_rebuild_coulomb!(c::C, g::G; validate::Bool = true) where {C<:C
 end
 
 """
-    _defect_apply_initial_mode!(mode::CoulombChargeShift, coulomb, graph, layer, idx, sign)
+    _defect_apply_initial_mode!(mode::CoulombChargeCoupling, coulomb, graph, layer, idx, sign)
 
 Register a charged defect in Coulomb free-charge occupancy during binding.
 Neutrality is not checked here so separate positive and negative systems can be
 bound before the final Coulomb initialization validates the total charge.
 """
-function _defect_apply_initial_mode!(mode::M, c::C, g::G, layer_arg::L, graph_idx::I, sign::S) where {M<:CoulombChargeShift,C<:CoulombHamiltonian,G<:AbstractIsingGraph,L,I<:Integer,S}
+function _defect_apply_initial_mode!(mode::M, c::C, g::G, layer_arg::L, graph_idx::I, sign::S) where {M<:CoulombChargeCoupling,C<:CoulombHamiltonian,G<:AbstractIsingGraph,L,I<:Integer,S}
     _defect_adjust_coulomb_occupancy!(mode, c, g, layer_arg, graph_idx, sign)
     _defect_rebuild_coulomb!(c, g; validate = false)
     return nothing
@@ -269,7 +272,7 @@ function _defect_append_coulomb_deltas!(
     c::C,
     defects::D,
     proposal::P,
-) where {T,M<:CoulombChargeShift,C<:CoulombHamiltonian,D<:DefectHopping,P<:DefectHopProposal}
+) where {T,M<:CoulombChargeCoupling,C<:CoulombHamiltonian,D<:DefectHopping,P<:DefectHopProposal}
     g = defects.state
     from_cell = _defect_coulomb_cell_coord(c, g, defects.layer, proposal.from_idx)
     to_cell = _defect_coulomb_cell_coord(c, g, defects.layer, proposal.to_idx)
@@ -296,7 +299,7 @@ charge hop.
     defects::D,
     proposal::P,
     ::Type{T},
-) where {M<:CoulombChargeShift,C<:CoulombHamiltonian,D<:DefectHopping,P<:DefectHopProposal,T}
+) where {M<:CoulombChargeCoupling,C<:CoulombHamiltonian,D<:DefectHopping,P<:DefectHopProposal,T}
     g = defects.state
     from_cell = _defect_coulomb_cell_coord(c, g, defects.layer, proposal.from_idx)
     to_cell = _defect_coulomb_cell_coord(c, g, defects.layer, proposal.to_idx)
@@ -364,12 +367,12 @@ function _defect_apply_coulomb_density_deltas!(
 end
 
 @inline _defect_coulomb_mode_count(::Tuple{}) = 0
-@inline _defect_coulomb_mode_count(effects::Tuple{<:CoulombChargeShift,Vararg}) =
+@inline _defect_coulomb_mode_count(effects::Tuple{<:CoulombChargeCoupling,Vararg}) =
     1 + _defect_coulomb_mode_count(Base.tail(effects))
 @inline _defect_coulomb_mode_count(effects::Tuple) =
     _defect_coulomb_mode_count(Base.tail(effects))
 
-@inline _defect_first_coulomb_mode(effects::Tuple{<:CoulombChargeShift,Vararg}) = first(effects)
+@inline _defect_first_coulomb_mode(effects::Tuple{<:CoulombChargeCoupling,Vararg}) = first(effects)
 @inline _defect_first_coulomb_mode(effects::Tuple) = _defect_first_coulomb_mode(Base.tail(effects))
 
 """

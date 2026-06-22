@@ -18,11 +18,12 @@ solves from the current total `ρ`.
 
 ## Free-Charge State
 
-Mobile free charge is stored separately from `ρ` as conserved positive and
-negative occupancy fields. `ChargeHopProposer` groups the two fields into one
-model, so `state(charges)` returns a charge-state object with positive and
-negative indices/occupancies, while `graphstate(charges)` still returns the
-coupled spin state.
+Mobile free charge is stored separately from `ρ` as conserved vacancy and
+carrier occupancy fields. `DefectsModel` groups the two fields into one
+Monte Carlo model, so `state(charges)` returns a charge-state object with
+vacancy/carrier indices and occupancies, while `graphstate(charges)` still
+returns the coupled spin state. `get_proposer(charges)` derives the
+`ChargeHopProposer` that draws `ChargeHopProposal`s for `Metropolis`.
 
 The Coulomb term stores:
 
@@ -50,16 +51,17 @@ countercharge.
 
 ## Defect Coupling
 
-`CoulombChargeShift(q)` registers a mobile free-charge occupancy:
+`CoulombChargeCoupling(q)` registers a mobile free-charge occupancy:
 
 - positive `q` uses positive occupancy,
 - negative `q` uses negative occupancy,
 - `abs(q)` must match the corresponding `CoulombHamiltonian` charge magnitude.
 
 Oxygen vacancies can additionally carry structural modes such as
-`LocalPotentialShift` or `ExtFieldShift`. Electron-like negative carriers should
-normally use only `CoulombChargeShift(-q)` unless a separate physical model says
-they also perturb local structure.
+`LocalPotentialShiftCoupling`, `LocalPotentialScaleCoupling`, or
+`ExternalFieldShiftCoupling`. Electron-like negative carriers should normally use
+only `CoulombChargeCoupling(-q)` unless a separate physical model says they also
+perturb local structure.
 
 `interface(charges)` displays both fields in one window, with positive and
 negative charges rendered in different colors.

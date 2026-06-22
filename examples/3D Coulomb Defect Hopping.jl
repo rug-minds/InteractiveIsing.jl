@@ -1,5 +1,6 @@
 using InteractiveIsing
 using InteractiveIsing.StatefulAlgorithms
+using Random
 using Unitful
 
 """
@@ -40,23 +41,17 @@ coulomb_recalc_interval = 1001
 electron_charge = elementary_charge
 vacancy_charge = 2f0 * electron_charge
 external_field_z = 6f0u"meV"
-vacancy_attempt_rate = 1f0
 electron_attempt_rate = 10f0
 
-charged_oxygen_vacancy = (
-    CoulombChargeShift(vacancy_charge; split = 0.5f0),
-    ExtFieldChargeCoupling(),
-    LocalPotentialShift(2, 0.012f0),
-    LocalPotentialShift(4, 0.004f0),
-)
+vacancy_hamiltonian =
+    CoulombChargeCoupling(vacancy_charge; split = 0.5f0) +
+    ExternalFieldChargeCoupling() +
+    LocalPotentialShiftCoupling(2, 0.012f0) +
+    LocalPotentialShiftCoupling(4, 0.004f0)
 
-mobile_electron = (
-    CoulombChargeShift(-electron_charge; split = 0.5f0),
-    ExtFieldChargeCoupling(),
-)
-
-vacancy_effects = charged_oxygen_vacancy
-electron_effects = mobile_electron
+electron_hamiltonian =
+    CoulombChargeCoupling(-electron_charge; split = 0.5f0) +
+    ExternalFieldChargeCoupling()
 
 g = IsingGraph(
     nx,
@@ -87,52 +82,12 @@ g = IsingGraph(
 
 temp!(g, kBT)
 
-vacancy_positions = [
-    CartesianIndex(6, 6, 5),
-    CartesianIndex(14, 10, 5),
-    CartesianIndex(22, 8, 5),
-    CartesianIndex(32, 12, 5),
-    CartesianIndex(9, 24, 5),
-    CartesianIndex(18, 28, 5),
-    CartesianIndex(27, 30, 6),
-    CartesianIndex(35, 25, 6),
-    CartesianIndex(11, 36, 6),
-    CartesianIndex(24, 35, 6),
-]
-
-electron_positions = [
-    CartesianIndex(4, 5, 5),
-    CartesianIndex(8, 7, 5),
-    CartesianIndex(12, 9, 5),
-    CartesianIndex(16, 11, 5),
-    CartesianIndex(20, 7, 6),
-    CartesianIndex(24, 9, 7),
-    CartesianIndex(28, 11, 6),
-    CartesianIndex(34, 13, 6),
-    CartesianIndex(7, 22, 5),
-    CartesianIndex(11, 26, 5),
-    CartesianIndex(15, 30, 5),
-    CartesianIndex(19, 34, 6),
-    CartesianIndex(23, 28, 7),
-    CartesianIndex(29, 32, 6),
-    CartesianIndex(33, 26, 6),
-    CartesianIndex(37, 24, 6),
-    CartesianIndex(9, 38, 5),
-    CartesianIndex(15, 36, 5),
-    CartesianIndex(27, 37, 6),
-    CartesianIndex(33, 35, 6),
-]
-
-charges = ChargeHopProposer(
+charges = DefectsModel(
     g;
-    positive = vacancy_positions,
-    negative = electron_positions,
-    positive_effects = vacancy_effects,
-    negative_effects = electron_effects,
-    positive_charge = vacancy_charge,
-    negative_charge = -electron_charge,
-    positive_attempt_rate = vacancy_attempt_rate,
-    negative_attempt_rate = electron_attempt_rate,
+    vacancies = MobileVacancies(10; charge = vacancy_charge, hamiltonian = vacancy_hamiltonian),
+    charges = MobileCharges(20; charge = -electron_charge, hamiltonian = electron_hamiltonian),
+    electron_attempt_rate,
+    rng = MersenneTwister(42),
 )
 
 println("Field drift demo: positive vacancies should drift toward z = $nz; electrons should drift toward z = 1.")

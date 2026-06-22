@@ -11,25 +11,21 @@ wg = @WG defect_hopping_weights NN = 1
 vacancy_hopping_scale = 180f0
 defect_step_interval = 1000
 
-weak_fast_vacancy = (
-    ExtFieldShift(0.04f0; hopping_scale = 1f0),
-)
+weak_fast_vacancy_hamiltonian =
+    ExternalFieldShiftCoupling(0.04f0; hopping_scale = 1f0)
 
-polar_trapping_vacancy = (
-    ExtFieldShift(0.08f0; hopping_scale = vacancy_hopping_scale),
-    LocalPotentialShift(1, -0.03f0; hopping_scale = vacancy_hopping_scale),
-)
+polar_trapping_vacancy_hamiltonian =
+    ExternalFieldShiftCoupling(0.08f0; hopping_scale = vacancy_hopping_scale) +
+    LocalPotentialShiftCoupling(1, -0.03f0; hopping_scale = vacancy_hopping_scale)
 
-stiffness_trapping_vacancy = (
-    LocalPotentialShift(2, 0.04f0; hopping_scale = vacancy_hopping_scale),
-)
+stiffness_trapping_vacancy_hamiltonian =
+    LocalPotentialShiftCoupling(2, 0.04f0; hopping_scale = vacancy_hopping_scale)
 
-mixed_charged_vacancy = (
-    ExtFieldShift(0.06f0; hopping_scale = vacancy_hopping_scale),
-    LocalPotentialShift(2, 0.03f0; hopping_scale = vacancy_hopping_scale),
-)
+mixed_charged_vacancy_hamiltonian =
+    ExternalFieldShiftCoupling(0.06f0; hopping_scale = vacancy_hopping_scale) +
+    LocalPotentialShiftCoupling(2, 0.03f0; hopping_scale = vacancy_hopping_scale)
 
-vacancy_effects = mixed_charged_vacancy
+vacancy_hamiltonian = mixed_charged_vacancy_hamiltonian
 
 g = IsingGraph(
     nx,
@@ -68,7 +64,7 @@ defects = DefectHopping(
         CartesianIndex(7, 7, 4),
         CartesianIndex(5, 4, 3),
     ],
-    effects = vacancy_effects,
+    hamiltonian = vacancy_hamiltonian,
 )
 
 langevin_algorithm = LocalLangevin(stepsize = 0.03f0, adjusted = false)
