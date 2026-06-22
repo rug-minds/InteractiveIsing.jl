@@ -5,27 +5,41 @@ using Unitful
 """
     coulomb_defect_weights(; dr)
 
-Nearest-neighbor coupling used by the bilinear part of the 3D graph.
+Nearest-neighbor coupling used by the bilinear part of the 3D graph. `dr` is
+Unitful because this example keeps the model parameters in meV/nm units.
 """
-coulomb_defect_weights(; dr) = dr == 1 ? 1f0 : 0f0
+function coulomb_defect_weights(; dr)
+    distance_nm = Unitful.ustrip(u"nm", dr)
+    return distance_nm == 1 ? 1f0u"meV" : 0f0u"meV"
+end
 
 nx, ny, nz = 40, 40, 10
-wg = @WG coulomb_defect_weights NN = 1
-scales = PhysicalScales(energy = 1u"eV", charge = 1u"C")
+wg = PhysicalWeightGenerator(WeightGenerator(coulomb_defect_weights, 1))
+elementary_charge = 1.602176634f-19u"C"
+
+# Keep the internal Hamiltonian scale in meV. Using eV here moves the same
+# dimensionless transition scale up by a factor of 1000 in the Kelvin readout.
+scales = PhysicalScales(
+    energy = 1u"meV",
+    length = 1u"nm",
+    charge = elementary_charge,
+    dipole = elementary_charge * 1u"nm",
+)
 
 vacancy_stiffness = zeros(Float32, nx * ny * nz)
 vacancy_quartic = zeros(Float32, nx * ny * nz)
 
 stepsize = 0.025f0
-temperature = 0.04f0
+temperature = 45u"K"
+kBT = Unitful.uconvert(u"meV", Unitful.k * temperature)
 defect_step_interval = 1000
 
-coulomb_scaling = 1f0
-coulomb_screening = 8f0
+coulomb_scaling = elementary_charge * 1f0u"nm"
+coulomb_screening = 8f0u"nm"
 coulomb_recalc_interval = Inf
-electron_charge = 1f0u"C"
+electron_charge = elementary_charge
 vacancy_charge = 2f0 * electron_charge
-external_field_z = 6f0u"eV"
+external_field_z = 6f0u"meV"
 vacancy_attempt_rate = 1f0
 electron_attempt_rate = 10f0
 
@@ -50,7 +64,7 @@ g = IsingGraph(
     nz,
     Continuous(),
     wg,
-    LatticeConstants(1f0, 1f0, 1f0),
+    LatticeConstants(1f0u"nm", 1f0u"nm", 1f0u"nm"),
     StateSet(-1.5f0, 1.5f0),
     Quadratic(c = ConstVal(-1.0f0), localpotential = ConstFill(1f0)) +
         Quartic(c = ConstVal(1.0f0), localpotential = ConstFill(1f0)) +
@@ -71,7 +85,7 @@ g = IsingGraph(
     physical_scales = scales,
 )
 
-temp!(g, temperature)
+temp!(g, kBT)
 
 vacancy_positions = [
     CartesianIndex(6, 6, 5),
