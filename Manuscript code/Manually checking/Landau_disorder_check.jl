@@ -701,7 +701,7 @@ g = IsingGraph(xL, yL, zL,
         wg5, 
         LatticeConstants(1.0, 1.0, 1.0),
         # Ising(b = UniformArray(0), localpotential = coeff2) + 
-            InteractiveIsing.MagField(b = 1) + InteractiveIsing.Bilinear() + 
+            InteractiveIsing.ExtField(b = 1) + InteractiveIsing.Bilinear() +
             CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + 
             Quadratic(localpotential = coeff2) +
             Quartic(localpotential = coeff4) + 
