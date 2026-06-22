@@ -431,7 +431,7 @@ function StatefulAlgorithms.step!(::DepolLogger, context::C) where C
     depol_term = find_first_term(hamiltonian, InteractiveIsing.CoulombHamiltonian)
     push!(total_energy, total_supported_energy(hamiltonian, model))
     push!(interaction_energy, bilinear_total_energy(hamiltonian, model))
-    push!(field_energy, sum_term_energy_by_type(hamiltonian, model, InteractiveIsing.MagField))
+    push!(field_energy, sum_term_energy_by_type(hamiltonian, model, InteractiveIsing.ExtField))
     push!(poly_energy, total_polynomial_energy(hamiltonian, model))
     isnothing(depol_term) && return (;)
     depol = coulomb_local_scale(model, depol_term)
@@ -695,7 +695,7 @@ end
 function total_supported_energy(hamiltonian, model)
     total = 0.0f0
     total += bilinear_total_energy(hamiltonian, model)
-    total += sum_term_energy_by_type(hamiltonian, model, InteractiveIsing.MagField)
+    total += sum_term_energy_by_type(hamiltonian, model, InteractiveIsing.ExtField)
     total += total_polynomial_energy(hamiltonian, model)
     total += coulomb_total_energy(hamiltonian)
     return total
@@ -943,7 +943,7 @@ g = IsingGraph(xL, yL, zL,
         wg5, 
         LatticeConstants(1.0, 1.0, 1.0),
         # Ising(b = UniformArray(0), localpotential = coeff2) + 
-            InteractiveIsing.MagField(b = 1) + InteractiveIsing.Bilinear() + 
+            InteractiveIsing.ExtField(b = 1) + InteractiveIsing.Bilinear() +
             CoulombHamiltonian(scaling = Scale, screening = Screening, recalc = 1000) + 
             Quadratic(localpotential = coeff2) +
             Quartic(localpotential = coeff4) + 
