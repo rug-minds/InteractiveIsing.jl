@@ -114,7 +114,7 @@ function xor_temperature_graph()
         input_layer,
         hidden_layer,
         output_layer,
-        Bilinear() + MagField(b = copy(XOR_SCALAR_BIAS));
+        Bilinear() + ExtField(b = copy(XOR_SCALAR_BIAS));
         precision = Float64,
         adj = xor_scalar_adjacency(),
         index_set = g -> ToggledIndexSet(g),

@@ -92,7 +92,7 @@ end
     return coeffs
 end
 
-@inline function local_potential_coefficients!(coeffs, h::MagField, g::IsingGraph, spin_idx)
+@inline function local_potential_coefficients!(coeffs, h::ExtField, g::IsingGraph, spin_idx)
     length(coeffs) < 2 && resize!(coeffs, 2)
     coeffs[2] += -convert(eltype(coeffs), h.c) * convert(eltype(coeffs), h.b[spin_idx])
     return coeffs

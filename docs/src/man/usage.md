@@ -29,7 +29,7 @@ If you experience hanging still on certain operations, start with
 This package can be used to simulate 2-, 2.5- and 3D Ising models (any model with 1D state and where the couplings are at most linear.) with different algorithms and energy functions.
 The simulations are segmented in different layers which can be 2D or 3D (at this moment there's only support for rectangular and cuboid layers).
 
-The base datastructure for every simulation is the IsingGraph, which holds all the data neccesary for the simulation to run, such as the state, the adjacency list, other parameters (like the magnetic field or other parameters in the energy function) and metadata for the layers, among other things.
+The base datastructure for every simulation is the IsingGraph, which holds all the data neccesary for the simulation to run, such as the state, the adjacency list, other parameters (like the external field or other parameters in the energy function) and metadata for the layers, among other things.
 
 The layers are an abstraction on top of the basic IsingGraph, and are the structures the user will mainly interact. Any layer in itself can be interpreted as an Ising Model with it's own properties. Currently the library supports layers that have continuous or discrete states. For both of these types a "state set" can be defined. For continuous layers the stateset may consist of two numbers which are interpreted as the end points of a closed interval. The states of any spin may then take on values from anywhere in this interval. For discrete states, the stateset may consist of any amount of numbers, and the spins in the system may take any of the values in the set.
 
@@ -163,7 +163,7 @@ quit(g)
 
 ## Interacting with parameters
 
-Hamiltonians, and sometimes the algorithms themselves, might have parameters that either have a physical interpretation or some technical interpretation in terms of the simulation itself. Moreover, these parameters might be accesible to the user to change during runtime, like the magnetic field on the spins, or a clamping factor for equilibrium propagation.
+Hamiltonians, and sometimes the algorithms themselves, might have parameters that either have a physical interpretation or some technical interpretation in terms of the simulation itself. Moreover, these parameters might be accesible to the user to change during runtime, like the external field on the spins, or a clamping factor for equilibrium propagation.
 
 Parameters will be either of scalar of vector value. In the case of a vector value, every index of the vector will correspond one-to-one to a spin.
 
@@ -173,7 +173,7 @@ These parameters may all be accesed through the accessor function `params(g)`. T
 
 ### Default values
 
-Since accessing memory is generally costly in computation time, acessing many parameters will generally cause a simulation loop to slow down. In other words, even if for some simulation a magnetic field is never considered, having the option to set a magnetic field would cause a slow down regardless of wether it is used. This is why these parameters are wrapped in a `ParamTensor` type, which holds extra information, i.e. what a default global value is for the parameter in question, and wether it should be considered in the simulation.
+Since accessing memory is generally costly in computation time, acessing many parameters will generally cause a simulation loop to slow down. In other words, even if for some simulation a external field is never considered, having the option to set a external field would cause a slow down regardless of wether it is used. This is why these parameters are wrapped in a `ParamTensor` type, which holds extra information, i.e. what a default global value is for the parameter in question, and wether it should be considered in the simulation.
 
 Using Julias metaprogramming capabilities simulation loops may substitute the global value for a parameter into the loop itself instead of acessing memory, in the case where a parameter is noted as not being active. This has a downside, in that the simulation needs to be paused and recompiled when the active status of a parameter is changed, or the global value it has. In other words, we made a trade-off between simulation speed and startup/restart time, in favor of simulation speed. In the most optimal case, this also causes extra overhead when writing new simulation loops or Hamiltonians, since metaprogramming is needed. However, a simulation loop may opt out of using the active status of a parameter altogether, so that prototyping new algorithms still has the same amount of overhead.
 
@@ -231,7 +231,7 @@ The following algorithms are currently Implemented
 Currently the following Hamiltonians are implemented
 
 * `Ising`: The Ising Hamiltonian $H = - \sum_{ij} \sigma_i \sigma_j -\sum_i b_i \sigma_i$
-    where $b$ is the magnetic field at every spin
+    where $b$ is the external field at every spin
 * `Clamping`: A Clamping Hamiltonian for Equilibrium Propagation $H = β/2 *(s_i - y_i)^2$
     where $y_i$ is a target value for the n-th spin
 * `GaussianBernoulli`: The Gaussian Bernoulli Hamiltonian often used with RBM's 

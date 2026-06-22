@@ -253,7 +253,7 @@ function MT_panel(window, axesgrid, pos, layer)
 end
 
 
-# Panel for the magnetic field phase transition
+# Panel for the external field phase transition
 export MB_panel
 function MB_panel(window, axesgrid, pos, layer)
     etype = eltype(state(layer))    

@@ -1,5 +1,9 @@
 # TODO: We need a conversion factor from dipole to charge
-export CoulombHamiltonian, init!, precompute_du_self!, recalc!, recalcnew, ΔH, update!
+export CoulombHamiltonian, init!, precompute_du_self!, recalc!, recalcnew, ΔH, update!,
+       PositiveFreeCharge, NegativeFreeCharge, free_charge_total,
+       validate_free_charge_neutrality!, rebuild_charge_density!,
+       add_cell_free_charge!, remove_cell_free_charge!, move_cell_free_charge!,
+       add_sheet_free_charge!, remove_sheet_free_charge!, move_sheet_free_charge!
 
 """
 We have a charge field where s_i -> (q_i+1, q_i) for the
@@ -19,7 +23,23 @@ The energy becomes H = 1/2 ϕ_i q_i
 # recalc state. The old numerical code below is kept active by generic property
 # forwarding (`c.ρ`, `c.scaling`, `c.recalc_steps`, etc.), but the old flat
 # struct layout should not be restored.
-struct CoulombInternal{T,PxyT,IPxyT,N} <: InternalImplementation
+abstract type AbstractFreeChargeSign end
+
+"""
+    PositiveFreeCharge()
+
+Marker for positive mobile free-charge occupancy stored by `CoulombHamiltonian`.
+"""
+struct PositiveFreeCharge <: AbstractFreeChargeSign end
+
+"""
+    NegativeFreeCharge()
+
+Marker for negative mobile free-charge occupancy stored by `CoulombHamiltonian`.
+"""
+struct NegativeFreeCharge <: AbstractFreeChargeSign end
+
+struct CoulombInternal{T,PxyT,IPxyT,N,PO,NO,PS,NS,R} <: InternalImplementation
     size::NTuple{N,Int}
     ρ::Array{T,3}                 # real charges
     ρhat::Array{Complex{T},3}     # rfft(ρ) over (x,y)
@@ -40,7 +60,15 @@ struct CoulombInternal{T,PxyT,IPxyT,N} <: InternalImplementation
     inv_den::Array{T,3}
     dp_scratch::Array{Complex{T},3} # Thomas algorithm forward sweep scratch space
 
-    recalc_steps::Int
+    positive_cell_occupancy::PO    # conserved positive free-charge counts on dipole cells
+    negative_cell_occupancy::NO    # conserved negative free-charge counts on dipole cells
+    positive_sheet_occupancy::PS   # conserved positive free-charge counts on charge sheets
+    negative_sheet_occupancy::NS   # conserved negative free-charge counts on charge sheets
+    q_positive::T
+    q_negative::T
+    free_charge_split::T
+
+    recalc_steps::R
     recalc_tracker::Base.RefValue{Int} # Counter to track when to recalculate potential (for external coupling)
 end
 
@@ -52,13 +80,43 @@ end
 
 Base.size(c::CoulombHamiltonian) = c.size
 
+"""
+    _coulomb_recalc_steps(recalc)
+
+Normalize a user recalc cadence. `Inf` disables scheduled spin-update recalc;
+finite values are positive integer update counts.
+"""
+function _coulomb_recalc_steps(recalc)
+    isinf(recalc) && return Inf
+    steps = Int(recalc)
+    steps > 0 || throw(ArgumentError("CoulombHamiltonian recalc must be positive or Inf; got $recalc."))
+    steps == recalc || throw(ArgumentError("CoulombHamiltonian recalc must be an integer cadence or Inf; got $recalc."))
+    return steps
+end
+
+"""
+    _coulomb_recalc_tracker(offset, recalc_steps)
+
+Return the initial scheduled-recalc tracker after applying `offset`.
+"""
+function _coulomb_recalc_tracker(offset, recalc_steps)
+    isinf(recalc_steps) && return 1
+    offset_int = Int(offset)
+    offset_int == offset || throw(ArgumentError("CoulombHamiltonian recalc_offset must be an integer; got $offset."))
+    return mod1(offset_int + 1, Int(recalc_steps))
+end
+
 @inline function CoulombHamiltonian(;
     layer = 1,
     scaling = 1.f0,
     screening = Inf32,
     screen_len_top = screening,
     screen_len_bot = screening,
-    recalc = 1
+    recalc = 1,
+    recalc_offset = 0,
+    q_positive = 1.f0,
+    q_negative = 1.f0,
+    free_charge_split = 0.5f0,
 )
     params = Parameters(
         parameter(;
@@ -70,7 +128,7 @@ Base.size(c::CoulombHamiltonian) = c.size
             units = physicalunits(dipole = 1, role = :dipole_scale),
         ),
     )
-    internal = InternalPlan((; screen_len_top, screen_len_bot, recalc)) do plan, g
+    internal = InternalPlan((; screen_len_top, screen_len_bot, recalc, recalc_offset, q_positive, q_negative, free_charge_split)) do plan, g
         config = plan.values
         T = eltype(g)
         Nx, Ny, Nz_dip = size(g)
@@ -85,6 +143,12 @@ Base.size(c::CoulombHamiltonian) = c.size
         ρhat = zeros(Complex{T}, spectral_size)
         uhat = zeros(Complex{T}, spectral_size)
         u = zeros(T, charge_size)
+        positive_cell_occupancy = zeros(Int, Nx, Ny, Nz_dip)
+        negative_cell_occupancy = zeros(Int, Nx, Ny, Nz_dip)
+        positive_sheet_occupancy = zeros(Int, charge_size)
+        negative_sheet_occupancy = zeros(Int, charge_size)
+        recalc_steps = _coulomb_recalc_steps(config.recalc)
+        recalc_tracker = Ref(_coulomb_recalc_tracker(config.recalc_offset, recalc_steps))
 
         return CoulombInternal(
             charge_size,                                  # size
@@ -104,8 +168,15 @@ Base.size(c::CoulombHamiltonian) = c.size
             zeros(T, spectral_size),                      # mod_upperd
             zeros(T, spectral_size),                      # inv_den
             zeros(Complex{T}, spectral_size),             # dp_scratch
-            config.recalc,                                # recalc_steps
-            Ref{Int}(1),                                  # recalc_tracker
+            positive_cell_occupancy,                      # positive_cell_occupancy
+            negative_cell_occupancy,                      # negative_cell_occupancy
+            positive_sheet_occupancy,                     # positive_sheet_occupancy
+            negative_sheet_occupancy,                     # negative_sheet_occupancy
+            T(internalvalue(config.q_positive, physicalunits(charge = 1), physicalscales(g), g; parameter = :q_positive)), # q_positive
+            T(internalvalue(config.q_negative, physicalunits(charge = 1), physicalscales(g), g; parameter = :q_negative)), # q_negative
+            T(config.free_charge_split),                  # free_charge_split
+            recalc_steps,                                 # recalc_steps
+            recalc_tracker,                               # recalc_tracker
         )
     end
     return CoulombHamiltonian(Int(layer), params, internal)
@@ -120,7 +191,11 @@ end
     screening = Inf32,
     screen_len_top = screening,
     screen_len_bot = screening,
-    recalc = 1
+    recalc = 1,
+    recalc_offset = 0,
+    q_positive = 1.f0,
+    q_negative = 1.f0,
+    free_charge_split = 0.5f0,
 )
     h = instantiate(
         CoulombHamiltonian(;
@@ -130,6 +205,10 @@ end
             screen_len_top,
             screen_len_bot,
             recalc,
+            recalc_offset,
+            q_positive,
+            q_negative,
+            free_charge_split,
         ),
         g,
     )
@@ -154,7 +233,24 @@ function init!(c::CoulombHamiltonian, g::AbstractIsingGraph)
 end
 
 function init!(c::CoulombHamiltonian, layer::AbstractIsingLayer)
-    ρ    = c.ρ
+    rebuild_charge_density!(c, layer)
+    precompute_solve_factors!(c)
+    precompute_du_self!(c)
+    recalc!(c)
+
+    return c
+end
+
+"""
+    rebuild_charge_density!(coulomb, layer; validate=true)
+
+Rebuild the total sheet charge `ρ` from bound dipoles plus the conserved
+positive and negative free-charge occupancies stored on `coulomb`.
+"""
+function rebuild_charge_density!(c::C, layer::L; validate::Bool = true) where {C<:CoulombHamiltonian,L<:AbstractIsingLayer}
+    validate && validate_free_charge_neutrality!(c)
+
+    ρ = c.ρ
     spins = graphstate(layer)
 
     Nx, Ny, Nz = size(ρ)
@@ -174,10 +270,159 @@ function init!(c::CoulombHamiltonian, layer::AbstractIsingLayer)
             ρ[i,j,z+1] += v
         end
     end
-    precompute_solve_factors!(c)
-    precompute_du_self!(c)
-    recalc!(c)
+    _add_free_charge_density!(c)
+    return c
+end
 
+"""
+    free_charge_total(coulomb)
+
+Return total mobile free charge from positive and negative cell/sheet
+occupancies. Neutral free-charge configurations return zero.
+"""
+function free_charge_total(c::C) where {C<:CoulombHamiltonian}
+    T = eltype(c.ρ)
+    npositive = sum(c.positive_cell_occupancy) + sum(c.positive_sheet_occupancy)
+    nnegative = sum(c.negative_cell_occupancy) + sum(c.negative_sheet_occupancy)
+    return T(c.q_positive) * T(npositive) - T(c.q_negative) * T(nnegative)
+end
+
+"""
+    validate_free_charge_neutrality!(coulomb; atol=sqrt(eps(T)))
+
+Throw an `ArgumentError` unless the stored positive and negative free-charge
+occupancies are neutral after applying their charge magnitudes.
+"""
+function validate_free_charge_neutrality!(c::C; atol = sqrt(eps(eltype(c.ρ)))) where {C<:CoulombHamiltonian}
+    total = free_charge_total(c)
+    isapprox(total, zero(total); atol) && return c
+    throw(ArgumentError("CoulombHamiltonian free charge must be neutral; total free charge is $total. Add explicit opposite charge occupancy before rebuilding the Coulomb field."))
+end
+
+@inline _free_cell_occupancy(c::CoulombHamiltonian, ::PositiveFreeCharge) = c.positive_cell_occupancy
+@inline _free_cell_occupancy(c::CoulombHamiltonian, ::NegativeFreeCharge) = c.negative_cell_occupancy
+@inline _free_sheet_occupancy(c::CoulombHamiltonian, ::PositiveFreeCharge) = c.positive_sheet_occupancy
+@inline _free_sheet_occupancy(c::CoulombHamiltonian, ::NegativeFreeCharge) = c.negative_sheet_occupancy
+
+@inline _free_charge_magnitude(c::CoulombHamiltonian, ::PositiveFreeCharge) = c.q_positive
+@inline _free_charge_magnitude(c::CoulombHamiltonian, ::NegativeFreeCharge) = c.q_negative
+@inline _free_charge_sign(::PositiveFreeCharge) = 1
+@inline _free_charge_sign(::NegativeFreeCharge) = -1
+
+"""
+    add_cell_free_charge!(coulomb, sign, coord[, count])
+
+Add `count` mobile free charges of `sign` to a dipole-cell coordinate. This
+updates occupancy only; call `rebuild_charge_density!` before solving.
+"""
+function add_cell_free_charge!(c::C, sign::S, coord::CartesianIndex{3}, count::I = 1) where {C<:CoulombHamiltonian,S<:AbstractFreeChargeSign,I<:Integer}
+    count >= 0 || throw(ArgumentError("Free-charge occupancy count must be nonnegative; got $count."))
+    occupancy = _free_cell_occupancy(c, sign)
+    checkbounds(occupancy, coord)
+    @inbounds occupancy[coord] += Int(count)
+    return c
+end
+
+"""
+    remove_cell_free_charge!(coulomb, sign, coord[, count])
+
+Remove `count` mobile free charges of `sign` from a dipole-cell coordinate.
+This updates occupancy only; call `rebuild_charge_density!` before solving.
+"""
+function remove_cell_free_charge!(c::C, sign::S, coord::CartesianIndex{3}, count::I = 1) where {C<:CoulombHamiltonian,S<:AbstractFreeChargeSign,I<:Integer}
+    count >= 0 || throw(ArgumentError("Free-charge occupancy count must be nonnegative; got $count."))
+    occupancy = _free_cell_occupancy(c, sign)
+    checkbounds(occupancy, coord)
+    @inbounds current = occupancy[coord]
+    current >= count || throw(ArgumentError("Cannot remove $count free charges from $coord; only $current are present."))
+    @inbounds occupancy[coord] = current - Int(count)
+    return c
+end
+
+"""
+    move_cell_free_charge!(coulomb, sign, from, to[, count])
+
+Move `count` mobile free charges of `sign` between two dipole cells. This
+preserves total free charge by construction.
+"""
+function move_cell_free_charge!(c::C, sign::S, from::CartesianIndex{3}, to::CartesianIndex{3}, count::I = 1) where {C<:CoulombHamiltonian,S<:AbstractFreeChargeSign,I<:Integer}
+    remove_cell_free_charge!(c, sign, from, count)
+    add_cell_free_charge!(c, sign, to, count)
+    return c
+end
+
+"""
+    add_sheet_free_charge!(coulomb, sign, coord[, count])
+
+Add `count` direct sheet free charges of `sign` to a Coulomb charge-sheet
+coordinate. This updates occupancy only; call `rebuild_charge_density!` before
+solving.
+"""
+function add_sheet_free_charge!(c::C, sign::S, coord::CartesianIndex{3}, count::I = 1) where {C<:CoulombHamiltonian,S<:AbstractFreeChargeSign,I<:Integer}
+    count >= 0 || throw(ArgumentError("Free-charge occupancy count must be nonnegative; got $count."))
+    occupancy = _free_sheet_occupancy(c, sign)
+    checkbounds(occupancy, coord)
+    @inbounds occupancy[coord] += Int(count)
+    return c
+end
+
+"""
+    remove_sheet_free_charge!(coulomb, sign, coord[, count])
+
+Remove `count` direct sheet free charges of `sign` from a Coulomb charge-sheet
+coordinate. This updates occupancy only; call `rebuild_charge_density!` before
+solving.
+"""
+function remove_sheet_free_charge!(c::C, sign::S, coord::CartesianIndex{3}, count::I = 1) where {C<:CoulombHamiltonian,S<:AbstractFreeChargeSign,I<:Integer}
+    count >= 0 || throw(ArgumentError("Free-charge occupancy count must be nonnegative; got $count."))
+    occupancy = _free_sheet_occupancy(c, sign)
+    checkbounds(occupancy, coord)
+    @inbounds current = occupancy[coord]
+    current >= count || throw(ArgumentError("Cannot remove $count free charges from $coord; only $current are present."))
+    @inbounds occupancy[coord] = current - Int(count)
+    return c
+end
+
+"""
+    move_sheet_free_charge!(coulomb, sign, from, to[, count])
+
+Move `count` direct sheet free charges of `sign` between two Coulomb charge
+sheets. This preserves total free charge by construction.
+"""
+function move_sheet_free_charge!(c::C, sign::S, from::CartesianIndex{3}, to::CartesianIndex{3}, count::I = 1) where {C<:CoulombHamiltonian,S<:AbstractFreeChargeSign,I<:Integer}
+    remove_sheet_free_charge!(c, sign, from, count)
+    add_sheet_free_charge!(c, sign, to, count)
+    return c
+end
+
+"""
+    _add_free_charge_density!(coulomb)
+
+Project cell-centered mobile free charge and direct sheet free charge into the
+derived total sheet charge `ρ`.
+"""
+function _add_free_charge_density!(c::C) where {C<:CoulombHamiltonian}
+    ρ = c.ρ
+    T = eltype(ρ)
+    split = T(c.free_charge_split)
+    zero(T) <= split <= one(T) ||
+        throw(ArgumentError("CoulombHamiltonian free_charge_split must lie in [0, 1]; got $(c.free_charge_split)."))
+
+    qpos = T(c.q_positive)
+    qneg = T(c.q_negative)
+    pos_cell = c.positive_cell_occupancy
+    neg_cell = c.negative_cell_occupancy
+    Nx, Ny, Nz_dip = size(pos_cell)
+
+    @inbounds for z in 1:Nz_dip, j in 1:Ny, i in 1:Nx
+        q = qpos * T(pos_cell[i, j, z]) - qneg * T(neg_cell[i, j, z])
+        ρ[i, j, z] += q * (one(T) - split)
+        ρ[i, j, z + 1] += q * split
+    end
+
+    @inbounds for idx in eachindex(ρ)
+        ρ[idx] += qpos * T(c.positive_sheet_occupancy[idx]) - qneg * T(c.negative_sheet_occupancy[idx])
+    end
     return c
 end
 
@@ -437,8 +682,10 @@ _update!(::Metropolis, c::CoulombHamiltonian, layer::AbstractIsingLayer, proposa
         c.ρ[coord_above...] += Δq_above
         # 场的重算交给外面的 Recalc 进程周期性处理
     end
-    if c.recalc_tracker[] == c.recalc_steps
+    if !isinf(c.recalc_steps) && c.recalc_tracker[] == c.recalc_steps
         recalc!(c)
     end
-    c.recalc_tracker[] = mod1(c.recalc_tracker[] + 1, c.recalc_steps)
+    if !isinf(c.recalc_steps)
+        c.recalc_tracker[] = mod1(c.recalc_tracker[] + 1, Int(c.recalc_steps))
+    end
 end

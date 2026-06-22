@@ -152,7 +152,7 @@ function hamiltonian_visualizations(term, g)
 end
 
 hamiltonian_visualizations(term::PolynomialHamiltonian, g) = _parameter_visualizations(term, g, (:lp,))
-hamiltonian_visualizations(term::MagField, g) = _parameter_visualizations(term, g, (:b,))
+hamiltonian_visualizations(term::ExtField, g) = _parameter_visualizations(term, g, (:b,))
 hamiltonian_visualizations(term::Clamping, g) = _parameter_visualizations(term, g, (:y,))
 
 function _parameter_visualizations(term, g, names)

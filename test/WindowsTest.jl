@@ -124,7 +124,30 @@ end
     @test temp(g) ≈ 5.0
     @test handle[:label_text][] == "T: 58.02 K"
 
+    handle[:slider].value[] = 0.01
+    @test temp(g) ≈ 0.01
+    @test handle[:slider].value[] ≈ 0.01
+    @test handle[:label_text][] == "T: 0.116 K"
+
     close(host)
+end
+
+@testset "Graph process resume includes finished processes" begin
+    g = IsingGraph(2, 2, Continuous(), StateSet(-1.0f0, 1.0f0); precision = Float32)
+    algorithm = Metropolis()
+    process = StatefulAlgorithms.Process(algorithm, InteractiveIsing._mc_model_inits(algorithm, g)...; repeat = 1)
+    push!(processes(g), process)
+
+    run(process)
+    wait(process)
+    @test StatefulAlgorithms.isdone(process)
+    @test Windows._graph_paused(g)
+
+    previous_ticks = StatefulAlgorithms.getticks(process)
+    Windows._resume_graph_processes!(g)
+    wait(process)
+    @test StatefulAlgorithms.getticks(process) > previous_ticks
+    @test Windows._graph_paused(g)
 end
 
 @testset "PTimer close and wait" begin
@@ -407,7 +430,7 @@ end
     @test :c ∉ getfield.(entries, :name)
     @test :J ∉ getfield.(entries, :name)
     @test any(occursin("Quadratic", label) for label in labels)
-    @test any(occursin("MagField", label) for label in labels)
+    @test any(occursin("ExtField", label) for label in labels)
     @test all(!occursin("{", label) for label in labels)
     @test all(!occursin("PolynomialHamiltonian", label) for label in labels)
     graph_state_obs = parameter_panel[:display_obs]

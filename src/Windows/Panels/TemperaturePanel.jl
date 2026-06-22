@@ -1,5 +1,5 @@
 """
-    TemperaturePanel(g; slider_max = 20.0)
+    TemperaturePanel(g; slider_max = 20.0, slider_step = 0.001)
 
 Panel that displays and edits graph temperature. The value is backed by a
 `PolledObservable`, so REPL-side `temp!(g, x)` changes and compatible process
@@ -9,12 +9,13 @@ back to `temp!(g, x)` and compatible process-context temperature variables.
 struct TemperaturePanel <: AbstractPanel
     graph::Any
     slider_max::Float64
+    slider_step::Float64
 end
 
 image_trait(::Type{TemperaturePanel}) = HasImage()
 
-function TemperaturePanel(graph; slider_max = 20.0)
-    return TemperaturePanel(graph, Float64(slider_max))
+function TemperaturePanel(graph; slider_max = 20.0, slider_step = 0.001)
+    return TemperaturePanel(graph, Float64(slider_max), Float64(slider_step))
 end
 
 function mount!(panel::TemperaturePanel, host::WindowHost, cell; kwargs...)
@@ -31,24 +32,31 @@ function mount!(panel::TemperaturePanel, host::WindowHost, cell; kwargs...)
         PolledObservable(
             temp(g),
             _ -> _poll_temperature!(g, last_graph_temp, last_context_temp);
-            setter = x -> _set_temperature!(g, x),
         ),
     )
     slider = handle[:slider] = Slider(
         grid[2, 1],
-        range = 0.0:0.02:panel.slider_max,
+        range = 0.0:panel.slider_step:panel.slider_max,
         value = temp(g),
         horizontal = false,
         height = 520,
     )
     slider.value.ignore_equal_values = true
+    syncing_slider = Ref(false)
     _set_slider_close!(slider, temp(g))
 
     register!(handle, on(po) do x
-        _set_slider_close!(slider, x)
+        syncing_slider[] = true
+        try
+            _set_slider_close!(slider, x)
+        finally
+            syncing_slider[] = false
+        end
     end)
     register!(handle, on(slider.value) do x
+        syncing_slider[] && return nothing
         if 0.0 <= x <= panel.slider_max
+            _set_temperature!(g, x)
             po[] = x
         end
     end)

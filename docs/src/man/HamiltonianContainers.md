@@ -104,9 +104,9 @@ Use `NoEnsure(x)` when the storage should be accepted as-is but still checked,
 and `Force(x)` when the template should not check it.
 
 If a keyword is omitted, the term uses its optimized default storage. For
-example, omitted `MagField.b` uses a constant zero field. If a scalar or
+example, omitted `ExtField.b` uses a constant zero field. If a scalar or
 singleton is explicitly passed, the term uses its explicit-input storage
-policy. For `MagField.b`, that means `b = 1` and `b = [1]` become mutable
+policy. For `ExtField.b`, that means `b = 1` and `b = [1]` become mutable
 uniform graph-sized storage.
 
 ## Choosing A Container

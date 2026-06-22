@@ -232,7 +232,46 @@ function createProcess(g::IsingGraph, func = nothing, inputs...; dynamics = g.de
     return process
 end
 
-export createProcess, createProcesses
+"""
+    createProcessManual(g, func, inputs...; kwargs...)
+
+Create and run a process attached to `g` without injecting graph-model `Init`s or
+graph-driven interactive specs. Every algorithm that needs initialization data
+must receive it explicitly through `inputs`.
+"""
+function createProcessManual(g::IsingGraph, func = nothing, inputs...; dynamics = g.default_algorithm, lifetime = nothing, repeats = nothing, repeat = nothing, allow_multiple = false, args...)
+    if isnothing(func)
+        func = dynamics
+    end
+
+    if !any(input -> input isa StatefulAlgorithms.Init, inputs)
+        throw(ArgumentError("createProcessManual requires explicit StatefulAlgorithms.Init inputs."))
+    end
+
+    if !isnothing(lifetime) && !(lifetime isa StatefulAlgorithms.Lifetime)
+        isnothing(repeats) || error("Pass either `repeats = ...` or numeric `lifetime = ...`, not both.")
+        repeats = lifetime
+        lifetime = nothing
+    end
+
+    if isnothing(lifetime) && isnothing(repeats) && isnothing(repeat)
+        lifetime = StatefulAlgorithms.Indefinite()
+    end
+
+    if !allow_multiple
+        StatefulAlgorithms.close(g)
+    end
+
+    process = Process(deepcopy(func), inputs...; lifetime, repeats, repeat)
+
+    ps = processes(g)
+    push!(ps, process)
+    run(process)
+
+    return process
+end
+
+export createProcess, createProcessManual, createProcesses
 
 hasprocess(g::IsingGraph) = !isempty(processes(g))
 doneprocesses(g::IsingGraph) = findall(p -> isdone(p), processes(g))

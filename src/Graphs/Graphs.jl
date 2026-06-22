@@ -29,6 +29,7 @@ include("StatePartition.jl")
 include("SingleLayerGraph.jl")
 include("InitialState.jl")
 include("Constructors.jl")
+include("DefectHopping/DefectHopping.jl")
 include("XYGraph.jl")
 
 

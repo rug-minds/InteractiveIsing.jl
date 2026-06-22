@@ -114,6 +114,33 @@ end
           InteractiveIsing.calculate(InteractiveIsing.d_iH(), h_single, single, SingleSpinProposal(local_idx, layer_state[local_idx], NoChange(), 1))
 end
 
+@testset "Coulomb free sheet occupancy" begin
+    g = IsingGraph(
+        2,
+        2,
+        2,
+        Continuous(),
+        COULOMB_WG,
+        LatticeConstants(1.0, 1.0, 1.0),
+        StateSet(-1.5, 1.5),
+        Ising(c = ConstVal(0.0), b = 0.0) +
+            CoulombHamiltonian(recalc = 1, q_positive = 2.0, q_negative = 1.0);
+        periodic = (:x, :y),
+        precision = Float64,
+        initial_state = 0.0,
+    )
+
+    h = InteractiveIsing.gethamiltonian(g.hamiltonian, CoulombHamiltonian)
+    InteractiveIsing.add_sheet_free_charge!(h, PositiveFreeCharge(), CartesianIndex(1, 1, 1))
+    InteractiveIsing.add_sheet_free_charge!(h, NegativeFreeCharge(), CartesianIndex(2, 1, 1), 2)
+    InteractiveIsing.rebuild_charge_density!(h, g[1])
+
+    @test InteractiveIsing.free_charge_total(h) ≈ 0.0
+    @test h.ρ[1, 1, 1] ≈ 2.0
+    @test h.ρ[2, 1, 1] ≈ -2.0
+    @test sum(h.ρ) ≈ 0.0 atol = 1.0e-12
+end
+
 @testset "LayerTerm DepolField scoping" begin
     layer_a = Layer(2, 2, 2, Continuous(), StateSet(-1, 1); periodic = false)
     layer_b = Layer(2, 2, 2, Continuous(), StateSet(-1, 1); periodic = false)
