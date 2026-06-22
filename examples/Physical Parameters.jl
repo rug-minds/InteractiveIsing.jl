@@ -49,15 +49,15 @@ g = IsingGraph(
 @assert physicalscales(g).length[] == 1u"nm"
 
 # Existing runtime storage is unit-free.
-mag = InteractiveIsing.gethamiltonian(g.hamiltonian, InteractiveIsing.MagField)
+mag = InteractiveIsing.gethamiltonian(g.hamiltonian, InteractiveIsing.ExtField)
 @assert mag.b[1] == 0.25f0
 @assert temp(g) ≈ Float32(Unitful.ustrip(initial_kBT))
 
 # Explicit physical setters convert once and write internal numeric values.
-setphysical!(g, InteractiveIsing.MagField, :b, 0.4u"meV")
+setphysical!(g, InteractiveIsing.ExtField, :b, 0.4u"meV")
 temp!(g, warmer_kBT)
 
-field = physicalvalue(g, InteractiveIsing.MagField, :b)
+field = physicalvalue(g, InteractiveIsing.ExtField, :b)
 adjacency = Matrix(adj(g))
 
 println("length scale: ", physicalscales(g).length[])

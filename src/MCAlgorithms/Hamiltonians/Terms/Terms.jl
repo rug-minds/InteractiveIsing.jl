@@ -1,10 +1,10 @@
-export Bilinear, MagField, CosineInteraction
+export Bilinear, ExtField, CosineInteraction
 
 include("EmptyHamiltonian.jl")
 include("Polynomial.jl")
 include("Bilinear.jl")
 include("CosineInteraction.jl")
-include("MagField.jl")
+include("ExtField.jl")
 include("Ising.jl")
 include("GaussianBernoulli.jl")
 include("Clamping.jl")

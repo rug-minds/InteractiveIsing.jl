@@ -1,5 +1,6 @@
 using InteractiveIsing
 using InteractiveIsing.StatefulAlgorithms
+using Unitful
 
 """
     coulomb_defect_weights(; dr)
@@ -10,6 +11,7 @@ coulomb_defect_weights(; dr) = dr == 1 ? 1f0 : 0f0
 
 nx, ny, nz = 40, 40, 10
 wg = @WG coulomb_defect_weights NN = 1
+scales = PhysicalScales(energy = 1u"eV", charge = 1u"C")
 
 vacancy_stiffness = zeros(Float32, nx * ny * nz)
 vacancy_quartic = zeros(Float32, nx * ny * nz)
@@ -18,23 +20,25 @@ stepsize = 0.025f0
 temperature = 0.04f0
 defect_step_interval = 1000
 
-coulomb_scaling = 0.25f0
+coulomb_scaling = 1f0
 coulomb_screening = 8f0
-coulomb_recalc_interval = 500
-vacancy_charge = 0.08f0
-electron_charge = 0.04f0
-external_field_z = 0.7f0
+coulomb_recalc_interval = Inf
+electron_charge = 1f0u"C"
+vacancy_charge = 2f0 * electron_charge
+external_field_z = 6f0u"eV"
+vacancy_attempt_rate = 1f0
+electron_attempt_rate = 10f0
 
 charged_oxygen_vacancy = (
     CoulombChargeShift(vacancy_charge; split = 0.5f0),
-    ExternalFieldBias((0f0, 0f0, external_field_z)),
-    LocalPotentialShift(2, 0.025f0),
-    LocalPotentialShift(4, 0.008f0),
+    ExtFieldChargeCoupling(),
+    LocalPotentialShift(2, 0.012f0),
+    LocalPotentialShift(4, 0.004f0),
 )
 
 mobile_electron = (
     CoulombChargeShift(-electron_charge; split = 0.5f0),
-    ExternalFieldBias((0f0, 0f0, external_field_z)),
+    ExtFieldChargeCoupling(),
 )
 
 vacancy_effects = charged_oxygen_vacancy
@@ -60,59 +64,52 @@ g = IsingGraph(
             q_positive = vacancy_charge,
             q_negative = electron_charge,
             free_charge_split = 0.5f0,
-        ) + MagField(),
+        ) + ExtField(b = external_field_z),
     periodic = (:x, :y),
     precision = Float32,
     initial_state = 0f0,
+    physical_scales = scales,
 )
 
-spin_field = reshape(state(g), nx, ny, nz)
-for I in CartesianIndices(spin_field)
-    x, y, z = Tuple(I)
-    spin_field[I] =
-        0.2f0 * sinpi(2f0 * Float32(x - 1) / Float32(nx)) +
-        0.2f0 * cospi(2f0 * Float32(y - 1) / Float32(ny)) +
-        0.15f0 * (Float32(z) - (Float32(nz) + 1f0) / 2f0)
-end
 temp!(g, temperature)
 
 vacancy_positions = [
-    CartesianIndex(6, 6, 2),
-    CartesianIndex(14, 10, 4),
-    CartesianIndex(22, 8, 6),
-    CartesianIndex(32, 12, 8),
-    CartesianIndex(9, 24, 3),
+    CartesianIndex(6, 6, 5),
+    CartesianIndex(14, 10, 5),
+    CartesianIndex(22, 8, 5),
+    CartesianIndex(32, 12, 5),
+    CartesianIndex(9, 24, 5),
     CartesianIndex(18, 28, 5),
-    CartesianIndex(27, 30, 7),
-    CartesianIndex(35, 25, 9),
-    CartesianIndex(11, 36, 2),
+    CartesianIndex(27, 30, 6),
+    CartesianIndex(35, 25, 6),
+    CartesianIndex(11, 36, 6),
     CartesianIndex(24, 35, 6),
 ]
 
 electron_positions = [
-    CartesianIndex(4, 5, 1),
-    CartesianIndex(8, 7, 3),
-    CartesianIndex(12, 9, 4),
+    CartesianIndex(4, 5, 5),
+    CartesianIndex(8, 7, 5),
+    CartesianIndex(12, 9, 5),
     CartesianIndex(16, 11, 5),
     CartesianIndex(20, 7, 6),
     CartesianIndex(24, 9, 7),
-    CartesianIndex(28, 11, 8),
-    CartesianIndex(34, 13, 9),
-    CartesianIndex(7, 22, 2),
-    CartesianIndex(11, 26, 4),
+    CartesianIndex(28, 11, 6),
+    CartesianIndex(34, 13, 6),
+    CartesianIndex(7, 22, 5),
+    CartesianIndex(11, 26, 5),
     CartesianIndex(15, 30, 5),
     CartesianIndex(19, 34, 6),
     CartesianIndex(23, 28, 7),
-    CartesianIndex(29, 32, 8),
-    CartesianIndex(33, 26, 9),
-    CartesianIndex(37, 24, 10),
-    CartesianIndex(9, 38, 1),
-    CartesianIndex(15, 36, 3),
-    CartesianIndex(27, 37, 5),
-    CartesianIndex(33, 35, 7),
+    CartesianIndex(29, 32, 6),
+    CartesianIndex(33, 26, 6),
+    CartesianIndex(37, 24, 6),
+    CartesianIndex(9, 38, 5),
+    CartesianIndex(15, 36, 5),
+    CartesianIndex(27, 37, 6),
+    CartesianIndex(33, 35, 6),
 ]
 
-charges = NeutralChargeHopping(
+charges = ChargeHopProposer(
     g;
     positive = vacancy_positions,
     negative = electron_positions,
@@ -120,19 +117,23 @@ charges = NeutralChargeHopping(
     negative_effects = electron_effects,
     positive_charge = vacancy_charge,
     negative_charge = -electron_charge,
+    positive_attempt_rate = vacancy_attempt_rate,
+    negative_attempt_rate = electron_attempt_rate,
 )
 
+println("Field drift demo: positive vacancies should drift toward z = $nz; electrons should drift toward z = 1.")
+
 langevin_algorithm = LocalLangevin(stepsize = stepsize, adjusted = false)
-vacancy_algorithm = Metropolis()
+charge_algorithm = Metropolis()
 
 algorithm = @CompositeAlgorithm begin
     @alias langevin = langevin_algorithm
-    @alias vacancy_metro = vacancy_algorithm
+    @alias charge_metro = charge_algorithm
 
-    @replace langevin.T => vacancy_metro.T
+    @replace langevin.T => charge_metro.T
 
     langevin()
-    @every defect_step_interval vacancy_metro()
+    @every defect_step_interval charge_metro()
 end
 
 graph_host = interface(g; title = "40x40x10 Coulomb spins with charged vacancies")
@@ -143,12 +144,11 @@ charge_host = interface(
     negative_markersize = 0.36,
     positive_color = :red,
     negative_color = :cyan,
-    lattice_color = (:gray70, 0.025),
 )
 process = createProcessManual(
     g,
     algorithm,
     StatefulAlgorithms.Init(:langevin; model = g),
-    StatefulAlgorithms.Init(:vacancy_metro; model = charges),
+    StatefulAlgorithms.Init(:charge_metro; model = charges),
     StatefulAlgorithms.Interactive(:langevin, :T),
 )

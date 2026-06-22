@@ -9,7 +9,7 @@ function _defect_bound_layer(defects::D) where {D<:DefectHopping}
     return defects.state[Int(defects.layer)]
 end
 
-function _defect_bound_layer(charges::C) where {C<:NeutralChargeHopping}
+function _defect_bound_layer(charges::C) where {C<:ChargeHopProposer}
     return _defect_bound_layer(charges.positive)
 end
 
@@ -44,11 +44,11 @@ function _defect_display_points(defects::D) where {D<:DefectHopping}
     return points
 end
 
-function _defect_positive_display_points(charges::C) where {C<:NeutralChargeHopping}
+function _defect_positive_display_points(charges::C) where {C<:ChargeHopProposer}
     return _defect_display_points(charges.positive)
 end
 
-function _defect_negative_display_points(charges::C) where {C<:NeutralChargeHopping}
+function _defect_negative_display_points(charges::C) where {C<:ChargeHopProposer}
     return _defect_display_points(charges.negative)
 end
 
@@ -81,9 +81,9 @@ function Windows.interface(
     size = (900, 800),
     title = "Defect hopping",
     defect_markersize = 0.42,
-    lattice_markersize = 0.12,
+    lattice_markersize = 1.0,
     defect_color = :deepskyblue,
-    lattice_color = (:gray70, 0.045),
+    lattice_color = (:gray70, 0.18),
     show_lattice = true,
     focus = true,
 ) where {D<:DefectHopping}
@@ -94,11 +94,14 @@ function Windows.interface(
     ax.zlabel = "z"
 
     if show_lattice
-        host[:lattice_plot] = meshscatter!(
+        # Use screen-space points for the lattice so the reference grid stays
+        # unobtrusive in dense 3D systems.
+        host[:lattice_plot] = scatter!(
             ax,
             _defect_lattice_points(defects);
             markersize = lattice_markersize,
             color = lattice_color,
+            transparency = true,
         )
     end
 
@@ -121,9 +124,9 @@ function Windows.interface(
 end
 
 """
-    Windows.interface(charges::NeutralChargeHopping; kwargs...)
+    Windows.interface(charges::ChargeHopProposer; kwargs...)
 
-Open one live GLMakie display for a neutral charge model, with positive and
+Open one live GLMakie display for a mobile-charge hopping model, with positive and
 negative mobile charges shown in different colors.
 """
 function Windows.interface(
@@ -131,17 +134,17 @@ function Windows.interface(
     framerate = 30,
     polling_rate = 10,
     size = (900, 800),
-    title = "Neutral charge hopping",
+    title = "Charge hopping",
     charge_markersize = 0.42,
     positive_markersize = charge_markersize,
     negative_markersize = 0.7 * charge_markersize,
-    lattice_markersize = 0.12,
+    lattice_markersize = 1.0,
     positive_color = :red,
     negative_color = :cyan,
-    lattice_color = (:gray70, 0.045),
+    lattice_color = (:gray70, 0.18),
     show_lattice = true,
     focus = true,
-) where {C<:NeutralChargeHopping}
+) where {C<:ChargeHopProposer}
     host = Windows.window(; title, size, fps = framerate, polling_rate, focus)
     ax = host[:axis] = Axis3(host.figure[1, 1])
     ax.xlabel = "x"
@@ -149,11 +152,14 @@ function Windows.interface(
     ax.zlabel = "z"
 
     if show_lattice
-        host[:lattice_plot] = meshscatter!(
+        # Use screen-space points for the lattice so the reference grid stays
+        # unobtrusive in dense 3D systems.
+        host[:lattice_plot] = scatter!(
             ax,
             _defect_lattice_points(charges.positive);
             markersize = lattice_markersize,
             color = lattice_color,
+            transparency = true,
         )
     end
 

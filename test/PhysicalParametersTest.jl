@@ -21,14 +21,14 @@ physical_test_alltoall_weight(; dr, c1 = nothing, c2 = nothing, dc = nothing) = 
         physical_scales = scales,
         temperature = 300u"K",
     )
-    mag = InteractiveIsing.gethamiltonian(g.hamiltonian, InteractiveIsing.MagField)
+    mag = InteractiveIsing.gethamiltonian(g.hamiltonian, InteractiveIsing.ExtField)
     @test temp(g) === 300.0
     @test mag.b[] === 2.0
     @test eltype(mag.b) === Float64
 
-    setphysical!(g, InteractiveIsing.MagField, :b, 3u"eV")
+    setphysical!(g, InteractiveIsing.ExtField, :b, 3u"eV")
     @test mag.b[] === 3.0
-    @test all(x -> x == 3.0u"eV", physicalvalue(g, InteractiveIsing.MagField, :b))
+    @test all(x -> x == 3.0u"eV", physicalvalue(g, InteractiveIsing.ExtField, :b))
 
     temp!(g, 125u"K")
     @test temp(g) === 125.0
@@ -49,7 +49,7 @@ end
 
 @testset "Physical Parameter Errors" begin
     err = try
-        IsingGraph(1, 1, Continuous(), MagField(b = 1u"eV"); precision = Float64)
+        IsingGraph(1, 1, Continuous(), ExtField(b = 1u"eV"); precision = Float64)
         nothing
     catch e
         e

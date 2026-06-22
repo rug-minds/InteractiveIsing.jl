@@ -56,7 +56,7 @@ g = IsingGraph(
 @assert physicalscales(g).length[] == 1u"nm"
 @assert temp(g) ≈ Float32(Unitful.ustrip(kBT))
 
-mag = InteractiveIsing.gethamiltonian(g.hamiltonian, InteractiveIsing.MagField)
+mag = InteractiveIsing.gethamiltonian(g.hamiltonian, InteractiveIsing.ExtField)
 coulomb = InteractiveIsing.gethamiltonian(g.hamiltonian, InteractiveIsing.CoulombHamiltonian)
 
 @assert mag.b[1] == 0.15f0
@@ -67,7 +67,7 @@ coulomb = InteractiveIsing.gethamiltonian(g.hamiltonian, InteractiveIsing.Coulom
 println("grid: ", size(g))
 println("length scale: ", physicalscales(g).length[])
 println("temperature: ", temperature, " (k_B T = ", temp(g), " meV)")
-println("magnetic field: ", physicalvalue(g, InteractiveIsing.MagField, :b)[1])
+println("external field: ", physicalvalue(g, InteractiveIsing.ExtField, :b)[1])
 println("coulomb dipole scale: ", coulomb.scaling[] * physicalscales(g).dipole[])
 println("screening length: ", coulomb.screen_top * physicalscales(g).length[])
 println("strongest exchange coupling: ", maximum(abs, Matrix(adj(g))), " meV")

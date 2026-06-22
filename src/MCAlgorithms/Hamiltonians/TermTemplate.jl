@@ -78,7 +78,7 @@ Base.getindex(::ArrayPlan) =
 InternalPlan(values::NamedTuple, f) = InternalPlan(f, values)
 
 struct ParameterSpec{Default,DefaultType,Ensure,Check,Warn,Input,Units}
-    # Front-end keyword name, e.g. :b for MagField(; b = ...).
+    # Front-end keyword name, e.g. :b for ExtField(; b = ...).
     name::Symbol
     # Required type after instantiation unless the value is wrapped in Force.
     type::Type

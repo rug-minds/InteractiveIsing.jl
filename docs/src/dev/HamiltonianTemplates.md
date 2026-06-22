@@ -248,7 +248,7 @@ This is separate from native `LayerTerm` implementations:
   on `graph[layer]`.
 
 ```julia
-h = ToLayer(2, MagField(b = 1))
+h = ToLayer(2, ExtField(b = 1))
 ```
 
 `ToLayer` stores only the integer layer selector and the wrapped Hamiltonian.
@@ -270,7 +270,7 @@ indices before the wrapped Hamiltonian sees them.
 
 Wrapped terms must be able to run against the layer graph-like interface:
 `eltype(layer)`, `statelen(layer)`, `graphstate(layer)`, and `adj(layer)`.
-Terms such as `MagField`, `Bilinear`, `PolynomialHamiltonian`, and `Clamping`
+Terms such as `ExtField`, `Bilinear`, `PolynomialHamiltonian`, and `Clamping`
 use that interface directly. Terms that require full-graph-specific APIs should
 remain global or become native `LayerTerm`s.
 

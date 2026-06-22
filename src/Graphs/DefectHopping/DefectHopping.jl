@@ -1,4 +1,4 @@
-export DefectHopping, NeutralChargeHopping, LocalPotentialShift, MagFieldShift, ExternalFieldBias
+export DefectHopping, ChargeHopProposer, LocalPotentialShift, ExtFieldShift, ExtFieldChargeCoupling, CoulombChargeShift
 
 abstract type AbstractDefectMode end
 
@@ -23,43 +23,40 @@ LocalPotentialShift{Order}(strength::A = 1; hopping_scale::H = 1) where {Order,A
     LocalPotentialShift{Order,A,H}(strength, hopping_scale)
 
 """
-    MagFieldShift(strength; hopping_scale=1)
+    ExtFieldShift(strength; hopping_scale=1)
 
-Mobile-defect mode that shifts mutable `MagField.b` storage by `strength` at
-every occupied defect site. Since `MagField` contributes `-c*b[i]*s[i]`, a
+Mobile-defect mode that shifts mutable `ExtField.b` storage by `strength` at
+every occupied defect site. Since `ExtField` contributes `-c*b[i]*s[i]`, a
 positive shift favors positive spin when `c > 0`. `hopping_scale` only
 multiplies the Metropolis hop energy contribution.
 """
-struct MagFieldShift{A,H} <: AbstractDefectMode
+struct ExtFieldShift{A,H} <: AbstractDefectMode
     strength::A
     hopping_scale::H
 end
 
-MagFieldShift(strength::A; hopping_scale::H = 1) where {A,H} =
-    MagFieldShift{A,H}(strength, hopping_scale)
+ExtFieldShift(strength::A; hopping_scale::H = 1) where {A,H} =
+    ExtFieldShift{A,H}(strength, hopping_scale)
 
 """
-    ExternalFieldBias(field; hopping_scale=1)
+    ExtFieldChargeCoupling(; axis=nothing, hopping_scale=1)
 
-Hop-only defect mode for a uniform external field acting on the mobile defect
-charge. It contributes `-hopping_scale * charge * dot(field, displacement)` to
-the Metropolis hop energy and does not mutate any Hamiltonian storage. Field
-components are in energy-per-charge per lattice step along the proposal axes.
+Defect mode that couples a charged hop to the graph's `ExtField` Hamiltonian
+term. The external-field value is read from `ExtField.b`, so spin and charged
+defect drift share one field parameter. `axis=nothing` uses the last proposal
+axis, which is the polarization axis for the current 3D examples.
 """
-struct ExternalFieldBias{F,H} <: AbstractDefectMode
-    field::F
+struct ExtFieldChargeCoupling{A,H} <: AbstractDefectMode
+    axis::A
     hopping_scale::H
 end
 
-function ExternalFieldBias(field::F; hopping_scale::H = 1) where {F,H}
-    field_tuple = _defect_field_tuple(field)
-    isempty(field_tuple) && throw(ArgumentError("ExternalFieldBias requires at least one field component."))
-    return ExternalFieldBias{typeof(field_tuple),H}(field_tuple, hopping_scale)
+function ExtFieldChargeCoupling(; axis::A = nothing, hopping_scale::H = 1) where {A,H}
+    if !(axis isa Nothing)
+        axis > 0 || throw(ArgumentError("ExtFieldChargeCoupling axis must be positive; got $axis."))
+    end
+    return ExtFieldChargeCoupling{A,H}(axis, hopping_scale)
 end
-
-@inline _defect_field_tuple(field::Tuple) = field
-@inline _defect_field_tuple(field::Number) = (field,)
-@inline _defect_field_tuple(field) = tuple(field...)
 
 """
     DefectHopping(; layer=1, defects, charge=1)
@@ -79,24 +76,26 @@ struct DefectHopping{L,D,C,E,DI,O,S} <: AbstractProposer
 end
 
 """
-    NeutralChargeHopping
+    ChargeHopProposer
 
 Combined mobile-charge proposer with separate positive and negative fields.
 Metropolis sees one model/proposer, while the two fields keep distinct effects
 and occupancies.
 """
-struct NeutralChargeState{PI,NI,PO,NO}
+struct ChargeHopState{PI,NI,PO,NO}
     positive_idxs::PI
     negative_idxs::NI
     positive_occupancy::PO
     negative_occupancy::NO
 end
 
-struct NeutralChargeHopping{P,N,CS,G} <: AbstractProposer
+struct ChargeHopProposer{P,N,CS,G,PR,NR} <: AbstractProposer
     positive::P
     negative::N
     charge_state::CS
     graph::G
+    positive_attempt_rate::PR
+    negative_attempt_rate::NR
 end
 
 """
@@ -125,13 +124,15 @@ function DefectHopping(g::G; layer::L = 1, defects::D, charge::C = 1, effects = 
 end
 
 """
-    NeutralChargeHopping(g; positive, negative, positive_effects, negative_effects, layer=1)
+    ChargeHopProposer(g; positive, negative, positive_effects, negative_effects, layer=1, positive_attempt_rate=1, negative_attempt_rate=1)
 
-Bind one neutral mobile-charge model to `g`. Positive charges typically
+Bind one mobile-charge hopping model to `g`. Positive charges typically
 represent charged vacancies and may carry structural modes; negative charges
 typically represent electron-like carriers and default to Coulomb-only effects.
+Attempt rates are per-particle proposal rates; Metropolis selects the positive
+or negative field with probability proportional to `rate * count`.
 """
-function NeutralChargeHopping(
+function ChargeHopProposer(
     g::G;
     layer::L = 1,
     positive::P,
@@ -140,16 +141,34 @@ function NeutralChargeHopping(
     negative_effects,
     positive_charge::PC = 1,
     negative_charge::NC = -1,
-) where {G<:AbstractIsingGraph,L,P,N,PC,NC}
+    positive_attempt_rate::PAR = 1,
+    negative_attempt_rate::NAR = 1,
+) where {G<:AbstractIsingGraph,L,P,N,PC,NC,PAR,NAR}
     positive_system = DefectHopping(g; layer, defects = positive, charge = positive_charge, effects = positive_effects)
     negative_system = DefectHopping(g; layer, defects = negative, charge = negative_charge, effects = negative_effects)
-    charge_state = NeutralChargeState(
+    positive_rate = _defect_internal_value(
+        positive_attempt_rate,
+        physicalunits(role = :dimensionless),
+        g,
+        :positive_attempt_rate,
+    )
+    negative_rate = _defect_internal_value(
+        negative_attempt_rate,
+        physicalunits(role = :dimensionless),
+        g,
+        :negative_attempt_rate,
+    )
+    (positive_rate >= zero(positive_rate) && negative_rate >= zero(negative_rate)) ||
+        throw(ArgumentError("ChargeHopProposer attempt rates must be nonnegative."))
+    (positive_rate > zero(positive_rate) || negative_rate > zero(negative_rate)) ||
+        throw(ArgumentError("ChargeHopProposer requires at least one nonzero attempt rate."))
+    charge_state = ChargeHopState(
         positive_system.defect_idxs,
         negative_system.defect_idxs,
         positive_system.occupancy,
         negative_system.occupancy,
     )
-    return NeutralChargeHopping(positive_system, negative_system, charge_state, g)
+    return ChargeHopProposer(positive_system, negative_system, charge_state, g, positive_rate, negative_rate)
 end
 
 """
@@ -169,12 +188,12 @@ struct DefectHopProposal{C,D,E} <: AbstractProposal
 end
 
 """
-    NeutralChargeHopProposal
+    ChargeHopProposal
 
 Wrapper proposal carrying the selected charge field and the underlying
 single-field defect-hop proposal.
 """
-struct NeutralChargeHopProposal{S,P} <: AbstractProposal
+struct ChargeHopProposal{S,P} <: AbstractProposal
     species::S
     proposal::P
 end
@@ -190,7 +209,7 @@ end
 Return whether a defect-hop proposal was accepted by Metropolis.
 """
 @inline isaccepted(proposal::DefectHopProposal) = proposal.accepted
-@inline isaccepted(proposal::NeutralChargeHopProposal) = isaccepted(proposal.proposal)
+@inline isaccepted(proposal::ChargeHopProposal) = isaccepted(proposal.proposal)
 
 """
     _accepted_defect_hop(proposal)
@@ -279,17 +298,75 @@ charge. Constant or uniform polynomial terms are treated as background terms.
     return lp isa AbstractVector && !(lp isa ConstFill) && !(lp isa UniformArray)
 end
 
-@inline _defect_convert_mode(mode::LocalPotentialShift{Order}, ::Type{T}) where {Order,T} =
-    LocalPotentialShift{Order}(T(mode.strength); hopping_scale = T(mode.hopping_scale))
+"""
+    _defect_internal_value(value, units, graph, parameter)
 
-@inline _defect_convert_mode(mode::MagFieldShift, ::Type{T}) where {T} =
-    MagFieldShift(T(mode.strength); hopping_scale = T(mode.hopping_scale))
+Convert a defect-hopping scalar with the same physical scale context used by
+Hamiltonian parameters, then cast it to the graph precision.
+"""
+@inline function _defect_internal_value(value::V, units::U, g::G, parameter::Symbol) where {V,U,G<:AbstractIsingGraph}
+    T = _defect_parameter_type(g)
+    return convert(T, internalvalue(value, units, physicalscales(g), g; parameter))
+end
 
-@inline _defect_convert_mode(mode::ExternalFieldBias, ::Type{T}) where {T} =
-    ExternalFieldBias(map(T, mode.field); hopping_scale = T(mode.hopping_scale))
+"""
+    _defect_parameter_type(graph)
 
-@inline _defect_convert_effects(effects::Tuple, ::Type{T}) where {T} =
-    map(effect -> _defect_convert_mode(effect, T), effects)
+Return the numeric type used for bound defect-hopping scalar parameters.
+Defect hopping mutates Hamiltonian parameter storage and evaluates energies
+against the graph spin state, so hopping scalars deliberately follow the
+element type of `graphstate(graph)`.
+"""
+@inline function _defect_parameter_type(g::G) where {G<:AbstractIsingGraph}
+    return eltype(graphstate(g))
+end
+
+@inline function _defect_convert_mode(mode::LocalPotentialShift{Order}, g::G) where {Order,G<:AbstractIsingGraph}
+    strength = _defect_internal_value(mode.strength, physicalunits(role = :dimensionless), g, :local_potential_shift)
+    hopping_scale = _defect_internal_value(mode.hopping_scale, physicalunits(role = :dimensionless), g, :local_potential_hopping_scale)
+    return LocalPotentialShift{Order}(strength; hopping_scale)
+end
+
+@inline function _defect_convert_mode(mode::ExtFieldShift, g::G) where {G<:AbstractIsingGraph}
+    strength = _defect_internal_value(mode.strength, physicalunits(energy = 1, role = :field_energy), g, :extfield_shift)
+    hopping_scale = _defect_internal_value(mode.hopping_scale, physicalunits(role = :dimensionless), g, :extfield_hopping_scale)
+    return ExtFieldShift(strength; hopping_scale)
+end
+
+@inline function _defect_convert_mode(mode::ExtFieldChargeCoupling, g::G) where {G<:AbstractIsingGraph}
+    hopping_scale = _defect_internal_value(mode.hopping_scale, physicalunits(role = :dimensionless), g, :extfield_charge_hopping_scale)
+    return ExtFieldChargeCoupling(; axis = mode.axis, hopping_scale)
+end
+
+@inline function _defect_convert_effects(effects::Tuple, g::G) where {G<:AbstractIsingGraph}
+    return map(effect -> _defect_convert_mode(effect, g), effects)
+end
+
+"""
+    _defect_charge_uses_physical_units(effects)
+
+Return whether the proposal charge should be converted as physical free charge
+instead of a dimensionless legacy local-potential amplitude.
+"""
+@inline _defect_mode_uses_physical_charge(::AbstractDefectMode) = false
+@inline _defect_mode_uses_physical_charge(::ExtFieldChargeCoupling) = true
+@inline _defect_charge_uses_physical_units(::Tuple{}) = false
+@inline function _defect_charge_uses_physical_units(effects::Tuple)
+    return _defect_mode_uses_physical_charge(first(effects)) || _defect_charge_uses_physical_units(Base.tail(effects))
+end
+
+"""
+    _defect_convert_charge(charge, effects, graph)
+
+Convert the proposal charge to graph precision, using charge units only for
+effects that model mobile free charge.
+"""
+@inline function _defect_convert_charge(charge::C, effects::E, g::G) where {C,E<:Tuple,G<:AbstractIsingGraph}
+    units = _defect_charge_uses_physical_units(effects) ?
+        physicalunits(charge = 1, role = :free_charge) :
+        physicalunits(role = :dimensionless)
+    return _defect_internal_value(charge, units, g, :defect_charge)
+end
 
 """
     _defect_validate_mode!(mode, hterm, idx)
@@ -308,7 +385,7 @@ function _defect_validate_mode!(mode::LocalPotentialShift{Order}, hterm::H, idx:
     return true
 end
 
-function _defect_validate_mode!(mode::MagFieldShift, hterm::H, idx::I) where {H<:MagField,I<:Integer}
+function _defect_validate_mode!(mode::ExtFieldShift, hterm::H, idx::I) where {H<:ExtField,I<:Integer}
     b = hterm.b
     _defect_uses_localpotential(b) || return false
     try
@@ -320,11 +397,7 @@ function _defect_validate_mode!(mode::MagFieldShift, hterm::H, idx::I) where {H<
     return true
 end
 
-function _defect_validate_mode!(mode::ExternalFieldBias, hterm::H, idx::I) where {H<:Hamiltonian,I<:Integer}
-    return true
-end
-
-function _defect_validate_mode!(mode::ExternalFieldBias, hts::HTS, idx::I) where {HTS<:AbstractHamiltonianTerms,I<:Integer}
+function _defect_validate_mode!(mode::ExtFieldChargeCoupling, hterm::H, idx::I) where {H<:ExtField,I<:Integer}
     return true
 end
 
@@ -361,6 +434,28 @@ function _defect_validate_effects!(hamiltonian::H, effects::E, idx::I) where {H<
 end
 
 """
+    _defect_bind_effects(hamiltonian, effects, graph, layer)
+
+Bind effect modes to Hamiltonian-local caches needed by specialized defect
+couplings. Ordinary local modes are returned unchanged.
+"""
+@inline function _defect_bind_mode(mode::M, hterm::H, g::G, layer_arg::L) where {M<:AbstractDefectMode,H<:Hamiltonian,G<:AbstractIsingGraph,L}
+    return mode
+end
+
+function _defect_bind_mode(mode::M, hts::HTS, g::G, layer_arg::L) where {M<:AbstractDefectMode,HTS<:AbstractHamiltonianTerms,G<:AbstractIsingGraph,L}
+    for hterm in hamiltonians(hts)
+        bound = _defect_bind_mode(mode, hterm, g, layer_arg)
+        typeof(bound) === typeof(mode) || return bound
+    end
+    return mode
+end
+
+@inline function _defect_bind_effects(hamiltonian::H, effects::E, g::G, layer_arg::L) where {H<:Hamiltonian,E<:Tuple,G<:AbstractIsingGraph,L}
+    return map(mode -> _defect_bind_mode(mode, hamiltonian, g, layer_arg), effects)
+end
+
+"""
     _defect_apply_mode!(mode, hamiltonian, idx, sign)
 
 Apply one mode's local parameter shift at `idx`, with `sign` equal to `+1` or
@@ -379,13 +474,13 @@ function _defect_apply_mode!(mode::LocalPotentialShift{Order}, hterm::H, idx::I,
     return nothing
 end
 
-function _defect_apply_mode!(mode::MagFieldShift, hterm::H, idx::I, sign::S) where {H<:MagField,I<:Integer,S}
+function _defect_apply_mode!(mode::ExtFieldShift, hterm::H, idx::I, sign::S) where {H<:ExtField,I<:Integer,S}
     _defect_uses_localpotential(hterm.b) || return nothing
     @inbounds hterm.b[Int(idx)] += sign * mode.strength
     return nothing
 end
 
-function _defect_apply_mode!(mode::ExternalFieldBias, hterm::H, idx::I, sign::S) where {H<:Hamiltonian,I<:Integer,S}
+function _defect_apply_mode!(mode::ExtFieldChargeCoupling, hterm::H, idx::I, sign::S) where {H<:Hamiltonian,I<:Integer,S}
     return nothing
 end
 
@@ -459,11 +554,12 @@ defect effects.
 function _defect_bound_system(g::G, layer_arg::L, defects::D, charge_arg::C, effects_arg::E) where {G<:AbstractIsingGraph,L,D,C,E<:Tuple}
     layer_idx = Int(layer_arg)
     layer = g[layer_idx]
-    charge = eltype(g)(charge_arg)
-    effects = _defect_convert_effects(effects_arg, eltype(g))
+    effects = _defect_convert_effects(effects_arg, g)
+    charge = _defect_convert_charge(charge_arg, effects, g)
     defect_idxs = _defect_initial_graph_indices(layer, defects)
 
     _defect_validate_effects!(g.hamiltonian, effects, first(defect_idxs))
+    effects = _defect_bind_effects(g.hamiltonian, effects, g, layer_arg)
 
     occupancy = falses(nstates(g))
     for idx in defect_idxs
@@ -506,11 +602,11 @@ function get_proposer(defects::D) where {D<:DefectHopping}
 end
 
 """
-    get_proposer(charges::NeutralChargeHopping)
+    get_proposer(charges::ChargeHopProposer)
 
 Return the combined positive/negative charge model as its own proposer.
 """
-function get_proposer(charges::C) where {C<:NeutralChargeHopping}
+function get_proposer(charges::C) where {C<:ChargeHopProposer}
     return charges
 end
 
@@ -521,33 +617,33 @@ Return the spin state used by the graph that owns this defect system.
 """
 @inline graphstate(defects::D) where {D<:DefectHopping} = graphstate(defects.state)
 
-@inline Base.eltype(defects::D) where {D<:DefectHopping} = eltype(defects.state)
+@inline Base.eltype(defects::D) where {D<:DefectHopping} = _defect_parameter_type(defects.state)
 @inline temp(defects::D) where {D<:DefectHopping} = temp(defects.state)
 
 """
-    state(charges::NeutralChargeHopping)
+    state(charges::ChargeHopProposer)
 
-Return the grouped positive/negative charge state for a neutral mobile-charge
+Return the grouped positive/negative charge state for a mobile-charge hopping
 model.
 """
-@inline state(charges::C) where {C<:NeutralChargeHopping} = charges.charge_state
+@inline state(charges::C) where {C<:ChargeHopProposer} = charges.charge_state
 
 """
-    graphstate(charges::NeutralChargeHopping)
+    graphstate(charges::ChargeHopProposer)
 
-Return the spin state of the graph coupled to a neutral mobile-charge model.
+Return the spin state of the graph coupled to a mobile-charge hopping model.
 """
-@inline graphstate(charges::C) where {C<:NeutralChargeHopping} = graphstate(charges.graph)
+@inline graphstate(charges::C) where {C<:ChargeHopProposer} = graphstate(charges.graph)
 
-@inline Base.eltype(charges::C) where {C<:NeutralChargeHopping} = eltype(charges.graph)
-@inline temp(charges::C) where {C<:NeutralChargeHopping} = temp(charges.graph)
+@inline Base.eltype(charges::C) where {C<:ChargeHopProposer} = _defect_parameter_type(charges.graph)
+@inline temp(charges::C) where {C<:ChargeHopProposer} = temp(charges.graph)
 
 function Base.getproperty(defects::D, name::Symbol) where {D<:DefectHopping}
     name === :hamiltonian && return getproperty(getfield(defects, :state), :hamiltonian)
     return getfield(defects, name)
 end
 
-function Base.getproperty(charges::C, name::Symbol) where {C<:NeutralChargeHopping}
+function Base.getproperty(charges::C, name::Symbol) where {C<:ChargeHopProposer}
     name === :hamiltonian && return getproperty(getfield(charges, :graph), :hamiltonian)
     name === :state && return getfield(charges, :charge_state)
     return getfield(charges, name)
@@ -574,11 +670,11 @@ function init!(hts::H, defects::D) where {H<:Hamiltonian,D<:DefectHopping}
     return _defect_reapply_initialized_effects!(initialized, defects)
 end
 
-function init!(hts::HamiltonianTerms{Hs}, charges::C) where {Hs,C<:NeutralChargeHopping}
+function init!(hts::HamiltonianTerms{Hs}, charges::C) where {Hs,C<:ChargeHopProposer}
     return init!(hts, charges.graph)
 end
 
-function init!(hts::H, charges::C) where {H<:Hamiltonian,C<:NeutralChargeHopping}
+function init!(hts::H, charges::C) where {H<:Hamiltonian,C<:ChargeHopProposer}
     return init!(hts, charges.graph)
 end
 
@@ -632,22 +728,27 @@ Draw a defect-hop proposal with Julia's default RNG.
 @inline Base.rand(proposer::DefectHopping) = rand(Random.default_rng(), proposer)
 
 """
-    rand(rng, proposer::NeutralChargeHopping)
+    rand(rng, proposer::ChargeHopProposer)
 
 Draw one hop from either the positive or negative charge field.
 """
-function Base.rand(rng::R, proposer::P) where {R<:AbstractRNG,P<:NeutralChargeHopping}
+function Base.rand(rng::R, proposer::P) where {R<:AbstractRNG,P<:ChargeHopProposer}
     npositive = length(proposer.positive.defect_idxs)
     nnegative = length(proposer.negative.defect_idxs)
-    selected = rand(rng, 1:(npositive + nnegative))
-    if selected <= npositive
-        return NeutralChargeHopProposal(PositiveFreeCharge(), rand(rng, proposer.positive))
+    positive_weight = proposer.positive_attempt_rate * npositive
+    negative_weight = proposer.negative_attempt_rate * nnegative
+    total_weight = positive_weight + negative_weight
+    total_weight > zero(total_weight) ||
+        throw(ArgumentError("ChargeHopProposer has no active proposal species; check attempt rates and occupancies."))
+
+    if rand(rng) * total_weight < positive_weight
+        return ChargeHopProposal(PositiveFreeCharge(), rand(rng, proposer.positive))
     else
-        return NeutralChargeHopProposal(NegativeFreeCharge(), rand(rng, proposer.negative))
+        return ChargeHopProposal(NegativeFreeCharge(), rand(rng, proposer.negative))
     end
 end
 
-@inline Base.rand(proposer::NeutralChargeHopping) = rand(Random.default_rng(), proposer)
+@inline Base.rand(proposer::ChargeHopProposer) = rand(Random.default_rng(), proposer)
 
 """
     accept(proposer, proposal::DefectHopProposal)
@@ -668,20 +769,23 @@ function accept(proposer::P, proposal::DP) where {P<:DefectHopping,DP<:DefectHop
 end
 
 """
-    accept(proposer::NeutralChargeHopping, proposal::NeutralChargeHopProposal)
+    accept(proposer::ChargeHopProposer, proposal::ChargeHopProposal)
 
 Commit the selected positive or negative charge hop to the corresponding field.
 """
-function accept(proposer::P, proposal::NP) where {P<:NeutralChargeHopping,NP<:NeutralChargeHopProposal}
-    if proposal.species isa PositiveFreeCharge
-        return NeutralChargeHopProposal(proposal.species, accept(proposer.positive, proposal.proposal))
-    else
-        return NeutralChargeHopProposal(proposal.species, accept(proposer.negative, proposal.proposal))
-    end
+function accept(proposer::P, proposal::NP) where {P<:ChargeHopProposer,NP<:ChargeHopProposal{PositiveFreeCharge}}
+    return ChargeHopProposal(proposal.species, accept(proposer.positive, proposal.proposal))
 end
 
-@inline _neutral_charge_system(model::M, proposal::P) where {M<:NeutralChargeHopping,P<:NeutralChargeHopProposal} =
-    proposal.species isa PositiveFreeCharge ? model.positive : model.negative
+function accept(proposer::P, proposal::NP) where {P<:ChargeHopProposer,NP<:ChargeHopProposal{NegativeFreeCharge}}
+    return ChargeHopProposal(proposal.species, accept(proposer.negative, proposal.proposal))
+end
+
+@inline _charge_hop_system(model::M, proposal::P) where {M<:ChargeHopProposer,P<:ChargeHopProposal{PositiveFreeCharge}} =
+    model.positive
+
+@inline _charge_hop_system(model::M, proposal::P) where {M<:ChargeHopProposer,P<:ChargeHopProposal{NegativeFreeCharge}} =
+    model.negative
 
 """
     calculate(ΔH(), hamiltonian_terms, model, proposal::DefectHopProposal)
@@ -689,28 +793,45 @@ end
 Calculate the defect-hop energy change over a Hamiltonian term collection.
 """
 @inline function calculate(dh::ΔH, hts::HTS, model, proposal::P) where {HTS<:AbstractHamiltonianTerms,P<:DefectHopProposal}
-    total = zero(eltype(model))
-    for hterm in hamiltonians(hts)
-        total += @inline calculate(dh, hterm, model, proposal)
-    end
+    T = eltype(model)
+    total = _defect_calculate_terms(dh, hamiltonians(hts), model, proposal, T)
     return total + _defect_hop_only_delta(model, proposal)
 end
 
 """
-    calculate(ΔH(), hamiltonian_terms, charges, proposal::NeutralChargeHopProposal)
+    _defect_calculate_terms(ΔH(), terms, model, proposal, T)
+
+Sum defect-hop energy terms through tuple recursion so each Hamiltonian term
+keeps its concrete type during inference.
+"""
+@inline _defect_calculate_terms(dh::ΔH, terms::Tuple{}, model, proposal::P, ::Type{T}) where {P<:DefectHopProposal,T} = zero(T)
+
+@inline function _defect_calculate_terms(
+    dh::ΔH,
+    terms::Tuple{H,Vararg},
+    model,
+    proposal::P,
+    ::Type{T},
+) where {H,P<:DefectHopProposal,T}
+    return T(calculate(dh, first(terms), model, proposal)) +
+        _defect_calculate_terms(dh, Base.tail(terms), model, proposal, T)
+end
+
+"""
+    calculate(ΔH(), hamiltonian_terms, charges, proposal::ChargeHopProposal)
 
 Route a combined charge proposal to the selected positive or negative field.
 """
-@inline function calculate(dh::ΔH, hts::HTS, model::M, proposal::P) where {HTS<:AbstractHamiltonianTerms,M<:NeutralChargeHopping,P<:NeutralChargeHopProposal}
-    return calculate(dh, hts, _neutral_charge_system(model, proposal), proposal.proposal)
+@inline function calculate(dh::ΔH, hts::HTS, model::M, proposal::P) where {HTS<:AbstractHamiltonianTerms,M<:ChargeHopProposer,P<:ChargeHopProposal}
+    return calculate(dh, hts, _charge_hop_system(model, proposal), proposal.proposal)
 end
 
-@inline function calculate(dh::ΔH, hterm::H, model::M, proposal::P) where {H<:Hamiltonian,M<:NeutralChargeHopping,P<:NeutralChargeHopProposal}
-    return calculate(dh, hterm, _neutral_charge_system(model, proposal), proposal.proposal)
+@inline function calculate(dh::ΔH, hterm::H, model::M, proposal::P) where {H<:Hamiltonian,M<:ChargeHopProposer,P<:ChargeHopProposal}
+    return calculate(dh, hterm, _charge_hop_system(model, proposal), proposal.proposal)
 end
 
-@inline function calculate(dh::ΔH, hterm::H, model::M, proposal::P) where {H<:HamiltonianTerm,M<:NeutralChargeHopping,P<:NeutralChargeHopProposal}
-    return calculate(dh, hterm, _neutral_charge_system(model, proposal), proposal.proposal)
+@inline function calculate(dh::ΔH, hterm::H, model::M, proposal::P) where {H<:HamiltonianTerm,M<:ChargeHopProposer,P<:ChargeHopProposal}
+    return calculate(dh, hterm, _charge_hop_system(model, proposal), proposal.proposal)
 end
 
 """
@@ -742,7 +863,7 @@ term.
     return T(mode.hopping_scale) * T(hterm.c[]) * T(mode.strength) * (T(to_state)^Order - T(from_state)^Order)
 end
 
-@inline function _defect_delta(mode::MagFieldShift, hterm::H, ::Type{T}, from_state, to_state) where {H<:MagField,T}
+@inline function _defect_delta(mode::ExtFieldShift, hterm::H, ::Type{T}, from_state, to_state) where {H<:ExtField,T}
     return -T(mode.hopping_scale) * T(hterm.c) * T(mode.strength) * (T(to_state) - T(from_state))
 end
 
@@ -764,24 +885,29 @@ on any particular Hamiltonian storage field.
     return total
 end
 
-@inline function _defect_hop_only_delta(mode::ExternalFieldBias, proposal::P, ::Type{T}) where {P<:DefectHopProposal,T}
-    return -T(mode.hopping_scale) * T(proposal.charge) * _defect_field_displacement_dot(mode.field, proposal.displacement, T)
-end
-
 @inline _defect_hop_only_delta(mode::AbstractDefectMode, proposal::P, ::Type{T}) where {P<:DefectHopProposal,T} = zero(T)
 
 """
-    _defect_field_displacement_dot(field, displacement, T)
+    _defect_field_axis(mode, displacement)
 
-Dot a configured external-field vector with a proposal displacement. Missing
-field components are treated as zero and extra field components are ignored.
+Return the proposal axis used by an `ExtFieldChargeCoupling`.
 """
-function _defect_field_displacement_dot(field::F, displacement::D, ::Type{T}) where {F<:Tuple,D<:Tuple,T}
-    total = zero(T)
-    for axis in 1:min(length(field), length(displacement))
-        total += T(field[axis]) * T(displacement[axis])
-    end
-    return total
+function _defect_field_axis(mode::M, displacement::D) where {M<:ExtFieldChargeCoupling,D<:Tuple}
+    axis = isnothing(mode.axis) ? length(displacement) : Int(mode.axis)
+    1 <= axis <= length(displacement) ||
+        throw(ArgumentError("ExtFieldChargeCoupling axis $axis is outside proposal dimension $(length(displacement))."))
+    return axis
+end
+
+"""
+    _defect_extfield_charge_delta(mode, extfield, proposal, T)
+
+Return the work done by the graph's external field during one charged hop.
+"""
+@inline function _defect_extfield_charge_delta(mode::M, hterm::H, proposal::P, ::Type{T}) where {M<:ExtFieldChargeCoupling,H<:ExtField,P<:DefectHopProposal,T}
+    axis = _defect_field_axis(mode, proposal.displacement)
+    field = T(hterm.c) * (T(hterm.b[proposal.from_idx]) + T(hterm.b[proposal.to_idx])) / T(2)
+    return -T(mode.hopping_scale) * T(proposal.charge) * field * T(proposal.displacement[axis])
 end
 
 """
@@ -802,16 +928,20 @@ Return zero for non-polynomial terms, while preserving invalid-hop rejection.
 @inline calculate(::ΔH, hterm::H, model, proposal::P) where {H<:Bilinear,P<:DefectHopProposal} =
     _defect_non_polynomial_delta(model, proposal)
 
-@inline function calculate(::ΔH, hterm::H, model, proposal::P) where {H<:MagField,P<:DefectHopProposal}
+@inline function calculate(::ΔH, hterm::H, model, proposal::P) where {H<:ExtField,P<:DefectHopProposal}
     T = eltype(model)
     proposal.valid || return T(Inf)
-    _defect_uses_localpotential(hterm.b) || return zero(T)
     spins = @inline graphstate(model)
     from_state = @inbounds spins[proposal.from_idx]
     to_state = @inbounds spins[proposal.to_idx]
     total = zero(T)
     for mode in proposal.effects
-        total += _defect_delta(mode, hterm, T, from_state, to_state)
+        if mode isa ExtFieldShift
+            _defect_uses_localpotential(hterm.b) &&
+                (total += _defect_delta(mode, hterm, T, from_state, to_state))
+        elseif mode isa ExtFieldChargeCoupling
+            total += _defect_extfield_charge_delta(mode, hterm, proposal, T)
+        end
     end
     return total
 end
@@ -849,11 +979,11 @@ function update!(algo::A, hterm::H, model, proposal::P) where {A<:Metropolis,H<:
 end
 
 """
-    update!(::Metropolis, hterm::MagField, model, proposal::DefectHopProposal)
+    update!(::Metropolis, hterm::ExtField, model, proposal::DefectHopProposal)
 
 Move accepted defect field shifts between magnetic-field entries.
 """
-function update!(algo::A, hterm::H, model, proposal::P) where {A<:Metropolis,H<:MagField,P<:DefectHopProposal}
+function update!(algo::A, hterm::H, model, proposal::P) where {A<:Metropolis,H<:ExtField,P<:DefectHopProposal}
     isaccepted(proposal) || return nothing
     proposal.valid || return nothing
 
@@ -863,25 +993,25 @@ function update!(algo::A, hterm::H, model, proposal::P) where {A<:Metropolis,H<:
 end
 
 """
-    update!(::Metropolis, hterm, charges, proposal::NeutralChargeHopProposal)
+    update!(::Metropolis, hterm, charges, proposal::ChargeHopProposal)
 
 Route accepted combined charge proposals to the selected positive or negative
 field's existing update methods.
 """
-@inline function update!(algo::A, hterm::H, model::M, proposal::P) where {A<:Metropolis,H<:Hamiltonian,M<:NeutralChargeHopping,P<:NeutralChargeHopProposal}
-    return update!(algo, hterm, _neutral_charge_system(model, proposal), proposal.proposal)
+@inline function update!(algo::A, hterm::H, model::M, proposal::P) where {A<:Metropolis,H<:Hamiltonian,M<:ChargeHopProposer,P<:ChargeHopProposal}
+    return update!(algo, hterm, _charge_hop_system(model, proposal), proposal.proposal)
 end
 
-@inline function update!(algo::A, hts::HTS, model::M, proposal::P) where {A<:Metropolis,HTS<:AbstractHamiltonianTerms,M<:NeutralChargeHopping,P<:NeutralChargeHopProposal}
-    return update!(algo, hts, _neutral_charge_system(model, proposal), proposal.proposal)
+@inline function update!(algo::A, hts::HTS, model::M, proposal::P) where {A<:Metropolis,HTS<:AbstractHamiltonianTerms,M<:ChargeHopProposer,P<:ChargeHopProposal}
+    return update!(algo, hts, _charge_hop_system(model, proposal), proposal.proposal)
 end
 
-@inline function update!(algo::A, hts::HTS, model::M, proposal::P) where {A<:Metropolis,Hs,HTS<:HamiltonianTerms{Hs},M<:NeutralChargeHopping,P<:NeutralChargeHopProposal}
-    return update!(algo, hts, _neutral_charge_system(model, proposal), proposal.proposal)
+@inline function update!(algo::A, hts::HTS, model::M, proposal::P) where {A<:Metropolis,Hs,HTS<:HamiltonianTerms{Hs},M<:ChargeHopProposer,P<:ChargeHopProposal}
+    return update!(algo, hts, _charge_hop_system(model, proposal), proposal.proposal)
 end
 
-@inline function update!(algo::A, hterm::H, model::M, proposal::P) where {A<:Metropolis,H<:HamiltonianTerm,M<:NeutralChargeHopping,P<:NeutralChargeHopProposal}
-    return update!(algo, hterm, _neutral_charge_system(model, proposal), proposal.proposal)
+@inline function update!(algo::A, hterm::H, model::M, proposal::P) where {A<:Metropolis,H<:HamiltonianTerm,M<:ChargeHopProposer,P<:ChargeHopProposal}
+    return update!(algo, hterm, _charge_hop_system(model, proposal), proposal.proposal)
 end
 
 include("CoulombCoupling.jl")

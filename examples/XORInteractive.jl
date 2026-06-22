@@ -59,7 +59,7 @@ function xor_rbm_graph()
         input_layer,
         hidden_layer,
         output_layer,
-        Bilinear() + MagField(b = copy(XOR_TRAINED_BIAS));
+        Bilinear() + ExtField(b = copy(XOR_TRAINED_BIAS));
         precision = XORFloat,
         adj = xor_trained_adjacency(),
         index_set = g -> ToggledIndexSet(g),

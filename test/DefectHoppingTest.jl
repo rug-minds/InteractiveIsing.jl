@@ -1,5 +1,6 @@
 using Test
 using Random
+using Unitful
 using InteractiveIsing
 using InteractiveIsing.StatefulAlgorithms
 
@@ -13,10 +14,24 @@ function defect_hopping_graph(
     hamiltonian,
     proposer = nothing;
     periodic::Bool = false,
+    physical_scales = nothing,
 ) where {N}
     layer = Layer(size..., Continuous(), StateSet(-10.0, 10.0); periodic)
-    isnothing(proposer) && return IsingGraph(layer, hamiltonian; precision = Float64, initial_state = 0.0)
-    return IsingGraph(layer, hamiltonian, proposer; precision = Float64, initial_state = 0.0)
+    isnothing(proposer) && return IsingGraph(
+        layer,
+        hamiltonian;
+        precision = Float64,
+        initial_state = 0.0,
+        physical_scales,
+    )
+    return IsingGraph(
+        layer,
+        hamiltonian,
+        proposer;
+        precision = Float64,
+        initial_state = 0.0,
+        physical_scales,
+    )
 end
 
 defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
@@ -49,10 +64,10 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
         field = zeros(2)
         hamiltonian =
             PolynomialHamiltonian(1; c = ConstVal(2.0), localpotential = linear_lp) +
-            MagField(b = field, c = 3.0)
+            ExtField(b = field, c = 3.0)
         effects = (
             LocalPotentialShift(1, 0.25),
-            MagFieldShift(0.5),
+            ExtFieldShift(0.5),
         )
         proposer = DefectHopping(defects = [1], effects = effects)
         g = defect_hopping_graph((2,), hamiltonian, proposer; periodic = true)
@@ -61,7 +76,7 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
         context = StatefulAlgorithms.init(Metropolis(), (; model = g))
         proposal = InteractiveIsing.DefectHopProposal(1, 1, 2, 1.0, (1,), context.proposer.effects, true, false)
 
-        @test context.proposer.effects isa Tuple{LocalPotentialShift{1,Float64,Float64},MagFieldShift{Float64,Float64}}
+        @test context.proposer.effects isa Tuple{LocalPotentialShift{1,Float64,Float64},ExtFieldShift{Float64,Float64}}
         @test g.hamiltonian[1].lp == [0.25, 0.0]
         @test g.hamiltonian[2].b == [0.5, 0.0]
         @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), context.hamiltonian, g, proposal) ≈
@@ -87,10 +102,10 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
         @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), context.hamiltonian, g, proposal) ≈ 5.0 * 0.2 * (3.0^2 - 1.0^2)
     end
 
-    @testset "External Field Bias" begin
-        effects = (ExternalFieldBias((0.0, 0.0, 2.0)),)
+    @testset "ExtField Charge Coupling" begin
+        effects = (ExtFieldChargeCoupling(),)
         proposer = DefectHopping(defects = [1], charge = 0.5, effects = effects)
-        hamiltonian = Quadratic(c = ConstVal(0.0), localpotential = ConstFill(0.0)) + Bilinear()
+        hamiltonian = Quadratic(c = ConstVal(0.0), localpotential = ConstFill(0.0)) + Bilinear() + ExtField(b = 2.0)
         g = defect_hopping_graph((2, 2, 2), hamiltonian, proposer)
         context = StatefulAlgorithms.init(Metropolis(), (; model = g))
 
@@ -103,6 +118,177 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
         @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), context.hamiltonian, context.proposer, negative_z) ≈ 1.0
         @test InteractiveIsing.calculate(InteractiveIsing.ΔH(), context.hamiltonian, context.proposer, negative_charge) ≈ 1.0
         @test isinf(InteractiveIsing.calculate(InteractiveIsing.ΔH(), context.hamiltonian, context.proposer, invalid))
+    end
+
+    @testset "Physical Parameter Conversion" begin
+        scales = PhysicalScales(energy = 1u"eV", charge = 1u"C")
+        hamiltonian = ExtField(b = zeros(2), c = 3.0)
+        effects = (
+            ExtFieldShift(0.5u"eV"),
+            ExtFieldChargeCoupling(),
+        )
+        proposer = DefectHopping(defects = [1], charge = 0.25u"C", effects = effects)
+        g = defect_hopping_graph((2,), hamiltonian, proposer; periodic = true, physical_scales = scales)
+
+        context = StatefulAlgorithms.init(Metropolis(), (; model = g))
+
+        @test context.proposer.charge ≈ 0.25
+        @test context.proposer.effects isa Tuple{ExtFieldShift{Float64,Float64},ExtFieldChargeCoupling{Nothing,Float64}}
+        @test g.hamiltonian.b == [0.5, 0.0]
+    end
+
+    @testset "Hopping Parameters Follow Graph State Type" begin
+        wg = @WG defect_hopping_coulomb_weights NN = 1
+        scales = PhysicalScales(energy = 1u"eV", charge = 1u"C")
+        hamiltonian =
+            Quadratic(c = ConstVal(0.0), localpotential = zeros(8)) +
+            ExtField(b = zeros(8), c = 1.0) +
+            CoulombHamiltonian(
+                recalc = Inf,
+                q_positive = 2.0u"C",
+                q_negative = 1.0u"C",
+                free_charge_split = 0.25,
+            )
+        g = IsingGraph(
+            2,
+            2,
+            2,
+            Continuous(),
+            wg,
+            LatticeConstants(1.0, 1.0, 1.0),
+            StateSet(-1.5, 1.5),
+            hamiltonian;
+            periodic = (:x, :y),
+            precision = Float32,
+            initial_state = 0.0,
+            physical_scales = scales,
+        )
+        charges = ChargeHopProposer(
+            g;
+            positive = [CartesianIndex(1, 1, 1)],
+            negative = [CartesianIndex(2, 2, 1), CartesianIndex(2, 2, 2)],
+            positive_effects = (
+                CoulombChargeShift(2.0u"C"; split = 0.25),
+                LocalPotentialShift(2, 0.125; hopping_scale = 3.0),
+                ExtFieldShift(0.5u"eV"; hopping_scale = 4.0),
+            ),
+            negative_effects = (
+                CoulombChargeShift(-1.0u"C"; split = 0.25),
+                ExtFieldChargeCoupling(; hopping_scale = 5.0),
+            ),
+            positive_charge = 2.0u"C",
+            negative_charge = -1.0u"C",
+            positive_attempt_rate = 7.0,
+            negative_attempt_rate = 11.0,
+        )
+        T = eltype(InteractiveIsing.graphstate(g))
+        coulomb = InteractiveIsing.gethamiltonian(g.hamiltonian, CoulombHamiltonian)
+
+        @test T === Float32
+        @test eltype(charges) === T
+        @test eltype(charges.positive) === T
+        @test eltype(charges.negative) === T
+        @test charges.positive.charge isa T
+        @test charges.negative.charge isa T
+        @test charges.positive_attempt_rate isa T
+        @test charges.negative_attempt_rate isa T
+        @test charges.positive.effects[1].charge isa T
+        @test charges.positive.effects[1].split isa T
+        @test charges.positive.effects[2].strength isa T
+        @test charges.positive.effects[2].hopping_scale isa T
+        @test charges.positive.effects[3].strength isa T
+        @test charges.positive.effects[3].hopping_scale isa T
+        @test charges.negative.effects[1].charge isa T
+        @test charges.negative.effects[1].split isa T
+        @test charges.negative.effects[2].hopping_scale isa T
+        @test coulomb.q_positive isa T
+        @test coulomb.q_negative isa T
+        @test coulomb.free_charge_split isa T
+    end
+
+    @testset "Charge Hop Attempt Rates" begin
+        g = defect_hopping_graph((3,), Quadratic(c = ConstVal(0.0), localpotential = zeros(3)); periodic = true)
+        rng = MersenneTwister(7)
+        neutral_effects = (LocalPotentialShift(2, 0.0),)
+
+        negative_only = ChargeHopProposer(
+            g;
+            positive = [1],
+            negative = [2],
+            positive_effects = neutral_effects,
+            negative_effects = neutral_effects,
+            positive_attempt_rate = 0.0,
+            negative_attempt_rate = 1.0,
+        )
+        for _ in 1:20
+            @test rand(rng, negative_only).species isa NegativeFreeCharge
+        end
+
+        fast_negative = ChargeHopProposer(
+            g;
+            positive = [1],
+            negative = [2],
+            positive_effects = neutral_effects,
+            negative_effects = neutral_effects,
+            positive_attempt_rate = 1.0,
+            negative_attempt_rate = 100.0,
+        )
+        negative_draws = count(_ -> rand(rng, fast_negative).species isa NegativeFreeCharge, 1:300)
+        @test negative_draws > 285
+
+        @test_throws ArgumentError ChargeHopProposer(
+            g;
+            positive = [1],
+            negative = [2],
+            positive_effects = neutral_effects,
+            negative_effects = neutral_effects,
+            positive_attempt_rate = -1.0,
+            negative_attempt_rate = 1.0,
+        )
+        @test_throws ArgumentError ChargeHopProposer(
+            g;
+            positive = [1],
+            negative = [2],
+            positive_effects = neutral_effects,
+            negative_effects = neutral_effects,
+            positive_attempt_rate = 0.0,
+            negative_attempt_rate = 0.0,
+        )
+    end
+
+    @testset "Type Stable Hot Paths" begin
+        hamiltonian =
+            Quadratic(c = ConstVal(1.0), localpotential = zeros(4)) +
+            ExtField(b = zeros(4))
+        g = defect_hopping_graph((4,), hamiltonian; periodic = true)
+        charges = ChargeHopProposer(
+            g;
+            positive = [1],
+            negative = [3],
+            positive_effects = (LocalPotentialShift(2, 0.1), ExtFieldShift(0.2)),
+            negative_effects = (LocalPotentialShift(2, -0.1),),
+            positive_charge = 1.0,
+            negative_charge = -1.0,
+        )
+        context = StatefulAlgorithms.init(Metropolis(), (; model = charges))
+        proposal = InteractiveIsing.DefectHopProposal(
+            1,
+            1,
+            2,
+            charges.positive.charge,
+            (1,),
+            charges.positive.effects,
+            true,
+            false,
+        )
+        wrapped = InteractiveIsing.ChargeHopProposal(PositiveFreeCharge(), proposal)
+        rng = MersenneTwister(11)
+
+        @inferred rand(rng, charges.positive)
+        @inferred InteractiveIsing.calculate(InteractiveIsing.ΔH(), context.hamiltonian, charges.positive, proposal)
+        @inferred InteractiveIsing.calculate(InteractiveIsing.ΔH(), context.hamiltonian, charges, wrapped)
+        @inferred InteractiveIsing.accept(charges.positive, proposal)
+        @inferred InteractiveIsing.accept(charges, wrapped)
     end
 
     @testset "Double Well Background Is Not Defect Field" begin
@@ -245,10 +431,10 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
         vacancy_effects = (
             CoulombChargeShift(2.0; split = 0.25),
             LocalPotentialShift(2, 0.4),
-            MagFieldShift(0.3),
+            ExtFieldShift(0.3),
         )
         electron_effects = (CoulombChargeShift(-1.0; split = 0.25),)
-        charges = NeutralChargeHopping(
+        charges = ChargeHopProposer(
             g;
             positive = [CartesianIndex(1, 1, 1)],
             negative = [CartesianIndex(2, 2, 1), CartesianIndex(2, 2, 2)],
@@ -290,14 +476,21 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
             true,
             false,
         )
-        wrapped_proposal = InteractiveIsing.NeutralChargeHopProposal(PositiveFreeCharge(), proposal)
-        ΔE = InteractiveIsing.calculate(InteractiveIsing.ΔH(), coulomb, charges, wrapped_proposal)
-
+        wrapped_proposal = InteractiveIsing.ChargeHopProposal(PositiveFreeCharge(), proposal)
+        coulomb.recalc_tracker[] = 1
         ρ_before = copy(coulomb.ρ)
         ρhat_before = copy(coulomb.ρhat)
         uhat_before = copy(coulomb.uhat)
         u_before = copy(coulomb.u)
         pos_before = copy(coulomb.positive_cell_occupancy)
+        ΔE = InteractiveIsing.calculate(InteractiveIsing.ΔH(), coulomb, charges, wrapped_proposal)
+        @test coulomb.recalc_tracker[] == 1
+        @test coulomb.ρ == ρ_before
+        @test coulomb.ρhat == ρhat_before
+        @test coulomb.uhat == uhat_before
+        @test coulomb.u == u_before
+        @test coulomb.positive_cell_occupancy == pos_before
+
         InteractiveIsing.recalc!(coulomb)
         energy_before = 0.5 * sum(coulomb.ρ .* coulomb.u)
         InteractiveIsing.move_cell_free_charge!(coulomb, PositiveFreeCharge(), CartesianIndex(1, 1, 1), CartesianIndex(2, 1, 1))
@@ -321,6 +514,12 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
         @test coulomb.ρ[2, 1, 1] ≈ 1.5
         @test coulomb.ρ[2, 1, 2] ≈ 0.5
         @test sum(coulomb.ρ) ≈ 0.0 atol = 1.0e-12
+        local_ρ = copy(coulomb.ρ)
+        local_u = copy(coulomb.u)
+        InteractiveIsing.rebuild_charge_density!(coulomb, g[1])
+        InteractiveIsing.recalc!(coulomb)
+        @test coulomb.ρ ≈ local_ρ
+        @test coulomb.u ≈ local_u
 
         electron_proposal = InteractiveIsing.DefectHopProposal(
             1,
@@ -332,7 +531,7 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
             true,
             false,
         )
-        wrapped_electron = InteractiveIsing.NeutralChargeHopProposal(NegativeFreeCharge(), electron_proposal)
+        wrapped_electron = InteractiveIsing.ChargeHopProposal(NegativeFreeCharge(), electron_proposal)
         lp_before = copy(g.hamiltonian[1].lp)
         b_before = copy(g.hamiltonian[3].b)
         accepted_electron = InteractiveIsing.accept(context.proposer, wrapped_electron)
@@ -343,6 +542,121 @@ defect_hopping_coulomb_weights(; dr) = dr == 1 ? 1.0 : 0.0
         @test g.hamiltonian[1].lp == lp_before
         @test g.hamiltonian[3].b == b_before
         @test InteractiveIsing.free_charge_total(coulomb) ≈ 0.0
+    end
+
+    @testset "Physical Coulomb Charge Conversion" begin
+        wg = @WG defect_hopping_coulomb_weights NN = 1
+        scales = PhysicalScales(charge = 1u"C")
+        hamiltonian = Ising(c = ConstVal(0.0), b = zeros(8), localpotential = zeros(8)) +
+            CoulombHamiltonian(recalc = Inf, q_positive = 0.8u"C", q_negative = 0.4u"C", free_charge_split = 0.25)
+        g = IsingGraph(
+            2,
+            2,
+            2,
+            Continuous(),
+            wg,
+            LatticeConstants(1.0, 1.0, 1.0),
+            StateSet(-1.5, 1.5),
+            hamiltonian;
+            periodic = (:x, :y),
+            precision = Float64,
+            initial_state = 0.0,
+            physical_scales = scales,
+        )
+        charges = ChargeHopProposer(
+            g;
+            positive = [CartesianIndex(1, 1, 1)],
+            negative = [CartesianIndex(2, 2, 1), CartesianIndex(2, 2, 2)],
+            positive_effects = (CoulombChargeShift(0.8u"C"; split = 0.25),),
+            negative_effects = (CoulombChargeShift(-0.4u"C"; split = 0.25),),
+            positive_charge = 0.8u"C",
+            negative_charge = -0.4u"C",
+        )
+        coulomb = InteractiveIsing.gethamiltonian(g.hamiltonian, CoulombHamiltonian)
+
+        @test charges.positive.charge ≈ 0.8
+        @test charges.negative.charge ≈ -0.4
+        @test charges.positive.effects[1].charge ≈ 0.8
+        @test charges.negative.effects[1].charge ≈ 0.4
+        @test coulomb.q_positive ≈ 0.8
+        @test coulomb.q_negative ≈ 0.4
+        @test InteractiveIsing.free_charge_total(coulomb) ≈ 0.0
+    end
+
+    @testset "Coulomb Recalc Schedule Controls" begin
+        wg = @WG defect_hopping_coulomb_weights NN = 1
+        hamiltonian = Ising(c = ConstVal(0.0), b = zeros(8), localpotential = zeros(8)) +
+            CoulombHamiltonian(recalc = Inf, q_positive = 2.0, q_negative = 1.0, free_charge_split = 0.5)
+        g = IsingGraph(
+            2,
+            2,
+            2,
+            Continuous(),
+            wg,
+            LatticeConstants(1.0, 1.0, 1.0),
+            StateSet(-1.5, 1.5),
+            hamiltonian;
+            periodic = (:x, :y),
+            precision = Float64,
+            initial_state = 0.0,
+        )
+        coulomb = InteractiveIsing.gethamiltonian(g.hamiltonian, CoulombHamiltonian)
+        @test isinf(coulomb.recalc_steps)
+        @test coulomb.recalc_tracker[] == 1
+
+        spin_proposal = FlipProposal(1, 0.0, 0.5, 1, true)
+        u_before_spin = copy(coulomb.u)
+        InteractiveIsing.update!(Metropolis(), coulomb, g, spin_proposal)
+        @test coulomb.u == u_before_spin
+
+        charges = ChargeHopProposer(
+            g;
+            positive = [CartesianIndex(1, 1, 1)],
+            negative = [CartesianIndex(2, 2, 1), CartesianIndex(2, 2, 2)],
+            positive_effects = (CoulombChargeShift(2.0; split = 0.5),),
+            negative_effects = (CoulombChargeShift(-1.0; split = 0.5),),
+            positive_charge = 2.0,
+            negative_charge = -1.0,
+        )
+        context = StatefulAlgorithms.init(Metropolis(), (; model = charges))
+        coulomb = InteractiveIsing.gethamiltonian(context.hamiltonian, CoulombHamiltonian)
+        u_before_defect = copy(coulomb.u)
+        defect_proposal = InteractiveIsing.DefectHopProposal(
+            1,
+            charges.positive.defect_idxs[1],
+            charges.positive.defect_idxs[1] + 1,
+            charges.positive.charge,
+            (1, 0, 0),
+            charges.positive.effects,
+            true,
+            false,
+        )
+        accepted_defect = InteractiveIsing.ChargeHopProposal(
+            PositiveFreeCharge(),
+            InteractiveIsing.accept(charges.positive, defect_proposal),
+        )
+        InteractiveIsing.update!(Metropolis(), context.hamiltonian, charges, accepted_defect)
+        @test coulomb.u != u_before_defect
+        @test coulomb.recalc_tracker[] == 1
+
+        offset_hamiltonian = Ising(c = ConstVal(0.0), b = zeros(8), localpotential = zeros(8)) +
+            CoulombHamiltonian(recalc = 5, recalc_offset = 2, q_positive = 2.0, q_negative = 1.0)
+        offset_graph = IsingGraph(
+            2,
+            2,
+            2,
+            Continuous(),
+            wg,
+            LatticeConstants(1.0, 1.0, 1.0),
+            StateSet(-1.5, 1.5),
+            offset_hamiltonian;
+            periodic = (:x, :y),
+            precision = Float64,
+            initial_state = 0.0,
+        )
+        offset_coulomb = InteractiveIsing.gethamiltonian(offset_graph.hamiltonian, CoulombHamiltonian)
+        @test offset_coulomb.recalc_steps == 5
+        @test offset_coulomb.recalc_tracker[] == 3
     end
 
     @testset "Coulomb Free-Charge Neutrality Validation" begin

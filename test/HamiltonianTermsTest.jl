@@ -56,8 +56,8 @@ end
     @test InteractiveIsing.getparam(hts, InteractiveIsing.Bilinear, Val(:J)) ===
           InteractiveIsing.gethamiltonian(hts, InteractiveIsing.Bilinear).J
 
-    @test InteractiveIsing.getparam(hts, InteractiveIsing.MagField, Val(:b)) ===
-          InteractiveIsing.gethamiltonian(hts, InteractiveIsing.MagField).b
+    @test InteractiveIsing.getparam(hts, InteractiveIsing.ExtField, Val(:b)) ===
+          InteractiveIsing.gethamiltonian(hts, InteractiveIsing.ExtField).b
 
     @test InteractiveIsing.getparam(hts, InteractiveIsing.Bilinear, :J) ===
           InteractiveIsing.gethamiltonian(hts, InteractiveIsing.Bilinear).J
@@ -82,14 +82,14 @@ end
 
 @testset "Hamiltonian Parameter Filling" begin
     default_graph = IsingGraph(2, 2, Continuous(), Ising(); precision = Float32)
-    default_b = InteractiveIsing.gethamiltonian(default_graph.hamiltonian, InteractiveIsing.MagField).b
+    default_b = InteractiveIsing.gethamiltonian(default_graph.hamiltonian, InteractiveIsing.ExtField).b
     @test default_b isa InteractiveIsing.ConstFill
     @test eltype(default_b) === Float32
     @test length(default_b) == 4
     @test all(==(0f0), default_b)
 
     scalar_graph = IsingGraph(2, 2, Continuous(), Ising(b = 1); precision = Float32)
-    scalar_b = InteractiveIsing.gethamiltonian(scalar_graph.hamiltonian, InteractiveIsing.MagField).b
+    scalar_b = InteractiveIsing.gethamiltonian(scalar_graph.hamiltonian, InteractiveIsing.ExtField).b
     @test scalar_b isa InteractiveIsing.UniformArray
     @test eltype(scalar_b) === Float32
     @test length(scalar_b) == 4
@@ -98,27 +98,27 @@ end
     @test all(==(2f0), scalar_b)
 
     singleton_graph = IsingGraph(2, 2, Continuous(), Ising(b = [1]); precision = Float32)
-    singleton_b = InteractiveIsing.gethamiltonian(singleton_graph.hamiltonian, InteractiveIsing.MagField).b
+    singleton_b = InteractiveIsing.gethamiltonian(singleton_graph.hamiltonian, InteractiveIsing.ExtField).b
     @test singleton_b isa InteractiveIsing.UniformArray
     @test eltype(singleton_b) === Float32
     @test length(singleton_b) == 4
     @test all(==(1f0), singleton_b)
 
     vector_type_graph = IsingGraph(2, 2, Continuous(), Ising(b = Vector); precision = Float32)
-    vector_type_b = InteractiveIsing.gethamiltonian(vector_type_graph.hamiltonian, InteractiveIsing.MagField).b
+    vector_type_b = InteractiveIsing.gethamiltonian(vector_type_graph.hamiltonian, InteractiveIsing.ExtField).b
     @test vector_type_b isa Vector{Float32}
     @test length(vector_type_b) == 4
     @test all(==(0f0), vector_type_b)
 
     const_graph = IsingGraph(2, 2, Continuous(), Ising(b = ConstFill(1)); precision = Float32)
-    const_b = InteractiveIsing.gethamiltonian(const_graph.hamiltonian, InteractiveIsing.MagField).b
+    const_b = InteractiveIsing.gethamiltonian(const_graph.hamiltonian, InteractiveIsing.ExtField).b
     @test const_b isa InteractiveIsing.ConstFill
     @test eltype(const_b) === Float32
     @test length(const_b) == 4
     @test all(==(1f0), const_b)
 
     custom_graph = IsingGraph(2, 2, Continuous(), Ising(b = [1, 2, 3, 4]); precision = Float32)
-    custom_b = InteractiveIsing.gethamiltonian(custom_graph.hamiltonian, InteractiveIsing.MagField).b
+    custom_b = InteractiveIsing.gethamiltonian(custom_graph.hamiltonian, InteractiveIsing.ExtField).b
     @test custom_b isa Vector{Float32}
     @test custom_b == Float32[1, 2, 3, 4]
 
@@ -150,10 +150,10 @@ end
 
     layer1 = Layer(2, Continuous(), StateSet(-10, 10); periodic = false)
     layer2 = Layer(3, Continuous(), StateSet(-10, 10); periodic = false)
-    g = IsingGraph(layer1, layer2, ToLayer(2, MagField(b = 1)); precision = Float64, adj = zero_adj(5))
+    g = IsingGraph(layer1, layer2, ToLayer(2, ExtField(b = 1)); precision = Float64, adj = zero_adj(5))
     InteractiveIsing.graphstate(g) .= Float64[1, 2, 3, 4, 5]
 
-    single = IsingGraph(Layer(3, Continuous(), StateSet(-10, 10); periodic = false), MagField(b = 1); precision = Float64, adj = zero_adj(3))
+    single = IsingGraph(Layer(3, Continuous(), StateSet(-10, 10); periodic = false), ExtField(b = 1); precision = Float64, adj = zero_adj(3))
     InteractiveIsing.graphstate(single) .= Float64[3, 4, 5]
 
     outside = FlipProposal(1, 1.0, 7.0, 1)
@@ -200,7 +200,7 @@ end
     mixed = IsingGraph(
         Layer(2, Continuous(), StateSet(-10, 10); periodic = false),
         Layer(2, Continuous(), StateSet(-10, 10); periodic = false),
-        MagField(b = 1) + ToLayer(2, MagField(b = 2));
+        ExtField(b = 1) + ToLayer(2, ExtField(b = 2));
         precision = Float64,
         adj = zero_adj(4),
     )
@@ -211,12 +211,12 @@ end
     lookup_h = IsingGraph(
         Layer(2, Continuous(), StateSet(-10, 10); periodic = false),
         Layer(3, Continuous(), StateSet(-10, 10); periodic = false),
-        MagField(b = 1) + ToLayer(2, Ising(c = ConstVal(0.0), b = 0.5));
+        ExtField(b = 1) + ToLayer(2, Ising(c = ConstVal(0.0), b = 0.5));
         precision = Float64,
         adj = zero_adj(5),
     )
-    found = InteractiveIsing.gethamiltonian(lookup_h.hamiltonian, InteractiveIsing.MagField, 2)
-    @test found isa InteractiveIsing.MagField
+    found = InteractiveIsing.gethamiltonian(lookup_h.hamiltonian, InteractiveIsing.ExtField, 2)
+    @test found isa InteractiveIsing.ExtField
     @test length(found.b) == length(InteractiveIsing.state(lookup_h[2]))
 end
 
@@ -353,7 +353,7 @@ end
     @test startswith(hts_type_text, "HamiltonianTerms")
     @test occursin("├── Quadratic", hts_type_text)
     @test occursin("├── Bilinear", hts_type_text)
-    @test occursin("└── MagField", hts_type_text)
+    @test occursin("└── ExtField", hts_type_text)
     @test occursin("c = Float32 [Defaulted]", hts_type_text)
     @test !occursin("Parameters{@NamedTuple", hts_type_text)
 
@@ -445,9 +445,9 @@ end
     InteractiveIsing.graphstate(g) .= spins
 
     hts = g.hamiltonian
-    magfield = InteractiveIsing.gethamiltonian(hts, InteractiveIsing.MagField)
+    ExtField = InteractiveIsing.gethamiltonian(hts, InteractiveIsing.ExtField)
 
-    @test InteractiveIsing.parameter_derivative(magfield, g) == (; db = -spins)
+    @test InteractiveIsing.parameter_derivative(ExtField, g) == (; db = -spins)
 
     deriv = InteractiveIsing.parameter_derivative(hts, g)
     @test deriv.db == -spins

@@ -54,7 +54,7 @@ g = IsingGraph(
 )
 ```
 
-Here `MagField.b` is stored internally as `0.25`, because the energy scale is
+Here `ExtField.b` is stored internally as `0.25`, because the energy scale is
 `1u"meV"`. The graph temperature is stored internally as `2.15`.
 
 !!! note
@@ -75,7 +75,7 @@ Common built-in defaults are:
 | Term | Parameter | Default physical role |
 | --- | --- | --- |
 | `Bilinear` | `J` | energy |
-| `MagField` | `b` | energy |
+| `ExtField` | `b` | energy |
 | `PolynomialHamiltonian` | `c` | energy |
 | `CosineInteraction` | `J` | energy |
 | `CosineInteraction` | `phase`, `edge_phase` | dimensionless angle |
@@ -107,20 +107,20 @@ Use `setphysical!` when writing Unitful values into an already instantiated
 Hamiltonian:
 
 ```julia
-setphysical!(g, InteractiveIsing.MagField, :b, 0.4u"meV")
+setphysical!(g, InteractiveIsing.ExtField, :b, 0.4u"meV")
 ```
 
 This updates the existing mutable parameter storage with the converted internal
 value. Use `physicalvalue` to read the stored value back in physical units:
 
 ```julia
-b = physicalvalue(g, InteractiveIsing.MagField, :b)
+b = physicalvalue(g, InteractiveIsing.ExtField, :b)
 ```
 
 The low-level Hamiltonian storage remains unit-free:
 
 ```julia
-mag = InteractiveIsing.gethamiltonian(g.hamiltonian, InteractiveIsing.MagField)
+mag = InteractiveIsing.gethamiltonian(g.hamiltonian, InteractiveIsing.ExtField)
 mag.b[1] # plain numeric internal value
 ```
 

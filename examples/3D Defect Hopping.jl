@@ -12,11 +12,11 @@ vacancy_hopping_scale = 180f0
 defect_step_interval = 1000
 
 weak_fast_vacancy = (
-    MagFieldShift(0.04f0; hopping_scale = 1f0),
+    ExtFieldShift(0.04f0; hopping_scale = 1f0),
 )
 
 polar_trapping_vacancy = (
-    MagFieldShift(0.08f0; hopping_scale = vacancy_hopping_scale),
+    ExtFieldShift(0.08f0; hopping_scale = vacancy_hopping_scale),
     LocalPotentialShift(1, -0.03f0; hopping_scale = vacancy_hopping_scale),
 )
 
@@ -25,7 +25,7 @@ stiffness_trapping_vacancy = (
 )
 
 mixed_charged_vacancy = (
-    MagFieldShift(0.06f0; hopping_scale = vacancy_hopping_scale),
+    ExtFieldShift(0.06f0; hopping_scale = vacancy_hopping_scale),
     LocalPotentialShift(2, 0.03f0; hopping_scale = vacancy_hopping_scale),
 )
 
@@ -43,7 +43,7 @@ g = IsingGraph(
         Quartic(c = ConstVal(1.0f0), localpotential = ConstFill(1f0)) +
         PolynomialHamiltonian(1; c = ConstVal(1.0f0), localpotential = vacancy_linear) +
         Quadratic(c = ConstVal(1.0f0), localpotential = vacancy_stiffness) +
-        MagField(b = vacancy_field, c = 1.0f0) +
+        ExtField(b = vacancy_field, c = 1.0f0) +
         Bilinear(),
     periodic = (:x, :y),
     precision = Float32,

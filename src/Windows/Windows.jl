@@ -30,7 +30,7 @@ using UUIDs
 
 using ..StatefulAlgorithms
 using ..InteractiveIsing: AbstractIsingLayer, AbstractLayerTopology, Clamping, CoulombHamiltonian,
-    CastVec, HamiltonianTerms, InteractiveGraphVarSpec, IsingGraph, KineticMC, MagField, PTimer, PolynomialHamiltonian,
+    CastVec, HamiltonianTerms, InteractiveGraphVarSpec, IsingGraph, KineticMC, ExtField, PTimer, PolynomialHamiltonian,
     PolledObservable, Parameter, SingleLayerGraph, _mc_model_inits, _prepared_interactive_var_data,
     _resolve_interactive_target_key, _set_interactive_graph_var_value!, addRandomDefects!, adj, createProcess, graphidxs,
     Coordinate, hamiltonian, hamiltonians, idxToCoord, inline_layer_dispatch, interactivevars, layers, modulefolder,

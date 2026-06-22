@@ -41,7 +41,7 @@ The default `Ising()` shortcut expands to:
 
 - `Quadratic(...)`
 - `Bilinear(...)`
-- `MagField(...)`
+- `ExtField(...)`
 
 ```julia
 Ising(; c = nothing, b = nothing, adj = nothing, localpotential = nothing)
@@ -79,7 +79,7 @@ Ising(adj = g -> adj(g), localpotential = g -> adj(g).diag)
 Represents ``-1/2 \sum_{ij} J_{ij}s_i s_j``. If neither `adj` nor `J` is
 provided, it uses `adj(g)`. `J` must be an `n x n` matrix for `n` graph states.
 
-`MagField(; b = nothing, c = nothing)`
+`ExtField(; b = nothing, c = nothing)`
 
 Represents ``-c \sum_i b_i s_i``. The default field is a zero `ConstFill`
 with graph-state length. `b = 1` means a uniform field of one in graph
@@ -125,7 +125,7 @@ Use `ToLayer(layer, hamiltonian)` when an ordinary Hamiltonian should operate
 on one layer as if that layer were a small graph:
 
 ```julia
-h = ToLayer(2, MagField(b = 1))
+h = ToLayer(2, ExtField(b = 1))
 ```
 
 The wrapped term is instantiated against `graph[2]`, so its parameters are
@@ -147,7 +147,7 @@ and ignores cross-layer edges.
 ```julia
 h =
     Bilinear() +
-    ToLayer(2, MagField(b = 1)) +
+    ToLayer(2, ExtField(b = 1)) +
     ToLayer(3, Ising(c = ConstVal(0), b = 0.5))
 ```
 
@@ -169,16 +169,16 @@ h =
 matrix over the full graph. This is usually the fastest representation for
 interactions, including disconnected or block-structured graphs.
 
-`MagField` is also global. To work with one layer's field values, use layer
+`ExtField` is also global. To work with one layer's field values, use layer
 accessors or views of the graph-sized field parameter rather than making
-`MagField` layer-bound. True `LayerTerm`s are intended for terms whose internal
+`ExtField` layer-bound. True `LayerTerm`s are intended for terms whose internal
 geometry or cached state cannot be represented as a simple full-graph vector or
 matrix.
 
-If you want an ordinary `MagField` to be scoped to one layer instead, wrap it:
+If you want an ordinary `ExtField` to be scoped to one layer instead, wrap it:
 
 ```julia
-ToLayer(2, MagField(b = 1))
+ToLayer(2, ExtField(b = 1))
 ```
 
 ## Containers

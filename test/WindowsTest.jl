@@ -430,7 +430,7 @@ end
     @test :c ∉ getfield.(entries, :name)
     @test :J ∉ getfield.(entries, :name)
     @test any(occursin("Quadratic", label) for label in labels)
-    @test any(occursin("MagField", label) for label in labels)
+    @test any(occursin("ExtField", label) for label in labels)
     @test all(!occursin("{", label) for label in labels)
     @test all(!occursin("PolynomialHamiltonian", label) for label in labels)
     graph_state_obs = parameter_panel[:display_obs]

@@ -138,7 +138,7 @@ sync after every optimiser step.
 The important split is:
 
 - shared: trainable parameter arrays, for example adjacency `nzval` and
-  `MagField.b`;
+  `ExtField.b`;
 - local per worker: graph state, clamping target/mask/beta, RNG, captures, and
   gradient buffers.
 
@@ -167,7 +167,7 @@ Then assert the aliases in `prepare!` while developing:
 
 ```julia
 SparseArrays.getnzval(adj(worker_graph)) === params.w || error("J is not shared")
-getparam(worker_graph.hamiltonian, MagField, :b) === params.b || error("b is not shared")
+getparam(worker_graph.hamiltonian, ExtField, :b) === params.b || error("b is not shared")
 ```
 
 After `Optimisers.update`, keep the shared storage object stable and copy the

@@ -120,7 +120,7 @@ from the layer `StateSet`. For unbounded continuous layers such as
 case the default initializer uses local Hamiltonian terms when possible: for a
 confining polynomial local energy, it starts at the local-energy minimum.
 Currently this is detected by summing `LocalPotential` terms, including
-polynomial Hamiltonians and `MagField`. If the summed local polynomial does not
+polynomial Hamiltonians and `ExtField`. If the summed local polynomial does not
 go to `+Inf` at both ends, the fallback initial value is zero.
 
 You can override initialization with `initial_state`:

@@ -19,7 +19,7 @@ solves from the current total `ρ`.
 ## Free-Charge State
 
 Mobile free charge is stored separately from `ρ` as conserved positive and
-negative occupancy fields. `NeutralChargeHopping` groups the two fields into one
+negative occupancy fields. `ChargeHopProposer` groups the two fields into one
 model, so `state(charges)` returns a charge-state object with positive and
 negative indices/occupancies, while `graphstate(charges)` still returns the
 coupled spin state.
@@ -57,7 +57,7 @@ countercharge.
 - `abs(q)` must match the corresponding `CoulombHamiltonian` charge magnitude.
 
 Oxygen vacancies can additionally carry structural modes such as
-`LocalPotentialShift` or `MagFieldShift`. Electron-like negative carriers should
+`LocalPotentialShift` or `ExtFieldShift`. Electron-like negative carriers should
 normally use only `CoulombChargeShift(-q)` unless a separate physical model says
 they also perturb local structure.
 

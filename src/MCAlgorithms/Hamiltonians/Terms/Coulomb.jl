@@ -39,7 +39,7 @@ Marker for negative mobile free-charge occupancy stored by `CoulombHamiltonian`.
 """
 struct NegativeFreeCharge <: AbstractFreeChargeSign end
 
-struct CoulombInternal{T,PxyT,IPxyT,N,PO,NO,PS,NS} <: InternalImplementation
+struct CoulombInternal{T,PxyT,IPxyT,N,PO,NO,PS,NS,R} <: InternalImplementation
     size::NTuple{N,Int}
     ρ::Array{T,3}                 # real charges
     ρhat::Array{Complex{T},3}     # rfft(ρ) over (x,y)
@@ -68,7 +68,7 @@ struct CoulombInternal{T,PxyT,IPxyT,N,PO,NO,PS,NS} <: InternalImplementation
     q_negative::T
     free_charge_split::T
 
-    recalc_steps::Int
+    recalc_steps::R
     recalc_tracker::Base.RefValue{Int} # Counter to track when to recalculate potential (for external coupling)
 end
 
@@ -80,6 +80,32 @@ end
 
 Base.size(c::CoulombHamiltonian) = c.size
 
+"""
+    _coulomb_recalc_steps(recalc)
+
+Normalize a user recalc cadence. `Inf` disables scheduled spin-update recalc;
+finite values are positive integer update counts.
+"""
+function _coulomb_recalc_steps(recalc)
+    isinf(recalc) && return Inf
+    steps = Int(recalc)
+    steps > 0 || throw(ArgumentError("CoulombHamiltonian recalc must be positive or Inf; got $recalc."))
+    steps == recalc || throw(ArgumentError("CoulombHamiltonian recalc must be an integer cadence or Inf; got $recalc."))
+    return steps
+end
+
+"""
+    _coulomb_recalc_tracker(offset, recalc_steps)
+
+Return the initial scheduled-recalc tracker after applying `offset`.
+"""
+function _coulomb_recalc_tracker(offset, recalc_steps)
+    isinf(recalc_steps) && return 1
+    offset_int = Int(offset)
+    offset_int == offset || throw(ArgumentError("CoulombHamiltonian recalc_offset must be an integer; got $offset."))
+    return mod1(offset_int + 1, Int(recalc_steps))
+end
+
 @inline function CoulombHamiltonian(;
     layer = 1,
     scaling = 1.f0,
@@ -87,6 +113,7 @@ Base.size(c::CoulombHamiltonian) = c.size
     screen_len_top = screening,
     screen_len_bot = screening,
     recalc = 1,
+    recalc_offset = 0,
     q_positive = 1.f0,
     q_negative = 1.f0,
     free_charge_split = 0.5f0,
@@ -101,7 +128,7 @@ Base.size(c::CoulombHamiltonian) = c.size
             units = physicalunits(dipole = 1, role = :dipole_scale),
         ),
     )
-    internal = InternalPlan((; screen_len_top, screen_len_bot, recalc, q_positive, q_negative, free_charge_split)) do plan, g
+    internal = InternalPlan((; screen_len_top, screen_len_bot, recalc, recalc_offset, q_positive, q_negative, free_charge_split)) do plan, g
         config = plan.values
         T = eltype(g)
         Nx, Ny, Nz_dip = size(g)
@@ -120,6 +147,8 @@ Base.size(c::CoulombHamiltonian) = c.size
         negative_cell_occupancy = zeros(Int, Nx, Ny, Nz_dip)
         positive_sheet_occupancy = zeros(Int, charge_size)
         negative_sheet_occupancy = zeros(Int, charge_size)
+        recalc_steps = _coulomb_recalc_steps(config.recalc)
+        recalc_tracker = Ref(_coulomb_recalc_tracker(config.recalc_offset, recalc_steps))
 
         return CoulombInternal(
             charge_size,                                  # size
@@ -146,8 +175,8 @@ Base.size(c::CoulombHamiltonian) = c.size
             T(internalvalue(config.q_positive, physicalunits(charge = 1), physicalscales(g), g; parameter = :q_positive)), # q_positive
             T(internalvalue(config.q_negative, physicalunits(charge = 1), physicalscales(g), g; parameter = :q_negative)), # q_negative
             T(config.free_charge_split),                  # free_charge_split
-            config.recalc,                                # recalc_steps
-            Ref{Int}(1),                                  # recalc_tracker
+            recalc_steps,                                 # recalc_steps
+            recalc_tracker,                               # recalc_tracker
         )
     end
     return CoulombHamiltonian(Int(layer), params, internal)
@@ -163,6 +192,7 @@ end
     screen_len_top = screening,
     screen_len_bot = screening,
     recalc = 1,
+    recalc_offset = 0,
     q_positive = 1.f0,
     q_negative = 1.f0,
     free_charge_split = 0.5f0,
@@ -175,6 +205,7 @@ end
             screen_len_top,
             screen_len_bot,
             recalc,
+            recalc_offset,
             q_positive,
             q_negative,
             free_charge_split,
@@ -651,8 +682,10 @@ _update!(::Metropolis, c::CoulombHamiltonian, layer::AbstractIsingLayer, proposa
         c.ρ[coord_above...] += Δq_above
         # 场的重算交给外面的 Recalc 进程周期性处理
     end
-    if c.recalc_tracker[] == c.recalc_steps
+    if !isinf(c.recalc_steps) && c.recalc_tracker[] == c.recalc_steps
         recalc!(c)
     end
-    c.recalc_tracker[] = mod1(c.recalc_tracker[] + 1, c.recalc_steps)
+    if !isinf(c.recalc_steps)
+        c.recalc_tracker[] = mod1(c.recalc_tracker[] + 1, Int(c.recalc_steps))
+    end
 end

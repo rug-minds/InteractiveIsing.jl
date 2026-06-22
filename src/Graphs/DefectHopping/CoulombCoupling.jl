@@ -7,21 +7,27 @@ Defect mode for a mobile Coulomb free charge. Positive `charge` values use the
 positive free-charge occupancy in `CoulombHamiltonian`; negative values use the
 negative occupancy and store `abs(charge)` as the species magnitude.
 """
-struct CoulombChargeShift{A,S,C} <: AbstractDefectMode
+struct CoulombChargeShift{A,S,C,K} <: AbstractDefectMode
     charge::A
     split::S
     charge_sign::C
+    kernel::K
 end
 
-function CoulombChargeShift(charge::A; split::S = 0.5, charge_sign = nothing) where {A,S}
+function CoulombChargeShift(charge::A; split::S = 0.5, charge_sign = nothing, kernel = nothing) where {A,S}
     selected_sign = isnothing(charge_sign) ? _defect_charge_sign(charge) : charge_sign
-    return CoulombChargeShift{typeof(abs(charge)),S,typeof(selected_sign)}(abs(charge), split, selected_sign)
+    return CoulombChargeShift{typeof(abs(charge)),S,typeof(selected_sign),typeof(kernel)}(abs(charge), split, selected_sign, kernel)
 end
 
 @inline _defect_charge_sign(charge) = charge < zero(charge) ? NegativeFreeCharge() : PositiveFreeCharge()
 
-@inline _defect_convert_mode(mode::M, ::Type{T}) where {M<:CoulombChargeShift,T} =
-    CoulombChargeShift(T(mode.charge); split = T(mode.split), charge_sign = mode.charge_sign)
+@inline function _defect_convert_mode(mode::M, g::G) where {M<:CoulombChargeShift,G<:AbstractIsingGraph}
+    charge = _defect_internal_value(mode.charge, physicalunits(charge = 1, role = :free_charge), g, :coulomb_charge_shift)
+    split = _defect_internal_value(mode.split, physicalunits(role = :dimensionless), g, :free_charge_split)
+    return CoulombChargeShift(charge; split, charge_sign = mode.charge_sign)
+end
+
+@inline _defect_mode_uses_physical_charge(::CoulombChargeShift) = true
 
 """
     _defect_has_coulomb_charge(effects)
@@ -88,6 +94,113 @@ end
     return nothing
 end
 
+struct _DefectCoulombSheetDelta{T}
+    coord::CartesianIndex{3}
+    charge::T
+end
+
+const _DEFECT_COULOMB_KERNEL_CACHE = IdDict{Any,Any}()
+
+"""
+    _defect_precompute_free_charge_kernel(coulomb)
+
+Build the sheet-charge Green response used by Coulomb defect hops. The cache is
+owned by the defect coupling layer because ordinary Coulomb spin dynamics does
+not need this proposal kernel.
+"""
+function _defect_precompute_free_charge_kernel(c::C) where {C<:CoulombHamiltonian}
+    T = eltype(c.ρ)
+    Nx, Ny, Nz = size(c.ρ)
+    Nxh = size(c.ρhat, 1)
+    invden = c.inv_den
+    m_upper = c.mod_upperd
+    scale = -(c.az^2) / (c.ϵ * T(Nx * Ny))
+
+    kernel = zeros(T, Nx, Ny, Nz, Nz)
+    ρtmp = zeros(T, Nx, Ny, Nz)
+    ρhat_tmp = similar(c.ρhat)
+    uhat_tmp = similar(c.uhat)
+    utmp = zeros(T, Nx, Ny, Nz)
+    dptmp = similar(c.dp_scratch)
+
+    @inbounds for source_z in 1:Nz
+        ρtmp[1, 1, source_z] = one(T)
+        mul!(ρhat_tmp, c.Pxy, ρtmp)
+
+        for ny in 1:Ny, nx in 1:Nxh
+            if !isfinite(invden[nx, ny, 1]) || !isfinite(invden[nx, ny, Nz])
+                uhat_tmp[nx, ny, :] .= zero(Complex{T})
+                continue
+            end
+
+            dptmp[nx, ny, 1] = (scale * ρhat_tmp[nx, ny, 1]) * invden[nx, ny, 1]
+            for nz in 2:Nz
+                dptmp[nx, ny, nz] = (scale * ρhat_tmp[nx, ny, nz] - dptmp[nx, ny, nz - 1]) * invden[nx, ny, nz]
+            end
+
+            uhat_tmp[nx, ny, Nz] = dptmp[nx, ny, Nz]
+            for nz in (Nz - 1):-1:1
+                uhat_tmp[nx, ny, nz] = dptmp[nx, ny, nz] - m_upper[nx, ny, nz] * uhat_tmp[nx, ny, nz + 1]
+            end
+        end
+
+        mul!(utmp, c.iPxy, uhat_tmp)
+        kernel[:, :, :, source_z] .= utmp
+        ρtmp[1, 1, source_z] = zero(T)
+    end
+
+    return kernel
+end
+
+"""
+    _defect_free_charge_kernel(coulomb)
+
+Return the cached free-charge Green kernel for a Coulomb Hamiltonian internal
+state, computing it once on first use by defect hopping.
+"""
+function _defect_free_charge_kernel(c::C) where {C<:CoulombHamiltonian}
+    T = eltype(c.ρ)
+    key = getfield(c, :internal)
+    kernel = get!(_DEFECT_COULOMB_KERNEL_CACHE, key) do
+        _defect_precompute_free_charge_kernel(c)
+    end
+    return kernel::Array{T,4}
+end
+
+@inline _defect_mode_kernel(mode::CoulombChargeShift{A,S,C,Nothing}, c::CoulombHamiltonian) where {A,S,C} =
+    _defect_free_charge_kernel(c)
+
+@inline _defect_mode_kernel(mode::CoulombChargeShift{A,S,C,K}, c::CoulombHamiltonian) where {A,S,C,K<:Array} =
+    mode.kernel
+
+"""
+    _defect_bind_mode(mode::CoulombChargeShift, coulomb, graph, layer)
+
+Attach the Coulomb free-charge Green kernel to a bound defect mode. The kernel
+remains owned by this coupling extension, but the hot hop path can read it
+directly from the mode without a cache lookup.
+"""
+function _defect_bind_mode(mode::M, c::C, g::G, layer_arg::L) where {M<:CoulombChargeShift,C<:CoulombHamiltonian,G<:AbstractIsingGraph,L}
+    return CoulombChargeShift(
+        mode.charge;
+        split = mode.split,
+        charge_sign = mode.charge_sign,
+        kernel = _defect_free_charge_kernel(c),
+    )
+end
+
+"""
+    _defect_free_charge_green(coulomb, kernel, target, source)
+
+Return the potential at `target` from a unit free sheet charge at `source`.
+"""
+@inline function _defect_free_charge_green(c::C, kernel::Array{T,4}, target::CartesianIndex{3}, source::CartesianIndex{3}) where {C<:CoulombHamiltonian,T}
+    Nx, Ny, _ = size(c.ρ)
+    dx = mod1(target[1] - source[1] + 1, Nx)
+    dy = mod1(target[2] - source[2] + 1, Ny)
+    return @inbounds kernel[dx, dy, target[3], source[3]]
+end
+
 """
     _defect_apply_coulomb_effects!(coulomb, defects, idx, sign)
 
@@ -146,20 +259,159 @@ function _defect_reapply_initialized_effects!(hts::HTS, defects::D) where {HTS<:
 end
 
 """
-    _defect_coulomb_energy(coulomb)
+    _defect_append_coulomb_deltas!(deltas, mode, coulomb, defects, proposal)
 
-Return the electrostatic energy represented by a Coulomb charge/potential pair.
+Append the sheet-charge changes caused by one cell-centered charged-defect hop.
 """
-@inline function _defect_coulomb_energy(c::C) where {C<:CoulombHamiltonian}
-    return eltype(c.ρ)(0.5) * sum(c.ρ .* c.u)
+function _defect_append_coulomb_deltas!(
+    deltas::Vector{_DefectCoulombSheetDelta{T}},
+    mode::M,
+    c::C,
+    defects::D,
+    proposal::P,
+) where {T,M<:CoulombChargeShift,C<:CoulombHamiltonian,D<:DefectHopping,P<:DefectHopProposal}
+    g = defects.state
+    from_cell = _defect_coulomb_cell_coord(c, g, defects.layer, proposal.from_idx)
+    to_cell = _defect_coulomb_cell_coord(c, g, defects.layer, proposal.to_idx)
+    q = T(_free_charge_sign(mode.charge_sign)) * T(mode.charge)
+    split = T(mode.split)
+    lower_weight = one(T) - split
+
+    push!(deltas, _DefectCoulombSheetDelta(CartesianIndex(from_cell[1], from_cell[2], from_cell[3]), -q * lower_weight))
+    push!(deltas, _DefectCoulombSheetDelta(CartesianIndex(from_cell[1], from_cell[2], from_cell[3] + 1), -q * split))
+    push!(deltas, _DefectCoulombSheetDelta(CartesianIndex(to_cell[1], to_cell[2], to_cell[3]), q * lower_weight))
+    push!(deltas, _DefectCoulombSheetDelta(CartesianIndex(to_cell[1], to_cell[2], to_cell[3] + 1), q * split))
+    return deltas
+end
+
+"""
+    _defect_coulomb_mode_deltas(mode, coulomb, defects, proposal, T)
+
+Return the four sheet-charge deltas generated by one cell-centered Coulomb
+charge hop.
+"""
+@inline function _defect_coulomb_mode_deltas(
+    mode::M,
+    c::C,
+    defects::D,
+    proposal::P,
+    ::Type{T},
+) where {M<:CoulombChargeShift,C<:CoulombHamiltonian,D<:DefectHopping,P<:DefectHopProposal,T}
+    g = defects.state
+    from_cell = _defect_coulomb_cell_coord(c, g, defects.layer, proposal.from_idx)
+    to_cell = _defect_coulomb_cell_coord(c, g, defects.layer, proposal.to_idx)
+    q = T(_free_charge_sign(mode.charge_sign)) * T(mode.charge)
+    split = T(mode.split)
+    lower_weight = one(T) - split
+
+    return (
+        _DefectCoulombSheetDelta(CartesianIndex(from_cell[1], from_cell[2], from_cell[3]), -q * lower_weight),
+        _DefectCoulombSheetDelta(CartesianIndex(from_cell[1], from_cell[2], from_cell[3] + 1), -q * split),
+        _DefectCoulombSheetDelta(CartesianIndex(to_cell[1], to_cell[2], to_cell[3]), q * lower_weight),
+        _DefectCoulombSheetDelta(CartesianIndex(to_cell[1], to_cell[2], to_cell[3] + 1), q * split),
+    )
+end
+
+@inline function _defect_append_coulomb_deltas!(
+    deltas::Vector{_DefectCoulombSheetDelta{T}},
+    mode::M,
+    c::C,
+    defects::D,
+    proposal::P,
+) where {T,M<:AbstractDefectMode,C<:CoulombHamiltonian,D<:DefectHopping,P<:DefectHopProposal}
+    return deltas
+end
+
+"""
+    _defect_coulomb_deltas(coulomb, defects, proposal, T)
+
+Return the sheet-charge delta vector for a proposed charged-defect hop.
+"""
+function _defect_coulomb_deltas(c::C, defects::D, proposal::P, ::Type{T}) where {C<:CoulombHamiltonian,D<:DefectHopping,P<:DefectHopProposal,T}
+    deltas = _DefectCoulombSheetDelta{T}[]
+    sizehint!(deltas, 4)
+    for mode in defects.effects
+        _defect_append_coulomb_deltas!(deltas, mode, c, defects, proposal)
+    end
+    return deltas
+end
+
+"""
+    _defect_apply_coulomb_density_deltas!(coulomb, deltas)
+
+Apply the local sheet-charge changes for an accepted defect hop. Spin flips
+already keep `ρ` current incrementally, so an accepted charge hop only needs to
+patch the affected free-charge sheets before the Coulomb solve.
+"""
+@inline function _defect_apply_coulomb_density_deltas!(
+    c::C,
+    deltas::NTuple{N,_DefectCoulombSheetDelta{T}},
+) where {C<:CoulombHamiltonian,N,T}
+    @inbounds for δ in deltas
+        c.ρ[δ.coord] += δ.charge
+    end
+    return c
+end
+
+function _defect_apply_coulomb_density_deltas!(
+    c::C,
+    deltas::Vector{_DefectCoulombSheetDelta{T}},
+) where {C<:CoulombHamiltonian,T}
+    @inbounds for δ in deltas
+        c.ρ[δ.coord] += δ.charge
+    end
+    return c
+end
+
+@inline _defect_coulomb_mode_count(::Tuple{}) = 0
+@inline _defect_coulomb_mode_count(effects::Tuple{<:CoulombChargeShift,Vararg}) =
+    1 + _defect_coulomb_mode_count(Base.tail(effects))
+@inline _defect_coulomb_mode_count(effects::Tuple) =
+    _defect_coulomb_mode_count(Base.tail(effects))
+
+@inline _defect_first_coulomb_mode(effects::Tuple{<:CoulombChargeShift,Vararg}) = first(effects)
+@inline _defect_first_coulomb_mode(effects::Tuple) = _defect_first_coulomb_mode(Base.tail(effects))
+
+"""
+    _defect_coulomb_delta_energy(coulomb, deltas)
+
+Calculate `δρ ⋅ u + 1/2 δρ ⋅ Gδρ` for a local free-charge proposal using the
+current potential and the precomputed Coulomb Green kernel.
+"""
+function _defect_coulomb_delta_energy(c::C, kernel::Array{T,4}, deltas::Vector{_DefectCoulombSheetDelta{T}}) where {C<:CoulombHamiltonian,T}
+    linear = zero(T)
+    self = zero(T)
+    @inbounds for δ in deltas
+        linear += δ.charge * T(c.u[δ.coord])
+    end
+    @inbounds for δtarget in deltas, δsource in deltas
+        self += δtarget.charge * δsource.charge * _defect_free_charge_green(c, kernel, δtarget.coord, δsource.coord)
+    end
+    return linear + T(0.5) * self
+end
+
+@inline function _defect_coulomb_delta_energy(
+    c::C,
+    kernel::Array{T,4},
+    deltas::NTuple{N,_DefectCoulombSheetDelta{T}},
+) where {C<:CoulombHamiltonian,T,N}
+    linear = zero(T)
+    self = zero(T)
+    @inbounds for δ in deltas
+        linear += δ.charge * T(c.u[δ.coord])
+    end
+    @inbounds for δtarget in deltas, δsource in deltas
+        self += δtarget.charge * δsource.charge * _defect_free_charge_green(c, kernel, δtarget.coord, δsource.coord)
+    end
+    return linear + T(0.5) * self
 end
 
 """
     calculate(ΔH(), coulomb, defects, proposal::DefectHopProposal)
 
-Calculate exact Coulomb energy change for a trial charged-defect hop by
-temporarily moving free-charge occupancy, rebuilding `ρ`, and restoring all
-Coulomb buffers.
+Calculate the Coulomb energy change for a trial charged-defect hop from the
+cached potential plus the proposal's exact Green self term. This does not solve
+Poisson for rejected proposals.
 """
 function calculate(::ΔH, c::C, defects::D, proposal::P) where {C<:CoulombHamiltonian,D<:DefectHopping,P<:DefectHopProposal}
     T = eltype(c.ρ)
@@ -167,32 +419,15 @@ function calculate(::ΔH, c::C, defects::D, proposal::P) where {C<:CoulombHamilt
     layeridx(c) == Int(defects.layer) || return zero(T)
     _defect_has_coulomb_charge(defects.effects) || return zero(T)
 
-    ρ_before = copy(c.ρ)
-    ρhat_before = copy(c.ρhat)
-    uhat_before = copy(c.uhat)
-    u_before = copy(c.u)
-    pos_cell_before = copy(c.positive_cell_occupancy)
-    neg_cell_before = copy(c.negative_cell_occupancy)
-    pos_sheet_before = copy(c.positive_sheet_occupancy)
-    neg_sheet_before = copy(c.negative_sheet_occupancy)
+    mode = _defect_first_coulomb_mode(defects.effects)
+    kernel = _defect_mode_kernel(mode, c)
+    if _defect_coulomb_mode_count(defects.effects) == 1
+        deltas = _defect_coulomb_mode_deltas(mode, c, defects, proposal, T)
+        return _defect_coulomb_delta_energy(c, kernel, deltas)
+    end
 
-    recalc!(c)
-    energy_before = _defect_coulomb_energy(c)
-
-    _defect_apply_coulomb_effects!(c, defects, proposal.from_idx, -1)
-    _defect_apply_coulomb_effects!(c, defects, proposal.to_idx, 1)
-    _defect_rebuild_coulomb!(c, defects.state)
-    energy_after = _defect_coulomb_energy(c)
-
-    c.ρ .= ρ_before
-    c.ρhat .= ρhat_before
-    c.uhat .= uhat_before
-    c.u .= u_before
-    c.positive_cell_occupancy .= pos_cell_before
-    c.negative_cell_occupancy .= neg_cell_before
-    c.positive_sheet_occupancy .= pos_sheet_before
-    c.negative_sheet_occupancy .= neg_sheet_before
-    return energy_after - energy_before
+    deltas = _defect_coulomb_deltas(c, defects, proposal, T)
+    return _defect_coulomb_delta_energy(c, kernel, deltas)
 end
 
 """
@@ -207,8 +442,23 @@ function update!(algo::A, c::C, defects::D, proposal::P) where {A<:Metropolis,C<
     layeridx(c) == Int(defects.layer) || return nothing
     _defect_has_coulomb_charge(defects.effects) || return nothing
 
+    T = eltype(c.ρ)
+    mode = _defect_first_coulomb_mode(defects.effects)
+    if _defect_coulomb_mode_count(defects.effects) == 1
+        deltas = _defect_coulomb_mode_deltas(mode, c, defects, proposal, T)
+        _defect_apply_coulomb_effects!(c, defects, proposal.from_idx, -1)
+        _defect_apply_coulomb_effects!(c, defects, proposal.to_idx, 1)
+        _defect_apply_coulomb_density_deltas!(c, deltas)
+        recalc!(c)
+        c.recalc_tracker[] = 1
+        return nothing
+    end
+
+    deltas = _defect_coulomb_deltas(c, defects, proposal, T)
     _defect_apply_coulomb_effects!(c, defects, proposal.from_idx, -1)
     _defect_apply_coulomb_effects!(c, defects, proposal.to_idx, 1)
-    _defect_rebuild_coulomb!(c, defects.state)
+    _defect_apply_coulomb_density_deltas!(c, deltas)
+    recalc!(c)
+    c.recalc_tracker[] = 1
     return nothing
 end
