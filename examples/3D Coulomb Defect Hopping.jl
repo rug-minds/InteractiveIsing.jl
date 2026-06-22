@@ -36,7 +36,7 @@ defect_step_interval = 1000
 
 coulomb_scaling = elementary_charge * 1f0u"nm"
 coulomb_screening = 8f0u"nm"
-coulomb_recalc_interval = Inf
+coulomb_recalc_interval = 1001
 electron_charge = elementary_charge
 vacancy_charge = 2f0 * electron_charge
 external_field_z = 6f0u"meV"
@@ -140,10 +140,9 @@ println("Field drift demo: positive vacancies should drift toward z = $nz; elect
 langevin_algorithm = LocalLangevin(stepsize = stepsize, adjusted = false)
 charge_algorithm = Metropolis()
 
-algorithm = @CompositeAlgorithm begin
+dynamics = @CompositeAlgorithm begin
     @alias langevin = langevin_algorithm
     @alias charge_metro = charge_algorithm
-
     @replace langevin.T => charge_metro.T
 
     langevin()
@@ -161,7 +160,7 @@ charge_host = interface(
 )
 process = createProcessManual(
     g,
-    algorithm,
+    dynamics,
     StatefulAlgorithms.Init(:langevin; model = g),
     StatefulAlgorithms.Init(:charge_metro; model = charges),
     StatefulAlgorithms.Interactive(:langevin, :T),
