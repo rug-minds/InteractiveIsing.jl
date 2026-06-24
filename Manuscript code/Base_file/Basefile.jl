@@ -31,8 +31,9 @@ Base.@kwdef struct ExperimentConfig
     coulomb_screening = 0.0001f0u"nm"
     coulomb_recalc_interval::Int = 1000
 
+    # Constructor fallbacks. Experiment scripts should override these explicitly.
     initial_kBT = 0.15f0u"meV"
-    anneal_max_kBT = 30.0f0u"meV"
+    anneal_max_kBT = 10.0f0u"meV"
     initial_field = 0f0u"meV"
     pulse_amplitude = 10.0f0u"meV"
 
@@ -42,8 +43,8 @@ Base.@kwdef struct ExperimentConfig
     landau_d::Float32 = 0.0f0
     landau_e::Float32 = 0.0f0
 
-    vacancy_count::Int = 1
-    electron_count::Int = 2
+    vacancy_count::Int = 10
+    electron_count::Int = 20
     vacancy_charge_number::Float32 = 2.0f0
     electron_charge_number::Float32 = 1.0f0
     electron_attempt_rate::Float32 = 10.0f0
@@ -184,6 +185,133 @@ function StatefulAlgorithms.step!(::TrianglePulse, context)
     pulse_value = waveform[step]
     hamiltonian.b[] = pulse_value
     return (; step = step + 1, pulse_value)
+end
+
+struct FORCPulse{T} <: ProcessAlgorithm
+    maximum_field::T
+    preset_edge_points::Int
+    test_field_step::T
+    zero_hold_points::Int
+end
+
+FORCPulse(maximum_field, preset_edge_points::Integer) =
+    FORCPulse(maximum_field, preset_edge_points, maximum_field / 100, 0)
+
+FORCPulse(maximum_field, preset_edge_points::Integer, test_field_step) =
+    FORCPulse(maximum_field, preset_edge_points, test_field_step, 0)
+
+function FORCPulse(
+    maximum_field,
+    preset_edge_points::Integer,
+    test_field_step,
+    zero_hold_points::Integer,
+)
+    T = promote_type(typeof(maximum_field), typeof(test_field_step))
+    return FORCPulse{T}(
+        convert(T, maximum_field),
+        Int(preset_edge_points),
+        convert(T, test_field_step),
+        Int(zero_hold_points),
+    )
+end
+
+function forc_axis_by_step(from, to, step_size)
+    step_size > 0 || error("FORC step size must be positive.")
+    span = abs(to - from)
+    intervals = max(1, round(Int, span / step_size))
+    return collect(LinRange(from, to, intervals + 1))
+end
+
+function forc_axis_by_count(from, to, npoints::Integer)
+    npoints >= 2 || error("A FORC edge needs at least 2 points.")
+    return collect(LinRange(from, to, Int(npoints)))
+end
+
+function forc_protocol(pulse::FORCPulse)
+    maximum_field = pulse.maximum_field
+    preset_edge_points = pulse.preset_edge_points
+    test_field_step = pulse.test_field_step
+    zero_hold_points = pulse.zero_hold_points
+
+    maximum_field > 0 || error("FORC maximum field must be positive.")
+    preset_edge_points >= 2 || error("FORC preset edge points must be at least 2.")
+    test_field_step > 0 || error("FORC test field step must be positive.")
+    zero_hold_points >= 0 || error("FORC zero hold points must be nonnegative.")
+
+    edge_step = maximum_field / (preset_edge_points - 1)
+    n_curves = ceil(Int, maximum_field / test_field_step)
+    end_fields = [min(i * test_field_step, maximum_field) for i in 1:n_curves]
+
+    fields = typeof(maximum_field)[]
+    curve = Int[]
+    curve_end_field = typeof(maximum_field)[]
+
+    for (curve_id, end_field) in enumerate(end_fields)
+        preset_down = forc_axis_by_count(zero(maximum_field), -maximum_field, preset_edge_points)
+        preset_up = forc_axis_by_count(-maximum_field, zero(maximum_field), preset_edge_points)
+        test_up = forc_axis_by_step(zero(maximum_field), end_field, edge_step)
+        test_down = forc_axis_by_step(end_field, zero(maximum_field), edge_step)
+        hold = fill(zero(maximum_field), zero_hold_points)
+        segment = vcat(preset_down, preset_up[2:end], test_up[2:end], test_down[2:end], hold)
+
+        append!(fields, segment)
+        append!(curve, fill(curve_id, length(segment)))
+        append!(curve_end_field, fill(end_field, length(segment)))
+    end
+
+    return (; fields, curve, curve_end_field, end_fields, edge_step, test_field_step, zero_hold_points)
+end
+
+function StatefulAlgorithms.init(pulse::FORCPulse, args)
+    protocol = forc_protocol(pulse)
+    fields = protocol.fields
+    curve = protocol.curve
+    curve_end_field = protocol.curve_end_field
+    steps = num_calls(args)
+
+    if steps < length(fields)
+        fields = fields[1:steps]
+        curve = curve[1:steps]
+        curve_end_field = curve_end_field[1:steps]
+    elseif steps > length(fields)
+        missing = steps - length(fields)
+        fields = vcat(fields, fill(last(fields), missing))
+        curve = vcat(curve, fill(last(curve), missing))
+        curve_end_field = vcat(curve_end_field, fill(last(curve_end_field), missing))
+    end
+
+    return (;
+        fields,
+        curve,
+        curve_end_field,
+        step = 1,
+        field = first(fields),
+        forc_curve = first(curve),
+        forc_end_field = first(curve_end_field),
+    )
+end
+
+function StatefulAlgorithms.step!(::FORCPulse, context)
+    (; fields, curve, curve_end_field, step, hamiltonian) = context
+    field = fields[step]
+    hamiltonian.b[] = field
+    return (;
+        step = step + 1,
+        field,
+        forc_curve = curve[step],
+        forc_end_field = curve_end_field[step],
+    )
+end
+
+function forc_protocol_dataframe(protocol, cfg::ExperimentConfig)
+    field_meV = Float64.(protocol.fields) .* Unitful.ustrip(u"meV", cfg.energy_scale)
+    return DataFrame(
+        step = collect(eachindex(protocol.fields)),
+        field = Float64.(protocol.fields),
+        field_meV = field_meV,
+        forc_curve = protocol.curve,
+        forc_end_field = Float64.(protocol.curve_end_field),
+    )
 end
 
 struct TemperatureCycle{T} <: ProcessAlgorithm
@@ -658,6 +786,7 @@ function save_experiment(
     result,
     figures::Dict{String,<:Any},
     reduced_summary = DataFrame(),
+    extra_sheets = Pair{String,DataFrame}[],
 )
     cfg.save_outputs || return nothing
     mkpath(cfg.outdir)
@@ -685,6 +814,10 @@ function save_experiment(
             )
             XLSX.addsheet!(workbook, "reduced_energy")
             write_dataframe_sheet!(workbook["reduced_energy"], reduced_summary)
+            for (name, dataframe) in extra_sheets
+                XLSX.addsheet!(workbook, name)
+                write_dataframe_sheet!(workbook[name], dataframe)
+            end
         end
     end
 

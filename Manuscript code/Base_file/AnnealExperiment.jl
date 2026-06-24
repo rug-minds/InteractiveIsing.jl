@@ -1,9 +1,16 @@
 include(joinpath(@__DIR__, "Basefile.jl"))
 
 cfg = config_from_environment()
+anneal_start_kBT = 2.0f0u"meV"
+anneal_end_kBT = 0.0f0u"meV"
+anneal_initial_field = 0.5f0u"meV"
+
 cfg = override_config(
     cfg;
-    anneal_max_kBT = 1.0f0u"meV",
+    initial_kBT = anneal_start_kBT,
+    anneal_max_kBT = anneal_start_kBT,
+    initial_field = anneal_initial_field,
+    time_factor = 10
 )
 model = build_physical_model(cfg)
 g = model.graph
@@ -18,8 +25,8 @@ anneal_time = loggers.sizes.experiment_time
 dynamics = select_dynamics(cfg)
 charge_dynamics = Metropolis()
 temperature_cycle = TemperatureCycle(
-    internal_energy(cfg.anneal_max_kBT, cfg),
-    0.0f0,
+    internal_energy(anneal_start_kBT, cfg),
+    internal_energy(anneal_end_kBT, cfg),
 )
 
 anneal_monte_carlo = @CompositeAlgorithm begin
