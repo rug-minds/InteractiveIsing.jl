@@ -170,9 +170,9 @@ target_x = sort([-bmin, -amin, amin, bmin])
 # e1 = 0
 # b1 = b_for_extremum_at(a1, c1, d1, e1; target = 1)
 
-a1 = -0.2
-b1 = -1.4
-c1 = 1
+a1 = -0.4
+b1 = -2.8
+c1 = 2
 d1 = -1
 e1 = 1
 
