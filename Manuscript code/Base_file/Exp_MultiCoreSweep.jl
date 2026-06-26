@@ -235,8 +235,10 @@ function run_sweep_manager(cases; nworkers = min(length(cases), max(1, Threads.n
     return (; manager, results)
 end
 
-run_sweep(cases; max_inflight = min(length(cases), max(1, Threads.nthreads()))) =
-    run_sweep_manager(cases; nworkers = max_inflight).results
+function run_sweep(cases; max_inflight = min(length(cases), max(1, Threads.nthreads())))
+    sweep = Base.invokelatest(run_sweep_manager, cases; nworkers = max_inflight)
+    return sweep.results
+end
 
 cases = [
     SweepCase(
@@ -267,7 +269,7 @@ cases = [
         name = "anneal_T_2meV",
         kind = :anneal,
         overrides = (;
-            anneal_start_kBT = 2.0f0u"meV",
+            anneal_start_kBT = 6.0f0u"meV",
             anneal_end_kBT = 0.0f0u"meV",
             initial_field = 0.0f0u"meV",
             steps = 1000,
@@ -281,6 +283,111 @@ function main(; max_inflight = min(Threads.nthreads(), length(cases)))
     return run_sweep(cases; max_inflight)
 end
 
-main()
+results = Base.invokelatest(main);
+println("Finished ", length(results), " sweep cases.")
 
+
+
+# Base.@kwdef struct ExperimentConfig
+#     nx::Int = 10
+#     ny::Int = 10
+#     nz::Int = 10
+
+#     energy_scale = 1.0f0u"meV"
+#     length_scale = 1.0f0u"nm"
+#     elementary_charge = 1.602176634f-19u"C"
+
+#     lattice_x = 1.0f0u"nm"
+#     lattice_y = 1.0f0u"nm"
+#     lattice_z = 1.0f0u"nm"
+
+#     exchange_energy = 1.0f0u"meV"
+#     coulomb_dipole_scale = elementary_charge * 0f0u"nm"
+#     coulomb_screening = 0.0001f0u"nm"
+#     coulomb_recalc_interval::Int = 1000
+
+#     # Constructor fallbacks. Experiment scripts should override these explicitly.
+#     initial_kBT = 0.15f0u"meV"
+#     anneal_max_kBT = 10.0f0u"meV"
+#     initial_field = 0f0u"meV"
+#     pulse_amplitude = 10.0f0u"meV"
+
+#     landau_a::Float32 = -0.3f0
+#     landau_b::Float32 = -2.1f0
+#     landau_c::Float32 = 1.5f0
+#     landau_d::Float32 = 0.0f0
+#     landau_e::Float32 = 0.0f0
+#     include_landau_8::Bool = false
+#     include_landau_10::Bool = false
+
+#     # Add site-to-site Gaussian disorder to Landau coefficients:
+#     # coeff_i[site] = landau_i + landau_i_disorder_scale * randn().
+#     # These are additive reduced coefficients, not multiplicative scale factors.
+#     apply_landau_disorder::Bool = false
+#     landau_disorder_seed::Int = 43
+#     landau_a_disorder_scale::Float32 = 0.0f0
+#     landau_b_disorder_scale::Float32 = 0.0f0
+#     landau_c_disorder_scale::Float32 = 0.0f0
+#     landau_d_disorder_scale::Float32 = 0.0f0
+#     landau_e_disorder_scale::Float32 = 0.0f0
+
+#     linear_defect_count::Int = 0
+#     linear_defect_strength = 0.0f0u"meV"
+#     linear_defect_disorder_scale = 0.0f0u"meV"
+#     # If true, each built-in-field defect randomly chooses + or - sign.
+#     linear_defect_random_sign::Bool = false
+#     # RNG seed makes the random defect locations/signs/disorder reproducible.
+#     linear_defect_rng_seed::Int = 44
+
+#     vacancy_count::Int = 10
+#     electron_count::Int = 20
+#     vacancy_charge_number::Float32 = 2.0f0
+#     electron_charge_number::Float32 = 1.0f0
+#     # Larger values make mobile electrons attempt hopping more often.
+#     electron_attempt_rate::Float32 = 10.0f0
+#     # Mobile vacancies/electrons are updated once every this many dynamics steps.
+#     # Smaller values mean more frequent defect motion.
+#     defect_step_interval::Int = 1000
+#     free_charge_split::Float32 = 0.5f0
+#     vacancy_quadratic_shift::Float32 = 0.012f0
+#     vacancy_quartic_shift::Float32 = 0.004f0
+#     defect_rng_seed::Int = 42
+
+#     steps::Int = 4000
+#     time_factor::Int = 1
+#     pulse_repeats::Int = 3
+#     relax_fraction::Float64 = 0.5
+
+#     algorithm_name::Symbol = :local_langevin
+#     langevin_stepsize::Float32 = 0.02f0
+#     langevin_adjusted::Bool = true
+#     proposer_delta::Float32 = 0.1f0
+
+#     # Weight function options for the Ising J term.
+#     # Simple path: set weight_mode and shell weights below, e.g.
+#     #   weight_mode = :nearest
+#     #   weight_mode = :shell
+#     #   weight_mode = :layered_afe
+#     #   weight_mode = :none
+#     # Custom path: pass weight_function = (cfg; dc) -> ... .
+#     # The custom function receives dc = (dx, dy, dz) and must return an energy
+#     # with units, for example: 0.2f0 * cfg.exchange_energy.
+#     # If weight_function is not nothing, it overrides weight_mode.
+#     weight_function = nothing
+#     weight_mode::Symbol = :shell
+#     # Maximum neighbor offset shell passed to WeightGenerator.
+#     weight_range::Int = 3
+#     # Dimensionless factors multiplied by exchange_energy in :shell mode.
+#     shell_weight_1::Float32 = 1.0f0
+#     shell_weight_2::Float32 = 0.1f0
+#     shell_weight_3::Float32 = 0.01f0
+#     shell_weight_beyond::Float32 = 0.0f0
+
+#     show_interfaces::Bool = true
+#     show_figures::Bool = false
+#     save_outputs::Bool = true
+#     save_figures::Bool = true
+#     save_excel::Bool = true
+#     outdir::String = raw"D:\Code\data\20260623"
+# end
 # See ExperimentConfig in Basefile.jl for all override keys.
