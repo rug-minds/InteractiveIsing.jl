@@ -7,6 +7,9 @@ using GLMakie
 using Dates
 using DataFrames
 using FileIO
+using LinearAlgebra
+using Random
+using Statistics
 using StatsBase
 using XLSX
 
@@ -32,16 +35,19 @@ export weightfunc_angle_anti, weightfunc_angle_ferro
 export weightfunc_shell, weightfunc_skymion, weightfunc_xy_antiferro, weightfunc_xy_dilog_antiferro
 export TrianglePulseA, BiasA, SinPulseA, LinAnealingA, LinAnealingB
 export accepted_proposal_delta
-export ValueLogger, Recalc, ImageCapture, DatatoDataframe
+export ValueLogger, DepolLogger, Recalc, ImageCapture, DatatoDataframe
 export normalize_adj_by_average_col!
-export graph_array
+export graph_array, mean_polarization_zlayer, staggered_z_polarization
+export mean_polarization_top, mean_polarization_mid, mean_polarization_bottom
+export find_first_term, total_supported_energy
 export ManuscriptParams, update_params, derived_params, build_graph
 export select_dynamics
-export landau_coefficients, landau_energy, landau_second_derivative, landau_hamiltonian, apply_landau_coefficients!
+export landau_coefficients, landau_energy, landau_second_derivative, estimate_landau_barrier
+export landau_hamiltonian, apply_landau_coefficients!, reduced_parameter_summary
 export AnnealRun, PulseRun
 export anneal_components, pulse_components, anneal_run, pulse_run
 export build_anneal_process, build_pulse_process
-export start_anneal!, start_pulse!, fetch_run
+export start_anneal!, start_pulse!, fetch_run, read_run_context
 export save_run_outputs
 
 end

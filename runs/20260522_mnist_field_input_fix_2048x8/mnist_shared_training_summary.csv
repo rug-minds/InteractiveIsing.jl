@@ -1,2 +1,0 @@
-timestamp,architecture,workers,threads,epochs,batchsize,sweeps,relaxation_steps,train_limit,validation_limit,elapsed_seconds,elapsed_minutes,checkpoint
-2026-05-22T02:07:15,784-120-40,32,32,8,256,500.0,80000,2048,none,200.0317514,3.333862523333333,runs/20260522_mnist_field_input_fix_2048x8\mnist_shared_training.bin
