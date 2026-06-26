@@ -42,12 +42,36 @@ Base.@kwdef struct ExperimentConfig
     landau_c::Float32 = 1.5f0
     landau_d::Float32 = 0.0f0
     landau_e::Float32 = 0.0f0
+    include_landau_8::Bool = false
+    include_landau_10::Bool = false
+
+    # Add site-to-site Gaussian disorder to Landau coefficients:
+    # coeff_i[site] = landau_i + landau_i_disorder_scale * randn().
+    # These are additive reduced coefficients, not multiplicative scale factors.
+    apply_landau_disorder::Bool = false
+    landau_disorder_seed::Int = 43
+    landau_a_disorder_scale::Float32 = 0.0f0
+    landau_b_disorder_scale::Float32 = 0.0f0
+    landau_c_disorder_scale::Float32 = 0.0f0
+    landau_d_disorder_scale::Float32 = 0.0f0
+    landau_e_disorder_scale::Float32 = 0.0f0
+
+    linear_defect_count::Int = 0
+    linear_defect_strength = 0.0f0u"meV"
+    linear_defect_disorder_scale = 0.0f0u"meV"
+    # If true, each built-in-field defect randomly chooses + or - sign.
+    linear_defect_random_sign::Bool = false
+    # RNG seed makes the random defect locations/signs/disorder reproducible.
+    linear_defect_rng_seed::Int = 44
 
     vacancy_count::Int = 10
     electron_count::Int = 20
     vacancy_charge_number::Float32 = 2.0f0
     electron_charge_number::Float32 = 1.0f0
+    # Larger values make mobile electrons attempt hopping more often.
     electron_attempt_rate::Float32 = 10.0f0
+    # Mobile vacancies/electrons are updated once every this many dynamics steps.
+    # Smaller values mean more frequent defect motion.
     defect_step_interval::Int = 1000
     free_charge_split::Float32 = 0.5f0
     vacancy_quadratic_shift::Float32 = 0.012f0
@@ -62,6 +86,27 @@ Base.@kwdef struct ExperimentConfig
     algorithm_name::Symbol = :local_langevin
     langevin_stepsize::Float32 = 0.02f0
     langevin_adjusted::Bool = true
+    proposer_delta::Float32 = 0.1f0
+
+    # Weight function options for the Ising J term.
+    # Simple path: set weight_mode and shell weights below, e.g.
+    #   weight_mode = :nearest
+    #   weight_mode = :shell
+    #   weight_mode = :layered_afe
+    #   weight_mode = :none
+    # Custom path: pass weight_function = (cfg; dc) -> ... .
+    # The custom function receives dc = (dx, dy, dz) and must return an energy
+    # with units, for example: 0.2f0 * cfg.exchange_energy.
+    # If weight_function is not nothing, it overrides weight_mode.
+    weight_function = nothing
+    weight_mode::Symbol = :shell
+    # Maximum neighbor offset shell passed to WeightGenerator.
+    weight_range::Int = 3
+    # Dimensionless factors multiplied by exchange_energy in :shell mode.
+    shell_weight_1::Float32 = 1.0f0
+    shell_weight_2::Float32 = 0.1f0
+    shell_weight_3::Float32 = 0.01f0
+    shell_weight_beyond::Float32 = 0.0f0
 
     show_interfaces::Bool = true
     show_figures::Bool = false
@@ -107,8 +152,10 @@ physical_scales(cfg::ExperimentConfig) = PhysicalScales(
     dipole = cfg.elementary_charge * cfg.length_scale,
 )
 
-internal_energy(value, cfg::ExperimentConfig) =
+internal_energy(value::Unitful.Quantity, cfg::ExperimentConfig) =
     Float32(Unitful.ustrip(Unitful.NoUnits, value / cfg.energy_scale))
+
+internal_energy(value::Number, cfg::ExperimentConfig) = Float32(value)
 
 function kBT_to_kelvin(kBT_internal, cfg::ExperimentConfig)
     energy = kBT_internal .* cfg.energy_scale
@@ -347,12 +394,37 @@ function StatefulAlgorithms.step!(::TemperatureCycle, context)
     return (; step = step + 1, temperature, T = temperature)
 end
 
+function shell_weight_factor(cfg::ExperimentConfig, shell::Integer)
+    shell == 1 && return cfg.shell_weight_1
+    shell == 2 && return cfg.shell_weight_2
+    shell == 3 && return cfg.shell_weight_3
+    return cfg.shell_weight_beyond
+end
+
 function shell_weight(cfg::ExperimentConfig; dc)
+    if cfg.weight_function !== nothing
+        return cfg.weight_function(cfg; dc)
+    end
+
     dx, dy, dz = dc
     shell = dx * dx + dy * dy + dz * dz
-    factor = shell == 1 ? 1.0f0 :
-             shell == 2 ? 0.1f0 :
-             shell == 3 ? 0.01f0 : 0.0f0
+
+    factor =
+        cfg.weight_mode == :shell ? shell_weight_factor(cfg, shell) :
+        cfg.weight_mode == :nearest ? (shell == 1 ? cfg.shell_weight_1 : 0.0f0) :
+        cfg.weight_mode == :xy_nearest ?
+            (shell == 1 && dz == 0 ? cfg.shell_weight_1 : 0.0f0) :
+        cfg.weight_mode == :z_nearest ?
+            (shell == 1 && dx == 0 && dy == 0 ? cfg.shell_weight_1 : 0.0f0) :
+        cfg.weight_mode == :layered_afe ?
+            (
+                shell == 1 && dz == 0 ? cfg.shell_weight_1 :
+                shell == 1 && dx == 0 && dy == 0 ? -abs(cfg.shell_weight_1) :
+                shell_weight_factor(cfg, shell)
+            ) :
+        cfg.weight_mode == :none ? 0.0f0 :
+        error("Unknown weight_mode $(cfg.weight_mode).")
+
     return factor * cfg.exchange_energy
 end
 
@@ -369,6 +441,51 @@ function normalize_adj_by_average_col!(adj, target)
     return adj
 end
 
+function add_gaussian_disorder!(rng, values, scale::Float32)
+    iszero(scale) && return values
+    values .+= scale .* randn(rng, Float32, length(values))
+    return values
+end
+
+function apply_landau_disorder!(
+    coeff2,
+    coeff4,
+    coeff6,
+    coeff8,
+    coeff10,
+    cfg::ExperimentConfig,
+)
+    cfg.apply_landau_disorder || return nothing
+    rng = MersenneTwister(cfg.landau_disorder_seed)
+    add_gaussian_disorder!(rng, coeff2, cfg.landau_a_disorder_scale)
+    add_gaussian_disorder!(rng, coeff4, cfg.landau_b_disorder_scale)
+    add_gaussian_disorder!(rng, coeff6, cfg.landau_c_disorder_scale)
+    add_gaussian_disorder!(rng, coeff8, cfg.landau_d_disorder_scale)
+    add_gaussian_disorder!(rng, coeff10, cfg.landau_e_disorder_scale)
+    return nothing
+end
+
+function build_linear_defect_coefficients(cfg::ExperimentConfig, nspins::Integer)
+    coefficients = zeros(Float32, nspins)
+    count = clamp(cfg.linear_defect_count, 0, nspins)
+    count == 0 && return (; coefficients, indices = Int[])
+
+    rng = MersenneTwister(cfg.linear_defect_rng_seed)
+    indices = randperm(rng, nspins)[1:count]
+    center = internal_energy(cfg.linear_defect_strength, cfg)
+    disorder = internal_energy(cfg.linear_defect_disorder_scale, cfg)
+
+    for idx in indices
+        value = center + disorder * randn(rng, Float32)
+        if cfg.linear_defect_random_sign
+            value *= rand(rng, Bool) ? 1.0f0 : -1.0f0
+        end
+        coefficients[idx] = value
+    end
+
+    return (; coefficients, indices)
+end
+
 function build_physical_model(cfg::ExperimentConfig)
     scales = physical_scales(cfg)
     nspins = cfg.nx * cfg.ny * cfg.nz
@@ -377,6 +494,8 @@ function build_physical_model(cfg::ExperimentConfig)
     coeff6 = fill(cfg.landau_c, nspins)
     coeff8 = fill(cfg.landau_d, nspins)
     coeff10 = fill(cfg.landau_e, nspins)
+    apply_landau_disorder!(coeff2, coeff4, coeff6, coeff8, coeff10, cfg)
+    linear_defect = build_linear_defect_coefficients(cfg, nspins)
 
     q_vacancy = physical_vacancy_charge(cfg)
     q_electron = physical_electron_charge(cfg)
@@ -388,31 +507,50 @@ function build_physical_model(cfg::ExperimentConfig)
 
     ACTIVE_WEIGHT_CONFIG[] = cfg
     weight_generator = PhysicalWeightGenerator(
-        WeightGenerator(configured_shell_weight, 3),
+        WeightGenerator(configured_shell_weight, cfg.weight_range),
     )
+
+    hamiltonian =
+        ExtField(b = cfg.initial_field) +
+        Bilinear() +
+        CoulombHamiltonian(
+            scaling = cfg.coulomb_dipole_scale,
+            screening = cfg.coulomb_screening,
+            recalc = cfg.coulomb_recalc_interval,
+            q_positive = q_vacancy,
+            q_negative = q_electron,
+            free_charge_split = cfg.free_charge_split,
+        ) +
+        PolynomialHamiltonian(
+            1;
+            c = cfg.energy_scale,
+            localpotential = linear_defect.coefficients,
+        ) +
+        Quadratic(c = cfg.energy_scale, localpotential = coeff2) +
+        Quartic(c = cfg.energy_scale, localpotential = coeff4) +
+        Sextic(c = cfg.energy_scale, localpotential = coeff6)
+
+    if cfg.include_landau_8 || any(x -> !iszero(x), coeff8)
+        hamiltonian += Octic(c = cfg.energy_scale, localpotential = coeff8)
+    end
+    if cfg.include_landau_10 || any(x -> !iszero(x), coeff10)
+        hamiltonian += PolynomialHamiltonian(
+            10;
+            c = cfg.energy_scale,
+            localpotential = coeff10,
+        )
+    end
 
     graph = IsingGraph(
         cfg.nx,
         cfg.ny,
         cfg.nz,
         Continuous(),
-        LocalProposer(0.1f0),
+        LocalProposer(cfg.proposer_delta),
         weight_generator,
         LatticeConstants(cfg.lattice_x, cfg.lattice_y, cfg.lattice_z),
         StateSet(-1.5f0, 1.5f0),
-        ExtField(b = cfg.initial_field) +
-            Bilinear() +
-            CoulombHamiltonian(
-                scaling = cfg.coulomb_dipole_scale,
-                screening = cfg.coulomb_screening,
-                recalc = cfg.coulomb_recalc_interval,
-                q_positive = q_vacancy,
-                q_negative = q_electron,
-                free_charge_split = cfg.free_charge_split,
-            ) +
-            Quadratic(c = cfg.energy_scale, localpotential = coeff2) +
-            Quartic(c = cfg.energy_scale, localpotential = coeff4) +
-            Sextic(c = cfg.energy_scale, localpotential = coeff6);
+        hamiltonian;
         periodic = (:x, :y),
         precision = Float32,
         diag = StateLike(UniformArray),
@@ -470,6 +608,8 @@ function build_physical_model(cfg::ExperimentConfig)
         coeff6,
         coeff8,
         coeff10,
+        linear_defect_coefficients = linear_defect.coefficients,
+        linear_defect_indices = linear_defect.indices,
         net_charge,
     )
 end
@@ -495,6 +635,274 @@ function make_loggers(cfg::ExperimentConfig)
         middle = ValueLogger(:P_mid),
         bottom = ValueLogger(:P_bot),
     )
+end
+
+field_value(hamiltonian) = hamiltonian.b[]
+
+struct LayerMean{Z} end
+(::LayerMean{Z})(model) where {Z} = mean_polarization_zlayer(model, Z)
+
+function build_pulse_job(cfg::ExperimentConfig; start::Bool = true)
+    model = build_physical_model(cfg)
+    graph = model.graph
+    charges = model.defects
+    reduced_summary = reduced_parameter_summary(cfg, model)
+
+    loggers = make_loggers(cfg)
+    point_repeat = loggers.sizes.point_repeat
+    pulse_time = loggers.sizes.experiment_time
+    relax_time = loggers.sizes.relax_time
+    top_mean = LayerMean{cfg.nz}()
+    mid_mean = LayerMean{cld(cfg.nz, 2)}()
+    bottom_mean = LayerMean{1}()
+
+    dynamics = select_dynamics(cfg)
+    charge_dynamics = Metropolis()
+    pulse = TrianglePulse(
+        internal_energy(cfg.pulse_amplitude, cfg),
+        cfg.pulse_repeats,
+    )
+
+    pulse_monte_carlo = @CompositeAlgorithm begin
+        @alias dynamics = dynamics
+        @alias charge_metro = charge_dynamics
+        @replace dynamics.T => charge_metro.T
+
+        proposal = dynamics()
+        @every cfg.defect_step_interval charge_metro()
+        @every 1 loggers.polarization(
+            value = @transform(accepted_proposal_delta, proposal),
+        )
+        @every point_repeat loggers.field(
+            value = @transform(field_value, dynamics.hamiltonian),
+        )
+        @every point_repeat loggers.depol(
+            model = dynamics.model,
+            hamiltonian = dynamics.hamiltonian,
+        )
+        @every point_repeat loggers.staggered(
+            value = @transform(staggered_z_polarization, dynamics.model),
+        )
+        @every point_repeat loggers.top(
+            value = @transform(top_mean, dynamics.model),
+        )
+        @every point_repeat loggers.middle(
+            value = @transform(mid_mean, dynamics.model),
+        )
+        @every point_repeat loggers.bottom(
+            value = @transform(bottom_mean, dynamics.model),
+        )
+    end
+
+    pulse_step = @CompositeAlgorithm begin
+        @context monte_carlo = pulse_monte_carlo()
+        @every point_repeat pulse(
+            hamiltonian = monte_carlo.dynamics.hamiltonian,
+            M = monte_carlo.dynamics.M,
+        )
+    end
+
+    relax_step = @CompositeAlgorithm begin
+        @context monte_carlo = pulse_monte_carlo()
+    end
+
+    algorithm = @Routine begin
+        @repeat pulse_time pulse_step()
+        @repeat relax_time relax_step()
+    end
+
+    process = Process(
+        algorithm,
+        StatefulAlgorithms.Init(:dynamics; model = graph),
+        StatefulAlgorithms.Init(:charge_metro; model = charges),
+        Init(loggers.polarization, initialvalue = sum(state(graph)));
+        repeats = 1,
+    )
+    start && run(process)
+
+    return (; cfg, model, graph, process, loggers, reduced_summary)
+end
+
+function build_anneal_job(
+    cfg::ExperimentConfig;
+    start_kBT = cfg.anneal_max_kBT,
+    end_kBT = 0.0f0u"meV",
+    start::Bool = true,
+)
+    cfg = override_config(cfg; initial_kBT = start_kBT, anneal_max_kBT = start_kBT)
+    model = build_physical_model(cfg)
+    graph = model.graph
+    charges = model.defects
+    reduced_summary = reduced_parameter_summary(cfg, model)
+
+    loggers = make_loggers(cfg)
+    point_repeat = loggers.sizes.point_repeat
+    anneal_time = loggers.sizes.experiment_time
+    top_mean = LayerMean{cfg.nz}()
+    mid_mean = LayerMean{cld(cfg.nz, 2)}()
+    bottom_mean = LayerMean{1}()
+
+    dynamics = select_dynamics(cfg)
+    charge_dynamics = Metropolis()
+    temperature_cycle = TemperatureCycle(
+        internal_energy(start_kBT, cfg),
+        internal_energy(end_kBT, cfg),
+    )
+
+    anneal_monte_carlo = @CompositeAlgorithm begin
+        @alias dynamics = dynamics
+        @alias charge_metro = charge_dynamics
+        @alias anneal_temperature = temperature_cycle
+        @replace anneal_temperature.temperature => dynamics.T
+        @replace dynamics.T => charge_metro.T
+
+        @every point_repeat anneal_temperature(model = dynamics.model)
+        proposal = dynamics()
+        @every cfg.defect_step_interval charge_metro()
+        @every 1 loggers.polarization(
+            value = @transform(accepted_proposal_delta, proposal),
+        )
+        @every point_repeat loggers.field(
+            value = @transform(field_value, dynamics.hamiltonian),
+        )
+        @every point_repeat loggers.temperature(
+            value = @transform(temp, dynamics.model),
+        )
+        @every point_repeat loggers.depol(
+            model = dynamics.model,
+            hamiltonian = dynamics.hamiltonian,
+        )
+        @every point_repeat loggers.staggered(
+            value = @transform(staggered_z_polarization, dynamics.model),
+        )
+        @every point_repeat loggers.top(
+            value = @transform(top_mean, dynamics.model),
+        )
+        @every point_repeat loggers.middle(
+            value = @transform(mid_mean, dynamics.model),
+        )
+        @every point_repeat loggers.bottom(
+            value = @transform(bottom_mean, dynamics.model),
+        )
+    end
+
+    anneal_step = @CompositeAlgorithm begin
+        @context monte_carlo = anneal_monte_carlo()
+    end
+
+    algorithm = @Routine begin
+        @repeat anneal_time anneal_step()
+    end
+
+    process = Process(
+        algorithm,
+        StatefulAlgorithms.Init(:dynamics; model = graph),
+        StatefulAlgorithms.Init(:charge_metro; model = charges),
+        Init(loggers.polarization, initialvalue = sum(state(graph)));
+        repeats = 1,
+    )
+    start && run(process)
+
+    return (; cfg, model, graph, process, loggers, reduced_summary)
+end
+
+function build_forc_job(
+    cfg::ExperimentConfig;
+    max_field,
+    preset_edge_points::Integer,
+    test_field_step = max_field / 100,
+    zero_hold_points::Integer = 0,
+    start::Bool = true,
+    print_protocol::Bool = true,
+)
+    model = build_physical_model(cfg)
+    graph = model.graph
+    charges = model.defects
+    reduced_summary = reduced_parameter_summary(cfg, model)
+
+    loggers = make_loggers(cfg)
+    point_repeat = loggers.sizes.point_repeat
+    forc_pulse = FORCPulse(
+        internal_energy(max_field, cfg),
+        preset_edge_points,
+        internal_energy(test_field_step, cfg),
+        zero_hold_points,
+    )
+    protocol = forc_protocol(forc_pulse)
+    forc_time = point_repeat * length(protocol.fields)
+    relax_time = loggers.sizes.relax_time
+    top_mean = LayerMean{cfg.nz}()
+    mid_mean = LayerMean{cld(cfg.nz, 2)}()
+    bottom_mean = LayerMean{1}()
+
+    if print_protocol
+        println("FORC field samples: ", length(protocol.fields))
+        println("FORC curves: ", length(protocol.end_fields))
+        println("FORC edge step: ", protocol.edge_step)
+        println("FORC test field step: ", protocol.test_field_step)
+        println("FORC zero-hold samples per curve: ", protocol.zero_hold_points)
+    end
+
+    dynamics = select_dynamics(cfg)
+    charge_dynamics = Metropolis()
+
+    forc_monte_carlo = @CompositeAlgorithm begin
+        @alias dynamics = dynamics
+        @alias charge_metro = charge_dynamics
+        @replace dynamics.T => charge_metro.T
+
+        proposal = dynamics()
+        @every cfg.defect_step_interval charge_metro()
+        @every 1 loggers.polarization(
+            value = @transform(accepted_proposal_delta, proposal),
+        )
+        @every point_repeat loggers.field(
+            value = @transform(field_value, dynamics.hamiltonian),
+        )
+        @every point_repeat loggers.depol(
+            model = dynamics.model,
+            hamiltonian = dynamics.hamiltonian,
+        )
+        @every point_repeat loggers.staggered(
+            value = @transform(staggered_z_polarization, dynamics.model),
+        )
+        @every point_repeat loggers.top(
+            value = @transform(top_mean, dynamics.model),
+        )
+        @every point_repeat loggers.middle(
+            value = @transform(mid_mean, dynamics.model),
+        )
+        @every point_repeat loggers.bottom(
+            value = @transform(bottom_mean, dynamics.model),
+        )
+    end
+
+    forc_step = @CompositeAlgorithm begin
+        @context monte_carlo = forc_monte_carlo()
+        @every point_repeat forc_pulse(
+            hamiltonian = monte_carlo.dynamics.hamiltonian,
+        )
+    end
+
+    relax_step = @CompositeAlgorithm begin
+        @context monte_carlo = forc_monte_carlo()
+    end
+
+    algorithm = @Routine begin
+        @repeat forc_time forc_step()
+        @repeat relax_time relax_step()
+    end
+
+    process = Process(
+        algorithm,
+        StatefulAlgorithms.Init(:dynamics; model = graph),
+        StatefulAlgorithms.Init(:charge_metro; model = charges),
+        Init(loggers.polarization, initialvalue = sum(state(graph)));
+        repeats = 1,
+    )
+    start && run(process)
+
+    return (; cfg, model, graph, process, loggers, reduced_summary, protocol)
 end
 
 function collect_logged_result(context, loggers; include_temperature = false)
@@ -638,6 +1046,7 @@ function reduced_parameter_summary(cfg::ExperimentConfig, model; print_summary =
     SJ = interaction.SJ
     field_typ = internal_energy(cfg.pulse_amplitude, cfg)
     defect_typ = max(abs(cfg.vacancy_quadratic_shift), abs(cfg.vacancy_quartic_shift))
+    linear_defect_typ = maximum(abs, model.linear_defect_coefficients)
     depol_ref = isnothing(coulomb_term) ? nothing :
         reference_coulomb_scale(graph, coulomb_term, P0)
     depol_current = isnothing(coulomb_term) ? nothing :
@@ -652,8 +1061,25 @@ function reduced_parameter_summary(cfg::ExperimentConfig, model; print_summary =
     addrow!("input", "coulomb_dipole_scale", string(cfg.coulomb_dipole_scale))
     addrow!("input", "coulomb_screening", string(cfg.coulomb_screening))
     addrow!("input", "pulse_amplitude", string(cfg.pulse_amplitude))
+    addrow!("input", "weight_mode", string(cfg.weight_mode))
+    addrow!("input", "weight_range", cfg.weight_range)
+    addrow!("input", "shell_weight_1", cfg.shell_weight_1)
+    addrow!("input", "shell_weight_2", cfg.shell_weight_2)
+    addrow!("input", "shell_weight_3", cfg.shell_weight_3)
     addrow!("input", "vacancy_quadratic_shift", cfg.vacancy_quadratic_shift)
     addrow!("input", "vacancy_quartic_shift", cfg.vacancy_quartic_shift)
+    addrow!("input", "linear_defect_count", cfg.linear_defect_count)
+    addrow!("input", "linear_defect_strength", string(cfg.linear_defect_strength))
+    addrow!(
+        "input",
+        "linear_defect_disorder_scale",
+        string(cfg.linear_defect_disorder_scale),
+    )
+    addrow!("input", "linear_defect_random_sign", cfg.linear_defect_random_sign)
+    addrow!("input", "apply_landau_disorder", cfg.apply_landau_disorder)
+    addrow!("input", "landau_a_disorder_scale", cfg.landau_a_disorder_scale)
+    addrow!("input", "landau_b_disorder_scale", cfg.landau_b_disorder_scale)
+    addrow!("input", "landau_c_disorder_scale", cfg.landau_c_disorder_scale)
     addrow!("landau", "P0", P0)
     addrow!("landau", "Ps", barrier.Ps)
     addrow!("landau", "DeltaF_barrier_internal", DeltaF)
@@ -670,8 +1096,10 @@ function reduced_parameter_summary(cfg::ExperimentConfig, model; print_summary =
     addrow!("reduced", "Lambda_barrier", DeltaF / (P0^2 * SJ))
     addrow!("reduced", "Lambda_field_pulse", abs(field_typ) / (P0 * SJ))
     addrow!("reduced", "Lambda_defect_local_shift", abs(defect_typ) / (P0 * SJ))
+    addrow!("reduced", "Lambda_linear_defect", linear_defect_typ / (P0 * SJ))
     addrow!("reduced", "Theta_field_pulse", abs(P0 * field_typ) / DeltaF)
     addrow!("reduced", "Theta_defect_local_shift", abs(P0 * defect_typ) / DeltaF)
+    addrow!("reduced", "Theta_linear_defect", abs(P0 * linear_defect_typ) / DeltaF)
 
     if !isnothing(depol_ref)
         addrow!("reference_depol", "reference_state", "all dipoles at +P0")
@@ -732,6 +1160,23 @@ function config_dataframe(cfg::ExperimentConfig)
         "landau_a_meV" => cfg.landau_a,
         "landau_b_meV" => cfg.landau_b,
         "landau_c_meV" => cfg.landau_c,
+        "landau_d_meV" => cfg.landau_d,
+        "landau_e_meV" => cfg.landau_e,
+        "include_landau_8" => cfg.include_landau_8,
+        "include_landau_10" => cfg.include_landau_10,
+        "apply_landau_disorder" => cfg.apply_landau_disorder,
+        "landau_disorder_seed" => cfg.landau_disorder_seed,
+        "landau_a_disorder_scale" => cfg.landau_a_disorder_scale,
+        "landau_b_disorder_scale" => cfg.landau_b_disorder_scale,
+        "landau_c_disorder_scale" => cfg.landau_c_disorder_scale,
+        "landau_d_disorder_scale" => cfg.landau_d_disorder_scale,
+        "landau_e_disorder_scale" => cfg.landau_e_disorder_scale,
+        "linear_defect_count" => cfg.linear_defect_count,
+        "linear_defect_strength" => string(cfg.linear_defect_strength),
+        "linear_defect_disorder_scale" =>
+            string(cfg.linear_defect_disorder_scale),
+        "linear_defect_random_sign" => cfg.linear_defect_random_sign,
+        "linear_defect_rng_seed" => cfg.linear_defect_rng_seed,
         "vacancy_count" => cfg.vacancy_count,
         "electron_count" => cfg.electron_count,
         "vacancy_charge" => string(physical_vacancy_charge(cfg)),
@@ -739,8 +1184,33 @@ function config_dataframe(cfg::ExperimentConfig)
         "defect_step_interval" => cfg.defect_step_interval,
         "steps" => cfg.steps,
         "algorithm" => string(cfg.algorithm_name),
+        "proposer_delta" => cfg.proposer_delta,
+        "weight_mode" => string(cfg.weight_mode),
+        "weight_range" => cfg.weight_range,
+        "shell_weight_1" => cfg.shell_weight_1,
+        "shell_weight_2" => cfg.shell_weight_2,
+        "shell_weight_3" => cfg.shell_weight_3,
+        "shell_weight_beyond" => cfg.shell_weight_beyond,
     ]
     return DataFrame(key = first.(rows), value = last.(rows))
+end
+
+function coefficient_dataframe(model)
+    nspins = length(model.coeff2)
+    defect_sites = falses(nspins)
+    for idx in model.linear_defect_indices
+        defect_sites[idx] = true
+    end
+    return DataFrame(
+        site = collect(1:nspins),
+        linear_defect = model.linear_defect_coefficients,
+        is_linear_defect = defect_sites,
+        landau_a = model.coeff2,
+        landau_b = model.coeff4,
+        landau_c = model.coeff6,
+        landau_d = model.coeff8,
+        landau_e = model.coeff10,
+    )
 end
 
 function result_dataframe(result)

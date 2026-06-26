@@ -7,11 +7,6 @@ Base.@kwdef struct SweepCase
     outdir::Union{Nothing,String} = nothing
 end
 
-field_value(hamiltonian) = hamiltonian.b[]
-
-struct LayerMean{Z} end
-(::LayerMean{Z})(model) where {Z} = mean_polarization_zlayer(model, Z)
-
 function experiment_overrides(overrides::NamedTuple)
     allowed = fieldnames(ExperimentConfig)
     return (; (name => value for (name, value) in pairs(overrides) if name in allowed)...)
@@ -21,170 +16,6 @@ function cfg_for_case(base_cfg::ExperimentConfig, case::SweepCase)
     cfg = override_config(base_cfg; experiment_overrides(case.overrides)...)
     isnothing(case.outdir) || (cfg = override_config(cfg; outdir = case.outdir))
     return cfg
-end
-
-function build_pulse_job(cfg::ExperimentConfig; start::Bool = true)
-    model = build_physical_model(cfg)
-    g = model.graph
-    charges = model.defects
-    reduced_summary = reduced_parameter_summary(cfg, model)
-
-    loggers = make_loggers(cfg)
-    point_repeat = loggers.sizes.point_repeat
-    pulse_time = loggers.sizes.experiment_time
-    relax_time = loggers.sizes.relax_time
-    top_mean = LayerMean{cfg.nz}()
-    mid_mean = LayerMean{cld(cfg.nz, 2)}()
-    bottom_mean = LayerMean{1}()
-
-    dynamics = select_dynamics(cfg)
-    charge_dynamics = Metropolis()
-    pulse = TrianglePulse(
-        internal_energy(cfg.pulse_amplitude, cfg),
-        cfg.pulse_repeats,
-    )
-
-    pulse_monte_carlo = @CompositeAlgorithm begin
-        @alias dynamics = dynamics
-        @alias charge_metro = charge_dynamics
-        @replace dynamics.T => charge_metro.T
-
-        proposal = dynamics()
-        @every cfg.defect_step_interval charge_metro()
-        @every 1 loggers.polarization(
-            Δvalue = @transform(accepted_proposal_delta, proposal),
-        )
-        @every point_repeat loggers.field(
-            value = @transform(field_value, dynamics.hamiltonian),
-        )
-        @every point_repeat loggers.depol(
-            model = dynamics.model,
-            hamiltonian = dynamics.hamiltonian,
-        )
-        @every point_repeat loggers.staggered(
-            value = @transform(staggered_z_polarization, dynamics.model),
-        )
-        @every point_repeat loggers.top(
-            value = @transform(top_mean, dynamics.model),
-        )
-        @every point_repeat loggers.middle(
-            value = @transform(mid_mean, dynamics.model),
-        )
-        @every point_repeat loggers.bottom(
-            value = @transform(bottom_mean, dynamics.model),
-        )
-    end
-
-    pulse_step = @CompositeAlgorithm begin
-        @context monte_carlo = pulse_monte_carlo()
-        @every point_repeat pulse(
-            hamiltonian = monte_carlo.dynamics.hamiltonian,
-            M = monte_carlo.dynamics.M,
-        )
-    end
-
-    relax_step = @CompositeAlgorithm begin
-        @context monte_carlo = pulse_monte_carlo()
-    end
-
-    algorithm = @Routine begin
-        @repeat pulse_time pulse_step()
-        @repeat relax_time relax_step()
-    end
-
-    process = Process(
-        algorithm,
-        StatefulAlgorithms.Init(:dynamics; model = g),
-        StatefulAlgorithms.Init(:charge_metro; model = charges),
-        Init(loggers.polarization, initialvalue = sum(state(g)));
-        repeats = 1,
-    )
-    start && run(process)
-
-    return (; cfg, model, graph = g, process, loggers, reduced_summary)
-end
-
-function build_anneal_job(
-    cfg::ExperimentConfig;
-    start_kBT = cfg.anneal_max_kBT,
-    end_kBT = 0.0f0u"meV",
-    start::Bool = true,
-)
-    cfg = override_config(cfg; initial_kBT = start_kBT, anneal_max_kBT = start_kBT)
-    model = build_physical_model(cfg)
-    g = model.graph
-    charges = model.defects
-    reduced_summary = reduced_parameter_summary(cfg, model)
-
-    loggers = make_loggers(cfg)
-    point_repeat = loggers.sizes.point_repeat
-    anneal_time = loggers.sizes.experiment_time
-    top_mean = LayerMean{cfg.nz}()
-    mid_mean = LayerMean{cld(cfg.nz, 2)}()
-    bottom_mean = LayerMean{1}()
-
-    dynamics = select_dynamics(cfg)
-    charge_dynamics = Metropolis()
-    temperature_cycle = TemperatureCycle(
-        internal_energy(start_kBT, cfg),
-        internal_energy(end_kBT, cfg),
-    )
-
-    anneal_monte_carlo = @CompositeAlgorithm begin
-        @alias dynamics = dynamics
-        @alias charge_metro = charge_dynamics
-        @alias anneal_temperature = temperature_cycle
-        @replace anneal_temperature.temperature => dynamics.T
-        @replace dynamics.T => charge_metro.T
-
-        @every point_repeat anneal_temperature(model = dynamics.model)
-        proposal = dynamics()
-        @every cfg.defect_step_interval charge_metro()
-        @every 1 loggers.polarization(
-            Δvalue = @transform(accepted_proposal_delta, proposal),
-        )
-        @every point_repeat loggers.field(
-            value = @transform(field_value, dynamics.hamiltonian),
-        )
-        @every point_repeat loggers.temperature(
-            value = @transform(temp, dynamics.model),
-        )
-        @every point_repeat loggers.depol(
-            model = dynamics.model,
-            hamiltonian = dynamics.hamiltonian,
-        )
-        @every point_repeat loggers.staggered(
-            value = @transform(staggered_z_polarization, dynamics.model),
-        )
-        @every point_repeat loggers.top(
-            value = @transform(top_mean, dynamics.model),
-        )
-        @every point_repeat loggers.middle(
-            value = @transform(mid_mean, dynamics.model),
-        )
-        @every point_repeat loggers.bottom(
-            value = @transform(bottom_mean, dynamics.model),
-        )
-    end
-
-    anneal_step = @CompositeAlgorithm begin
-        @context monte_carlo = anneal_monte_carlo()
-    end
-
-    algorithm = @Routine begin
-        @repeat anneal_time anneal_step()
-    end
-
-    process = Process(
-        algorithm,
-        StatefulAlgorithms.Init(:dynamics; model = g),
-        StatefulAlgorithms.Init(:charge_metro; model = charges),
-        Init(loggers.polarization, initialvalue = sum(state(g)));
-        repeats = 1,
-    )
-    start && run(process)
-
-    return (; cfg, model, graph = g, process, loggers, reduced_summary)
 end
 
 function finish_pulse_job!(case::SweepCase, job)
@@ -210,7 +41,18 @@ function finish_pulse_job!(case::SweepCase, job)
         ),
     )
 
-    saved = save_experiment("sweep_$(case.name)", job.cfg, result, figures, job.reduced_summary)
+    extra_sheets = Pair{String,DataFrame}[
+        "coefficients" => coefficient_dataframe(job.model),
+    ]
+
+    saved = save_experiment(
+        "sweep_$(case.name)",
+        job.cfg,
+        result,
+        figures,
+        job.reduced_summary,
+        extra_sheets,
+    )
     return (; case, result, saved)
 end
 
@@ -249,7 +91,18 @@ function finish_anneal_job!(case::SweepCase, job)
         ),
     )
 
-    saved = save_experiment("sweep_$(case.name)", job.cfg, result, figures, job.reduced_summary)
+    extra_sheets = Pair{String,DataFrame}[
+        "coefficients" => coefficient_dataframe(job.model),
+    ]
+
+    saved = save_experiment(
+        "sweep_$(case.name)",
+        job.cfg,
+        result,
+        figures,
+        job.reduced_summary,
+        extra_sheets,
+    )
     return (; case, result, saved)
 end
 
@@ -423,7 +276,11 @@ cases = [
     ),
 ]
 
-if abspath(PROGRAM_FILE) == @__FILE__
+function main(; max_inflight = min(Threads.nthreads(), length(cases)))
     println("Julia threads: ", Threads.nthreads())
-    run_sweep(cases; max_inflight = min(Threads.nthreads(), length(cases)))
+    return run_sweep(cases; max_inflight)
 end
+
+main()
+
+# See ExperimentConfig in Basefile.jl for all override keys.

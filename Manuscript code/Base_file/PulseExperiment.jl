@@ -9,8 +9,9 @@ cfg = override_config(
     initial_kBT = pulse_kBT,
     initial_field = pulse_initial_field,
 )
+
 model = build_physical_model(cfg)
-g = model.graph
+graph = model.graph
 charges = model.defects
 print_physical_summary(cfg, model)
 reduced_summary = reduced_parameter_summary(cfg, model)
@@ -19,6 +20,9 @@ loggers = make_loggers(cfg)
 point_repeat = loggers.sizes.point_repeat
 pulse_time = loggers.sizes.experiment_time
 relax_time = loggers.sizes.relax_time
+top_mean = LayerMean{cfg.nz}()
+mid_mean = LayerMean{cld(cfg.nz, 2)}()
+bottom_mean = LayerMean{1}()
 
 dynamics = select_dynamics(cfg)
 charge_dynamics = Metropolis()
@@ -35,10 +39,10 @@ pulse_monte_carlo = @CompositeAlgorithm begin
     proposal = dynamics()
     @every cfg.defect_step_interval charge_metro()
     @every 1 loggers.polarization(
-        Δvalue = @transform(accepted_proposal_delta, proposal),
+        value = @transform(accepted_proposal_delta, proposal),
     )
     @every point_repeat loggers.field(
-        value = @transform(x -> x.b[], dynamics.hamiltonian),
+        value = @transform(field_value, dynamics.hamiltonian),
     )
     @every point_repeat loggers.depol(
         model = dynamics.model,
@@ -48,13 +52,13 @@ pulse_monte_carlo = @CompositeAlgorithm begin
         value = @transform(staggered_z_polarization, dynamics.model),
     )
     @every point_repeat loggers.top(
-        value = @transform(m -> mean_polarization_zlayer(m, cfg.nz), dynamics.model),
+        value = @transform(top_mean, dynamics.model),
     )
     @every point_repeat loggers.middle(
-        value = @transform(m -> mean_polarization_zlayer(m, cld(cfg.nz, 2)), dynamics.model),
+        value = @transform(mid_mean, dynamics.model),
     )
     @every point_repeat loggers.bottom(
-        value = @transform(m -> mean_polarization_zlayer(m, 1), dynamics.model),
+        value = @transform(bottom_mean, dynamics.model),
     )
 end
 
@@ -75,16 +79,16 @@ pulse_experiment = @Routine begin
     @repeat relax_time relax_step()
 end
 
-createProcessManual(
-    g,
+process = Process(
     pulse_experiment,
-    StatefulAlgorithms.Init(:dynamics; model = g),
+    StatefulAlgorithms.Init(:dynamics; model = graph),
     StatefulAlgorithms.Init(:charge_metro; model = charges),
-    Init(loggers.polarization, initialvalue = sum(state(g)));
-    lifetime = 1,
+    Init(loggers.polarization, initialvalue = sum(state(graph)));
+    repeats = 1,
 )
+run(process)
 
-context = fetch(process(g))
+context = fetch(process)
 result = collect_logged_result(context, loggers)
 field_meV = result.field .* Unitful.ustrip(u"meV", cfg.energy_scale)
 result = merge(result, (; field_meV))
@@ -110,5 +114,9 @@ for figure in values(figures)
     cfg.show_figures && display(figure)
 end
 
-saved = save_experiment("pulse", cfg, result, figures, reduced_summary)
+extra_sheets = Pair{String,DataFrame}[
+    "coefficients" => coefficient_dataframe(model),
+]
+
+saved = save_experiment("pulse", cfg, result, figures, reduced_summary, extra_sheets)
 isnothing(saved) || println("Saved pulse output: ", saved.xlsx_path)

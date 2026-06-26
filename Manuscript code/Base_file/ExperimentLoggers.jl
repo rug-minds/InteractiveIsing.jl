@@ -87,19 +87,28 @@ end
 
 ################################################################################
 
-function IntegrateAndLog(type = Float64, loginterval = 1)
-    integrator = Integrator(type, name = :integrate_and_log)
-    logger = Logger(type, name = :integrate_and_log)
+struct IntegrateAndLog{T} <: ProcessAlgorithm
+    loginterval::Int
+end
 
-    composite = @CompositeAlgorithm begin
-        @alias integrator = integrator
-        @alias logger = logger
+IntegrateAndLog(type = Float64, loginterval = 1) =
+    IntegrateAndLog{type}(Int(loginterval))
 
-        total = integrator()
-        @every loginterval logger(value = @transform(x -> x[], total))
+function StatefulAlgorithms.init(logger::IntegrateAndLog{T}, args) where T
+    total = convert(T, get(args, :initialvalue, zero(T)))
+    log = T[]
+    processsizehint!(log, args)
+    return (; total, log, step = 0)
+end
+
+function StatefulAlgorithms.step!(logger::IntegrateAndLog{T}, context) where T
+    (; total, log, step, value) = context
+    total += convert(T, value)
+    step += 1
+    if step % logger.loginterval == 0
+        push!(log, total)
     end
-
-    return package(composite)
+    return (; total, step)
 end
 
 ################################################################################
