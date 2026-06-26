@@ -1,22 +1,14 @@
 function result_basename(p::ManuscriptParams)
-    d = derived_params(p)
     date_str = Dates.format(Dates.now(), "yyyy-mm-dd_HHMMSS")
-    return string(
-        "Scale=", round(p.Scale, digits = 4),
-        "_Screening=", round(p.Screening, digits = 4),
-        "_timefctr=", round(p.time_fctr, digits = 4),
-        "_Steps_1=", round(p.Steps_1, digits = 4),
-        "_Eb=", round(d.E_barrier, digits = 4),
-        "_Epp=", round(d.Epp_1, digits = 4),
-        "_Temp_aneal=", round(p.Temp_aneal, digits = 4),
-        "_", date_str,
-    )
+    short_id = randstring('A':'Z', 4) * randstring('0':'9', 2)
+    return "Basefile_$(date_str)_$(short_id)"
 end
 
 function state_distribution(g; bins = -1.5:0.05:1.5)
     P = graph_array(g)
     h = fit(Histogram, vec(P), bins)
-    density = h.weights ./ sum(h.weights)
+    total = sum(h.weights)
+    density = iszero(total) ? zeros(Float64, length(h.weights)) : h.weights ./ total
     return (; histogram = h, density, bins)
 end
 
@@ -169,13 +161,135 @@ excel_value(x::AbstractFloat) = Float64(x)
 excel_value(x::Symbol) = String(x)
 excel_value(x) = repr(x)
 
-function save_run_outputs(g, p::ManuscriptParams; anneal = nothing, pulse = nothing)
+function numeric_or_missing_column(values, nrows)
+    column = Vector{Union{Missing,Float64}}(missing, nrows)
+    isnothing(values) && return column
+    n = min(length(values), nrows)
+    n > 0 && (column[1:n] .= Float64.(values[1:n]))
+    return column
+end
+
+function run_series_dataframe(; anneal = nothing, pulse = nothing)
+    columns = Pair{Symbol,Any}[]
+    function add_result!(prefix, result)
+        isnothing(result) && return
+        for name in propertynames(result)
+            name == :context && continue
+            values = getproperty(result, name)
+            isnothing(values) && continue
+            values isa AbstractVector || continue
+            push!(columns, Symbol(prefix, "_", name) => values)
+        end
+    end
+    add_result!("anneal", anneal)
+    add_result!("pulse", pulse)
+    isempty(columns) && return DataFrame()
+    nrows = maximum(length(last(pair)) for pair in columns)
+    return DataFrame((first(pair) => numeric_or_missing_column(last(pair), nrows) for pair in columns))
+end
+
+function params_dataframe(p::ManuscriptParams)
+    return DataFrame(
+        key = String.(propertynames(p)),
+        value = [excel_value(getproperty(p, name)) for name in propertynames(p)],
+    )
+end
+
+function derived_dataframe(p::ManuscriptParams)
+    d = derived_params(p)
+    return DataFrame(
+        key = String.(propertynames(d)),
+        value = [excel_value(getproperty(d, name)) for name in propertynames(d)],
+    )
+end
+
+function coefficient_summary_dataframe(p::ManuscriptParams)
+    rows = NamedTuple[]
+    for (order, coeff) in sort(collect(landau_coefficients(p)); by = first)
+        values = coeff isa Number ? [Float64(coeff)] : Float64.(vec(coeff))
+        push!(rows, (;
+            order,
+            coefficient = "P$(order)",
+            mean = mean(values),
+            std = length(values) > 1 ? std(values) : 0.0,
+            minimum = minimum(values),
+            maximum = maximum(values),
+            first_value = first(values),
+            n = length(values),
+        ))
+    end
+    return DataFrame(rows)
+end
+
+function excel_cell_value(x)
+    ismissing(x) && return missing
+    x isa Bool && return x
+    x isa Integer && return Int64(x)
+    x isa Real && return Float64(x)
+    x isa Dates.Date && return x
+    x isa Dates.DateTime && return x
+    x isa Dates.Time && return x
+    x isa AbstractString && return String(x)
+    return string(x)
+end
+
+function write_dataframe_sheet!(ws, df::DataFrame)
+    if ncol(df) == 0
+        ws["A1"] = "empty"
+        return nothing
+    end
+    for (j, name) in enumerate(names(df))
+        ws[XLSX.CellRef(1, j)] = string(name)
+    end
+    for i in 1:nrow(df), j in 1:ncol(df)
+        ws[XLSX.CellRef(i + 1, j)] = excel_cell_value(df[i, j])
+    end
+    return nothing
+end
+
+function save_diagnostic_figures(base_name, outdir; anneal = nothing, pulse = nothing)
+    paths = String[]
+    specs = Pair{String,NamedTuple}[]
+    if !isnothing(anneal)
+        push!(specs, "anneal_T_Pr" => (; x = anneal.Temp, y = anneal.Pr,
+            xlabel = "Temperature", ylabel = "Pr", title = "P-T"))
+    end
+    if !isnothing(pulse)
+        push!(specs, "pulse_V_Pr" => (; x = pulse.voltage, y = pulse.Pr,
+            xlabel = "Voltage", ylabel = "Pr", title = "P-V"))
+        for (suffix, field, ylabel) in (
+            ("pulse_Htotal_V", :H_total, "Total H"),
+            ("pulse_Hrest_V", :H_rest, "H_dep + H_J + H_poly"),
+            ("pulse_PAFEz_V", :P_AFE_z, "P_AFE_z"),
+        )
+            values = getproperty(pulse, field)
+            isnothing(values) && continue
+            push!(specs, suffix => (; x = pulse.voltage, y = values,
+                xlabel = "Voltage", ylabel, title = suffix))
+        end
+    end
+    for (suffix, spec) in specs
+        path = joinpath(outdir, base_name * "_" * suffix * ".png")
+        save_series_figure(path; spec...)
+        push!(paths, path)
+    end
+    return paths
+end
+
+function save_run_outputs(
+    g,
+    p::ManuscriptParams;
+    anneal = nothing,
+    pulse = nothing,
+    base_name = result_basename(p),
+    save_figures = p.save_figures,
+    save_xlsx = p.save_xlsx,
+)
     mkpath(p.outdir)
-    base_name = result_basename(p)
     xlsx_path = joinpath(p.outdir, base_name * ".xlsx")
     png_path_dist = joinpath(p.outdir, base_name * "_Pr_distribution.png")
-    png_path_pv = joinpath(p.outdir, base_name * "_PV.png")
-    png_path_pt = joinpath(p.outdir, base_name * "_PT.png")
+    png_path_pv = joinpath(p.outdir, base_name * "_pulse_V_Pr.png")
+    png_path_pt = joinpath(p.outdir, base_name * "_anneal_T_Pr.png")
     png_path_landau = joinpath(p.outdir, base_name * "_Landau.png")
     png_path_landau_zoom = joinpath(p.outdir, base_name * "_Landau_zoom_m1_1.png")
     csv_path_state = joinpath(p.outdir, base_name * "_FinalState_standard.csv")
@@ -183,36 +297,18 @@ function save_run_outputs(g, p::ManuscriptParams; anneal = nothing, pulse = noth
     png_path_state = joinpath(p.outdir, base_name * "_FinalState.png")
 
     dist = state_distribution(g)
-    save_distribution_figure(png_path_dist, dist)
-    save_landau_figure(png_path_landau, p)
-    save_landau_figure(png_path_landau_zoom, p; xrange = range(-1.0, 1.0, length = 1000))
     save_final_state_csv(csv_path_state, g)
     save_final_state_csv_eu(csv_path_state_eu, g)
-    save_final_state_figure(png_path_state, g)
-
-    if !isnothing(pulse)
-        save_series_figure(
-            png_path_pv;
-            x = pulse.voltage,
-            y = pulse.Pr,
-            xlabel = "Voltage",
-            ylabel = "Pr",
-            title = "P-V",
-        )
+    figure_paths = String[]
+    if save_figures
+        save_distribution_figure(png_path_dist, dist)
+        save_landau_figure(png_path_landau, p)
+        save_landau_figure(png_path_landau_zoom, p; xrange = range(-1.0, 1.0, length = 1000))
+        save_final_state_figure(png_path_state, g; vmin = p.state_min, vmax = p.state_max)
+        append!(figure_paths, (png_path_dist, png_path_landau, png_path_landau_zoom, png_path_state))
+        append!(figure_paths, save_diagnostic_figures(base_name, p.outdir; anneal, pulse))
     end
 
-    if !isnothing(anneal)
-        save_series_figure(
-            png_path_pt;
-            x = anneal.Temp,
-            y = anneal.Pr,
-            xlabel = "Temperature",
-            ylabel = "Pr",
-            title = "P-T",
-        )
-    end
-
-    d = derived_params(p)
     bin_left = Float64.(dist.histogram.edges[1][1:end-1])
     bin_center = bin_left .+ step(dist.bins) / 2
     df_dist = DataFrame(
@@ -222,52 +318,30 @@ function save_run_outputs(g, p::ManuscriptParams; anneal = nothing, pulse = noth
         counts = Float64.(dist.histogram.weights),
     )
 
-    coeffs = d.landau_coeffs
-    param_keys = String[
-        "JIsing", "a1", "b1", "c1", "E_barrier", "Eypp_1", "xL", "yL", "zL",
-        "Scale", "Screening", "Steps_1", "time_fctr", "anneal_time",
-        "point_repeat", "Temp_aneal", "proposal_delta", "algorithm_name", "algorithm_kwargs",
-        "landau_mode", "landau_coeffs",
-        "landau_2", "landau_4", "landau_6", "landau_8", "landau_10",
-    ]
-    param_values = Any[
-        p.JIsing, p.a1, d.b1, p.c1, d.E_barrier, d.Epp_1, p.xL, p.yL, p.zL,
-        p.Scale, p.Screening, p.Steps_1, p.time_fctr, d.anneal_time,
-        d.point_repeat, p.Temp_aneal, p.proposal_delta, p.algorithm_name, p.algorithm_kwargs,
-        p.landau_mode, d.landau_coeffs,
-        get(coeffs, 2, missing), get(coeffs, 4, missing), get(coeffs, 6, missing),
-        get(coeffs, 8, missing), get(coeffs, 10, missing),
-    ]
-
-    params = DataFrame(
-        key = param_keys,
-        value = excel_value.(param_values),
-    )
-
-    XLSX.openxlsx(xlsx_path, mode = "w") do xf
-        xf[1].name = "params"
-        XLSX.writetable!(xf["params"], collect(eachcol(params)), names(params))
-
-        XLSX.addsheet!(xf, "Pr_distribution")
-        XLSX.writetable!(xf["Pr_distribution"], collect(eachcol(df_dist)), names(df_dist))
-
-        if !isnothing(anneal)
-            n = min(length(anneal.Temp), length(anneal.Pr))
-            df_anneal = DataFrame(Temp = Float64.(anneal.Temp[1:n]), Pr = Float64.(anneal.Pr[1:n]))
-            XLSX.addsheet!(xf, "anneal_series")
-            XLSX.writetable!(xf["anneal_series"], collect(eachcol(df_anneal)), names(df_anneal))
-        end
-
-        if !isnothing(pulse)
-            n = min(length(pulse.voltage), length(pulse.Pr))
-            df_pulse = DataFrame(voltage = Float64.(pulse.voltage[1:n]), Pr = Float64.(pulse.Pr[1:n]))
-            XLSX.addsheet!(xf, "pulse_series")
-            XLSX.writetable!(xf["pulse_series"], collect(eachcol(df_pulse)), names(df_pulse))
+    if save_xlsx
+        sheets = (
+            "series" => run_series_dataframe(; anneal, pulse),
+            "params" => params_dataframe(p),
+            "derived" => derived_dataframe(p),
+            "reduced_energy" => reduced_parameter_summary(g, p),
+            "landau_coefficients" => coefficient_summary_dataframe(p),
+            "Pr_distribution" => df_dist,
+        )
+        XLSX.openxlsx(xlsx_path, mode = "w") do xf
+            for (i, (name, df)) in enumerate(sheets)
+                if i == 1
+                    xf[1].name = name
+                else
+                    XLSX.addsheet!(xf, name)
+                end
+                write_dataframe_sheet!(xf[name], df)
+            end
         end
     end
 
     return (; xlsx_path, png_path_dist, png_path_landau, png_path_landau_zoom,
         csv_path_state, csv_path_state_eu, png_path_state,
+        figure_paths,
         png_path_pv = isnothing(pulse) ? nothing : png_path_pv,
         png_path_pt = isnothing(anneal) ? nothing : png_path_pt)
 end

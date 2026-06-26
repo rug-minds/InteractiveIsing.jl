@@ -1,2 +1,0 @@
-timestamp,architecture,workers,threads,epochs,batchsize,sweeps,relaxation_steps,train_limit,validation_limit,elapsed_seconds,elapsed_minutes,checkpoint
-2026-05-22T01:45:31,784-120-40,2,1,1,4,1.0,160,8,none,10.3866172,0.17311028666666667,runs/20260522_mnist_gradient_fix_smoke\mnist_shared_training.bin

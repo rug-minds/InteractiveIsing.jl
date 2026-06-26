@@ -15,15 +15,19 @@ end
 
 function StatefulAlgorithms.init(tp::TrianglePulseA, args)
     steps = num_calls(args)
-    num_samples = steps / (4 * tp.numpulses)
-    first = LinRange(0, tp.amp, round(Int, num_samples))
-    second = LinRange(tp.amp, 0, round(Int, num_samples))
-    third = LinRange(0, -tp.amp, round(Int, num_samples))
-    fourth = LinRange(-tp.amp, 0, round(Int, num_samples))
-
-    pulse = repeat(vcat(first, second, third, fourth), tp.numpulses)
-    fix_num = steps - length(pulse)
-    pulse = vcat(pulse, zeros(Int, fix_num))
+    segments = 4 * tp.numpulses
+    steps % segments == 0 || throw(ArgumentError(
+        "TrianglePulseA requires num_calls to be divisible by 4 * numpulses; got num_calls=$steps and numpulses=$(tp.numpulses).",
+    ))
+    samples = div(steps, segments)
+    segment(start, stop) = samples == 1 ? [start] : collect(LinRange(start, stop, samples))
+    cycle = vcat(
+        segment(zero(tp.amp), tp.amp),
+        segment(tp.amp, zero(tp.amp)),
+        segment(zero(tp.amp), -tp.amp),
+        segment(-tp.amp, zero(tp.amp)),
+    )
+    pulse = repeat(cycle, tp.numpulses)
     return (; pulse, step = 1, pulseval = pulse[1])
 end
 
@@ -122,6 +126,138 @@ end
 function StatefulAlgorithms.step!(::ValueLogger, context::C) where {C}
     (; values, value) = context
     push!(values, value)
+    return (;)
+end
+
+mean_polarization_zlayer(model, zidx::Integer) =
+    mean(@view graph_array(model)[:, :, zidx])
+
+mean_polarization_top(model) =
+    mean_polarization_zlayer(model, size(graph_array(model), 3))
+
+mean_polarization_mid(model) =
+    mean_polarization_zlayer(model, cld(size(graph_array(model), 3), 2))
+
+mean_polarization_bottom(model) =
+    mean_polarization_zlayer(model, 1)
+
+function staggered_z_polarization(model)
+    A = graph_array(model)
+    total = zero(Float64)
+    for z in axes(A, 3)
+        total += (isodd(z) ? 1 : -1) * sum(@view A[:, :, z])
+    end
+    return total / length(A)
+end
+
+function find_first_term(hamiltonian, ::Type{T}) where {T}
+    for term in InteractiveIsing.hamiltonians(hamiltonian)
+        term isa T && return term
+    end
+    return nothing
+end
+
+function sum_term_energy_by_type(hamiltonian, model, ::Type{T}) where {T}
+    total = 0.0f0
+    for term in InteractiveIsing.hamiltonians(hamiltonian)
+        term isa T || continue
+        total += Float32(InteractiveIsing.calculate(InteractiveIsing.H(), term, model))
+    end
+    return total
+end
+
+function bilinear_total_energy(hamiltonian, model)
+    spins = graph_array(model)
+    total = 0.0f0
+    for term in InteractiveIsing.hamiltonians(hamiltonian)
+        term isa InteractiveIsing.Bilinear || continue
+        J = hasproperty(term.J, :sp) ? term.J.sp : term.J
+        state_vector = vec(spins)
+        total -= 0.5f0 * Float32(dot(state_vector, J * state_vector))
+    end
+    return total
+end
+
+function total_polynomial_energy(hamiltonian, model)
+    spins = graph_array(model)
+    total = 0.0f0
+    for term in InteractiveIsing.hamiltonians(hamiltonian)
+        term isa InteractiveIsing.PolynomialHamiltonian || continue
+        for i in eachindex(spins)
+            total += Float32(InteractiveIsing.calculate(InteractiveIsing.H_i(), term, model, i))
+        end
+    end
+    return total
+end
+
+function coulomb_total_energy(hamiltonian)
+    term = hamiltonian isa InteractiveIsing.CoulombHamiltonian ? hamiltonian :
+        find_first_term(hamiltonian, InteractiveIsing.CoulombHamiltonian)
+    isnothing(term) && return 0.0f0
+    return 0.5f0 * Float32(sum(term.ρ .* term.u))
+end
+
+function total_supported_energy(hamiltonian, model)
+    return bilinear_total_energy(hamiltonian, model) +
+        sum_term_energy_by_type(hamiltonian, model, InteractiveIsing.MagField) +
+        total_polynomial_energy(hamiltonian, model) +
+        coulomb_total_energy(hamiltonian)
+end
+
+function coulomb_local_scale(model, term)
+    values = Float64[]
+    spins = graph_array(model)
+    sizehint!(values, length(spins))
+    for i in eachindex(spins)
+        proposal = InteractiveIsing.SingleSpinProposal(i, spins[i], spins[i], 1)
+        push!(values, abs(InteractiveIsing.calculate(
+            InteractiveIsing.d_iH(),
+            term,
+            model,
+            proposal,
+        )))
+    end
+    return (; mean = mean(values), median = median(values), maximum = maximum(values))
+end
+
+struct DepolLogger{Name} <: ProcessAlgorithm end
+DepolLogger(name) = DepolLogger{Symbol(name)}()
+
+function StatefulAlgorithms.init(::DepolLogger, args)
+    names = (
+        :means, :medians, :maxima, :total_energy, :depol_energy,
+        :interaction_energy, :field_energy, :poly_energy,
+    )
+    buffers = map(names) do _
+        values = Float32[]
+        processsizehint!(values, args)
+        values
+    end
+    return NamedTuple{names}(buffers)
+end
+
+function StatefulAlgorithms.step!(::DepolLogger, context::C) where {C}
+    (; means, medians, maxima, total_energy, depol_energy,
+        interaction_energy, field_energy, poly_energy, model, hamiltonian) = context
+
+    push!(total_energy, total_supported_energy(hamiltonian, model))
+    push!(interaction_energy, bilinear_total_energy(hamiltonian, model))
+    push!(field_energy, sum_term_energy_by_type(hamiltonian, model, InteractiveIsing.MagField))
+    push!(poly_energy, total_polynomial_energy(hamiltonian, model))
+
+    depol_term = find_first_term(hamiltonian, InteractiveIsing.CoulombHamiltonian)
+    if isnothing(depol_term)
+        push!(depol_energy, 0.0f0)
+        push!(means, 0.0f0)
+        push!(medians, 0.0f0)
+        push!(maxima, 0.0f0)
+    else
+        depol = coulomb_local_scale(model, depol_term)
+        push!(depol_energy, coulomb_total_energy(depol_term))
+        push!(means, Float32(depol.mean))
+        push!(medians, Float32(depol.median))
+        push!(maxima, Float32(depol.maximum))
+    end
     return (;)
 end
 
