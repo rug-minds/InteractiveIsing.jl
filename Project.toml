@@ -41,6 +41,10 @@ VectorizationBase = "3d5dd08c-fd9d-11e8-17fa-ed2836048c2f"
 Accessors = "0.1.44"
 RuntimeGeneratedFunctions = "0.5.19"
 
+[weakdeps]
+AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
+Metal = "dde4c033-4e86-420c-a63e-0dd931031962"
+
 [extras]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"

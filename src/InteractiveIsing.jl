@@ -31,8 +31,9 @@ include("MCAlgorithms/MCAlgorithms.jl")
 
 include("Graphs/Graphs.jl")
 include("IndexPickers/IndexPickers.jl")
+include("AdiabaticOptimization/AdiabaticOptimization.jl")
 
-include("Sim/Sim.jl")
+include("Processes/Sim.jl")
 
 include("Interaction/Interaction.jl")
 

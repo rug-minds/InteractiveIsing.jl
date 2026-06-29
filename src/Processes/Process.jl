@@ -9,19 +9,44 @@ single node.
 @inline _flat_process_algos(algo) = (algo,)
 
 """
+    _is_graph_model_target(algo)
+
+Return whether `algo` needs the current graph injected as its `model` input.
+"""
+@inline function _is_graph_model_target(algo)
+    algotype = StatefulAlgorithms.algotype(algo)
+    return algotype <: IsingMCAlgorithm || algotype <: AdiabaticOptimization
+end
+
+"""
     _is_ising_mc_target(algo)
 
-Return whether `algo` is an Ising Monte Carlo algorithm that needs the current
-graph injected as its `model` input.
+Return whether `algo` is an Ising Monte Carlo algorithm target.
 """
-@inline _is_ising_mc_target(algo) = StatefulAlgorithms.algotype(algo) <: IsingMCAlgorithm
+@inline function _is_ising_mc_target(algo)
+    return StatefulAlgorithms.algotype(algo) <: IsingMCAlgorithm
+end
+
+"""
+    _collect_graph_model_targets(func)
+
+Collect graph-model process targets found inside `func`. The result is a tuple
+so it can be passed through process input construction without vector storage.
+"""
+function _collect_graph_model_targets(func)
+    targets = ()
+    for algo in _flat_process_algos(func)
+        if _is_graph_model_target(algo)
+            targets = (targets..., algo)
+        end
+    end
+    return targets
+end
 
 """
     _collect_ising_mc_targets(func)
 
-Collect the Ising Monte Carlo algorithm targets found inside `func`. The result
-is a tuple so it can be passed through the process input construction path
-without introducing vector storage.
+Collect only Ising Monte Carlo targets found inside `func`.
 """
 function _collect_ising_mc_targets(func)
     targets = ()
@@ -36,13 +61,13 @@ end
 """
     _mc_model_inits(func, g)
 
-Create one `StatefulAlgorithms.Init` per Ising Monte Carlo algorithm in `func`, assigning
-`g` as that algorithm's `model`. User inputs are deliberately not inspected or
-merged here; `createProcess` splats them into `Process` unchanged after these
-graph-model inputs.
+Create one `StatefulAlgorithms.Init` per graph-model algorithm in `func`,
+assigning `g` as that algorithm's `model`. User inputs are deliberately not
+inspected or merged here; `createProcess` splats them into `Process` unchanged
+after these graph-model inputs.
 """
 function _mc_model_inits(func::F, g::G) where {F,G<:IsingGraph}
-    targets = _collect_ising_mc_targets(func)
+    targets = _collect_graph_model_targets(func)
     graph_inputs = ()
     for target in targets
         graph_inputs = (graph_inputs..., StatefulAlgorithms.Init(target, model = g))
