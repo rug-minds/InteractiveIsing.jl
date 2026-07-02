@@ -4,6 +4,13 @@ using SparseArrays
 physical_test_weight(; dr) = 2u"eV"
 physical_test_alltoall_weight(; dr, c1 = nothing, c2 = nothing, dc = nothing) = 2u"eV"
 
+struct NonIndexableFloatVector <: AbstractVector{Float32}
+    n::Int
+end
+
+Base.size(value::NonIndexableFloatVector) = (value.n,)
+Base.getindex(::NonIndexableFloatVector, ::Int) = error("numeric arrays should not be scanned for Unitful values")
+
 @testset "Physical Parameter Conversion" begin
     scales = PhysicalScales(
         energy = 1u"eV",
@@ -45,6 +52,11 @@ physical_test_alltoall_weight(; dr, c1 = nothing, c2 = nothing, dc = nothing) = 
     @test temp(kbt_graph) === 2.5
     temp!(kbt_graph, 3.5u"meV")
     @test temp(kbt_graph) === 3.5
+end
+
+@testset "Physical Parameter Numeric Array Fast Path" begin
+    value = NonIndexableFloatVector(1_000_000)
+    @test internalvalue(value, nothing, nothing, nothing; parameter = :J) === value
 end
 
 @testset "Physical Parameter Errors" begin

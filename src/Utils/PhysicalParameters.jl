@@ -125,6 +125,11 @@ _state_scale_refs(state) = Dict{Any,Base.RefValue{Any}}(:default => Ref{Any}(sta
 
 _isunitful(value) = value isa Unitful.AbstractQuantity
 _contains_unitful(value) = _isunitful(value)
+function _contains_unitful(value::AbstractArray{T}) where {T<:Number}
+    T <: Unitful.AbstractQuantity && return true
+    isconcretetype(T) && return false
+    return any(_contains_unitful, value)
+end
 _contains_unitful(value::AbstractArray) = any(_contains_unitful, value)
 _contains_unitful(value::Tuple) = any(_contains_unitful, value)
 _contains_unitful(value::NamedTuple) = any(_contains_unitful, values(value))
