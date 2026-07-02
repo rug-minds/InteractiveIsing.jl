@@ -14,8 +14,8 @@ using XLSX
 include(joinpath(@__DIR__, "ExperimentLoggers.jl"))
 
 Base.@kwdef struct ExperimentConfig
-    nx::Int = 10
-    ny::Int = 10
+    nx::Int = 30
+    ny::Int = 30
     nz::Int = 10
 
     energy_scale = 1.0f0u"meV"

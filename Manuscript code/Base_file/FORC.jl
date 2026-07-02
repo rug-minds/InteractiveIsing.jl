@@ -8,16 +8,35 @@ cfg = config_from_environment()
 
 forc_kBT = 0.15f0u"meV"
 forc_initial_field = 0.0f0u"meV"
-forc_max_field = 6.0f0u"meV"
+forc_max_field = 3.0f0u"meV"
 forc_preset_edge_points = 1001
-forc_test_field_step = 2.0f0u"meV"
+forc_test_field_step = 0.5f0u"meV"
 # Hold points after each positive FORC branch. Keep this modest for quick tests.
-forc_zero_hold_points = 201
+forc_zero_hold_points = 101
 
 cfg = override_config(
     cfg;
     initial_kBT = forc_kBT,
     initial_field = forc_initial_field,
+    # Landau polynomial coefficients
+    landau_a = -0.3f0,
+    landau_b = -2.1f0,
+    landau_c = 1.5f0,
+    landau_d = 0.1f0,
+    landau_e = 0.1f0,
+    include_landau_8 = true,
+    include_landau_10 = true,
+
+    # Additive Gaussian Landau disorder:
+    # coeff_i[site] = landau_i + landau_i_disorder_scale * randn().
+    apply_landau_disorder = false,
+    landau_disorder_seed = 43,
+    landau_a_disorder_scale = 1.0f0,
+    landau_b_disorder_scale = 1.0f0,
+    landau_c_disorder_scale = 1.5f0,
+    landau_d_disorder_scale = 1.5f0,
+    landau_e_disorder_scale = 1.5f0,
+    
 )
 
 job = build_forc_job(
